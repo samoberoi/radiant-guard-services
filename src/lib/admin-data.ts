@@ -415,6 +415,8 @@ export type Unit = {
   nearbyHospitalMobile: string;
   ambulanceName: string;
   ambulanceMobile: string;
+  latitude: number | null;
+  longitude: number | null;
 };
 
 export function nextUnitCode(units: { code: string }[]) {
@@ -467,6 +469,8 @@ type UnitRow = {
   nearby_hospital_mobile: string | null;
   ambulance_name: string | null;
   ambulance_mobile: string | null;
+  latitude: number | string | null;
+  longitude: number | string | null;
 };
 
 function rowToUnit(r: UnitRow): Unit {
@@ -518,6 +522,8 @@ function rowToUnit(r: UnitRow): Unit {
     nearbyHospitalMobile: r.nearby_hospital_mobile ?? "",
     ambulanceName: r.ambulance_name ?? "",
     ambulanceMobile: r.ambulance_mobile ?? "",
+    latitude: r.latitude == null ? null : Number(r.latitude),
+    longitude: r.longitude == null ? null : Number(r.longitude),
   };
 }
 
@@ -568,6 +574,8 @@ function unitToRow(data: Omit<Unit, "id">) {
     nearby_hospital_mobile: data.nearbyHospitalMobile,
     ambulance_name: data.ambulanceName,
     ambulance_mobile: data.ambulanceMobile,
+    latitude: data.latitude,
+    longitude: data.longitude,
   };
 }
 

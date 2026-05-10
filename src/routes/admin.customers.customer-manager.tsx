@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Edit2, ExternalLink, Plus, Search, Trash2, Users } from "lucide-react";
+import { ChevronRight, Edit2, ExternalLink, List as ListIcon, MapPin, Network, Plus, Search, Trash2, Users, Warehouse } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -29,8 +29,12 @@ import {
 import {
   nextCustomerCode,
   useCustomers,
+  useUnits,
+  useBranches,
+  useStates,
   type Customer,
   type CustomerStatus,
+  type Unit,
 } from "@/lib/admin-data";
 import { cn } from "@/lib/utils";
 
@@ -62,6 +66,7 @@ function CustomerManagerPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
   const [deleting, setDeleting] = useState<Customer | null>(null);
+  const [viewingUnits, setViewingUnits] = useState<Customer | null>(null);
 
   const rows = useMemo(() => {
     const list = [...customers].sort((a, b) => {
@@ -179,6 +184,16 @@ function CustomerManagerPage() {
                       <Button
                         size="sm"
                         variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-accent"
+                        onClick={() => setViewingUnits(c)}
+                        aria-label="View units"
+                        title="View mapped units"
+                      >
+                        <Network className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                         onClick={() => {
                           setEditing(c);
@@ -263,7 +278,197 @@ function CustomerManagerPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <CustomerUnitsDialog
+        customer={viewingUnits}
+        onOpenChange={(o) => !o && setViewingUnits(null)}
+      />
     </div>
+  );
+}
+
+function CustomerUnitsDialog({
+  customer,
+  onOpenChange,
+}: {
+  customer: Customer | null;
+  onOpenChange: (o: boolean) => void;
+}) {
+  const { units, updateUnit } = useUnits();
+  const { branches } = useBranches();
+  const { states } = useStates();
+  const [view, setView] = useState<"list" | "tree">("list");
+
+  const branchById = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
+  const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
+
+  const orgUnits = useMemo(() => {
+    if (!customer) return [];
+    return units
+      .filter((u) => u.customerId === customer.id)
+      .sort((a, b) => {
+        const na = parseInt(a.code.replace(/\D/g, ""), 10) || 0;
+        const nb = parseInt(b.code.replace(/\D/g, ""), 10) || 0;
+        return na - nb;
+      });
+  }, [units, customer]);
+
+  const branchLabel = (u: Unit) => {
+    if (!u.branchId) return "—";
+    const b = branchById.get(u.branchId);
+    if (!b) return "—";
+    const st = stateById.get(b.stateId)?.name ?? "";
+    return `${b.code} – ${st}`;
+  };
+
+  const toggleStatus = async (u: Unit) => {
+    const next = u.status === "active" ? "inactive" : "active";
+    const { id: _id, ...rest } = u;
+    void _id;
+    const r = await updateUnit(u.id, { ...rest, status: next });
+    if (r.ok) toast.success(`${u.code} marked ${next}`);
+    else toast.error(r.error);
+  };
+
+  return (
+    <Dialog open={!!customer} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Users className="h-4 w-4 text-accent" />
+            {customer?.name}
+          </DialogTitle>
+          <DialogDescription>
+            <span className="font-mono">{customer?.code}</span>
+            {customer?.address ? <> · {customer.address}</> : null}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="mb-3 flex items-center justify-between">
+          <div className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+            {orgUnits.length} unit{orgUnits.length === 1 ? "" : "s"} mapped
+          </div>
+          <div className="inline-flex rounded-lg border border-border bg-secondary/40 p-0.5">
+            <button
+              type="button"
+              onClick={() => setView("list")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold",
+                view === "list" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+              )}
+            >
+              <ListIcon className="h-3.5 w-3.5" /> List
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("tree")}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold",
+                view === "tree" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
+              )}
+            >
+              <Network className="h-3.5 w-3.5" /> Tree
+            </button>
+          </div>
+        </div>
+
+        {orgUnits.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+            <Warehouse className="mx-auto mb-2 h-6 w-6 opacity-50" />
+            No units mapped to this organisation yet.
+          </div>
+        ) : view === "list" ? (
+          <div className="overflow-hidden rounded-xl border border-border">
+            <table className="w-full text-sm">
+              <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-2.5">Unit</th>
+                  <th className="px-4 py-2.5">Branch</th>
+                  <th className="px-4 py-2.5">Location</th>
+                  <th className="px-4 py-2.5">Active</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {orgUnits.map((u) => (
+                  <tr key={u.id} className="hover:bg-secondary/30">
+                    <td className="px-4 py-2.5">
+                      <div className="font-mono text-xs font-semibold text-accent">{u.code}</div>
+                      <div className="font-semibold text-foreground">{u.name}</div>
+                    </td>
+                    <td className="px-4 py-2.5 text-foreground">{branchLabel(u)}</td>
+                    <td className="px-4 py-2.5 text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <span className="line-clamp-1">{u.location || "—"}</span>
+                        {u.latitude != null && u.longitude != null && (
+                          <a
+                            href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent hover:bg-accent/10"
+                            title="Open in Google Maps"
+                          >
+                            <MapPin className="h-3 w-3" /> Map
+                          </a>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <Switch
+                        checked={u.status === "active"}
+                        onCheckedChange={() => toggleStatus(u)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+              <Users className="h-4 w-4 text-accent" />
+              {customer?.name}
+              <span className="font-mono text-xs text-muted-foreground">({customer?.code})</span>
+            </div>
+            <ul className="mt-2 space-y-1.5 border-l-2 border-dashed border-border pl-4">
+              {orgUnits.map((u) => (
+                <li
+                  key={u.id}
+                  className="relative flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-3"
+                >
+                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                  <Warehouse className="h-4 w-4 text-accent" />
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-semibold text-accent">{u.code}</span>
+                      <span className="font-semibold text-foreground">{u.name}</span>
+                      <StatusBadge status={u.status} />
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {branchLabel(u)} · {u.location || "—"}
+                    </div>
+                  </div>
+                  {u.latitude != null && u.longitude != null && (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-accent hover:bg-accent/10"
+                    >
+                      <MapPin className="h-3 w-3" /> Map
+                    </a>
+                  )}
+                  <Switch
+                    checked={u.status === "active"}
+                    onCheckedChange={() => toggleStatus(u)}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
