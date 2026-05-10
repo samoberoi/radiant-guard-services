@@ -14,7 +14,104 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      branches: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          id: string
+          name: string
+          state_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          state_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          state_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branches_state_id_fkey"
+            columns: ["state_id"]
+            isOneToOne: true
+            referencedRelation: "states"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
+        Row: {
+          address: string
+          code: string
+          contract_start_date: string | null
+          created_at: string
+          id: string
+          name: string
+          phone: string
+          status: Database["public"]["Enums"]["customer_status"]
+          updated_at: string
+          website: string
+        }
+        Insert: {
+          address?: string
+          code: string
+          contract_start_date?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string
+          status?: Database["public"]["Enums"]["customer_status"]
+          updated_at?: string
+          website?: string
+        }
+        Update: {
+          address?: string
+          code?: string
+          contract_start_date?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string
+          status?: Database["public"]["Enums"]["customer_status"]
+          updated_at?: string
+          website?: string
+        }
+        Relationships: []
+      }
+      states: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +120,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      customer_status: "active" | "inactive"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +247,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      customer_status: ["active", "inactive"],
+    },
   },
 } as const
