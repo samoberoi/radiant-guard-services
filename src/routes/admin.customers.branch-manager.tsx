@@ -237,11 +237,14 @@ function BranchManagerPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (deleting) {
-                  deleteBranch(deleting.id);
+              onClick={async () => {
+                if (!deleting) return;
+                try {
+                  await deleteBranch(deleting.id);
                   toast.success("Branch deleted");
                   setDeleting(null);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Delete failed");
                 }
               }}
             >
