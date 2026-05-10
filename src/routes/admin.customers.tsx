@@ -84,7 +84,7 @@ function CustomersDashboard() {
       .filter((u) => {
         const c = u.customerId ? customerById.get(u.customerId) : undefined;
         const b = u.branchId ? branchById.get(u.branchId) : undefined;
-        if (status !== "all" && u.status !== status) return false;
+        if (status !== "all" && u.status !== status && c?.status !== status) return false;
         if (branchId !== "all" && u.branchId !== branchId) return false;
         if (stateId !== "all" && b?.stateId !== stateId) return false;
         if (!q) return true;
