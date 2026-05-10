@@ -11,7 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WelcomeRouteImport } from './routes/welcome'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
+import { Route as AdminCustomersUnitManagerRouteImport } from './routes/admin.customers.unit-manager'
+import { Route as AdminCustomersStateManagerRouteImport } from './routes/admin.customers.state-manager'
+import { Route as AdminCustomersCustomerManagerRouteImport } from './routes/admin.customers.customer-manager'
+import { Route as AdminCustomersBranchManagerRouteImport } from './routes/admin.customers.branch-manager'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -23,38 +29,119 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminCustomersRoute = AdminCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCustomersUnitManagerRoute =
+  AdminCustomersUnitManagerRouteImport.update({
+    id: '/unit-manager',
+    path: '/unit-manager',
+    getParentRoute: () => AdminCustomersRoute,
+  } as any)
+const AdminCustomersStateManagerRoute =
+  AdminCustomersStateManagerRouteImport.update({
+    id: '/state-manager',
+    path: '/state-manager',
+    getParentRoute: () => AdminCustomersRoute,
+  } as any)
+const AdminCustomersCustomerManagerRoute =
+  AdminCustomersCustomerManagerRouteImport.update({
+    id: '/customer-manager',
+    path: '/customer-manager',
+    getParentRoute: () => AdminCustomersRoute,
+  } as any)
+const AdminCustomersBranchManagerRoute =
+  AdminCustomersBranchManagerRouteImport.update({
+    id: '/branch-manager',
+    path: '/branch-manager',
+    getParentRoute: () => AdminCustomersRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/customers': typeof AdminCustomersRouteWithChildren
+  '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
+  '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
+  '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
+  '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/customers': typeof AdminCustomersRouteWithChildren
+  '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
+  '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
+  '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
+  '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/customers': typeof AdminCustomersRouteWithChildren
+  '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
+  '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
+  '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
+  '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/welcome'
+  fullPaths:
+    | '/'
+    | '/admin'
+    | '/login'
+    | '/welcome'
+    | '/admin/customers'
+    | '/admin/customers/branch-manager'
+    | '/admin/customers/customer-manager'
+    | '/admin/customers/state-manager'
+    | '/admin/customers/unit-manager'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/welcome'
-  id: '__root__' | '/' | '/login' | '/welcome'
+  to:
+    | '/'
+    | '/admin'
+    | '/login'
+    | '/welcome'
+    | '/admin/customers'
+    | '/admin/customers/branch-manager'
+    | '/admin/customers/customer-manager'
+    | '/admin/customers/state-manager'
+    | '/admin/customers/unit-manager'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/login'
+    | '/welcome'
+    | '/admin/customers'
+    | '/admin/customers/branch-manager'
+    | '/admin/customers/customer-manager'
+    | '/admin/customers/state-manager'
+    | '/admin/customers/unit-manager'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   LoginRoute: typeof LoginRoute
   WelcomeRoute: typeof WelcomeRoute
 }
@@ -75,6 +162,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -82,11 +176,75 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/customers': {
+      id: '/admin/customers'
+      path: '/customers'
+      fullPath: '/admin/customers'
+      preLoaderRoute: typeof AdminCustomersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/customers/unit-manager': {
+      id: '/admin/customers/unit-manager'
+      path: '/unit-manager'
+      fullPath: '/admin/customers/unit-manager'
+      preLoaderRoute: typeof AdminCustomersUnitManagerRouteImport
+      parentRoute: typeof AdminCustomersRoute
+    }
+    '/admin/customers/state-manager': {
+      id: '/admin/customers/state-manager'
+      path: '/state-manager'
+      fullPath: '/admin/customers/state-manager'
+      preLoaderRoute: typeof AdminCustomersStateManagerRouteImport
+      parentRoute: typeof AdminCustomersRoute
+    }
+    '/admin/customers/customer-manager': {
+      id: '/admin/customers/customer-manager'
+      path: '/customer-manager'
+      fullPath: '/admin/customers/customer-manager'
+      preLoaderRoute: typeof AdminCustomersCustomerManagerRouteImport
+      parentRoute: typeof AdminCustomersRoute
+    }
+    '/admin/customers/branch-manager': {
+      id: '/admin/customers/branch-manager'
+      path: '/branch-manager'
+      fullPath: '/admin/customers/branch-manager'
+      preLoaderRoute: typeof AdminCustomersBranchManagerRouteImport
+      parentRoute: typeof AdminCustomersRoute
+    }
   }
 }
 
+interface AdminCustomersRouteChildren {
+  AdminCustomersBranchManagerRoute: typeof AdminCustomersBranchManagerRoute
+  AdminCustomersCustomerManagerRoute: typeof AdminCustomersCustomerManagerRoute
+  AdminCustomersStateManagerRoute: typeof AdminCustomersStateManagerRoute
+  AdminCustomersUnitManagerRoute: typeof AdminCustomersUnitManagerRoute
+}
+
+const AdminCustomersRouteChildren: AdminCustomersRouteChildren = {
+  AdminCustomersBranchManagerRoute: AdminCustomersBranchManagerRoute,
+  AdminCustomersCustomerManagerRoute: AdminCustomersCustomerManagerRoute,
+  AdminCustomersStateManagerRoute: AdminCustomersStateManagerRoute,
+  AdminCustomersUnitManagerRoute: AdminCustomersUnitManagerRoute,
+}
+
+const AdminCustomersRouteWithChildren = AdminCustomersRoute._addFileChildren(
+  AdminCustomersRouteChildren,
+)
+
+interface AdminRouteChildren {
+  AdminCustomersRoute: typeof AdminCustomersRouteWithChildren
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminCustomersRoute: AdminCustomersRouteWithChildren,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   LoginRoute: LoginRoute,
   WelcomeRoute: WelcomeRoute,
 }

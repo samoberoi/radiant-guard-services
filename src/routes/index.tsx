@@ -11,7 +11,7 @@ function Index() {
   const { user } = useAuth();
 
   useEffect(() => {
-    navigate({ to: user ? "/welcome" : "/login", replace: true });
+    navigate({ to: user ? "/admin/customers" : "/login", replace: true });
   }, [user, navigate]);
 
   return <div className="min-h-screen bg-background" />;

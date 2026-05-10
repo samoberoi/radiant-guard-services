@@ -41,7 +41,7 @@ function LoginPage() {
   const [resendIn, setResendIn] = useState(0);
 
   useEffect(() => {
-    if (user) navigate({ to: "/welcome", replace: true });
+    if (user) navigate({ to: "/admin/customers", replace: true });
   }, [user, navigate]);
 
   useEffect(() => {
@@ -77,9 +77,9 @@ function LoginPage() {
     if (verifyOtp(code)) {
       login(`+91${phone}`);
       toast.success("Signed in");
-      navigate({ to: "/welcome", replace: true });
+      navigate({ to: "/admin/customers", replace: true });
     } else {
-      setError("Incorrect code. Try 111111 for the demo.");
+      setError(`Incorrect code. Try ${DEMO_OTP_HINT} for the demo.`);
       setOtp("");
     }
   }

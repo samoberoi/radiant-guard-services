@@ -1,0 +1,286 @@
+import {
+  createFileRoute,
+  Link,
+  Outlet,
+  useNavigate,
+  useRouterState,
+} from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import {
+  Building2,
+  ChevronDown,
+  LayoutDashboard,
+  LogOut,
+  MapPin,
+  Menu,
+  PanelLeftClose,
+  ShieldCheck,
+  Users,
+  Warehouse,
+  X,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth";
+import { cn } from "@/lib/utils";
+
+export const Route = createFileRoute("/admin")({
+  component: AdminLayout,
+});
+
+type NavItem = {
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
+
+const customersChildren: NavItem[] = [
+  { to: "/admin/customers/state-manager", label: "State Manager", icon: MapPin },
+  { to: "/admin/customers/branch-manager", label: "Branch Manager", icon: Building2 },
+  { to: "/admin/customers/unit-manager", label: "Unit Manager", icon: Warehouse },
+  { to: "/admin/customers/customer-manager", label: "Customer Manager", icon: Users },
+];
+
+function maskPhone(phone: string) {
+  const d = phone.replace(/\D/g, "");
+  return `+91 ••• ••• ${d.slice(-4)}`;
+}
+
+function AdminLayout() {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [customersOpen, setCustomersOpen] = useState(true);
+
+  // Auth guard — wait for hydration; if no token in storage, kick to login.
+  useEffect(() => {
+    if (user === null) {
+      const t = setTimeout(() => {
+        if (typeof window !== "undefined" && !localStorage.getItem("radiant.auth")) {
+          navigate({ to: "/login", replace: true });
+        }
+      }, 50);
+      return () => clearTimeout(t);
+    }
+  }, [user, navigate]);
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  function handleLogout() {
+    logout();
+    navigate({ to: "/login", replace: true });
+  }
+
+  const isActive = (path: string) => pathname === path || pathname.startsWith(path + "/");
+
+  const sidebarWidth = collapsed ? "lg:w-20" : "lg:w-64";
+
+  return (
+    <div className="relative min-h-screen bg-background">
+      <div className="ambient-glow pointer-events-none absolute inset-0" />
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-border/60 bg-primary text-primary-foreground transition-transform duration-300",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          "lg:translate-x-0",
+          sidebarWidth,
+        )}
+      >
+        <div className="dot-pattern pointer-events-none absolute inset-0 opacity-20" />
+
+        {/* Brand */}
+        <div className="relative flex h-16 items-center justify-between border-b border-white/10 px-4">
+          <Link to="/admin/customers" className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent-foreground shadow">
+              <ShieldCheck className="h-5 w-5" strokeWidth={2.4} />
+            </div>
+            {!collapsed && (
+              <div className="leading-tight">
+                <div className="font-display text-sm font-bold tracking-tight">Radiant Guard</div>
+                <div className="text-[9px] font-semibold uppercase tracking-[0.22em] text-primary-foreground/60">
+                  Admin Console
+                </div>
+              </div>
+            )}
+          </Link>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(false)}
+            className="rounded-md p-1.5 text-primary-foreground/70 hover:bg-white/10 lg:hidden"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Nav */}
+        <nav className="relative flex-1 overflow-y-auto p-3">
+          <div className="mb-2 px-3">
+            {!collapsed && (
+              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary-foreground/50">
+                Main
+              </div>
+            )}
+          </div>
+
+          {/* Customers group */}
+          <div>
+            <button
+              type="button"
+              onClick={() => setCustomersOpen((v) => !v)}
+              className={cn(
+                "group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+                isActive("/admin/customers")
+                  ? "bg-accent/20 text-accent"
+                  : "text-primary-foreground/85 hover:bg-white/5",
+              )}
+            >
+              <LayoutDashboard className="h-4.5 w-4.5 shrink-0" />
+              {!collapsed && (
+                <>
+                  <span className="flex-1 text-left">Customers</span>
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 transition-transform",
+                      customersOpen ? "rotate-0" : "-rotate-90",
+                    )}
+                  />
+                </>
+              )}
+            </button>
+
+            {customersOpen && !collapsed && (
+              <div className="mt-1 space-y-0.5 pl-3">
+                {customersChildren.map((item) => {
+                  const active = isActive(item.to);
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
+                        active
+                          ? "bg-white/10 text-primary-foreground"
+                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "absolute left-0 h-5 w-0.5 rounded-r bg-accent transition-opacity",
+                          active ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Collapsed icon-only children */}
+            {collapsed && (
+              <div className="mt-1 space-y-1">
+                {customersChildren.map((item) => {
+                  const active = isActive(item.to);
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      title={item.label}
+                      className={cn(
+                        "flex items-center justify-center rounded-lg p-2.5 transition-colors",
+                        active
+                          ? "bg-accent/20 text-accent"
+                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
+                      )}
+                    >
+                      <item.icon className="h-4.5 w-4.5" />
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </nav>
+
+        {/* Footer */}
+        <div className="relative border-t border-white/10 p-3">
+          <button
+            type="button"
+            onClick={() => setCollapsed((v) => !v)}
+            className="hidden w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-primary-foreground/60 transition-colors hover:bg-white/5 hover:text-primary-foreground lg:flex"
+          >
+            <PanelLeftClose
+              className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")}
+            />
+            {!collapsed && <span>Collapse</span>}
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Main column */}
+      <div className={cn("flex min-h-screen flex-col transition-[padding] duration-300", collapsed ? "lg:pl-20" : "lg:pl-64")}>
+        {/* Header */}
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border/60 bg-background/80 px-4 backdrop-blur-md sm:px-6">
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="rounded-md p-2 text-foreground hover:bg-secondary lg:hidden"
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+
+          <div className="hidden flex-col leading-tight sm:flex">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              Admin Console
+            </span>
+            <span className="font-display text-sm font-bold tracking-tight text-foreground">
+              Radiant Guard Services
+            </span>
+          </div>
+
+          <div className="ml-auto flex items-center gap-3">
+            <div className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground sm:flex">
+              <span className="inline-flex h-2 w-2 rounded-full bg-accent" />
+              {user?.role === "super_admin" ? "Super Admin" : "User"}
+              <span className="text-muted-foreground">·</span>
+              <span className="font-mono text-muted-foreground">
+                {user ? maskPhone(user.phone) : "—"}
+              </span>
+            </div>
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              size="sm"
+              className="h-9 rounded-lg border-border bg-background font-semibold hover:border-accent hover:text-accent"
+            >
+              <LogOut className="mr-1.5 h-4 w-4" />
+              Sign out
+            </Button>
+          </div>
+        </header>
+
+        <main className="relative z-10 flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}
