@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Download, Edit2, Link2, MapPin, Plus, Search, Trash2 } from "lucide-react";
-import { downloadCsv } from "@/lib/csv-export";
+import { csvJoin, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -96,14 +96,24 @@ function StateManagerPage() {
               downloadCsv(
                 "states",
                 states.map((s) => ({
-                  id: s.id,
-                  name: s.name,
+                  state: s.name,
                   mappedToBranch: mappedStateIds.has(s.id) ? "Yes" : "No",
+                  branchCodes: csvJoin(
+                    branches
+                      .filter((b) => b.stateId === s.id)
+                      .map((b) => b.code),
+                  ),
+                  branchNames: csvJoin(
+                    branches
+                      .filter((b) => b.stateId === s.id)
+                      .map((b) => b.name || b.code),
+                  ),
                 })),
                 [
-                  { key: "id", header: "ID" },
-                  { key: "name", header: "State" },
+                  { key: "state", header: "State" },
                   { key: "mappedToBranch", header: "Mapped to branch" },
+                  { key: "branchCodes", header: "Mapped branch codes" },
+                  { key: "branchNames", header: "Mapped branch names" },
                 ],
               )
             }
