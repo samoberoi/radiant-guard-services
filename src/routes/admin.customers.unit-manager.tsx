@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Edit2, MapPin, Plus, Search, Trash2, Warehouse, X } from "lucide-react";
+import { Download, Edit2, MapPin, Plus, Search, Trash2, Warehouse, X } from "lucide-react";
+import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
