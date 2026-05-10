@@ -9,6 +9,7 @@ import { useEffect, useState, useCallback } from "react";
 
 const STATES_KEY = "radiant.admin.states";
 const BRANCHES_KEY = "radiant.admin.branches";
+const CUSTOMERS_KEY = "radiant.admin.customers";
 const SEED_FLAG = "radiant.admin.seeded.v1";
 
 export type State = {
@@ -22,6 +23,19 @@ export type Branch = {
   name: string; // human label, often same as state
   description: string;
   stateId: string;
+};
+
+export type CustomerStatus = "active" | "inactive";
+
+export type Customer = {
+  id: string;
+  code: string; // e.g. "ORG1", "ORG22"
+  name: string; // organisation name
+  website: string;
+  phone: string;
+  address: string;
+  contractStartDate: string; // ISO yyyy-mm-dd
+  status: CustomerStatus;
 };
 
 // 28 Indian states + 8 UTs
@@ -326,4 +340,92 @@ export function useBranches() {
   );
 
   return { branches, addBranch, updateBranch, deleteBranch };
+}
+
+export function nextCustomerCode(customers: { code: string }[]) {
+  const nums = customers
+    .map((c) => parseInt(c.code.replace(/\D/g, ""), 10))
+    .filter((n) => Number.isFinite(n));
+  const max = nums.length ? Math.max(...nums) : 0;
+  return `ORG${max + 1}`;
+}
+
+export function useCustomers() {
+  const [customers, setCustomers] = useStore<Customer[]>(CUSTOMERS_KEY, []);
+
+  const addCustomer = useCallback(
+    (data: Omit<Customer, "id">) => {
+      const code = data.code.trim();
+      const name = data.name.trim();
+      if (!code) return { ok: false as const, error: "Organisation ID is required" };
+      if (!name) return { ok: false as const, error: "Organisation name is required" };
+      const codeDup = customers.some(
+        (c) => c.code.trim().toLowerCase() === code.toLowerCase(),
+      );
+      if (codeDup) return { ok: false as const, error: "Organisation ID already exists" };
+      const nameDup = customers.some(
+        (c) => c.name.trim().toLowerCase() === name.toLowerCase(),
+      );
+      if (nameDup) return { ok: false as const, error: "Organisation name already exists" };
+      setCustomers([
+        ...customers,
+        {
+          id: uid(),
+          code,
+          name,
+          website: data.website.trim(),
+          phone: data.phone.trim(),
+          address: data.address.trim(),
+          contractStartDate: data.contractStartDate,
+          status: data.status,
+        },
+      ]);
+      return { ok: true as const };
+    },
+    [customers, setCustomers],
+  );
+
+  const updateCustomer = useCallback(
+    (id: string, data: Omit<Customer, "id">) => {
+      const code = data.code.trim();
+      const name = data.name.trim();
+      if (!code) return { ok: false as const, error: "Organisation ID is required" };
+      if (!name) return { ok: false as const, error: "Organisation name is required" };
+      const codeDup = customers.some(
+        (c) => c.id !== id && c.code.trim().toLowerCase() === code.toLowerCase(),
+      );
+      if (codeDup) return { ok: false as const, error: "Organisation ID already exists" };
+      const nameDup = customers.some(
+        (c) => c.id !== id && c.name.trim().toLowerCase() === name.toLowerCase(),
+      );
+      if (nameDup) return { ok: false as const, error: "Organisation name already exists" };
+      setCustomers(
+        customers.map((c) =>
+          c.id === id
+            ? {
+                ...c,
+                code,
+                name,
+                website: data.website.trim(),
+                phone: data.phone.trim(),
+                address: data.address.trim(),
+                contractStartDate: data.contractStartDate,
+                status: data.status,
+              }
+            : c,
+        ),
+      );
+      return { ok: true as const };
+    },
+    [customers, setCustomers],
+  );
+
+  const deleteCustomer = useCallback(
+    (id: string) => {
+      setCustomers(customers.filter((c) => c.id !== id));
+    },
+    [customers, setCustomers],
+  );
+
+  return { customers, addCustomer, updateCustomer, deleteCustomer };
 }
