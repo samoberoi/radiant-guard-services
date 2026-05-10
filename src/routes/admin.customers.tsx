@@ -157,7 +157,67 @@ function CustomersDashboard() {
         />
       </div>
 
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex justify-end gap-2">
+        <Button
+          variant="outline"
+          className="h-10 rounded-lg"
+          disabled={rows.length === 0}
+          onClick={() => {
+            const data = rows.map((u) => {
+              const c = u.customerId ? customerById.get(u.customerId) : undefined;
+              const b = u.branchId ? branchById.get(u.branchId) : undefined;
+              const stName = b ? stateById.get(b.stateId)?.name ?? "" : "";
+              return {
+                customerCode: c?.code ?? "",
+                customerName: c?.name ?? "",
+                customerWebsite: c?.website ?? "",
+                customerPhone: c?.phone ?? "",
+                customerStatus: c?.status ?? "",
+                unitId: u.id,
+                unitCode: u.code,
+                unitName: u.name,
+                unitLocation: u.location,
+                unitStatus: u.status,
+                branchCode: b?.code ?? "",
+                branchName: b?.name ?? "",
+                state: stName,
+                onboardingDate: u.onboardingDate,
+                closingDate: u.closingDate,
+                panNumber: u.panNumber,
+                gstNumber: u.gstNumber,
+                billingName: u.billingName,
+                billingAddress1: u.billingAddress1,
+                billingAddress2: u.billingAddress2,
+                billingCity: u.billingCity,
+                billingDistrict: u.billingDistrict,
+                billingState: u.billingState,
+                billingPincode: u.billingPincode,
+                billingCountry: u.billingCountry,
+                shippingName: u.shippingName,
+                shippingAddress1: u.shippingAddress1,
+                shippingAddress2: u.shippingAddress2,
+                shippingCity: u.shippingCity,
+                shippingDistrict: u.shippingDistrict,
+                shippingState: u.shippingState,
+                shippingPincode: u.shippingPincode,
+                shippingCountry: u.shippingCountry,
+                reportingOfficers: u.reportingOfficers,
+                emergencyContactName: u.emergencyContactName,
+                emergencyContactMobile: u.emergencyContactMobile,
+                nearbyHospitalName: u.nearbyHospitalName,
+                nearbyHospitalMobile: u.nearbyHospitalMobile,
+                ambulanceName: u.ambulanceName,
+                ambulanceMobile: u.ambulanceMobile,
+                latitude: u.latitude,
+                longitude: u.longitude,
+              };
+            });
+            downloadCsv("customers-dashboard", data);
+          }}
+        >
+          <Download className="mr-1.5 h-4 w-4" />
+          Export
+        </Button>
         <Button
           variant="outline"
           className="h-10 rounded-lg border-accent/40 text-accent hover:bg-accent/10 hover:text-accent"
