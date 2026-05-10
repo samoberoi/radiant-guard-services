@@ -1,12 +1,143 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Warehouse } from "lucide-react";
-import { ComingSoonCard, PageHeader } from "@/components/PageHeader";
+import { useEffect, useMemo, useState } from "react";
+import { Edit2, Plus, Search, Trash2, Warehouse, X } from "lucide-react";
+import { toast } from "sonner";
+import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  nextUnitCode,
+  useBranches,
+  useCustomers,
+  useStates,
+  useUnits,
+  type ReportingOfficer,
+  type Unit,
+} from "@/lib/admin-data";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/customers/unit-manager")({
   component: UnitManagerPage,
 });
 
+const SALUTATIONS = ["Mr.", "Mrs.", "Ms.", "Dr.", "Mx."];
+
+function emptyUnit(code: string): Omit<Unit, "id"> {
+  return {
+    code,
+    name: "",
+    location: "",
+    description: "",
+    status: "active",
+    branchId: null,
+    customerId: null,
+    onboardingDate: new Date().toISOString().slice(0, 10),
+    closingDate: "",
+    panNumber: "",
+    gstNumber: "",
+    billingSalutation: "",
+    billingName: "",
+    billingAddress1: "",
+    billingAddress2: "",
+    billingPincode: "",
+    billingCity: "",
+    billingDistrict: "",
+    billingState: "",
+    billingCountry: "India",
+    shippingSameAsBilling: true,
+    shippingSameAsOrg: false,
+    shippingSalutation: "",
+    shippingName: "",
+    shippingAddress1: "",
+    shippingAddress2: "",
+    shippingPincode: "",
+    shippingCity: "",
+    shippingDistrict: "",
+    shippingState: "",
+    shippingCountry: "India",
+    reportingOfficers: [{ name: "", isPrimary: true, isActive: true }],
+    emergencyContactName: "",
+    emergencyContactMobile: "",
+    nearbyHospitalName: "",
+    nearbyHospitalMobile: "",
+    ambulanceName: "",
+    ambulanceMobile: "",
+  };
+}
+
 function UnitManagerPage() {
+  const { units, addUnit, updateUnit, deleteUnit } = useUnits();
+  const { branches } = useBranches();
+  const { customers } = useCustomers();
+  const { states } = useStates();
+
+  const [query, setQuery] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Unit | null>(null);
+  const [deleting, setDeleting] = useState<Unit | null>(null);
+
+  const branchById = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
+  const customerById = useMemo(() => new Map(customers.map((c) => [c.id, c])), [customers]);
+  const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
+
+  const rows = useMemo(() => {
+    const list = [...units]
+      .map((u) => {
+        const br = u.branchId ? branchById.get(u.branchId) : undefined;
+        const stName = br ? stateById.get(br.stateId)?.name ?? "" : "";
+        return {
+          ...u,
+          branchLabel: br ? `${br.code} – ${stName}` : "—",
+          customerLabel: u.customerId ? customerById.get(u.customerId)?.name ?? "—" : "—",
+        };
+      })
+      .sort((a, b) => {
+        const na = parseInt(a.code.replace(/\D/g, ""), 10) || 0;
+        const nb = parseInt(b.code.replace(/\D/g, ""), 10) || 0;
+        return na - nb;
+      });
+    if (!query.trim()) return list;
+    const q = query.trim().toLowerCase();
+    return list.filter(
+      (u) =>
+        u.code.toLowerCase().includes(q) ||
+        u.name.toLowerCase().includes(q) ||
+        u.location.toLowerCase().includes(q) ||
+        u.branchLabel.toLowerCase().includes(q) ||
+        u.customerLabel.toLowerCase().includes(q),
+    );
+  }, [units, branchById, customerById, stateById, query]);
+
+  const activeCount = units.filter((u) => u.status === "active").length;
+
   return (
     <div>
       <PageHeader
@@ -17,11 +148,642 @@ function UnitManagerPage() {
           { label: "Unit Manager" },
         ]}
       />
-      <ComingSoonCard
-        icon={Warehouse}
-        title="Unit management module coming soon"
-        message="Maintain detailed records of every operational unit."
+
+      <div className="mb-5 grid gap-3 sm:grid-cols-3">
+        <StatCard label="Total units" value={units.length} />
+        <StatCard label="Active" value={activeCount} accent />
+        <StatCard label="Inactive" value={units.length - activeCount} />
+      </div>
+
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:max-w-sm">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by code, name, branch, organisation…"
+            className="h-10 rounded-lg pl-9"
+          />
+        </div>
+        <Button
+          onClick={() => {
+            setEditing(null);
+            setFormOpen(true);
+          }}
+          className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
+        >
+          <Plus className="mr-1.5 h-4 w-4" />
+          Add unit
+        </Button>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <tr>
+                <th className="px-5 py-3">Unit ID</th>
+                <th className="px-5 py-3">Name</th>
+                <th className="px-5 py-3">Location</th>
+                <th className="px-5 py-3">Branch</th>
+                <th className="px-5 py-3">Organisation</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {rows.map((u) => (
+                <tr key={u.id} className="hover:bg-secondary/30">
+                  <td className="px-5 py-3 font-mono text-xs font-semibold text-accent">{u.code}</td>
+                  <td className="px-5 py-3 font-semibold text-foreground">{u.name}</td>
+                  <td className="px-5 py-3 text-muted-foreground">{u.location || <span className="italic opacity-60">—</span>}</td>
+                  <td className="px-5 py-3 text-foreground">{u.branchLabel}</td>
+                  <td className="px-5 py-3 text-foreground">{u.customerLabel}</td>
+                  <td className="px-5 py-3">
+                    <StatusBadge active={u.status === "active"} />
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    <div className="inline-flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          setEditing(u);
+                          setFormOpen(true);
+                        }}
+                        aria-label="Edit"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => setDeleting(u)}
+                        aria-label="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                    <Warehouse className="mx-auto mb-2 h-6 w-6 opacity-50" />
+                    {units.length === 0
+                      ? "No units yet. Add your first unit to get started."
+                      : "No units match your search."}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <UnitFormDialog
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        editing={editing}
+        units={units}
+        onSubmit={async (data) => {
+          const r = editing ? await updateUnit(editing.id, data) : await addUnit(data);
+          if (!r.ok) return r.error;
+          toast.success(editing ? "Unit updated" : "Unit added");
+          return null;
+        }}
       />
+
+      <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete unit?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will remove <span className="font-mono font-semibold text-foreground">{deleting?.code}</span>
+              {deleting?.name ? <> – {deleting.name}</> : null} from the directory.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!deleting) return;
+                try {
+                  await deleteUnit(deleting.id);
+                  toast.success("Unit deleted");
+                  setDeleting(null);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Delete failed");
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function StatusBadge({ active }: { active: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider",
+        active ? "bg-accent/15 text-accent" : "bg-muted text-muted-foreground",
+      )}
+    >
+      <span className={cn("h-1.5 w-1.5 rounded-full", active ? "bg-accent" : "bg-muted-foreground")} />
+      {active ? "active" : "inactive"}
+    </span>
+  );
+}
+
+function StatCard({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">{label}</div>
+      <div className={cn("mt-2 font-display text-3xl font-bold", accent ? "text-accent" : "text-foreground")}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-3 rounded-xl border border-border bg-secondary/30 p-4">
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function UnitFormDialog({
+  open,
+  onOpenChange,
+  editing,
+  units,
+  onSubmit,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  editing: Unit | null;
+  units: Unit[];
+  onSubmit: (data: Omit<Unit, "id">) => Promise<string | null>;
+}) {
+  const { branches } = useBranches();
+  const { customers } = useCustomers();
+  const { states } = useStates();
+
+  const [form, setForm] = useState<Omit<Unit, "id">>(() => emptyUnit(nextUnitCode(units)));
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    if (editing) {
+      const { id: _ignored, ...rest } = editing;
+      void _ignored;
+      setForm(rest);
+    } else {
+      setForm(emptyUnit(nextUnitCode(units)));
+    }
+    setError(null);
+  }, [open, editing, units]);
+
+  const set = <K extends keyof Omit<Unit, "id">>(k: K, v: Omit<Unit, "id">[K]) =>
+    setForm((f) => ({ ...f, [k]: v }));
+
+  // Sort branches as code (BR1, BR2…)
+  const branchOptions = useMemo(() => {
+    const stateById = new Map(states.map((s) => [s.id, s]));
+    return [...branches]
+      .sort((a, b) => {
+        const na = parseInt(a.code.replace(/\D/g, ""), 10) || 0;
+        const nb = parseInt(b.code.replace(/\D/g, ""), 10) || 0;
+        return na - nb;
+      })
+      .map((b) => ({ id: b.id, label: `${b.code} – ${stateById.get(b.stateId)?.name ?? ""}` }));
+  }, [branches, states]);
+
+  const customerOptions = useMemo(
+    () => [...customers].sort((a, b) => a.name.localeCompare(b.name)),
+    [customers],
+  );
+
+  const selectedOrg = customers.find((c) => c.id === form.customerId);
+
+  // Apply "shipping same as billing"
+  useEffect(() => {
+    if (!form.shippingSameAsBilling) return;
+    setForm((f) => ({
+      ...f,
+      shippingSalutation: f.billingSalutation,
+      shippingName: f.billingName,
+      shippingAddress1: f.billingAddress1,
+      shippingAddress2: f.billingAddress2,
+      shippingPincode: f.billingPincode,
+      shippingCity: f.billingCity,
+      shippingDistrict: f.billingDistrict,
+      shippingState: f.billingState,
+      shippingCountry: f.billingCountry,
+      shippingSameAsOrg: false,
+    }));
+  }, [
+    form.shippingSameAsBilling,
+    form.billingSalutation,
+    form.billingName,
+    form.billingAddress1,
+    form.billingAddress2,
+    form.billingPincode,
+    form.billingCity,
+    form.billingDistrict,
+    form.billingState,
+    form.billingCountry,
+  ]);
+
+  // Apply "shipping same as organisation"
+  useEffect(() => {
+    if (!form.shippingSameAsOrg || !selectedOrg) return;
+    setForm((f) => ({
+      ...f,
+      shippingAddress1: selectedOrg.address,
+      shippingAddress2: "",
+      shippingName: selectedOrg.name,
+      shippingSameAsBilling: false,
+    }));
+  }, [form.shippingSameAsOrg, selectedOrg]);
+
+  const addOfficer = () =>
+    set("reportingOfficers", [...form.reportingOfficers, { name: "", isPrimary: false, isActive: true }]);
+
+  const updateOfficer = (idx: number, patch: Partial<ReportingOfficer>) => {
+    const next = form.reportingOfficers.map((o, i) => (i === idx ? { ...o, ...patch } : o));
+    // Ensure only one primary
+    if (patch.isPrimary) {
+      for (let i = 0; i < next.length; i++) {
+        if (i !== idx) next[i] = { ...next[i], isPrimary: false };
+      }
+    }
+    set("reportingOfficers", next);
+  };
+
+  const removeOfficer = (idx: number) =>
+    set(
+      "reportingOfficers",
+      form.reportingOfficers.filter((_, i) => i !== idx),
+    );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{editing ? "Edit unit" : "Add unit"}</DialogTitle>
+          <DialogDescription>
+            A unit is an operational location mapped to a branch and an organisation.
+          </DialogDescription>
+        </DialogHeader>
+
+        <form
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setError(null);
+            const err = await onSubmit(form);
+            if (err) setError(err);
+            else onOpenChange(false);
+          }}
+          className="space-y-5"
+        >
+          {/* UNIT INFO */}
+          <Section title="Unit information">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Unit code">
+                <Input
+                  value={form.code}
+                  onChange={(e) => set("code", e.target.value.toUpperCase())}
+                  placeholder="UN1"
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="Unit name">
+                <Input value={form.name} onChange={(e) => set("name", e.target.value)} />
+              </Field>
+              <Field label="Unit location">
+                <Input value={form.location} onChange={(e) => set("location", e.target.value)} />
+              </Field>
+              <Field label="Status">
+                <div className="flex h-9 items-center justify-between rounded-md border border-input bg-background px-3">
+                  <span className="text-sm font-medium text-foreground">
+                    {form.status === "active" ? "Active" : "Inactive"}
+                  </span>
+                  <Switch
+                    checked={form.status === "active"}
+                    onCheckedChange={(v) => set("status", v ? "active" : "inactive")}
+                  />
+                </div>
+              </Field>
+              <div className="sm:col-span-2">
+                <Field label="Description">
+                  <Textarea
+                    value={form.description}
+                    onChange={(e) => set("description", e.target.value)}
+                    rows={2}
+                  />
+                </Field>
+              </div>
+            </div>
+          </Section>
+
+          {/* ADDITIONAL */}
+          <Section title="Additional information">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Branch">
+                <Select value={form.branchId ?? ""} onValueChange={(v) => set("branchId", v || null)}>
+                  <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {branchOptions.length === 0 ? (
+                      <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+                        No branches yet
+                      </div>
+                    ) : (
+                      branchOptions.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.label}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Organisation">
+                <Select value={form.customerId ?? ""} onValueChange={(v) => set("customerId", v || null)}>
+                  <SelectTrigger><SelectValue placeholder="Select organisation" /></SelectTrigger>
+                  <SelectContent className="max-h-72">
+                    {customerOptions.length === 0 ? (
+                      <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+                        No organisations yet
+                      </div>
+                    ) : (
+                      customerOptions.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.code} – {c.name}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Onboarding date">
+                <Input type="date" value={form.onboardingDate} onChange={(e) => set("onboardingDate", e.target.value)} />
+              </Field>
+              <Field label="Closing date">
+                <Input type="date" value={form.closingDate} onChange={(e) => set("closingDate", e.target.value)} />
+              </Field>
+            </div>
+          </Section>
+
+          {/* BUSINESS */}
+          <Section title="Business information">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="PAN number">
+                <Input
+                  value={form.panNumber}
+                  onChange={(e) => set("panNumber", e.target.value.toUpperCase())}
+                  placeholder="AAAAA0000A"
+                  className="font-mono"
+                />
+              </Field>
+              <Field label="GST number">
+                <Input
+                  value={form.gstNumber}
+                  onChange={(e) => set("gstNumber", e.target.value.toUpperCase())}
+                  placeholder="22AAAAA0000A1Z5"
+                  className="font-mono"
+                />
+              </Field>
+            </div>
+          </Section>
+
+          {/* CONTACT / BILLING */}
+          <Section title="Contact / billing information">
+            <AddressFields
+              prefix="billing"
+              salutation={form.billingSalutation}
+              name={form.billingName}
+              address1={form.billingAddress1}
+              address2={form.billingAddress2}
+              pincode={form.billingPincode}
+              city={form.billingCity}
+              district={form.billingDistrict}
+              stateName={form.billingState}
+              country={form.billingCountry}
+              onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+            />
+          </Section>
+
+          {/* SHIPPING */}
+          <Section title="Shipping information">
+            <div className="mb-3 grid gap-3 sm:grid-cols-2">
+              <ToggleRow
+                label="Same as billing"
+                checked={form.shippingSameAsBilling}
+                onCheckedChange={(v) => set("shippingSameAsBilling", v)}
+              />
+              <ToggleRow
+                label="Same as organisation address"
+                checked={form.shippingSameAsOrg}
+                onCheckedChange={(v) => set("shippingSameAsOrg", v)}
+              />
+            </div>
+            {!form.shippingSameAsBilling && !form.shippingSameAsOrg && (
+              <AddressFields
+                prefix="shipping"
+                salutation={form.shippingSalutation}
+                name={form.shippingName}
+                address1={form.shippingAddress1}
+                address2={form.shippingAddress2}
+                pincode={form.shippingPincode}
+                city={form.shippingCity}
+                district={form.shippingDistrict}
+                stateName={form.shippingState}
+                country={form.shippingCountry}
+                onChange={(patch) => {
+                  // patch keys come back as billing*; remap to shipping*
+                  const remapped: Partial<Omit<Unit, "id">> = {};
+                  for (const [k, v] of Object.entries(patch)) {
+                    const sk = k.replace(/^billing/, "shipping") as keyof Omit<Unit, "id">;
+                    (remapped as Record<string, unknown>)[sk] = v;
+                  }
+                  setForm((f) => ({ ...f, ...remapped }));
+                }}
+              />
+            )}
+          </Section>
+
+          {/* REPORTING OFFICERS */}
+          <Section title="Reporting officers">
+            <div className="space-y-2">
+              {form.reportingOfficers.map((o, i) => (
+                <div
+                  key={i}
+                  className="grid items-center gap-2 rounded-lg border border-border bg-background p-3 sm:grid-cols-[1fr_auto_auto_auto]"
+                >
+                  <Input
+                    value={o.name}
+                    onChange={(e) => updateOfficer(i, { name: e.target.value })}
+                    placeholder="Officer name"
+                  />
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Switch checked={o.isPrimary} onCheckedChange={(v) => updateOfficer(i, { isPrimary: v })} />
+                    Primary
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Switch checked={o.isActive} onCheckedChange={(v) => updateOfficer(i, { isActive: v })} />
+                    Active
+                  </label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => removeOfficer(i)}
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    aria-label="Remove"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button type="button" size="sm" variant="outline" onClick={addOfficer}>
+                <Plus className="mr-1 h-3.5 w-3.5" /> Add officer
+              </Button>
+            </div>
+          </Section>
+
+          {/* OTHER */}
+          <Section title="Other details">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Emergency contact name">
+                <Input value={form.emergencyContactName} onChange={(e) => set("emergencyContactName", e.target.value)} />
+              </Field>
+              <Field label="Emergency contact mobile">
+                <Input value={form.emergencyContactMobile} onChange={(e) => set("emergencyContactMobile", e.target.value)} inputMode="tel" />
+              </Field>
+              <Field label="Nearby hospital">
+                <Input value={form.nearbyHospitalName} onChange={(e) => set("nearbyHospitalName", e.target.value)} />
+              </Field>
+              <Field label="Hospital mobile">
+                <Input value={form.nearbyHospitalMobile} onChange={(e) => set("nearbyHospitalMobile", e.target.value)} inputMode="tel" />
+              </Field>
+              <Field label="Ambulance service">
+                <Input value={form.ambulanceName} onChange={(e) => set("ambulanceName", e.target.value)} />
+              </Field>
+              <Field label="Ambulance mobile">
+                <Input value={form.ambulanceMobile} onChange={(e) => set("ambulanceMobile", e.target.value)} inputMode="tel" />
+              </Field>
+            </div>
+          </Section>
+
+          {error && <p className="text-xs font-medium text-destructive">{error}</p>}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" className="bg-primary text-primary-foreground hover:bg-primary/90">
+              {editing ? "Save changes" : "Create unit"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-xs">{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function ToggleRow({
+  label,
+  checked,
+  onCheckedChange,
+}: {
+  label: string;
+  checked: boolean;
+  onCheckedChange: (v: boolean) => void;
+}) {
+  return (
+    <div className="flex h-9 items-center justify-between rounded-md border border-input bg-background px-3">
+      <span className="text-sm text-foreground">{label}</span>
+      <Switch checked={checked} onCheckedChange={onCheckedChange} />
+    </div>
+  );
+}
+
+function AddressFields({
+  prefix,
+  salutation,
+  name,
+  address1,
+  address2,
+  pincode,
+  city,
+  district,
+  stateName,
+  country,
+  onChange,
+}: {
+  prefix: "billing" | "shipping";
+  salutation: string;
+  name: string;
+  address1: string;
+  address2: string;
+  pincode: string;
+  city: string;
+  district: string;
+  stateName: string;
+  country: string;
+  onChange: (patch: Record<string, string>) => void;
+}) {
+  const k = (suffix: string) => `${prefix}${suffix}`;
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field label="Salutation">
+        <Select value={salutation} onValueChange={(v) => onChange({ [k("Salutation")]: v })}>
+          <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+          <SelectContent>
+            {SALUTATIONS.map((s) => (<SelectItem key={s} value={s}>{s}</SelectItem>))}
+          </SelectContent>
+        </Select>
+      </Field>
+      <Field label="Name">
+        <Input value={name} onChange={(e) => onChange({ [k("Name")]: e.target.value })} />
+      </Field>
+      <Field label="Address line 1">
+        <Input value={address1} onChange={(e) => onChange({ [k("Address1")]: e.target.value })} />
+      </Field>
+      <Field label="Address line 2">
+        <Input value={address2} onChange={(e) => onChange({ [k("Address2")]: e.target.value })} />
+      </Field>
+      <Field label="Pincode">
+        <Input value={pincode} onChange={(e) => onChange({ [k("Pincode")]: e.target.value })} inputMode="numeric" />
+      </Field>
+      <Field label="City">
+        <Input value={city} onChange={(e) => onChange({ [k("City")]: e.target.value })} />
+      </Field>
+      <Field label="District">
+        <Input value={district} onChange={(e) => onChange({ [k("District")]: e.target.value })} />
+      </Field>
+      <Field label="State">
+        <Input value={stateName} onChange={(e) => onChange({ [k("State")]: e.target.value })} />
+      </Field>
+      <Field label="Country">
+        <Input value={country} onChange={(e) => onChange({ [k("Country")]: e.target.value })} />
+      </Field>
     </div>
   );
 }
