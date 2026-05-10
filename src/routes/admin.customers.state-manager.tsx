@@ -212,11 +212,14 @@ function StateManagerPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (deleting) {
-                  deleteState(deleting.id);
+              onClick={async () => {
+                if (!deleting) return;
+                try {
+                  await deleteState(deleting.id);
                   toast.success("State deleted");
                   setDeleting(null);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Delete failed");
                 }
               }}
             >

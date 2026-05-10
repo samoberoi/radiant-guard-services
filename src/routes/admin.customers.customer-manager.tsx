@@ -247,11 +247,14 @@ function CustomerManagerPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (deleting) {
-                  deleteCustomer(deleting.id);
+              onClick={async () => {
+                if (!deleting) return;
+                try {
+                  await deleteCustomer(deleting.id);
                   toast.success("Customer deleted");
                   setDeleting(null);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Delete failed");
                 }
               }}
             >
