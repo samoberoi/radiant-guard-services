@@ -135,7 +135,9 @@ export type Database = {
           emergency_contact_name: string
           gst_number: string
           id: string
+          latitude: number | null
           location: string
+          longitude: number | null
           name: string
           nearby_hospital_mobile: string
           nearby_hospital_name: string
@@ -178,7 +180,9 @@ export type Database = {
           emergency_contact_name?: string
           gst_number?: string
           id?: string
+          latitude?: number | null
           location?: string
+          longitude?: number | null
           name?: string
           nearby_hospital_mobile?: string
           nearby_hospital_name?: string
@@ -221,7 +225,9 @@ export type Database = {
           emergency_contact_name?: string
           gst_number?: string
           id?: string
+          latitude?: number | null
           location?: string
+          longitude?: number | null
           name?: string
           nearby_hospital_mobile?: string
           nearby_hospital_name?: string
