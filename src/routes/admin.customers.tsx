@@ -12,7 +12,7 @@ import {
   Warehouse,
   X,
 } from "lucide-react";
-import { downloadCsv } from "@/lib/csv-export";
+import { csvDate, csvJoin, csvMapLink, csvStatus, downloadCsv } from "@/lib/csv-export";
 import { PageHeader } from "@/components/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -168,51 +168,96 @@ function CustomersDashboard() {
               const b = u.branchId ? branchById.get(u.branchId) : undefined;
               const stName = b ? stateById.get(b.stateId)?.name ?? "" : "";
               return {
+                customer: c?.name ?? "",
                 customerCode: c?.code ?? "",
-                customerName: c?.name ?? "",
+                customerStatus: csvStatus(c?.status ?? ""),
                 customerWebsite: c?.website ?? "",
                 customerPhone: c?.phone ?? "",
-                customerStatus: c?.status ?? "",
-                unitId: u.id,
+                branch: b ? `${b.code} – ${stName}` : "",
+                branchName: b?.name ?? "",
+                state: stName,
                 unitCode: u.code,
                 unitName: u.name,
                 unitLocation: u.location,
-                unitStatus: u.status,
-                branchCode: b?.code ?? "",
-                branchName: b?.name ?? "",
-                state: stName,
-                onboardingDate: u.onboardingDate,
-                closingDate: u.closingDate,
+                unitStatus: csvStatus(u.status),
+                onboardingDate: csvDate(u.onboardingDate),
+                closingDate: csvDate(u.closingDate),
                 panNumber: u.panNumber,
                 gstNumber: u.gstNumber,
-                billingName: u.billingName,
-                billingAddress1: u.billingAddress1,
-                billingAddress2: u.billingAddress2,
-                billingCity: u.billingCity,
-                billingDistrict: u.billingDistrict,
-                billingState: u.billingState,
-                billingPincode: u.billingPincode,
-                billingCountry: u.billingCountry,
-                shippingName: u.shippingName,
-                shippingAddress1: u.shippingAddress1,
-                shippingAddress2: u.shippingAddress2,
-                shippingCity: u.shippingCity,
-                shippingDistrict: u.shippingDistrict,
-                shippingState: u.shippingState,
-                shippingPincode: u.shippingPincode,
-                shippingCountry: u.shippingCountry,
-                reportingOfficers: u.reportingOfficers,
-                emergencyContactName: u.emergencyContactName,
-                emergencyContactMobile: u.emergencyContactMobile,
-                nearbyHospitalName: u.nearbyHospitalName,
-                nearbyHospitalMobile: u.nearbyHospitalMobile,
-                ambulanceName: u.ambulanceName,
-                ambulanceMobile: u.ambulanceMobile,
+                billingContact: csvJoin([u.billingSalutation, u.billingName], " "),
+                billingAddress: csvJoin(
+                  [
+                    u.billingAddress1,
+                    u.billingAddress2,
+                    u.billingCity,
+                    u.billingDistrict,
+                    u.billingState,
+                    u.billingPincode,
+                    u.billingCountry,
+                  ],
+                ),
+                shippingContact: csvJoin([u.shippingSalutation, u.shippingName], " "),
+                shippingAddress: csvJoin(
+                  [
+                    u.shippingAddress1,
+                    u.shippingAddress2,
+                    u.shippingCity,
+                    u.shippingDistrict,
+                    u.shippingState,
+                    u.shippingPincode,
+                    u.shippingCountry,
+                  ],
+                ),
+                reportingOfficers: csvJoin(
+                  u.reportingOfficers.map((officer) =>
+                    csvJoin(
+                      [
+                        officer.name,
+                        officer.isPrimary ? "Primary" : "Secondary",
+                        officer.isActive ? "Active" : "Inactive",
+                      ],
+                      " | ",
+                    ),
+                  ),
+                  " ; ",
+                ),
+                emergencyContact: csvJoin([u.emergencyContactName, u.emergencyContactMobile], " | "),
+                nearbyHospital: csvJoin([u.nearbyHospitalName, u.nearbyHospitalMobile], " | "),
+                ambulance: csvJoin([u.ambulanceName, u.ambulanceMobile], " | "),
                 latitude: u.latitude,
                 longitude: u.longitude,
+                mapLink: csvMapLink(u.latitude, u.longitude),
               };
             });
-            downloadCsv("customers-dashboard", data);
+            downloadCsv("customers-dashboard", data, [
+              { key: "customer", header: "Customer" },
+              { key: "customerCode", header: "Customer code" },
+              { key: "customerStatus", header: "Customer status" },
+              { key: "customerWebsite", header: "Website" },
+              { key: "customerPhone", header: "Phone" },
+              { key: "state", header: "State" },
+              { key: "branch", header: "Branch" },
+              { key: "branchName", header: "Branch name" },
+              { key: "unitCode", header: "Unit code" },
+              { key: "unitName", header: "Unit name" },
+              { key: "unitLocation", header: "Unit location" },
+              { key: "unitStatus", header: "Unit status" },
+              { key: "onboardingDate", header: "Onboarding date" },
+              { key: "closingDate", header: "Closing date" },
+              { key: "panNumber", header: "PAN" },
+              { key: "gstNumber", header: "GST" },
+              { key: "billingContact", header: "Billing contact" },
+              { key: "billingAddress", header: "Billing address" },
+              { key: "shippingContact", header: "Shipping contact" },
+              { key: "shippingAddress", header: "Shipping address" },
+              { key: "reportingOfficers", header: "Reporting officers" },
+              { key: "emergencyContact", header: "Emergency contact" },
+              { key: "nearbyHospital", header: "Nearby hospital" },
+              { key: "ambulance", header: "Ambulance" },
+              { key: "latitude", header: "Latitude" },
+              { key: "longitude", header: "Longitude" },
+              { key: "mapLink", header: "Map link" },
+            ]);
           }}
         >
           <Download className="mr-1.5 h-4 w-4" />
