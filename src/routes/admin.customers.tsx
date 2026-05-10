@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import {
   Building2,
   ChevronRight,
+  Download,
   ExternalLink,
   MapPin,
   Network,
@@ -11,6 +12,7 @@ import {
   Warehouse,
   X,
 } from "lucide-react";
+import { downloadCsv } from "@/lib/csv-export";
 import { PageHeader } from "@/components/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
