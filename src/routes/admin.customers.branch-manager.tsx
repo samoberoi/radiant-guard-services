@@ -211,10 +211,10 @@ function BranchManagerPage() {
         editing={editing}
         availableStates={availableStates}
         allStates={states}
-        onSubmit={(data) => {
+        onSubmit={async (data) => {
           const r = editing
-            ? updateBranch(editing.id, data)
-            : addBranch(data);
+            ? await updateBranch(editing.id, data)
+            : await addBranch(data);
           if (!r.ok) return r.error;
           toast.success(editing ? "Branch updated" : "Branch added");
           return null;
@@ -301,7 +301,7 @@ function BranchFormDialog({
   editing: Branch | null;
   availableStates: { id: string; name: string }[];
   allStates: { id: string; name: string }[];
-  onSubmit: (data: Omit<Branch, "id">) => string | null;
+  onSubmit: (data: Omit<Branch, "id">) => Promise<string | null> | string | null;
 }) {
   const { branches } = useBranches();
 
@@ -353,9 +353,9 @@ function BranchFormDialog({
         </DialogHeader>
 
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            const err = onSubmit({
+            const err = await onSubmit({
               code,
               name: selectedState?.name ?? "",
               description,
