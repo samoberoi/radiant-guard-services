@@ -20,16 +20,16 @@ const tiles = [
     icon: Building2,
   },
   {
-    to: "/admin/customers/unit-manager",
-    label: "Unit Manager",
-    description: "Track operational units.",
-    icon: Warehouse,
-  },
-  {
     to: "/admin/customers/customer-manager",
     label: "Customer Manager",
     description: "Onboard and manage customers.",
     icon: Users,
+  },
+  {
+    to: "/admin/customers/unit-manager",
+    label: "Unit Manager",
+    description: "Track operational units.",
+    icon: Warehouse,
   },
 ];
 
