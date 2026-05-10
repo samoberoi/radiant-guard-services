@@ -424,7 +424,7 @@ function CustomerFormDialog({
                 value={website}
                 onChange={(e) => setWebsite(e.target.value)}
                 placeholder="acme.com"
-                type="url"
+                type="text"
               />
             </div>
             <div className="space-y-2">
