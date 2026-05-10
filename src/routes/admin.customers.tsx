@@ -130,8 +130,6 @@ function CustomersDashboard() {
           sub={`${activeCustomers} active`}
           icon={Users}
           to="/admin/customers/customer-manager"
-          onCount={() => setTreeOpen(true)}
-          countTitle="Open customer → unit tree"
           accent
         />
         <StatTile
@@ -155,6 +153,17 @@ function CustomersDashboard() {
           icon={MapPin}
           to="/admin/customers/state-manager"
         />
+      </div>
+
+      <div className="mb-4 flex justify-end">
+        <Button
+          variant="outline"
+          className="h-10 rounded-lg border-accent/40 text-accent hover:bg-accent/10 hover:text-accent"
+          onClick={() => setTreeOpen(true)}
+        >
+          <Network className="mr-1.5 h-4 w-4" />
+          View full hierarchy
+        </Button>
       </div>
 
       {/* Filters */}
