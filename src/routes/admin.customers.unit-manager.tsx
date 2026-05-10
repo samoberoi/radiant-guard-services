@@ -90,6 +90,8 @@ function emptyUnit(code: string): Omit<Unit, "id"> {
     nearbyHospitalMobile: "",
     ambulanceName: "",
     ambulanceMobile: "",
+    latitude: null,
+    longitude: null,
   };
 }
 
