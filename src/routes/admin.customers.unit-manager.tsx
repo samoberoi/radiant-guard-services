@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Download, Edit2, MapPin, Plus, Search, Trash2, Warehouse, X } from "lucide-react";
-import { downloadCsv } from "@/lib/csv-export";
+import { csvDate, csvJoin, csvMapLink, csvStatus, csvYesNo, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -172,51 +172,99 @@ function UnitManagerPage() {
           <Button
             variant="outline"
             onClick={() =>
-              downloadCsv("units", rows, [
-                { key: "id", header: "ID" },
-                { key: "code", header: "Unit code" },
-                { key: "name", header: "Unit name" },
-                { key: "location", header: "Location" },
-                { key: "description", header: "Description" },
-                { key: "status", header: "Status" },
-                { key: "branchId", header: "Branch ID" },
-                { key: "branchLabel", header: "Branch" },
-                { key: "customerId", header: "Customer ID" },
-                { key: "customerLabel", header: "Customer" },
-                { key: "onboardingDate", header: "Onboarding date" },
-                { key: "closingDate", header: "Closing date" },
-                { key: "panNumber", header: "PAN" },
-                { key: "gstNumber", header: "GST" },
-                { key: "billingSalutation", header: "Billing salutation" },
-                { key: "billingName", header: "Billing name" },
-                { key: "billingAddress1", header: "Billing address 1" },
-                { key: "billingAddress2", header: "Billing address 2" },
-                { key: "billingPincode", header: "Billing pincode" },
-                { key: "billingCity", header: "Billing city" },
-                { key: "billingDistrict", header: "Billing district" },
-                { key: "billingState", header: "Billing state" },
-                { key: "billingCountry", header: "Billing country" },
-                { key: "shippingSameAsBilling", header: "Shipping same as billing" },
-                { key: "shippingSameAsOrg", header: "Shipping same as org" },
-                { key: "shippingSalutation", header: "Shipping salutation" },
-                { key: "shippingName", header: "Shipping name" },
-                { key: "shippingAddress1", header: "Shipping address 1" },
-                { key: "shippingAddress2", header: "Shipping address 2" },
-                { key: "shippingPincode", header: "Shipping pincode" },
-                { key: "shippingCity", header: "Shipping city" },
-                { key: "shippingDistrict", header: "Shipping district" },
-                { key: "shippingState", header: "Shipping state" },
-                { key: "shippingCountry", header: "Shipping country" },
-                { key: "reportingOfficers", header: "Reporting officers (JSON)" },
-                { key: "emergencyContactName", header: "Emergency contact name" },
-                { key: "emergencyContactMobile", header: "Emergency contact mobile" },
-                { key: "nearbyHospitalName", header: "Nearby hospital name" },
-                { key: "nearbyHospitalMobile", header: "Nearby hospital mobile" },
-                { key: "ambulanceName", header: "Ambulance name" },
-                { key: "ambulanceMobile", header: "Ambulance mobile" },
-                { key: "latitude", header: "Latitude" },
-                { key: "longitude", header: "Longitude" },
-              ])
+              downloadCsv(
+                "units",
+                rows.map((u) => ({
+                  unitCode: u.code,
+                  unitName: u.name,
+                  customer: u.customerLabel,
+                  branch: u.branchLabel,
+                  location: u.location,
+                  description: u.description,
+                  status: csvStatus(u.status),
+                  onboardingDate: csvDate(u.onboardingDate),
+                  closingDate: csvDate(u.closingDate),
+                  pan: u.panNumber,
+                  gst: u.gstNumber,
+                  billingContact: csvJoin([u.billingSalutation, u.billingName], " "),
+                  billingAddress: csvJoin(
+                    [
+                      u.billingAddress1,
+                      u.billingAddress2,
+                      u.billingCity,
+                      u.billingDistrict,
+                      u.billingState,
+                      u.billingPincode,
+                      u.billingCountry,
+                    ],
+                  ),
+                  shippingSameAsBilling: csvYesNo(u.shippingSameAsBilling),
+                  shippingSameAsOrganisation: csvYesNo(u.shippingSameAsOrg),
+                  shippingContact: csvJoin([u.shippingSalutation, u.shippingName], " "),
+                  shippingAddress: csvJoin(
+                    [
+                      u.shippingAddress1,
+                      u.shippingAddress2,
+                      u.shippingCity,
+                      u.shippingDistrict,
+                      u.shippingState,
+                      u.shippingPincode,
+                      u.shippingCountry,
+                    ],
+                  ),
+                  reportingOfficers: csvJoin(
+                    u.reportingOfficers.map((officer) =>
+                      csvJoin(
+                        [
+                          officer.name,
+                          officer.isPrimary ? "Primary" : "Secondary",
+                          officer.isActive ? "Active" : "Inactive",
+                        ],
+                        " | ",
+                      ),
+                    ),
+                    " ; ",
+                  ),
+                  emergencyContact: csvJoin(
+                    [u.emergencyContactName, u.emergencyContactMobile],
+                    " | ",
+                  ),
+                  nearbyHospital: csvJoin(
+                    [u.nearbyHospitalName, u.nearbyHospitalMobile],
+                    " | ",
+                  ),
+                  ambulance: csvJoin([u.ambulanceName, u.ambulanceMobile], " | "),
+                  latitude: u.latitude,
+                  longitude: u.longitude,
+                  mapLink: csvMapLink(u.latitude, u.longitude),
+                })),
+                [
+                  { key: "unitCode", header: "Unit code" },
+                  { key: "unitName", header: "Unit name" },
+                  { key: "customer", header: "Customer" },
+                  { key: "branch", header: "Branch" },
+                  { key: "location", header: "Location" },
+                  { key: "description", header: "Description" },
+                  { key: "status", header: "Status" },
+                  { key: "onboardingDate", header: "Onboarding date" },
+                  { key: "closingDate", header: "Closing date" },
+                  { key: "pan", header: "PAN" },
+                  { key: "gst", header: "GST" },
+                  { key: "billingContact", header: "Billing contact" },
+                  { key: "billingAddress", header: "Billing address" },
+                  { key: "shippingSameAsBilling", header: "Shipping same as billing" },
+                  { key: "shippingSameAsOrganisation", header: "Shipping same as organisation" },
+                  { key: "shippingContact", header: "Shipping contact" },
+                  { key: "shippingAddress", header: "Shipping address" },
+                  { key: "reportingOfficers", header: "Reporting officers" },
+                  { key: "emergencyContact", header: "Emergency contact" },
+                  { key: "nearbyHospital", header: "Nearby hospital" },
+                  { key: "ambulance", header: "Ambulance" },
+                  { key: "latitude", header: "Latitude" },
+                  { key: "longitude", header: "Longitude" },
+                  { key: "mapLink", header: "Map link" },
+                ],
+              )
             }
             disabled={rows.length === 0}
             className="h-10 rounded-lg"
