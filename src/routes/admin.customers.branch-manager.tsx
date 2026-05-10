@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Building2, Edit2, Plus, Search, Trash2 } from "lucide-react";
+import { Building2, Download, Edit2, Plus, Search, Trash2 } from "lucide-react";
+import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -124,15 +125,35 @@ function BranchManagerPage() {
             className="h-10 rounded-lg pl-9"
           />
         </div>
-        <Button
-          onClick={openAdd}
-          disabled={availableStates.length === 0}
-          className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
-          title={availableStates.length === 0 ? "All states are already mapped" : ""}
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add branch
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() =>
+              downloadCsv("branches", rows, [
+                { key: "id", header: "ID" },
+                { key: "code", header: "Code" },
+                { key: "name", header: "Name" },
+                { key: "description", header: "Description" },
+                { key: "stateId", header: "State ID" },
+                { key: "stateName", header: "State" },
+              ])
+            }
+            disabled={rows.length === 0}
+            className="h-10 rounded-lg"
+          >
+            <Download className="mr-1.5 h-4 w-4" />
+            Export
+          </Button>
+          <Button
+            onClick={openAdd}
+            disabled={availableStates.length === 0}
+            className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
+            title={availableStates.length === 0 ? "All states are already mapped" : ""}
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add branch
+          </Button>
+        </div>
       </div>
 
       {/* Table */}

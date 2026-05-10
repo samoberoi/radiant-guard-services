@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Edit2, MapPin, Plus, Search, Trash2, Warehouse, X } from "lucide-react";
+import { Download, Edit2, MapPin, Plus, Search, Trash2, Warehouse, X } from "lucide-react";
+import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -167,16 +168,73 @@ function UnitManagerPage() {
             className="h-10 rounded-lg pl-9"
           />
         </div>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setFormOpen(true);
-          }}
-          className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add unit
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() =>
+              downloadCsv("units", rows, [
+                { key: "id", header: "ID" },
+                { key: "code", header: "Unit code" },
+                { key: "name", header: "Unit name" },
+                { key: "location", header: "Location" },
+                { key: "description", header: "Description" },
+                { key: "status", header: "Status" },
+                { key: "branchId", header: "Branch ID" },
+                { key: "branchLabel", header: "Branch" },
+                { key: "customerId", header: "Customer ID" },
+                { key: "customerLabel", header: "Customer" },
+                { key: "onboardingDate", header: "Onboarding date" },
+                { key: "closingDate", header: "Closing date" },
+                { key: "panNumber", header: "PAN" },
+                { key: "gstNumber", header: "GST" },
+                { key: "billingSalutation", header: "Billing salutation" },
+                { key: "billingName", header: "Billing name" },
+                { key: "billingAddress1", header: "Billing address 1" },
+                { key: "billingAddress2", header: "Billing address 2" },
+                { key: "billingPincode", header: "Billing pincode" },
+                { key: "billingCity", header: "Billing city" },
+                { key: "billingDistrict", header: "Billing district" },
+                { key: "billingState", header: "Billing state" },
+                { key: "billingCountry", header: "Billing country" },
+                { key: "shippingSameAsBilling", header: "Shipping same as billing" },
+                { key: "shippingSameAsOrg", header: "Shipping same as org" },
+                { key: "shippingSalutation", header: "Shipping salutation" },
+                { key: "shippingName", header: "Shipping name" },
+                { key: "shippingAddress1", header: "Shipping address 1" },
+                { key: "shippingAddress2", header: "Shipping address 2" },
+                { key: "shippingPincode", header: "Shipping pincode" },
+                { key: "shippingCity", header: "Shipping city" },
+                { key: "shippingDistrict", header: "Shipping district" },
+                { key: "shippingState", header: "Shipping state" },
+                { key: "shippingCountry", header: "Shipping country" },
+                { key: "reportingOfficers", header: "Reporting officers (JSON)" },
+                { key: "emergencyContactName", header: "Emergency contact name" },
+                { key: "emergencyContactMobile", header: "Emergency contact mobile" },
+                { key: "nearbyHospitalName", header: "Nearby hospital name" },
+                { key: "nearbyHospitalMobile", header: "Nearby hospital mobile" },
+                { key: "ambulanceName", header: "Ambulance name" },
+                { key: "ambulanceMobile", header: "Ambulance mobile" },
+                { key: "latitude", header: "Latitude" },
+                { key: "longitude", header: "Longitude" },
+              ])
+            }
+            disabled={rows.length === 0}
+            className="h-10 rounded-lg"
+          >
+            <Download className="mr-1.5 h-4 w-4" />
+            Export
+          </Button>
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+            className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add unit
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Edit2, ExternalLink, List as ListIcon, MapPin, Network, Plus, Search, Trash2, Users, Warehouse } from "lucide-react";
+import { ChevronRight, Download, Edit2, ExternalLink, List as ListIcon, MapPin, Network, Plus, Search, Trash2, Users, Warehouse } from "lucide-react";
+import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -115,16 +116,38 @@ function CustomerManagerPage() {
             className="h-10 rounded-lg pl-9"
           />
         </div>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setFormOpen(true);
-          }}
-          className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add customer
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() =>
+              downloadCsv("customers", rows, [
+                { key: "id", header: "ID" },
+                { key: "code", header: "Org ID" },
+                { key: "name", header: "Organisation" },
+                { key: "website", header: "Website" },
+                { key: "phone", header: "Phone" },
+                { key: "address", header: "Address" },
+                { key: "contractStartDate", header: "Contract start" },
+                { key: "status", header: "Status" },
+              ])
+            }
+            disabled={rows.length === 0}
+            className="h-10 rounded-lg"
+          >
+            <Download className="mr-1.5 h-4 w-4" />
+            Export
+          </Button>
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setFormOpen(true);
+            }}
+            className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add customer
+          </Button>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Edit2, Link2, MapPin, Plus, Search, Trash2 } from "lucide-react";
+import { Download, Edit2, Link2, MapPin, Plus, Search, Trash2 } from "lucide-react";
+import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -88,13 +89,38 @@ function StateManagerPage() {
             className="h-10 rounded-lg pl-9"
           />
         </div>
-        <Button
-          onClick={() => setAddOpen(true)}
-          className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add state
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() =>
+              downloadCsv(
+                "states",
+                states.map((s) => ({
+                  id: s.id,
+                  name: s.name,
+                  mappedToBranch: mappedStateIds.has(s.id) ? "Yes" : "No",
+                })),
+                [
+                  { key: "id", header: "ID" },
+                  { key: "name", header: "State" },
+                  { key: "mappedToBranch", header: "Mapped to branch" },
+                ],
+              )
+            }
+            disabled={states.length === 0}
+            className="h-10 rounded-lg"
+          >
+            <Download className="mr-1.5 h-4 w-4" />
+            Export
+          </Button>
+          <Button
+            onClick={() => setAddOpen(true)}
+            className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add state
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
