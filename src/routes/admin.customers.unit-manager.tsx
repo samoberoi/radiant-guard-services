@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Edit2, Plus, Search, Trash2, Warehouse, X } from "lucide-react";
+import { Edit2, MapPin, Plus, Search, Trash2, Warehouse, X } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -198,7 +198,22 @@ function UnitManagerPage() {
                 <tr key={u.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs font-semibold text-accent">{u.code}</td>
                   <td className="px-5 py-3 font-semibold text-foreground">{u.name}</td>
-                  <td className="px-5 py-3 text-muted-foreground">{u.location || <span className="italic opacity-60">—</span>}</td>
+                  <td className="px-5 py-3 text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <span>{u.location || <span className="italic opacity-60">—</span>}</span>
+                      {(u.latitude != null && u.longitude != null) && (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent hover:bg-accent/10"
+                          title="Open in Google Maps"
+                        >
+                          <MapPin className="h-3 w-3" /> Map
+                        </a>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-5 py-3 text-foreground">{u.branchLabel}</td>
                   <td className="px-5 py-3 text-foreground">{u.customerLabel}</td>
                   <td className="px-5 py-3">
@@ -582,6 +597,42 @@ function UnitFormDialog({
               country={form.billingCountry}
               onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
             />
+            <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+              <Field label="Latitude">
+                <Input
+                  value={form.latitude ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    set("latitude", v === "" ? null : Number(v));
+                  }}
+                  placeholder="19.0760"
+                  inputMode="decimal"
+                />
+              </Field>
+              <Field label="Longitude">
+                <Input
+                  value={form.longitude ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value.trim();
+                    set("longitude", v === "" ? null : Number(v));
+                  }}
+                  placeholder="72.8777"
+                  inputMode="decimal"
+                />
+              </Field>
+              <div className="flex items-end">
+                {form.latitude != null && form.longitude != null && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${form.latitude},${form.longitude}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border px-3 text-xs font-semibold text-accent hover:bg-accent/10"
+                  >
+                    <MapPin className="h-3.5 w-3.5" /> Open in Maps
+                  </a>
+                )}
+              </div>
+            </div>
           </Section>
 
           {/* SHIPPING */}
