@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { Building2, Download, Edit2, Plus, Search, Trash2 } from "lucide-react";
-import { csvJoin, downloadCsv } from "@/lib/csv-export";
+import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -137,8 +137,6 @@ function BranchManagerPage() {
                   state: b.stateName,
                   branchDisplay: `${b.code} – ${b.stateName}`,
                   description: b.description,
-                  mappedState: b.stateName,
-                  searchableText: csvJoin([b.code, b.name, b.stateName, b.description], " | "),
                 })),
                 [
                   { key: "branchCode", header: "Branch code" },
@@ -146,7 +144,6 @@ function BranchManagerPage() {
                   { key: "state", header: "State" },
                   { key: "branchDisplay", header: "Branch display" },
                   { key: "description", header: "Description" },
-                  { key: "searchableText", header: "Search summary" },
                 ],
               )
             }
