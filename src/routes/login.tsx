@@ -72,15 +72,23 @@ function LoginPage() {
     const code = value ?? otp;
     if (code.length !== 6) return;
     setVerifying(true);
-    await new Promise((r) => setTimeout(r, 400));
-    setVerifying(false);
-    if (verifyOtp(code)) {
-      login(`+91${phone}`);
-      toast.success("Signed in");
-      navigate({ to: "/admin/customers", replace: true });
-    } else {
+    if (!verifyOtp(code)) {
+      setVerifying(false);
       setError(`Incorrect code. Try ${DEMO_OTP_HINT} for the demo.`);
       setOtp("");
+      return;
+    }
+    try {
+      await login(`+91${phone}`);
+      toast.success("Signed in");
+      navigate({ to: "/admin/customers", replace: true });
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not start session. Try again.",
+      );
+      setOtp("");
+    } finally {
+      setVerifying(false);
     }
   }
 

@@ -177,8 +177,8 @@ function StateManagerPage() {
         open={addOpen}
         onOpenChange={setAddOpen}
         title="Add state"
-        onSubmit={(name) => {
-          const r = addState(name);
+        onSubmit={async (name) => {
+          const r = await addState(name);
           if (!r.ok) return r.error;
           toast.success("State added");
           return null;
@@ -190,9 +190,9 @@ function StateManagerPage() {
         initial={editing?.name}
         onOpenChange={(o) => !o && setEditing(null)}
         title="Edit state"
-        onSubmit={(name) => {
+        onSubmit={async (name) => {
           if (!editing) return null;
-          const r = updateState(editing.id, name);
+          const r = await updateState(editing.id, name);
           if (!r.ok) return r.error;
           toast.success("State updated");
           setEditing(null);
@@ -212,11 +212,14 @@ function StateManagerPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (deleting) {
-                  deleteState(deleting.id);
+              onClick={async () => {
+                if (!deleting) return;
+                try {
+                  await deleteState(deleting.id);
                   toast.success("State deleted");
                   setDeleting(null);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Delete failed");
                 }
               }}
             >
@@ -272,7 +275,7 @@ function StateFormDialog({
   onOpenChange: (o: boolean) => void;
   title: string;
   initial?: string;
-  onSubmit: (name: string) => string | null;
+  onSubmit: (name: string) => Promise<string | null> | string | null;
 }) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -296,9 +299,9 @@ function StateFormDialog({
           </DialogDescription>
         </DialogHeader>
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            const err = onSubmit(name);
+            const err = await onSubmit(name);
             if (err) setError(err);
             else {
               setName("");

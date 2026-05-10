@@ -223,8 +223,8 @@ function CustomerManagerPage() {
         open={formOpen}
         onOpenChange={setFormOpen}
         editing={editing}
-        onSubmit={(data) => {
-          const r = editing ? updateCustomer(editing.id, data) : addCustomer(data);
+        onSubmit={async (data) => {
+          const r = editing ? await updateCustomer(editing.id, data) : await addCustomer(data);
           if (!r.ok) return r.error;
           toast.success(editing ? "Customer updated" : "Customer added");
           return null;
@@ -247,11 +247,14 @@ function CustomerManagerPage() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (deleting) {
-                  deleteCustomer(deleting.id);
+              onClick={async () => {
+                if (!deleting) return;
+                try {
+                  await deleteCustomer(deleting.id);
                   toast.success("Customer deleted");
                   setDeleting(null);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Delete failed");
                 }
               }}
             >
@@ -325,7 +328,7 @@ function CustomerFormDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   editing: Customer | null;
-  onSubmit: (data: Omit<Customer, "id">) => string | null;
+  onSubmit: (data: Omit<Customer, "id">) => Promise<string | null> | string | null;
 }) {
   const { customers } = useCustomers();
 
@@ -371,9 +374,9 @@ function CustomerFormDialog({
         </DialogHeader>
 
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            const err = onSubmit({
+            const err = await onSubmit({
               code,
               name,
               website,

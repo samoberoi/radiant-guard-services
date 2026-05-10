@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const STORAGE_KEY = "radiant.auth";
 
@@ -37,6 +38,31 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
+/**
+ * Bridge phone-OTP login into a real Supabase Auth session so RLS works.
+ * Each phone gets a deterministic synthetic email + password (pre-launch only).
+ */
+function credsForPhone(phone: string) {
+  const digits = phone.replace(/\D/g, "").slice(-10);
+  return {
+    email: `phone-${digits}@radiantguard.local`,
+    password: `RG-${digits}-pre-launch!`,
+  };
+}
+
+async function ensureSupabaseSession(phone: string) {
+  const { email, password } = credsForPhone(phone);
+  const signIn = await supabase.auth.signInWithPassword({ email, password });
+  if (!signIn.error) return;
+  // First-time login → sign up, then sign in.
+  const signUp = await supabase.auth.signUp({ email, password });
+  if (signUp.error && !/registered/i.test(signUp.error.message)) {
+    throw signUp.error;
+  }
+  const retry = await supabase.auth.signInWithPassword({ email, password });
+  if (retry.error) throw retry.error;
+}
+
 export function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
 
@@ -51,10 +77,11 @@ export function useAuth() {
     };
   }, []);
 
-  const login = useCallback((phone: string) => {
+  const login = useCallback(async (phone: string) => {
     const digits = phone.replace(/\D/g, "").slice(-10);
     const role: AuthUser["role"] =
       digits === SUPER_ADMIN_PHONE ? "super_admin" : "user";
+    await ensureSupabaseSession(phone);
     const u: AuthUser = { phone, role };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
     emit();
@@ -62,6 +89,7 @@ export function useAuth() {
 
   const logout = useCallback(() => {
     window.localStorage.removeItem(STORAGE_KEY);
+    void supabase.auth.signOut();
     emit();
   }, []);
 
