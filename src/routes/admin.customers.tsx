@@ -130,8 +130,6 @@ function CustomersDashboard() {
           sub={`${activeCustomers} active`}
           icon={Users}
           to="/admin/customers/customer-manager"
-          onCount={() => setTreeOpen(true)}
-          countTitle="Open customer → unit tree"
           accent
         />
         <StatTile
@@ -155,6 +153,17 @@ function CustomersDashboard() {
           icon={MapPin}
           to="/admin/customers/state-manager"
         />
+      </div>
+
+      <div className="mb-4 flex justify-end">
+        <Button
+          variant="outline"
+          className="h-10 rounded-lg border-accent/40 text-accent hover:bg-accent/10 hover:text-accent"
+          onClick={() => setTreeOpen(true)}
+        >
+          <Network className="mr-1.5 h-4 w-4" />
+          View full hierarchy
+        </Button>
       </div>
 
       {/* Filters */}
@@ -300,40 +309,62 @@ function CustomersDashboard() {
         </div>
       </div>
 
-      <CustomerTreeDialog
+      <HierarchyTreeDialog
         open={treeOpen}
         onOpenChange={setTreeOpen}
-        customers={customers}
+        states={states}
+        branches={branches}
         units={units}
-        branchLabel={branchLabel}
+        customerById={customerById}
       />
     </div>
   );
 }
 
-function CustomerTreeDialog({
+function HierarchyTreeDialog({
   open,
   onOpenChange,
-  customers,
+  states,
+  branches,
   units,
-  branchLabel,
+  customerById,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  customers: Customer[];
+  states: { id: string; name: string }[];
+  branches: { id: string; code: string; name: string; stateId: string }[];
   units: Unit[];
-  branchLabel: (u: Unit) => string;
+  customerById: Map<string, Customer>;
 }) {
-  const grouped = useMemo(() => {
-    return [...customers]
+  const tree = useMemo(() => {
+    const branchUnits = new Map<string, Unit[]>();
+    for (const u of units) {
+      if (!u.branchId) continue;
+      const arr = branchUnits.get(u.branchId) ?? [];
+      arr.push(u);
+      branchUnits.set(u.branchId, arr);
+    }
+    return [...states]
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((c) => ({
-        customer: c,
-        units: units
-          .filter((u) => u.customerId === c.id)
-          .sort((a, b) => a.code.localeCompare(b.code)),
-      }));
-  }, [customers, units]);
+      .map((s) => {
+        const stBranches = branches
+          .filter((b) => b.stateId === s.id)
+          .map((b) => ({
+            ...b,
+            units: (branchUnits.get(b.id) ?? []).sort((x, y) => x.code.localeCompare(y.code)),
+          }))
+          .filter((b) => b.units.length > 0)
+          .sort((a, b) => a.code.localeCompare(b.code));
+        return { state: s, branches: stBranches };
+      })
+      .filter((s) => s.branches.length > 0);
+  }, [states, branches, units]);
+
+  const totalBranches = tree.reduce((n, s) => n + s.branches.length, 0);
+  const totalUnits = tree.reduce(
+    (n, s) => n + s.branches.reduce((m, b) => m + b.units.length, 0),
+    0,
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -341,64 +372,84 @@ function CustomerTreeDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Network className="h-4 w-4 text-accent" />
-            Customers → Units tree
+            States → Branches → Units
           </DialogTitle>
           <DialogDescription>
-            {customers.length} customers · {units.length} units mapped
+            {tree.length} active states · {totalBranches} mapped branches · {totalUnits} units
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
-          {grouped.map(({ customer, units: cu }) => (
-            <div key={customer.id} className="rounded-xl border border-border bg-card p-4">
+          {tree.map(({ state, branches: br }) => (
+            <div key={state.id} className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-accent" />
-                <span className="font-mono text-xs font-semibold text-accent">{customer.code}</span>
-                <span className="font-semibold text-foreground">{customer.name}</span>
-                <StatusBadge status={customer.status} />
+                <MapPin className="h-4 w-4 text-accent" />
+                <span className="font-semibold text-foreground">{state.name}</span>
                 <span className="ml-auto text-xs text-muted-foreground">
-                  {cu.length} unit{cu.length === 1 ? "" : "s"}
+                  {br.length} branch{br.length === 1 ? "" : "es"}
                 </span>
               </div>
-              {cu.length > 0 ? (
-                <ul className="mt-2 space-y-1.5 border-l-2 border-dashed border-border pl-4">
-                  {cu.map((u) => (
-                    <li
-                      key={u.id}
-                      className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-2.5"
-                    >
-                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                      <Warehouse className="h-4 w-4 text-accent" />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-[11px] font-semibold text-accent">{u.code}</span>
-                          <span className="truncate font-semibold text-foreground">{u.name}</span>
-                          <StatusBadge status={u.status} />
-                        </div>
-                        <div className="truncate text-xs text-muted-foreground">
-                          {branchLabel(u)} · {u.location || "—"}
-                        </div>
-                      </div>
-                      {u.latitude != null && u.longitude != null && (
-                        <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-accent hover:bg-accent/10"
-                        >
-                          <MapPin className="h-3 w-3" /> Map
-                        </a>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="mt-2 rounded-lg border border-dashed border-border p-3 text-center text-xs text-muted-foreground">
-                  No units mapped yet.
-                </div>
-              )}
+              <ul className="mt-2 space-y-2 border-l-2 border-dashed border-border pl-4">
+                {br.map((b) => (
+                  <li key={b.id}>
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-4 w-4 text-accent" />
+                      <span className="font-mono text-[11px] font-semibold text-accent">{b.code}</span>
+                      <span className="font-semibold text-foreground">{b.name || "—"}</span>
+                      <span className="ml-auto text-xs text-muted-foreground">
+                        {b.units.length} unit{b.units.length === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    <ul className="mt-1.5 space-y-1.5 border-l-2 border-dashed border-border pl-4">
+                      {b.units.map((u) => {
+                        const c = u.customerId ? customerById.get(u.customerId) : undefined;
+                        return (
+                          <li
+                            key={u.id}
+                            className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-2.5"
+                          >
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                            <Warehouse className="h-4 w-4 text-accent" />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-[11px] font-semibold text-accent">{u.code}</span>
+                                <span className="truncate font-semibold text-foreground">{u.name}</span>
+                                <StatusBadge status={u.status} />
+                              </div>
+                              <div className="truncate text-xs text-muted-foreground">
+                                {c ? (
+                                  <>
+                                    <span className="text-foreground">{c.name}</span>
+                                    <span className="font-mono"> ({c.code})</span> ·{" "}
+                                  </>
+                                ) : null}
+                                {u.location || "—"}
+                              </div>
+                            </div>
+                            {u.latitude != null && u.longitude != null && (
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-accent hover:bg-accent/10"
+                              >
+                                <MapPin className="h-3 w-3" /> Map
+                              </a>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
+          {tree.length === 0 && (
+            <div className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+              No mapped states with units yet.
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

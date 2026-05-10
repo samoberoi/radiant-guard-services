@@ -132,29 +132,38 @@ function AdminLayout() {
 
           {/* Customers group */}
           <div>
-            <button
-              type="button"
-              onClick={() => setCustomersOpen((v) => !v)}
+            <div
               className={cn(
-                "group flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+                "group flex w-full items-center gap-1 rounded-lg pr-1 text-sm font-semibold transition-colors",
                 isActive("/admin/customers")
                   ? "bg-accent/20 text-accent"
                   : "text-primary-foreground/85 hover:bg-white/5",
               )}
             >
-              <LayoutDashboard className="h-4.5 w-4.5 shrink-0" />
+              <Link
+                to="/admin/customers"
+                onClick={() => setCustomersOpen(true)}
+                className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5"
+              >
+                <LayoutDashboard className="h-4.5 w-4.5 shrink-0" />
+                {!collapsed && <span className="flex-1 text-left">Customers</span>}
+              </Link>
               {!collapsed && (
-                <>
-                  <span className="flex-1 text-left">Customers</span>
+                <button
+                  type="button"
+                  onClick={() => setCustomersOpen((v) => !v)}
+                  aria-label={customersOpen ? "Collapse" : "Expand"}
+                  className="rounded-md p-1.5 text-primary-foreground/70 hover:bg-white/10"
+                >
                   <ChevronDown
                     className={cn(
                       "h-4 w-4 transition-transform",
                       customersOpen ? "rotate-0" : "-rotate-90",
                     )}
                   />
-                </>
+                </button>
               )}
-            </button>
+            </div>
 
             {customersOpen && !collapsed && (
               <div className="mt-1 space-y-0.5 pl-3">
