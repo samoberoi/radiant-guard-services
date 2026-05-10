@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Download, Edit2, ExternalLink, List as ListIcon, MapPin, Network, Plus, Search, Trash2, Users, Warehouse } from "lucide-react";
-import { downloadCsv } from "@/lib/csv-export";
+import { csvDate, csvStatus, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -120,16 +120,27 @@ function CustomerManagerPage() {
           <Button
             variant="outline"
             onClick={() =>
-              downloadCsv("customers", rows, [
-                { key: "id", header: "ID" },
-                { key: "code", header: "Org ID" },
-                { key: "name", header: "Organisation" },
-                { key: "website", header: "Website" },
-                { key: "phone", header: "Phone" },
-                { key: "address", header: "Address" },
-                { key: "contractStartDate", header: "Contract start" },
-                { key: "status", header: "Status" },
-              ])
+              downloadCsv(
+                "customers",
+                rows.map((c) => ({
+                  orgId: c.code,
+                  organisation: c.name,
+                  website: c.website,
+                  phone: c.phone,
+                  address: c.address,
+                  contractStart: csvDate(c.contractStartDate),
+                  status: csvStatus(c.status),
+                })),
+                [
+                  { key: "orgId", header: "Org ID" },
+                  { key: "organisation", header: "Organisation" },
+                  { key: "website", header: "Website" },
+                  { key: "phone", header: "Phone" },
+                  { key: "address", header: "Address" },
+                  { key: "contractStart", header: "Contract start" },
+                  { key: "status", header: "Status" },
+                ],
+              )
             }
             disabled={rows.length === 0}
             className="h-10 rounded-lg"

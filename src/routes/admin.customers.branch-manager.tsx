@@ -129,14 +129,23 @@ function BranchManagerPage() {
           <Button
             variant="outline"
             onClick={() =>
-              downloadCsv("branches", rows, [
-                { key: "id", header: "ID" },
-                { key: "code", header: "Code" },
-                { key: "name", header: "Name" },
-                { key: "description", header: "Description" },
-                { key: "stateId", header: "State ID" },
-                { key: "stateName", header: "State" },
-              ])
+              downloadCsv(
+                "branches",
+                rows.map((b) => ({
+                  branchCode: b.code,
+                  branchName: b.name || b.stateName,
+                  state: b.stateName,
+                  branchDisplay: `${b.code} – ${b.stateName}`,
+                  description: b.description,
+                })),
+                [
+                  { key: "branchCode", header: "Branch code" },
+                  { key: "branchName", header: "Branch name" },
+                  { key: "state", header: "State" },
+                  { key: "branchDisplay", header: "Branch display" },
+                  { key: "description", header: "Description" },
+                ],
+              )
             }
             disabled={rows.length === 0}
             className="h-10 rounded-lg"

@@ -40,3 +40,50 @@ export function downloadCsv<T extends Record<string, unknown>>(
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
+export function csvJoin(
+  parts: Array<unknown>,
+  separator = ", ",
+): string {
+  return parts
+    .map((part) => {
+      if (part === null || part === undefined) return "";
+      return String(part).trim();
+    })
+    .filter(Boolean)
+    .join(separator);
+}
+
+export function csvYesNo(value: boolean | null | undefined): string {
+  return value ? "Yes" : "No";
+}
+
+export function csvDate(value: string | Date | null | undefined): string {
+  if (!value) return "";
+  try {
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return String(value);
+  }
+}
+
+export function csvStatus(value: string | null | undefined): string {
+  if (!value) return "";
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+export function csvMapLink(
+  latitude: number | string | null | undefined,
+  longitude: number | string | null | undefined,
+): string {
+  if (latitude === null || latitude === undefined || longitude === null || longitude === undefined) {
+    return "";
+  }
+  return `https://www.google.com/maps/search/?api=1&query=${latitude},${longitude}`;
+}
