@@ -112,6 +112,153 @@ export type Database = {
         }
         Relationships: []
       }
+      units: {
+        Row: {
+          ambulance_mobile: string
+          ambulance_name: string
+          billing_address1: string
+          billing_address2: string
+          billing_city: string
+          billing_country: string
+          billing_district: string
+          billing_name: string
+          billing_pincode: string
+          billing_salutation: string
+          billing_state: string
+          branch_id: string | null
+          closing_date: string | null
+          code: string
+          created_at: string
+          customer_id: string | null
+          description: string
+          emergency_contact_mobile: string
+          emergency_contact_name: string
+          gst_number: string
+          id: string
+          location: string
+          name: string
+          nearby_hospital_mobile: string
+          nearby_hospital_name: string
+          onboarding_date: string | null
+          pan_number: string
+          reporting_officers: Json
+          shipping_address1: string
+          shipping_address2: string
+          shipping_city: string
+          shipping_country: string
+          shipping_district: string
+          shipping_name: string
+          shipping_pincode: string
+          shipping_salutation: string
+          shipping_same_as_billing: boolean
+          shipping_same_as_org: boolean
+          shipping_state: string
+          status: Database["public"]["Enums"]["customer_status"]
+          updated_at: string
+        }
+        Insert: {
+          ambulance_mobile?: string
+          ambulance_name?: string
+          billing_address1?: string
+          billing_address2?: string
+          billing_city?: string
+          billing_country?: string
+          billing_district?: string
+          billing_name?: string
+          billing_pincode?: string
+          billing_salutation?: string
+          billing_state?: string
+          branch_id?: string | null
+          closing_date?: string | null
+          code: string
+          created_at?: string
+          customer_id?: string | null
+          description?: string
+          emergency_contact_mobile?: string
+          emergency_contact_name?: string
+          gst_number?: string
+          id?: string
+          location?: string
+          name?: string
+          nearby_hospital_mobile?: string
+          nearby_hospital_name?: string
+          onboarding_date?: string | null
+          pan_number?: string
+          reporting_officers?: Json
+          shipping_address1?: string
+          shipping_address2?: string
+          shipping_city?: string
+          shipping_country?: string
+          shipping_district?: string
+          shipping_name?: string
+          shipping_pincode?: string
+          shipping_salutation?: string
+          shipping_same_as_billing?: boolean
+          shipping_same_as_org?: boolean
+          shipping_state?: string
+          status?: Database["public"]["Enums"]["customer_status"]
+          updated_at?: string
+        }
+        Update: {
+          ambulance_mobile?: string
+          ambulance_name?: string
+          billing_address1?: string
+          billing_address2?: string
+          billing_city?: string
+          billing_country?: string
+          billing_district?: string
+          billing_name?: string
+          billing_pincode?: string
+          billing_salutation?: string
+          billing_state?: string
+          branch_id?: string | null
+          closing_date?: string | null
+          code?: string
+          created_at?: string
+          customer_id?: string | null
+          description?: string
+          emergency_contact_mobile?: string
+          emergency_contact_name?: string
+          gst_number?: string
+          id?: string
+          location?: string
+          name?: string
+          nearby_hospital_mobile?: string
+          nearby_hospital_name?: string
+          onboarding_date?: string | null
+          pan_number?: string
+          reporting_officers?: Json
+          shipping_address1?: string
+          shipping_address2?: string
+          shipping_city?: string
+          shipping_country?: string
+          shipping_district?: string
+          shipping_name?: string
+          shipping_pincode?: string
+          shipping_salutation?: string
+          shipping_same_as_billing?: boolean
+          shipping_same_as_org?: boolean
+          shipping_state?: string
+          status?: Database["public"]["Enums"]["customer_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "units_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "units_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
