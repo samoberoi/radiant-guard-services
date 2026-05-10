@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Edit2, ExternalLink, Plus, Search, Trash2, Users } from "lucide-react";
+import { ChevronRight, Edit2, ExternalLink, List as ListIcon, MapPin, Network, Plus, Search, Trash2, Users, Warehouse } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -29,8 +29,12 @@ import {
 import {
   nextCustomerCode,
   useCustomers,
+  useUnits,
+  useBranches,
+  useStates,
   type Customer,
   type CustomerStatus,
+  type Unit,
 } from "@/lib/admin-data";
 import { cn } from "@/lib/utils";
 
@@ -62,6 +66,7 @@ function CustomerManagerPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
   const [deleting, setDeleting] = useState<Customer | null>(null);
+  const [viewingUnits, setViewingUnits] = useState<Customer | null>(null);
 
   const rows = useMemo(() => {
     const list = [...customers].sort((a, b) => {
@@ -176,6 +181,16 @@ function CustomerManagerPage() {
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-accent"
+                        onClick={() => setViewingUnits(c)}
+                        aria-label="View units"
+                        title="View mapped units"
+                      >
+                        <Network className="h-4 w-4" />
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
