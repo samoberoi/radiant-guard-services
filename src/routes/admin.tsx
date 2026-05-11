@@ -17,6 +17,7 @@ import {
   HandCoins,
   ReceiptText,
   ShieldCheck,
+  SlidersHorizontal,
   Users,
   Warehouse,
   X,
