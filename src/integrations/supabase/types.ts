@@ -362,6 +362,33 @@ export type Database = {
         }
         Relationships: []
       }
+      designations: {
+        Row: {
+          code: string
+          created_at: string
+          enabled: boolean
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       duties: {
         Row: {
           created_at: string
