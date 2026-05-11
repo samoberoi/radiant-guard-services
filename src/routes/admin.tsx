@@ -14,6 +14,7 @@ import {
   MapPin,
   Menu,
   PanelLeftClose,
+  ReceiptText,
   ShieldCheck,
   Users,
   Warehouse,
