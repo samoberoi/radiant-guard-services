@@ -36,7 +36,7 @@ type NavItem = {
 const customersChildren: NavItem[] = [
   { to: "/admin/customers/state-manager", label: "State Manager", icon: MapPin },
   { to: "/admin/customers/branch-manager", label: "Branch Manager", icon: Building2 },
-  { to: "/admin/customers/customer-manager", label: "Customer Manager", icon: Users },
+  { to: "/admin/customers/customer-manager", label: "Organization Manager", icon: Users },
   { to: "/admin/customers/unit-manager", label: "Unit Manager", icon: Warehouse },
 ];
 
@@ -146,7 +146,7 @@ function AdminLayout() {
                 className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5"
               >
                 <LayoutDashboard className="h-4.5 w-4.5 shrink-0" />
-                {!collapsed && <span className="flex-1 text-left">Customers</span>}
+                {!collapsed && <span className="flex-1 text-left">Organizations</span>}
               </Link>
               {!collapsed && (
                 <button
