@@ -3,12 +3,14 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Check,
   ChevronsUpDown,
+  Copy,
   Download,
   Edit2,
   FileText,
   Plus,
   Search,
   Trash2,
+  Users,
   X,
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -91,11 +93,35 @@ type PayrollWindow = {
   processingDay: number;
 };
 type BillingType = { id: string; name: string };
+type Designation = { id: string; name: string; code: string };
+type AllowanceType = {
+  id: string;
+  name: string;
+  displayName: string;
+  shortName: string;
+  isDefault: boolean;
+};
+
+type ResourceComponent = {
+  allowanceId: string;
+  name: string;
+  amount: number;
+};
+
+type ContractResource = {
+  id?: string;
+  designationId: string;
+  serviceTypeId: string;
+  quantity: number;
+  components: ResourceComponent[];
+};
 
 const QK = ["admin", "client-contracts"] as const;
 const QK_SVC = ["admin", "service-types", "enabled"] as const;
 const QK_PAY = ["admin", "payroll-windows", "enabled"] as const;
 const QK_BIL = ["admin", "billing-types", "enabled"] as const;
+const QK_DSG = ["admin", "designations", "enabled"] as const;
+const QK_ALW = ["admin", "allowance-types", "enabled"] as const;
 
 function rowToContract(r: Record<string, unknown>): ClientContract {
   return {
@@ -155,12 +181,15 @@ function useContracts() {
   });
 
   const addMut = useMutation({
-    mutationFn: async (p: Payload) => {
+    mutationFn: async (p: Payload): Promise<string> => {
       if (!p.unitId) throw new Error("Unit is required");
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("client_contracts" as never)
-        .insert(toRow(p) as never);
+        .insert(toRow(p) as never)
+        .select("id")
+        .single();
       if (error) throw error;
+      return String((data as Record<string, unknown>).id);
     },
     onSuccess: invalidate,
   });
@@ -245,6 +274,96 @@ function useBillingTypes() {
     },
   });
   return data;
+}
+
+function useDesignations() {
+  const { data = [] } = useQuery({
+    queryKey: QK_DSG,
+    queryFn: async (): Promise<Designation[]> => {
+      const { data, error } = await supabase
+        .from("designations" as never)
+        .select("id,name,code,enabled")
+        .order("name");
+      if (error) throw error;
+      return (data as unknown as Record<string, unknown>[])
+        .filter((r) => r.enabled !== false)
+        .map((r) => ({
+          id: String(r.id),
+          name: String(r.name),
+          code: String(r.code ?? ""),
+        }));
+    },
+  });
+  return data;
+}
+
+function useAllowanceTypes() {
+  const { data = [] } = useQuery({
+    queryKey: QK_ALW,
+    queryFn: async (): Promise<AllowanceType[]> => {
+      const { data, error } = await supabase
+        .from("allowance_types" as never)
+        .select("id,name,display_name,short_name,is_default,enabled")
+        .order("display_name");
+      if (error) throw error;
+      return (data as unknown as Record<string, unknown>[])
+        .filter((r) => r.enabled !== false)
+        .map((r) => ({
+          id: String(r.id),
+          name: String(r.name),
+          displayName: String(r.display_name ?? r.name),
+          shortName: String(r.short_name ?? ""),
+          isDefault: Boolean(r.is_default),
+        }));
+    },
+  });
+  return data;
+}
+
+function useContractResources(contractId: string | null) {
+  const { data = [] } = useQuery({
+    queryKey: ["admin", "contract-resources", contractId ?? "none"],
+    enabled: !!contractId,
+    queryFn: async (): Promise<ContractResource[]> => {
+      if (!contractId) return [];
+      const { data, error } = await supabase
+        .from("contract_resources" as never)
+        .select("id,designation_id,service_type_id,quantity,components,sort_order")
+        .eq("contract_id", contractId)
+        .order("sort_order");
+      if (error) throw error;
+      return (data as unknown as Record<string, unknown>[]).map((r) => ({
+        id: String(r.id),
+        designationId: r.designation_id ? String(r.designation_id) : "",
+        serviceTypeId: r.service_type_id ? String(r.service_type_id) : "",
+        quantity: Number(r.quantity ?? 1),
+        components: Array.isArray(r.components)
+          ? (r.components as ResourceComponent[])
+          : [],
+      }));
+    },
+  });
+  return data;
+}
+
+async function persistResources(contractId: string, resources: ContractResource[]) {
+  const del = await supabase
+    .from("contract_resources" as never)
+    .delete()
+    .eq("contract_id", contractId);
+  if (del.error) throw del.error;
+  if (resources.length === 0) return;
+  const rows = resources.map((r, idx) => ({
+    contract_id: contractId,
+    designation_id: r.designationId || null,
+    service_type_id: r.serviceTypeId || null,
+    quantity: r.quantity,
+    components: r.components,
+    gross: r.components.reduce((s, c) => s + (Number(c.amount) || 0), 0),
+    sort_order: idx,
+  }));
+  const ins = await supabase.from("contract_resources" as never).insert(rows as never);
+  if (ins.error) throw ins.error;
 }
 
 function ClientContractsPage() {
@@ -515,15 +634,17 @@ function ClientContractsPage() {
         }}
         editing={editing}
         existingCodes={items.map((i) => i.contractCode)}
-        onSubmit={async (p) => {
+        onSubmit={async (p, resources) => {
           try {
+            let contractId: string;
             if (editing) {
               await updateMut.mutateAsync({ id: editing.id, p });
-              toast.success("Contract updated");
+              contractId = editing.id;
             } else {
-              await addMut.mutateAsync(p);
-              toast.success("Contract created");
+              contractId = await addMut.mutateAsync(p);
             }
+            await persistResources(contractId, resources);
+            toast.success(editing ? "Contract updated" : "Contract created");
             return null;
           } catch (e) {
             return e instanceof Error ? e.message : "Could not save contract";
@@ -597,7 +718,10 @@ function ContractFormDialog({
   onOpenChange: (o: boolean) => void;
   editing: ClientContract | null;
   existingCodes: string[];
-  onSubmit: (p: Omit<ClientContract, "id">) => Promise<string | null>;
+  onSubmit: (
+    p: Omit<ClientContract, "id">,
+    resources: ContractResource[],
+  ) => Promise<string | null>;
 }) {
   const { units } = useUnits();
   const { customers } = useCustomers();
@@ -622,6 +746,14 @@ function ContractFormDialog({
   const [status, setStatus] = useState<ContractStatus>("active");
   const [unitPickerOpen, setUnitPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [resources, setResources] = useState<ContractResource[]>([]);
+  const [resourceDialog, setResourceDialog] = useState<{
+    open: boolean;
+    index: number | null;
+    initial: ContractResource | null;
+  }>({ open: false, index: null, initial: null });
+
+  const existingResources = useContractResources(editing?.id ?? null);
 
   // Reset when opened
   useEffect(() => {
@@ -649,8 +781,17 @@ function ContractFormDialog({
       setGstOption("csgst");
       setStatus("active");
     }
+    setResources([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id]);
+
+  // Hydrate existing resources when editing
+  useEffect(() => {
+    if (open && editing && existingResources.length > 0) {
+      setResources(existingResources);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing?.id, existingResources.length]);
 
   const selectedUnit = units.find((u) => u.id === unitId);
   const selectedOrg = selectedUnit?.customerId
@@ -893,6 +1034,31 @@ function ContractFormDialog({
               ))}
             </div>
           </Section>
+
+          {/* Resources */}
+          <ResourcesSection
+            resources={resources}
+            onAdd={() =>
+              setResourceDialog({ open: true, index: null, initial: null })
+            }
+            onEdit={(idx) =>
+              setResourceDialog({
+                open: true,
+                index: idx,
+                initial: resources[idx],
+              })
+            }
+            onCopy={(idx) =>
+              setResourceDialog({
+                open: true,
+                index: null,
+                initial: { ...resources[idx], id: undefined },
+              })
+            }
+            onDelete={(idx) =>
+              setResources((prev) => prev.filter((_, i) => i !== idx))
+            }
+          />
         </div>
 
         <DialogFooter>
@@ -918,7 +1084,7 @@ function ContractFormDialog({
                 billingTypeId: billingTypeId || null,
                 gstOption,
                 status,
-              });
+              }, resources);
               setSaving(false);
               if (err) toast.error(err);
               else onOpenChange(false);
@@ -927,6 +1093,25 @@ function ContractFormDialog({
             {saving ? "Saving…" : editing ? "Save Changes" : "Create Contract"}
           </Button>
         </DialogFooter>
+
+        <ResourceFormDialog
+          open={resourceDialog.open}
+          initial={resourceDialog.initial}
+          onOpenChange={(o) =>
+            setResourceDialog((s) => ({ ...s, open: o }))
+          }
+          onSubmit={(r) => {
+            setResources((prev) => {
+              if (resourceDialog.index !== null) {
+                const next = [...prev];
+                next[resourceDialog.index] = r;
+                return next;
+              }
+              return [...prev, r];
+            });
+            setResourceDialog({ open: false, index: null, initial: null });
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
@@ -949,5 +1134,455 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <Label className="text-xs font-semibold text-muted-foreground">{label}</Label>
       {children}
     </div>
+  );
+}
+
+function ResourcesSection({
+  resources,
+  onAdd,
+  onEdit,
+  onCopy,
+  onDelete,
+}: {
+  resources: ContractResource[];
+  onAdd: () => void;
+  onEdit: (idx: number) => void;
+  onCopy: (idx: number) => void;
+  onDelete: (idx: number) => void;
+}) {
+  const designations = useDesignations();
+  const serviceTypes = useServiceTypes();
+  const dById = useMemo(
+    () => new Map(designations.map((d) => [d.id, d])),
+    [designations],
+  );
+  const sById = useMemo(
+    () => new Map(serviceTypes.map((s) => [s.id, s])),
+    [serviceTypes],
+  );
+
+  return (
+    <Section title="Resources">
+      {resources.length === 0 ? (
+        <button
+          type="button"
+          onClick={onAdd}
+          className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-card px-4 py-8 text-sm text-muted-foreground transition-colors hover:border-accent hover:bg-accent/5 hover:text-foreground"
+        >
+          <Users className="h-6 w-6 opacity-60" />
+          <span className="font-medium">No resources mapped to the contract.</span>
+          <span className="text-xs">Click here to add resources</span>
+        </button>
+      ) : (
+        <div className="space-y-3">
+          {resources.map((r, idx) => {
+            const gross = r.components.reduce(
+              (s, c) => s + (Number(c.amount) || 0),
+              0,
+            );
+            const dn = dById.get(r.designationId);
+            const sn = sById.get(r.serviceTypeId);
+            return (
+              <div
+                key={idx}
+                className="rounded-lg border border-border bg-card p-3"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-foreground">
+                        {dn?.name ?? "—"}
+                      </span>
+                      {dn?.code && (
+                        <span className="font-mono text-[11px] text-muted-foreground">
+                          {dn.code}
+                        </span>
+                      )}
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] uppercase tracking-wider text-muted-foreground">
+                        {sn?.name ?? "—"}
+                      </span>
+                      <span className="rounded-full bg-accent/10 px-2 py-0.5 text-[11px] font-semibold text-accent">
+                        Qty {r.quantity}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {r.components.map((c) => (
+                        <span
+                          key={c.allowanceId}
+                          className="rounded bg-secondary/60 px-1.5 py-0.5 text-[11px] text-muted-foreground"
+                        >
+                          {c.name}: {c.amount.toFixed(2)}
+                        </span>
+                      ))}
+                      {r.components.length === 0 && (
+                        <span className="text-[11px] italic text-muted-foreground">
+                          No wage components
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1.5 text-xs font-semibold text-foreground">
+                      Gross: {gross.toFixed(2)}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      onClick={() => onEdit(idx)}
+                      aria-label="Edit"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                      onClick={() => onCopy(idx)}
+                      aria-label="Copy"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => onDelete(idx)}
+                      aria-label="Remove"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={onAdd}
+          >
+            <Plus className="mr-1.5 h-4 w-4" /> Add another resource
+          </Button>
+        </div>
+      )}
+    </Section>
+  );
+}
+
+function ResourceFormDialog({
+  open,
+  onOpenChange,
+  initial,
+  onSubmit,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  initial: ContractResource | null;
+  onSubmit: (r: ContractResource) => void;
+}) {
+  const designations = useDesignations();
+  const serviceTypes = useServiceTypes();
+  const allowanceTypes = useAllowanceTypes();
+
+  const [designationId, setDesignationId] = useState("");
+  const [serviceTypeId, setServiceTypeId] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [components, setComponents] = useState<ResourceComponent[]>([]);
+  const [designationOpen, setDesignationOpen] = useState(false);
+  const [allowancePickerOpen, setAllowancePickerOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    if (initial) {
+      setDesignationId(initial.designationId);
+      setServiceTypeId(initial.serviceTypeId);
+      setQuantity(String(initial.quantity));
+      setComponents(initial.components.map((c) => ({ ...c })));
+    } else {
+      setDesignationId("");
+      setServiceTypeId("");
+      setQuantity("1");
+      // Pre-load defaults from allowance types
+      setComponents(
+        allowanceTypes
+          .filter((a) => a.isDefault)
+          .map((a) => ({
+            allowanceId: a.id,
+            name: a.shortName || a.displayName,
+            amount: 0,
+          })),
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initial, allowanceTypes.length]);
+
+  const gross = components.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const usedIds = new Set(components.map((c) => c.allowanceId));
+  const availableExtras = allowanceTypes.filter((a) => !usedIds.has(a.id));
+
+  const updateAmount = (allowanceId: string, amount: number) => {
+    setComponents((prev) =>
+      prev.map((c) => (c.allowanceId === allowanceId ? { ...c, amount } : c)),
+    );
+  };
+
+  const removeComponent = (allowanceId: string) => {
+    setComponents((prev) => prev.filter((c) => c.allowanceId !== allowanceId));
+  };
+
+  const addComponent = (a: AllowanceType) => {
+    setComponents((prev) => [
+      ...prev,
+      {
+        allowanceId: a.id,
+        name: a.shortName || a.displayName,
+        amount: 0,
+      },
+    ]);
+    setAllowancePickerOpen(false);
+  };
+
+  const handleSubmit = () => {
+    if (!designationId) {
+      toast.error("Please select a designation");
+      return;
+    }
+    if (!serviceTypeId) {
+      toast.error("Please select a service type");
+      return;
+    }
+    const q = parseInt(quantity, 10);
+    if (!q || q < 1) {
+      toast.error("Quantity must be at least 1");
+      return;
+    }
+    onSubmit({
+      id: initial?.id,
+      designationId,
+      serviceTypeId,
+      quantity: q,
+      components,
+    });
+  };
+
+  const selectedDesignation = designations.find((d) => d.id === designationId);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>
+            {initial?.id ? "Edit Resource" : "Add Resource"}
+          </DialogTitle>
+          <DialogDescription>
+            Map a designation, service type and quantity, then configure wage
+            components.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Designation *">
+              <Popover open={designationOpen} onOpenChange={setDesignationOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    className="h-10 w-full justify-between rounded-lg font-normal"
+                  >
+                    {selectedDesignation ? (
+                      <span className="truncate">
+                        {selectedDesignation.name}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Select…</span>
+                    )}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[--radix-popover-trigger-width] p-0"
+                  align="start"
+                >
+                  <Command>
+                    <CommandInput placeholder="Search designation…" />
+                    <CommandList>
+                      <CommandEmpty>No designation found.</CommandEmpty>
+                      <CommandGroup>
+                        {designations.map((d) => (
+                          <CommandItem
+                            key={d.id}
+                            value={`${d.code} ${d.name}`}
+                            onSelect={() => {
+                              setDesignationId(d.id);
+                              setDesignationOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                designationId === d.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span className="text-sm">{d.name}</span>
+                              {d.code && (
+                                <span className="font-mono text-[11px] text-muted-foreground">
+                                  {d.code}
+                                </span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </Field>
+
+            <Field label="Service Type *">
+              <Select value={serviceTypeId} onValueChange={setServiceTypeId}>
+                <SelectTrigger className="h-10 rounded-lg">
+                  <SelectValue placeholder="Select" />
+                </SelectTrigger>
+                <SelectContent>
+                  {serviceTypes.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <Field label="Quantity *">
+              <Input
+                type="number"
+                min={1}
+                value={quantity}
+                onChange={(e) => setQuantity(e.target.value)}
+              />
+            </Field>
+          </div>
+
+          <div className="rounded-xl border border-border bg-secondary/30 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <h4 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Wages Components
+              </h4>
+              <Popover
+                open={allowancePickerOpen}
+                onOpenChange={setAllowancePickerOpen}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
+                    disabled={availableExtras.length === 0}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" /> Add allowance
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-72 p-0" align="end">
+                  <Command>
+                    <CommandInput placeholder="Search allowance…" />
+                    <CommandList>
+                      <CommandEmpty>No more allowances.</CommandEmpty>
+                      <CommandGroup>
+                        {availableExtras.map((a) => (
+                          <CommandItem
+                            key={a.id}
+                            value={`${a.shortName} ${a.displayName} ${a.name}`}
+                            onSelect={() => addComponent(a)}
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-sm">
+                                {a.shortName || a.displayName}
+                              </span>
+                              <span className="text-[11px] text-muted-foreground">
+                                {a.displayName}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {components.length === 0 ? (
+              <div className="py-4 text-center text-xs text-muted-foreground">
+                No wage components yet.
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-3">
+                {components.map((c) => (
+                  <div key={c.allowanceId} className="grid gap-1">
+                    <Label className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+                      <span className="truncate">{c.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeComponent(c.allowanceId)}
+                        className="text-muted-foreground hover:text-destructive"
+                        aria-label={`Remove ${c.name}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      value={c.amount}
+                      onChange={(e) =>
+                        updateAmount(
+                          c.allowanceId,
+                          parseFloat(e.target.value) || 0,
+                        )
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-3 flex items-center justify-end border-t border-border pt-3">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Gross
+              </span>
+              <span className="ml-3 text-base font-bold text-foreground">
+                {gross.toFixed(2)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+          >
+            Cancel
+          </Button>
+          <Button type="button" onClick={handleSubmit}>
+            {initial?.id ? "Save Resource" : "Add Resource"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
