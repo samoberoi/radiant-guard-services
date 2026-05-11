@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Download, Edit2, Plus, Search, Trash2, CalendarRange } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -98,6 +99,7 @@ function usePayrollWindows() {
       validate(p);
       const { error } = await supabase.from("payroll_windows" as never).insert(toRow(p) as never);
       if (error) throw error;
+    void logActivity({ module: "Payroll Manager", action: "create", entityType: "payroll_windows", entityLabel: String((p as Record<string, unknown>).label ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -110,6 +112,7 @@ function usePayrollWindows() {
         .update(toRow(p) as never)
         .eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Payroll Manager", action: "update", entityType: "payroll_windows", entityId: id, entityLabel: String((p as Record<string, unknown>).label ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -121,6 +124,7 @@ function usePayrollWindows() {
         .update({ enabled } as never)
         .eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Payroll Manager", action: enabled ? "enable" : "disable", entityType: "payroll_windows", entityId: id, details: { enabled } });
     },
     onSuccess: invalidate,
   });
@@ -129,6 +133,7 @@ function usePayrollWindows() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("payroll_windows" as never).delete().eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Payroll Manager", action: "delete", entityType: "payroll_windows", entityId: id });
     },
     onSuccess: invalidate,
   });

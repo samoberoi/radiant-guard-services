@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activity-log";
 
 /**
  * Cloud-backed admin data store.
@@ -134,6 +135,7 @@ export function useStates() {
       if (!trimmed) throw new Error("Name is required");
       const { error } = await supabase.from("states").insert({ name: trimmed });
       if (error) throw error;
+      void logActivity({ module: "State Manager", action: "create", entityType: "states", entityLabel: trimmed });
     },
     onSuccess: invalidate,
   });
@@ -147,6 +149,7 @@ export function useStates() {
         .update({ name: trimmed })
         .eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "State Manager", action: "update", entityType: "states", entityId: id, entityLabel: trimmed });
     },
     onSuccess: invalidate,
   });
@@ -155,6 +158,7 @@ export function useStates() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("states").delete().eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "State Manager", action: "delete", entityType: "states", entityId: id });
     },
     onSuccess: invalidate,
   });
@@ -224,6 +228,7 @@ export function useBranches() {
         state_id: data.stateId,
       });
       if (error) throw error;
+      void logActivity({ module: "Branch Manager", action: "create", entityType: "branches", entityLabel: data.name.trim() || code, details: data as unknown as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -243,6 +248,7 @@ export function useBranches() {
         })
         .eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Branch Manager", action: "update", entityType: "branches", entityId: id, entityLabel: data.name.trim() || code, details: data as unknown as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -251,6 +257,7 @@ export function useBranches() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("branches").delete().eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Branch Manager", action: "delete", entityType: "branches", entityId: id });
     },
     onSuccess: invalidate,
   });
@@ -418,7 +425,9 @@ export function useCustomers() {
         .select("id")
         .single();
       if (error) throw error;
-      return (inserted as { id: string }).id;
+      const id = (inserted as { id: string }).id;
+      void logActivity({ module: "Customer Manager", action: "create", entityType: "customers", entityId: id, entityLabel: data.name, details: data as unknown as Record<string, unknown> });
+      return id;
     },
     onSuccess: invalidate,
   });
@@ -436,6 +445,7 @@ export function useCustomers() {
         .update(customerToRow(data))
         .eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Customer Manager", action: "update", entityType: "customers", entityId: id, entityLabel: data.name, details: data as unknown as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -444,6 +454,7 @@ export function useCustomers() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("customers").delete().eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Customer Manager", action: "delete", entityType: "customers", entityId: id });
     },
     onSuccess: invalidate,
   });
@@ -743,6 +754,7 @@ export function useUnits() {
     mutationFn: async (data: Omit<Unit, "id">) => {
       const { error } = await supabase.from("units").insert(unitToRow(data));
       if (error) throw error;
+      void logActivity({ module: "Unit Manager", action: "create", entityType: "units", entityLabel: (data as unknown as { name?: string; code?: string }).name || (data as unknown as { code?: string }).code || "", details: data as unknown as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -754,6 +766,7 @@ export function useUnits() {
         .update(unitToRow(data))
         .eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Unit Manager", action: "update", entityType: "units", entityId: id, entityLabel: (data as unknown as { name?: string; code?: string }).name || (data as unknown as { code?: string }).code || "", details: data as unknown as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -762,6 +775,7 @@ export function useUnits() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("units").delete().eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Unit Manager", action: "delete", entityType: "units", entityId: id });
     },
     onSuccess: invalidate,
   });

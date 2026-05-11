@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity, getClientIp } from "@/lib/activity-log";
 
 const STORAGE_KEY = "radiant.auth";
 
@@ -81,13 +82,47 @@ export function useAuth() {
     const digits = phone.replace(/\D/g, "").slice(-10);
     const role: AuthUser["role"] =
       digits === SUPER_ADMIN_PHONE ? "super_admin" : "user";
-    await ensureSupabaseSession(phone);
+    const ip = await getClientIp();
+    try {
+      await ensureSupabaseSession(phone);
+    } catch (e) {
+      void logActivity({
+        module: "Authentication",
+        action: "login",
+        entityType: "user",
+        entityLabel: phone,
+        userPhone: phone,
+        userRole: role,
+        ip,
+        status: "failure",
+        errorMessage: e instanceof Error ? e.message : String(e),
+      });
+      throw e;
+    }
     const u: AuthUser = { phone, role };
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+    void logActivity({
+      module: "Authentication",
+      action: "login",
+      entityType: "user",
+      entityLabel: phone,
+      userPhone: phone,
+      userRole: role,
+      ip,
+    });
     emit();
   }, []);
 
   const logout = useCallback(() => {
+    const current = read();
+    void logActivity({
+      module: "Authentication",
+      action: "logout",
+      entityType: "user",
+      entityLabel: current?.phone ?? "",
+      userPhone: current?.phone ?? "",
+      userRole: current?.role ?? "",
+    });
     window.localStorage.removeItem(STORAGE_KEY);
     void supabase.auth.signOut();
     emit();

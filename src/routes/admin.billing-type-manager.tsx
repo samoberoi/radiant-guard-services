@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Download, Edit2, Plus, Receipt, Search, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -79,6 +80,7 @@ function useBillingTypes() {
       if (!p.name.trim()) throw new Error("Name is required");
       const { error } = await supabase.from("billing_types" as never).insert(toRow(p) as never);
       if (error) throw error;
+    void logActivity({ module: "Billing Type Manager", action: "create", entityType: "billing_types", entityLabel: String((p as Record<string, unknown>).name ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -90,6 +92,7 @@ function useBillingTypes() {
         .update(toRow(p) as never)
         .eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Billing Type Manager", action: "update", entityType: "billing_types", entityId: id, entityLabel: String((p as Record<string, unknown>).name ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -101,6 +104,7 @@ function useBillingTypes() {
         .update({ enabled } as never)
         .eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Billing Type Manager", action: enabled ? "enable" : "disable", entityType: "billing_types", entityId: id, details: { enabled } });
     },
     onSuccess: invalidate,
   });
@@ -109,6 +113,7 @@ function useBillingTypes() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("billing_types" as never).delete().eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Billing Type Manager", action: "delete", entityType: "billing_types", entityId: id });
     },
     onSuccess: invalidate,
   });

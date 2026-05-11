@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Coins, Download, Edit2, Plus, Search, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -87,6 +88,7 @@ function useAllowances() {
       if (!p.name.trim()) throw new Error("Name is required");
       const { error } = await supabase.from("allowance_types" as never).insert(toRow(p) as never);
       if (error) throw error;
+    void logActivity({ module: "Allowance Manager", action: "create", entityType: "allowance_types", entityLabel: String((p as Record<string, unknown>).display_name ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -98,6 +100,7 @@ function useAllowances() {
         .update(toRow(p) as never)
         .eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Allowance Manager", action: "update", entityType: "allowance_types", entityId: id, entityLabel: String((p as Record<string, unknown>).display_name ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -109,6 +112,7 @@ function useAllowances() {
         .update({ enabled } as never)
         .eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Allowance Manager", action: enabled ? "enable" : "disable", entityType: "allowance_types", entityId: id, details: { enabled } });
     },
     onSuccess: invalidate,
   });
@@ -117,6 +121,7 @@ function useAllowances() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("allowance_types" as never).delete().eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Allowance Manager", action: "delete", entityType: "allowance_types", entityId: id });
     },
     onSuccess: invalidate,
   });

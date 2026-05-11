@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { BadgeCheck, Download, Edit2, Plus, Search, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -79,6 +80,7 @@ function useDesignations() {
       if (!p.name.trim()) throw new Error("Name is required");
       const { error } = await supabase.from("designations" as never).insert(toRow(p) as never);
       if (error) throw error;
+    void logActivity({ module: "Designation Manager", action: "create", entityType: "designations", entityLabel: String((p as Record<string, unknown>).name ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -90,6 +92,7 @@ function useDesignations() {
         .update(toRow(p) as never)
         .eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Designation Manager", action: "update", entityType: "designations", entityId: id, entityLabel: String((p as Record<string, unknown>).name ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -101,6 +104,7 @@ function useDesignations() {
         .update({ enabled } as never)
         .eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Designation Manager", action: enabled ? "enable" : "disable", entityType: "designations", entityId: id, details: { enabled } });
     },
     onSuccess: invalidate,
   });
@@ -109,6 +113,7 @@ function useDesignations() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("designations" as never).delete().eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Designation Manager", action: "delete", entityType: "designations", entityId: id });
     },
     onSuccess: invalidate,
   });

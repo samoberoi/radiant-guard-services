@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Download, Edit2, Plus, Search, Trash2, Clock } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -83,6 +84,7 @@ function useDuties() {
       if (!p.name.trim()) throw new Error("Name is required");
       const { error } = await supabase.from("duties" as never).insert(toRow(p) as never);
       if (error) throw error;
+    void logActivity({ module: "Duty Manager", action: "create", entityType: "duties", entityLabel: String((p as Record<string, unknown>).name ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -94,6 +96,7 @@ function useDuties() {
         .update(toRow(p) as never)
         .eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Duty Manager", action: "update", entityType: "duties", entityId: id, entityLabel: String((p as Record<string, unknown>).name ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -105,6 +108,7 @@ function useDuties() {
         .update({ enabled } as never)
         .eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Duty Manager", action: enabled ? "enable" : "disable", entityType: "duties", entityId: id, details: { enabled } });
     },
     onSuccess: invalidate,
   });
@@ -113,6 +117,7 @@ function useDuties() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("duties" as never).delete().eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Duty Manager", action: "delete", entityType: "duties", entityId: id });
     },
     onSuccess: invalidate,
   });

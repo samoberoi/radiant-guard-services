@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -127,6 +128,7 @@ function useLwfs() {
         .from("labour_welfare_funds" as never)
         .insert(toRow(p) as never);
       if (error) throw error;
+    void logActivity({ module: "Labour Welfare Fund", action: "create", entityType: "labour_welfare_funds", entityLabel: String((p as Record<string, unknown>).state ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -138,6 +140,7 @@ function useLwfs() {
         .update(toRow(p) as never)
         .eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Labour Welfare Fund", action: "update", entityType: "labour_welfare_funds", entityId: id, entityLabel: String((p as Record<string, unknown>).state ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -149,6 +152,7 @@ function useLwfs() {
         .update({ enabled } as never)
         .eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Labour Welfare Fund", action: enabled ? "enable" : "disable", entityType: "labour_welfare_funds", entityId: id, details: { enabled } });
     },
     onSuccess: invalidate,
   });
@@ -160,6 +164,7 @@ function useLwfs() {
         .delete()
         .eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Labour Welfare Fund", action: "delete", entityType: "labour_welfare_funds", entityId: id });
     },
     onSuccess: invalidate,
   });
