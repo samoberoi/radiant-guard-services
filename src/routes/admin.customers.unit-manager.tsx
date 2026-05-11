@@ -1049,3 +1049,98 @@ function ProfessionalTaxBlock({
     </div>
   );
 }
+
+function LwfBlock({
+  enabled,
+  onToggle,
+  billingPincode,
+}: {
+  enabled: boolean;
+  onToggle: (v: boolean) => void;
+  billingPincode: string;
+}) {
+  const { data: ranges } = usePincodeRanges();
+  const { data: lwfRows } = useLwfRows();
+
+  const result = useMemo(
+    () => resolveLwf(billingPincode, ranges ?? [], lwfRows ?? []),
+    [billingPincode, ranges, lwfRows],
+  );
+
+  const fmtAmount = (n: number) =>
+    new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(n);
+  const freqLabel = (f: string) =>
+    f === "monthly" ? "Monthly"
+      : f === "quarterly" ? "Quarterly"
+      : f === "half-yearly" ? "Half-yearly (twice a year)"
+      : "Yearly";
+
+  return (
+    <div className="space-y-3">
+      <ToggleRow label="Enable LWF" checked={enabled} onCheckedChange={onToggle} />
+      {enabled && (
+        <div className="rounded-lg border border-border bg-background p-3 text-sm">
+          {result.kind === "no_pincode" || result.kind === "invalid" ? (
+            <p className="text-muted-foreground">
+              Navigate to <span className="font-semibold text-foreground">unit's billing</span> and provide a valid 6-digit pincode to view applicable LWF.
+            </p>
+          ) : result.kind === "no_state" ? (
+            <p className="text-muted-foreground">
+              Could not resolve a state for pincode <span className="font-mono font-semibold text-foreground">{result.pincode}</span>.
+            </p>
+          ) : result.kind === "no_lwf" ? (
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="rounded-full bg-accent/15 px-2.5 py-1 font-semibold text-accent">{result.state}</span>
+                <span className="font-mono text-muted-foreground">PIN {result.pincode}</span>
+              </div>
+              <p className="text-muted-foreground">No LWF configured for this state.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="rounded-full bg-accent/15 px-2.5 py-1 font-semibold text-accent">{result.state}</span>
+                <span className="font-mono text-muted-foreground">PIN {result.pincode}</span>
+                {!result.lwf.enabled && (
+                  <span className="rounded-full bg-destructive/15 px-2.5 py-1 font-semibold text-destructive">Disabled in registry</span>
+                )}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-md border border-border p-2.5">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Frequency</div>
+                  <div className="text-sm font-semibold text-foreground">{freqLabel(result.lwf.frequency)}</div>
+                </div>
+                <div className="rounded-md border border-border p-2.5">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Deduction months</div>
+                  <div className="text-sm font-semibold text-foreground">
+                    {result.lwf.deduction_months.length === 0
+                      ? "—"
+                      : result.lwf.deduction_months
+                          .slice()
+                          .sort((a, b) => a - b)
+                          .map((m) => MONTH_NAMES[m - 1] ?? m)
+                          .join(", ")}
+                  </div>
+                </div>
+                <div className="rounded-md border border-border p-2.5">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Employee contribution</div>
+                  <div className="font-mono text-sm font-semibold text-foreground">{fmtAmount(Number(result.lwf.employee_contribution))}</div>
+                </div>
+                <div className="rounded-md border border-border p-2.5">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Employer contribution</div>
+                  <div className="font-mono text-sm font-semibold text-foreground">{fmtAmount(Number(result.lwf.employer_contribution))}</div>
+                </div>
+                <div className="rounded-md border border-primary/30 bg-primary/5 p-2.5 sm:col-span-2">
+                  <div className="text-[10px] font-semibold uppercase tracking-wider text-primary">Total per cycle</div>
+                  <div className="font-mono text-base font-semibold text-primary">
+                    {fmtAmount(Number(result.lwf.employee_contribution) + Number(result.lwf.employer_contribution))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
