@@ -9,6 +9,8 @@ import { useEffect, useState } from "react";
 import {
   Building2,
   ChevronDown,
+  FileText,
+  Files,
   LayoutDashboard,
   LogOut,
   MapPin,
