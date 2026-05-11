@@ -792,6 +792,16 @@ function UnitFormDialog({
               billingPincode={form.billingPincode}
             />
           </Section>
+
+          {/* LABOUR WELFARE FUND */}
+          <Section title="Labour welfare fund (LWF)">
+            <LwfBlock
+              enabled={form.enableLwf}
+              onToggle={(v) => set("enableLwf", v)}
+              billingPincode={form.billingPincode}
+            />
+          </Section>
+
           <Section title="Reporting officers">
             <div className="space-y-2">
               {form.reportingOfficers.map((o, i) => (
