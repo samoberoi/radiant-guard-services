@@ -746,6 +746,14 @@ function ContractFormDialog({
   const [status, setStatus] = useState<ContractStatus>("active");
   const [unitPickerOpen, setUnitPickerOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [resources, setResources] = useState<ContractResource[]>([]);
+  const [resourceDialog, setResourceDialog] = useState<{
+    open: boolean;
+    index: number | null;
+    initial: ContractResource | null;
+  }>({ open: false, index: null, initial: null });
+
+  const existingResources = useContractResources(editing?.id ?? null);
 
   // Reset when opened
   useEffect(() => {
