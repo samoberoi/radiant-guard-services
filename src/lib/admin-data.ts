@@ -548,6 +548,7 @@ export type Unit = {
   latitude: number | null;
   longitude: number | null;
   enablePt: boolean;
+  enableLwf: boolean;
 };
 
 export function nextUnitCode(units: { code: string }[]) {
