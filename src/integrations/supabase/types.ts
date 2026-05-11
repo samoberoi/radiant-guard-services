@@ -384,6 +384,7 @@ export type Database = {
           description: string
           emergency_contact_mobile: string
           emergency_contact_name: string
+          enable_lwf: boolean
           enable_pt: boolean
           gst_number: string
           id: string
@@ -430,6 +431,7 @@ export type Database = {
           description?: string
           emergency_contact_mobile?: string
           emergency_contact_name?: string
+          enable_lwf?: boolean
           enable_pt?: boolean
           gst_number?: string
           id?: string
@@ -476,6 +478,7 @@ export type Database = {
           description?: string
           emergency_contact_mobile?: string
           emergency_contact_name?: string
+          enable_lwf?: boolean
           enable_pt?: boolean
           gst_number?: string
           id?: string
