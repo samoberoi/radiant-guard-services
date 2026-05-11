@@ -156,7 +156,7 @@ function CustomerManagerPage() {
             className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="mr-1.5 h-4 w-4" />
-            Add customer
+            Add organization
           </Button>
         </div>
       </div>
