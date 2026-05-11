@@ -1084,7 +1084,7 @@ function ContractFormDialog({
                 billingTypeId: billingTypeId || null,
                 gstOption,
                 status,
-              });
+              }, resources);
               setSaving(false);
               if (err) toast.error(err);
               else onOpenChange(false);
@@ -1093,6 +1093,25 @@ function ContractFormDialog({
             {saving ? "Saving…" : editing ? "Save Changes" : "Create Contract"}
           </Button>
         </DialogFooter>
+
+        <ResourceFormDialog
+          open={resourceDialog.open}
+          initial={resourceDialog.initial}
+          onOpenChange={(o) =>
+            setResourceDialog((s) => ({ ...s, open: o }))
+          }
+          onSubmit={(r) => {
+            setResources((prev) => {
+              if (resourceDialog.index !== null) {
+                const next = [...prev];
+                next[resourceDialog.index] = r;
+                return next;
+              }
+              return [...prev, r];
+            });
+            setResourceDialog({ open: false, index: null, initial: null });
+          }}
+        />
       </DialogContent>
     </Dialog>
   );
