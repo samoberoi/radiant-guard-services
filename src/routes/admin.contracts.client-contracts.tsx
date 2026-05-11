@@ -1418,7 +1418,7 @@ function ResourceFormDialog({
                         {designations.map((d) => (
                           <CommandItem
                             key={d.id}
-                            value={`${d.code} ${d.name}`}
+                            value={`${d.code} ${d.name} ${d.id}`}
                             onSelect={() => {
                               setDesignationId(d.id);
                               setDesignationOpen(false);
