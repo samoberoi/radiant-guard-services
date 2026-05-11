@@ -602,6 +602,7 @@ type UnitRow = {
   ambulance_mobile: string | null;
   latitude: number | string | null;
   longitude: number | string | null;
+  enable_pt: boolean | null;
 };
 
 function rowToUnit(r: UnitRow): Unit {
