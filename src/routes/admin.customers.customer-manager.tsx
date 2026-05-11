@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  INDUSTRY_TYPES,
   nextCustomerCode,
   useCustomers,
   useUnits,
@@ -37,6 +38,7 @@ import {
   type CustomerStatus,
   type Unit,
 } from "@/lib/admin-data";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/customers/customer-manager")({
