@@ -192,6 +192,53 @@ export type Database = {
           },
         ]
       }
+      contract_resources: {
+        Row: {
+          components: Json
+          contract_id: string
+          created_at: string
+          designation_id: string | null
+          gross: number
+          id: string
+          quantity: number
+          service_type_id: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          components?: Json
+          contract_id: string
+          created_at?: string
+          designation_id?: string | null
+          gross?: number
+          id?: string
+          quantity?: number
+          service_type_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          components?: Json
+          contract_id?: string
+          created_at?: string
+          designation_id?: string | null
+          gross?: number
+          id?: string
+          quantity?: number
+          service_type_id?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contract_resources_contract_id_fkey"
+            columns: ["contract_id"]
+            isOneToOne: false
+            referencedRelation: "client_contracts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_gst_numbers: {
         Row: {
           created_at: string
