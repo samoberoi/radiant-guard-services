@@ -634,15 +634,17 @@ function ClientContractsPage() {
         }}
         editing={editing}
         existingCodes={items.map((i) => i.contractCode)}
-        onSubmit={async (p) => {
+        onSubmit={async (p, resources) => {
           try {
+            let contractId: string;
             if (editing) {
               await updateMut.mutateAsync({ id: editing.id, p });
-              toast.success("Contract updated");
+              contractId = editing.id;
             } else {
-              await addMut.mutateAsync(p);
-              toast.success("Contract created");
+              contractId = await addMut.mutateAsync(p);
             }
+            await persistResources(contractId, resources);
+            toast.success(editing ? "Contract updated" : "Contract created");
             return null;
           } catch (e) {
             return e instanceof Error ? e.message : "Could not save contract";
