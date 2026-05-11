@@ -1543,16 +1543,21 @@ function ResourceFormDialog({
                       </button>
                     </Label>
                     <Input
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      value={c.amount}
-                      onChange={(e) =>
-                        updateAmount(
-                          c.allowanceId,
-                          parseFloat(e.target.value) || 0,
-                        )
-                      }
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={c.amount === 0 ? "" : String(c.amount)}
+                      onChange={(e) => {
+                        const raw = e.target.value.trim();
+                        if (raw === "") {
+                          updateAmount(c.allowanceId, 0);
+                          return;
+                        }
+                        if (!/^\d*\.?\d*$/.test(raw)) return;
+                        const n = parseFloat(raw);
+                        updateAmount(c.allowanceId, Number.isFinite(n) ? n : 0);
+                      }}
+                      onFocus={(e) => e.target.select()}
                     />
                   </div>
                 ))}
