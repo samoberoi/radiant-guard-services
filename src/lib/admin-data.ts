@@ -659,6 +659,7 @@ function rowToUnit(r: UnitRow): Unit {
     latitude: r.latitude == null ? null : Number(r.latitude),
     longitude: r.longitude == null ? null : Number(r.longitude),
     enablePt: Boolean(r.enable_pt),
+    enableLwf: Boolean(r.enable_lwf),
   };
 }
 
