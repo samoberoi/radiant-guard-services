@@ -44,6 +44,7 @@ import {
   type Unit,
 } from "@/lib/admin-data";
 import { cn } from "@/lib/utils";
+import { resolvePt, usePincodeRanges, usePtSlabs } from "@/lib/pt-lookup";
 
 export const Route = createFileRoute("/admin/customers/unit-manager")({
   component: UnitManagerPage,
