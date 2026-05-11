@@ -351,8 +351,9 @@ function customerToRow(data: Omit<Customer, "id">) {
   if (!code) throw new Error("Organisation ID is required");
   if (!name) throw new Error("Organisation name is required");
   const sameAsBilling = data.shippingSameAsBilling;
-  const ship = (k: keyof Customer, fallback: string) =>
-    sameAsBilling ? (data[fallback as keyof Customer] as string) ?? "" : (data[k] as string) ?? "";
+  const d = data as unknown as Record<string, string>;
+  const ship = (k: string, fallback: string) =>
+    sameAsBilling ? d[fallback] ?? "" : d[k] ?? "";
   return {
     code,
     name,
