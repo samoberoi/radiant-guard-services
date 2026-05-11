@@ -181,12 +181,15 @@ function useContracts() {
   });
 
   const addMut = useMutation({
-    mutationFn: async (p: Payload) => {
+    mutationFn: async (p: Payload): Promise<string> => {
       if (!p.unitId) throw new Error("Unit is required");
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("client_contracts" as never)
-        .insert(toRow(p) as never);
+        .insert(toRow(p) as never)
+        .select("id")
+        .single();
       if (error) throw error;
+      return String((data as Record<string, unknown>).id);
     },
     onSuccess: invalidate,
   });
