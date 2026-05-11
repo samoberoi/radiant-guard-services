@@ -660,6 +660,8 @@ function rowToUnit(r: UnitRow): Unit {
     nearbyHospitalMobile: r.nearby_hospital_mobile ?? "",
     ambulanceName: r.ambulance_name ?? "",
     ambulanceMobile: r.ambulance_mobile ?? "",
+    securityServiceName: r.security_service_name ?? "",
+    securityServiceMobile: r.security_service_mobile ?? "",
     latitude: r.latitude == null ? null : Number(r.latitude),
     longitude: r.longitude == null ? null : Number(r.longitude),
     enablePt: Boolean(r.enable_pt),
