@@ -713,6 +713,7 @@ function unitToRow(data: Omit<Unit, "id">) {
     latitude: data.latitude,
     longitude: data.longitude,
     enable_pt: data.enablePt,
+    enable_lwf: data.enableLwf,
   };
 }
 
