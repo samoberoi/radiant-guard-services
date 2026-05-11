@@ -781,8 +781,17 @@ function ContractFormDialog({
       setGstOption("csgst");
       setStatus("active");
     }
+    setResources([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id]);
+
+  // Hydrate existing resources when editing
+  useEffect(() => {
+    if (open && editing && existingResources.length > 0) {
+      setResources(existingResources);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing?.id, existingResources.length]);
 
   const selectedUnit = units.find((u) => u.id === unitId);
   const selectedOrg = selectedUnit?.customerId
