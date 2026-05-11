@@ -625,7 +625,7 @@ function PtSlabFormDialog({
                 id="pt-region"
                 value={form.regionLabel}
                 onChange={(e) => set("regionLabel", e.target.value)}
-                placeholder="All Pincodes / Vadodara / Mumbai zone"
+                placeholder="All Pincodes / Baroda / Mumbai zone"
               />
             </div>
           </div>
@@ -640,7 +640,7 @@ function PtSlabFormDialog({
             />
             <p className="text-[11px] text-muted-foreground">
               Use this to record which pincodes this slab applies to (e.g. exclusions like
-              Vadodara within Gujarat).
+              Baroda within Gujarat). Reusable ranges are stored in the Pincode Ranges table.
             </p>
           </div>
 

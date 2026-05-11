@@ -52,6 +52,47 @@ export type Database = {
           },
         ]
       }
+      customer_gst_numbers: {
+        Row: {
+          created_at: string
+          customer_id: string
+          gstin: string
+          id: string
+          label: string
+          state_code: string
+          state_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          gstin: string
+          id?: string
+          label?: string
+          state_code?: string
+          state_name?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          gstin?: string
+          id?: string
+          label?: string
+          state_code?: string
+          state_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_gst_numbers_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           address: string
@@ -178,6 +219,42 @@ export type Database = {
           status?: Database["public"]["Enums"]["customer_status"]
           updated_at?: string
           website?: string
+        }
+        Relationships: []
+      }
+      pincode_ranges: {
+        Row: {
+          created_at: string
+          id: string
+          is_excluded: boolean
+          notes: string
+          range_end: number
+          range_start: number
+          region_label: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_excluded?: boolean
+          notes?: string
+          range_end: number
+          range_start: number
+          region_label?: string
+          state: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_excluded?: boolean
+          notes?: string
+          range_end?: number
+          range_start?: number
+          region_label?: string
+          state?: string
+          updated_at?: string
         }
         Relationships: []
       }

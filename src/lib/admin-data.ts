@@ -93,6 +93,7 @@ export const INDUSTRY_TYPES = [
 ] as const;
 
 type Result = { ok: true } | { ok: false; error: string };
+type AddResult = { ok: true; id: string } | { ok: false; error: string };
 
 const QK = {
   states: ["admin", "states"] as const,
@@ -410,9 +411,14 @@ export function useCustomers() {
   const invalidate = () => qc.invalidateQueries({ queryKey: QK.customers });
 
   const addMut = useMutation({
-    mutationFn: async (data: Omit<Customer, "id">) => {
-      const { error } = await supabase.from("customers").insert(customerToRow(data));
+    mutationFn: async (data: Omit<Customer, "id">): Promise<string> => {
+      const { data: inserted, error } = await supabase
+        .from("customers")
+        .insert(customerToRow(data))
+        .select("id")
+        .single();
       if (error) throw error;
+      return (inserted as { id: string }).id;
     },
     onSuccess: invalidate,
   });
@@ -442,10 +448,10 @@ export function useCustomers() {
     onSuccess: invalidate,
   });
 
-  const addCustomer = async (data: Omit<Customer, "id">): Promise<Result> => {
+  const addCustomer = async (data: Omit<Customer, "id">): Promise<AddResult> => {
     try {
-      await addMut.mutateAsync(data);
-      return { ok: true };
+      const id = await addMut.mutateAsync(data);
+      return { ok: true, id };
     } catch (e) {
       return { ok: false, error: friendlyDbError(e, "customer") };
     }
