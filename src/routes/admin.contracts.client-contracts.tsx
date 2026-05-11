@@ -1034,6 +1034,31 @@ function ContractFormDialog({
               ))}
             </div>
           </Section>
+
+          {/* Resources */}
+          <ResourcesSection
+            resources={resources}
+            onAdd={() =>
+              setResourceDialog({ open: true, index: null, initial: null })
+            }
+            onEdit={(idx) =>
+              setResourceDialog({
+                open: true,
+                index: idx,
+                initial: resources[idx],
+              })
+            }
+            onCopy={(idx) =>
+              setResourceDialog({
+                open: true,
+                index: null,
+                initial: { ...resources[idx], id: undefined },
+              })
+            }
+            onDelete={(idx) =>
+              setResources((prev) => prev.filter((_, i) => i !== idx))
+            }
+          />
         </div>
 
         <DialogFooter>
