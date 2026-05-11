@@ -357,7 +357,10 @@ async function persistResources(contractId: string, resources: ContractResource[
     .delete()
     .eq("contract_id", contractId);
   if (del.error) throw del.error;
-  if (resources.length === 0) return;
+  if (resources.length === 0) {
+    void logActivity({ module: "Contract Resources", action: "update", entityType: "contract_resources", entityId: contractId, details: { count: 0 } });
+    return;
+  }
   const rows = resources.map((r, idx) => ({
     contract_id: contractId,
     designation_id: r.designationId || null,
@@ -369,6 +372,7 @@ async function persistResources(contractId: string, resources: ContractResource[
   }));
   const ins = await supabase.from("contract_resources" as never).insert(rows as never);
   if (ins.error) throw ins.error;
+  void logActivity({ module: "Contract Resources", action: "update", entityType: "contract_resources", entityId: contractId, details: { count: resources.length, resources: rows } as unknown as Record<string, unknown> });
 }
 
 function ClientContractsPage() {
