@@ -863,6 +863,12 @@ function UnitFormDialog({
               <Field label="Ambulance mobile">
                 <Input value={form.ambulanceMobile} onChange={(e) => set("ambulanceMobile", e.target.value)} inputMode="tel" />
               </Field>
+              <Field label="Security service">
+                <Input value={form.securityServiceName} onChange={(e) => set("securityServiceName", e.target.value)} />
+              </Field>
+              <Field label="Security mobile">
+                <Input value={form.securityServiceMobile} onChange={(e) => set("securityServiceMobile", e.target.value)} inputMode="tel" />
+              </Field>
             </div>
           </Section>
 
