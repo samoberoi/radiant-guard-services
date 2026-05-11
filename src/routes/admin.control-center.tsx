@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Clock, HandCoins, ReceiptText } from "lucide-react";
+import { ArrowRight, Briefcase, Clock, HandCoins, ReceiptText } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/admin/control-center")({
@@ -31,6 +31,12 @@ const tiles: Tile[] = [
     label: "Duty Manager",
     description: "Define duty types like 8 hrs and 12 hrs used in rosters.",
     icon: Clock,
+  },
+  {
+    to: "/admin/service-type-manager",
+    label: "Service Type Manager",
+    description: "Define service types like Security, Manpower, Facility, Staff.",
+    icon: Briefcase,
   },
 ];
 
