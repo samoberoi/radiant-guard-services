@@ -56,6 +56,12 @@ const tiles: Tile[] = [
     description: "Define billing types like Man Hours, Man Days, Man Months, Special.",
     icon: Receipt,
   },
+  {
+    to: "/admin/designation-manager",
+    label: "Designation Manager",
+    description: "Manage employee designations used across rosters and payroll.",
+    icon: BadgeCheck,
+  },
 ];
 
 function ControlCenterDashboard() {
