@@ -754,6 +754,7 @@ export function useUnits() {
     mutationFn: async (data: Omit<Unit, "id">) => {
       const { error } = await supabase.from("units").insert(unitToRow(data));
       if (error) throw error;
+      void logActivity({ module: "Unit Manager", action: "create", entityType: "units", entityLabel: (data as unknown as { name?: string; code?: string }).name || (data as unknown as { code?: string }).code || "", details: data as unknown as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -765,6 +766,7 @@ export function useUnits() {
         .update(unitToRow(data))
         .eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Unit Manager", action: "update", entityType: "units", entityId: id, entityLabel: (data as unknown as { name?: string; code?: string }).name || (data as unknown as { code?: string }).code || "", details: data as unknown as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -773,6 +775,7 @@ export function useUnits() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("units").delete().eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Unit Manager", action: "delete", entityType: "units", entityId: id });
     },
     onSuccess: invalidate,
   });
