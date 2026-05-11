@@ -222,6 +222,36 @@ export type Database = {
         }
         Relationships: []
       }
+      duties: {
+        Row: {
+          created_at: string
+          description: string
+          enabled: boolean
+          hours: number
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          hours?: number
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          hours?: number
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       labour_welfare_funds: {
         Row: {
           created_at: string
