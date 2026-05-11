@@ -115,6 +115,83 @@ export type Database = {
           },
         ]
       }
+      client_contracts: {
+        Row: {
+          billing_type_id: string | null
+          contract_code: string
+          created_at: string
+          description: string
+          end_date: string | null
+          gst_option: string
+          id: string
+          payroll_window_id: string | null
+          service_type_id: string | null
+          start_date: string | null
+          status: string
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          billing_type_id?: string | null
+          contract_code: string
+          created_at?: string
+          description?: string
+          end_date?: string | null
+          gst_option?: string
+          id?: string
+          payroll_window_id?: string | null
+          service_type_id?: string | null
+          start_date?: string | null
+          status?: string
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          billing_type_id?: string | null
+          contract_code?: string
+          created_at?: string
+          description?: string
+          end_date?: string | null
+          gst_option?: string
+          id?: string
+          payroll_window_id?: string | null
+          service_type_id?: string | null
+          start_date?: string | null
+          status?: string
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_contracts_billing_type_id_fkey"
+            columns: ["billing_type_id"]
+            isOneToOne: false
+            referencedRelation: "billing_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contracts_payroll_window_id_fkey"
+            columns: ["payroll_window_id"]
+            isOneToOne: false
+            referencedRelation: "payroll_windows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contracts_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contracts_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_gst_numbers: {
         Row: {
           created_at: string

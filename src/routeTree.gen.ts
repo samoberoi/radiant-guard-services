@@ -26,6 +26,7 @@ import { Route as AdminCustomersUnitManagerRouteImport } from './routes/admin.cu
 import { Route as AdminCustomersStateManagerRouteImport } from './routes/admin.customers.state-manager'
 import { Route as AdminCustomersCustomerManagerRouteImport } from './routes/admin.customers.customer-manager'
 import { Route as AdminCustomersBranchManagerRouteImport } from './routes/admin.customers.branch-manager'
+import { Route as AdminContractsClientContractsRouteImport } from './routes/admin.contracts.client-contracts'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -117,6 +118,12 @@ const AdminCustomersBranchManagerRoute =
     path: '/branch-manager',
     getParentRoute: () => AdminCustomersRoute,
   } as any)
+const AdminContractsClientContractsRoute =
+  AdminContractsClientContractsRouteImport.update({
+    id: '/contracts/client-contracts',
+    path: '/contracts/client-contracts',
+    getParentRoute: () => AdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -132,6 +139,7 @@ export interface FileRoutesByFullPath {
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
   '/admin/service-type-manager': typeof AdminServiceTypeManagerRoute
+  '/admin/contracts/client-contracts': typeof AdminContractsClientContractsRoute
   '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
@@ -151,6 +159,7 @@ export interface FileRoutesByTo {
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
   '/admin/service-type-manager': typeof AdminServiceTypeManagerRoute
+  '/admin/contracts/client-contracts': typeof AdminContractsClientContractsRoute
   '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
@@ -171,6 +180,7 @@ export interface FileRoutesById {
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
   '/admin/service-type-manager': typeof AdminServiceTypeManagerRoute
+  '/admin/contracts/client-contracts': typeof AdminContractsClientContractsRoute
   '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
@@ -192,6 +202,7 @@ export interface FileRouteTypes {
     | '/admin/payroll-manager'
     | '/admin/professional-tax-manager'
     | '/admin/service-type-manager'
+    | '/admin/contracts/client-contracts'
     | '/admin/customers/branch-manager'
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
@@ -211,6 +222,7 @@ export interface FileRouteTypes {
     | '/admin/payroll-manager'
     | '/admin/professional-tax-manager'
     | '/admin/service-type-manager'
+    | '/admin/contracts/client-contracts'
     | '/admin/customers/branch-manager'
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
@@ -230,6 +242,7 @@ export interface FileRouteTypes {
     | '/admin/payroll-manager'
     | '/admin/professional-tax-manager'
     | '/admin/service-type-manager'
+    | '/admin/contracts/client-contracts'
     | '/admin/customers/branch-manager'
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
@@ -364,6 +377,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCustomersBranchManagerRouteImport
       parentRoute: typeof AdminCustomersRoute
     }
+    '/admin/contracts/client-contracts': {
+      id: '/admin/contracts/client-contracts'
+      path: '/contracts/client-contracts'
+      fullPath: '/admin/contracts/client-contracts'
+      preLoaderRoute: typeof AdminContractsClientContractsRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
@@ -395,6 +415,7 @@ interface AdminRouteChildren {
   AdminPayrollManagerRoute: typeof AdminPayrollManagerRoute
   AdminProfessionalTaxManagerRoute: typeof AdminProfessionalTaxManagerRoute
   AdminServiceTypeManagerRoute: typeof AdminServiceTypeManagerRoute
+  AdminContractsClientContractsRoute: typeof AdminContractsClientContractsRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -407,6 +428,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminPayrollManagerRoute: AdminPayrollManagerRoute,
   AdminProfessionalTaxManagerRoute: AdminProfessionalTaxManagerRoute,
   AdminServiceTypeManagerRoute: AdminServiceTypeManagerRoute,
+  AdminContractsClientContractsRoute: AdminContractsClientContractsRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
