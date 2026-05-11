@@ -425,7 +425,9 @@ export function useCustomers() {
         .select("id")
         .single();
       if (error) throw error;
-      return (inserted as { id: string }).id;
+      const id = (inserted as { id: string }).id;
+      void logActivity({ module: "Customer Manager", action: "create", entityType: "customers", entityId: id, entityLabel: data.name, details: data as unknown as Record<string, unknown> });
+      return id;
     },
     onSuccess: invalidate,
   });
@@ -443,6 +445,7 @@ export function useCustomers() {
         .update(customerToRow(data))
         .eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Customer Manager", action: "update", entityType: "customers", entityId: id, entityLabel: data.name, details: data as unknown as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -451,6 +454,7 @@ export function useCustomers() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("customers").delete().eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Customer Manager", action: "delete", entityType: "customers", entityId: id });
     },
     onSuccess: invalidate,
   });
