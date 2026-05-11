@@ -426,7 +426,7 @@ function BranchFormDialog({
                 <SelectTrigger id="branch-state">
                   <SelectValue placeholder="Select a state" />
                 </SelectTrigger>
-                <SelectContent className="max-h-72">
+                <SelectContent>
                   {stateOptions.length === 0 ? (
                     <div className="px-2 py-3 text-center text-xs text-muted-foreground">
                       All states are already mapped.
