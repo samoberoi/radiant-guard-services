@@ -190,7 +190,9 @@ function useContracts() {
         .select("id")
         .single();
       if (error) throw error;
-      return String((data as Record<string, unknown>).id);
+      const id = String((data as Record<string, unknown>).id);
+      void logActivity({ module: "Client Contracts", action: "create", entityType: "client_contracts", entityId: id, entityLabel: p.contractCode, details: p as unknown as Record<string, unknown> });
+      return id;
     },
     onSuccess: invalidate,
   });
@@ -202,6 +204,7 @@ function useContracts() {
         .update(toRow(p) as never)
         .eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Client Contracts", action: "update", entityType: "client_contracts", entityId: id, entityLabel: p.contractCode, details: p as unknown as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -213,6 +216,7 @@ function useContracts() {
         .delete()
         .eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Client Contracts", action: "delete", entityType: "client_contracts", entityId: id });
     },
     onSuccess: invalidate,
   });
