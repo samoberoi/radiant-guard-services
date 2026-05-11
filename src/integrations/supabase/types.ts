@@ -222,6 +222,45 @@ export type Database = {
         }
         Relationships: []
       }
+      labour_welfare_funds: {
+        Row: {
+          created_at: string
+          deduction_months: number[]
+          employee_contribution: number
+          employer_contribution: number
+          enabled: boolean
+          frequency: string
+          id: string
+          notes: string
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deduction_months?: number[]
+          employee_contribution?: number
+          employer_contribution?: number
+          enabled?: boolean
+          frequency?: string
+          id?: string
+          notes?: string
+          state: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deduction_months?: number[]
+          employee_contribution?: number
+          employer_contribution?: number
+          enabled?: boolean
+          frequency?: string
+          id?: string
+          notes?: string
+          state?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pincode_ranges: {
         Row: {
           created_at: string
