@@ -93,6 +93,8 @@ function emptyUnit(code: string): Omit<Unit, "id"> {
     nearbyHospitalMobile: "",
     ambulanceName: "",
     ambulanceMobile: "",
+    securityServiceName: "",
+    securityServiceMobile: "",
     latitude: null,
     longitude: null,
     enablePt: false,
