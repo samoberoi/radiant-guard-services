@@ -548,6 +548,7 @@ export type Unit = {
   latitude: number | null;
   longitude: number | null;
   enablePt: boolean;
+  enableLwf: boolean;
 };
 
 export function nextUnitCode(units: { code: string }[]) {
@@ -603,6 +604,7 @@ type UnitRow = {
   latitude: number | string | null;
   longitude: number | string | null;
   enable_pt: boolean | null;
+  enable_lwf: boolean | null;
 };
 
 function rowToUnit(r: UnitRow): Unit {
@@ -657,6 +659,7 @@ function rowToUnit(r: UnitRow): Unit {
     latitude: r.latitude == null ? null : Number(r.latitude),
     longitude: r.longitude == null ? null : Number(r.longitude),
     enablePt: Boolean(r.enable_pt),
+    enableLwf: Boolean(r.enable_lwf),
   };
 }
 
@@ -710,6 +713,7 @@ function unitToRow(data: Omit<Unit, "id">) {
     latitude: data.latitude,
     longitude: data.longitude,
     enable_pt: data.enablePt,
+    enable_lwf: data.enableLwf,
   };
 }
 
