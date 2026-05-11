@@ -709,6 +709,7 @@ function unitToRow(data: Omit<Unit, "id">) {
     ambulance_mobile: data.ambulanceMobile,
     latitude: data.latitude,
     longitude: data.longitude,
+    enable_pt: data.enablePt,
   };
 }
 
