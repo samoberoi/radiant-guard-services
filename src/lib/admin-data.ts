@@ -545,6 +545,8 @@ export type Unit = {
   nearbyHospitalMobile: string;
   ambulanceName: string;
   ambulanceMobile: string;
+  securityServiceName: string;
+  securityServiceMobile: string;
   latitude: number | null;
   longitude: number | null;
   enablePt: boolean;
@@ -601,6 +603,8 @@ type UnitRow = {
   nearby_hospital_mobile: string | null;
   ambulance_name: string | null;
   ambulance_mobile: string | null;
+  security_service_name: string | null;
+  security_service_mobile: string | null;
   latitude: number | string | null;
   longitude: number | string | null;
   enable_pt: boolean | null;
@@ -656,6 +660,8 @@ function rowToUnit(r: UnitRow): Unit {
     nearbyHospitalMobile: r.nearby_hospital_mobile ?? "",
     ambulanceName: r.ambulance_name ?? "",
     ambulanceMobile: r.ambulance_mobile ?? "",
+    securityServiceName: r.security_service_name ?? "",
+    securityServiceMobile: r.security_service_mobile ?? "",
     latitude: r.latitude == null ? null : Number(r.latitude),
     longitude: r.longitude == null ? null : Number(r.longitude),
     enablePt: Boolean(r.enable_pt),
@@ -710,6 +716,8 @@ function unitToRow(data: Omit<Unit, "id">) {
     nearby_hospital_mobile: data.nearbyHospitalMobile,
     ambulance_name: data.ambulanceName,
     ambulance_mobile: data.ambulanceMobile,
+    security_service_name: data.securityServiceName,
+    security_service_mobile: data.securityServiceMobile,
     latitude: data.latitude,
     longitude: data.longitude,
     enable_pt: data.enablePt,
