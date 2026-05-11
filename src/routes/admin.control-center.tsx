@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Clock, HandCoins, ReceiptText } from "lucide-react";
+import { ArrowRight, Briefcase, Clock, HandCoins, ReceiptText } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/admin/control-center")({
