@@ -291,6 +291,39 @@ export type Database = {
         }
         Relationships: []
       }
+      payroll_windows: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          label: string
+          processing_day: number
+          updated_at: string
+          window_end_day: number
+          window_start_day: number
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label?: string
+          processing_day: number
+          updated_at?: string
+          window_end_day: number
+          window_start_day: number
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          label?: string
+          processing_day?: number
+          updated_at?: string
+          window_end_day?: number
+          window_start_day?: number
+        }
+        Relationships: []
+      }
       pincode_ranges: {
         Row: {
           created_at: string
