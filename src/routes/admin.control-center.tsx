@@ -67,11 +67,23 @@ const tiles: Tile[] = [
 function ControlCenterDashboard() {
   return (
     <div>
-      <PageHeader
-        title="Control Center"
-        description="Platform-wide statutory and configuration settings."
-        crumbs={[{ label: "Control Center" }]}
-      />
+      <div className="relative">
+        <PageHeader
+          title="Control Center"
+          description="Platform-wide statutory and configuration settings."
+          crumbs={[{ label: "Control Center" }]}
+        />
+        <Link
+          to="/admin/system-logs"
+          aria-label="System Logs"
+          title="System Logs"
+          className="group absolute right-0 top-0 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground/80 transition-colors hover:border-accent/40 hover:bg-accent/10 hover:text-accent"
+        >
+          <Settings className="h-4 w-4 transition-transform group-hover:rotate-45" />
+          <span className="hidden sm:inline">System Logs</span>
+          <ClipboardList className="h-3.5 w-3.5 opacity-60" />
+        </Link>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {tiles.map((tile) => (
