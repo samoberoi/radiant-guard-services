@@ -39,6 +39,7 @@ const customersChildren: NavItem[] = [
   { to: "/admin/customers/branch-manager", label: "Branch Manager", icon: Building2 },
   { to: "/admin/customers/customer-manager", label: "Organization Manager", icon: Users },
   { to: "/admin/customers/unit-manager", label: "Unit Manager", icon: Warehouse },
+  { to: "/admin/professional-tax-manager", label: "Professional Tax Manager", icon: ReceiptText },
 ];
 
 function maskPhone(phone: string) {
@@ -220,23 +221,6 @@ function AdminLayout() {
             )}
           </div>
 
-          {/* Professional Tax Manager (top-level) */}
-          <div className="mt-2">
-            <Link
-              to="/admin/professional-tax-manager"
-              title="Professional Tax Manager"
-              className={cn(
-                "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
-                isActive("/admin/professional-tax-manager")
-                  ? "bg-accent/20 text-accent"
-                  : "text-primary-foreground/85 hover:bg-white/5",
-                collapsed && "justify-center",
-              )}
-            >
-              <ReceiptText className="h-4.5 w-4.5 shrink-0" />
-              {!collapsed && <span>Professional Tax Manager</span>}
-            </Link>
-          </div>
         </nav>
 
         {/* Footer */}
