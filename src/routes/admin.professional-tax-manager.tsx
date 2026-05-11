@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -125,6 +126,7 @@ function usePtSlabs() {
         .from("professional_tax_slabs" as never)
         .insert(toRow(p) as never);
       if (error) throw error;
+    void logActivity({ module: "Professional Tax Manager", action: "create", entityType: "professional_tax_slabs", entityLabel: String((p as Record<string, unknown>).state ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -136,6 +138,7 @@ function usePtSlabs() {
         .update(toRow(p) as never)
         .eq("id", id);
       if (error) throw error;
+    void logActivity({ module: "Professional Tax Manager", action: "update", entityType: "professional_tax_slabs", entityId: id, entityLabel: String((p as Record<string, unknown>).state ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
