@@ -302,22 +302,9 @@ export function useCustomers() {
   const { data: customers = [] } = useQuery({
     queryKey: QK.customers,
     queryFn: async (): Promise<Customer[]> => {
-      const { data, error } = await supabase
-        .from("customers")
-        .select(
-          "id, code, name, website, phone, address, contract_start_date, status",
-        );
+      const { data, error } = await supabase.from("customers").select("*");
       if (error) throw error;
-      return (data ?? []).map((r) => ({
-        id: r.id,
-        code: r.code,
-        name: r.name,
-        website: r.website ?? "",
-        phone: r.phone ?? "",
-        address: r.address ?? "",
-        contractStartDate: r.contract_start_date ?? "",
-        status: r.status as CustomerStatus,
-      }));
+      return (data ?? []).map(rowToCustomer);
     },
   });
 
@@ -325,19 +312,7 @@ export function useCustomers() {
 
   const addMut = useMutation({
     mutationFn: async (data: Omit<Customer, "id">) => {
-      const code = data.code.trim();
-      const name = data.name.trim();
-      if (!code) throw new Error("Organisation ID is required");
-      if (!name) throw new Error("Organisation name is required");
-      const { error } = await supabase.from("customers").insert({
-        code,
-        name,
-        website: data.website.trim(),
-        phone: data.phone.trim(),
-        address: data.address.trim(),
-        contract_start_date: data.contractStartDate || null,
-        status: data.status,
-      });
+      const { error } = await supabase.from("customers").insert(customerToRow(data));
       if (error) throw error;
     },
     onSuccess: invalidate,
@@ -351,21 +326,9 @@ export function useCustomers() {
       id: string;
       data: Omit<Customer, "id">;
     }) => {
-      const code = data.code.trim();
-      const name = data.name.trim();
-      if (!code) throw new Error("Organisation ID is required");
-      if (!name) throw new Error("Organisation name is required");
       const { error } = await supabase
         .from("customers")
-        .update({
-          code,
-          name,
-          website: data.website.trim(),
-          phone: data.phone.trim(),
-          address: data.address.trim(),
-          contract_start_date: data.contractStartDate || null,
-          status: data.status,
-        })
+        .update(customerToRow(data))
         .eq("id", id);
       if (error) throw error;
     },
