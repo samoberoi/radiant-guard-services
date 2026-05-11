@@ -273,6 +273,96 @@ function useBillingTypes() {
   return data;
 }
 
+function useDesignations() {
+  const { data = [] } = useQuery({
+    queryKey: QK_DSG,
+    queryFn: async (): Promise<Designation[]> => {
+      const { data, error } = await supabase
+        .from("designations" as never)
+        .select("id,name,code,enabled")
+        .order("name");
+      if (error) throw error;
+      return (data as unknown as Record<string, unknown>[])
+        .filter((r) => r.enabled !== false)
+        .map((r) => ({
+          id: String(r.id),
+          name: String(r.name),
+          code: String(r.code ?? ""),
+        }));
+    },
+  });
+  return data;
+}
+
+function useAllowanceTypes() {
+  const { data = [] } = useQuery({
+    queryKey: QK_ALW,
+    queryFn: async (): Promise<AllowanceType[]> => {
+      const { data, error } = await supabase
+        .from("allowance_types" as never)
+        .select("id,name,display_name,short_name,is_default,enabled")
+        .order("display_name");
+      if (error) throw error;
+      return (data as unknown as Record<string, unknown>[])
+        .filter((r) => r.enabled !== false)
+        .map((r) => ({
+          id: String(r.id),
+          name: String(r.name),
+          displayName: String(r.display_name ?? r.name),
+          shortName: String(r.short_name ?? ""),
+          isDefault: Boolean(r.is_default),
+        }));
+    },
+  });
+  return data;
+}
+
+function useContractResources(contractId: string | null) {
+  const { data = [] } = useQuery({
+    queryKey: ["admin", "contract-resources", contractId ?? "none"],
+    enabled: !!contractId,
+    queryFn: async (): Promise<ContractResource[]> => {
+      if (!contractId) return [];
+      const { data, error } = await supabase
+        .from("contract_resources" as never)
+        .select("id,designation_id,service_type_id,quantity,components,sort_order")
+        .eq("contract_id", contractId)
+        .order("sort_order");
+      if (error) throw error;
+      return (data as unknown as Record<string, unknown>[]).map((r) => ({
+        id: String(r.id),
+        designationId: r.designation_id ? String(r.designation_id) : "",
+        serviceTypeId: r.service_type_id ? String(r.service_type_id) : "",
+        quantity: Number(r.quantity ?? 1),
+        components: Array.isArray(r.components)
+          ? (r.components as ResourceComponent[])
+          : [],
+      }));
+    },
+  });
+  return data;
+}
+
+async function persistResources(contractId: string, resources: ContractResource[]) {
+  const del = await supabase
+    .from("contract_resources" as never)
+    .delete()
+    .eq("contract_id", contractId);
+  if (del.error) throw del.error;
+  if (resources.length === 0) return;
+  const rows = resources.map((r, idx) => ({
+    contract_id: contractId,
+    designation_id: r.designationId || null,
+    service_type_id: r.serviceTypeId || null,
+    quantity: r.quantity,
+    components: r.components,
+    gross: r.components.reduce((s, c) => s + (Number(c.amount) || 0), 0),
+    sort_order: idx,
+  }));
+  const ins = await supabase.from("contract_resources" as never).insert(rows as never);
+  if (ins.error) throw ins.error;
+}
+
 function ClientContractsPage() {
   const { items, addMut, updateMut, deleteMut } = useContracts();
   const { units } = useUnits();
