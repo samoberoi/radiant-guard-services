@@ -14,6 +14,7 @@ import {
   MapPin,
   Menu,
   PanelLeftClose,
+  ReceiptText,
   ShieldCheck,
   Users,
   Warehouse,
@@ -217,6 +218,24 @@ function AdminLayout() {
                 })}
               </div>
             )}
+          </div>
+
+          {/* Professional Tax Manager (top-level) */}
+          <div className="mt-2">
+            <Link
+              to="/admin/professional-tax-manager"
+              title="Professional Tax Manager"
+              className={cn(
+                "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+                isActive("/admin/professional-tax-manager")
+                  ? "bg-accent/20 text-accent"
+                  : "text-primary-foreground/85 hover:bg-white/5",
+                collapsed && "justify-center",
+              )}
+            >
+              <ReceiptText className="h-4.5 w-4.5 shrink-0" />
+              {!collapsed && <span>Professional Tax Manager</span>}
+            </Link>
           </div>
         </nav>
 

@@ -181,6 +181,51 @@ export type Database = {
         }
         Relationships: []
       }
+      professional_tax_slabs: {
+        Row: {
+          created_at: string
+          gender: string
+          id: string
+          period: string
+          pincode_coverage: string
+          region_label: string
+          salary_max: number | null
+          salary_min: number
+          state: string
+          tax_per_month: number
+          updated_at: string
+          working_days: string
+        }
+        Insert: {
+          created_at?: string
+          gender?: string
+          id?: string
+          period?: string
+          pincode_coverage?: string
+          region_label?: string
+          salary_max?: number | null
+          salary_min?: number
+          state: string
+          tax_per_month?: number
+          updated_at?: string
+          working_days?: string
+        }
+        Update: {
+          created_at?: string
+          gender?: string
+          id?: string
+          period?: string
+          pincode_coverage?: string
+          region_label?: string
+          salary_max?: number | null
+          salary_min?: number
+          state?: string
+          tax_per_month?: number
+          updated_at?: string
+          working_days?: string
+        }
+        Relationships: []
+      }
       states: {
         Row: {
           created_at: string
