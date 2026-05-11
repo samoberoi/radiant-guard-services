@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      allowance_types: {
+        Row: {
+          created_at: string
+          display_name: string
+          earning_type: string
+          enabled: boolean
+          id: string
+          is_default: boolean
+          name: string
+          short_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string
+          earning_type?: string
+          enabled?: boolean
+          id?: string
+          is_default?: boolean
+          name: string
+          short_name?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string
+          earning_type?: string
+          enabled?: boolean
+          id?: string
+          is_default?: boolean
+          name?: string
+          short_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       branches: {
         Row: {
           code: string
