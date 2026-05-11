@@ -135,6 +135,7 @@ export function useStates() {
       if (!trimmed) throw new Error("Name is required");
       const { error } = await supabase.from("states").insert({ name: trimmed });
       if (error) throw error;
+      void logActivity({ module: "State Manager", action: "create", entityType: "states", entityLabel: trimmed });
     },
     onSuccess: invalidate,
   });
@@ -148,6 +149,7 @@ export function useStates() {
         .update({ name: trimmed })
         .eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "State Manager", action: "update", entityType: "states", entityId: id, entityLabel: trimmed });
     },
     onSuccess: invalidate,
   });
@@ -156,6 +158,7 @@ export function useStates() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("states").delete().eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "State Manager", action: "delete", entityType: "states", entityId: id });
     },
     onSuccess: invalidate,
   });
