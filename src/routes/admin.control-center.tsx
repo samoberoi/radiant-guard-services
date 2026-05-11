@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Briefcase, Clock, HandCoins, ReceiptText } from "lucide-react";
+import { ArrowRight, Briefcase, CalendarRange, Clock, HandCoins, ReceiptText } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/admin/control-center")({
@@ -37,6 +37,12 @@ const tiles: Tile[] = [
     label: "Service Type Manager",
     description: "Define service types like Security, Manpower, Facility, Staff.",
     icon: Briefcase,
+  },
+  {
+    to: "/admin/payroll-manager",
+    label: "Payroll Manager",
+    description: "Configure payroll windows and salary processing day.",
+    icon: CalendarRange,
   },
 ];
 
