@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity, getClientIp } from "@/lib/activity-log";
 
 const STORAGE_KEY = "radiant.auth";
 
