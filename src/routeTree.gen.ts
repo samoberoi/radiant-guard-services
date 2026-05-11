@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminProfessionalTaxManagerRouteImport } from './routes/admin.professional-tax-manager'
 import { Route as AdminLwfManagerRouteImport } from './routes/admin.lwf-manager'
 import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
+import { Route as AdminControlCenterRouteImport } from './routes/admin.control-center'
 import { Route as AdminCustomersUnitManagerRouteImport } from './routes/admin.customers.unit-manager'
 import { Route as AdminCustomersStateManagerRouteImport } from './routes/admin.customers.state-manager'
 import { Route as AdminCustomersCustomerManagerRouteImport } from './routes/admin.customers.customer-manager'
@@ -57,6 +58,11 @@ const AdminCustomersRoute = AdminCustomersRouteImport.update({
   path: '/customers',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminControlCenterRoute = AdminControlCenterRouteImport.update({
+  id: '/control-center',
+  path: '/control-center',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCustomersUnitManagerRoute =
   AdminCustomersUnitManagerRouteImport.update({
     id: '/unit-manager',
@@ -87,6 +93,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/control-center': typeof AdminControlCenterRoute
   '/admin/customers': typeof AdminCustomersRouteWithChildren
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
@@ -100,6 +107,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/control-center': typeof AdminControlCenterRoute
   '/admin/customers': typeof AdminCustomersRouteWithChildren
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
@@ -114,6 +122,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/control-center': typeof AdminControlCenterRoute
   '/admin/customers': typeof AdminCustomersRouteWithChildren
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
@@ -129,6 +138,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/welcome'
+    | '/admin/control-center'
     | '/admin/customers'
     | '/admin/lwf-manager'
     | '/admin/professional-tax-manager'
@@ -142,6 +152,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/welcome'
+    | '/admin/control-center'
     | '/admin/customers'
     | '/admin/lwf-manager'
     | '/admin/professional-tax-manager'
@@ -155,6 +166,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/welcome'
+    | '/admin/control-center'
     | '/admin/customers'
     | '/admin/lwf-manager'
     | '/admin/professional-tax-manager'
@@ -222,6 +234,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCustomersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/control-center': {
+      id: '/admin/control-center'
+      path: '/control-center'
+      fullPath: '/admin/control-center'
+      preLoaderRoute: typeof AdminControlCenterRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/customers/unit-manager': {
       id: '/admin/customers/unit-manager'
       path: '/unit-manager'
@@ -272,12 +291,14 @@ const AdminCustomersRouteWithChildren = AdminCustomersRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminControlCenterRoute: typeof AdminControlCenterRoute
   AdminCustomersRoute: typeof AdminCustomersRouteWithChildren
   AdminLwfManagerRoute: typeof AdminLwfManagerRoute
   AdminProfessionalTaxManagerRoute: typeof AdminProfessionalTaxManagerRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminControlCenterRoute: AdminControlCenterRoute,
   AdminCustomersRoute: AdminCustomersRouteWithChildren,
   AdminLwfManagerRoute: AdminLwfManagerRoute,
   AdminProfessionalTaxManagerRoute: AdminProfessionalTaxManagerRoute,
@@ -294,3 +315,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
