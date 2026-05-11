@@ -716,6 +716,8 @@ function unitToRow(data: Omit<Unit, "id">) {
     nearby_hospital_mobile: data.nearbyHospitalMobile,
     ambulance_name: data.ambulanceName,
     ambulance_mobile: data.ambulanceMobile,
+    security_service_name: data.securityServiceName,
+    security_service_mobile: data.securityServiceMobile,
     latitude: data.latitude,
     longitude: data.longitude,
     enable_pt: data.enablePt,
