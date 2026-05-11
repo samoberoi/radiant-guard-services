@@ -303,8 +303,8 @@ function useAllowanceTypes() {
     queryFn: async (): Promise<AllowanceType[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,display_name,short_name,is_default,enabled")
-        .order("display_name");
+        .select("id,name,display_name,short_name,is_default,enabled,created_at")
+        .order("created_at", { ascending: true });
       if (error) throw error;
       return (data as unknown as Record<string, unknown>[])
         .filter((r) => r.enabled !== false)
