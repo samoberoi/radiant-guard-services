@@ -634,7 +634,7 @@ function UnitFormDialog({
               <Field label="Branch">
                 <Select value={form.branchId ?? ""} onValueChange={(v) => set("branchId", v || null)}>
                   <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
-                  <SelectContent className="max-h-72">
+                  <SelectContent>
                     {branchOptions.length === 0 ? (
                       <div className="px-2 py-3 text-center text-xs text-muted-foreground">
                         No branches yet
@@ -650,7 +650,7 @@ function UnitFormDialog({
               <Field label="Organisation">
                 <Select value={form.customerId ?? ""} onValueChange={(v) => set("customerId", v || null)}>
                   <SelectTrigger><SelectValue placeholder="Select organisation" /></SelectTrigger>
-                  <SelectContent className="max-h-72">
+                  <SelectContent>
                     {customerOptions.length === 0 ? (
                       <div className="px-2 py-3 text-center text-xs text-muted-foreground">
                         No organisations yet
