@@ -14,6 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminProfessionalTaxManagerRouteImport } from './routes/admin.professional-tax-manager'
+import { Route as AdminLwfManagerRouteImport } from './routes/admin.lwf-manager'
 import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
 import { Route as AdminCustomersUnitManagerRouteImport } from './routes/admin.customers.unit-manager'
 import { Route as AdminCustomersStateManagerRouteImport } from './routes/admin.customers.state-manager'
@@ -46,6 +47,11 @@ const AdminProfessionalTaxManagerRoute =
     path: '/professional-tax-manager',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminLwfManagerRoute = AdminLwfManagerRouteImport.update({
+  id: '/lwf-manager',
+  path: '/lwf-manager',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCustomersRoute = AdminCustomersRouteImport.update({
   id: '/customers',
   path: '/customers',
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
   '/admin/customers': typeof AdminCustomersRouteWithChildren
+  '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
   '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
   '/admin/customers': typeof AdminCustomersRouteWithChildren
+  '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
   '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
   '/admin/customers': typeof AdminCustomersRouteWithChildren
+  '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
   '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/welcome'
     | '/admin/customers'
+    | '/admin/lwf-manager'
     | '/admin/professional-tax-manager'
     | '/admin/customers/branch-manager'
     | '/admin/customers/customer-manager'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/welcome'
     | '/admin/customers'
+    | '/admin/lwf-manager'
     | '/admin/professional-tax-manager'
     | '/admin/customers/branch-manager'
     | '/admin/customers/customer-manager'
@@ -145,6 +156,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/welcome'
     | '/admin/customers'
+    | '/admin/lwf-manager'
     | '/admin/professional-tax-manager'
     | '/admin/customers/branch-manager'
     | '/admin/customers/customer-manager'
@@ -194,6 +206,13 @@ declare module '@tanstack/react-router' {
       path: '/professional-tax-manager'
       fullPath: '/admin/professional-tax-manager'
       preLoaderRoute: typeof AdminProfessionalTaxManagerRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/lwf-manager': {
+      id: '/admin/lwf-manager'
+      path: '/lwf-manager'
+      fullPath: '/admin/lwf-manager'
+      preLoaderRoute: typeof AdminLwfManagerRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/customers': {
@@ -254,11 +273,13 @@ const AdminCustomersRouteWithChildren = AdminCustomersRoute._addFileChildren(
 
 interface AdminRouteChildren {
   AdminCustomersRoute: typeof AdminCustomersRouteWithChildren
+  AdminLwfManagerRoute: typeof AdminLwfManagerRoute
   AdminProfessionalTaxManagerRoute: typeof AdminProfessionalTaxManagerRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminCustomersRoute: AdminCustomersRouteWithChildren,
+  AdminLwfManagerRoute: AdminLwfManagerRoute,
   AdminProfessionalTaxManagerRoute: AdminProfessionalTaxManagerRoute,
 }
 

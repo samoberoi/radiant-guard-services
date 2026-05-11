@@ -14,6 +14,7 @@ import {
   MapPin,
   Menu,
   PanelLeftClose,
+  HandCoins,
   ReceiptText,
   ShieldCheck,
   Users,
@@ -40,6 +41,7 @@ const customersChildren: NavItem[] = [
   { to: "/admin/customers/customer-manager", label: "Organization Manager", icon: Users },
   { to: "/admin/customers/unit-manager", label: "Unit Manager", icon: Warehouse },
   { to: "/admin/professional-tax-manager", label: "Professional Tax Manager", icon: ReceiptText },
+  { to: "/admin/lwf-manager", label: "Labour Welfare Fund", icon: HandCoins },
 ];
 
 function maskPhone(phone: string) {
