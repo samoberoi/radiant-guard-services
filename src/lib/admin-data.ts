@@ -545,6 +545,8 @@ export type Unit = {
   nearbyHospitalMobile: string;
   ambulanceName: string;
   ambulanceMobile: string;
+  securityServiceName: string;
+  securityServiceMobile: string;
   latitude: number | null;
   longitude: number | null;
   enablePt: boolean;
