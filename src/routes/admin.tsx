@@ -14,8 +14,6 @@ import {
   MapPin,
   Menu,
   PanelLeftClose,
-  HandCoins,
-  ReceiptText,
   ShieldCheck,
   SlidersHorizontal,
   Users,
