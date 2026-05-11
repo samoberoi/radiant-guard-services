@@ -228,6 +228,7 @@ export function useBranches() {
         state_id: data.stateId,
       });
       if (error) throw error;
+      void logActivity({ module: "Branch Manager", action: "create", entityType: "branches", entityLabel: data.name.trim() || code, details: data as unknown as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -247,6 +248,7 @@ export function useBranches() {
         })
         .eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Branch Manager", action: "update", entityType: "branches", entityId: id, entityLabel: data.name.trim() || code, details: data as unknown as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
@@ -255,6 +257,7 @@ export function useBranches() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("branches").delete().eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Branch Manager", action: "delete", entityType: "branches", entityId: id });
     },
     onSuccess: invalidate,
   });
