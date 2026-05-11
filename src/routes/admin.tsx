@@ -43,6 +43,10 @@ const customersChildren: NavItem[] = [
   { to: "/admin/customers/unit-manager", label: "Unit Manager", icon: Warehouse },
 ];
 
+const contractsChildren: NavItem[] = [
+  { to: "/admin/contracts/client-contracts", label: "Client Contracts", icon: FileText },
+];
+
 
 function maskPhone(phone: string) {
   const d = phone.replace(/\D/g, "");
