@@ -547,6 +547,7 @@ export type Unit = {
   ambulanceMobile: string;
   latitude: number | null;
   longitude: number | null;
+  enablePt: boolean;
 };
 
 export function nextUnitCode(units: { code: string }[]) {
