@@ -851,7 +851,7 @@ function ContractFormDialog({
                             return (
                               <CommandItem
                                 key={u.id}
-                                value={`${u.code} ${u.name} ${org?.name ?? ""}`}
+                                value={`${u.code} ${u.name} ${org?.name ?? ""} ${u.id}`}
                                 onSelect={() => {
                                   setUnitId(u.id);
                                   setUnitPickerOpen(false);
