@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  INDUSTRY_TYPES,
   nextCustomerCode,
   useCustomers,
   useUnits,
@@ -37,6 +38,7 @@ import {
   type CustomerStatus,
   type Unit,
 } from "@/lib/admin-data";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/customers/customer-manager")({
@@ -570,140 +572,236 @@ function CustomerFormDialog({
   onSubmit: (data: Omit<Customer, "id">) => Promise<string | null> | string | null;
 }) {
   const { customers } = useCustomers();
-
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
-  const [website, setWebsite] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-  const [contractStartDate, setContractStartDate] = useState(todayIso());
-  const [active, setActive] = useState(true);
+  const [form, setForm] = useState<Omit<Customer, "id">>(emptyCustomer());
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     if (editing) {
-      setCode(editing.code);
-      setName(editing.name);
-      setWebsite(editing.website);
-      setPhone(editing.phone);
-      setAddress(editing.address);
-      setContractStartDate(editing.contractStartDate || todayIso());
-      setActive(editing.status === "active");
+      const { id: _id, ...rest } = editing;
+      void _id;
+      setForm(rest);
     } else {
-      setCode(nextCustomerCode(customers));
-      setName("");
-      setWebsite("");
-      setPhone("");
-      setAddress("");
-      setContractStartDate(todayIso());
-      setActive(true);
+      setForm({ ...emptyCustomer(), code: nextCustomerCode(customers) });
     }
     setError(null);
   }, [open, editing, customers]);
 
+  const set = <K extends keyof Omit<Customer, "id">>(key: K, value: Omit<Customer, "id">[K]) => {
+    setForm((f) => ({ ...f, [key]: value }));
+    setError(null);
+  };
+
+  const handleLogo = async (file: File | null) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const ext = file.name.split(".").pop() || "png";
+      const path = `${form.code || "ORG"}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("org-logos")
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from("org-logos").getPublicUrl(path);
+      set("logoUrl", data.publicUrl);
+      toast.success("Logo uploaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Logo upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const billingFields: Array<{ key: keyof Omit<Customer, "id">; label: string; placeholder?: string; full?: boolean }> = [
+    { key: "billingSalutation", label: "Salutation", placeholder: "Mr. / Ms. / Dr." },
+    { key: "billingName", label: "Name" },
+    { key: "billingAddress1", label: "Address line 1", full: true },
+    { key: "billingAddress2", label: "Address line 2", full: true },
+    { key: "billingPincode", label: "Pincode" },
+    { key: "billingCity", label: "City" },
+    { key: "billingDistrict", label: "District" },
+    { key: "billingState", label: "State" },
+    { key: "billingCountry", label: "Country" },
+    { key: "billingEmail", label: "Email" },
+    { key: "billingPhone", label: "Phone" },
+    { key: "billingFax", label: "Fax" },
+  ];
+  const shippingFields = billingFields.map((f) => ({
+    ...f,
+    key: f.key.toString().replace("billing", "shipping") as keyof Omit<Customer, "id">,
+  }));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{editing ? "Edit organization" : "Add organization"}</DialogTitle>
           <DialogDescription>
-            Each organization gets a unique organisation ID for internal mapping.
+            Capture the organisation profile, contract window, and billing/shipping addresses.
           </DialogDescription>
         </DialogHeader>
 
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            const err = await onSubmit({
-              code,
-              name,
-              website,
-              phone,
-              address,
-              contractStartDate,
-              status: active ? "active" : "inactive",
-            });
+            const err = await onSubmit(form);
             if (err) setError(err);
             else onOpenChange(false);
           }}
-          className="space-y-4"
+          className="space-y-6"
         >
+          <SectionHeading title="Organization profile" />
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="org-code">Organisation ID</Label>
+            <Field label="Organisation ID">
               <Input
-                id="org-code"
-                value={code}
-                onChange={(e) => {
-                  setCode(e.target.value.toUpperCase());
-                  setError(null);
-                }}
+                value={form.code}
+                onChange={(e) => set("code", e.target.value.toUpperCase())}
                 placeholder="ORG1"
                 className="font-mono"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="org-name">Organisation name</Label>
+            </Field>
+            <Field label="Organisation name">
               <Input
-                id="org-name"
-                value={name}
-                onChange={(e) => {
-                  setName(e.target.value);
-                  setError(null);
-                }}
+                value={form.name}
+                onChange={(e) => set("name", e.target.value)}
                 placeholder="Acme Industries Pvt Ltd"
                 autoFocus
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="org-website">Website</Label>
+            </Field>
+            <Field label="Short name">
               <Input
-                id="org-website"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                placeholder="acme.com"
-                type="text"
+                value={form.shortName}
+                onChange={(e) => set("shortName", e.target.value)}
+                placeholder="Acme"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="org-phone">Phone number</Label>
-              <Input
-                id="org-phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+91 98765 43210"
-                inputMode="tel"
-              />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="org-address">Address</Label>
+            </Field>
+            <Field label="Industry / Organization type">
+              <select
+                value={form.industryType}
+                onChange={(e) => set("industryType", e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+              >
+                <option value="">Select industry…</option>
+                {INDUSTRY_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Description" full>
               <Textarea
-                id="org-address"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="Street, city, state, pincode"
+                value={form.description}
+                onChange={(e) => set("description", e.target.value)}
+                placeholder="Brief overview of the organisation"
                 rows={2}
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="org-date">Contract start date</Label>
+            </Field>
+            <Field label="Logo" full>
+              <div className="flex items-center gap-3">
+                {form.logoUrl ? (
+                  <img
+                    src={form.logoUrl}
+                    alt="Logo"
+                    className="h-12 w-12 rounded-md border border-border bg-card object-contain"
+                  />
+                ) : (
+                  <div className="flex h-12 w-12 items-center justify-center rounded-md border border-dashed border-border text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Logo
+                  </div>
+                )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleLogo(e.target.files?.[0] ?? null)}
+                  disabled={uploading}
+                  className="max-w-xs"
+                />
+                {form.logoUrl && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => set("logoUrl", "")}
+                    className="text-muted-foreground"
+                  >
+                    Remove
+                  </Button>
+                )}
+              </div>
+            </Field>
+            <Field label="Website">
               <Input
-                id="org-date"
-                type="date"
-                value={contractStartDate}
-                onChange={(e) => setContractStartDate(e.target.value)}
+                value={form.website}
+                onChange={(e) => set("website", e.target.value)}
+                placeholder="acme.com"
               />
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
+            </Field>
+            <Field label="Status">
               <div className="flex h-9 items-center justify-between rounded-md border border-input bg-transparent px-3">
                 <span className="text-sm font-medium text-foreground">
-                  {active ? "Active" : "Inactive"}
+                  {form.status === "active" ? "Active" : "Inactive"}
                 </span>
-                <Switch checked={active} onCheckedChange={setActive} />
+                <Switch
+                  checked={form.status === "active"}
+                  onCheckedChange={(v) => set("status", v ? "active" : "inactive")}
+                />
               </div>
+            </Field>
+            <Field label="Contract start date">
+              <Input
+                type="date"
+                value={form.contractStartDate}
+                onChange={(e) => set("contractStartDate", e.target.value)}
+              />
+            </Field>
+            <Field label="Contract end date">
+              <Input
+                type="date"
+                value={form.contractEndDate}
+                onChange={(e) => set("contractEndDate", e.target.value)}
+              />
+            </Field>
+          </div>
+
+          <SectionHeading title="Billing information" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            {billingFields.map((f) => (
+              <Field key={f.key} label={f.label} full={f.full}>
+                <Input
+                  value={(form[f.key] as string) ?? ""}
+                  onChange={(e) => set(f.key, e.target.value as never)}
+                  placeholder={f.placeholder}
+                />
+              </Field>
+            ))}
+          </div>
+
+          <div>
+            <div className="mb-3 flex items-center justify-between gap-3 border-b border-border pb-2">
+              <SectionHeading title="Shipping information" inline />
+              <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                Same as billing
+                <Switch
+                  checked={form.shippingSameAsBilling}
+                  onCheckedChange={(v) => set("shippingSameAsBilling", v)}
+                />
+              </label>
             </div>
+            {!form.shippingSameAsBilling && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {shippingFields.map((f) => (
+                  <Field key={f.key} label={f.label} full={f.full}>
+                    <Input
+                      value={(form[f.key] as string) ?? ""}
+                      onChange={(e) => set(f.key, e.target.value as never)}
+                      placeholder={f.placeholder}
+                    />
+                  </Field>
+                ))}
+              </div>
+            )}
           </div>
 
           {error && <p className="text-xs font-medium text-destructive">{error}</p>}
@@ -712,15 +810,86 @@ function CustomerFormDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
+            <Button type="submit" disabled={uploading} className="bg-primary text-primary-foreground hover:bg-primary/90">
               {editing ? "Save changes" : "Create organization"}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function emptyCustomer(): Omit<Customer, "id"> {
+  return {
+    code: "",
+    name: "",
+    shortName: "",
+    description: "",
+    logoUrl: "",
+    industryType: "",
+    website: "",
+    phone: "",
+    address: "",
+    contractStartDate: todayIso(),
+    contractEndDate: "",
+    status: "active",
+    billingSalutation: "",
+    billingName: "",
+    billingAddress1: "",
+    billingAddress2: "",
+    billingPincode: "",
+    billingCity: "",
+    billingDistrict: "",
+    billingState: "",
+    billingCountry: "India",
+    billingEmail: "",
+    billingPhone: "",
+    billingFax: "",
+    shippingSameAsBilling: true,
+    shippingSalutation: "",
+    shippingName: "",
+    shippingAddress1: "",
+    shippingAddress2: "",
+    shippingPincode: "",
+    shippingCity: "",
+    shippingDistrict: "",
+    shippingState: "",
+    shippingCountry: "India",
+    shippingEmail: "",
+    shippingPhone: "",
+    shippingFax: "",
+  };
+}
+
+function SectionHeading({ title, inline }: { title: string; inline?: boolean }) {
+  return (
+    <h3
+      className={cn(
+        "text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground",
+        !inline && "border-b border-border pb-2",
+      )}
+    >
+      {title}
+    </h3>
+  );
+}
+
+function Field({
+  label,
+  children,
+  full,
+}: {
+  label: string;
+  children: React.ReactNode;
+  full?: boolean;
+}) {
+  return (
+    <div className={cn("space-y-2", full && "sm:col-span-2")}>
+      <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        {label}
+      </Label>
+      {children}
+    </div>
   );
 }

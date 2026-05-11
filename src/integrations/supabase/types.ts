@@ -55,36 +55,126 @@ export type Database = {
       customers: {
         Row: {
           address: string
+          billing_address1: string
+          billing_address2: string
+          billing_city: string
+          billing_country: string
+          billing_district: string
+          billing_email: string
+          billing_fax: string
+          billing_name: string
+          billing_phone: string
+          billing_pincode: string
+          billing_salutation: string
+          billing_state: string
           code: string
+          contract_end_date: string | null
           contract_start_date: string | null
           created_at: string
+          description: string
           id: string
+          industry_type: string
+          logo_url: string
           name: string
           phone: string
+          shipping_address1: string
+          shipping_address2: string
+          shipping_city: string
+          shipping_country: string
+          shipping_district: string
+          shipping_email: string
+          shipping_fax: string
+          shipping_name: string
+          shipping_phone: string
+          shipping_pincode: string
+          shipping_salutation: string
+          shipping_same_as_billing: boolean
+          shipping_state: string
+          short_name: string
           status: Database["public"]["Enums"]["customer_status"]
           updated_at: string
           website: string
         }
         Insert: {
           address?: string
+          billing_address1?: string
+          billing_address2?: string
+          billing_city?: string
+          billing_country?: string
+          billing_district?: string
+          billing_email?: string
+          billing_fax?: string
+          billing_name?: string
+          billing_phone?: string
+          billing_pincode?: string
+          billing_salutation?: string
+          billing_state?: string
           code: string
+          contract_end_date?: string | null
           contract_start_date?: string | null
           created_at?: string
+          description?: string
           id?: string
+          industry_type?: string
+          logo_url?: string
           name: string
           phone?: string
+          shipping_address1?: string
+          shipping_address2?: string
+          shipping_city?: string
+          shipping_country?: string
+          shipping_district?: string
+          shipping_email?: string
+          shipping_fax?: string
+          shipping_name?: string
+          shipping_phone?: string
+          shipping_pincode?: string
+          shipping_salutation?: string
+          shipping_same_as_billing?: boolean
+          shipping_state?: string
+          short_name?: string
           status?: Database["public"]["Enums"]["customer_status"]
           updated_at?: string
           website?: string
         }
         Update: {
           address?: string
+          billing_address1?: string
+          billing_address2?: string
+          billing_city?: string
+          billing_country?: string
+          billing_district?: string
+          billing_email?: string
+          billing_fax?: string
+          billing_name?: string
+          billing_phone?: string
+          billing_pincode?: string
+          billing_salutation?: string
+          billing_state?: string
           code?: string
+          contract_end_date?: string | null
           contract_start_date?: string | null
           created_at?: string
+          description?: string
           id?: string
+          industry_type?: string
+          logo_url?: string
           name?: string
           phone?: string
+          shipping_address1?: string
+          shipping_address2?: string
+          shipping_city?: string
+          shipping_country?: string
+          shipping_district?: string
+          shipping_email?: string
+          shipping_fax?: string
+          shipping_name?: string
+          shipping_phone?: string
+          shipping_pincode?: string
+          shipping_salutation?: string
+          shipping_same_as_billing?: boolean
+          shipping_state?: string
+          short_name?: string
           status?: Database["public"]["Enums"]["customer_status"]
           updated_at?: string
           website?: string
