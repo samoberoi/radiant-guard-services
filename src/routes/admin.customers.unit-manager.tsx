@@ -95,6 +95,7 @@ function emptyUnit(code: string): Omit<Unit, "id"> {
     latitude: null,
     longitude: null,
     enablePt: false,
+    enableLwf: false,
   };
 }
 
