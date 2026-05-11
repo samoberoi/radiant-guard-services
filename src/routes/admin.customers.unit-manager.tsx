@@ -147,7 +147,7 @@ function UnitManagerPage() {
         title="Unit Manager"
         description="Track operational units deployed across branches."
         crumbs={[
-          { label: "Customers", to: "/admin/customers" },
+          { label: "Organizations", to: "/admin/customers" },
           { label: "Unit Manager" },
         ]}
       />
@@ -241,7 +241,7 @@ function UnitManagerPage() {
                 [
                   { key: "unitCode", header: "Unit code" },
                   { key: "unitName", header: "Unit name" },
-                  { key: "customer", header: "Customer" },
+                  { key: "customer", header: "Organization" },
                   { key: "branch", header: "Branch" },
                   { key: "location", header: "Location" },
                   { key: "description", header: "Description" },

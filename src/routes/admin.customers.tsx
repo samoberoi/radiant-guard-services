@@ -119,15 +119,15 @@ function CustomersDashboard() {
   return (
     <div>
       <PageHeader
-        title="Customers Dashboard"
-        description="Live overview of customers, branches and operational units across India."
-        crumbs={[{ label: "Customers" }]}
+        title="Organizations Dashboard"
+        description="Live overview of organizations, branches and operational units across India."
+        crumbs={[{ label: "Organizations" }]}
       />
 
       {/* Stat tiles */}
       <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
-          label="Customers"
+          label="Organizations"
           value={customers.length}
           sub={`${activeCustomers} active`}
           icon={Users}
@@ -168,7 +168,7 @@ function CustomersDashboard() {
               const b = u.branchId ? branchById.get(u.branchId) : undefined;
               const stName = b ? stateById.get(b.stateId)?.name ?? "" : "";
               return {
-                customer: c?.name ?? "",
+                organization: c?.name ?? "",
                 customerCode: c?.code ?? "",
                 customerStatus: csvStatus(c?.status ?? ""),
                 customerWebsite: c?.website ?? "",
@@ -229,10 +229,10 @@ function CustomersDashboard() {
                 mapLink: csvMapLink(u.latitude, u.longitude),
               };
             });
-            downloadCsv("customers-dashboard", data, [
-              { key: "customer", header: "Customer" },
-              { key: "customerCode", header: "Customer code" },
-              { key: "customerStatus", header: "Customer status" },
+            downloadCsv("organizations-dashboard", data, [
+              { key: "organization", header: "Organization" },
+              { key: "customerCode", header: "Organization code" },
+              { key: "customerStatus", header: "Organization status" },
               { key: "customerWebsite", header: "Website" },
               { key: "customerPhone", header: "Phone" },
               { key: "state", header: "State" },
@@ -281,7 +281,7 @@ function CustomersDashboard() {
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by customer, unit, code, location…"
+              placeholder="Search by organization, unit, code, location…"
               className="h-10 rounded-lg pl-9"
             />
           </div>
@@ -325,13 +325,13 @@ function CustomersDashboard() {
         </div>
       </div>
 
-      {/* Combined customer + unit list */}
+      {/* Combined organization + unit list */}
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
-                <th className="px-5 py-3">Customer</th>
+                <th className="px-5 py-3">Organization</th>
                 <th className="px-5 py-3">Unit</th>
                 <th className="px-5 py-3">Branch / Location</th>
                 <th className="px-5 py-3">Contact</th>

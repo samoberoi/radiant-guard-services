@@ -61,7 +61,7 @@ function StateManagerPage() {
         title="State Manager"
         description="All states served by Radiant Guard. Used as the source of truth for branch mappings."
         crumbs={[
-          { label: "Customers", to: "/admin/customers" },
+          { label: "Organizations", to: "/admin/customers" },
           { label: "State Manager" },
         ]}
       />

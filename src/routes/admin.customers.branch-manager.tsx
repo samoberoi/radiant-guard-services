@@ -102,7 +102,7 @@ function BranchManagerPage() {
         title="Branch Manager"
         description="Map a unique branch code to each state. Branches display as CODE – STATE."
         crumbs={[
-          { label: "Customers", to: "/admin/customers" },
+          { label: "Organizations", to: "/admin/customers" },
           { label: "Branch Manager" },
         ]}
       />
