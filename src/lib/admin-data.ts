@@ -603,6 +603,8 @@ type UnitRow = {
   nearby_hospital_mobile: string | null;
   ambulance_name: string | null;
   ambulance_mobile: string | null;
+  security_service_name: string | null;
+  security_service_mobile: string | null;
   latitude: number | string | null;
   longitude: number | string | null;
   enable_pt: boolean | null;
