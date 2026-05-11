@@ -718,7 +718,10 @@ function ContractFormDialog({
   onOpenChange: (o: boolean) => void;
   editing: ClientContract | null;
   existingCodes: string[];
-  onSubmit: (p: Omit<ClientContract, "id">) => Promise<string | null>;
+  onSubmit: (
+    p: Omit<ClientContract, "id">,
+    resources: ContractResource[],
+  ) => Promise<string | null>;
 }) {
   const { units } = useUnits();
   const { customers } = useCustomers();
