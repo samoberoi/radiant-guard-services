@@ -394,6 +394,7 @@ function customerToRow(data: Omit<Customer, "id">) {
   };
 }
 
+export function useCustomers() {
   const qc = useQueryClient();
 
   const { data: customers = [] } = useQuery({
