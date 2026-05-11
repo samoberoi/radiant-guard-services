@@ -604,6 +604,7 @@ type UnitRow = {
   latitude: number | string | null;
   longitude: number | string | null;
   enable_pt: boolean | null;
+  enable_lwf: boolean | null;
 };
 
 function rowToUnit(r: UnitRow): Unit {
