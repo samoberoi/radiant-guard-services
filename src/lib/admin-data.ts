@@ -656,6 +656,7 @@ function rowToUnit(r: UnitRow): Unit {
     ambulanceMobile: r.ambulance_mobile ?? "",
     latitude: r.latitude == null ? null : Number(r.latitude),
     longitude: r.longitude == null ? null : Number(r.longitude),
+    enablePt: Boolean(r.enable_pt),
   };
 }
 
