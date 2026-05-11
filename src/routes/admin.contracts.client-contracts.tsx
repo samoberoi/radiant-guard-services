@@ -745,6 +745,7 @@ function ContractFormDialog({
   const [gstOption, setGstOption] = useState<GstOption>("csgst");
   const [status, setStatus] = useState<ContractStatus>("active");
   const [unitPickerOpen, setUnitPickerOpen] = useState(false);
+  const [unitQuery, setUnitQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [resources, setResources] = useState<ContractResource[]>([]);
   const [resourceDialog, setResourceDialog] = useState<{
@@ -797,6 +798,17 @@ function ContractFormDialog({
   const selectedOrg = selectedUnit?.customerId
     ? customerById.get(selectedUnit.customerId)
     : undefined;
+  const filteredUnits = useMemo(() => {
+    const query = unitQuery.trim().toLowerCase();
+    if (!query) return units;
+    return units.filter((u) => {
+      const org = u.customerId ? customerById.get(u.customerId) : null;
+      return [u.code, u.name, org?.name ?? "", u.id]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+  }, [customerById, unitQuery, units]);
 
   const selectedWindow = payrollWindows.find((w) => w.id === payrollWindowId);
   const payDate = selectedWindow ? `Day ${selectedWindow.processingDay}` : "—";
@@ -841,12 +853,16 @@ function ContractFormDialog({
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search by unit ID or name…" />
+                      <Command shouldFilter={false}>
+                      <CommandInput
+                        placeholder="Search by unit ID or name…"
+                        value={unitQuery}
+                        onValueChange={setUnitQuery}
+                      />
                       <CommandList>
                         <CommandEmpty>No units found.</CommandEmpty>
                         <CommandGroup>
-                          {units.map((u) => {
+                          {filteredUnits.map((u) => {
                             const org = u.customerId ? customerById.get(u.customerId) : null;
                             return (
                               <CommandItem
@@ -854,6 +870,7 @@ function ContractFormDialog({
                                 value={`${u.code} ${u.name} ${org?.name ?? ""} ${u.id}`}
                                 onSelect={() => {
                                   setUnitId(u.id);
+                                  setUnitQuery("");
                                   setUnitPickerOpen(false);
                                 }}
                               >
@@ -1295,6 +1312,8 @@ function ResourceFormDialog({
   const [components, setComponents] = useState<ResourceComponent[]>([]);
   const [designationOpen, setDesignationOpen] = useState(false);
   const [allowancePickerOpen, setAllowancePickerOpen] = useState(false);
+  const [designationQuery, setDesignationQuery] = useState("");
+  const [allowanceQuery, setAllowanceQuery] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -1324,6 +1343,23 @@ function ResourceFormDialog({
   const gross = components.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const usedIds = new Set(components.map((c) => c.allowanceId));
   const availableExtras = allowanceTypes.filter((a) => !usedIds.has(a.id));
+  const filteredDesignations = useMemo(() => {
+    const query = designationQuery.trim().toLowerCase();
+    if (!query) return designations;
+    return designations.filter((d) =>
+      [d.code, d.name, d.id].join(" ").toLowerCase().includes(query),
+    );
+  }, [designationQuery, designations]);
+  const filteredAvailableExtras = useMemo(() => {
+    const query = allowanceQuery.trim().toLowerCase();
+    if (!query) return availableExtras;
+    return availableExtras.filter((a) =>
+      [a.shortName, a.displayName, a.name, a.id]
+        .join(" ")
+        .toLowerCase()
+        .includes(query),
+    );
+  }, [allowanceQuery, availableExtras]);
 
   const updateAmount = (allowanceId: string, amount: number) => {
     setComponents((prev) =>
@@ -1344,6 +1380,7 @@ function ResourceFormDialog({
         amount: 0,
       },
     ]);
+    setAllowanceQuery("");
     setAllowancePickerOpen(false);
   };
 
@@ -1410,17 +1447,22 @@ function ResourceFormDialog({
                   className="w-[--radix-popover-trigger-width] p-0"
                   align="start"
                 >
-                  <Command>
-                    <CommandInput placeholder="Search designation…" />
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Search designation…"
+                      value={designationQuery}
+                      onValueChange={setDesignationQuery}
+                    />
                     <CommandList>
                       <CommandEmpty>No designation found.</CommandEmpty>
                       <CommandGroup>
-                        {designations.map((d) => (
+                        {filteredDesignations.map((d) => (
                           <CommandItem
                             key={d.id}
                             value={`${d.code} ${d.name} ${d.id}`}
                             onSelect={() => {
                               setDesignationId(d.id);
+                              setDesignationQuery("");
                               setDesignationOpen(false);
                             }}
                           >
@@ -1495,12 +1537,16 @@ function ResourceFormDialog({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-72 p-0" align="end">
-                  <Command>
-                    <CommandInput placeholder="Search allowance…" />
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Search allowance…"
+                      value={allowanceQuery}
+                      onValueChange={setAllowanceQuery}
+                    />
                     <CommandList>
                       <CommandEmpty>No more allowances.</CommandEmpty>
                       <CommandGroup>
-                        {availableExtras.map((a) => (
+                        {filteredAvailableExtras.map((a) => (
                           <CommandItem
                             key={a.id}
                             value={`${a.shortName} ${a.displayName} ${a.name} ${a.id}`}
