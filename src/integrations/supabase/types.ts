@@ -397,6 +397,8 @@ export type Database = {
           onboarding_date: string | null
           pan_number: string
           reporting_officers: Json
+          security_service_mobile: string
+          security_service_name: string
           shipping_address1: string
           shipping_address2: string
           shipping_city: string
@@ -444,6 +446,8 @@ export type Database = {
           onboarding_date?: string | null
           pan_number?: string
           reporting_officers?: Json
+          security_service_mobile?: string
+          security_service_name?: string
           shipping_address1?: string
           shipping_address2?: string
           shipping_city?: string
@@ -491,6 +495,8 @@ export type Database = {
           onboarding_date?: string | null
           pan_number?: string
           reporting_officers?: Json
+          security_service_mobile?: string
+          security_service_name?: string
           shipping_address1?: string
           shipping_address2?: string
           shipping_city?: string
