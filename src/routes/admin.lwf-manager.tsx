@@ -164,6 +164,7 @@ function useLwfs() {
         .delete()
         .eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Labour Welfare Fund", action: "delete", entityType: "labour_welfare_funds", entityId: id });
     },
     onSuccess: invalidate,
   });
