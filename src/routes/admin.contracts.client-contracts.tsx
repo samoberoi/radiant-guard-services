@@ -1503,7 +1503,7 @@ function ResourceFormDialog({
                         {availableExtras.map((a) => (
                           <CommandItem
                             key={a.id}
-                            value={`${a.shortName} ${a.displayName} ${a.name}`}
+                            value={`${a.shortName} ${a.displayName} ${a.name} ${a.id}`}
                             onSelect={() => addComponent(a)}
                           >
                             <div className="flex flex-col">
