@@ -93,11 +93,35 @@ type PayrollWindow = {
   processingDay: number;
 };
 type BillingType = { id: string; name: string };
+type Designation = { id: string; name: string; code: string };
+type AllowanceType = {
+  id: string;
+  name: string;
+  displayName: string;
+  shortName: string;
+  isDefault: boolean;
+};
+
+type ResourceComponent = {
+  allowanceId: string;
+  name: string;
+  amount: number;
+};
+
+type ContractResource = {
+  id?: string;
+  designationId: string;
+  serviceTypeId: string;
+  quantity: number;
+  components: ResourceComponent[];
+};
 
 const QK = ["admin", "client-contracts"] as const;
 const QK_SVC = ["admin", "service-types", "enabled"] as const;
 const QK_PAY = ["admin", "payroll-windows", "enabled"] as const;
 const QK_BIL = ["admin", "billing-types", "enabled"] as const;
+const QK_DSG = ["admin", "designations", "enabled"] as const;
+const QK_ALW = ["admin", "allowance-types", "enabled"] as const;
 
 function rowToContract(r: Record<string, unknown>): ClientContract {
   return {
