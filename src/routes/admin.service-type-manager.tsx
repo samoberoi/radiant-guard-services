@@ -1,0 +1,412 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { Download, Edit2, Plus, Search, Trash2, Briefcase } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { downloadCsv } from "@/lib/csv-export";
+import { toast } from "sonner";
+import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+export const Route = createFileRoute("/admin/service-type-manager")({
+  component: ServiceTypeManagerPage,
+});
+
+type ServiceType = {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+};
+
+const QK = ["admin", "service-types"] as const;
+
+function rowToItem(r: Record<string, unknown>): ServiceType {
+  return {
+    id: String(r.id),
+    name: String(r.name ?? ""),
+    description: String(r.description ?? ""),
+    enabled: Boolean(r.enabled ?? true),
+  };
+}
+
+function useServiceTypes() {
+  const qc = useQueryClient();
+  const { data: items = [] } = useQuery({
+    queryKey: QK,
+    queryFn: async (): Promise<ServiceType[]> => {
+      const { data, error } = await supabase
+        .from("service_types" as never)
+        .select("id,name,description,enabled")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
+    },
+  });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: QK });
+  type Payload = Omit<ServiceType, "id">;
+  const toRow = (p: Payload) => ({
+    name: p.name.trim(),
+    description: p.description.trim(),
+    enabled: p.enabled,
+  });
+
+  const addMut = useMutation({
+    mutationFn: async (p: Payload) => {
+      if (!p.name.trim()) throw new Error("Name is required");
+      const { error } = await supabase.from("service_types" as never).insert(toRow(p) as never);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const updateMut = useMutation({
+    mutationFn: async ({ id, p }: { id: string; p: Payload }) => {
+      const { error } = await supabase
+        .from("service_types" as never)
+        .update(toRow(p) as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const toggleMut = useMutation({
+    mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
+      const { error } = await supabase
+        .from("service_types" as never)
+        .update({ enabled } as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("service_types" as never).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: invalidate,
+  });
+
+  return { items, addMut, updateMut, toggleMut, deleteMut };
+}
+
+function ServiceTypeManagerPage() {
+  const { items, addMut, updateMut, toggleMut, deleteMut } = useServiceTypes();
+  const [query, setQuery] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
+  const [editing, setEditing] = useState<ServiceType | null>(null);
+  const [deleting, setDeleting] = useState<ServiceType | null>(null);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter(
+      (i) => i.name.toLowerCase().includes(q) || i.description.toLowerCase().includes(q),
+    );
+  }, [items, query]);
+
+  return (
+    <div>
+      <PageHeader
+        title="Service Type Manager"
+        description="Define service types (e.g. Security, Manpower) used across the platform."
+        crumbs={[{ label: "Control Center", to: "/admin/control-center" }, { label: "Service Type Manager" }]}
+      />
+
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search service type…"
+            className="h-10 rounded-lg pl-9"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            onClick={() => setAddOpen(true)}
+            className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add New
+          </Button>
+          <Button
+            variant="outline"
+            disabled={filtered.length === 0}
+            onClick={() =>
+              downloadCsv(
+                "service-types",
+                filtered.map((i) => ({
+                  name: i.name,
+                  description: i.description,
+                  enabled: i.enabled ? "Yes" : "No",
+                })),
+                [
+                  { key: "name", header: "Name" },
+                  { key: "description", header: "Description" },
+                  { key: "enabled", header: "Enabled" },
+                ],
+              )
+            }
+            className="h-10 rounded-lg"
+          >
+            <Download className="mr-1.5 h-4 w-4" />
+            Export
+          </Button>
+        </div>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <tr>
+                <th className="px-5 py-3">Name</th>
+                <th className="px-5 py-3">Description</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((i) => (
+                <tr key={i.id} className="hover:bg-secondary/30">
+                  <td className="px-5 py-3 font-medium text-foreground">
+                    <span className="inline-flex items-center gap-2">
+                      <Briefcase className="h-4 w-4 text-muted-foreground" />
+                      {i.name}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 text-foreground/90">{i.description || "—"}</td>
+                  <td className="px-5 py-3">
+                    <Switch
+                      checked={i.enabled}
+                      onCheckedChange={(v) =>
+                        toggleMut.mutate(
+                          { id: i.id, enabled: v },
+                          {
+                            onSuccess: () => toast.success(v ? "Enabled" : "Disabled"),
+                            onError: (e) =>
+                              toast.error(e instanceof Error ? e.message : "Update failed"),
+                          },
+                        )
+                      }
+                    />
+                  </td>
+                  <td className="px-5 py-3 text-right">
+                    <div className="inline-flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => setEditing(i)}
+                        aria-label="Edit"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => setDeleting(i)}
+                        aria-label="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                    No service types found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <ServiceTypeFormDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        title="Add New Service Type"
+        onSubmit={async (p) => {
+          try {
+            await addMut.mutateAsync(p);
+            toast.success("Service type added");
+            return null;
+          } catch (e) {
+            return e instanceof Error ? e.message : "Could not add service type";
+          }
+        }}
+      />
+
+      <ServiceTypeFormDialog
+        open={!!editing}
+        initial={editing}
+        onOpenChange={(o) => !o && setEditing(null)}
+        title="Edit Service Type"
+        onSubmit={async (p) => {
+          if (!editing) return null;
+          try {
+            await updateMut.mutateAsync({ id: editing.id, p });
+            toast.success("Service type updated");
+            setEditing(null);
+            return null;
+          } catch (e) {
+            return e instanceof Error ? e.message : "Could not update service type";
+          }
+        }}
+      />
+
+      <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this service type?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleting && (
+                <span className="font-semibold text-foreground">{deleting.name}</span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!deleting) return;
+                try {
+                  await deleteMut.mutateAsync(deleting.id);
+                  toast.success("Service type deleted");
+                  setDeleting(null);
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Delete failed");
+                }
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function ServiceTypeFormDialog({
+  open,
+  onOpenChange,
+  title,
+  initial,
+  onSubmit,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  title: string;
+  initial?: ServiceType | null;
+  onSubmit: (p: Omit<ServiceType, "id">) => Promise<string | null>;
+}) {
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [enabled, setEnabled] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useResetOnOpen(open, () => {
+    setName(initial?.name ?? "");
+    setDescription(initial?.description ?? "");
+    setEnabled(initial?.enabled ?? true);
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>
+            Used as a dropdown across the platform.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-2">
+          <div className="grid gap-2">
+            <Label>Name</Label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Security"
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label>Description</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Short description"
+              rows={3}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+            <div>
+              <div className="text-sm font-medium">Enabled</div>
+              <div className="text-xs text-muted-foreground">Show in dropdowns</div>
+            </div>
+            <Switch checked={enabled} onCheckedChange={setEnabled} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancel
+          </Button>
+          <Button
+            disabled={saving}
+            onClick={async () => {
+              setSaving(true);
+              const err = await onSubmit({ name, description, enabled });
+              setSaving(false);
+              if (err) toast.error(err);
+              else onOpenChange(false);
+            }}
+          >
+            {saving ? "Saving…" : "Save"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function useResetOnOpen(open: boolean, reset: () => void) {
+  const [last, setLast] = useState(false);
+  if (open !== last) {
+    setLast(open);
+    if (open) reset();
+  }
+}
