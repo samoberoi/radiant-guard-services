@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Briefcase, CalendarRange, Clock, Coins, HandCoins, ReceiptText } from "lucide-react";
+import { ArrowRight, Briefcase, CalendarRange, Clock, Coins, HandCoins, Receipt, ReceiptText } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/admin/control-center")({
@@ -49,6 +49,12 @@ const tiles: Tile[] = [
     label: "Allowance Manager",
     description: "Define allowance / earning components used in payroll.",
     icon: Coins,
+  },
+  {
+    to: "/admin/billing-type-manager",
+    label: "Billing Type Manager",
+    description: "Define billing types like Man Hours, Man Days, Man Months, Special.",
+    icon: Receipt,
   },
 ];
 
