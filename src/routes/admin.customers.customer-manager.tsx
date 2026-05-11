@@ -275,10 +275,17 @@ function CustomerManagerPage() {
         onOpenChange={setFormOpen}
         editing={editing}
         onSubmit={async (data) => {
-          const r = editing ? await updateCustomer(editing.id, data) : await addCustomer(data);
-          if (!r.ok) return r.error;
+          if (editing) {
+            const r = await updateCustomer(editing.id, data);
+            if (!r.ok) return { error: r.error, id: null };
+            return { error: null, id: editing.id };
+          }
+          const r = await addCustomer(data);
+          if (!r.ok) return { error: r.error, id: null };
+          return { error: null, id: r.id };
+        }}
+        onSuccess={() => {
           toast.success(editing ? "Organization updated" : "Organization added");
-          return null;
         }}
       />
 
