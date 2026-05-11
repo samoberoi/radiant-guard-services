@@ -296,7 +296,104 @@ export function nextCustomerCode(customers: { code: string }[]) {
   return `ORG${max + 1}`;
 }
 
-export function useCustomers() {
+type CustomerRow = Record<string, unknown> & { id: string; code: string; name: string };
+
+function s(v: unknown): string {
+  return typeof v === "string" ? v : v == null ? "" : String(v);
+}
+
+function rowToCustomer(r: CustomerRow): Customer {
+  return {
+    id: r.id,
+    code: r.code,
+    name: r.name,
+    shortName: s(r.short_name),
+    description: s(r.description),
+    logoUrl: s(r.logo_url),
+    industryType: s(r.industry_type),
+    website: s(r.website),
+    phone: s(r.phone),
+    address: s(r.address),
+    contractStartDate: s(r.contract_start_date),
+    contractEndDate: s(r.contract_end_date),
+    status: (r.status as CustomerStatus) ?? "active",
+    billingSalutation: s(r.billing_salutation),
+    billingName: s(r.billing_name),
+    billingAddress1: s(r.billing_address1),
+    billingAddress2: s(r.billing_address2),
+    billingPincode: s(r.billing_pincode),
+    billingCity: s(r.billing_city),
+    billingDistrict: s(r.billing_district),
+    billingState: s(r.billing_state),
+    billingCountry: s(r.billing_country) || "India",
+    billingEmail: s(r.billing_email),
+    billingPhone: s(r.billing_phone),
+    billingFax: s(r.billing_fax),
+    shippingSameAsBilling: r.shipping_same_as_billing !== false,
+    shippingSalutation: s(r.shipping_salutation),
+    shippingName: s(r.shipping_name),
+    shippingAddress1: s(r.shipping_address1),
+    shippingAddress2: s(r.shipping_address2),
+    shippingPincode: s(r.shipping_pincode),
+    shippingCity: s(r.shipping_city),
+    shippingDistrict: s(r.shipping_district),
+    shippingState: s(r.shipping_state),
+    shippingCountry: s(r.shipping_country) || "India",
+    shippingEmail: s(r.shipping_email),
+    shippingPhone: s(r.shipping_phone),
+    shippingFax: s(r.shipping_fax),
+  };
+}
+
+function customerToRow(data: Omit<Customer, "id">) {
+  const code = data.code.trim();
+  const name = data.name.trim();
+  if (!code) throw new Error("Organisation ID is required");
+  if (!name) throw new Error("Organisation name is required");
+  const sameAsBilling = data.shippingSameAsBilling;
+  const ship = (k: keyof Customer, fallback: string) =>
+    sameAsBilling ? (data[fallback as keyof Customer] as string) ?? "" : (data[k] as string) ?? "";
+  return {
+    code,
+    name,
+    short_name: data.shortName.trim(),
+    description: data.description.trim(),
+    logo_url: data.logoUrl.trim(),
+    industry_type: data.industryType.trim(),
+    website: data.website.trim(),
+    phone: data.phone.trim(),
+    address: data.address.trim(),
+    contract_start_date: data.contractStartDate || null,
+    contract_end_date: data.contractEndDate || null,
+    status: data.status,
+    billing_salutation: data.billingSalutation,
+    billing_name: data.billingName,
+    billing_address1: data.billingAddress1,
+    billing_address2: data.billingAddress2,
+    billing_pincode: data.billingPincode,
+    billing_city: data.billingCity,
+    billing_district: data.billingDistrict,
+    billing_state: data.billingState,
+    billing_country: data.billingCountry || "India",
+    billing_email: data.billingEmail,
+    billing_phone: data.billingPhone,
+    billing_fax: data.billingFax,
+    shipping_same_as_billing: sameAsBilling,
+    shipping_salutation: ship("shippingSalutation", "billingSalutation"),
+    shipping_name: ship("shippingName", "billingName"),
+    shipping_address1: ship("shippingAddress1", "billingAddress1"),
+    shipping_address2: ship("shippingAddress2", "billingAddress2"),
+    shipping_pincode: ship("shippingPincode", "billingPincode"),
+    shipping_city: ship("shippingCity", "billingCity"),
+    shipping_district: ship("shippingDistrict", "billingDistrict"),
+    shipping_state: ship("shippingState", "billingState"),
+    shipping_country: ship("shippingCountry", "billingCountry") || "India",
+    shipping_email: ship("shippingEmail", "billingEmail"),
+    shipping_phone: ship("shippingPhone", "billingPhone"),
+    shipping_fax: ship("shippingFax", "billingFax"),
+  };
+}
+
   const qc = useQueryClient();
 
   const { data: customers = [] } = useQuery({
