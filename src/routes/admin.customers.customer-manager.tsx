@@ -92,16 +92,16 @@ function CustomerManagerPage() {
   return (
     <div>
       <PageHeader
-        title="Customer Manager"
+        title="Organization Manager"
         description="Onboard organisations and manage their contract details."
         crumbs={[
-          { label: "Customers", to: "/admin/customers" },
-          { label: "Customer Manager" },
+          { label: "Organizations", to: "/admin/customers" },
+          { label: "Organization Manager" },
         ]}
       />
 
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
-        <StatCard label="Total customers" value={customers.length} />
+        <StatCard label="Total organizations" value={customers.length} />
         <StatCard label="Active" value={activeCount} accent />
         <StatCard label="Inactive" value={customers.length - activeCount} />
       </div>
@@ -121,7 +121,7 @@ function CustomerManagerPage() {
             variant="outline"
             onClick={() =>
               downloadCsv(
-                "customers",
+                "organizations",
                 rows.map((c) => ({
                   orgId: c.code,
                   organisation: c.name,
@@ -258,8 +258,8 @@ function CustomerManagerPage() {
                   >
                     <Users className="mx-auto mb-2 h-6 w-6 opacity-50" />
                     {customers.length === 0
-                      ? "No customers yet. Add your first organisation to get started."
-                      : "No customers match your search."}
+                      ? "No organizations yet. Add your first organization to get started."
+                      : "No organizations match your search."}
                   </td>
                 </tr>
               )}
@@ -275,7 +275,7 @@ function CustomerManagerPage() {
         onSubmit={async (data) => {
           const r = editing ? await updateCustomer(editing.id, data) : await addCustomer(data);
           if (!r.ok) return r.error;
-          toast.success(editing ? "Customer updated" : "Customer added");
+          toast.success(editing ? "Organization updated" : "Organization added");
           return null;
         }}
       />
@@ -283,7 +283,7 @@ function CustomerManagerPage() {
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete customer?</AlertDialogTitle>
+            <AlertDialogTitle>Delete organization?</AlertDialogTitle>
             <AlertDialogDescription>
               This will remove{" "}
               <span className="font-semibold text-foreground">{deleting?.name}</span>{" "}
@@ -300,7 +300,7 @@ function CustomerManagerPage() {
                 if (!deleting) return;
                 try {
                   await deleteCustomer(deleting.id);
-                  toast.success("Customer deleted");
+                  toast.success("Organization deleted");
                   setDeleting(null);
                 } catch (e) {
                   toast.error(e instanceof Error ? e.message : "Delete failed");
@@ -606,9 +606,9 @@ function CustomerFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit customer" : "Add customer"}</DialogTitle>
+          <DialogTitle>{editing ? "Edit organization" : "Add organization"}</DialogTitle>
           <DialogDescription>
-            Each customer gets a unique organisation ID for internal mapping.
+            Each organization gets a unique organisation ID for internal mapping.
           </DialogDescription>
         </DialogHeader>
 
@@ -716,7 +716,7 @@ function CustomerFormDialog({
               type="submit"
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              {editing ? "Save changes" : "Create customer"}
+              {editing ? "Save changes" : "Create organization"}
             </Button>
           </DialogFooter>
         </form>
