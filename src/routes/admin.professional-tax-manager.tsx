@@ -150,6 +150,7 @@ function usePtSlabs() {
         .delete()
         .eq("id", id);
       if (error) throw error;
+      void logActivity({ module: "Professional Tax Manager", action: "delete", entityType: "professional_tax_slabs", entityId: id });
     },
     onSuccess: invalidate,
   });
