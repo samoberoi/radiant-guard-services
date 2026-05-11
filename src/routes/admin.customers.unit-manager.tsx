@@ -782,7 +782,14 @@ function UnitFormDialog({
             )}
           </Section>
 
-          {/* REPORTING OFFICERS */}
+          {/* PROFESSIONAL TAX */}
+          <Section title="Professional tax information">
+            <ProfessionalTaxBlock
+              enabled={form.enablePt}
+              onToggle={(v) => set("enablePt", v)}
+              billingPincode={form.billingPincode}
+            />
+          </Section>
           <Section title="Reporting officers">
             <div className="space-y-2">
               {form.reportingOfficers.map((o, i) => (
