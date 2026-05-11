@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, HandCoins, ReceiptText } from "lucide-react";
+import { ArrowRight, Clock, HandCoins, ReceiptText } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/admin/control-center")({
@@ -25,6 +25,12 @@ const tiles: Tile[] = [
     label: "Labour Welfare Fund",
     description: "Manage LWF contribution rules across states.",
     icon: HandCoins,
+  },
+  {
+    to: "/admin/duty-manager",
+    label: "Duty Manager",
+    description: "Define duty types like 8 hrs and 12 hrs used in rosters.",
+    icon: Clock,
   },
 ];
 
