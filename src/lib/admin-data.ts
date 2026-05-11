@@ -23,12 +23,74 @@ export type Customer = {
   id: string;
   code: string;
   name: string;
+  shortName: string;
+  description: string;
+  logoUrl: string;
+  industryType: string;
   website: string;
   phone: string;
   address: string;
   contractStartDate: string; // yyyy-mm-dd or ""
+  contractEndDate: string;
   status: CustomerStatus;
+  billingSalutation: string;
+  billingName: string;
+  billingAddress1: string;
+  billingAddress2: string;
+  billingPincode: string;
+  billingCity: string;
+  billingDistrict: string;
+  billingState: string;
+  billingCountry: string;
+  billingEmail: string;
+  billingPhone: string;
+  billingFax: string;
+  shippingSameAsBilling: boolean;
+  shippingSalutation: string;
+  shippingName: string;
+  shippingAddress1: string;
+  shippingAddress2: string;
+  shippingPincode: string;
+  shippingCity: string;
+  shippingDistrict: string;
+  shippingState: string;
+  shippingCountry: string;
+  shippingEmail: string;
+  shippingPhone: string;
+  shippingFax: string;
 };
+
+export const INDUSTRY_TYPES = [
+  "Agriculture, Forestry & Fishing",
+  "Automotive",
+  "Aviation & Aerospace",
+  "Banking, Financial Services & Insurance (BFSI)",
+  "Chemicals",
+  "Construction & Real Estate",
+  "Consumer Goods (FMCG)",
+  "Defense & Security",
+  "Education & Training",
+  "Energy & Utilities",
+  "Engineering & Industrial Manufacturing",
+  "Entertainment & Media",
+  "Food & Beverage",
+  "Government & Public Sector",
+  "Healthcare & Hospitals",
+  "Hospitality, Travel & Tourism",
+  "Information Technology & Software",
+  "Legal Services",
+  "Logistics & Supply Chain",
+  "Mining & Metals",
+  "Non-Profit & NGO",
+  "Oil & Gas",
+  "Pharmaceuticals & Biotechnology",
+  "Professional Services & Consulting",
+  "Retail & E-commerce",
+  "Telecommunications",
+  "Textiles & Apparel",
+  "Transportation",
+  "Other",
+] as const;
 
 type Result = { ok: true } | { ok: false; error: string };
 
