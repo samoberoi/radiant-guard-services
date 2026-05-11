@@ -667,6 +667,60 @@ export type Database = {
         }
         Relationships: []
       }
+      system_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json
+          entity_id: string
+          entity_label: string
+          entity_type: string
+          error_message: string
+          id: string
+          ip_address: string
+          module: string
+          status: string
+          user_agent: string
+          user_id: string | null
+          user_phone: string
+          user_role: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json
+          entity_id?: string
+          entity_label?: string
+          entity_type?: string
+          error_message?: string
+          id?: string
+          ip_address?: string
+          module: string
+          status?: string
+          user_agent?: string
+          user_id?: string | null
+          user_phone?: string
+          user_role?: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json
+          entity_id?: string
+          entity_label?: string
+          entity_type?: string
+          error_message?: string
+          id?: string
+          ip_address?: string
+          module?: string
+          status?: string
+          user_agent?: string
+          user_id?: string | null
+          user_phone?: string
+          user_role?: string
+        }
+        Relationships: []
+      }
       units: {
         Row: {
           ambulance_mobile: string
