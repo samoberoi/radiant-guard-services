@@ -955,3 +955,85 @@ function AddressFields({
     </div>
   );
 }
+
+function ProfessionalTaxBlock({
+  enabled,
+  onToggle,
+  billingPincode,
+}: {
+  enabled: boolean;
+  onToggle: (v: boolean) => void;
+  billingPincode: string;
+}) {
+  const { data: ranges } = usePincodeRanges();
+  const { data: slabs } = usePtSlabs();
+
+  const result = useMemo(
+    () => resolvePt(billingPincode, ranges ?? [], slabs ?? []),
+    [billingPincode, ranges, slabs],
+  );
+
+  const fmtCurrency = (n: number) =>
+    new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
+  const fmtRange = (min: number, max: number | null) =>
+    max == null ? `${fmtCurrency(min)} & above` : `${fmtCurrency(min)} – ${fmtCurrency(max)}`;
+  const genderLabel = (g: string) =>
+    g === "male" ? "Male only" : g === "female" ? "Female only" : "All";
+
+  return (
+    <div className="space-y-3">
+      <ToggleRow label="Enable Professional Tax" checked={enabled} onCheckedChange={onToggle} />
+      {enabled && (
+        <div className="rounded-lg border border-border bg-background p-3 text-sm">
+          {result.kind === "no_pincode" || result.kind === "invalid" ? (
+            <p className="text-muted-foreground">
+              Navigate to <span className="font-semibold text-foreground">unit's billing</span> and provide a valid 6-digit pincode to view applicable PT slabs.
+            </p>
+          ) : result.kind === "no_match" ? (
+            <p className="text-muted-foreground">
+              No PT slab configured for pincode <span className="font-mono font-semibold text-foreground">{result.pincode}</span>.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="rounded-full bg-accent/15 px-2.5 py-1 font-semibold text-accent">
+                  {result.state}
+                </span>
+                <span className="rounded-full bg-secondary px-2.5 py-1 font-semibold text-foreground">
+                  {result.regionLabel}
+                </span>
+                <span className="font-mono text-muted-foreground">PIN {result.pincode}</span>
+              </div>
+              {result.slabs.length === 0 ? (
+                <p className="text-muted-foreground">No slab rows defined for this region.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-secondary/60 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2">Salary range</th>
+                        <th className="px-3 py-2">Gender</th>
+                        <th className="px-3 py-2 text-right">Tax / month</th>
+                        <th className="px-3 py-2">Period</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      {result.slabs.map((s) => (
+                        <tr key={s.id}>
+                          <td className="px-3 py-2 font-medium text-foreground">{fmtRange(Number(s.salary_min), s.salary_max == null ? null : Number(s.salary_max))}</td>
+                          <td className="px-3 py-2 text-muted-foreground">{genderLabel(s.gender)}</td>
+                          <td className="px-3 py-2 text-right font-mono font-semibold text-foreground">{fmtCurrency(Number(s.tax_per_month))}</td>
+                          <td className="px-3 py-2 text-muted-foreground">{s.period}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
