@@ -32,6 +32,12 @@ const tiles: Tile[] = [
     description: "Define duty types like 8 hrs and 12 hrs used in rosters.",
     icon: Clock,
   },
+  {
+    to: "/admin/service-type-manager",
+    label: "Service Type Manager",
+    description: "Define service types like Security, Manpower, Facility, Staff.",
+    icon: Briefcase,
+  },
 ];
 
 function ControlCenterDashboard() {
