@@ -303,8 +303,8 @@ function useAllowanceTypes() {
     queryFn: async (): Promise<AllowanceType[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,display_name,short_name,is_default,enabled")
-        .order("display_name");
+        .select("id,name,display_name,short_name,is_default,enabled,created_at")
+        .order("created_at", { ascending: true });
       if (error) throw error;
       return (data as unknown as Record<string, unknown>[])
         .filter((r) => r.enabled !== false)
@@ -851,7 +851,7 @@ function ContractFormDialog({
                             return (
                               <CommandItem
                                 key={u.id}
-                                value={`${u.code} ${u.name} ${org?.name ?? ""}`}
+                                value={`${u.code} ${u.name} ${org?.name ?? ""} ${u.id}`}
                                 onSelect={() => {
                                   setUnitId(u.id);
                                   setUnitPickerOpen(false);
@@ -1418,7 +1418,7 @@ function ResourceFormDialog({
                         {designations.map((d) => (
                           <CommandItem
                             key={d.id}
-                            value={`${d.code} ${d.name}`}
+                            value={`${d.code} ${d.name} ${d.id}`}
                             onSelect={() => {
                               setDesignationId(d.id);
                               setDesignationOpen(false);
@@ -1503,7 +1503,7 @@ function ResourceFormDialog({
                         {availableExtras.map((a) => (
                           <CommandItem
                             key={a.id}
-                            value={`${a.shortName} ${a.displayName} ${a.name}`}
+                            value={`${a.shortName} ${a.displayName} ${a.name} ${a.id}`}
                             onSelect={() => addComponent(a)}
                           >
                             <div className="flex flex-col">
@@ -1543,16 +1543,21 @@ function ResourceFormDialog({
                       </button>
                     </Label>
                     <Input
-                      type="number"
-                      step="0.01"
-                      min={0}
-                      value={c.amount}
-                      onChange={(e) =>
-                        updateAmount(
-                          c.allowanceId,
-                          parseFloat(e.target.value) || 0,
-                        )
-                      }
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="0.00"
+                      value={c.amount === 0 ? "" : String(c.amount)}
+                      onChange={(e) => {
+                        const raw = e.target.value.trim();
+                        if (raw === "") {
+                          updateAmount(c.allowanceId, 0);
+                          return;
+                        }
+                        if (!/^\d*\.?\d*$/.test(raw)) return;
+                        const n = parseFloat(raw);
+                        updateAmount(c.allowanceId, Number.isFinite(n) ? n : 0);
+                      }}
+                      onFocus={(e) => e.target.select()}
                     />
                   </div>
                 ))}
