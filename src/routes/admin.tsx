@@ -43,10 +43,6 @@ const customersChildren: NavItem[] = [
   { to: "/admin/customers/unit-manager", label: "Unit Manager", icon: Warehouse },
 ];
 
-const controlCenterChildren: NavItem[] = [
-  { to: "/admin/professional-tax-manager", label: "Professional Tax Manager", icon: ReceiptText },
-  { to: "/admin/lwf-manager", label: "Labour Welfare Fund", icon: HandCoins },
-];
 
 function maskPhone(phone: string) {
   const d = phone.replace(/\D/g, "");
