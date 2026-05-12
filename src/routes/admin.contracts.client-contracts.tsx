@@ -109,12 +109,45 @@ type ResourceComponent = {
   amount: number;
 };
 
+type BenefitItem = {
+  costComponentId: string;
+  name: string;
+  calcType: "percentage" | "fixed";
+  percentage: number;
+  baseComponents: { label: string; operator: "+" | "-" }[];
+  capAmount: number | null;
+  amount: number; // computed (percentage) or manual (fixed)
+  state: string;
+};
+
 type ContractResource = {
   id?: string;
   designationId: string;
   serviceTypeId: string;
   quantity: number;
   components: ResourceComponent[];
+  payrollDayBaseId: string | null;
+  benefits: BenefitItem[];
+};
+
+type PayrollDayBase = {
+  id: string;
+  name: string;
+  code: string;
+  method: "actual_days" | "fixed_days" | "actual_minus_weekly_off";
+  fixedDays: number | null;
+  weeklyOffDay: number | null;
+};
+
+type CostComponentOption = {
+  id: string;
+  name: string;
+  calcType: "percentage" | "fixed";
+  percentage: number;
+  baseComponents: { label: string; operator: "+" | "-" }[];
+  capAmount: number | null;
+  amount: number | null;
+  state: string;
 };
 
 const QK = ["admin", "client-contracts"] as const;
@@ -123,6 +156,8 @@ const QK_PAY = ["admin", "payroll-windows", "enabled"] as const;
 const QK_BIL = ["admin", "billing-types", "enabled"] as const;
 const QK_DSG = ["admin", "designations", "enabled"] as const;
 const QK_ALW = ["admin", "allowance-types", "enabled"] as const;
+const QK_PDB = ["admin", "payroll-day-bases", "enabled"] as const;
+const QK_CC = ["admin", "cost-components", "enabled"] as const;
 
 function rowToContract(r: Record<string, unknown>): ClientContract {
   return {
