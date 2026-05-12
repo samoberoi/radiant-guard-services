@@ -194,36 +194,42 @@ export type Database = {
       }
       contract_resources: {
         Row: {
+          benefits: Json
           components: Json
           contract_id: string
           created_at: string
           designation_id: string | null
           gross: number
           id: string
+          payroll_day_base_id: string | null
           quantity: number
           service_type_id: string | null
           sort_order: number
           updated_at: string
         }
         Insert: {
+          benefits?: Json
           components?: Json
           contract_id: string
           created_at?: string
           designation_id?: string | null
           gross?: number
           id?: string
+          payroll_day_base_id?: string | null
           quantity?: number
           service_type_id?: string | null
           sort_order?: number
           updated_at?: string
         }
         Update: {
+          benefits?: Json
           components?: Json
           contract_id?: string
           created_at?: string
           designation_id?: string | null
           gross?: number
           id?: string
+          payroll_day_base_id?: string | null
           quantity?: number
           service_type_id?: string | null
           sort_order?: number
