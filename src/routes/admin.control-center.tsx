@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BadgeCheck, Briefcase, Calculator, CalendarRange, ClipboardList, Clock, Coins, HandCoins, Receipt, ReceiptText, Settings } from "lucide-react";
+import { ArrowRight, BadgeCheck, Briefcase, Calculator, CalendarDays, CalendarRange, ClipboardList, Clock, Coins, HandCoins, Receipt, ReceiptText, Settings } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/admin/control-center")({
@@ -43,6 +43,12 @@ const tiles: Tile[] = [
     label: "Payroll Manager",
     description: "Configure payroll windows and salary processing day.",
     icon: CalendarRange,
+  },
+  {
+    to: "/admin/payroll-days-manager",
+    label: "Payroll Days Manager",
+    description: "Define salary day bases (actual, fixed 26, actual minus Sundays).",
+    icon: CalendarDays,
   },
   {
     to: "/admin/allowance-manager",
