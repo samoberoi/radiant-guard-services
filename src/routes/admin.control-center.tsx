@@ -45,6 +45,12 @@ const tiles: Tile[] = [
     icon: CalendarRange,
   },
   {
+    to: "/admin/payroll-days-manager",
+    label: "Payroll Days Manager",
+    description: "Define salary day bases (actual, fixed 26, actual minus Sundays).",
+    icon: CalendarDays,
+  },
+  {
     to: "/admin/allowance-manager",
     label: "Allowance Manager",
     description: "Define allowance / earning components used in payroll.",
