@@ -3,11 +3,12 @@ import { useMemo, useState } from "react";
 import {
   Activity,
   CalendarRange,
+  Download,
   Filter,
-  RefreshCw,
   Search,
   ShieldAlert,
 } from "lucide-react";
+import { downloadCsv } from "@/lib/csv-export";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
@@ -112,7 +113,7 @@ function SystemLogsPage() {
 
   const range = useMemo(() => resolveRange(preset, from, to), [preset, from, to]);
 
-  const { data: logs = [], refetch, isFetching } = useQuery({
+  const { data: logs = [] } = useQuery({
     queryKey: [
       "system_logs",
       range.from.toISOString(),
@@ -273,11 +274,30 @@ function SystemLogsPage() {
           <Button
             variant="outline"
             className="h-10 w-full"
-            onClick={() => refetch()}
-            disabled={isFetching}
+            onClick={() =>
+              downloadCsv(
+                "system-logs",
+                filtered.map((l) => ({
+                  When: new Date(l.created_at).toLocaleString(),
+                  Module: l.module,
+                  Action: l.action,
+                  "Entity Type": l.entity_type,
+                  "Entity Label": l.entity_label,
+                  "Entity ID": l.entity_id,
+                  User: l.user_phone,
+                  Role: l.user_role,
+                  IP: l.ip_address,
+                  Status: l.status,
+                  Error: l.error_message,
+                  Details: l.details,
+                  "User Agent": l.user_agent,
+                })),
+              )
+            }
+            disabled={filtered.length === 0}
           >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-            Refresh
+            <Download className="mr-2 h-4 w-4" />
+            Download CSV
           </Button>
         </div>
       </div>
