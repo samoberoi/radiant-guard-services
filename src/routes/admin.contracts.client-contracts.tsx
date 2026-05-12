@@ -445,7 +445,7 @@ function useCostComponentOptions() {
 }
 
 /** Compute benefit amount from a percentage component using the resource's wage components. */
-export function computeBenefitAmount(
+function computeBenefitAmount(
   benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "amount">,
   wageComponents: ResourceComponent[],
 ): number {
