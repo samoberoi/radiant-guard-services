@@ -368,7 +368,9 @@ function useContractResources(contractId: string | null) {
       if (!contractId) return [];
       const { data, error } = await supabase
         .from("contract_resources" as never)
-        .select("id,designation_id,service_type_id,quantity,components,sort_order")
+        .select(
+          "id,designation_id,service_type_id,quantity,components,sort_order,payroll_day_base_id,benefits",
+        )
         .eq("contract_id", contractId)
         .order("sort_order");
       if (error) throw error;
@@ -380,10 +382,91 @@ function useContractResources(contractId: string | null) {
         components: Array.isArray(r.components)
           ? (r.components as ResourceComponent[])
           : [],
+        payrollDayBaseId: r.payroll_day_base_id ? String(r.payroll_day_base_id) : null,
+        benefits: Array.isArray(r.benefits) ? (r.benefits as BenefitItem[]) : [],
       }));
     },
   });
   return data;
+}
+
+function usePayrollDayBases() {
+  const { data = [] } = useQuery({
+    queryKey: QK_PDB,
+    queryFn: async (): Promise<PayrollDayBase[]> => {
+      const { data, error } = await supabase
+        .from("payroll_day_bases" as never)
+        .select("id,name,code,method,fixed_days,weekly_off_day,enabled,sort_order")
+        .order("sort_order")
+        .order("name");
+      if (error) throw error;
+      return (data as unknown as Record<string, unknown>[])
+        .filter((r) => r.enabled !== false)
+        .map((r) => ({
+          id: String(r.id),
+          name: String(r.name),
+          code: String(r.code),
+          method: r.method as PayrollDayBase["method"],
+          fixedDays: r.fixed_days == null ? null : Number(r.fixed_days),
+          weeklyOffDay: r.weekly_off_day == null ? null : Number(r.weekly_off_day),
+        }));
+    },
+  });
+  return data;
+}
+
+function useCostComponentOptions() {
+  const { data = [] } = useQuery({
+    queryKey: QK_CC,
+    queryFn: async (): Promise<CostComponentOption[]> => {
+      const { data, error } = await supabase
+        .from("cost_components" as never)
+        .select("id,name,calc_type,percentage,base_components,cap_amount,amount,state,enabled,sort_order")
+        .order("sort_order")
+        .order("name");
+      if (error) throw error;
+      return (data as unknown as Record<string, unknown>[])
+        .filter((r) => r.enabled !== false)
+        .map((r) => ({
+          id: String(r.id),
+          name: String(r.name),
+          calcType: (r.calc_type as "percentage" | "fixed") ?? "percentage",
+          percentage: Number(r.percentage ?? 0),
+          baseComponents: Array.isArray(r.base_components)
+            ? (r.base_components as { label: string; operator: "+" | "-" }[])
+            : [],
+          capAmount: r.cap_amount == null ? null : Number(r.cap_amount),
+          amount: r.amount == null ? null : Number(r.amount),
+          state: String(r.state ?? "N/A"),
+        }));
+    },
+  });
+  return data;
+}
+
+/** Compute benefit amount from a percentage component using the resource's wage components. */
+export function computeBenefitAmount(
+  benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "amount">,
+  wageComponents: ResourceComponent[],
+): number {
+  if (benefit.calcType === "fixed") return Number(benefit.amount) || 0;
+  const grossOf = (label: string): number => {
+    const l = label.trim().toLowerCase();
+    if (l === "gross" || l === "ctc") {
+      return wageComponents.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+    }
+    const match = wageComponents.find((c) => c.name.trim().toLowerCase() === l);
+    return match ? Number(match.amount) || 0 : 0;
+  };
+  const base = benefit.baseComponents.reduce((sum, b) => {
+    const v = grossOf(b.label);
+    return b.operator === "-" ? sum - v : sum + v;
+  }, 0);
+  let amt = (Number(benefit.percentage) || 0) * base / 100;
+  if (benefit.capAmount != null && benefit.capAmount > 0 && amt > benefit.capAmount) {
+    amt = benefit.capAmount;
+  }
+  return Math.round(amt * 100) / 100;
 }
 
 async function persistResources(contractId: string, resources: ContractResource[]) {
@@ -404,6 +487,8 @@ async function persistResources(contractId: string, resources: ContractResource[
     components: r.components,
     gross: r.components.reduce((s, c) => s + (Number(c.amount) || 0), 0),
     sort_order: idx,
+    payroll_day_base_id: r.payrollDayBaseId || null,
+    benefits: r.benefits,
   }));
   const ins = await supabase.from("contract_resources" as never).insert(rows as never);
   if (ins.error) throw ins.error;
