@@ -1711,6 +1711,30 @@ function ResourceFormDialog({
             </Field>
           </div>
 
+          <Field label="Payroll Days *">
+            <Select value={payrollDayBaseId} onValueChange={setPayrollDayBaseId}>
+              <SelectTrigger className="h-10 rounded-lg">
+                <SelectValue placeholder="Select payroll-days rule" />
+              </SelectTrigger>
+              <SelectContent>
+                {payrollDayBases.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    <div className="flex flex-col">
+                      <span>{p.name}</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {p.method === "fixed_days"
+                          ? `Fixed ${p.fixedDays ?? 26} days`
+                          : p.method === "actual_minus_weekly_off"
+                            ? `Actual − weekly off`
+                            : `Actual days in month`}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+
           <div className="rounded-xl border border-border bg-secondary/30 p-3">
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
