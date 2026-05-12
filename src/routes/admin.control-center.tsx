@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BadgeCheck, Briefcase, CalendarRange, ClipboardList, Clock, Coins, HandCoins, Receipt, ReceiptText, Settings } from "lucide-react";
+import { ArrowRight, BadgeCheck, Briefcase, Calculator, CalendarRange, ClipboardList, Clock, Coins, HandCoins, Receipt, ReceiptText, Settings } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/admin/control-center")({
@@ -61,6 +61,12 @@ const tiles: Tile[] = [
     label: "Designation Manager",
     description: "Manage employee designations used across rosters and payroll.",
     icon: BadgeCheck,
+  },
+  {
+    to: "/admin/cost-component-manager",
+    label: "Cost Component Manager",
+    description: "Configure CTC cost components like EPF, ESI, Bonus, Gratuity, LWF, etc.",
+    icon: Calculator,
   },
 ];
 

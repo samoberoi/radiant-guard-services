@@ -239,6 +239,54 @@ export type Database = {
           },
         ]
       }
+      cost_components: {
+        Row: {
+          amount: number | null
+          base_components: Json
+          calc_type: string
+          cap_amount: number | null
+          created_at: string
+          enabled: boolean
+          id: string
+          name: string
+          notes: string
+          percentage: number
+          sort_order: number
+          state: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number | null
+          base_components?: Json
+          calc_type?: string
+          cap_amount?: number | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name: string
+          notes?: string
+          percentage?: number
+          sort_order?: number
+          state?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number | null
+          base_components?: Json
+          calc_type?: string
+          cap_amount?: number | null
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          notes?: string
+          percentage?: number
+          sort_order?: number
+          state?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       customer_gst_numbers: {
         Row: {
           created_at: string
