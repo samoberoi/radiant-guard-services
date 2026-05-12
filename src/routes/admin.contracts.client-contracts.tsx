@@ -1434,15 +1434,21 @@ function ResourceFormDialog({
   const designations = useDesignations();
   const serviceTypes = useServiceTypes();
   const allowanceTypes = useAllowanceTypes();
+  const payrollDayBases = usePayrollDayBases();
+  const costComponents = useCostComponentOptions();
 
   const [designationId, setDesignationId] = useState("");
   const [serviceTypeId, setServiceTypeId] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [components, setComponents] = useState<ResourceComponent[]>([]);
+  const [payrollDayBaseId, setPayrollDayBaseId] = useState<string>("");
+  const [benefits, setBenefits] = useState<BenefitItem[]>([]);
   const [designationOpen, setDesignationOpen] = useState(false);
   const [allowancePickerOpen, setAllowancePickerOpen] = useState(false);
   const [designationQuery, setDesignationQuery] = useState("");
   const [allowanceQuery, setAllowanceQuery] = useState("");
+  const [benefitPickerOpen, setBenefitPickerOpen] = useState(false);
+  const [benefitQuery, setBenefitQuery] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -1451,6 +1457,8 @@ function ResourceFormDialog({
       setServiceTypeId(initial.serviceTypeId);
       setQuantity(String(initial.quantity));
       setComponents(initial.components.map((c) => ({ ...c })));
+      setPayrollDayBaseId(initial.payrollDayBaseId ?? "");
+      setBenefits(initial.benefits.map((b) => ({ ...b })));
     } else {
       setDesignationId("");
       setServiceTypeId("");
@@ -1465,6 +1473,8 @@ function ResourceFormDialog({
             amount: 0,
           })),
       );
+      setPayrollDayBaseId("");
+      setBenefits([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial, allowanceTypes.length]);
@@ -1490,6 +1500,27 @@ function ResourceFormDialog({
     );
   }, [allowanceQuery, availableExtras]);
 
+  // Recompute percentage benefits whenever wage components change
+  useEffect(() => {
+    setBenefits((prev) =>
+      prev.map((b) =>
+        b.calcType === "percentage"
+          ? { ...b, amount: computeBenefitAmount(b, components) }
+          : b,
+      ),
+    );
+  }, [components]);
+
+  const usedBenefitIds = new Set(benefits.map((b) => b.costComponentId));
+  const availableBenefits = costComponents.filter((c) => !usedBenefitIds.has(c.id));
+  const filteredAvailableBenefits = useMemo(() => {
+    const q = benefitQuery.trim().toLowerCase();
+    if (!q) return availableBenefits;
+    return availableBenefits.filter((c) =>
+      [c.name, c.state, c.id].join(" ").toLowerCase().includes(q),
+    );
+  }, [benefitQuery, availableBenefits]);
+
   const updateAmount = (allowanceId: string, amount: number) => {
     setComponents((prev) =>
       prev.map((c) => (c.allowanceId === allowanceId ? { ...c, amount } : c)),
@@ -1513,6 +1544,33 @@ function ResourceFormDialog({
     setAllowancePickerOpen(false);
   };
 
+  const addBenefit = (c: CostComponentOption) => {
+    const benefit: BenefitItem = {
+      costComponentId: c.id,
+      name: c.name,
+      calcType: c.calcType,
+      percentage: c.percentage,
+      baseComponents: c.baseComponents,
+      capAmount: c.capAmount,
+      amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
+      state: c.state,
+    };
+    if (benefit.calcType === "percentage") {
+      benefit.amount = computeBenefitAmount(benefit, components);
+    }
+    setBenefits((prev) => [...prev, benefit]);
+    setBenefitQuery("");
+    setBenefitPickerOpen(false);
+  };
+
+  const updateBenefitAmount = (id: string, amount: number) => {
+    setBenefits((prev) => prev.map((b) => (b.costComponentId === id ? { ...b, amount } : b)));
+  };
+
+  const removeBenefit = (id: string) => {
+    setBenefits((prev) => prev.filter((b) => b.costComponentId !== id));
+  };
+
   const handleSubmit = () => {
     if (!designationId) {
       toast.error("Please select a designation");
@@ -1520,6 +1578,10 @@ function ResourceFormDialog({
     }
     if (!serviceTypeId) {
       toast.error("Please select a service type");
+      return;
+    }
+    if (!payrollDayBaseId) {
+      toast.error("Please select Payroll Days");
       return;
     }
     const q = parseInt(quantity, 10);
@@ -1533,8 +1595,12 @@ function ResourceFormDialog({
       serviceTypeId,
       quantity: q,
       components,
+      payrollDayBaseId: payrollDayBaseId || null,
+      benefits,
     });
   };
+
+  const totalBenefits = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
 
   const selectedDesignation = designations.find((d) => d.id === designationId);
 
