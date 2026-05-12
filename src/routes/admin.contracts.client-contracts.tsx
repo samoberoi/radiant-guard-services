@@ -109,12 +109,45 @@ type ResourceComponent = {
   amount: number;
 };
 
+type BenefitItem = {
+  costComponentId: string;
+  name: string;
+  calcType: "percentage" | "fixed";
+  percentage: number;
+  baseComponents: { label: string; operator: "+" | "-" }[];
+  capAmount: number | null;
+  amount: number; // computed (percentage) or manual (fixed)
+  state: string;
+};
+
 type ContractResource = {
   id?: string;
   designationId: string;
   serviceTypeId: string;
   quantity: number;
   components: ResourceComponent[];
+  payrollDayBaseId: string | null;
+  benefits: BenefitItem[];
+};
+
+type PayrollDayBase = {
+  id: string;
+  name: string;
+  code: string;
+  method: "actual_days" | "fixed_days" | "actual_minus_weekly_off";
+  fixedDays: number | null;
+  weeklyOffDay: number | null;
+};
+
+type CostComponentOption = {
+  id: string;
+  name: string;
+  calcType: "percentage" | "fixed";
+  percentage: number;
+  baseComponents: { label: string; operator: "+" | "-" }[];
+  capAmount: number | null;
+  amount: number | null;
+  state: string;
 };
 
 const QK = ["admin", "client-contracts"] as const;
@@ -123,6 +156,8 @@ const QK_PAY = ["admin", "payroll-windows", "enabled"] as const;
 const QK_BIL = ["admin", "billing-types", "enabled"] as const;
 const QK_DSG = ["admin", "designations", "enabled"] as const;
 const QK_ALW = ["admin", "allowance-types", "enabled"] as const;
+const QK_PDB = ["admin", "payroll-day-bases", "enabled"] as const;
+const QK_CC = ["admin", "cost-components", "enabled"] as const;
 
 function rowToContract(r: Record<string, unknown>): ClientContract {
   return {
@@ -333,7 +368,9 @@ function useContractResources(contractId: string | null) {
       if (!contractId) return [];
       const { data, error } = await supabase
         .from("contract_resources" as never)
-        .select("id,designation_id,service_type_id,quantity,components,sort_order")
+        .select(
+          "id,designation_id,service_type_id,quantity,components,sort_order,payroll_day_base_id,benefits",
+        )
         .eq("contract_id", contractId)
         .order("sort_order");
       if (error) throw error;
@@ -345,10 +382,91 @@ function useContractResources(contractId: string | null) {
         components: Array.isArray(r.components)
           ? (r.components as ResourceComponent[])
           : [],
+        payrollDayBaseId: r.payroll_day_base_id ? String(r.payroll_day_base_id) : null,
+        benefits: Array.isArray(r.benefits) ? (r.benefits as BenefitItem[]) : [],
       }));
     },
   });
   return data;
+}
+
+function usePayrollDayBases() {
+  const { data = [] } = useQuery({
+    queryKey: QK_PDB,
+    queryFn: async (): Promise<PayrollDayBase[]> => {
+      const { data, error } = await supabase
+        .from("payroll_day_bases" as never)
+        .select("id,name,code,method,fixed_days,weekly_off_day,enabled,sort_order")
+        .order("sort_order")
+        .order("name");
+      if (error) throw error;
+      return (data as unknown as Record<string, unknown>[])
+        .filter((r) => r.enabled !== false)
+        .map((r) => ({
+          id: String(r.id),
+          name: String(r.name),
+          code: String(r.code),
+          method: r.method as PayrollDayBase["method"],
+          fixedDays: r.fixed_days == null ? null : Number(r.fixed_days),
+          weeklyOffDay: r.weekly_off_day == null ? null : Number(r.weekly_off_day),
+        }));
+    },
+  });
+  return data;
+}
+
+function useCostComponentOptions() {
+  const { data = [] } = useQuery({
+    queryKey: QK_CC,
+    queryFn: async (): Promise<CostComponentOption[]> => {
+      const { data, error } = await supabase
+        .from("cost_components" as never)
+        .select("id,name,calc_type,percentage,base_components,cap_amount,amount,state,enabled,sort_order")
+        .order("sort_order")
+        .order("name");
+      if (error) throw error;
+      return (data as unknown as Record<string, unknown>[])
+        .filter((r) => r.enabled !== false)
+        .map((r) => ({
+          id: String(r.id),
+          name: String(r.name),
+          calcType: (r.calc_type as "percentage" | "fixed") ?? "percentage",
+          percentage: Number(r.percentage ?? 0),
+          baseComponents: Array.isArray(r.base_components)
+            ? (r.base_components as { label: string; operator: "+" | "-" }[])
+            : [],
+          capAmount: r.cap_amount == null ? null : Number(r.cap_amount),
+          amount: r.amount == null ? null : Number(r.amount),
+          state: String(r.state ?? "N/A"),
+        }));
+    },
+  });
+  return data;
+}
+
+/** Compute benefit amount from a percentage component using the resource's wage components. */
+function computeBenefitAmount(
+  benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "amount">,
+  wageComponents: ResourceComponent[],
+): number {
+  if (benefit.calcType === "fixed") return Number(benefit.amount) || 0;
+  const grossOf = (label: string): number => {
+    const l = label.trim().toLowerCase();
+    if (l === "gross" || l === "ctc") {
+      return wageComponents.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+    }
+    const match = wageComponents.find((c) => c.name.trim().toLowerCase() === l);
+    return match ? Number(match.amount) || 0 : 0;
+  };
+  const base = benefit.baseComponents.reduce((sum, b) => {
+    const v = grossOf(b.label);
+    return b.operator === "-" ? sum - v : sum + v;
+  }, 0);
+  let amt = (Number(benefit.percentage) || 0) * base / 100;
+  if (benefit.capAmount != null && benefit.capAmount > 0 && amt > benefit.capAmount) {
+    amt = benefit.capAmount;
+  }
+  return Math.round(amt * 100) / 100;
 }
 
 async function persistResources(contractId: string, resources: ContractResource[]) {
@@ -369,6 +487,8 @@ async function persistResources(contractId: string, resources: ContractResource[
     components: r.components,
     gross: r.components.reduce((s, c) => s + (Number(c.amount) || 0), 0),
     sort_order: idx,
+    payroll_day_base_id: r.payrollDayBaseId || null,
+    benefits: r.benefits,
   }));
   const ins = await supabase.from("contract_resources" as never).insert(rows as never);
   if (ins.error) throw ins.error;
@@ -1314,15 +1434,21 @@ function ResourceFormDialog({
   const designations = useDesignations();
   const serviceTypes = useServiceTypes();
   const allowanceTypes = useAllowanceTypes();
+  const payrollDayBases = usePayrollDayBases();
+  const costComponents = useCostComponentOptions();
 
   const [designationId, setDesignationId] = useState("");
   const [serviceTypeId, setServiceTypeId] = useState("");
   const [quantity, setQuantity] = useState("1");
   const [components, setComponents] = useState<ResourceComponent[]>([]);
+  const [payrollDayBaseId, setPayrollDayBaseId] = useState<string>("");
+  const [benefits, setBenefits] = useState<BenefitItem[]>([]);
   const [designationOpen, setDesignationOpen] = useState(false);
   const [allowancePickerOpen, setAllowancePickerOpen] = useState(false);
   const [designationQuery, setDesignationQuery] = useState("");
   const [allowanceQuery, setAllowanceQuery] = useState("");
+  const [benefitPickerOpen, setBenefitPickerOpen] = useState(false);
+  const [benefitQuery, setBenefitQuery] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -1331,6 +1457,8 @@ function ResourceFormDialog({
       setServiceTypeId(initial.serviceTypeId);
       setQuantity(String(initial.quantity));
       setComponents(initial.components.map((c) => ({ ...c })));
+      setPayrollDayBaseId(initial.payrollDayBaseId ?? "");
+      setBenefits(initial.benefits.map((b) => ({ ...b })));
     } else {
       setDesignationId("");
       setServiceTypeId("");
@@ -1345,6 +1473,8 @@ function ResourceFormDialog({
             amount: 0,
           })),
       );
+      setPayrollDayBaseId("");
+      setBenefits([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial, allowanceTypes.length]);
@@ -1370,6 +1500,27 @@ function ResourceFormDialog({
     );
   }, [allowanceQuery, availableExtras]);
 
+  // Recompute percentage benefits whenever wage components change
+  useEffect(() => {
+    setBenefits((prev) =>
+      prev.map((b) =>
+        b.calcType === "percentage"
+          ? { ...b, amount: computeBenefitAmount(b, components) }
+          : b,
+      ),
+    );
+  }, [components]);
+
+  const usedBenefitIds = new Set(benefits.map((b) => b.costComponentId));
+  const availableBenefits = costComponents.filter((c) => !usedBenefitIds.has(c.id));
+  const filteredAvailableBenefits = useMemo(() => {
+    const q = benefitQuery.trim().toLowerCase();
+    if (!q) return availableBenefits;
+    return availableBenefits.filter((c) =>
+      [c.name, c.state, c.id].join(" ").toLowerCase().includes(q),
+    );
+  }, [benefitQuery, availableBenefits]);
+
   const updateAmount = (allowanceId: string, amount: number) => {
     setComponents((prev) =>
       prev.map((c) => (c.allowanceId === allowanceId ? { ...c, amount } : c)),
@@ -1393,6 +1544,33 @@ function ResourceFormDialog({
     setAllowancePickerOpen(false);
   };
 
+  const addBenefit = (c: CostComponentOption) => {
+    const benefit: BenefitItem = {
+      costComponentId: c.id,
+      name: c.name,
+      calcType: c.calcType,
+      percentage: c.percentage,
+      baseComponents: c.baseComponents,
+      capAmount: c.capAmount,
+      amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
+      state: c.state,
+    };
+    if (benefit.calcType === "percentage") {
+      benefit.amount = computeBenefitAmount(benefit, components);
+    }
+    setBenefits((prev) => [...prev, benefit]);
+    setBenefitQuery("");
+    setBenefitPickerOpen(false);
+  };
+
+  const updateBenefitAmount = (id: string, amount: number) => {
+    setBenefits((prev) => prev.map((b) => (b.costComponentId === id ? { ...b, amount } : b)));
+  };
+
+  const removeBenefit = (id: string) => {
+    setBenefits((prev) => prev.filter((b) => b.costComponentId !== id));
+  };
+
   const handleSubmit = () => {
     if (!designationId) {
       toast.error("Please select a designation");
@@ -1400,6 +1578,10 @@ function ResourceFormDialog({
     }
     if (!serviceTypeId) {
       toast.error("Please select a service type");
+      return;
+    }
+    if (!payrollDayBaseId) {
+      toast.error("Please select Payroll Days");
       return;
     }
     const q = parseInt(quantity, 10);
@@ -1413,8 +1595,12 @@ function ResourceFormDialog({
       serviceTypeId,
       quantity: q,
       components,
+      payrollDayBaseId: payrollDayBaseId || null,
+      benefits,
     });
   };
+
+  const totalBenefits = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
 
   const selectedDesignation = designations.find((d) => d.id === designationId);
 
@@ -1525,6 +1711,30 @@ function ResourceFormDialog({
             </Field>
           </div>
 
+          <Field label="Payroll Days *">
+            <Select value={payrollDayBaseId} onValueChange={setPayrollDayBaseId}>
+              <SelectTrigger className="h-10 rounded-lg">
+                <SelectValue placeholder="Select payroll-days rule" />
+              </SelectTrigger>
+              <SelectContent>
+                {payrollDayBases.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    <div className="flex flex-col">
+                      <span>{p.name}</span>
+                      <span className="text-[11px] text-muted-foreground">
+                        {p.method === "fixed_days"
+                          ? `Fixed ${p.fixedDays ?? 26} days`
+                          : p.method === "actual_minus_weekly_off"
+                            ? `Actual − weekly off`
+                            : `Actual days in month`}
+                      </span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+
           <div className="rounded-xl border border-border bg-secondary/30 p-3">
             <div className="mb-2 flex items-center justify-between">
               <h4 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -1627,6 +1837,153 @@ function ResourceFormDialog({
                 {gross.toFixed(2)}
               </span>
             </div>
+          </div>
+
+          {/* Benefits Management */}
+          <div className="rounded-xl border border-border bg-secondary/30 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <div>
+                <h4 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Benefits Management
+                </h4>
+                <p className="text-[11px] text-muted-foreground">
+                  Add benefit components like EPF, ESIC, Bonus, LWF, PT.
+                </p>
+              </div>
+              <Popover open={benefitPickerOpen} onOpenChange={setBenefitPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
+                    disabled={availableBenefits.length === 0}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" /> Add component
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Which benefit would you like to add?"
+                      value={benefitQuery}
+                      onValueChange={setBenefitQuery}
+                    />
+                    <CommandList>
+                      <CommandEmpty>No more components.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredAvailableBenefits.map((c) => (
+                          <CommandItem
+                            key={c.id}
+                            value={`${c.name} ${c.state} ${c.id}`}
+                            onSelect={() => addBenefit(c)}
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-sm">{c.name}</span>
+                              <span className="text-[11px] text-muted-foreground">
+                                {c.calcType === "percentage"
+                                  ? `${c.percentage}% of ${c.baseComponents.map((b, i) => (i === 0 ? b.label : `${b.operator} ${b.label}`)).join(" ") || "—"}`
+                                  : c.amount != null && c.amount > 0
+                                    ? `Fixed ₹${c.amount.toLocaleString("en-IN")}`
+                                    : "Fixed amount (manual)"}
+                                {c.state && c.state !== "N/A" ? ` · ${c.state}` : ""}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {benefits.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border bg-card/50 px-4 py-6 text-center">
+                <div className="text-sm font-medium text-foreground">No benefits added</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  Click <span className="font-semibold text-foreground">Add component</span> to attach EPF, ESIC, Bonus, LWF, PT…
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {benefits.map((b) => (
+                  <div
+                    key={b.costComponentId}
+                    className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-3 py-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground">{b.name}</span>
+                        {b.state && b.state !== "N/A" && (
+                          <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                            {b.state}
+                          </span>
+                        )}
+                        <span
+                          className={cn(
+                            "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+                            b.calcType === "percentage"
+                              ? "bg-accent/15 text-accent"
+                              : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+                          )}
+                        >
+                          {b.calcType === "percentage" ? `${b.percentage}%` : "Fixed"}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                        {b.calcType === "percentage"
+                          ? `${b.percentage}% of ${b.baseComponents.map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`)).join(" ") || "—"}${b.capAmount ? ` · cap ₹${b.capAmount.toLocaleString("en-IN")}` : ""}`
+                          : "Manual entry"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {b.calcType === "fixed" ? (
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0.00"
+                          className="h-9 w-28"
+                          value={b.amount === 0 ? "" : String(b.amount)}
+                          onChange={(e) => {
+                            const raw = e.target.value.trim();
+                            if (raw === "") {
+                              updateBenefitAmount(b.costComponentId, 0);
+                              return;
+                            }
+                            if (!/^\d*\.?\d*$/.test(raw)) return;
+                            const n = parseFloat(raw);
+                            updateBenefitAmount(b.costComponentId, Number.isFinite(n) ? n : 0);
+                          }}
+                        />
+                      ) : (
+                        <span className="w-28 text-right text-sm font-semibold text-foreground">
+                          {b.amount.toFixed(2)}
+                        </span>
+                      )}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeBenefit(b.costComponentId)}
+                        aria-label="Remove"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex items-center justify-end border-t border-border pt-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Total Benefits
+                  </span>
+                  <span className="ml-3 text-base font-bold text-foreground">
+                    {totalBenefits.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
