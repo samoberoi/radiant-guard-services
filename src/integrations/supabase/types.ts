@@ -553,6 +553,51 @@ export type Database = {
         }
         Relationships: []
       }
+      payroll_day_bases: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          enabled: boolean
+          fixed_days: number | null
+          id: string
+          is_default: boolean
+          method: string
+          name: string
+          sort_order: number
+          updated_at: string
+          weekly_off_day: number | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          fixed_days?: number | null
+          id?: string
+          is_default?: boolean
+          method: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          weekly_off_day?: number | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          fixed_days?: number | null
+          id?: string
+          is_default?: boolean
+          method?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          weekly_off_day?: number | null
+        }
+        Relationships: []
+      }
       payroll_windows: {
         Row: {
           created_at: string
