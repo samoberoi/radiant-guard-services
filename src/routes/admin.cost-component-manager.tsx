@@ -548,18 +548,25 @@ function CostComponentDialog({
                       ))}
                     </div>
                   )}
-                  <div className="mt-3 flex flex-wrap gap-1.5">
-                    {baseLabels.map((lbl) => (
-                      <button
-                        key={lbl}
-                        type="button"
-                        className="rounded-md border border-border bg-card px-2 py-1 text-xs hover:bg-accent/10 hover:text-accent"
-                        onClick={() => setBaseRefs([...baseRefs, { label: lbl, operator: "+" }])}
-                      >
-                        + {lbl}
-                      </button>
-                    ))}
-                  </div>
+                  {(() => {
+                    const used = new Set(baseRefs.map((b) => b.label));
+                    const remaining = baseLabels.filter((l) => !used.has(l));
+                    if (remaining.length === 0) return null;
+                    return (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {remaining.map((lbl) => (
+                          <button
+                            key={lbl}
+                            type="button"
+                            className="rounded-md border border-border bg-card px-2 py-1 text-xs hover:bg-accent/10 hover:text-accent"
+                            onClick={() => setBaseRefs([...baseRefs, { label: lbl, operator: "+" }])}
+                          >
+                            + {lbl}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             </>
