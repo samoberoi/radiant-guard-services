@@ -806,7 +806,7 @@ function parseContractWorkbook(buf: ArrayBuffer): ImportedContract {
     defval: "",
   });
   if (cRows.length === 0) throw new Error("'Contract' sheet has no rows");
-  const rSheet = wb.Sheets["Resources"];
+  const rSheet = wb.Sheets["Resources_Raw"] ?? wb.Sheets["Resources"];
   const rRows = rSheet
     ? XLSX.utils.sheet_to_json<Record<string, unknown>>(rSheet, { defval: "" })
     : [];
