@@ -575,6 +575,177 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
   if (error) throw error;
   const resources = (resData as unknown as Record<string, unknown>[]) ?? [];
 
+  // Resolve lookup labels in parallel
+  const [unitsRes, desigRes, svcRes, pwRes, btRes, pdbRes] = await Promise.all([
+    supabase.from("units" as never).select("id,code,name").eq("id", contract.unitId).maybeSingle(),
+    supabase.from("designations" as never).select("id,name,code"),
+    supabase.from("service_types" as never).select("id,name"),
+    supabase.from("payroll_windows" as never).select("id,label"),
+    supabase.from("billing_types" as never).select("id,name"),
+    supabase.from("payroll_day_bases" as never).select("id,name,code"),
+  ]);
+  const unitRow = unitsRes.data as Record<string, unknown> | null;
+  const nameMap = (rows: unknown, key = "name"): Map<string, string> => {
+    const m = new Map<string, string>();
+    ((rows as Record<string, unknown>[]) ?? []).forEach((r) =>
+      m.set(String(r.id), String(r[key] ?? "")),
+    );
+    return m;
+  };
+  const desigMap = nameMap(desigRes.data);
+  const svcMap = nameMap(svcRes.data);
+  const pwMap = nameMap(pwRes.data, "label");
+  const btMap = nameMap(btRes.data);
+  const pdbMap = nameMap(pdbRes.data);
+
+  const sumArr = (arr: unknown): number =>
+    Array.isArray(arr)
+      ? (arr as { amount?: number }[]).reduce((s, x) => s + (Number(x?.amount) || 0), 0)
+      : 0;
+
+  // ---- Sheet 1: Summary
+  const summaryRows: Array<[string, string | number]> = [];
+  summaryRows.push(["Contract Code", contract.contractCode]);
+  summaryRows.push([
+    "Unit",
+    unitRow ? `${String(unitRow.code ?? "")} — ${String(unitRow.name ?? "")}` : contract.unitId,
+  ]);
+  summaryRows.push(["Start Date", contract.startDate]);
+  summaryRows.push(["End Date", contract.endDate]);
+  summaryRows.push(["Status", contract.status]);
+  summaryRows.push(["Description", contract.description]);
+  summaryRows.push(["Service Type", svcMap.get(contract.serviceTypeId ?? "") ?? ""]);
+  summaryRows.push(["Payroll Window", pwMap.get(contract.payrollWindowId ?? "") ?? ""]);
+  summaryRows.push(["Billing Type", btMap.get(contract.billingTypeId ?? "") ?? ""]);
+  summaryRows.push(["GST Option", contract.gstOption]);
+
+  let totalHeadcount = 0;
+  let totalMonthlyCTC = 0;
+  let totalGross = 0;
+  let totalBenefits = 0;
+  let totalDeductions = 0;
+  let totalEmployer = 0;
+  resources.forEach((r) => {
+    const qty = Number(r.quantity ?? 1) || 1;
+    const wage = sumArr(r.components);
+    const ben = sumArr(r.benefits);
+    const ded = sumArr(r.deductions);
+    const emp = sumArr(r.employer_contributions);
+    totalHeadcount += qty;
+    totalGross += (wage + ben) * qty;
+    totalBenefits += ben * qty;
+    totalDeductions += ded * qty;
+    totalEmployer += emp * qty;
+    totalMonthlyCTC += (wage + ben + emp) * qty;
+  });
+  summaryRows.push(["", ""]);
+  summaryRows.push(["Resource Lines", resources.length]);
+  summaryRows.push(["Total Headcount", totalHeadcount]);
+  summaryRows.push(["Total Monthly Gross", totalGross]);
+  summaryRows.push(["Total Monthly Benefits (in gross)", totalBenefits]);
+  summaryRows.push(["Total Monthly Deductions", totalDeductions]);
+  summaryRows.push(["Total Monthly Employer Contribution", totalEmployer]);
+  summaryRows.push(["Total Monthly CTC (Gross + Employer)", totalMonthlyCTC]);
+  summaryRows.push(["Total Monthly Net Payable (Gross - Deductions)", totalGross - totalDeductions]);
+
+  const wb = XLSX.utils.book_new();
+  const wsSummary = XLSX.utils.aoa_to_sheet([["Field", "Value"], ...summaryRows]);
+  wsSummary["!cols"] = [{ wch: 42 }, { wch: 50 }];
+  XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+
+  // ---- Sheet 2: Resources (human-readable)
+  const resHeader = [
+    "#",
+    "Designation",
+    "Service Type",
+    "Quantity",
+    "Payroll Day Basis",
+    "Wage Components Total",
+    "Benefits Total",
+    "Gross (Wage + Benefits)",
+    "Deductions Total",
+    "Net Payable",
+    "Employer Contribution Total",
+    "Monthly CTC",
+    "Annual CTC",
+    "Line Monthly CTC (× Qty)",
+    "Line Annual CTC (× Qty)",
+  ];
+  const resHumanRows = resources.map((r, idx) => {
+    const qty = Number(r.quantity ?? 1) || 1;
+    const wage = sumArr(r.components);
+    const ben = sumArr(r.benefits);
+    const ded = sumArr(r.deductions);
+    const emp = sumArr(r.employer_contributions);
+    const gross = wage + ben;
+    const ctc = gross + emp;
+    return [
+      idx + 1,
+      desigMap.get(String(r.designation_id ?? "")) ?? "",
+      svcMap.get(String(r.service_type_id ?? "")) ?? "",
+      qty,
+      pdbMap.get(String(r.payroll_day_base_id ?? "")) ?? "",
+      wage,
+      ben,
+      gross,
+      ded,
+      gross - ded,
+      emp,
+      ctc,
+      ctc * 12,
+      ctc * qty,
+      ctc * qty * 12,
+    ];
+  });
+  const wsRes = XLSX.utils.aoa_to_sheet([resHeader, ...resHumanRows]);
+  wsRes["!cols"] = resHeader.map((h) => ({ wch: Math.max(14, h.length + 2) }));
+  XLSX.utils.book_append_sheet(wb, wsRes, "Resources");
+
+  // ---- Sheet 3: Salary Breakdown (long format)
+  const breakdownHeader = [
+    "Resource #",
+    "Designation",
+    "Quantity",
+    "Section",
+    "Component",
+    "Calc Type",
+    "Percentage",
+    "State",
+    "Monthly Amount",
+    "Line Total (× Qty)",
+  ];
+  const breakdownRows: (string | number)[][] = [];
+  resources.forEach((r, idx) => {
+    const qty = Number(r.quantity ?? 1) || 1;
+    const desig = desigMap.get(String(r.designation_id ?? "")) ?? "";
+    const pushSection = (section: string, items: unknown) => {
+      if (!Array.isArray(items)) return;
+      (items as Array<Record<string, unknown>>).forEach((it) => {
+        const amt = Number(it.amount) || 0;
+        breakdownRows.push([
+          idx + 1,
+          desig,
+          qty,
+          section,
+          String(it.name ?? ""),
+          String(it.calcType ?? ""),
+          Number(it.percentage ?? 0) || 0,
+          String(it.state ?? ""),
+          amt,
+          amt * qty,
+        ]);
+      });
+    };
+    pushSection("Wage", r.components);
+    pushSection("Benefit", r.benefits);
+    pushSection("Deduction", r.deductions);
+    pushSection("Employer Contribution", r.employer_contributions);
+  });
+  const wsBreak = XLSX.utils.aoa_to_sheet([breakdownHeader, ...breakdownRows]);
+  wsBreak["!cols"] = breakdownHeader.map((h) => ({ wch: Math.max(14, h.length + 2) }));
+  XLSX.utils.book_append_sheet(wb, wsBreak, "Salary Breakdown");
+
+  // ---- Sheet 4: Contract (raw, importable)
   const contractRow: Record<string, string | number> = {
     contract_code: contract.contractCode,
     unit_id: contract.unitId,
@@ -587,8 +758,13 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
     gst_option: contract.gstOption,
     status: contract.status,
   };
+  const wsContract = XLSX.utils.json_to_sheet([contractRow], {
+    header: [...CONTRACT_FIELDS],
+  });
+  XLSX.utils.book_append_sheet(wb, wsContract, "Contract");
 
-  const resourceRows = resources.map((r, idx) => ({
+  // ---- Sheet 5: Resources_Raw (importable JSON columns)
+  const resourceRawRows = resources.map((r, idx) => ({
     sort_order: Number(r.sort_order ?? idx),
     designation_id: r.designation_id ? String(r.designation_id) : "",
     service_type_id: r.service_type_id ? String(r.service_type_id) : "",
@@ -599,13 +775,7 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
     deductions_json: JSON.stringify(r.deductions ?? []),
     employer_contributions_json: JSON.stringify(r.employer_contributions ?? []),
   }));
-
-  const wb = XLSX.utils.book_new();
-  const wsContract = XLSX.utils.json_to_sheet([contractRow], {
-    header: [...CONTRACT_FIELDS],
-  });
-  XLSX.utils.book_append_sheet(wb, wsContract, "Contract");
-  const wsResources = XLSX.utils.json_to_sheet(resourceRows, {
+  const wsRaw = XLSX.utils.json_to_sheet(resourceRawRows, {
     header: [
       "sort_order",
       "designation_id",
@@ -618,7 +788,8 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
       "employer_contributions_json",
     ],
   });
-  XLSX.utils.book_append_sheet(wb, wsResources, "Resources");
+  XLSX.utils.book_append_sheet(wb, wsRaw, "Resources_Raw");
+
   XLSX.writeFile(wb, `${contract.contractCode || "contract"}.xlsx`);
 }
 
@@ -635,7 +806,7 @@ function parseContractWorkbook(buf: ArrayBuffer): ImportedContract {
     defval: "",
   });
   if (cRows.length === 0) throw new Error("'Contract' sheet has no rows");
-  const rSheet = wb.Sheets["Resources"];
+  const rSheet = wb.Sheets["Resources_Raw"] ?? wb.Sheets["Resources"];
   const rRows = rSheet
     ? XLSX.utils.sheet_to_json<Record<string, unknown>>(rSheet, { defval: "" })
     : [];
