@@ -444,6 +444,25 @@ function useCostComponentOptions() {
   return data;
 }
 
+/** Compute total payable days for a resource in the current month, based on the payroll-day base rule. */
+function computePayableDays(base: PayrollDayBase | undefined, ref: Date = new Date()): number {
+  if (!base) return 0;
+  const year = ref.getFullYear();
+  const month = ref.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  if (base.method === "fixed_days") return Number(base.fixedDays) || 0;
+  if (base.method === "actual_days") return daysInMonth;
+  if (base.method === "actual_minus_weekly_off") {
+    const off = base.weeklyOffDay == null ? 0 : Number(base.weeklyOffDay); // 0=Sun..6=Sat
+    let count = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (new Date(year, month, d).getDay() === off) count++;
+    }
+    return daysInMonth - count;
+  }
+  return daysInMonth;
+}
+
 /** Compute benefit amount from a percentage component using the resource's wage components. */
 function computeBenefitAmount(
   benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "amount">,
@@ -1985,6 +2004,14 @@ function ResourceFormDialog({
               </div>
             )}
           </div>
+
+          {/* Salary Breakdown Preview */}
+          <SalaryBreakdownTable
+            designationName={selectedDesignation?.name ?? ""}
+            payrollDayBase={payrollDayBases.find((p) => p.id === payrollDayBaseId)}
+            components={components}
+            benefits={benefits}
+          />
         </div>
 
         <DialogFooter>
@@ -2001,5 +2028,142 @@ function ResourceFormDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Salary Breakdown Table                                             */
+/* ------------------------------------------------------------------ */
+
+function SalaryBreakdownTable({
+  designationName,
+  payrollDayBase,
+  components,
+  benefits,
+}: {
+  designationName: string;
+  payrollDayBase: PayrollDayBase | undefined;
+  components: ResourceComponent[];
+  benefits: BenefitItem[];
+}) {
+  const payableDays = computePayableDays(payrollDayBase);
+  const divisorDays = payableDays; // configured basis = same rule
+  const gross = components.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const totalDeductions = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const netPayable = gross - totalDeductions;
+
+  const basisLabel = payrollDayBase
+    ? payrollDayBase.method === "fixed_days"
+      ? `${payrollDayBase.fixedDays ?? 0} Days`
+      : payrollDayBase.method === "actual_minus_weekly_off"
+        ? `${payableDays} Days (actual − weekly off)`
+        : `${payableDays} Days (actual)`
+    : "—";
+
+  // earned = configured / divisor * payable. At full attendance equal to configured.
+  const earnedFor = (amount: number) =>
+    divisorDays > 0 ? (amount / divisorDays) * payableDays : 0;
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="border-b border-border bg-secondary/40 px-4 py-2.5">
+        <h4 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Salary Breakdown Preview
+        </h4>
+        <p className="mt-0.5 text-[11px] text-muted-foreground">
+          Auto-computed from wage components, benefits and the selected payroll-days rule.
+        </p>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <tbody className="[&_tr]:border-b [&_tr]:border-border/60 [&_td]:px-3 [&_td]:py-2">
+            <tr className="bg-secondary/20">
+              <td className="font-medium text-muted-foreground">Designation</td>
+              <td className="text-center font-semibold">{designationName || "—"}</td>
+              <td className="text-right text-muted-foreground">Total Payable Days</td>
+              <td className="text-right">
+                <span className="inline-block rounded bg-amber-200/70 px-2 py-0.5 font-bold text-amber-900 dark:bg-amber-300/30 dark:text-amber-100">
+                  {payableDays || "—"}
+                </span>
+              </td>
+            </tr>
+            <tr className="bg-muted/40">
+              <td className="font-bold uppercase text-foreground">Salary Particulars</td>
+              <td className="text-center font-bold">{basisLabel}</td>
+              <td />
+              <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
+            </tr>
+            {components.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
+                  No wage components configured.
+                </td>
+              </tr>
+            ) : (
+              components.map((c) => (
+                <tr key={c.allowanceId}>
+                  <td>{c.name}</td>
+                  <td className="text-center tabular-nums">{Number(c.amount).toFixed(2)}</td>
+                  <td />
+                  <td className="text-right tabular-nums">{earnedFor(Number(c.amount)).toFixed(2)}</td>
+                </tr>
+              ))
+            )}
+            <tr className="bg-secondary/30 font-bold">
+              <td>TOTAL Gross Rs.</td>
+              <td className="text-center tabular-nums">{gross.toFixed(2)}</td>
+              <td />
+              <td className="text-right tabular-nums">{earnedFor(gross).toFixed(2)}</td>
+            </tr>
+
+            <tr className="bg-muted/40">
+              <td className="font-bold uppercase text-foreground" colSpan={4}>
+                Deductions
+              </td>
+            </tr>
+            {benefits.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
+                  No deductions / benefits configured.
+                </td>
+              </tr>
+            ) : (
+              benefits.map((b) => (
+                <tr key={b.costComponentId}>
+                  <td>
+                    {b.name}
+                    {b.calcType === "percentage" && (
+                      <span className="ml-2 text-[11px] text-muted-foreground">
+                        @ {b.percentage}% of{" "}
+                        {b.baseComponents
+                          .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
+                          .join(" ") || "—"}
+                        {b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}
+                      </span>
+                    )}
+                  </td>
+                  <td />
+                  <td />
+                  <td className="text-right font-semibold tabular-nums">{Number(b.amount).toFixed(2)}</td>
+                </tr>
+              ))
+            )}
+            <tr className="bg-secondary/30 font-bold">
+              <td>TOTAL Rs.</td>
+              <td />
+              <td />
+              <td className="text-right tabular-nums">{totalDeductions.toFixed(2)}</td>
+            </tr>
+
+            <tr className="bg-sky-100 font-bold dark:bg-sky-500/20">
+              <td className="uppercase">Total Amount ( Payable ) Rs.</td>
+              <td />
+              <td />
+              <td className="text-right text-base tabular-nums">{netPayable.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
