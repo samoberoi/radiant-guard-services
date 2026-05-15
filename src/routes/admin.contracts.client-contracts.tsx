@@ -1475,7 +1475,14 @@ function ResourceFormDialog({
       setDesignationId(initial.designationId);
       setServiceTypeId(initial.serviceTypeId);
       setQuantity(String(initial.quantity));
-      setComponents(initial.components.map((c) => ({ ...c })));
+      {
+        const validIds = new Set(allowanceTypes.map((a) => a.id));
+        setComponents(
+          initial.components
+            .filter((c) => validIds.has(c.allowanceId))
+            .map((c) => ({ ...c })),
+        );
+      }
       setPayrollDayBaseId(initial.payrollDayBaseId ?? "");
       setBenefits(initial.benefits.map((b) => ({ ...b })));
     } else {
