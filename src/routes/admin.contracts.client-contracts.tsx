@@ -1558,6 +1558,13 @@ function ResourceFormDialog({
           : b,
       ),
     );
+    setEmployerContributions((prev) =>
+      prev.map((b) =>
+        b.calcType === "percentage"
+          ? { ...b, amount: computeBenefitAmount(b, components) }
+          : b,
+      ),
+    );
   }, [components]);
 
   const PT_SYNTHETIC_ID = "__pt__";
