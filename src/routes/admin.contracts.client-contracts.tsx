@@ -7,10 +7,12 @@ import {
   Copy,
   Download,
   Edit2,
+  FileSpreadsheet,
   FileText,
   Plus,
   Search,
   Trash2,
+  Upload,
   Users,
   X,
 } from "lucide-react";
