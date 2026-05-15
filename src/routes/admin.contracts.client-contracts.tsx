@@ -198,7 +198,33 @@ function useContracts() {
         )
         .order("contract_code", { ascending: false });
       if (error) throw error;
-      return (data as unknown as Record<string, unknown>[]).map(rowToContract);
+      const rows = data as unknown as Record<string, unknown>[];
+      // Auto-expire: any active contract whose end_date has passed → mark expired
+      const today = new Date().toISOString().slice(0, 10);
+      const toExpire = rows.filter(
+        (r) =>
+          (r.status ?? "active") === "active" &&
+          r.end_date &&
+          String(r.end_date) < today,
+      );
+      if (toExpire.length > 0) {
+        const ids = toExpire.map((r) => String(r.id));
+        await supabase
+          .from("client_contracts" as never)
+          .update({ status: "expired" } as never)
+          .in("id", ids);
+        for (const r of toExpire) {
+          r.status = "expired";
+          void logActivity({
+            module: "Client Contracts",
+            action: "auto-expire",
+            entityType: "client_contracts",
+            entityId: String(r.id),
+            entityLabel: String(r.contract_code ?? ""),
+          });
+        }
+      }
+      return rows.map(rowToContract);
     },
   });
 
