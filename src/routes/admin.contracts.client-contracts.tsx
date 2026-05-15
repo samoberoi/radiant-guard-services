@@ -1,15 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import * as XLSX from "xlsx";
 import {
   Check,
   ChevronsUpDown,
   Copy,
   Download,
   Edit2,
+  FileSpreadsheet,
   FileText,
   Plus,
   Search,
   Trash2,
+  Upload,
   Users,
   X,
 } from "lucide-react";
@@ -546,10 +549,190 @@ async function persistResources(contractId: string, resources: ContractResource[
   void logActivity({ module: "Contract Resources", action: "update", entityType: "contract_resources", entityId: contractId, details: { count: resources.length, resources: rows } as unknown as Record<string, unknown> });
 }
 
+// ============= Excel export / import =============
+
+const CONTRACT_FIELDS = [
+  "contract_code",
+  "unit_id",
+  "start_date",
+  "end_date",
+  "description",
+  "service_type_id",
+  "payroll_window_id",
+  "billing_type_id",
+  "gst_option",
+  "status",
+] as const;
+
+async function exportContractToXlsx(contract: ClientContract): Promise<void> {
+  const { data: resData, error } = await supabase
+    .from("contract_resources" as never)
+    .select(
+      "designation_id,service_type_id,quantity,payroll_day_base_id,components,benefits,deductions,employer_contributions,sort_order",
+    )
+    .eq("contract_id", contract.id)
+    .order("sort_order");
+  if (error) throw error;
+  const resources = (resData as unknown as Record<string, unknown>[]) ?? [];
+
+  const contractRow: Record<string, string | number> = {
+    contract_code: contract.contractCode,
+    unit_id: contract.unitId,
+    start_date: contract.startDate,
+    end_date: contract.endDate,
+    description: contract.description,
+    service_type_id: contract.serviceTypeId ?? "",
+    payroll_window_id: contract.payrollWindowId ?? "",
+    billing_type_id: contract.billingTypeId ?? "",
+    gst_option: contract.gstOption,
+    status: contract.status,
+  };
+
+  const resourceRows = resources.map((r, idx) => ({
+    sort_order: Number(r.sort_order ?? idx),
+    designation_id: r.designation_id ? String(r.designation_id) : "",
+    service_type_id: r.service_type_id ? String(r.service_type_id) : "",
+    quantity: Number(r.quantity ?? 1),
+    payroll_day_base_id: r.payroll_day_base_id ? String(r.payroll_day_base_id) : "",
+    components_json: JSON.stringify(r.components ?? []),
+    benefits_json: JSON.stringify(r.benefits ?? []),
+    deductions_json: JSON.stringify(r.deductions ?? []),
+    employer_contributions_json: JSON.stringify(r.employer_contributions ?? []),
+  }));
+
+  const wb = XLSX.utils.book_new();
+  const wsContract = XLSX.utils.json_to_sheet([contractRow], {
+    header: [...CONTRACT_FIELDS],
+  });
+  XLSX.utils.book_append_sheet(wb, wsContract, "Contract");
+  const wsResources = XLSX.utils.json_to_sheet(resourceRows, {
+    header: [
+      "sort_order",
+      "designation_id",
+      "service_type_id",
+      "quantity",
+      "payroll_day_base_id",
+      "components_json",
+      "benefits_json",
+      "deductions_json",
+      "employer_contributions_json",
+    ],
+  });
+  XLSX.utils.book_append_sheet(wb, wsResources, "Resources");
+  XLSX.writeFile(wb, `${contract.contractCode || "contract"}.xlsx`);
+}
+
+type ImportedContract = {
+  contractRow: Record<string, unknown>;
+  resourceRows: Record<string, unknown>[];
+};
+
+function parseContractWorkbook(buf: ArrayBuffer): ImportedContract {
+  const wb = XLSX.read(buf, { type: "array" });
+  const cSheet = wb.Sheets["Contract"];
+  if (!cSheet) throw new Error("Workbook is missing a 'Contract' sheet");
+  const cRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(cSheet, {
+    defval: "",
+  });
+  if (cRows.length === 0) throw new Error("'Contract' sheet has no rows");
+  const rSheet = wb.Sheets["Resources"];
+  const rRows = rSheet
+    ? XLSX.utils.sheet_to_json<Record<string, unknown>>(rSheet, { defval: "" })
+    : [];
+  return { contractRow: cRows[0], resourceRows: rRows };
+}
+
+function safeJsonArray(v: unknown): unknown[] {
+  if (v == null || v === "") return [];
+  if (Array.isArray(v)) return v;
+  try {
+    const p = JSON.parse(String(v));
+    return Array.isArray(p) ? p : [];
+  } catch {
+    return [];
+  }
+}
+
+async function importContractFromXlsx(buf: ArrayBuffer): Promise<{
+  action: "created" | "updated";
+  contractCode: string;
+}> {
+  const { contractRow, resourceRows } = parseContractWorkbook(buf);
+  const code = String(contractRow.contract_code ?? "").trim();
+  if (!code) throw new Error("Missing contract_code in workbook");
+  const unitId = String(contractRow.unit_id ?? "").trim();
+  if (!unitId) throw new Error("Missing unit_id in workbook");
+
+  const row = {
+    contract_code: code,
+    unit_id: unitId,
+    start_date: contractRow.start_date ? String(contractRow.start_date) : null,
+    end_date: contractRow.end_date ? String(contractRow.end_date) : null,
+    description: String(contractRow.description ?? ""),
+    service_type_id: contractRow.service_type_id ? String(contractRow.service_type_id) : null,
+    payroll_window_id: contractRow.payroll_window_id ? String(contractRow.payroll_window_id) : null,
+    billing_type_id: contractRow.billing_type_id ? String(contractRow.billing_type_id) : null,
+    gst_option: String(contractRow.gst_option ?? "csgst"),
+    status: String(contractRow.status ?? "active"),
+  };
+
+  const existing = await supabase
+    .from("client_contracts" as never)
+    .select("id")
+    .eq("contract_code", code)
+    .maybeSingle();
+  if (existing.error) throw existing.error;
+
+  let contractId: string;
+  let action: "created" | "updated";
+  if (existing.data) {
+    contractId = String((existing.data as Record<string, unknown>).id);
+    const upd = await supabase
+      .from("client_contracts" as never)
+      .update(row as never)
+      .eq("id", contractId);
+    if (upd.error) throw upd.error;
+    action = "updated";
+  } else {
+    const ins = await supabase
+      .from("client_contracts" as never)
+      .insert(row as never)
+      .select("id")
+      .single();
+    if (ins.error) throw ins.error;
+    contractId = String((ins.data as Record<string, unknown>).id);
+    action = "created";
+  }
+
+  const resources: ContractResource[] = resourceRows.map((r) => ({
+    designationId: String(r.designation_id ?? ""),
+    serviceTypeId: String(r.service_type_id ?? ""),
+    quantity: Number(r.quantity ?? 1) || 1,
+    payrollDayBaseId: r.payroll_day_base_id ? String(r.payroll_day_base_id) : null,
+    components: safeJsonArray(r.components_json) as ResourceComponent[],
+    benefits: safeJsonArray(r.benefits_json) as BenefitItem[],
+    deductions: safeJsonArray(r.deductions_json) as BenefitItem[],
+    employerContributions: safeJsonArray(r.employer_contributions_json) as BenefitItem[],
+  }));
+  await persistResources(contractId, resources);
+
+  void logActivity({
+    module: "Client Contracts",
+    action: action === "created" ? "import-create" : "import-update",
+    entityType: "client_contracts",
+    entityId: contractId,
+    entityLabel: code,
+  });
+
+  return { action, contractCode: code };
+}
+
 function ClientContractsPage() {
+  const qc = useQueryClient();
   const { items, addMut, updateMut, deleteMut } = useContracts();
   const { units } = useUnits();
   const { customers } = useCustomers();
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const unitById = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const customerById = useMemo(
@@ -657,6 +840,35 @@ function ClientContractsPage() {
         >
           <Download className="mr-1.5 h-4 w-4" />
           Export Contracts
+        </Button>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            try {
+              const buf = await file.arrayBuffer();
+              const res = await importContractFromXlsx(buf);
+              toast.success(
+                `Contract ${res.contractCode} ${res.action === "created" ? "imported" : "updated"} from Excel`,
+              );
+              await qc.invalidateQueries({ queryKey: QK });
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Import failed");
+            }
+          }}
+        />
+        <Button
+          variant="outline"
+          onClick={() => importInputRef.current?.click()}
+          className="h-10 rounded-lg"
+        >
+          <Upload className="mr-1.5 h-4 w-4" />
+          Import Contract
         </Button>
         <Button
           onClick={() => {
@@ -782,6 +994,23 @@ function ClientContractsPage() {
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-accent"
+                        onClick={async () => {
+                          try {
+                            await exportContractToXlsx(c);
+                            toast.success(`Exported ${c.contractCode}.xlsx`);
+                          } catch (err) {
+                            toast.error(err instanceof Error ? err.message : "Export failed");
+                          }
+                        }}
+                        aria-label="Export to Excel"
+                        title="Export to Excel"
+                      >
+                        <FileSpreadsheet className="h-4 w-4" />
+                      </Button>
                       <Button
                         size="sm"
                         variant="ghost"
