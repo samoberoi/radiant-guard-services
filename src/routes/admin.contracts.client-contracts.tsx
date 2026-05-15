@@ -1491,6 +1491,7 @@ function ResourceFormDialog({
       }
       setPayrollDayBaseId(initial.payrollDayBaseId ?? "");
       setBenefits(initial.benefits.map((b) => ({ ...b })));
+      setDeductions((initial.deductions ?? []).map((b) => ({ ...b })));
     } else {
       setDesignationId("");
       setServiceTypeId("");
@@ -1507,6 +1508,7 @@ function ResourceFormDialog({
       );
       setPayrollDayBaseId("");
       setBenefits([]);
+      setDeductions([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial, allowanceTypes.length]);
