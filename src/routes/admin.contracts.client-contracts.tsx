@@ -600,8 +600,24 @@ function ClientContractsPage() {
   const hasFilters =
     !!query || orgFilter !== "all" || unitFilter !== "all" || statusFilter !== "all";
 
+  const stats = useMemo(() => {
+    const s = { total: items.length, active: 0, inactive: 0, expired: 0 };
+    for (const c of items) {
+      if (c.status === "active") s.active++;
+      else if (c.status === "inactive") s.inactive++;
+      else if (c.status === "expired") s.expired++;
+    }
+    return s;
+  }, [items]);
+
   return (
     <div>
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Total" value={stats.total} tone="default" />
+        <StatCard label="Active" value={stats.active} tone="active" />
+        <StatCard label="Inactive" value={stats.inactive} tone="inactive" />
+        <StatCard label="Expired" value={stats.expired} tone="expired" />
+      </div>
       <PageHeader
         title="Client Contracts"
         description="Manage client contracts across organisations and units."
