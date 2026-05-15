@@ -1469,6 +1469,7 @@ function ResourceFormDialog({
   const [payrollDayBaseId, setPayrollDayBaseId] = useState<string>("");
   const [benefits, setBenefits] = useState<BenefitItem[]>([]);
   const [deductions, setDeductions] = useState<BenefitItem[]>([]);
+  const [employerContributions, setEmployerContributions] = useState<BenefitItem[]>([]);
   const [designationOpen, setDesignationOpen] = useState(false);
   const [allowancePickerOpen, setAllowancePickerOpen] = useState(false);
   const [designationQuery, setDesignationQuery] = useState("");
@@ -1477,6 +1478,8 @@ function ResourceFormDialog({
   const [benefitQuery, setBenefitQuery] = useState("");
   const [deductionPickerOpen, setDeductionPickerOpen] = useState(false);
   const [deductionQuery, setDeductionQuery] = useState("");
+  const [employerPickerOpen, setEmployerPickerOpen] = useState(false);
+  const [employerQuery, setEmployerQuery] = useState("");
 
   useEffect(() => {
     if (!open) return;
