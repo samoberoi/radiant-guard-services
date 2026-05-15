@@ -128,6 +128,7 @@ type ContractResource = {
   components: ResourceComponent[];
   payrollDayBaseId: string | null;
   benefits: BenefitItem[];
+  deductions: BenefitItem[];
 };
 
 type PayrollDayBase = {
