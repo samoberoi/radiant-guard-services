@@ -444,6 +444,25 @@ function useCostComponentOptions() {
   return data;
 }
 
+/** Compute total payable days for a resource in the current month, based on the payroll-day base rule. */
+function computePayableDays(base: PayrollDayBase | undefined, ref: Date = new Date()): number {
+  if (!base) return 0;
+  const year = ref.getFullYear();
+  const month = ref.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  if (base.method === "fixed_days") return Number(base.fixedDays) || 0;
+  if (base.method === "actual_days") return daysInMonth;
+  if (base.method === "actual_minus_weekly_off") {
+    const off = base.weeklyOffDay == null ? 0 : Number(base.weeklyOffDay); // 0=Sun..6=Sat
+    let count = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (new Date(year, month, d).getDay() === off) count++;
+    }
+    return daysInMonth - count;
+  }
+  return daysInMonth;
+}
+
 /** Compute benefit amount from a percentage component using the resource's wage components. */
 function computeBenefitAmount(
   benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "amount">,
