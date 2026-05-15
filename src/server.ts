@@ -1,13 +1,8 @@
 import "./lib/error-capture";
 
-import { createServerEntry } from "@tanstack/react-start/default-entry";
-import handler from "@tanstack/react-start/default-entry";
+import handler, { createServerEntry, type ServerEntry } from "@tanstack/react-start/server-entry";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
-
-type ServerEntry = {
-  fetch: (...args: Parameters<typeof handler.fetch>) => Promise<Response> | Response;
-};
 
 function brandedErrorResponse(): Response {
   return new Response(renderErrorPage(), {
