@@ -2466,12 +2466,14 @@ function SalaryBreakdownTable({
   components,
   benefits,
   deductions,
+  employerContributions,
 }: {
   designationName: string;
   payrollDayBase: PayrollDayBase | undefined;
   components: ResourceComponent[];
   benefits: BenefitItem[];
   deductions: BenefitItem[];
+  employerContributions: BenefitItem[];
 }) {
   const payableDays = computePayableDays(payrollDayBase);
   const divisorDays = payableDays;
@@ -2479,6 +2481,8 @@ function SalaryBreakdownTable({
   const benefitsTotal = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const gross = componentsTotal + benefitsTotal;
   const deductionsTotal = deductions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const employerTotal = employerContributions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const totalCTC = gross + employerTotal;
 
   const basisLabel = payrollDayBase
     ? payrollDayBase.method === "fixed_days"
@@ -2493,7 +2497,8 @@ function SalaryBreakdownTable({
 
   const earnedGross = earnedFor(gross);
   const earnedDeductions = earnedFor(deductionsTotal);
-  const earnedNet = earnedGross - earnedDeductions;
+  const earnedEmployer = earnedFor(employerTotal);
+  const earnedCTC = earnedFor(totalCTC);
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
