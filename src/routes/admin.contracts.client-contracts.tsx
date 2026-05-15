@@ -728,9 +728,11 @@ async function importContractFromXlsx(buf: ArrayBuffer): Promise<{
 }
 
 function ClientContractsPage() {
+  const qc = useQueryClient();
   const { items, addMut, updateMut, deleteMut } = useContracts();
   const { units } = useUnits();
   const { customers } = useCustomers();
+  const importInputRef = useRef<HTMLInputElement | null>(null);
 
   const unitById = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const customerById = useMemo(
