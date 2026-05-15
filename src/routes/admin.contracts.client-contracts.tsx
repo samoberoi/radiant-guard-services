@@ -1637,6 +1637,33 @@ function ResourceFormDialog({
     setBenefits((prev) => prev.filter((b) => b.costComponentId !== id));
   };
 
+  const addDeduction = (c: CostComponentOption) => {
+    const item: BenefitItem = {
+      costComponentId: c.id,
+      name: c.name,
+      calcType: c.calcType,
+      percentage: c.percentage,
+      baseComponents: c.baseComponents,
+      capAmount: c.capAmount,
+      amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
+      state: c.state,
+    };
+    if (item.calcType === "percentage") {
+      item.amount = computeBenefitAmount(item, components);
+    }
+    setDeductions((prev) => [...prev, item]);
+    setDeductionQuery("");
+    setDeductionPickerOpen(false);
+  };
+
+  const updateDeductionAmount = (id: string, amount: number) => {
+    setDeductions((prev) => prev.map((b) => (b.costComponentId === id ? { ...b, amount } : b)));
+  };
+
+  const removeDeduction = (id: string) => {
+    setDeductions((prev) => prev.filter((b) => b.costComponentId !== id));
+  };
+
   const handleSubmit = () => {
     if (!designationId) {
       toast.error("Please select a designation");
@@ -1663,10 +1690,12 @@ function ResourceFormDialog({
       components,
       payrollDayBaseId: payrollDayBaseId || null,
       benefits,
+      deductions,
     });
   };
 
   const totalBenefits = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const totalDeductions = deductions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
 
   const selectedDesignation = designations.find((d) => d.id === designationId);
 
