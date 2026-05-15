@@ -2132,14 +2132,18 @@ function SalaryBreakdownTable({
                 Deductions
               </td>
             </tr>
-            {benefits.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
-                  No deductions / benefits configured.
-                </td>
-              </tr>
-            ) : (
-              benefits.map((b) => (
+            {(() => {
+              const visible = benefits.filter((b) => Number(b.amount) > 0);
+              if (visible.length === 0) {
+                return (
+                  <tr>
+                    <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
+                      No deductions / benefits configured.
+                    </td>
+                  </tr>
+                );
+              }
+              return visible.map((b) => (
                 <tr key={b.costComponentId}>
                   <td>
                     {b.name}
@@ -2157,8 +2161,8 @@ function SalaryBreakdownTable({
                   <td />
                   <td className="text-right font-semibold tabular-nums">{Number(b.amount).toFixed(2)}</td>
                 </tr>
-              ))
-            )}
+              ));
+            })()}
             <tr className="bg-secondary/30 font-bold">
               <td>TOTAL Rs.</td>
               <td />
