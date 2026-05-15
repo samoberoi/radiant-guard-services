@@ -198,6 +198,7 @@ export type Database = {
           components: Json
           contract_id: string
           created_at: string
+          deductions: Json
           designation_id: string | null
           gross: number
           id: string
@@ -212,6 +213,7 @@ export type Database = {
           components?: Json
           contract_id: string
           created_at?: string
+          deductions?: Json
           designation_id?: string | null
           gross?: number
           id?: string
@@ -226,6 +228,7 @@ export type Database = {
           components?: Json
           contract_id?: string
           created_at?: string
+          deductions?: Json
           designation_id?: string | null
           gross?: number
           id?: string
