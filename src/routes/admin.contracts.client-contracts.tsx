@@ -997,6 +997,23 @@ function ClientContractsPage() {
                       <Button
                         size="sm"
                         variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-accent"
+                        onClick={async () => {
+                          try {
+                            await exportContractToXlsx(c);
+                            toast.success(`Exported ${c.contractCode}.xlsx`);
+                          } catch (err) {
+                            toast.error(err instanceof Error ? err.message : "Export failed");
+                          }
+                        }}
+                        aria-label="Export to Excel"
+                        title="Export to Excel"
+                      >
+                        <FileSpreadsheet className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                         onClick={() => {
                           setEditing(c);
