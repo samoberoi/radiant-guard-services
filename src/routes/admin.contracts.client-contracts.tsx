@@ -370,7 +370,7 @@ function useContractResources(contractId: string | null) {
       const { data, error } = await supabase
         .from("contract_resources" as never)
         .select(
-          "id,designation_id,service_type_id,quantity,components,sort_order,payroll_day_base_id,benefits",
+          "id,designation_id,service_type_id,quantity,components,sort_order,payroll_day_base_id,benefits,deductions",
         )
         .eq("contract_id", contractId)
         .order("sort_order");
@@ -385,6 +385,7 @@ function useContractResources(contractId: string | null) {
           : [],
         payrollDayBaseId: r.payroll_day_base_id ? String(r.payroll_day_base_id) : null,
         benefits: Array.isArray(r.benefits) ? (r.benefits as BenefitItem[]) : [],
+        deductions: Array.isArray(r.deductions) ? (r.deductions as BenefitItem[]) : [],
       }));
     },
   });
