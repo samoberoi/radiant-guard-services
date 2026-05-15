@@ -2264,17 +2264,20 @@ function SalaryBreakdownTable({
   payrollDayBase,
   components,
   benefits,
+  deductions,
 }: {
   designationName: string;
   payrollDayBase: PayrollDayBase | undefined;
   components: ResourceComponent[];
   benefits: BenefitItem[];
+  deductions: BenefitItem[];
 }) {
   const payableDays = computePayableDays(payrollDayBase);
-  const divisorDays = payableDays; // configured basis = same rule
+  const divisorDays = payableDays;
   const componentsTotal = components.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const benefitsTotal = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const gross = componentsTotal + benefitsTotal;
+  const deductionsTotal = deductions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
 
   const basisLabel = payrollDayBase
     ? payrollDayBase.method === "fixed_days"
@@ -2284,9 +2287,12 @@ function SalaryBreakdownTable({
         : `${payableDays} Days (actual)`
     : "—";
 
-  // earned = configured / divisor * payable. At full attendance equal to configured.
   const earnedFor = (amount: number) =>
     divisorDays > 0 ? (amount / divisorDays) * payableDays : 0;
+
+  const earnedGross = earnedFor(gross);
+  const earnedDeductions = earnedFor(deductionsTotal);
+  const earnedNet = earnedGross - earnedDeductions;
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -2295,7 +2301,7 @@ function SalaryBreakdownTable({
           Salary Breakdown Preview
         </h4>
         <p className="mt-0.5 text-[11px] text-muted-foreground">
-          Auto-computed from wage components, benefits and the selected payroll-days rule.
+          Auto-computed from wage components, benefits, deductions and the selected payroll-days rule.
         </p>
       </div>
       <div className="overflow-x-auto">
@@ -2365,7 +2371,56 @@ function SalaryBreakdownTable({
               <td className="uppercase">TOTAL Gross Rs.</td>
               <td className="text-center tabular-nums">{gross.toFixed(2)}</td>
               <td />
-              <td className="text-right text-base tabular-nums">{earnedFor(gross).toFixed(2)}</td>
+              <td className="text-right text-base tabular-nums">{earnedGross.toFixed(2)}</td>
+            </tr>
+            <tr className="bg-muted/40">
+              <td className="font-bold uppercase text-foreground">Deductions</td>
+              <td />
+              <td />
+              <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
+            </tr>
+            {(() => {
+              const visibleDeductions = deductions.filter((b) => Number(b.amount) > 0);
+              if (visibleDeductions.length === 0) {
+                return (
+                  <tr>
+                    <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
+                      No deductions configured.
+                    </td>
+                  </tr>
+                );
+              }
+              return visibleDeductions.map((b) => (
+                <tr key={`d-${b.costComponentId}`}>
+                  <td>
+                    {b.name}
+                    {b.calcType === "percentage" && (
+                      <span className="ml-2 text-[11px] text-muted-foreground">
+                        @ {b.percentage}% of{" "}
+                        {b.baseComponents
+                          .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
+                          .join(" ") || "—"}
+                        {b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}
+                      </span>
+                    )}
+                  </td>
+                  <td className="text-center tabular-nums">{Number(b.amount).toFixed(2)}</td>
+                  <td />
+                  <td className="text-right tabular-nums">{earnedFor(Number(b.amount)).toFixed(2)}</td>
+                </tr>
+              ));
+            })()}
+            <tr className="bg-rose-100 font-semibold dark:bg-rose-500/20">
+              <td className="uppercase">Total Deductions Rs.</td>
+              <td className="text-center tabular-nums">{deductionsTotal.toFixed(2)}</td>
+              <td />
+              <td className="text-right tabular-nums">{earnedDeductions.toFixed(2)}</td>
+            </tr>
+            <tr className="bg-emerald-100 font-bold dark:bg-emerald-500/20">
+              <td className="uppercase">TOTAL Amount Payable Rs.</td>
+              <td className="text-center tabular-nums">{(gross - deductionsTotal).toFixed(2)}</td>
+              <td />
+              <td className="text-right text-base tabular-nums">{earnedNet.toFixed(2)}</td>
             </tr>
           </tbody>
         </table>
