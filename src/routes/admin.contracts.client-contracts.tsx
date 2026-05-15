@@ -2100,22 +2100,26 @@ function SalaryBreakdownTable({
               <td />
               <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
             </tr>
-            {components.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
-                  No wage components configured.
-                </td>
-              </tr>
-            ) : (
-              components.map((c) => (
+            {(() => {
+              const visible = components.filter((c) => Number(c.amount) > 0);
+              if (visible.length === 0) {
+                return (
+                  <tr>
+                    <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
+                      No wage components configured.
+                    </td>
+                  </tr>
+                );
+              }
+              return visible.map((c) => (
                 <tr key={c.allowanceId}>
                   <td>{c.name}</td>
                   <td className="text-center tabular-nums">{Number(c.amount).toFixed(2)}</td>
                   <td />
                   <td className="text-right tabular-nums">{earnedFor(Number(c.amount)).toFixed(2)}</td>
                 </tr>
-              ))
-            )}
+              ));
+            })()}
             <tr className="bg-secondary/30 font-bold">
               <td>TOTAL Gross Rs.</td>
               <td className="text-center tabular-nums">{gross.toFixed(2)}</td>
