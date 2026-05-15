@@ -2055,9 +2055,9 @@ function SalaryBreakdownTable({
 }) {
   const payableDays = computePayableDays(payrollDayBase);
   const divisorDays = payableDays; // configured basis = same rule
-  const gross = components.reduce((s, c) => s + (Number(c.amount) || 0), 0);
-  const totalDeductions = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const netPayable = gross - totalDeductions;
+  const componentsTotal = components.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const benefitsTotal = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const gross = componentsTotal + benefitsTotal;
 
   const basisLabel = payrollDayBase
     ? payrollDayBase.method === "fixed_days"
@@ -2101,80 +2101,54 @@ function SalaryBreakdownTable({
               <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
             </tr>
             {(() => {
-              const visible = components.filter((c) => Number(c.amount) > 0);
-              if (visible.length === 0) {
+              const visibleComponents = components.filter((c) => Number(c.amount) > 0);
+              const visibleBenefits = benefits.filter((b) => Number(b.amount) > 0);
+              if (visibleComponents.length === 0 && visibleBenefits.length === 0) {
                 return (
                   <tr>
                     <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
-                      No wage components configured.
+                      No salary particulars configured.
                     </td>
                   </tr>
                 );
               }
-              return visible.map((c) => (
-                <tr key={c.allowanceId}>
-                  <td>{c.name}</td>
-                  <td className="text-center tabular-nums">{Number(c.amount).toFixed(2)}</td>
-                  <td />
-                  <td className="text-right tabular-nums">{earnedFor(Number(c.amount)).toFixed(2)}</td>
-                </tr>
-              ));
+              return (
+                <>
+                  {visibleComponents.map((c) => (
+                    <tr key={`c-${c.allowanceId}`}>
+                      <td>{c.name}</td>
+                      <td className="text-center tabular-nums">{Number(c.amount).toFixed(2)}</td>
+                      <td />
+                      <td className="text-right tabular-nums">{earnedFor(Number(c.amount)).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  {visibleBenefits.map((b) => (
+                    <tr key={`b-${b.costComponentId}`}>
+                      <td>
+                        {b.name}
+                        {b.calcType === "percentage" && (
+                          <span className="ml-2 text-[11px] text-muted-foreground">
+                            @ {b.percentage}% of{" "}
+                            {b.baseComponents
+                              .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
+                              .join(" ") || "—"}
+                            {b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}
+                          </span>
+                        )}
+                      </td>
+                      <td className="text-center tabular-nums">{Number(b.amount).toFixed(2)}</td>
+                      <td />
+                      <td className="text-right tabular-nums">{earnedFor(Number(b.amount)).toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </>
+              );
             })()}
-            <tr className="bg-secondary/30 font-bold">
-              <td>TOTAL Gross Rs.</td>
+            <tr className="bg-sky-100 font-bold dark:bg-sky-500/20">
+              <td className="uppercase">TOTAL Gross Rs.</td>
               <td className="text-center tabular-nums">{gross.toFixed(2)}</td>
               <td />
-              <td className="text-right tabular-nums">{earnedFor(gross).toFixed(2)}</td>
-            </tr>
-
-            <tr className="bg-muted/40">
-              <td className="font-bold uppercase text-foreground" colSpan={4}>
-                Deductions
-              </td>
-            </tr>
-            {(() => {
-              const visible = benefits.filter((b) => Number(b.amount) > 0);
-              if (visible.length === 0) {
-                return (
-                  <tr>
-                    <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
-                      No deductions / benefits configured.
-                    </td>
-                  </tr>
-                );
-              }
-              return visible.map((b) => (
-                <tr key={b.costComponentId}>
-                  <td>
-                    {b.name}
-                    {b.calcType === "percentage" && (
-                      <span className="ml-2 text-[11px] text-muted-foreground">
-                        @ {b.percentage}% of{" "}
-                        {b.baseComponents
-                          .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
-                          .join(" ") || "—"}
-                        {b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}
-                      </span>
-                    )}
-                  </td>
-                  <td />
-                  <td />
-                  <td className="text-right font-semibold tabular-nums">{Number(b.amount).toFixed(2)}</td>
-                </tr>
-              ));
-            })()}
-            <tr className="bg-secondary/30 font-bold">
-              <td>TOTAL Rs.</td>
-              <td />
-              <td />
-              <td className="text-right tabular-nums">{totalDeductions.toFixed(2)}</td>
-            </tr>
-
-            <tr className="bg-sky-100 font-bold dark:bg-sky-500/20">
-              <td className="uppercase">Total Amount ( Payable ) Rs.</td>
-              <td />
-              <td />
-              <td className="text-right text-base tabular-nums">{netPayable.toFixed(2)}</td>
+              <td className="text-right text-base tabular-nums">{earnedFor(gross).toFixed(2)}</td>
             </tr>
           </tbody>
         </table>
