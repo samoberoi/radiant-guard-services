@@ -2497,7 +2497,7 @@ function SalaryBreakdownTable({
 
   const earnedGross = earnedFor(gross);
   const earnedDeductions = earnedFor(deductionsTotal);
-  const earnedEmployer = earnedFor(employerTotal);
+  
   const earnedCTC = earnedFor(totalCTC);
 
   return (
