@@ -2281,6 +2281,153 @@ function ResourceFormDialog({
             )}
           </div>
 
+          {/* Employer Contribution */}
+          <div className="rounded-xl border border-border bg-secondary/30 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <div>
+                <h4 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Employer Contribution
+                </h4>
+                <p className="text-[11px] text-muted-foreground">
+                  Add employer-side cost components (PF, ESIC, LWF, Gratuity, Bonus, Uniform, Management Fee, etc.) to compute Total CTC.
+                </p>
+              </div>
+              <Popover open={employerPickerOpen} onOpenChange={setEmployerPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
+                    disabled={availableEmployer.length === 0}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" /> Add component
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Which contribution would you like to add?"
+                      value={employerQuery}
+                      onValueChange={setEmployerQuery}
+                    />
+                    <CommandList>
+                      <CommandEmpty>No more components.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredAvailableEmployer.map((c) => (
+                          <CommandItem
+                            key={c.id}
+                            value={`${c.name} ${c.state} ${c.id}`}
+                            onSelect={() => addEmployerContribution(c)}
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-sm">{c.name}</span>
+                              <span className="text-[11px] text-muted-foreground">
+                                {c.calcType === "percentage"
+                                  ? `${c.percentage}% of ${c.baseComponents.map((b, i) => (i === 0 ? b.label : `${b.operator} ${b.label}`)).join(" ") || "—"}`
+                                  : c.amount != null && c.amount > 0
+                                    ? `Fixed ₹${c.amount.toLocaleString("en-IN")}`
+                                    : "Fixed amount (manual)"}
+                                {c.state && c.state !== "N/A" ? ` · ${c.state}` : ""}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {employerContributions.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border bg-card/50 px-4 py-6 text-center">
+                <div className="text-sm font-medium text-foreground">No employer contributions added</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  Click <span className="font-semibold text-foreground">Add component</span> to attach PF, ESIC, Gratuity, Management Fee…
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {employerContributions.map((b) => (
+                  <div
+                    key={b.costComponentId}
+                    className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-3 py-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground">{b.name}</span>
+                        {b.state && b.state !== "N/A" && (
+                          <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                            {b.state}
+                          </span>
+                        )}
+                        <span
+                          className={cn(
+                            "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+                            b.calcType === "percentage"
+                              ? "bg-accent/15 text-accent"
+                              : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+                          )}
+                        >
+                          {b.calcType === "percentage" ? `${b.percentage}%` : "Fixed"}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                        {b.calcType === "percentage"
+                          ? `${b.percentage}% of ${b.baseComponents.map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`)).join(" ") || "—"}${b.capAmount ? ` · cap ₹${b.capAmount.toLocaleString("en-IN")}` : ""}`
+                          : "Fixed amount"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {b.calcType === "fixed" ? (
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0.00"
+                          className="h-9 w-28"
+                          value={b.amount === 0 ? "" : String(b.amount)}
+                          onChange={(e) => {
+                            const raw = e.target.value.trim();
+                            if (raw === "") {
+                              updateEmployerAmount(b.costComponentId, 0);
+                              return;
+                            }
+                            if (!/^\d*\.?\d*$/.test(raw)) return;
+                            const n = parseFloat(raw);
+                            updateEmployerAmount(b.costComponentId, Number.isFinite(n) ? n : 0);
+                          }}
+                        />
+                      ) : (
+                        <span className="w-28 text-right text-sm font-semibold text-foreground">
+                          {b.amount.toFixed(2)}
+                        </span>
+                      )}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeEmployerContribution(b.costComponentId)}
+                        aria-label="Remove"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex items-center justify-end border-t border-border pt-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Total Employer Contribution
+                  </span>
+                  <span className="ml-3 text-base font-bold text-foreground">
+                    {totalEmployer.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Salary Breakdown Preview */}
           <SalaryBreakdownTable
             designationName={selectedDesignation?.name ?? ""}
@@ -2288,6 +2435,7 @@ function ResourceFormDialog({
             components={components}
             benefits={benefits}
             deductions={deductions}
+            employerContributions={employerContributions}
           />
         </div>
 
