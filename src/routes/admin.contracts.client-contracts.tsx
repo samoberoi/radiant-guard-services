@@ -510,6 +510,7 @@ async function persistResources(contractId: string, resources: ContractResource[
     sort_order: idx,
     payroll_day_base_id: r.payrollDayBaseId || null,
     benefits: r.benefits,
+    deductions: r.deductions,
   }));
   const ins = await supabase.from("contract_resources" as never).insert(rows as never);
   if (ins.error) throw ins.error;
