@@ -1543,10 +1543,35 @@ function ResourceFormDialog({
           : b,
       ),
     );
+    setDeductions((prev) =>
+      prev.map((b) =>
+        b.calcType === "percentage"
+          ? { ...b, amount: computeBenefitAmount(b, components) }
+          : b,
+      ),
+    );
   }, [components]);
 
+  const PT_SYNTHETIC_ID = "__pt__";
+  const ptSynthetic: CostComponentOption = {
+    id: PT_SYNTHETIC_ID,
+    name: "Professional Tax (PT)",
+    calcType: "fixed",
+    percentage: 0,
+    baseComponents: [],
+    capAmount: null,
+    amount: 0,
+    state: "Per state slab",
+  };
+
   const usedBenefitIds = new Set(benefits.map((b) => b.costComponentId));
-  const availableBenefits = costComponents.filter((c) => !usedBenefitIds.has(c.id));
+  const usedDeductionIds = new Set(deductions.map((b) => b.costComponentId));
+  const usedAcross = new Set([...usedBenefitIds, ...usedDeductionIds]);
+  const availableBenefits = costComponents.filter((c) => !usedAcross.has(c.id));
+  const availableDeductions: CostComponentOption[] = [
+    ...costComponents.filter((c) => !usedAcross.has(c.id)),
+    ...(usedDeductionIds.has(PT_SYNTHETIC_ID) ? [] : [ptSynthetic]),
+  ];
   const filteredAvailableBenefits = useMemo(() => {
     const q = benefitQuery.trim().toLowerCase();
     if (!q) return availableBenefits;
@@ -1554,6 +1579,13 @@ function ResourceFormDialog({
       [c.name, c.state, c.id].join(" ").toLowerCase().includes(q),
     );
   }, [benefitQuery, availableBenefits]);
+  const filteredAvailableDeductions = useMemo(() => {
+    const q = deductionQuery.trim().toLowerCase();
+    if (!q) return availableDeductions;
+    return availableDeductions.filter((c) =>
+      [c.name, c.state, c.id].join(" ").toLowerCase().includes(q),
+    );
+  }, [deductionQuery, availableDeductions]);
 
   const updateAmount = (allowanceId: string, amount: number) => {
     setComponents((prev) =>
