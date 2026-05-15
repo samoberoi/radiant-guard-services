@@ -2004,6 +2004,14 @@ function ResourceFormDialog({
               </div>
             )}
           </div>
+
+          {/* Salary Breakdown Preview */}
+          <SalaryBreakdownTable
+            designationName={selectedDesignation?.name ?? ""}
+            payrollDayBase={payrollDayBases.find((p) => p.id === payrollDayBaseId)}
+            components={components}
+            benefits={benefits}
+          />
         </div>
 
         <DialogFooter>
