@@ -129,6 +129,7 @@ type ContractResource = {
   payrollDayBaseId: string | null;
   benefits: BenefitItem[];
   deductions: BenefitItem[];
+  employerContributions: BenefitItem[];
 };
 
 type PayrollDayBase = {
