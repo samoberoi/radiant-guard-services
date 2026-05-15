@@ -2622,11 +2622,48 @@ function SalaryBreakdownTable({
               <td />
               <td className="text-right tabular-nums">{earnedDeductions.toFixed(2)}</td>
             </tr>
-            <tr className="bg-emerald-100 font-bold dark:bg-emerald-500/20">
-              <td className="uppercase">TOTAL Amount Payable Rs.</td>
-              <td className="text-center tabular-nums">{(gross - deductionsTotal).toFixed(2)}</td>
+            <tr className="bg-muted/40">
+              <td className="font-bold uppercase text-foreground">Employer Contribution</td>
               <td />
-              <td className="text-right text-base tabular-nums">{earnedNet.toFixed(2)}</td>
+              <td />
+              <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
+            </tr>
+            {(() => {
+              const visibleEmployer = employerContributions.filter((b) => Number(b.amount) > 0);
+              if (visibleEmployer.length === 0) {
+                return (
+                  <tr>
+                    <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
+                      No employer contributions configured.
+                    </td>
+                  </tr>
+                );
+              }
+              return visibleEmployer.map((b) => (
+                <tr key={`e-${b.costComponentId}`}>
+                  <td>
+                    {b.name}
+                    {b.calcType === "percentage" && (
+                      <span className="ml-2 text-[11px] text-muted-foreground">
+                        @ {b.percentage}% of{" "}
+                        {b.baseComponents
+                          .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
+                          .join(" ") || "—"}
+                        {b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}
+                      </span>
+                    )}
+                  </td>
+                  <td className="text-center tabular-nums">{Number(b.amount).toFixed(2)}</td>
+                  <td />
+                  <td className="text-right tabular-nums">{earnedFor(Number(b.amount)).toFixed(2)}</td>
+                </tr>
+              ));
+            })()}
+            <tr className="bg-emerald-100 font-bold dark:bg-emerald-500/20">
+              <td className="uppercase">Total CTC Rs.</td>
+              <td className="text-center tabular-nums">{totalCTC.toFixed(2)}</td>
+              <td />
+              <td className="text-right text-base tabular-nums">{earnedCTC.toFixed(2)}</td>
             </tr>
           </tbody>
         </table>
