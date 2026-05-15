@@ -839,6 +839,35 @@ function ClientContractsPage() {
           <Download className="mr-1.5 h-4 w-4" />
           Export Contracts
         </Button>
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          className="hidden"
+          onChange={async (e) => {
+            const file = e.target.files?.[0];
+            e.target.value = "";
+            if (!file) return;
+            try {
+              const buf = await file.arrayBuffer();
+              const res = await importContractFromXlsx(buf);
+              toast.success(
+                `Contract ${res.contractCode} ${res.action === "created" ? "imported" : "updated"} from Excel`,
+              );
+              await qc.invalidateQueries({ queryKey: QK });
+            } catch (err) {
+              toast.error(err instanceof Error ? err.message : "Import failed");
+            }
+          }}
+        />
+        <Button
+          variant="outline"
+          onClick={() => importInputRef.current?.click()}
+          className="h-10 rounded-lg"
+        >
+          <Upload className="mr-1.5 h-4 w-4" />
+          Import Contract
+        </Button>
         <Button
           onClick={() => {
             setEditing(null);
