@@ -2055,9 +2055,9 @@ function SalaryBreakdownTable({
 }) {
   const payableDays = computePayableDays(payrollDayBase);
   const divisorDays = payableDays; // configured basis = same rule
-  const gross = components.reduce((s, c) => s + (Number(c.amount) || 0), 0);
-  const totalDeductions = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const netPayable = gross - totalDeductions;
+  const componentsTotal = components.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const benefitsTotal = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const gross = componentsTotal + benefitsTotal;
 
   const basisLabel = payrollDayBase
     ? payrollDayBase.method === "fixed_days"
