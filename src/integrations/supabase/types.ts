@@ -200,6 +200,7 @@ export type Database = {
           created_at: string
           deductions: Json
           designation_id: string | null
+          employer_contributions: Json
           gross: number
           id: string
           payroll_day_base_id: string | null
@@ -215,6 +216,7 @@ export type Database = {
           created_at?: string
           deductions?: Json
           designation_id?: string | null
+          employer_contributions?: Json
           gross?: number
           id?: string
           payroll_day_base_id?: string | null
@@ -230,6 +232,7 @@ export type Database = {
           created_at?: string
           deductions?: Json
           designation_id?: string | null
+          employer_contributions?: Json
           gross?: number
           id?: string
           payroll_day_base_id?: string | null

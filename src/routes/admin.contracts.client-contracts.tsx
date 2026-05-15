@@ -129,6 +129,7 @@ type ContractResource = {
   payrollDayBaseId: string | null;
   benefits: BenefitItem[];
   deductions: BenefitItem[];
+  employerContributions: BenefitItem[];
 };
 
 type PayrollDayBase = {
@@ -370,7 +371,7 @@ function useContractResources(contractId: string | null) {
       const { data, error } = await supabase
         .from("contract_resources" as never)
         .select(
-          "id,designation_id,service_type_id,quantity,components,sort_order,payroll_day_base_id,benefits,deductions",
+          "id,designation_id,service_type_id,quantity,components,sort_order,payroll_day_base_id,benefits,deductions,employer_contributions",
         )
         .eq("contract_id", contractId)
         .order("sort_order");
@@ -386,6 +387,7 @@ function useContractResources(contractId: string | null) {
         payrollDayBaseId: r.payroll_day_base_id ? String(r.payroll_day_base_id) : null,
         benefits: Array.isArray(r.benefits) ? (r.benefits as BenefitItem[]) : [],
         deductions: Array.isArray(r.deductions) ? (r.deductions as BenefitItem[]) : [],
+        employerContributions: Array.isArray(r.employer_contributions) ? (r.employer_contributions as BenefitItem[]) : [],
       }));
     },
   });
@@ -511,6 +513,7 @@ async function persistResources(contractId: string, resources: ContractResource[
     payroll_day_base_id: r.payrollDayBaseId || null,
     benefits: r.benefits,
     deductions: r.deductions,
+    employer_contributions: r.employerContributions,
   }));
   const ins = await supabase.from("contract_resources" as never).insert(rows as never);
   if (ins.error) throw ins.error;
@@ -1466,6 +1469,7 @@ function ResourceFormDialog({
   const [payrollDayBaseId, setPayrollDayBaseId] = useState<string>("");
   const [benefits, setBenefits] = useState<BenefitItem[]>([]);
   const [deductions, setDeductions] = useState<BenefitItem[]>([]);
+  const [employerContributions, setEmployerContributions] = useState<BenefitItem[]>([]);
   const [designationOpen, setDesignationOpen] = useState(false);
   const [allowancePickerOpen, setAllowancePickerOpen] = useState(false);
   const [designationQuery, setDesignationQuery] = useState("");
@@ -1474,6 +1478,8 @@ function ResourceFormDialog({
   const [benefitQuery, setBenefitQuery] = useState("");
   const [deductionPickerOpen, setDeductionPickerOpen] = useState(false);
   const [deductionQuery, setDeductionQuery] = useState("");
+  const [employerPickerOpen, setEmployerPickerOpen] = useState(false);
+  const [employerQuery, setEmployerQuery] = useState("");
 
   useEffect(() => {
     if (!open) return;
@@ -1492,6 +1498,7 @@ function ResourceFormDialog({
       setPayrollDayBaseId(initial.payrollDayBaseId ?? "");
       setBenefits(initial.benefits.map((b) => ({ ...b })));
       setDeductions((initial.deductions ?? []).map((b) => ({ ...b })));
+      setEmployerContributions((initial.employerContributions ?? []).map((b) => ({ ...b })));
     } else {
       setDesignationId("");
       setServiceTypeId("");
@@ -1509,6 +1516,7 @@ function ResourceFormDialog({
       setPayrollDayBaseId("");
       setBenefits([]);
       setDeductions([]);
+      setEmployerContributions([]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial, allowanceTypes.length]);
@@ -1550,6 +1558,13 @@ function ResourceFormDialog({
           : b,
       ),
     );
+    setEmployerContributions((prev) =>
+      prev.map((b) =>
+        b.calcType === "percentage"
+          ? { ...b, amount: computeBenefitAmount(b, components) }
+          : b,
+      ),
+    );
   }, [components]);
 
   const PT_SYNTHETIC_ID = "__pt__";
@@ -1566,12 +1581,14 @@ function ResourceFormDialog({
 
   const usedBenefitIds = new Set(benefits.map((b) => b.costComponentId));
   const usedDeductionIds = new Set(deductions.map((b) => b.costComponentId));
-  const usedAcross = new Set([...usedBenefitIds, ...usedDeductionIds]);
+  const usedEmployerIds = new Set(employerContributions.map((b) => b.costComponentId));
+  const usedAcross = new Set([...usedBenefitIds, ...usedDeductionIds, ...usedEmployerIds]);
   const availableBenefits = costComponents.filter((c) => !usedAcross.has(c.id));
   const availableDeductions: CostComponentOption[] = [
     ...costComponents.filter((c) => !usedAcross.has(c.id)),
     ...(usedDeductionIds.has(PT_SYNTHETIC_ID) ? [] : [ptSynthetic]),
   ];
+  const availableEmployer = costComponents.filter((c) => !usedAcross.has(c.id));
   const filteredAvailableBenefits = useMemo(() => {
     const q = benefitQuery.trim().toLowerCase();
     if (!q) return availableBenefits;
@@ -1586,6 +1603,13 @@ function ResourceFormDialog({
       [c.name, c.state, c.id].join(" ").toLowerCase().includes(q),
     );
   }, [deductionQuery, availableDeductions]);
+  const filteredAvailableEmployer = useMemo(() => {
+    const q = employerQuery.trim().toLowerCase();
+    if (!q) return availableEmployer;
+    return availableEmployer.filter((c) =>
+      [c.name, c.state, c.id].join(" ").toLowerCase().includes(q),
+    );
+  }, [employerQuery, availableEmployer]);
 
   const updateAmount = (allowanceId: string, amount: number) => {
     setComponents((prev) =>
@@ -1664,6 +1688,33 @@ function ResourceFormDialog({
     setDeductions((prev) => prev.filter((b) => b.costComponentId !== id));
   };
 
+  const addEmployerContribution = (c: CostComponentOption) => {
+    const item: BenefitItem = {
+      costComponentId: c.id,
+      name: c.name,
+      calcType: c.calcType,
+      percentage: c.percentage,
+      baseComponents: c.baseComponents,
+      capAmount: c.capAmount,
+      amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
+      state: c.state,
+    };
+    if (item.calcType === "percentage") {
+      item.amount = computeBenefitAmount(item, components);
+    }
+    setEmployerContributions((prev) => [...prev, item]);
+    setEmployerQuery("");
+    setEmployerPickerOpen(false);
+  };
+
+  const updateEmployerAmount = (id: string, amount: number) => {
+    setEmployerContributions((prev) => prev.map((b) => (b.costComponentId === id ? { ...b, amount } : b)));
+  };
+
+  const removeEmployerContribution = (id: string) => {
+    setEmployerContributions((prev) => prev.filter((b) => b.costComponentId !== id));
+  };
+
   const handleSubmit = () => {
     if (!designationId) {
       toast.error("Please select a designation");
@@ -1691,11 +1742,13 @@ function ResourceFormDialog({
       payrollDayBaseId: payrollDayBaseId || null,
       benefits,
       deductions,
+      employerContributions,
     });
   };
 
   const totalBenefits = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const totalDeductions = deductions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const totalEmployer = employerContributions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
 
   const selectedDesignation = designations.find((d) => d.id === designationId);
 
@@ -2228,6 +2281,153 @@ function ResourceFormDialog({
             )}
           </div>
 
+          {/* Employer Contribution */}
+          <div className="rounded-xl border border-border bg-secondary/30 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <div>
+                <h4 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Employer Contribution
+                </h4>
+                <p className="text-[11px] text-muted-foreground">
+                  Add employer-side cost components (PF, ESIC, LWF, Gratuity, Bonus, Uniform, Management Fee, etc.) to compute Total CTC.
+                </p>
+              </div>
+              <Popover open={employerPickerOpen} onOpenChange={setEmployerPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8"
+                    disabled={availableEmployer.length === 0}
+                  >
+                    <Plus className="mr-1 h-3.5 w-3.5" /> Add component
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <Command shouldFilter={false}>
+                    <CommandInput
+                      placeholder="Which contribution would you like to add?"
+                      value={employerQuery}
+                      onValueChange={setEmployerQuery}
+                    />
+                    <CommandList>
+                      <CommandEmpty>No more components.</CommandEmpty>
+                      <CommandGroup>
+                        {filteredAvailableEmployer.map((c) => (
+                          <CommandItem
+                            key={c.id}
+                            value={`${c.name} ${c.state} ${c.id}`}
+                            onSelect={() => addEmployerContribution(c)}
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-sm">{c.name}</span>
+                              <span className="text-[11px] text-muted-foreground">
+                                {c.calcType === "percentage"
+                                  ? `${c.percentage}% of ${c.baseComponents.map((b, i) => (i === 0 ? b.label : `${b.operator} ${b.label}`)).join(" ") || "—"}`
+                                  : c.amount != null && c.amount > 0
+                                    ? `Fixed ₹${c.amount.toLocaleString("en-IN")}`
+                                    : "Fixed amount (manual)"}
+                                {c.state && c.state !== "N/A" ? ` · ${c.state}` : ""}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {employerContributions.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border bg-card/50 px-4 py-6 text-center">
+                <div className="text-sm font-medium text-foreground">No employer contributions added</div>
+                <div className="mt-0.5 text-xs text-muted-foreground">
+                  Click <span className="font-semibold text-foreground">Add component</span> to attach PF, ESIC, Gratuity, Management Fee…
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {employerContributions.map((b) => (
+                  <div
+                    key={b.costComponentId}
+                    className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card px-3 py-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-foreground">{b.name}</span>
+                        {b.state && b.state !== "N/A" && (
+                          <span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                            {b.state}
+                          </span>
+                        )}
+                        <span
+                          className={cn(
+                            "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
+                            b.calcType === "percentage"
+                              ? "bg-accent/15 text-accent"
+                              : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+                          )}
+                        >
+                          {b.calcType === "percentage" ? `${b.percentage}%` : "Fixed"}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                        {b.calcType === "percentage"
+                          ? `${b.percentage}% of ${b.baseComponents.map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`)).join(" ") || "—"}${b.capAmount ? ` · cap ₹${b.capAmount.toLocaleString("en-IN")}` : ""}`
+                          : "Fixed amount"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {b.calcType === "fixed" ? (
+                        <Input
+                          type="text"
+                          inputMode="decimal"
+                          placeholder="0.00"
+                          className="h-9 w-28"
+                          value={b.amount === 0 ? "" : String(b.amount)}
+                          onChange={(e) => {
+                            const raw = e.target.value.trim();
+                            if (raw === "") {
+                              updateEmployerAmount(b.costComponentId, 0);
+                              return;
+                            }
+                            if (!/^\d*\.?\d*$/.test(raw)) return;
+                            const n = parseFloat(raw);
+                            updateEmployerAmount(b.costComponentId, Number.isFinite(n) ? n : 0);
+                          }}
+                        />
+                      ) : (
+                        <span className="w-28 text-right text-sm font-semibold text-foreground">
+                          {b.amount.toFixed(2)}
+                        </span>
+                      )}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => removeEmployerContribution(b.costComponentId)}
+                        aria-label="Remove"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <div className="flex items-center justify-end border-t border-border pt-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Total Employer Contribution
+                  </span>
+                  <span className="ml-3 text-base font-bold text-foreground">
+                    {totalEmployer.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Salary Breakdown Preview */}
           <SalaryBreakdownTable
             designationName={selectedDesignation?.name ?? ""}
@@ -2235,6 +2435,7 @@ function ResourceFormDialog({
             components={components}
             benefits={benefits}
             deductions={deductions}
+            employerContributions={employerContributions}
           />
         </div>
 
@@ -2265,12 +2466,14 @@ function SalaryBreakdownTable({
   components,
   benefits,
   deductions,
+  employerContributions,
 }: {
   designationName: string;
   payrollDayBase: PayrollDayBase | undefined;
   components: ResourceComponent[];
   benefits: BenefitItem[];
   deductions: BenefitItem[];
+  employerContributions: BenefitItem[];
 }) {
   const payableDays = computePayableDays(payrollDayBase);
   const divisorDays = payableDays;
@@ -2278,6 +2481,8 @@ function SalaryBreakdownTable({
   const benefitsTotal = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const gross = componentsTotal + benefitsTotal;
   const deductionsTotal = deductions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const employerTotal = employerContributions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const totalCTC = gross + employerTotal;
 
   const basisLabel = payrollDayBase
     ? payrollDayBase.method === "fixed_days"
@@ -2292,7 +2497,8 @@ function SalaryBreakdownTable({
 
   const earnedGross = earnedFor(gross);
   const earnedDeductions = earnedFor(deductionsTotal);
-  const earnedNet = earnedGross - earnedDeductions;
+  
+  const earnedCTC = earnedFor(totalCTC);
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -2416,11 +2622,48 @@ function SalaryBreakdownTable({
               <td />
               <td className="text-right tabular-nums">{earnedDeductions.toFixed(2)}</td>
             </tr>
-            <tr className="bg-emerald-100 font-bold dark:bg-emerald-500/20">
-              <td className="uppercase">TOTAL Amount Payable Rs.</td>
-              <td className="text-center tabular-nums">{(gross - deductionsTotal).toFixed(2)}</td>
+            <tr className="bg-muted/40">
+              <td className="font-bold uppercase text-foreground">Employer Contribution</td>
               <td />
-              <td className="text-right text-base tabular-nums">{earnedNet.toFixed(2)}</td>
+              <td />
+              <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
+            </tr>
+            {(() => {
+              const visibleEmployer = employerContributions.filter((b) => Number(b.amount) > 0);
+              if (visibleEmployer.length === 0) {
+                return (
+                  <tr>
+                    <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
+                      No employer contributions configured.
+                    </td>
+                  </tr>
+                );
+              }
+              return visibleEmployer.map((b) => (
+                <tr key={`e-${b.costComponentId}`}>
+                  <td>
+                    {b.name}
+                    {b.calcType === "percentage" && (
+                      <span className="ml-2 text-[11px] text-muted-foreground">
+                        @ {b.percentage}% of{" "}
+                        {b.baseComponents
+                          .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
+                          .join(" ") || "—"}
+                        {b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}
+                      </span>
+                    )}
+                  </td>
+                  <td className="text-center tabular-nums">{Number(b.amount).toFixed(2)}</td>
+                  <td />
+                  <td className="text-right tabular-nums">{earnedFor(Number(b.amount)).toFixed(2)}</td>
+                </tr>
+              ));
+            })()}
+            <tr className="bg-emerald-100 font-bold dark:bg-emerald-500/20">
+              <td className="uppercase">Total CTC Rs.</td>
+              <td className="text-center tabular-nums">{totalCTC.toFixed(2)}</td>
+              <td />
+              <td className="text-right text-base tabular-nums">{earnedCTC.toFixed(2)}</td>
             </tr>
           </tbody>
         </table>
