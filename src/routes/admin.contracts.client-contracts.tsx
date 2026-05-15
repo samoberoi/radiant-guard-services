@@ -198,7 +198,33 @@ function useContracts() {
         )
         .order("contract_code", { ascending: false });
       if (error) throw error;
-      return (data as unknown as Record<string, unknown>[]).map(rowToContract);
+      const rows = data as unknown as Record<string, unknown>[];
+      // Auto-expire: any active contract whose end_date has passed → mark expired
+      const today = new Date().toISOString().slice(0, 10);
+      const toExpire = rows.filter(
+        (r) =>
+          (r.status ?? "active") === "active" &&
+          r.end_date &&
+          String(r.end_date) < today,
+      );
+      if (toExpire.length > 0) {
+        const ids = toExpire.map((r) => String(r.id));
+        await supabase
+          .from("client_contracts" as never)
+          .update({ status: "expired" } as never)
+          .in("id", ids);
+        for (const r of toExpire) {
+          r.status = "expired";
+          void logActivity({
+            module: "Client Contracts",
+            action: "auto-expire",
+            entityType: "client_contracts",
+            entityId: String(r.id),
+            entityLabel: String(r.contract_code ?? ""),
+          });
+        }
+      }
+      return rows.map(rowToContract);
     },
   });
 
@@ -574,8 +600,24 @@ function ClientContractsPage() {
   const hasFilters =
     !!query || orgFilter !== "all" || unitFilter !== "all" || statusFilter !== "all";
 
+  const stats = useMemo(() => {
+    const s = { total: items.length, active: 0, inactive: 0, expired: 0 };
+    for (const c of items) {
+      if (c.status === "active") s.active++;
+      else if (c.status === "inactive") s.inactive++;
+      else if (c.status === "expired") s.expired++;
+    }
+    return s;
+  }, [items]);
+
   return (
     <div>
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Total" value={stats.total} tone="default" />
+        <StatCard label="Active" value={stats.active} tone="active" />
+        <StatCard label="Inactive" value={stats.inactive} tone="inactive" />
+        <StatCard label="Expired" value={stats.expired} tone="expired" />
+      </div>
       <PageHeader
         title="Client Contracts"
         description="Manage client contracts across organisations and units."
@@ -838,6 +880,33 @@ function ClientContractsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+function StatCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "default" | "active" | "inactive" | "expired";
+}) {
+  const toneClass: Record<typeof tone, string> = {
+    default: "text-foreground",
+    active: "text-accent",
+    inactive: "text-muted-foreground",
+    expired: "text-destructive",
+  };
+  return (
+    <div className="rounded-lg border bg-card p-4">
+      <div className="text-xs uppercase tracking-wide text-muted-foreground">
+        {label}
+      </div>
+      <div className={cn("mt-1 text-2xl font-semibold", toneClass[tone])}>
+        {value}
+      </div>
     </div>
   );
 }
