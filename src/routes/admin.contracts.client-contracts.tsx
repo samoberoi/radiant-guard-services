@@ -806,11 +806,41 @@ function parseContractWorkbook(buf: ArrayBuffer): ImportedContract {
     defval: "",
   });
   if (cRows.length === 0) throw new Error("'Contract' sheet has no rows");
+  const contractRow = { ...cRows[0] };
+
+  // Allow user to edit the human-readable Summary sheet (Contract Code, Status,
+  // Description, GST Option). When those values diverge from the raw Contract
+  // sheet, the Summary edits win — that's the sheet users actually look at.
+  const sSheet = wb.Sheets["Summary"];
+  if (sSheet) {
+    const sRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sSheet, {
+      header: 1,
+      defval: "",
+    }) as unknown as Array<Array<unknown>>;
+    const sMap = new Map<string, string>();
+    for (const row of sRows) {
+      if (!Array.isArray(row) || row.length < 2) continue;
+      const k = String(row[0] ?? "").trim();
+      const v = row[1];
+      if (k) sMap.set(k.toLowerCase(), v == null ? "" : String(v));
+    }
+    const apply = (label: string, field: string) => {
+      const v = sMap.get(label.toLowerCase());
+      if (v != null && v !== "") contractRow[field] = v;
+    };
+    apply("Contract Code", "contract_code");
+    apply("Status", "status");
+    apply("Description", "description");
+    apply("GST Option", "gst_option");
+    apply("Start Date", "start_date");
+    apply("End Date", "end_date");
+  }
+
   const rSheet = wb.Sheets["Resources_Raw"] ?? wb.Sheets["Resources"];
   const rRows = rSheet
     ? XLSX.utils.sheet_to_json<Record<string, unknown>>(rSheet, { defval: "" })
     : [];
-  return { contractRow: cRows[0], resourceRows: rRows };
+  return { contractRow, resourceRows: rRows };
 }
 
 function safeJsonArray(v: unknown): unknown[] {
