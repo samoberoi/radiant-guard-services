@@ -239,7 +239,7 @@ function EmployeesPage() {
       <PageHeader
         title="Employees"
         description="Onboard and manage candidates joining client units."
-        icon={UserPlus}
+        crumbs={[{ label: "Employees" }]}
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
