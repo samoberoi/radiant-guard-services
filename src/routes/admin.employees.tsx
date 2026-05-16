@@ -1589,17 +1589,11 @@ function CandidateWizard({
                     <Input value={unit?.customer_name ?? ""} disabled placeholder="Auto-filled from unit" />
                   </Field>
                   <Field label="Designation">
-                    <Select
-                      value={form.designation_id ?? undefined}
-                      onValueChange={(v) => set("designation_id", v)}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Select designation" /></SelectTrigger>
-                      <SelectContent>
-                        {designations.map((d) => (
-                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <DesignationPicker
+                      designations={designations}
+                      value={form.designation_id}
+                      onChange={(id) => set("designation_id", id)}
+                    />
                   </Field>
                   <Field label="Status">
                     <Select value={form.status} onValueChange={(v) => set("status", v)}>
@@ -2006,6 +2000,70 @@ function UnitPicker({
                   <div className="flex flex-col">
                     <span className="font-medium"><b>{u.code}</b> · {u.name}</span>
                     <span className="text-xs text-muted-foreground">{u.customer_name}</span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function DesignationPicker({
+  designations,
+  value,
+  onChange,
+}: {
+  designations: DesignationLite[];
+  value: string | null;
+  onChange: (id: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selected = value ? designations.find((d) => d.id === value) : null;
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return designations;
+    return designations.filter((d) =>
+      [d.code ?? "", d.name].some((p) => p.toLowerCase().includes(needle)),
+    );
+  }, [query, designations]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" role="combobox" className="w-full justify-between font-normal">
+          {selected ? (
+            <span className="truncate">
+              {selected.code ? <><b>{selected.code}</b> · </> : null}{selected.name}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">Search designation…</span>
+          )}
+          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[420px] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Search designations…" value={query} onValueChange={setQuery} />
+          <CommandList>
+            <CommandEmpty>No designations found.</CommandEmpty>
+            <CommandGroup>
+              {filtered.map((d) => (
+                <CommandItem
+                  key={d.id}
+                  value={`${d.code ?? ""} ${d.name}`}
+                  onSelect={() => {
+                    onChange(d.id);
+                    setQuery("");
+                    setOpen(false);
+                  }}
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium">{d.name}</span>
+                    {d.code ? <span className="text-xs text-muted-foreground">{d.code}</span> : null}
                   </div>
                 </CommandItem>
               ))}
