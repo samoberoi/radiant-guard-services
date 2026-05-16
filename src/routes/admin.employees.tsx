@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClientOnlyFn, useServerFn } from "@tanstack/react-start";
@@ -569,8 +569,19 @@ function EmployeesPage() {
                             size="icon"
                             onClick={() => void openEditor(c.id)}
                             disabled={openingCandidateId === c.id}
+                            title="Quick edit"
                           >
                             {openingCandidateId === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="icon"
+                            title="Full details"
+                          >
+                            <Link to="/admin/candidates/$id/details" params={{ id: c.id }}>
+                              <FileText className="h-4 w-4" />
+                            </Link>
                           </Button>
                           <Button
                             variant="ghost"
