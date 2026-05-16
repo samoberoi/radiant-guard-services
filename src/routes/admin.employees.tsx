@@ -152,11 +152,37 @@ type Candidate = {
   emergency_contact_mobile: string;
   // References
   references: CandidateReference[];
+  // Ex-Service
+  is_ex_service: boolean;
+  ex_service_id: string | null;
+  // Languages / Experiences / Education
+  languages: string[];
+  experiences: CandidateExperience[];
+  educations: CandidateEducation[];
   application_date: string;
   preferred_joining_date: string | null;
   unit_id: string | null;
   designation_id: string | null;
   status: string;
+};
+
+type CandidateExperience = {
+  company_name: string;
+  designation: string;
+  location: string;
+  joined_date: string;
+  resigned_date: string;
+  reason: string;
+  remarks: string;
+};
+
+type CandidateEducation = {
+  education_name: string;
+  university: string;
+  course: string;
+  institution: string;
+  year_of_passing: string;
+  percentage: string;
 };
 
 type CandidateReference = {
