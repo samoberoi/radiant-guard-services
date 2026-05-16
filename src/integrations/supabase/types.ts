@@ -128,6 +128,7 @@ export type Database = {
           bank_ifsc: string
           bank_name: string
           birthplace: string
+          candidate_code: string
           caste_category: string
           compliance: Json
           contacts: Json
@@ -179,6 +180,7 @@ export type Database = {
           present_police_station: string
           present_state: string
           references: Json
+          rejection_reason: string
           religion: string
           same_as_permanent: boolean
           signature_url: string
@@ -198,6 +200,7 @@ export type Database = {
           bank_ifsc?: string
           bank_name?: string
           birthplace?: string
+          candidate_code?: string
           caste_category?: string
           compliance?: Json
           contacts?: Json
@@ -249,6 +252,7 @@ export type Database = {
           present_police_station?: string
           present_state?: string
           references?: Json
+          rejection_reason?: string
           religion?: string
           same_as_permanent?: boolean
           signature_url?: string
@@ -268,6 +272,7 @@ export type Database = {
           bank_ifsc?: string
           bank_name?: string
           birthplace?: string
+          candidate_code?: string
           caste_category?: string
           compliance?: Json
           contacts?: Json
@@ -319,6 +324,7 @@ export type Database = {
           present_police_station?: string
           present_state?: string
           references?: Json
+          rejection_reason?: string
           religion?: string
           same_as_permanent?: boolean
           signature_url?: string
