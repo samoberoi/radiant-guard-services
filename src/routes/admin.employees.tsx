@@ -707,7 +707,7 @@ function CandidateWizard({
     return data.publicUrl;
   };
 
-  const handleFile = async (file: File | null, slot: "photo" | "signature" | "aadhaar") => {
+  const handleFile = async (file: File | null, slot: "photo" | "signature" | "aadhaar" | "pan") => {
     if (!file) return;
     const isImage = file.type.startsWith("image/");
     const isPdf = file.type === "application/pdf";
@@ -715,17 +715,18 @@ function CandidateWizard({
       toast.error("Photograph must be an image");
       return;
     }
-    if ((slot === "aadhaar" || slot === "signature") && !isImage && !isPdf) {
+    if ((slot === "aadhaar" || slot === "signature" || slot === "pan") && !isImage && !isPdf) {
       toast.error("Only image or PDF files are allowed");
       return;
     }
     setUploading(slot);
     try {
       const uploadPromise = uploadFile(file, slot);
-      if (slot === "photo" || slot === "signature") {
+      if (slot === "photo" || slot === "signature" || slot === "pan") {
         const url = await uploadPromise;
         if (slot === "photo") set("photo_url", url);
-        else set("signature_url", url);
+        else if (slot === "signature") set("signature_url", url);
+        else set("pan_image_url", url);
         toast.success(`${slot[0].toUpperCase() + slot.slice(1)} uploaded`);
         return;
       }
