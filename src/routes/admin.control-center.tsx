@@ -80,6 +80,12 @@ const tiles: Tile[] = [
     description: "Manage ex-servicemen ranks across Army, Navy, Air Force and CAPF.",
     icon: Shield,
   },
+  {
+    to: "/admin/language-manager",
+    label: "Language Manager",
+    description: "Manage languages used in employee profiles.",
+    icon: Languages,
+  },
 ];
 
 function ControlCenterDashboard() {
