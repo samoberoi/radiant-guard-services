@@ -483,7 +483,7 @@ function EmployeesPage() {
         crumbs={[{ label: "Employees" }]}
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         {[
           { label: "Total", value: stats.total, tone: "bg-secondary text-foreground" },
           { label: "Drafts", value: stats.drafts, tone: "bg-slate-500/10 text-slate-600 dark:text-slate-300" },
