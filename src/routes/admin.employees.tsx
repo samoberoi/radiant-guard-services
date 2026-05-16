@@ -1000,7 +1000,8 @@ function CandidateWizard({
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button
               onClick={submit}
-              disabled={submitting || !!uploading || scanning}
+              disabled={submitting || !!uploading || scanning || !uploadsComplete}
+              title={!uploadsComplete ? "Upload photograph, Aadhaar and signature to continue" : undefined}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {submitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
