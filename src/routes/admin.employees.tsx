@@ -1159,7 +1159,7 @@ function CandidateWizard({
             <div className="space-y-6">
               {/* Uploads strip */}
               <Section title={`Uploads — all required${uploadsComplete ? "" : " (incomplete)"}`}>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <UploadTile
                     label="Photograph"
                     required
@@ -1177,6 +1177,14 @@ function CandidateWizard({
                     onPick={(f) => handleFile(f, "aadhaar")}
                     uploading={uploading === "aadhaar" || scanning}
                     badge={scanning ? "Scanning…" : undefined}
+                  />
+                  <UploadTile
+                    label="PAN Card"
+                    required
+                    url={form.pan_image_url}
+                    accept="image/*,application/pdf"
+                    onPick={(f) => handleFile(f, "pan")}
+                    uploading={uploading === "pan"}
                   />
                   <UploadTile
                     label="Signature"
