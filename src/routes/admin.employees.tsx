@@ -599,11 +599,15 @@ function CandidateWizard({
     }
     setUploading(slot);
     try {
-      const url = await uploadFile(file, slot);
-      if (slot === "photo") set("photo_url", url);
-      else if (slot === "signature") set("signature_url", url);
-      else set("aadhaar_image_url", url);
-      toast.success(`${slot[0].toUpperCase() + slot.slice(1)} uploaded`);
+      const uploadPromise = uploadFile(file, slot);
+      if (slot === "photo" || slot === "signature") {
+        const url = await uploadPromise;
+        if (slot === "photo") set("photo_url", url);
+        else set("signature_url", url);
+        toast.success(`${slot[0].toUpperCase() + slot.slice(1)} uploaded`);
+        return;
+      }
+
       if (slot === "aadhaar") {
         const clientOcr = await getAadhaarOcrClient();
         const isTrustedExtraction = (extraction: AadhaarExtraction) => {
@@ -636,6 +640,10 @@ function CandidateWizard({
             form.aadhaar_number && (!clientResult.aadhaar_number || !/^\d{12}$/.test(clientResult.aadhaar_number))
               ? { ...clientResult, aadhaar_number: form.aadhaar_number }
               : clientResult;
+
+          const uploadedUrl = await uploadPromise;
+          set("aadhaar_image_url", uploadedUrl);
+          toast.success("Aadhaar uploaded");
 
           if (isTrustedExtraction(normalizedClient)) {
             applyExtraction(normalizedClient);
