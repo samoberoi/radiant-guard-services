@@ -16,19 +16,15 @@ import {
   Phone,
   FileBadge,
   Gavel,
-  Trophy,
   Info,
-  FileText,
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
-  emptyDoc,
   emptyProof,
   emptyContact,
-  emptyActivity,
   emptyNominee,
   SectionHeader,
   Field,
@@ -51,9 +47,7 @@ const SECTIONS = [
   { id: "contacts", label: "Contacts", icon: Phone },
   { id: "identification", label: "Identification Proofs", icon: FileBadge },
   { id: "criminal", label: "Criminal History", icon: Gavel },
-  { id: "extra", label: "Extra Curricular", icon: Trophy },
   { id: "other", label: "Other Info", icon: Info },
-  { id: "documents", label: "Documents", icon: FileText },
   { id: "nominations", label: "Nominations", icon: Users },
 ] as const;
 
@@ -254,37 +248,8 @@ function CandidateDetailsPage() {
           {active === "criminal" && (
             <CriminalSection form={form} set={set} />
           )}
-          {active === "extra" && (
-            <ListSection
-              title="Extra Curricular Activities"
-              description="Sports, hobbies, achievements"
-              items={form.extra_curricular}
-              onChange={(v) => set("extra_curricular", v)}
-              empty={emptyActivity}
-              fields={[
-                { key: "activity", label: "Activity" },
-                { key: "level", label: "Level" },
-                { key: "year", label: "Year" },
-              ]}
-            />
-          )}
           {active === "other" && (
             <OtherSection form={form} setSection={setSection} />
-          )}
-          {active === "documents" && (
-            <ListSection
-              title="Documents"
-              description="Supporting files for this candidate"
-              items={form.documents}
-              onChange={(v) => set("documents", v)}
-              empty={emptyDoc}
-              fields={[
-                { key: "name", label: "Document Name" },
-                { key: "type", label: "Type" },
-                { key: "url", label: "File URL" },
-                { key: "notes", label: "Notes" },
-              ]}
-            />
           )}
           {active === "nominations" && (
             <ListSection

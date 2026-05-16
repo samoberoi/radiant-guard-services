@@ -105,14 +105,6 @@ export function PhysicalSection({ form, setSection }: { form: any; setSection: S
           />
         </Field>
       </div>
-      <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Field label="Known Allergies">
-          <Textarea rows={2} value={ph.allergies ?? ""} onChange={(e) => setSection("physical_health", { allergies: e.target.value })} />
-        </Field>
-        <Field label="Chronic Conditions / Medications">
-          <Textarea rows={2} value={ph.conditions ?? ""} onChange={(e) => setSection("physical_health", { conditions: e.target.value })} />
-        </Field>
-      </div>
     </div>
   );
 }
