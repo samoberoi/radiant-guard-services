@@ -537,13 +537,26 @@ function computeBenefitAmount(
 }
 
 async function persistResources(contractId: string, resources: ContractResource[]) {
+  const prev = await supabase
+    .from("contract_resources" as never)
+    .select("designation_id,service_type_id,quantity,components,benefits,deductions,employer_contributions,payroll_day_base_id,sort_order")
+    .eq("contract_id", contractId)
+    .order("sort_order");
+  const beforeRows = ((prev.data ?? []) as Record<string, unknown>[]) ?? [];
   const del = await supabase
     .from("contract_resources" as never)
     .delete()
     .eq("contract_id", contractId);
   if (del.error) throw del.error;
   if (resources.length === 0) {
-    void logActivity({ module: "Contract Resources", action: "update", entityType: "contract_resources", entityId: contractId, details: { count: 0 } });
+    void logActivity({
+      module: "Contract Resources",
+      action: "update",
+      entityType: "contract_resources",
+      entityId: contractId,
+      before: { count: beforeRows.length, resources: beforeRows },
+      after: { count: 0, resources: [] },
+    });
     return;
   }
   const rows = resources.map((r, idx) => ({
@@ -561,7 +574,14 @@ async function persistResources(contractId: string, resources: ContractResource[
   }));
   const ins = await supabase.from("contract_resources" as never).insert(rows as never);
   if (ins.error) throw ins.error;
-  void logActivity({ module: "Contract Resources", action: "update", entityType: "contract_resources", entityId: contractId, details: { count: resources.length, resources: rows } as unknown as Record<string, unknown> });
+  void logActivity({
+    module: "Contract Resources",
+    action: "update",
+    entityType: "contract_resources",
+    entityId: contractId,
+    before: { count: beforeRows.length, resources: beforeRows },
+    after: { count: rows.length, resources: rows },
+  });
 }
 
 // ============= Excel export / import =============
