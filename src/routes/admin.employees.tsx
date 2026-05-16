@@ -7,8 +7,6 @@ import {
   CriminalSection,
   OtherSection,
   ListSection,
-  emptyActivity,
-  emptyDoc,
   emptyNominee,
 } from "@/components/candidate-extra-sections";
 import { useEffect, useMemo, useRef, useState } from "react";
