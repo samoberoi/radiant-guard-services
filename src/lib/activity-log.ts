@@ -109,7 +109,7 @@ export async function logActivity(p: LogParams): Promise<void> {
       user_agent: ua,
       status: p.status ?? "success",
       error_message: p.errorMessage ?? "",
-      details: p.details ?? {},
+      details,
     } as never);
     // Kick off IP resolution for next call if missing
     if (!cachedIp) void getClientIp();
