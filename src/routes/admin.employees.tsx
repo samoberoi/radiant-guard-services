@@ -146,10 +146,12 @@ type Candidate = {
   bank_name: string;
   bank_branch: string;
   bank_account_type: string;
-  // Emergency Contact
+  // Emergency Contact (legacy, derived from primary contact on save)
   emergency_contact_name: string;
   emergency_contact_relation: string;
   emergency_contact_mobile: string;
+  // Contacts (list, one marked as emergency)
+  contacts: CandidateContact[];
   // References
   references: CandidateReference[];
   // Ex-Service
@@ -190,6 +192,13 @@ type CandidateReference = {
   relation_type: string;
   mobile: string;
   address: string;
+};
+
+type CandidateContact = {
+  name: string;
+  relation: string;
+  mobile: string;
+  is_emergency: boolean;
 };
 
 const RELATION_TYPES = ["Family", "Friend", "Colleague", "Neighbor", "Other"] as const;
@@ -727,6 +736,7 @@ function emptyForm(): CandidateForm {
     emergency_contact_name: "",
     emergency_contact_relation: "",
     emergency_contact_mobile: "",
+    contacts: [],
     references: [],
     is_ex_service: false,
     ex_service_id: null,
@@ -781,7 +791,18 @@ function CandidateWizard({
     if (editing) {
       const { id: _id, ...rest } = editing;
       void _id;
-      setForm(rest);
+      const restAny = rest as unknown as Partial<CandidateForm> & { contacts?: CandidateContact[] };
+      const existing = Array.isArray(restAny.contacts) ? restAny.contacts : [];
+      let contacts = existing;
+      if (contacts.length === 0 && (rest.emergency_contact_name || rest.emergency_contact_mobile)) {
+        contacts = [{
+          name: rest.emergency_contact_name || "",
+          relation: rest.emergency_contact_relation || "",
+          mobile: rest.emergency_contact_mobile || "",
+          is_emergency: true,
+        }];
+      }
+      setForm({ ...(rest as CandidateForm), contacts });
       setStep("form");
     } else {
       setForm(emptyForm());
@@ -1093,7 +1114,8 @@ function CandidateWizard({
       return toast.error("Bank account number must be 6–18 digits");
     setSubmitting(true);
     try {
-      const payload = form.same_as_permanent
+      const emergencyContact = form.contacts.find((c) => c.is_emergency) ?? form.contacts[0] ?? null;
+      const basePayload = form.same_as_permanent
         ? {
             ...form,
             present_address1: form.permanent_address1,
@@ -1107,6 +1129,12 @@ function CandidateWizard({
             present_police_station: form.permanent_police_station,
           }
         : { ...form };
+      const payload = {
+        ...basePayload,
+        emergency_contact_name: emergencyContact?.name ?? "",
+        emergency_contact_relation: emergencyContact?.relation ?? "",
+        emergency_contact_mobile: emergencyContact?.mobile ?? "",
+      };
       if (editing) {
         const { data: before } = await supabase
           .from("candidates" as never)
@@ -1412,37 +1440,131 @@ function CandidateWizard({
                 </div>
 
                 <div className="mt-5 border-t border-border pt-4">
-                  <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                    Emergency Contact
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                      Contacts
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          contacts: [
+                            ...f.contacts,
+                            { name: "", relation: "", mobile: "", is_emergency: f.contacts.length === 0 },
+                          ],
+                        }))
+                      }
+                    >
+                      <Plus className="mr-1 h-4 w-4" /> Add Contact
+                    </Button>
                   </div>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                    <Field label="Name">
-                      <Input
-                        value={form.emergency_contact_name}
-                        onChange={(e) => set("emergency_contact_name", e.target.value)}
-                      />
-                    </Field>
-                    <Field label="Relationship">
-                      <Select
-                        value={form.emergency_contact_relation || undefined}
-                        onValueChange={(v) => set("emergency_contact_relation", v)}
-                      >
-                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-                        <SelectContent>
-                          {REFERENCE_RELATIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                    <Field label="Mobile">
-                      <Input
-                        value={form.emergency_contact_mobile}
-                        inputMode="numeric"
-                        onChange={(e) =>
-                          set("emergency_contact_mobile", e.target.value.replace(/\D/g, "").slice(0, 10))
-                        }
-                      />
-                    </Field>
-                  </div>
+                  {form.contacts.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      No contacts added. Click "Add Contact" to include one. Mark one as Emergency.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {form.contacts.map((ct, i) => (
+                        <div
+                          key={i}
+                          className="rounded-lg border border-border bg-secondary/30 p-3"
+                        >
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="text-xs font-semibold text-muted-foreground">
+                              Contact #{i + 1}
+                            </span>
+                            <div className="flex items-center gap-3">
+                              <label className="flex items-center gap-2 text-xs">
+                                <input
+                                  type="checkbox"
+                                  className="h-4 w-4 accent-rose-500"
+                                  checked={!!ct.is_emergency}
+                                  onChange={(e) =>
+                                    setForm((f) => ({
+                                      ...f,
+                                      contacts: f.contacts.map((c, idx) =>
+                                        idx === i
+                                          ? { ...c, is_emergency: e.target.checked }
+                                          : e.target.checked
+                                            ? { ...c, is_emergency: false }
+                                            : c,
+                                      ),
+                                    }))
+                                  }
+                                />
+                                Emergency
+                              </label>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  setForm((f) => ({
+                                    ...f,
+                                    contacts: f.contacts.filter((_, idx) => idx !== i),
+                                  }))
+                                }
+                              >
+                                <Trash2 className="h-4 w-4 text-rose-500" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                            <Field label="Name">
+                              <Input
+                                value={ct.name}
+                                onChange={(e) =>
+                                  setForm((f) => ({
+                                    ...f,
+                                    contacts: f.contacts.map((c, idx) =>
+                                      idx === i ? { ...c, name: e.target.value } : c,
+                                    ),
+                                  }))
+                                }
+                              />
+                            </Field>
+                            <Field label="Relationship">
+                              <Select
+                                value={ct.relation || undefined}
+                                onValueChange={(v) =>
+                                  setForm((f) => ({
+                                    ...f,
+                                    contacts: f.contacts.map((c, idx) =>
+                                      idx === i ? { ...c, relation: v } : c,
+                                    ),
+                                  }))
+                                }
+                              >
+                                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                                <SelectContent>
+                                  {REFERENCE_RELATIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </Field>
+                            <Field label="Mobile">
+                              <Input
+                                value={ct.mobile}
+                                inputMode="numeric"
+                                onChange={(e) =>
+                                  setForm((f) => ({
+                                    ...f,
+                                    contacts: f.contacts.map((c, idx) =>
+                                      idx === i
+                                        ? { ...c, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) }
+                                        : c,
+                                    ),
+                                  }))
+                                }
+                              />
+                            </Field>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-5 border-t border-border pt-4">
