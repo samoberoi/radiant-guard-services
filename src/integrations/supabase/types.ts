@@ -115,6 +115,96 @@ export type Database = {
           },
         ]
       }
+      candidates: {
+        Row: {
+          aadhaar_image_url: string
+          aadhaar_number: string
+          alt_mobile: string
+          application_date: string
+          birthplace: string
+          caste_category: string
+          created_at: string
+          date_of_birth: string | null
+          designation_id: string | null
+          email: string
+          full_name: string
+          gender: string
+          id: string
+          marital_status: string
+          mobile: string
+          permanent_address: string
+          permanent_police_station: string
+          photo_url: string
+          preferred_joining_date: string | null
+          present_address: string
+          present_police_station: string
+          religion: string
+          same_as_permanent: boolean
+          signature_url: string
+          status: string
+          unit_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          aadhaar_image_url?: string
+          aadhaar_number?: string
+          alt_mobile?: string
+          application_date?: string
+          birthplace?: string
+          caste_category?: string
+          created_at?: string
+          date_of_birth?: string | null
+          designation_id?: string | null
+          email?: string
+          full_name?: string
+          gender?: string
+          id?: string
+          marital_status?: string
+          mobile?: string
+          permanent_address?: string
+          permanent_police_station?: string
+          photo_url?: string
+          preferred_joining_date?: string | null
+          present_address?: string
+          present_police_station?: string
+          religion?: string
+          same_as_permanent?: boolean
+          signature_url?: string
+          status?: string
+          unit_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aadhaar_image_url?: string
+          aadhaar_number?: string
+          alt_mobile?: string
+          application_date?: string
+          birthplace?: string
+          caste_category?: string
+          created_at?: string
+          date_of_birth?: string | null
+          designation_id?: string | null
+          email?: string
+          full_name?: string
+          gender?: string
+          id?: string
+          marital_status?: string
+          mobile?: string
+          permanent_address?: string
+          permanent_police_station?: string
+          photo_url?: string
+          preferred_joining_date?: string | null
+          present_address?: string
+          present_police_station?: string
+          religion?: string
+          same_as_permanent?: boolean
+          signature_url?: string
+          status?: string
+          unit_id?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       client_contracts: {
         Row: {
           billing_type_id: string | null
