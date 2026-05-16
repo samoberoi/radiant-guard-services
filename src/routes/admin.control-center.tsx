@@ -74,6 +74,12 @@ const tiles: Tile[] = [
     description: "Configure CTC cost components like EPF, ESI, Bonus, Gratuity, LWF, etc.",
     icon: Calculator,
   },
+  {
+    to: "/admin/ex-service-manager",
+    label: "Ex-Service Manager",
+    description: "Manage ex-servicemen ranks across Army, Navy, Air Force and CAPF.",
+    icon: Shield,
+  },
 ];
 
 function ControlCenterDashboard() {
