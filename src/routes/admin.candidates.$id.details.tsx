@@ -273,19 +273,7 @@ function CandidateDetailsPage() {
             />
           )}
           {active === "identification" && (
-            <ListSection
-              title="Identification Proofs"
-              description="Driving license, voter id, passport, etc."
-              items={form.identification_proofs}
-              onChange={(v) => set("identification_proofs", v)}
-              empty={emptyProof}
-              fields={[
-                { key: "type", label: "Document Type" },
-                { key: "number", label: "Document Number" },
-                { key: "issued_by", label: "Issued By" },
-                { key: "url", label: "File URL" },
-              ]}
-            />
+            <IdentificationSection form={form} set={set} setSection={setSection} />
           )}
           {active === "criminal" && (
             <CriminalSection form={form} set={set} />
