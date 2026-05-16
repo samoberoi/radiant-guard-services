@@ -529,6 +529,7 @@ function EmployeesPage() {
           <table className="min-w-full text-sm">
             <thead className="bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
+                <th className="px-4 py-3 text-left font-semibold">Code</th>
                 <th className="px-4 py-3 text-left font-semibold">Candidate</th>
                 <th className="px-4 py-3 text-left font-semibold">Aadhaar</th>
                 <th className="px-4 py-3 text-left font-semibold">Mobile</th>
