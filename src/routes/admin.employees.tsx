@@ -821,11 +821,9 @@ function CandidateWizard({
 }) {
   const qc = useQueryClient();
   const extractFn = useServerFn(extractAadhaar);
-  const [step, setStep] = useState<WizardStep>("aadhaar");
-  const [otp, setOtp] = useState("");
-  const [otpError, setOtpError] = useState<string | null>(null);
   const [form, setForm] = useState<CandidateForm>(emptyForm());
   const [submitting, setSubmitting] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
 
@@ -846,13 +844,9 @@ function CandidateWizard({
         }];
       }
       setForm({ ...(rest as CandidateForm), contacts });
-      setStep("form");
     } else {
       setForm(emptyForm());
-      setStep("aadhaar");
     }
-    setOtp("");
-    setOtpError(null);
   }, [open, editing]);
 
   const set = <K extends keyof CandidateForm>(k: K, v: CandidateForm[K]) =>
