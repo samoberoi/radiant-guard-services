@@ -368,9 +368,13 @@ function EmployeesPage() {
   const candidatesQuery = useCandidates();
   const unitsQuery = useUnits();
   const designationsQuery = useDesignations();
+  const exServicesQuery = useExServices();
+  const languagesQuery = useLanguagesLite();
   const candidates = candidatesQuery.data ?? [];
   const units = unitsQuery.data ?? [];
   const designations = designationsQuery.data ?? [];
+  const exServices = exServicesQuery.data ?? [];
+  const languagesList = languagesQuery.data ?? [];
   const isLoading = candidatesQuery.isLoading;
   const candidatesError = candidatesQuery.error;
   const qc = useQueryClient();
