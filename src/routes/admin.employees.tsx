@@ -672,13 +672,20 @@ function CandidateWizard({
     if (!form.mobile.trim()) return toast.error("Mobile is required");
     setSubmitting(true);
     try {
-      const payload = {
-        ...form,
-        present_address: form.same_as_permanent ? form.permanent_address : form.present_address,
-        present_police_station: form.same_as_permanent
-          ? form.permanent_police_station
-          : form.present_police_station,
-      };
+      const payload = form.same_as_permanent
+        ? {
+            ...form,
+            present_address1: form.permanent_address1,
+            present_address2: form.permanent_address2,
+            present_landmark: form.permanent_landmark,
+            present_pincode: form.permanent_pincode,
+            present_city: form.permanent_city,
+            present_district: form.permanent_district,
+            present_state: form.permanent_state,
+            present_country: form.permanent_country,
+            present_police_station: form.permanent_police_station,
+          }
+        : { ...form };
       if (editing) {
         const { data: before } = await supabase
           .from("candidates" as never)
