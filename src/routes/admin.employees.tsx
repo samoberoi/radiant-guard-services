@@ -246,6 +246,7 @@ function EmployeesPage() {
   const [search, setSearch] = useState("");
   const [openWizard, setOpenWizard] = useState(false);
   const [editing, setEditing] = useState<Candidate | null>(null);
+  const [openingCandidateId, setOpeningCandidateId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Candidate | null>(null);
 
   const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
@@ -286,6 +287,24 @@ function EmployeesPage() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Delete failed"),
   });
+
+  const openEditor = async (candidateId: string) => {
+    setOpeningCandidateId(candidateId);
+    try {
+      const { data, error } = await supabase
+        .from("candidates" as never)
+        .select("*")
+        .eq("id", candidateId)
+        .single();
+      if (error) throw error;
+      setEditing((data as Candidate) ?? null);
+      setOpenWizard(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not open candidate");
+    } finally {
+      setOpeningCandidateId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -404,12 +423,10 @@ function EmployeesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => {
-                              setEditing(c);
-                              setOpenWizard(true);
-                            }}
+                            onClick={() => void openEditor(c.id)}
+                            disabled={openingCandidateId === c.id}
                           >
-                            <Edit2 className="h-4 w-4" />
+                            {openingCandidateId === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="h-4 w-4" />}
                           </Button>
                           <Button
                             variant="ghost"
