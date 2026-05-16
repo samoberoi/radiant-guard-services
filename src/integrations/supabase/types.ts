@@ -121,17 +121,28 @@ export type Database = {
           aadhaar_number: string
           alt_mobile: string
           application_date: string
+          bank_account_holder: string
+          bank_account_number: string
+          bank_account_type: string
+          bank_branch: string
+          bank_ifsc: string
+          bank_name: string
           birthplace: string
           caste_category: string
           created_at: string
           date_of_birth: string | null
           designation_id: string | null
           email: string
+          emergency_contact_mobile: string
+          emergency_contact_name: string
+          emergency_contact_relation: string
           full_name: string
           gender: string
           id: string
           marital_status: string
           mobile: string
+          pan_image_url: string
+          pan_number: string
           permanent_address1: string
           permanent_address2: string
           permanent_city: string
@@ -152,6 +163,7 @@ export type Database = {
           present_pincode: string
           present_police_station: string
           present_state: string
+          references: Json
           religion: string
           same_as_permanent: boolean
           signature_url: string
@@ -164,17 +176,28 @@ export type Database = {
           aadhaar_number?: string
           alt_mobile?: string
           application_date?: string
+          bank_account_holder?: string
+          bank_account_number?: string
+          bank_account_type?: string
+          bank_branch?: string
+          bank_ifsc?: string
+          bank_name?: string
           birthplace?: string
           caste_category?: string
           created_at?: string
           date_of_birth?: string | null
           designation_id?: string | null
           email?: string
+          emergency_contact_mobile?: string
+          emergency_contact_name?: string
+          emergency_contact_relation?: string
           full_name?: string
           gender?: string
           id?: string
           marital_status?: string
           mobile?: string
+          pan_image_url?: string
+          pan_number?: string
           permanent_address1?: string
           permanent_address2?: string
           permanent_city?: string
@@ -195,6 +218,7 @@ export type Database = {
           present_pincode?: string
           present_police_station?: string
           present_state?: string
+          references?: Json
           religion?: string
           same_as_permanent?: boolean
           signature_url?: string
@@ -207,17 +231,28 @@ export type Database = {
           aadhaar_number?: string
           alt_mobile?: string
           application_date?: string
+          bank_account_holder?: string
+          bank_account_number?: string
+          bank_account_type?: string
+          bank_branch?: string
+          bank_ifsc?: string
+          bank_name?: string
           birthplace?: string
           caste_category?: string
           created_at?: string
           date_of_birth?: string | null
           designation_id?: string | null
           email?: string
+          emergency_contact_mobile?: string
+          emergency_contact_name?: string
+          emergency_contact_relation?: string
           full_name?: string
           gender?: string
           id?: string
           marital_status?: string
           mobile?: string
+          pan_image_url?: string
+          pan_number?: string
           permanent_address1?: string
           permanent_address2?: string
           permanent_city?: string
@@ -238,6 +273,7 @@ export type Database = {
           present_pincode?: string
           present_police_station?: string
           present_state?: string
+          references?: Json
           religion?: string
           same_as_permanent?: boolean
           signature_url?: string
