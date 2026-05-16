@@ -614,11 +614,13 @@ function CandidateWizard({
         });
         setScanning(true);
         try {
-          const serverRes = (await extractFn({
+          let res = (await extractFn({
             data: { fileDataUrl: dataUrl, mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg") },
           })) as AadhaarExtraction;
-          const clientRes = await clientOcr.extractAadhaarClient(file);
-          const res = clientOcr.mergeAadhaarExtractions(serverRes, clientRes);
+
+          if (!clientOcr.hasUsefulAadhaarData(res)) {
+            res = await clientOcr.extractAadhaarClient(file);
+          }
 
           applyExtraction(res);
           const filled = clientOcr.countExtractedFields(res);
@@ -688,7 +690,7 @@ function CandidateWizard({
       const next: CandidateForm = {
         ...f,
         full_name: resolvedName,
-        date_of_birth: x.date_of_birth ? x.date_of_birth : f.date_of_birth,
+        date_of_birth: /^\d{4}-\d{2}-\d{2}$/.test(x.date_of_birth) ? x.date_of_birth : f.date_of_birth,
         gender: looksUseful(x.gender, "gender") ? toTitle(x.gender) : f.gender,
         aadhaar_number: pick(x.aadhaar_number, f.aadhaar_number, "aadhaar"),
         birthplace: pick(x.birthplace, f.birthplace, "place"),
