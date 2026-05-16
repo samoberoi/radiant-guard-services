@@ -265,12 +265,27 @@ function useContracts() {
 
   const updateMut = useMutation({
     mutationFn: async ({ id, p }: { id: string; p: Payload }) => {
+      const beforeRes = await supabase
+        .from("client_contracts" as never)
+        .select("contract_code,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,gst_option,status")
+        .eq("id", id)
+        .single();
+      const before = (beforeRes.data ?? null) as Record<string, unknown> | null;
+      const after = toRow(p);
       const { error } = await supabase
         .from("client_contracts" as never)
-        .update(toRow(p) as never)
+        .update(after as never)
         .eq("id", id);
       if (error) throw error;
-      void logActivity({ module: "Client Contracts", action: "update", entityType: "client_contracts", entityId: id, entityLabel: p.contractCode, details: p as unknown as Record<string, unknown> });
+      void logActivity({
+        module: "Client Contracts",
+        action: "update",
+        entityType: "client_contracts",
+        entityId: id,
+        entityLabel: p.contractCode,
+        before,
+        after: after as unknown as Record<string, unknown>,
+      });
     },
     onSuccess: invalidate,
   });
