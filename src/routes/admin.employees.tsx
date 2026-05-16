@@ -430,10 +430,11 @@ function EmployeesPage() {
 
   const stats = useMemo(() => {
     const total = candidates.length;
-    const active = candidates.filter((c) => c.status === "active").length;
+    const approved = candidates.filter((c) => c.status === "approved" || c.status === "active").length;
     const pending = candidates.filter((c) => c.status === "pending").length;
     const rejected = candidates.filter((c) => c.status === "rejected").length;
-    return { total, active, pending, rejected };
+    const drafts = candidates.filter((c) => c.status === "draft").length;
+    return { total, approved, pending, rejected, drafts };
   }, [candidates]);
 
   const deleteMut = useMutation({
