@@ -1262,6 +1262,214 @@ function CandidateWizard({
                     <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
                   </Field>
                 </div>
+
+                <div className="mt-5 border-t border-border pt-4">
+                  <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                    Emergency Contact
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <Field label="Name">
+                      <Input
+                        value={form.emergency_contact_name}
+                        onChange={(e) => set("emergency_contact_name", e.target.value)}
+                      />
+                    </Field>
+                    <Field label="Relationship">
+                      <Select
+                        value={form.emergency_contact_relation || undefined}
+                        onValueChange={(v) => set("emergency_contact_relation", v)}
+                      >
+                        <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                        <SelectContent>
+                          {REFERENCE_RELATIONS.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Field label="Mobile">
+                      <Input
+                        value={form.emergency_contact_mobile}
+                        inputMode="numeric"
+                        onChange={(e) =>
+                          set("emergency_contact_mobile", e.target.value.replace(/\D/g, "").slice(0, 10))
+                        }
+                      />
+                    </Field>
+                  </div>
+                </div>
+
+                <div className="mt-5 border-t border-border pt-4">
+                  <div className="mb-3 flex items-center justify-between">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                      References
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        setForm((f) => ({
+                          ...f,
+                          references: [
+                            ...f.references,
+                            { name: "", relation_type: "", mobile: "", address: "" },
+                          ],
+                        }))
+                      }
+                    >
+                      <Plus className="mr-1 h-4 w-4" /> Add Reference
+                    </Button>
+                  </div>
+                  {form.references.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      No references added. Click "Add Reference" to include one.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {form.references.map((ref, i) => (
+                        <div
+                          key={i}
+                          className="rounded-lg border border-border bg-secondary/30 p-3"
+                        >
+                          <div className="mb-2 flex items-center justify-between">
+                            <span className="text-xs font-semibold text-muted-foreground">
+                              Reference #{i + 1}
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setForm((f) => ({
+                                  ...f,
+                                  references: f.references.filter((_, idx) => idx !== i),
+                                }))
+                              }
+                            >
+                              <Trash2 className="h-4 w-4 text-rose-500" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <Field label="Name">
+                              <Input
+                                value={ref.name}
+                                onChange={(e) =>
+                                  setForm((f) => ({
+                                    ...f,
+                                    references: f.references.map((r, idx) =>
+                                      idx === i ? { ...r, name: e.target.value } : r,
+                                    ),
+                                  }))
+                                }
+                              />
+                            </Field>
+                            <Field label="Relation Type">
+                              <Select
+                                value={ref.relation_type || undefined}
+                                onValueChange={(v) =>
+                                  setForm((f) => ({
+                                    ...f,
+                                    references: f.references.map((r, idx) =>
+                                      idx === i ? { ...r, relation_type: v } : r,
+                                    ),
+                                  }))
+                                }
+                              >
+                                <SelectTrigger><SelectValue placeholder="Family / Friend / …" /></SelectTrigger>
+                                <SelectContent>
+                                  {RELATION_TYPES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            </Field>
+                            <Field label="Mobile">
+                              <Input
+                                value={ref.mobile}
+                                inputMode="numeric"
+                                onChange={(e) =>
+                                  setForm((f) => ({
+                                    ...f,
+                                    references: f.references.map((r, idx) =>
+                                      idx === i
+                                        ? { ...r, mobile: e.target.value.replace(/\D/g, "").slice(0, 10) }
+                                        : r,
+                                    ),
+                                  }))
+                                }
+                              />
+                            </Field>
+                            <Field label="Address">
+                              <Input
+                                value={ref.address}
+                                onChange={(e) =>
+                                  setForm((f) => ({
+                                    ...f,
+                                    references: f.references.map((r, idx) =>
+                                      idx === i ? { ...r, address: e.target.value } : r,
+                                    ),
+                                  }))
+                                }
+                              />
+                            </Field>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </Section>
+
+              <Section title="Bank Details">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Field label="Account Holder Name">
+                    <Input
+                      value={form.bank_account_holder}
+                      onChange={(e) => set("bank_account_holder", e.target.value)}
+                      placeholder="As per bank records"
+                    />
+                  </Field>
+                  <Field label="Account Number">
+                    <Input
+                      value={form.bank_account_number}
+                      inputMode="numeric"
+                      onChange={(e) =>
+                        set("bank_account_number", e.target.value.replace(/\D/g, "").slice(0, 18))
+                      }
+                      className="font-mono"
+                    />
+                  </Field>
+                  <Field label="IFSC Code">
+                    <Input
+                      value={form.bank_ifsc}
+                      onChange={(e) => set("bank_ifsc", e.target.value.toUpperCase().slice(0, 11))}
+                      placeholder="e.g. SBIN0001234"
+                      className="font-mono uppercase"
+                    />
+                  </Field>
+                  <Field label="Bank Name">
+                    <Input value={form.bank_name} onChange={(e) => set("bank_name", e.target.value)} />
+                  </Field>
+                  <Field label="Branch">
+                    <Input value={form.bank_branch} onChange={(e) => set("bank_branch", e.target.value)} />
+                  </Field>
+                  <Field label="Account Type">
+                    <Select
+                      value={form.bank_account_type || undefined}
+                      onValueChange={(v) => set("bank_account_type", v)}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>
+                        {BANK_ACCOUNT_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="PAN Number">
+                    <Input
+                      value={form.pan_number}
+                      onChange={(e) => set("pan_number", e.target.value.toUpperCase().slice(0, 10))}
+                      placeholder="e.g. ABCDE1234F"
+                      className="font-mono uppercase"
+                    />
+                  </Field>
+                </div>
               </Section>
 
               <Section title="Permanent Address (auto-filled from Aadhaar)">
