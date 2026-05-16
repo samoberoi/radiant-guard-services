@@ -66,12 +66,15 @@ export const getEmployeesPageData = createServerFn({ method: "GET" })
       );
     }
 
+    const candidateRows = ((candidates ?? []) as unknown) as CandidateListItem[];
+    const designationRows = ((designations ?? []) as unknown) as DesignationLite[];
+
     return {
-      candidates: ((candidates as unknown) as CandidateListItem[]) ?? [],
+      candidates: candidateRows,
       units: unitRows.map((unit) => ({
         ...unit,
         customer_name: unit.customer_id ? customerNameById.get(unit.customer_id) ?? "" : "",
       })),
-      designations: (((designations ?? []) as unknown) as DesignationLite[]) ?? [],
+      designations: designationRows,
     };
   });
