@@ -1807,21 +1807,6 @@ function CandidateWizard({
                     });
                   }}
                 />
-                <div className="mt-3">
-                  <Field label="Nearest Police Station (Permanent)">
-                    <Input
-                      value={form.permanent_police_station}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setForm((f) => ({
-                          ...f,
-                          permanent_police_station: v,
-                          present_police_station: f.same_as_permanent ? v : f.present_police_station,
-                        }));
-                      }}
-                    />
-                  </Field>
-                </div>
               </Section>
 
               <Section title="Present Address">
@@ -1856,14 +1841,6 @@ function CandidateWizard({
                         })
                       }
                     />
-                    <div className="mt-3">
-                      <Field label="Nearest Police Station (Present)">
-                        <Input
-                          value={form.present_police_station}
-                          onChange={(e) => set("present_police_station", e.target.value)}
-                        />
-                      </Field>
-                    </div>
                   </>
                 )}
               </Section>
@@ -1938,37 +1915,8 @@ function CandidateWizard({
                 <CriminalSection form={form} set={setAny} />
               </Section>
 
-              <Section title="Extra Curricular">
-                <ListSection
-                  title=""
-                  items={form.extra_curricular}
-                  onChange={(v: any[]) => setAny("extra_curricular", v)}
-                  empty={emptyActivity}
-                  fields={[
-                    { key: "activity", label: "Activity" },
-                    { key: "level", label: "Level" },
-                    { key: "year", label: "Year" },
-                  ]}
-                />
-              </Section>
-
               <Section title="Other Info">
                 <OtherSection form={form} setSection={setSection} />
-              </Section>
-
-              <Section title="Documents">
-                <ListSection
-                  title=""
-                  items={form.documents}
-                  onChange={(v: any[]) => setAny("documents", v)}
-                  empty={emptyDoc}
-                  fields={[
-                    { key: "name", label: "Document Name" },
-                    { key: "type", label: "Type" },
-                    { key: "url", label: "File URL" },
-                    { key: "notes", label: "Notes" },
-                  ]}
-                />
               </Section>
 
               <Section title="Nominations">
