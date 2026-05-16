@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BadgeCheck, Briefcase, Calculator, CalendarDays, CalendarRange, ClipboardList, Clock, Coins, HandCoins, Receipt, ReceiptText, Settings, Shield } from "lucide-react";
+import { ArrowRight, BadgeCheck, Briefcase, Calculator, CalendarDays, CalendarRange, ClipboardList, Clock, Coins, HandCoins, Languages, Receipt, ReceiptText, Settings, Shield } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/admin/control-center")({
@@ -79,6 +79,12 @@ const tiles: Tile[] = [
     label: "Ex-Service Manager",
     description: "Manage ex-servicemen ranks across Army, Navy, Air Force and CAPF.",
     icon: Shield,
+  },
+  {
+    to: "/admin/language-manager",
+    label: "Language Manager",
+    description: "Manage languages used in employee profiles.",
+    icon: Languages,
   },
 ];
 

@@ -152,11 +152,37 @@ type Candidate = {
   emergency_contact_mobile: string;
   // References
   references: CandidateReference[];
+  // Ex-Service
+  is_ex_service: boolean;
+  ex_service_id: string | null;
+  // Languages / Experiences / Education
+  languages: string[];
+  experiences: CandidateExperience[];
+  educations: CandidateEducation[];
   application_date: string;
   preferred_joining_date: string | null;
   unit_id: string | null;
   designation_id: string | null;
   status: string;
+};
+
+type CandidateExperience = {
+  company_name: string;
+  designation: string;
+  location: string;
+  joined_date: string;
+  resigned_date: string;
+  reason: string;
+  remarks: string;
+};
+
+type CandidateEducation = {
+  education_name: string;
+  university: string;
+  course: string;
+  institution: string;
+  year_of_passing: string;
+  percentage: string;
 };
 
 type CandidateReference = {
@@ -192,10 +218,14 @@ type UnitLite = {
 };
 
 type DesignationLite = { id: string; name: string; code: string };
+type ExServiceLite = { id: string; name: string; description: string };
+type LanguageLite = { id: string; name: string };
 
 const QK = ["admin", "candidates"] as const;
 const QK_UNITS = ["admin", "units-lite"] as const;
 const QK_DESIG = ["admin", "designations-lite"] as const;
+const QK_EX_SERVICES = ["admin", "ex-services-lite"] as const;
+const QK_LANGUAGES = ["admin", "languages-lite"] as const;
 
 async function runWithQueryTimeout<T>(label: string, run: (signal: AbortSignal) => Promise<T>, timeoutMs = 8_000) {
   const controller = new AbortController();
@@ -290,14 +320,61 @@ function useDesignations() {
   });
 }
 
-// ---------------- Page ---------------- //
+function useExServices() {
+  return useQuery({
+    queryKey: QK_EX_SERVICES,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async (): Promise<ExServiceLite[]> => {
+      const { data, error } = await runWithQueryTimeout("Ex-Services", async (signal) =>
+        await supabase
+          .from("ex_services" as never)
+          .select("id,name,description,enabled")
+          .eq("enabled", true)
+          .order("name", { ascending: true })
+          .limit(500)
+          .abortSignal(signal),
+      );
+      if (error) throw error;
+      return ((data as unknown) as ExServiceLite[]) ?? [];
+    },
+  });
+}
+
+function useLanguagesLite() {
+  return useQuery({
+    queryKey: QK_LANGUAGES,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async (): Promise<LanguageLite[]> => {
+      const { data, error } = await runWithQueryTimeout("Languages", async (signal) =>
+        await supabase
+          .from("languages" as never)
+          .select("id,name,enabled")
+          .eq("enabled", true)
+          .order("name", { ascending: true })
+          .limit(500)
+          .abortSignal(signal),
+      );
+      if (error) throw error;
+      return ((data as unknown) as LanguageLite[]) ?? [];
+    },
+  });
+}
+
 function EmployeesPage() {
   const candidatesQuery = useCandidates();
   const unitsQuery = useUnits();
   const designationsQuery = useDesignations();
+  const exServicesQuery = useExServices();
+  const languagesQuery = useLanguagesLite();
   const candidates = candidatesQuery.data ?? [];
   const units = unitsQuery.data ?? [];
   const designations = designationsQuery.data ?? [];
+  const exServices = exServicesQuery.data ?? [];
+  const languagesList = languagesQuery.data ?? [];
   const isLoading = candidatesQuery.isLoading;
   const candidatesError = candidatesQuery.error;
   const qc = useQueryClient();
@@ -527,6 +604,8 @@ function EmployeesPage() {
         designations={designations}
         designationsLoading={designationsQuery.isLoading}
         designationsError={designationsQuery.error instanceof Error ? designationsQuery.error.message : null}
+        exServices={exServices}
+        languagesList={languagesList}
       />
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
@@ -638,6 +717,11 @@ function emptyForm(): CandidateForm {
     emergency_contact_relation: "",
     emergency_contact_mobile: "",
     references: [],
+    is_ex_service: false,
+    ex_service_id: null,
+    languages: [],
+    experiences: [],
+    educations: [],
     application_date: new Date().toISOString().slice(0, 10),
     preferred_joining_date: null,
     unit_id: null,
@@ -656,6 +740,8 @@ function CandidateWizard({
   designations,
   designationsLoading,
   designationsError,
+  exServices,
+  languagesList,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -666,6 +752,8 @@ function CandidateWizard({
   designations: DesignationLite[];
   designationsLoading: boolean;
   designationsError: string | null;
+  exServices: ExServiceLite[];
+  languagesList: LanguageLite[];
 }) {
   const qc = useQueryClient();
   const extractFn = useServerFn(extractAadhaar);

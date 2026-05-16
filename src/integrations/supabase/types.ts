@@ -132,13 +132,18 @@ export type Database = {
           created_at: string
           date_of_birth: string | null
           designation_id: string | null
+          educations: Json
           email: string
           emergency_contact_mobile: string
           emergency_contact_name: string
           emergency_contact_relation: string
+          ex_service_id: string | null
+          experiences: Json
           full_name: string
           gender: string
           id: string
+          is_ex_service: boolean
+          languages: Json
           marital_status: string
           mobile: string
           pan_image_url: string
@@ -187,13 +192,18 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           designation_id?: string | null
+          educations?: Json
           email?: string
           emergency_contact_mobile?: string
           emergency_contact_name?: string
           emergency_contact_relation?: string
+          ex_service_id?: string | null
+          experiences?: Json
           full_name?: string
           gender?: string
           id?: string
+          is_ex_service?: boolean
+          languages?: Json
           marital_status?: string
           mobile?: string
           pan_image_url?: string
@@ -242,13 +252,18 @@ export type Database = {
           created_at?: string
           date_of_birth?: string | null
           designation_id?: string | null
+          educations?: Json
           email?: string
           emergency_contact_mobile?: string
           emergency_contact_name?: string
           emergency_contact_relation?: string
+          ex_service_id?: string | null
+          experiences?: Json
           full_name?: string
           gender?: string
           id?: string
+          is_ex_service?: boolean
+          languages?: Json
           marital_status?: string
           mobile?: string
           pan_image_url?: string
@@ -756,6 +771,30 @@ export type Database = {
           id?: string
           notes?: string
           state?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      languages: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name?: string
           updated_at?: string
         }
         Relationships: []
