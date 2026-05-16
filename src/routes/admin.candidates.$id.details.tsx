@@ -16,8 +16,6 @@ import {
   Phone,
   FileBadge,
   Gavel,
-  Info,
-  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,14 +23,12 @@ import { Badge } from "@/components/ui/badge";
 import {
   emptyProof,
   emptyContact,
-  emptyNominee,
   SectionHeader,
   Field,
   PhysicalSection,
   ComplianceSection,
   KnowledgeSection,
   CriminalSection,
-  OtherSection,
   ListSection,
   IdentificationSection,
 } from "@/components/candidate-extra-sections";
@@ -47,8 +43,6 @@ const SECTIONS = [
   { id: "contacts", label: "Contacts", icon: Phone },
   { id: "identification", label: "Identification Proofs", icon: FileBadge },
   { id: "criminal", label: "Criminal History", icon: Gavel },
-  { id: "other", label: "Other Info", icon: Info },
-  { id: "nominations", label: "Nominations", icon: Users },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -247,25 +241,6 @@ function CandidateDetailsPage() {
           )}
           {active === "criminal" && (
             <CriminalSection form={form} set={set} />
-          )}
-          {active === "other" && (
-            <OtherSection form={form} setSection={setSection} />
-          )}
-          {active === "nominations" && (
-            <ListSection
-              title="Nominations"
-              description="Nominee details for PF / Gratuity / Insurance"
-              items={form.nominations}
-              onChange={(v) => set("nominations", v)}
-              empty={emptyNominee}
-              fields={[
-                { key: "name", label: "Nominee Name" },
-                { key: "relation", label: "Relation" },
-                { key: "dob", label: "Date of Birth", type: "date" },
-                { key: "share_percent", label: "Share %" },
-                { key: "aadhaar", label: "Aadhaar" },
-              ]}
-            />
           )}
         </section>
       </div>
