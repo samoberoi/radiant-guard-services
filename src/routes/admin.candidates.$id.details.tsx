@@ -8,6 +8,8 @@ import {
   ArrowLeft,
   Save,
   CheckCircle2,
+  XCircle,
+  RotateCcw,
   Loader2,
   Activity,
   ShieldCheck,
@@ -16,10 +18,20 @@ import {
   Phone,
   FileBadge,
   Gavel,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   emptyProof,
   emptyContact,
@@ -55,9 +67,12 @@ function CandidateDetailsPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const router = useRouter();
-  const [active, setActive] = useState<SectionId>("physical");
+  const [active, setActive] = useState<SectionId>("basic");
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>(null);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [statusBusy, setStatusBusy] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["candidate-details", id],
@@ -138,6 +153,48 @@ function CandidateDetailsPage() {
     toast.success("KYC marked completed");
   };
 
+  const changeStatus = async (
+    next: "approved" | "rejected" | "pending",
+    reason = "",
+  ) => {
+    setStatusBusy(true);
+    try {
+      const { error } = await supabase
+        .from("candidates")
+        .update({ status: next, rejection_reason: reason })
+        .eq("id", id);
+      if (error) throw error;
+      setForm((p: any) => ({ ...p, status: next, rejection_reason: reason }));
+      await logActivity({
+        module: MODULE,
+        action: next === "approved" ? "approve" : next === "rejected" ? "reject" : "resubmit",
+        entityType: "candidate",
+        entityId: id,
+        entityLabel: form?.full_name || id,
+        details: reason ? { reason } : undefined,
+      });
+      toast.success(
+        next === "approved" ? "Candidate approved" :
+        next === "rejected" ? "Candidate rejected" :
+        "Candidate resubmitted for review",
+      );
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update status");
+    } finally {
+      setStatusBusy(false);
+    }
+  };
+
+  const submitReject = async () => {
+    if (!rejectReason.trim()) {
+      toast.error("Please provide a rejection reason");
+      return;
+    }
+    await changeStatus("rejected", rejectReason.trim());
+    setRejectOpen(false);
+    setRejectReason("");
+  };
+
   if (isLoading || !form) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -155,7 +212,15 @@ function CandidateDetailsPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-xl font-semibold">Edit Candidate</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold">Edit Candidate</h1>
+              {form.candidate_code && (
+                <Badge variant="outline" className="font-mono text-xs">
+                  {form.candidate_code}
+                </Badge>
+              )}
+              <StatusPill status={form.status} />
+            </div>
             <p className="text-xs text-muted-foreground">
               {form.full_name || "—"} · {form.mobile || "no mobile"}
             </p>
@@ -171,6 +236,50 @@ function CandidateDetailsPage() {
               <CheckCircle2 className="mr-2 h-4 w-4" /> Mark KYC Completed
             </Button>
           )}
+
+          {form.status === "pending" && (
+            <>
+              <Button
+                size="sm"
+                onClick={() => changeStatus("approved")}
+                disabled={statusBusy}
+                className="bg-emerald-600 text-white hover:bg-emerald-700"
+              >
+                {statusBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setRejectOpen(true)}
+                disabled={statusBusy}
+              >
+                <XCircle className="mr-2 h-4 w-4" /> Reject
+              </Button>
+            </>
+          )}
+          {form.status === "rejected" && (
+            <Button
+              size="sm"
+              onClick={() => changeStatus("pending", "")}
+              disabled={statusBusy}
+              className="bg-amber-600 text-white hover:bg-amber-700"
+            >
+              {statusBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+              Resubmit for Review
+            </Button>
+          )}
+          {form.status === "approved" && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => setRejectOpen(true)}
+              disabled={statusBusy}
+            >
+              <XCircle className="mr-2 h-4 w-4" /> Reject
+            </Button>
+          )}
+
           <Button variant="outline" size="sm" onClick={() => router.history.back()}>
             Cancel
           </Button>
@@ -183,6 +292,24 @@ function CandidateDetailsPage() {
           </Button>
         </div>
       </div>
+
+      {form.status === "rejected" && form.rejection_reason && (
+        <div className="flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm dark:border-rose-900/40 dark:bg-rose-950/30">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+          <div>
+            <div className="font-semibold text-rose-700 dark:text-rose-300">Rejected</div>
+            <div className="text-rose-700/90 dark:text-rose-200/90">{form.rejection_reason}</div>
+          </div>
+        </div>
+      )}
+      {form.status === "approved" && (
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/30">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          <div className="font-medium text-emerald-700 dark:text-emerald-300">
+            This candidate has been approved.
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
         {/* Sidebar */}
@@ -244,7 +371,47 @@ function CandidateDetailsPage() {
           )}
         </section>
       </div>
+
+      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject candidate</DialogTitle>
+            <DialogDescription>
+              Provide a reason. The candidate can be resubmitted for review after edits.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="Reason for rejection…"
+            rows={4}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectOpen(false)} disabled={statusBusy}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={submitReject} disabled={statusBusy}>
+              {statusBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm Rejection
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    draft: "bg-slate-500/15 text-slate-600",
+    pending: "bg-amber-500/15 text-amber-600",
+    approved: "bg-emerald-500/15 text-emerald-600",
+    rejected: "bg-rose-500/15 text-rose-600",
+  };
+  return (
+    <Badge className={`border-0 font-semibold capitalize ${map[status] ?? "bg-secondary text-foreground"}`}>
+      {status || "—"}
+    </Badge>
   );
 }
 
@@ -255,6 +422,7 @@ function BasicSection({ form }: { form: any }) {
     <div>
       <SectionHeader title="Basic Info" desc="Read-only. Edit via the candidate wizard." />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Field label="Candidate Code"><Input value={form.candidate_code || "—"} readOnly className="font-mono" /></Field>
         <Field label="Full Name"><Input value={form.full_name || ""} readOnly /></Field>
         <Field label="Mobile"><Input value={form.mobile || ""} readOnly /></Field>
         <Field label="Email"><Input value={form.email || ""} readOnly /></Field>
