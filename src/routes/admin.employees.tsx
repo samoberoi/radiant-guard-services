@@ -614,13 +614,11 @@ function CandidateWizard({
         });
         setScanning(true);
         try {
-          let res = (await extractFn({
+          const serverRes = (await extractFn({
             data: { fileDataUrl: dataUrl, mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg") },
           })) as AadhaarExtraction;
-
-          if (!clientOcr.hasUsefulAadhaarData(res)) {
-            res = await clientOcr.extractAadhaarClient(file);
-          }
+          const clientRes = await clientOcr.extractAadhaarClient(file);
+          const res = clientOcr.mergeAadhaarExtractions(serverRes, clientRes);
 
           applyExtraction(res);
           const filled = clientOcr.countExtractedFields(res);
@@ -629,7 +627,7 @@ function CandidateWizard({
           } else {
             toast.success(`Aadhaar scanned — ${filled} field(s) auto-filled`);
           }
-        } catch (e) {
+          } catch (e) {
           try {
             const fallback = await clientOcr.extractAadhaarClient(file);
             applyExtraction(fallback);
