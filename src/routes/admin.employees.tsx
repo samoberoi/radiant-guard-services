@@ -229,6 +229,8 @@ const BANK_ACCOUNT_TYPES = ["Savings", "Current", "Salary"] as const;
 type CandidateListItem = Pick<
   Candidate,
   | "id"
+  | "candidate_code"
+  | "rejection_reason"
   | "aadhaar_number"
   | "full_name"
   | "photo_url"
