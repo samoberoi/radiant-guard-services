@@ -67,9 +67,12 @@ function CandidateDetailsPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const router = useRouter();
-  const [active, setActive] = useState<SectionId>("physical");
+  const [active, setActive] = useState<SectionId>("basic");
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>(null);
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [statusBusy, setStatusBusy] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["candidate-details", id],
