@@ -108,7 +108,11 @@ function isIsoDate(value: string) {
 
 function isUsefulName(value: string) {
   const next = cleanLine(value);
-  return /^[A-Za-z][A-Za-z .'-]{2,79}$/.test(next) && next.split(/\s+/).length >= 2;
+  if (!/^[A-Za-z][A-Za-z .'-]{2,79}$/.test(next)) return false;
+  const wordParts = next.match(/[A-Za-z]+/g) ?? [];
+  const meaningfulParts = wordParts.filter((part) => part.length >= 2);
+  const totalLetters = wordParts.join("").length;
+  return meaningfulParts.length >= 2 && totalLetters >= 4;
 }
 
 function isUsefulPlace(value: string) {
@@ -383,6 +387,6 @@ export function countExtractedFields(extraction: AadhaarExtraction) {
 }
 
 export function hasUsefulAadhaarData(extraction: AadhaarExtraction) {
-  const hasIdentityCore = /^\d{12}$/.test(extraction.aadhaar_number) || isUsefulName(extraction.full_name);
+  const hasIdentityCore = /^\d{12}$/.test(extraction.aadhaar_number) && isUsefulName(extraction.full_name);
   return hasIdentityCore && countValidFields(extraction) >= 3;
 }
