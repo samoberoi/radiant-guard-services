@@ -1863,20 +1863,30 @@ function CandidateWizard({
           )}
         </div>
 
-        {step === "form" && (
-          <DialogFooter className="border-t border-border bg-card px-6 py-4">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+        <DialogFooter className="flex-col gap-2 border-t border-border bg-card px-6 py-4 sm:flex-row sm:justify-between">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="sm:mr-auto">
+            Cancel
+          </Button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button
+              variant="secondary"
+              onClick={saveDraft}
+              disabled={savingDraft || submitting || !!uploading || scanning}
+            >
+              {savingDraft && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+              Save Draft
+            </Button>
             <Button
               onClick={submit}
-              disabled={submitting || !!uploading || scanning || !uploadsComplete}
-              title={!uploadsComplete ? "Upload photograph, Aadhaar and signature to continue" : undefined}
+              disabled={submitting || savingDraft || !!uploading || scanning || !profileComplete}
+              title={!profileComplete ? `Complete all ${completionTotal} required fields to submit (${completionPct}% done)` : undefined}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {submitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
               {editing ? "Save Changes" : "Create Candidate"}
             </Button>
-          </DialogFooter>
-        )}
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
