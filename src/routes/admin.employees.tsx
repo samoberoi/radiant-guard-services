@@ -20,7 +20,6 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { extractAadhaar, type AadhaarExtraction } from "@/lib/aadhaar.functions";
-import { getEmployeesPageData } from "@/lib/employees.functions";
 import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -293,17 +292,14 @@ function useDesignations() {
 
 // ---------------- Page ---------------- //
 function EmployeesPage() {
-  const fetchEmployeesPageData = useServerFn(getEmployeesPageData);
-  const { data: pageData, isLoading, error: candidatesError } = useQuery({
-    queryKey: ["admin", "employees-page"],
-    queryFn: () => fetchEmployeesPageData(),
-    retry: false,
-    refetchOnWindowFocus: false,
-    staleTime: 60_000,
-  });
-  const candidates = pageData?.candidates ?? [];
-  const units = pageData?.units ?? [];
-  const designations = pageData?.designations ?? [];
+  const candidatesQuery = useCandidates();
+  const unitsQuery = useUnits();
+  const designationsQuery = useDesignations();
+  const candidates = candidatesQuery.data ?? [];
+  const units = unitsQuery.data ?? [];
+  const designations = designationsQuery.data ?? [];
+  const isLoading = candidatesQuery.isLoading;
+  const candidatesError = candidatesQuery.error;
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
@@ -526,7 +522,11 @@ function EmployeesPage() {
         }}
         editing={editing}
         units={units}
+        unitsLoading={unitsQuery.isLoading}
+        unitsError={unitsQuery.error instanceof Error ? unitsQuery.error.message : null}
         designations={designations}
+        designationsLoading={designationsQuery.isLoading}
+        designationsError={designationsQuery.error instanceof Error ? designationsQuery.error.message : null}
       />
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
@@ -572,6 +572,22 @@ function maskAadhaar(n: string) {
 
 // ---------------- Wizard ---------------- //
 type WizardStep = "aadhaar" | "otp" | "form";
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
 
 type CandidateForm = Omit<Candidate, "id">;
 
@@ -635,13 +651,21 @@ function CandidateWizard({
   onOpenChange,
   editing,
   units,
+  unitsLoading,
+  unitsError,
   designations,
+  designationsLoading,
+  designationsError,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   editing: Candidate | null;
   units: UnitLite[];
+  unitsLoading: boolean;
+  unitsError: string | null;
   designations: DesignationLite[];
+  designationsLoading: boolean;
+  designationsError: string | null;
 }) {
   const qc = useQueryClient();
   const extractFn = useServerFn(extractAadhaar);
@@ -791,13 +815,17 @@ function CandidateWizard({
 
           const aiPromise = Promise.all([dataUrlPromise, pageImageDataUrlsPromise])
             .then(([dataUrl, pageImageDataUrls]) =>
-              extractFn({
-                data: {
-                  fileDataUrl: dataUrl,
-                  mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
-                  pageImageDataUrls,
-                },
-              }) as Promise<AadhaarExtraction>,
+              withTimeout(
+                extractFn({
+                  data: {
+                    fileDataUrl: dataUrl,
+                    mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
+                    pageImageDataUrls,
+                  },
+                }) as Promise<AadhaarExtraction>,
+                12_000,
+                "Aadhaar AI extraction timed out",
+              ),
             )
             .catch(() => null);
 
@@ -1197,6 +1225,14 @@ function CandidateWizard({
                 </div>
               </Section>
 
+              {(unitsLoading || unitsError || designationsLoading || designationsError) && (
+                <div className="rounded-lg border border-border bg-secondary/30 px-4 py-3 text-sm text-muted-foreground">
+                  {unitsLoading || designationsLoading
+                    ? "Loading units and designations…"
+                    : unitsError || designationsError || "Reference data is unavailable right now."}
+                </div>
+              )}
+
               <Section title="Basic Information">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Full Name" required>
@@ -1583,6 +1619,8 @@ function CandidateWizard({
                       units={units}
                       value={form.unit_id}
                       onChange={(id) => set("unit_id", id)}
+                      disabled={unitsLoading || !!unitsError}
+                      emptyMessage={unitsError ? `Could not load units: ${unitsError}` : "No units found."}
                     />
                   </Field>
                   <Field label="Organization">
@@ -1593,6 +1631,8 @@ function CandidateWizard({
                       designations={designations}
                       value={form.designation_id}
                       onChange={(id) => set("designation_id", id)}
+                      disabled={designationsLoading || !!designationsError}
+                      emptyMessage={designationsError ? `Could not load designations: ${designationsError}` : "No designations found."}
                     />
                   </Field>
                   <Field label="Status">
@@ -1948,10 +1988,14 @@ function UnitPicker({
   units,
   value,
   onChange,
+  disabled = false,
+  emptyMessage = "No units found.",
 }: {
   units: UnitLite[];
   value: string | null;
   onChange: (id: string | null) => void;
+  disabled?: boolean;
+  emptyMessage?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -1970,7 +2014,7 @@ function UnitPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" className="w-full justify-between font-normal">
+        <Button type="button" variant="outline" role="combobox" disabled={disabled} className="w-full justify-between font-normal">
           {selected ? (
             <span className="truncate">
               <b>{selected.code}</b> · {selected.name}
@@ -1985,7 +2029,7 @@ function UnitPicker({
         <Command shouldFilter={false}>
           <CommandInput placeholder="Search units…" value={query} onValueChange={setQuery} />
           <CommandList>
-            <CommandEmpty>No units found.</CommandEmpty>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
               {filteredUnits.map((u) => (
                 <CommandItem
@@ -2015,10 +2059,14 @@ function DesignationPicker({
   designations,
   value,
   onChange,
+  disabled = false,
+  emptyMessage = "No designations found.",
 }: {
   designations: DesignationLite[];
   value: string | null;
   onChange: (id: string | null) => void;
+  disabled?: boolean;
+  emptyMessage?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -2034,7 +2082,7 @@ function DesignationPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" className="w-full justify-between font-normal">
+        <Button type="button" variant="outline" role="combobox" disabled={disabled} className="w-full justify-between font-normal">
           {selected ? (
             <span className="truncate">
               {selected.code ? <><b>{selected.code}</b> · </> : null}{selected.name}
@@ -2049,7 +2097,7 @@ function DesignationPicker({
         <Command shouldFilter={false}>
           <CommandInput placeholder="Search designations…" value={query} onValueChange={setQuery} />
           <CommandList>
-            <CommandEmpty>No designations found.</CommandEmpty>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
               {filtered.map((d) => (
                 <CommandItem
