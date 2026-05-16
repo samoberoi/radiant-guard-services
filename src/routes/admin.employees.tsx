@@ -600,7 +600,11 @@ function CandidateWizard({
   };
 
   // ----- Submit ----- //
+  const uploadsComplete = !!form.photo_url && !!form.aadhaar_image_url && !!form.signature_url;
   const submit = async () => {
+    if (!form.photo_url) return toast.error("Photograph is required");
+    if (!form.aadhaar_image_url) return toast.error("Aadhaar upload is required");
+    if (!form.signature_url) return toast.error("Signature is required");
     if (!form.full_name.trim()) return toast.error("Name is required");
     if (!form.mobile.trim()) return toast.error("Mobile is required");
     setSubmitting(true);
