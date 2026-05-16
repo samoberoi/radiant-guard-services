@@ -693,6 +693,11 @@ function CandidateWizard({
 
       if (slot === "aadhaar") {
         const clientOcr = await getAadhaarOcrClient();
+        const looksSuspicious = (value: string) => {
+          const next = value.trim();
+          if (!next) return false;
+          return /[`~^*_={}|<>]/.test(next) || /[;:]{2,}/.test(next) || /\b[il1|]\s*[;:=]\s*/i.test(next);
+        };
         const isTrustedExtraction = (extraction: AadhaarExtraction) => {
           const normalizedName = extraction.full_name.trim();
           const nameParts = normalizedName.match(/[A-Za-z]+/g) ?? [];
@@ -706,7 +711,18 @@ function CandidateWizard({
             extraction.city,
             extraction.district,
             extraction.state,
-          ].some((value) => /[A-Za-z]{3,}/.test(value ?? ""));
+          ].some((value) => /[A-Za-z]{3,}/.test(value ?? "") && !looksSuspicious(value ?? ""));
+
+          if (
+            looksSuspicious(extraction.full_name) ||
+            looksSuspicious(extraction.address_line1) ||
+            looksSuspicious(extraction.address_line2) ||
+            looksSuspicious(extraction.city) ||
+            looksSuspicious(extraction.district) ||
+            looksSuspicious(extraction.state)
+          ) {
+            return false;
+          }
 
           return (
             hasValidAadhaar &&
@@ -729,12 +745,17 @@ function CandidateWizard({
             reader.readAsDataURL(file);
           });
 
-          const aiPromise = dataUrlPromise
-            .then((dataUrl) =>
+          const pageImageDataUrlsPromise = isPdf
+            ? clientOcr.renderPdfPagesAsDataUrls(file).catch(() => [])
+            : Promise.resolve<string[]>([]);
+
+          const aiPromise = Promise.all([dataUrlPromise, pageImageDataUrlsPromise])
+            .then(([dataUrl, pageImageDataUrls]) =>
               extractFn({
                 data: {
                   fileDataUrl: dataUrl,
                   mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
+                  pageImageDataUrls,
                 },
               }) as Promise<AadhaarExtraction>,
             )
@@ -806,9 +827,15 @@ function CandidateWizard({
 
   const applyExtraction = (x: AadhaarExtraction) => {
     const cleanValue = (incoming: string) => incoming?.trim() ?? "";
+    const looksSuspicious = (value: string) => {
+      const next = cleanValue(value);
+      if (!next) return false;
+      return /[`~^*_={}|<>]/.test(next) || /[;:]{2,}/.test(next) || /\b[il1|]\s*[;:=]\s*/i.test(next);
+    };
     const looksUseful = (value: string, kind: "name" | "address" | "place" | "pin" | "aadhaar" | "gender") => {
       const next = cleanValue(value);
       if (!next) return false;
+      if ((kind === "name" || kind === "address" || kind === "place") && looksSuspicious(next)) return false;
       switch (kind) {
         case "name": {
           if (!/^[A-Za-z][A-Za-z .'-]{1,79}$/.test(next)) return false;
