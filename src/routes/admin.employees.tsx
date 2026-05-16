@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useServerFn } from "@tanstack/react-start";
+import { createClientOnlyFn, useServerFn } from "@tanstack/react-start";
 import {
   Camera,
   CheckCircle2,
@@ -85,17 +85,7 @@ const MARITAL_STATUSES = ["Single", "Married", "Divorced", "Widowed", "Separated
 const GENDERS = ["Male", "Female", "Other"];
 const MOCK_OTP = "1111";
 
-let aadhaarOcrClientPromise: Promise<typeof import("@/lib/aadhaar-ocr.client")> | null = null;
-
-async function getAadhaarOcrClient() {
-  if (typeof window === "undefined") {
-    throw new Error("Aadhaar OCR is only available in the browser");
-  }
-  if (!aadhaarOcrClientPromise) {
-    aadhaarOcrClientPromise = import("@/lib/aadhaar-ocr.client");
-  }
-  return aadhaarOcrClientPromise;
-}
+const getAadhaarOcrClient = createClientOnlyFn(() => import("@/lib/aadhaar-ocr.client"));
 
 // ---------------- Types ---------------- //
 type AddressBlock = {
