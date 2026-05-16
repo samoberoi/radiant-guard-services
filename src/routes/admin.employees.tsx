@@ -7,7 +7,6 @@ import {
   CriminalSection,
   OtherSection,
   ListSection,
-  emptyNominee,
 } from "@/components/candidate-extra-sections";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -1913,25 +1912,6 @@ function CandidateWizard({
                 <CriminalSection form={form} set={setAny} />
               </Section>
 
-              <Section title="Other Info">
-                <OtherSection form={form} setSection={setSection} />
-              </Section>
-
-              <Section title="Nominations">
-                <ListSection
-                  title=""
-                  items={form.nominations}
-                  onChange={(v: any[]) => setAny("nominations", v)}
-                  empty={emptyNominee}
-                  fields={[
-                    { key: "name", label: "Nominee Name" },
-                    { key: "relation", label: "Relation" },
-                    { key: "dob", label: "Date of Birth", type: "date" },
-                    { key: "share_percent", label: "Share %" },
-                    { key: "aadhaar", label: "Aadhaar" },
-                  ]}
-                />
-              </Section>
             </div>
           )}
         </div>
