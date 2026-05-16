@@ -1258,139 +1258,52 @@ function CandidateWizard({
             {editing ? "Edit Candidate" : "Add Candidate"}
           </DialogTitle>
           <DialogDescription>
-            {step === "aadhaar" && "Start by entering the candidate's Aadhaar number."}
-            {step === "otp" && "An OTP has been sent to the Aadhaar-linked mobile number."}
-            {step === "form" && "Complete the candidate's profile."}
+            Complete the candidate profile. Save a draft any time; only submit when 100% complete.
           </DialogDescription>
         </DialogHeader>
 
-        {/* Stepper */}
-        {!editing && (
-          <div className="flex items-center justify-center gap-2 border-b border-border bg-card px-6 py-3">
-            {[
-              { id: "aadhaar", label: "Aadhaar" },
-              { id: "otp", label: "Verify OTP" },
-              { id: "form", label: "Details" },
-            ].map((s, i) => {
-              const active = step === s.id;
-              const done = ["aadhaar", "otp", "form"].indexOf(step) > i;
-              return (
-                <div key={s.id} className="flex items-center gap-2">
-                  <div
-                    className={cn(
-                      "flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
-                      active
-                        ? "bg-primary text-primary-foreground"
-                        : done
-                          ? "bg-emerald-500 text-white"
-                          : "bg-secondary text-muted-foreground",
-                    )}
-                  >
-                    {done ? <CheckCircle2 className="h-4 w-4" /> : i + 1}
-                  </div>
-                  <span
-                    className={cn(
-                      "text-xs font-semibold",
-                      active ? "text-foreground" : "text-muted-foreground",
-                    )}
-                  >
-                    {s.label}
-                  </span>
-                  {i < 2 && <div className="ml-1 h-px w-8 bg-border" />}
-                </div>
-              );
-            })}
+        {/* Profile completion meter */}
+        <div className="border-b border-border bg-card px-6 py-4">
+          <div className="mb-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                Profile Completion
+              </span>
+              {editing?.candidate_code && (
+                <Badge className="border-0 bg-primary/10 font-mono text-[11px] font-semibold text-primary">
+                  {editing.candidate_code}
+                </Badge>
+              )}
+            </div>
+            <span className={cn(
+              "text-sm font-bold tabular-nums",
+              completionPct === 100 ? "text-emerald-600" : completionPct >= 60 ? "text-amber-600" : "text-rose-500",
+            )}>
+              {completionPct}%
+            </span>
           </div>
-        )}
+          <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+            <div
+              className={cn(
+                "h-full transition-all",
+                completionPct === 100
+                  ? "bg-emerald-500"
+                  : completionPct >= 60
+                    ? "bg-amber-500"
+                    : "bg-rose-500",
+              )}
+              style={{ width: `${completionPct}%` }}
+            />
+          </div>
+          <p className="mt-2 text-[11px] text-muted-foreground">
+            {completionDone} of {completionTotal} required fields complete
+            {!profileComplete && " — Save as draft to come back later."}
+          </p>
+        </div>
 
         <div className="px-6 py-5">
-          {/* ----- Step: Aadhaar ----- */}
-          {step === "aadhaar" && (
-            <div className="mx-auto max-w-md space-y-4 py-6">
-              <div className="flex flex-col items-center gap-3 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/15 text-accent">
-                  <IdCard className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-display text-lg font-bold">Enter Aadhaar Number</h3>
-                  <p className="text-sm text-muted-foreground">
-                    We'll send a one-time password to the Aadhaar-linked mobile.
-                  </p>
-                </div>
-              </div>
-              <div>
-                <Label>Aadhaar Number</Label>
-                <Input
-                  value={form.aadhaar_number}
-                  onChange={(e) =>
-                    set("aadhaar_number", e.target.value.replace(/\D/g, "").slice(0, 12))
-                  }
-                  placeholder="12-digit Aadhaar"
-                  className="mt-1 text-center font-mono text-lg tracking-widest"
-                  maxLength={12}
-                />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {form.aadhaar_number.length}/12 digits
-                </p>
-              </div>
-              <Button onClick={sendOtp} disabled={!aadhaarValid} className="w-full">
-                Send OTP
-              </Button>
-            </div>
-          )}
-
-          {/* ----- Step: OTP ----- */}
-          {step === "otp" && (
-            <div className="mx-auto max-w-md space-y-4 py-6">
-              <div className="flex flex-col items-center gap-3 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/15 text-accent">
-                  <ShieldCheck className="h-6 w-6" />
-                </div>
-                <div>
-                  <h3 className="font-display text-lg font-bold">Verify OTP</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Enter the 4-digit OTP sent to the registered mobile. (Demo: <b>1111</b>)
-                  </p>
-                </div>
-              </div>
-              <div>
-                <Label>OTP</Label>
-                <Input
-                  value={otp}
-                  onChange={(e) => {
-                    setOtp(e.target.value.replace(/\D/g, "").slice(0, 4));
-                    setOtpError(null);
-                  }}
-                  placeholder="• • • •"
-                  className="mt-1 text-center font-mono text-2xl tracking-[0.5em]"
-                  maxLength={4}
-                />
-                {otpError && <p className="mt-1 text-xs text-rose-500">{otpError}</p>}
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  className="flex-1"
-                  onClick={() => toast.success(`OTP resent. (Demo: ${MOCK_OTP})`)}
-                >
-                  Resend OTP
-                </Button>
-                <Button onClick={verifyOtp} disabled={otp.length !== 4} className="flex-1">
-                  Verify OTP
-                </Button>
-              </div>
-              <button
-                type="button"
-                className="block w-full text-center text-xs text-muted-foreground hover:text-foreground"
-                onClick={() => setStep("aadhaar")}
-              >
-                ← Change Aadhaar number
-              </button>
-            </div>
-          )}
-
-          {/* ----- Step: Full form ----- */}
-          {step === "form" && (
+          {/* ----- Full form (single page) ----- */}
+          {true && (
             <div className="space-y-6">
               {/* Uploads strip */}
               <Section title={`Uploads — all required${uploadsComplete ? "" : " (incomplete)"}`}>
