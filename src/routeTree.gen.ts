@@ -19,6 +19,7 @@ import { Route as AdminProfessionalTaxManagerRouteImport } from './routes/admin.
 import { Route as AdminPayrollManagerRouteImport } from './routes/admin.payroll-manager'
 import { Route as AdminPayrollDaysManagerRouteImport } from './routes/admin.payroll-days-manager'
 import { Route as AdminLwfManagerRouteImport } from './routes/admin.lwf-manager'
+import { Route as AdminLanguageManagerRouteImport } from './routes/admin.language-manager'
 import { Route as AdminExServiceManagerRouteImport } from './routes/admin.ex-service-manager'
 import { Route as AdminEmployeesRouteImport } from './routes/admin.employees'
 import { Route as AdminDutyManagerRouteImport } from './routes/admin.duty-manager'
@@ -83,6 +84,11 @@ const AdminPayrollDaysManagerRoute = AdminPayrollDaysManagerRouteImport.update({
 const AdminLwfManagerRoute = AdminLwfManagerRouteImport.update({
   id: '/lwf-manager',
   path: '/lwf-manager',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLanguageManagerRoute = AdminLanguageManagerRouteImport.update({
+  id: '/language-manager',
+  path: '/language-manager',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminExServiceManagerRoute = AdminExServiceManagerRouteImport.update({
@@ -176,6 +182,7 @@ export interface FileRoutesByFullPath {
   '/admin/duty-manager': typeof AdminDutyManagerRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/ex-service-manager': typeof AdminExServiceManagerRoute
+  '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
@@ -202,6 +209,7 @@ export interface FileRoutesByTo {
   '/admin/duty-manager': typeof AdminDutyManagerRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/ex-service-manager': typeof AdminExServiceManagerRoute
+  '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
@@ -229,6 +237,7 @@ export interface FileRoutesById {
   '/admin/duty-manager': typeof AdminDutyManagerRoute
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/ex-service-manager': typeof AdminExServiceManagerRoute
+  '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
@@ -257,6 +266,7 @@ export interface FileRouteTypes {
     | '/admin/duty-manager'
     | '/admin/employees'
     | '/admin/ex-service-manager'
+    | '/admin/language-manager'
     | '/admin/lwf-manager'
     | '/admin/payroll-days-manager'
     | '/admin/payroll-manager'
@@ -283,6 +293,7 @@ export interface FileRouteTypes {
     | '/admin/duty-manager'
     | '/admin/employees'
     | '/admin/ex-service-manager'
+    | '/admin/language-manager'
     | '/admin/lwf-manager'
     | '/admin/payroll-days-manager'
     | '/admin/payroll-manager'
@@ -309,6 +320,7 @@ export interface FileRouteTypes {
     | '/admin/duty-manager'
     | '/admin/employees'
     | '/admin/ex-service-manager'
+    | '/admin/language-manager'
     | '/admin/lwf-manager'
     | '/admin/payroll-days-manager'
     | '/admin/payroll-manager'
@@ -399,6 +411,13 @@ declare module '@tanstack/react-router' {
       path: '/lwf-manager'
       fullPath: '/admin/lwf-manager'
       preLoaderRoute: typeof AdminLwfManagerRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/language-manager': {
+      id: '/admin/language-manager'
+      path: '/language-manager'
+      fullPath: '/admin/language-manager'
+      preLoaderRoute: typeof AdminLanguageManagerRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/ex-service-manager': {
@@ -530,6 +549,7 @@ interface AdminRouteChildren {
   AdminDutyManagerRoute: typeof AdminDutyManagerRoute
   AdminEmployeesRoute: typeof AdminEmployeesRoute
   AdminExServiceManagerRoute: typeof AdminExServiceManagerRoute
+  AdminLanguageManagerRoute: typeof AdminLanguageManagerRoute
   AdminLwfManagerRoute: typeof AdminLwfManagerRoute
   AdminPayrollDaysManagerRoute: typeof AdminPayrollDaysManagerRoute
   AdminPayrollManagerRoute: typeof AdminPayrollManagerRoute
@@ -549,6 +569,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDutyManagerRoute: AdminDutyManagerRoute,
   AdminEmployeesRoute: AdminEmployeesRoute,
   AdminExServiceManagerRoute: AdminExServiceManagerRoute,
+  AdminLanguageManagerRoute: AdminLanguageManagerRoute,
   AdminLwfManagerRoute: AdminLwfManagerRoute,
   AdminPayrollDaysManagerRoute: AdminPayrollDaysManagerRoute,
   AdminPayrollManagerRoute: AdminPayrollManagerRoute,
@@ -569,3 +590,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
