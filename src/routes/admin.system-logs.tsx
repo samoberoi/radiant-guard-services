@@ -318,6 +318,7 @@ function SystemLogsPage() {
                 <th className="px-4 py-3">Module</th>
                 <th className="px-4 py-3">Action</th>
                 <th className="px-4 py-3">Entity</th>
+                <th className="px-4 py-3">Changes</th>
                 <th className="px-4 py-3">User</th>
                 <th className="px-4 py-3">IP</th>
                 <th className="px-4 py-3">Status</th>
@@ -344,6 +345,9 @@ function SystemLogsPage() {
                   <td className="px-4 py-3 text-foreground/90">
                     {l.entity_label || l.entity_type || "—"}
                   </td>
+                  <td className="px-4 py-3 text-foreground/80">
+                    <ChangesSummary details={l.details} />
+                  </td>
                   <td className="px-4 py-3 text-foreground/80">{l.user_phone || "—"}</td>
                   <td className="px-4 py-3 text-foreground/70">{l.ip_address || "—"}</td>
                   <td className="px-4 py-3">
@@ -363,7 +367,7 @@ function SystemLogsPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
                     No log entries for this filter.
                   </td>
                 </tr>
