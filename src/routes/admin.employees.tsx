@@ -170,6 +170,21 @@ const QK = ["admin", "candidates"] as const;
 const QK_UNITS = ["admin", "units-lite"] as const;
 const QK_DESIG = ["admin", "designations-lite"] as const;
 
+async function runWithQueryTimeout<T>(label: string, run: (signal: AbortSignal) => Promise<T>, timeoutMs = 8_000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await run(controller.signal);
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`${label} request timed out. Please retry.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 // ---------------- Hooks ---------------- //
 function useCandidates() {
   return useQuery({
@@ -178,11 +193,14 @@ function useCandidates() {
     refetchOnWindowFocus: false,
     staleTime: 60_000,
     queryFn: async (): Promise<CandidateListItem[]> => {
-      const { data, error } = await supabase
-        .from("candidates" as never)
-        .select("id,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status")
-        .order("created_at", { ascending: false })
-        .limit(250);
+      const { data, error } = await runWithQueryTimeout("Employees", (signal) =>
+        supabase
+          .from("candidates" as never)
+          .select("id,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status")
+          .order("created_at", { ascending: false })
+          .limit(250)
+          .abortSignal(signal),
+      );
       if (error) throw error;
       return ((data as unknown) as CandidateListItem[]) ?? [];
     },
@@ -196,20 +214,26 @@ function useUnits() {
     refetchOnWindowFocus: false,
     staleTime: 60_000,
     queryFn: async (): Promise<UnitLite[]> => {
-      const { data, error } = await supabase
-        .from("units" as never)
-        .select("id,code,name,customer_id")
-        .order("name", { ascending: true })
-        .limit(2000);
+      const { data, error } = await runWithQueryTimeout("Units", (signal) =>
+        supabase
+          .from("units" as never)
+          .select("id,code,name,customer_id")
+          .order("name", { ascending: true })
+          .limit(2000)
+          .abortSignal(signal),
+      );
       if (error) throw error;
       const units = ((data as unknown) as UnitLite[]) ?? [];
       const custIds = Array.from(new Set(units.map((u) => u.customer_id).filter(Boolean))) as string[];
       let custMap = new Map<string, string>();
       if (custIds.length) {
-        const { data: cs } = await supabase
-          .from("customers" as never)
-          .select("id,name")
-          .in("id", custIds);
+        const { data: cs } = await runWithQueryTimeout("Customers", (signal) =>
+          supabase
+            .from("customers" as never)
+            .select("id,name")
+            .in("id", custIds)
+            .abortSignal(signal),
+        );
         custMap = new Map(((cs ?? []) as Array<{ id: string; name: string }>).map((c) => [c.id, c.name]));
       }
       return units.map((u) => ({ ...u, customer_name: u.customer_id ? custMap.get(u.customer_id) ?? "" : "" }));
@@ -224,12 +248,15 @@ function useDesignations() {
     refetchOnWindowFocus: false,
     staleTime: 60_000,
     queryFn: async (): Promise<DesignationLite[]> => {
-      const { data, error } = await supabase
-        .from("designations" as never)
-        .select("id,name,code,enabled")
-        .eq("enabled", true)
-        .order("name", { ascending: true })
-        .limit(500);
+      const { data, error } = await runWithQueryTimeout("Designations", (signal) =>
+        supabase
+          .from("designations" as never)
+          .select("id,name,code,enabled")
+          .eq("enabled", true)
+          .order("name", { ascending: true })
+          .limit(500)
+          .abortSignal(signal),
+      );
       if (error) throw error;
       return ((data as unknown) as DesignationLite[]) ?? [];
     },
