@@ -129,9 +129,13 @@ export type Database = {
           bank_name: string
           birthplace: string
           caste_category: string
+          compliance: Json
+          contacts: Json
           created_at: string
+          criminal_history: Json
           date_of_birth: string | null
           designation_id: string | null
+          documents: Json
           educations: Json
           email: string
           emergency_contact_mobile: string
@@ -139,13 +143,18 @@ export type Database = {
           emergency_contact_relation: string
           ex_service_id: string | null
           experiences: Json
+          extra_curricular: Json
           full_name: string
           gender: string
           id: string
+          identification_proofs: Json
           is_ex_service: boolean
+          kyc_completed: boolean
           languages: Json
           marital_status: string
           mobile: string
+          nominations: Json
+          other_info: Json
           pan_image_url: string
           pan_number: string
           permanent_address1: string
@@ -158,6 +167,7 @@ export type Database = {
           permanent_police_station: string
           permanent_state: string
           photo_url: string
+          physical_health: Json
           preferred_joining_date: string | null
           present_address1: string
           present_address2: string
@@ -189,9 +199,13 @@ export type Database = {
           bank_name?: string
           birthplace?: string
           caste_category?: string
+          compliance?: Json
+          contacts?: Json
           created_at?: string
+          criminal_history?: Json
           date_of_birth?: string | null
           designation_id?: string | null
+          documents?: Json
           educations?: Json
           email?: string
           emergency_contact_mobile?: string
@@ -199,13 +213,18 @@ export type Database = {
           emergency_contact_relation?: string
           ex_service_id?: string | null
           experiences?: Json
+          extra_curricular?: Json
           full_name?: string
           gender?: string
           id?: string
+          identification_proofs?: Json
           is_ex_service?: boolean
+          kyc_completed?: boolean
           languages?: Json
           marital_status?: string
           mobile?: string
+          nominations?: Json
+          other_info?: Json
           pan_image_url?: string
           pan_number?: string
           permanent_address1?: string
@@ -218,6 +237,7 @@ export type Database = {
           permanent_police_station?: string
           permanent_state?: string
           photo_url?: string
+          physical_health?: Json
           preferred_joining_date?: string | null
           present_address1?: string
           present_address2?: string
@@ -249,9 +269,13 @@ export type Database = {
           bank_name?: string
           birthplace?: string
           caste_category?: string
+          compliance?: Json
+          contacts?: Json
           created_at?: string
+          criminal_history?: Json
           date_of_birth?: string | null
           designation_id?: string | null
+          documents?: Json
           educations?: Json
           email?: string
           emergency_contact_mobile?: string
@@ -259,13 +283,18 @@ export type Database = {
           emergency_contact_relation?: string
           ex_service_id?: string | null
           experiences?: Json
+          extra_curricular?: Json
           full_name?: string
           gender?: string
           id?: string
+          identification_proofs?: Json
           is_ex_service?: boolean
+          kyc_completed?: boolean
           languages?: Json
           marital_status?: string
           mobile?: string
+          nominations?: Json
+          other_info?: Json
           pan_image_url?: string
           pan_number?: string
           permanent_address1?: string
@@ -278,6 +307,7 @@ export type Database = {
           permanent_police_station?: string
           permanent_state?: string
           photo_url?: string
+          physical_health?: Json
           preferred_joining_date?: string | null
           present_address1?: string
           present_address2?: string
