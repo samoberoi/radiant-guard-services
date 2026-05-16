@@ -285,7 +285,7 @@ function useCandidates() {
       const { data, error } = await runWithQueryTimeout("Employees", async (signal) =>
         await supabase
           .from("candidates" as never)
-          .select("id,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status")
+          .select("id,candidate_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status")
           .order("created_at", { ascending: false })
           .limit(250)
           .abortSignal(signal),
