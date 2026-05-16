@@ -542,7 +542,7 @@ async function persistResources(contractId: string, resources: ContractResource[
     .select("designation_id,service_type_id,quantity,components,benefits,deductions,employer_contributions,payroll_day_base_id,sort_order")
     .eq("contract_id", contractId)
     .order("sort_order");
-  const beforeRows = ((prev.data ?? []) as Record<string, unknown>[]) ?? [];
+  const beforeRows = (prev.data ?? []) as Record<string, unknown>[];
   const del = await supabase
     .from("contract_resources" as never)
     .delete()
