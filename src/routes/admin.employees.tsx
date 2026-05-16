@@ -86,6 +86,17 @@ const GENDERS = ["Male", "Female", "Other"];
 const MOCK_OTP = "1111";
 
 // ---------------- Types ---------------- //
+type AddressBlock = {
+  address1: string;
+  address2: string;
+  landmark: string;
+  pincode: string;
+  city: string;
+  district: string;
+  state: string;
+  country: string;
+};
+
 type Candidate = {
   id: string;
   aadhaar_number: string;
@@ -102,11 +113,27 @@ type Candidate = {
   mobile: string;
   alt_mobile: string;
   email: string;
-  permanent_address: string;
-  present_address: string;
-  same_as_permanent: boolean;
+  // Permanent address (structured)
+  permanent_address1: string;
+  permanent_address2: string;
+  permanent_landmark: string;
+  permanent_pincode: string;
+  permanent_city: string;
+  permanent_district: string;
+  permanent_state: string;
+  permanent_country: string;
   permanent_police_station: string;
+  // Present address (structured)
+  present_address1: string;
+  present_address2: string;
+  present_landmark: string;
+  present_pincode: string;
+  present_city: string;
+  present_district: string;
+  present_state: string;
+  present_country: string;
   present_police_station: string;
+  same_as_permanent: boolean;
   application_date: string;
   preferred_joining_date: string | null;
   unit_id: string | null;
