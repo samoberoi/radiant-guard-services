@@ -658,6 +658,10 @@ function CandidateWizard({
           } catch (e) {
           try {
             const fallback = await clientOcr.extractAadhaarClient(file);
+            if (!isTrustedExtraction(fallback)) {
+              toast.warning("Aadhaar uploaded, but the scan was not reliable enough to auto-fill details.");
+              return;
+            }
             applyExtraction(fallback);
             const filled = clientOcr.countExtractedFields(fallback);
             if (filled === 0) {
