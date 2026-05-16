@@ -611,12 +611,14 @@ function CandidateWizard({
         });
         setScanning(true);
         try {
-          const res = (await extractFn({ data: { imageDataUrl: dataUrl } })) as AadhaarExtraction;
+          const res = (await extractFn({
+            data: { fileDataUrl: dataUrl, mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg") },
+          })) as AadhaarExtraction;
           applyExtraction(res);
           const filled = [res.full_name, res.aadhaar_number, res.date_of_birth, res.address_line1]
             .filter((v) => v && v.trim()).length;
           if (filled === 0) {
-            toast.warning("Aadhaar scanned but no fields could be read. Try a clearer image.");
+            toast.warning("Aadhaar scanned but no fields could be read. Try a clearer scan.");
           } else {
             toast.success(`Aadhaar scanned — ${filled} field(s) auto-filled`);
           }
