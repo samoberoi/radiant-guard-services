@@ -236,6 +236,50 @@ function CandidateDetailsPage() {
               <CheckCircle2 className="mr-2 h-4 w-4" /> Mark KYC Completed
             </Button>
           )}
+
+          {form.status === "pending" && (
+            <>
+              <Button
+                size="sm"
+                onClick={() => changeStatus("approved")}
+                disabled={statusBusy}
+                className="bg-emerald-600 text-white hover:bg-emerald-700"
+              >
+                {statusBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                Approve
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setRejectOpen(true)}
+                disabled={statusBusy}
+              >
+                <XCircle className="mr-2 h-4 w-4" /> Reject
+              </Button>
+            </>
+          )}
+          {form.status === "rejected" && (
+            <Button
+              size="sm"
+              onClick={() => changeStatus("pending", "")}
+              disabled={statusBusy}
+              className="bg-amber-600 text-white hover:bg-amber-700"
+            >
+              {statusBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
+              Resubmit for Review
+            </Button>
+          )}
+          {form.status === "approved" && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => setRejectOpen(true)}
+              disabled={statusBusy}
+            >
+              <XCircle className="mr-2 h-4 w-4" /> Reject
+            </Button>
+          )}
+
           <Button variant="outline" size="sm" onClick={() => router.history.back()}>
             Cancel
           </Button>
@@ -248,6 +292,24 @@ function CandidateDetailsPage() {
           </Button>
         </div>
       </div>
+
+      {form.status === "rejected" && form.rejection_reason && (
+        <div className="flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm dark:border-rose-900/40 dark:bg-rose-950/30">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-rose-600" />
+          <div>
+            <div className="font-semibold text-rose-700 dark:text-rose-300">Rejected</div>
+            <div className="text-rose-700/90 dark:text-rose-200/90">{form.rejection_reason}</div>
+          </div>
+        </div>
+      )}
+      {form.status === "approved" && (
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/30">
+          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+          <div className="font-medium text-emerald-700 dark:text-emerald-300">
+            This candidate has been approved.
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
         {/* Sidebar */}
