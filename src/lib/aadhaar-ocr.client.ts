@@ -233,8 +233,9 @@ function textLayerToLines(items: unknown[]) {
   const rows = items
     .map((item) => {
       if (!item || typeof item !== "object" || !("str" in item) || !("transform" in item)) return null;
-      const value = cleanLine(String(item.str ?? ""));
-      const transform = Array.isArray(item.transform) ? item.transform : [];
+      const entry = item as { str?: unknown; transform?: unknown };
+      const value = cleanLine(String(entry.str ?? ""));
+      const transform = Array.isArray(entry.transform) ? entry.transform : [];
       const x = typeof transform[4] === "number" ? transform[4] : 0;
       const y = typeof transform[5] === "number" ? transform[5] : 0;
       return value ? { value, x, y } : null;
