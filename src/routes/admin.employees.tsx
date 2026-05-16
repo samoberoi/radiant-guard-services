@@ -166,6 +166,16 @@ type Candidate = {
   unit_id: string | null;
   designation_id: string | null;
   status: string;
+  // Extended (JSONB) sections
+  physical_health: Record<string, any>;
+  compliance: Record<string, any>;
+  identification_proofs: any[];
+  criminal_history: { has_history: boolean; incidents: any[] };
+  extra_curricular: any[];
+  other_info: Record<string, any>;
+  documents: any[];
+  nominations: any[];
+  kyc_completed: boolean;
 };
 
 type CandidateExperience = {
