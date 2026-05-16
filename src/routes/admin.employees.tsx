@@ -604,6 +604,8 @@ function EmployeesPage() {
         designations={designations}
         designationsLoading={designationsQuery.isLoading}
         designationsError={designationsQuery.error instanceof Error ? designationsQuery.error.message : null}
+        exServices={exServices}
+        languagesList={languagesList}
       />
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
