@@ -542,6 +542,16 @@ function CandidateWizard({
 
   const handleFile = async (file: File | null, slot: "photo" | "signature" | "aadhaar") => {
     if (!file) return;
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf";
+    if (slot === "photo" && !isImage) {
+      toast.error("Photograph must be an image");
+      return;
+    }
+    if ((slot === "aadhaar" || slot === "signature") && !isImage && !isPdf) {
+      toast.error("Only image or PDF files are allowed");
+      return;
+    }
     setUploading(slot);
     try {
       const url = await uploadFile(file, slot);
@@ -549,8 +559,7 @@ function CandidateWizard({
       else if (slot === "signature") set("signature_url", url);
       else set("aadhaar_image_url", url);
       toast.success(`${slot[0].toUpperCase() + slot.slice(1)} uploaded`);
-      if (slot === "aadhaar") {
-        // also run OCR
+      if (slot === "aadhaar" && isImage) {
         const reader = new FileReader();
         const dataUrl: string = await new Promise((resolve, reject) => {
           reader.onload = () => resolve(String(reader.result));
@@ -567,6 +576,8 @@ function CandidateWizard({
         } finally {
           setScanning(false);
         }
+      } else if (slot === "aadhaar" && isPdf) {
+        toast.message("PDF uploaded — please fill Aadhaar fields manually.");
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
