@@ -3,8 +3,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  Camera,
   CheckCircle2,
   Edit2,
+  FileText,
   IdCard,
   Loader2,
   Plus,
