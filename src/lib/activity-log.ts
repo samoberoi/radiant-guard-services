@@ -89,6 +89,13 @@ export async function logActivity(p: LogParams): Promise<void> {
     const ip = p.ip ?? cachedIp ?? "";
     const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
     const { data: auth } = await supabase.auth.getUser();
+    const details: Record<string, unknown> = { ...(p.details ?? {}) };
+    if (p.before !== undefined || p.after !== undefined) {
+      const changes = diffObjects(p.before ?? null, p.after ?? null);
+      if (Object.keys(changes).length > 0) details.changes = changes;
+      if (p.before !== undefined && details.before === undefined) details.before = p.before;
+      if (p.after !== undefined && details.after === undefined) details.after = p.after;
+    }
     await supabase.from("system_logs" as never).insert({
       module: p.module,
       action: p.action,
