@@ -383,5 +383,6 @@ export function countExtractedFields(extraction: AadhaarExtraction) {
 }
 
 export function hasUsefulAadhaarData(extraction: AadhaarExtraction) {
-  return countValidFields(extraction) >= 3 || /^\d{12}$/.test(extraction.aadhaar_number);
+  const hasIdentityCore = /^\d{12}$/.test(extraction.aadhaar_number) || isUsefulName(extraction.full_name);
+  return hasIdentityCore && countValidFields(extraction) >= 3;
 }
