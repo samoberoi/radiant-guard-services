@@ -573,6 +573,22 @@ function maskAadhaar(n: string) {
 // ---------------- Wizard ---------------- //
 type WizardStep = "aadhaar" | "otp" | "form";
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timeoutId);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
+
 type CandidateForm = Omit<Candidate, "id">;
 
 function emptyForm(): CandidateForm {
@@ -799,13 +815,17 @@ function CandidateWizard({
 
           const aiPromise = Promise.all([dataUrlPromise, pageImageDataUrlsPromise])
             .then(([dataUrl, pageImageDataUrls]) =>
-              extractFn({
-                data: {
-                  fileDataUrl: dataUrl,
-                  mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
-                  pageImageDataUrls,
-                },
-              }) as Promise<AadhaarExtraction>,
+              withTimeout(
+                extractFn({
+                  data: {
+                    fileDataUrl: dataUrl,
+                    mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
+                    pageImageDataUrls,
+                  },
+                }) as Promise<AadhaarExtraction>,
+                12_000,
+                "Aadhaar AI extraction timed out",
+              ),
             )
             .catch(() => null);
 
@@ -1205,6 +1225,14 @@ function CandidateWizard({
                 </div>
               </Section>
 
+              {(unitsLoading || unitsError || designationsLoading || designationsError) && (
+                <div className="rounded-lg border border-border bg-secondary/30 px-4 py-3 text-sm text-muted-foreground">
+                  {unitsLoading || designationsLoading
+                    ? "Loading units and designations…"
+                    : unitsError || designationsError || "Reference data is unavailable right now."}
+                </div>
+              )}
+
               <Section title="Basic Information">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Full Name" required>
@@ -1591,6 +1619,8 @@ function CandidateWizard({
                       units={units}
                       value={form.unit_id}
                       onChange={(id) => set("unit_id", id)}
+                      disabled={unitsLoading || !!unitsError}
+                      emptyMessage={unitsError ? `Could not load units: ${unitsError}` : "No units found."}
                     />
                   </Field>
                   <Field label="Organization">
@@ -1601,6 +1631,8 @@ function CandidateWizard({
                       designations={designations}
                       value={form.designation_id}
                       onChange={(id) => set("designation_id", id)}
+                      disabled={designationsLoading || !!designationsError}
+                      emptyMessage={designationsError ? `Could not load designations: ${designationsError}` : "No designations found."}
                     />
                   </Field>
                   <Field label="Status">
