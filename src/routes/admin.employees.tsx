@@ -630,16 +630,36 @@ function CandidateWizard({
   };
 
   const applyExtraction = (x: AadhaarExtraction) => {
-    setForm((f) => ({
-      ...f,
-      full_name: f.full_name || x.full_name,
-      date_of_birth: f.date_of_birth || (x.date_of_birth || null),
-      gender: f.gender || (x.gender ? toTitle(x.gender) : ""),
-      aadhaar_number: f.aadhaar_number || x.aadhaar_number,
-      permanent_address: f.permanent_address || x.address,
-      present_address: f.same_as_permanent ? x.address : f.present_address || x.address,
-      birthplace: f.birthplace || x.birthplace,
-    }));
+    setForm((f) => {
+      const next: CandidateForm = {
+        ...f,
+        full_name: f.full_name || x.full_name,
+        date_of_birth: f.date_of_birth || (x.date_of_birth || null),
+        gender: f.gender || (x.gender ? toTitle(x.gender) : ""),
+        aadhaar_number: f.aadhaar_number || x.aadhaar_number,
+        birthplace: f.birthplace || x.birthplace,
+        permanent_address1: f.permanent_address1 || x.address_line1,
+        permanent_address2: f.permanent_address2 || x.address_line2,
+        permanent_landmark: f.permanent_landmark || x.landmark,
+        permanent_pincode: f.permanent_pincode || x.pincode,
+        permanent_city: f.permanent_city || x.city,
+        permanent_district: f.permanent_district || x.district,
+        permanent_state: f.permanent_state || x.state,
+        permanent_country: f.permanent_country || x.country || "India",
+      };
+      if (next.same_as_permanent) {
+        next.present_address1 = next.permanent_address1;
+        next.present_address2 = next.permanent_address2;
+        next.present_landmark = next.permanent_landmark;
+        next.present_pincode = next.permanent_pincode;
+        next.present_city = next.permanent_city;
+        next.present_district = next.permanent_district;
+        next.present_state = next.permanent_state;
+        next.present_country = next.permanent_country;
+        next.present_police_station = next.permanent_police_station;
+      }
+      return next;
+    });
   };
 
   // ----- Submit ----- //
