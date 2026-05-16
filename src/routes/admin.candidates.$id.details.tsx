@@ -323,30 +323,6 @@ function CandidateDetailsPage() {
 
 /* ---------- Section components ---------- */
 
-function SectionHeader({ title, desc }: { title: string; desc?: string }) {
-  return (
-    <div className="mb-6 border-b pb-3">
-      <h2 className="text-lg font-semibold">{title}</h2>
-      {desc && <p className="text-xs text-muted-foreground">{desc}</p>}
-    </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs font-medium text-muted-foreground">{label}</Label>
-      {children}
-    </div>
-  );
-}
-
 function BasicSection({ form }: { form: any }) {
   return (
     <div>
