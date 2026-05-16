@@ -10,11 +10,35 @@ export type AadhaarExtraction = {
   date_of_birth: string;
   gender: string;
   aadhaar_number: string;
-  address: string;
+  address_line1: string;
+  address_line2: string;
+  landmark: string;
+  city: string;
+  district: string;
+  state: string;
+  pincode: string;
+  country: string;
   birthplace: string;
 };
 
-const SYSTEM_PROMPT = `You are an OCR engine that extracts data from a scanned Indian Aadhaar card image. Return ONLY a strict JSON object with these keys: full_name, date_of_birth (YYYY-MM-DD), gender (Male|Female|Other), aadhaar_number (12 digits, no spaces), address (full single-line), birthplace (city or village). If a field is not visible, use an empty string. Do not include any commentary.`;
+const SYSTEM_PROMPT = `You are an OCR engine that extracts data from a scanned Indian Aadhaar card (front and/or back).
+Return ONLY a strict JSON object with EXACTLY these keys (all strings; use "" if not visible):
+{
+  "full_name": "as printed",
+  "date_of_birth": "YYYY-MM-DD",
+  "gender": "Male | Female | Other",
+  "aadhaar_number": "12 digits, no spaces",
+  "address_line1": "house no, street",
+  "address_line2": "area, locality",
+  "landmark": "near / opposite (if any)",
+  "city": "town or city name",
+  "district": "district name",
+  "state": "Indian state name (full)",
+  "pincode": "6 digit PIN",
+  "country": "India",
+  "birthplace": "city/village if printed"
+}
+Carefully parse the address block on the back of the Aadhaar card and split it into the structured fields above. Do not include any commentary or markdown.`;
 
 export const extractAadhaar = createServerFn({ method: "POST" })
   .inputValidator((input) => InputSchema.parse(input))
@@ -35,7 +59,10 @@ export const extractAadhaar = createServerFn({ method: "POST" })
           {
             role: "user",
             content: [
-              { type: "text", text: "Extract the Aadhaar fields from this card." },
+              {
+                type: "text",
+                text: "Extract the Aadhaar fields and the structured address from this card image.",
+              },
               { type: "image_url", image_url: { url: data.imageDataUrl } },
             ],
           },
@@ -56,7 +83,6 @@ export const extractAadhaar = createServerFn({ method: "POST" })
     try {
       parsed = JSON.parse(content);
     } catch {
-      // try to extract a JSON block
       const m = content.match(/\{[\s\S]*\}/);
       if (m) {
         try {
@@ -66,12 +92,20 @@ export const extractAadhaar = createServerFn({ method: "POST" })
         }
       }
     }
+    const s = (v: unknown) => String(v ?? "").trim();
     return {
-      full_name: String(parsed.full_name ?? ""),
-      date_of_birth: String(parsed.date_of_birth ?? ""),
-      gender: String(parsed.gender ?? ""),
-      aadhaar_number: String(parsed.aadhaar_number ?? "").replace(/\D/g, ""),
-      address: String(parsed.address ?? ""),
-      birthplace: String(parsed.birthplace ?? ""),
+      full_name: s(parsed.full_name),
+      date_of_birth: s(parsed.date_of_birth),
+      gender: s(parsed.gender),
+      aadhaar_number: s(parsed.aadhaar_number).replace(/\D/g, ""),
+      address_line1: s(parsed.address_line1),
+      address_line2: s(parsed.address_line2),
+      landmark: s(parsed.landmark),
+      city: s(parsed.city),
+      district: s(parsed.district),
+      state: s(parsed.state),
+      pincode: s(parsed.pincode).replace(/\D/g, "").slice(0, 6),
+      country: s(parsed.country) || "India",
+      birthplace: s(parsed.birthplace),
     };
   });
