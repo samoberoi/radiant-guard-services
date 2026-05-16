@@ -247,7 +247,7 @@ function EmployeesPage() {
   const [openWizard, setOpenWizard] = useState(false);
   const [editing, setEditing] = useState<Candidate | null>(null);
   const [openingCandidateId, setOpeningCandidateId] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<Candidate | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<CandidateListItem | null>(null);
 
   const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const desigMap = useMemo(() => new Map(designations.map((d) => [d.id, d])), [designations]);
@@ -269,7 +269,7 @@ function EmployeesPage() {
   }, [candidates]);
 
   const deleteMut = useMutation({
-    mutationFn: async (c: Candidate) => {
+    mutationFn: async (c: CandidateListItem) => {
       const { error } = await supabase.from("candidates" as never).delete().eq("id", c.id);
       if (error) throw error;
       await logActivity({
