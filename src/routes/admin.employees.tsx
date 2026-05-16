@@ -1,4 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  ComplianceSection,
+  KnowledgeSection,
+  PhysicalSection,
+  IdentificationSection,
+  CriminalSection,
+  OtherSection,
+  ListSection,
+  emptyActivity,
+  emptyDoc,
+  emptyNominee,
+} from "@/components/candidate-extra-sections";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClientOnlyFn, useServerFn } from "@tanstack/react-start";
