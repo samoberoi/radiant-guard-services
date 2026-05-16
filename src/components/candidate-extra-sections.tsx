@@ -25,8 +25,12 @@ export function emptyContact() {
   return { id: crypto.randomUUID(), name: "", relation: "", phone: "", email: "" };
 }
 export function emptyIncident() {
-  return { id: crypto.randomUUID(), date: "", description: "", status: "" };
+  return { id: crypto.randomUUID(), fir_no: "", ipc_section: "", police_station: "", case_no: "", court: "", judgement_date: "", remarks: "" };
 }
+export const LANGUAGE_OPTIONS = [
+  "English", "Hindi", "Marathi", "Gujarati", "Bengali", "Tamil", "Telugu",
+  "Kannada", "Malayalam", "Punjabi", "Odia", "Assamese", "Urdu", "Konkani", "Nepali",
+];
 export function emptyActivity() {
   return { id: crypto.randomUUID(), activity: "", level: "", year: "" };
 }
@@ -245,6 +249,28 @@ export function KnowledgeSection({ form, set }: { form: any; set: SetField }) {
           </div>
         )}
       </div>
+      <div className="mt-6">
+        <h3 className="mb-3 text-sm font-medium">Languages Known</h3>
+        <div className="flex flex-wrap gap-2">
+          {LANGUAGE_OPTIONS.map((lang) => {
+            const langs: string[] = Array.isArray(form.languages) ? form.languages : [];
+            const selected = langs.includes(lang);
+            return (
+              <button
+                key={lang}
+                type="button"
+                onClick={() => {
+                  const next = selected ? langs.filter((l) => l !== lang) : [...langs, lang];
+                  set("languages", next);
+                }}
+                className={`rounded-full border px-3 py-1 text-xs transition ${selected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background hover:bg-muted"}`}
+              >
+                {lang}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
@@ -265,25 +291,42 @@ export function CriminalSection({ form, set }: { form: any; set: SetField }) {
       {ch.has_history && (
         <div>
           <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-medium">Incidents</h3>
+            <h3 className="text-sm font-medium">Criminal History Records</h3>
             <Button size="sm" variant="outline" onClick={() => set("criminal_history", { ...ch, incidents: [...incidents, emptyIncident()] })}>
-              <Plus className="mr-1 h-3 w-3" /> Add
+              <Plus className="mr-1 h-3 w-3" /> Add Criminal History
             </Button>
           </div>
           {incidents.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No incidents recorded</p>
+            <p className="rounded-md border border-dashed py-8 text-center text-xs text-muted-foreground">No records yet. Click Add to create one.</p>
           ) : (
             <div className="space-y-3">
-              {incidents.map((inc: any, i: number) => (
-                <div key={inc.id ?? i} className="grid grid-cols-1 gap-2 rounded-md border p-3 md:grid-cols-[140px_1fr_160px_40px]">
-                  <Input type="date" value={inc.date ?? ""} onChange={(e) => { const copy = [...incidents]; copy[i] = { ...copy[i], date: e.target.value }; set("criminal_history", { ...ch, incidents: copy }); }} />
-                  <Input placeholder="Description" value={inc.description ?? ""} onChange={(e) => { const copy = [...incidents]; copy[i] = { ...copy[i], description: e.target.value }; set("criminal_history", { ...ch, incidents: copy }); }} />
-                  <Input placeholder="Status (closed / pending)" value={inc.status ?? ""} onChange={(e) => { const copy = [...incidents]; copy[i] = { ...copy[i], status: e.target.value }; set("criminal_history", { ...ch, incidents: copy }); }} />
-                  <Button variant="ghost" size="icon" className="text-rose-500" onClick={() => set("criminal_history", { ...ch, incidents: incidents.filter((_: any, j: number) => j !== i) })}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+              {incidents.map((inc: any, i: number) => {
+                const update = (patch: any) => {
+                  const copy = [...incidents];
+                  copy[i] = { ...copy[i], ...patch };
+                  set("criminal_history", { ...ch, incidents: copy });
+                };
+                return (
+                  <div key={inc.id ?? i} className="rounded-md border p-3">
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <Field label="FIR No."><Input value={inc.fir_no ?? ""} onChange={(e) => update({ fir_no: e.target.value })} /></Field>
+                      <Field label="IPC Section"><Input value={inc.ipc_section ?? ""} onChange={(e) => update({ ipc_section: e.target.value })} /></Field>
+                      <Field label="Police Station"><Input value={inc.police_station ?? ""} onChange={(e) => update({ police_station: e.target.value })} /></Field>
+                      <Field label="Case No."><Input value={inc.case_no ?? ""} onChange={(e) => update({ case_no: e.target.value })} /></Field>
+                      <Field label="Name of Court"><Input value={inc.court ?? ""} onChange={(e) => update({ court: e.target.value })} /></Field>
+                      <Field label="Judgement Date"><Input type="date" value={inc.judgement_date ?? ""} onChange={(e) => update({ judgement_date: e.target.value })} /></Field>
+                    </div>
+                    <div className="mt-3">
+                      <Field label="Remarks"><Textarea rows={2} value={inc.remarks ?? ""} onChange={(e) => update({ remarks: e.target.value })} /></Field>
+                    </div>
+                    <div className="mt-2 text-right">
+                      <Button variant="ghost" size="sm" className="text-rose-500" onClick={() => set("criminal_history", { ...ch, incidents: incidents.filter((_: any, j: number) => j !== i) })}>
+                        <Trash2 className="mr-1 h-3 w-3" /> Remove
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
