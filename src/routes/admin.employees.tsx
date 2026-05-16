@@ -265,7 +265,7 @@ function useDesignations() {
 
 // ---------------- Page ---------------- //
 function EmployeesPage() {
-  const { data: candidates = [], isLoading } = useCandidates();
+  const { data: candidates = [], isLoading, error: candidatesError } = useCandidates();
   const { data: units = [] } = useUnits();
   const { data: designations = [] } = useDesignations();
   const qc = useQueryClient();
@@ -400,6 +400,14 @@ function EmployeesPage() {
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
                     Loading…
+                  </td>
+                </tr>
+              ) : candidatesError ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
+                    {candidatesError instanceof Error
+                      ? candidatesError.message
+                      : "Could not load employees right now. Please retry."}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
