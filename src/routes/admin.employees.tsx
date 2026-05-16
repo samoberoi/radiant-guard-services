@@ -602,7 +602,7 @@ function CandidateWizard({
       else if (slot === "signature") set("signature_url", url);
       else set("aadhaar_image_url", url);
       toast.success(`${slot[0].toUpperCase() + slot.slice(1)} uploaded`);
-      if (slot === "aadhaar" && isImage) {
+      if (slot === "aadhaar") {
         const reader = new FileReader();
         const dataUrl: string = await new Promise((resolve, reject) => {
           reader.onload = () => resolve(String(reader.result));
@@ -613,14 +613,18 @@ function CandidateWizard({
         try {
           const res = (await extractFn({ data: { imageDataUrl: dataUrl } })) as AadhaarExtraction;
           applyExtraction(res);
-          toast.success("Aadhaar scanned — fields auto-filled");
+          const filled = [res.full_name, res.aadhaar_number, res.date_of_birth, res.address_line1]
+            .filter((v) => v && v.trim()).length;
+          if (filled === 0) {
+            toast.warning("Aadhaar scanned but no fields could be read. Try a clearer image.");
+          } else {
+            toast.success(`Aadhaar scanned — ${filled} field(s) auto-filled`);
+          }
         } catch (e) {
           toast.error(e instanceof Error ? e.message : "Aadhaar scan failed");
         } finally {
           setScanning(false);
         }
-      } else if (slot === "aadhaar" && isPdf) {
-        toast.message("PDF uploaded — please fill Aadhaar fields manually.");
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
@@ -630,22 +634,24 @@ function CandidateWizard({
   };
 
   const applyExtraction = (x: AadhaarExtraction) => {
+    const pick = (incoming: string, current: string) =>
+      incoming && incoming.trim() ? incoming.trim() : current;
     setForm((f) => {
       const next: CandidateForm = {
         ...f,
-        full_name: f.full_name || x.full_name,
-        date_of_birth: f.date_of_birth || (x.date_of_birth || null),
-        gender: f.gender || (x.gender ? toTitle(x.gender) : ""),
-        aadhaar_number: f.aadhaar_number || x.aadhaar_number,
-        birthplace: f.birthplace || x.birthplace,
-        permanent_address1: f.permanent_address1 || x.address_line1,
-        permanent_address2: f.permanent_address2 || x.address_line2,
-        permanent_landmark: f.permanent_landmark || x.landmark,
-        permanent_pincode: f.permanent_pincode || x.pincode,
-        permanent_city: f.permanent_city || x.city,
-        permanent_district: f.permanent_district || x.district,
-        permanent_state: f.permanent_state || x.state,
-        permanent_country: f.permanent_country || x.country || "India",
+        full_name: pick(x.full_name, f.full_name),
+        date_of_birth: x.date_of_birth ? x.date_of_birth : f.date_of_birth,
+        gender: x.gender ? toTitle(x.gender) : f.gender,
+        aadhaar_number: pick(x.aadhaar_number, f.aadhaar_number),
+        birthplace: pick(x.birthplace, f.birthplace),
+        permanent_address1: pick(x.address_line1, f.permanent_address1),
+        permanent_address2: pick(x.address_line2, f.permanent_address2),
+        permanent_landmark: pick(x.landmark, f.permanent_landmark),
+        permanent_pincode: pick(x.pincode, f.permanent_pincode),
+        permanent_city: pick(x.city, f.permanent_city),
+        permanent_district: pick(x.district, f.permanent_district),
+        permanent_state: pick(x.state, f.permanent_state),
+        permanent_country: pick(x.country, f.permanent_country) || "India",
       };
       if (next.same_as_permanent) {
         next.present_address1 = next.permanent_address1;
@@ -1223,7 +1229,7 @@ function UploadTile({
   badge?: string;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const isPdf = !!url && /\.pdf(\?|$)/i.test(url);
   const done = !!url;
   return (
@@ -1263,27 +1269,13 @@ function UploadTile({
           onPick(f);
         }}
       />
-      {allowCamera && (
-        <input
-          ref={cameraRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0] ?? null;
-            e.target.value = "";
-            onPick(f);
-          }}
-        />
-      )}
       {allowCamera ? (
         <div className="grid w-full grid-cols-2 gap-1.5">
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => cameraRef.current?.click()}
+            onClick={() => setCameraOpen(true)}
             disabled={uploading}
           >
             {uploading ? (
@@ -1323,7 +1315,147 @@ function UploadTile({
           ) : url ? "Replace" : "Upload (Image or PDF)"}
         </Button>
       )}
+      {allowCamera && (
+        <CameraCaptureDialog
+          open={cameraOpen}
+          onOpenChange={setCameraOpen}
+          onCapture={(file) => {
+            setCameraOpen(false);
+            onPick(file);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function CameraCaptureDialog({
+  open,
+  onOpenChange,
+  onCapture,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onCapture: (file: File) => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [facing, setFacing] = useState<"user" | "environment">("user");
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setError(null);
+    setReady(false);
+
+    (async () => {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error("Camera API not available in this browser");
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(() => {});
+          setReady(true);
+        }
+      } catch (e: unknown) {
+        const err = e as { name?: string; message?: string };
+        if (err.name === "NotAllowedError") {
+          setError("Camera permission denied. Enable camera access in your browser settings and retry.");
+        } else if (err.name === "NotFoundError") {
+          setError("No camera found on this device.");
+        } else if (err.name === "NotReadableError") {
+          setError("Camera is in use by another application.");
+        } else {
+          setError(err.message || "Could not start camera");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      const s = streamRef.current;
+      if (s) {
+        s.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+      if (videoRef.current) videoRef.current.srcObject = null;
+    };
+  }, [open, facing]);
+
+  const snap = () => {
+    const video = videoRef.current;
+    if (!video || !ready) return;
+    const w = video.videoWidth || 1280;
+    const h = video.videoHeight || 720;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, w, h);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" });
+        onCapture(file);
+      },
+      "image/jpeg",
+      0.92,
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Take Photograph</DialogTitle>
+          <DialogDescription>Position the subject and click Capture.</DialogDescription>
+        </DialogHeader>
+        <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-md bg-black">
+          {error ? (
+            <div className="px-6 text-center text-sm text-rose-300">{error}</div>
+          ) : (
+            <video ref={videoRef} playsInline muted className="h-full w-full object-contain" />
+          )}
+          {!ready && !error && (
+            <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting camera…
+            </div>
+          )}
+        </div>
+        <DialogFooter className="gap-2 sm:justify-between">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setFacing((f) => (f === "user" ? "environment" : "user"))}
+            disabled={!!error}
+          >
+            Switch camera ({facing === "user" ? "front" : "back"})
+          </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={snap} disabled={!ready || !!error}>
+              <Camera className="mr-1.5 h-4 w-4" /> Capture
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
