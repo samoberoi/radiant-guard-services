@@ -65,8 +65,9 @@ function emptyDoc() {
   return { id: crypto.randomUUID(), name: "", type: "", url: "", notes: "" };
 }
 function emptyProof() {
-  return { id: crypto.randomUUID(), type: "", number: "", issued_by: "", url: "" };
+  return { id: crypto.randomUUID(), type: "", number: "", issued_by: "", valid_until: "", url: "" };
 }
+const ID_PROOF_TYPES = ["Driving License", "Passport", "Voter ID", "Ration Card", "Other"];
 function emptyContact() {
   return { id: crypto.randomUUID(), name: "", relation: "", phone: "", email: "" };
 }
