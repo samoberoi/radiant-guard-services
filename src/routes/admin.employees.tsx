@@ -19,7 +19,6 @@ import {
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-import { countExtractedFields, extractAadhaarClient, hasUsefulAadhaarData } from "@/lib/aadhaar-ocr.client";
 import { extractAadhaar, type AadhaarExtraction } from "@/lib/aadhaar.functions";
 import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
@@ -85,6 +84,18 @@ const CASTE_CATEGORIES = ["General", "OBC", "SC", "ST", "EWS"];
 const MARITAL_STATUSES = ["Single", "Married", "Divorced", "Widowed", "Separated"];
 const GENDERS = ["Male", "Female", "Other"];
 const MOCK_OTP = "1111";
+
+let aadhaarOcrClientPromise: Promise<typeof import("@/lib/aadhaar-ocr.client")> | null = null;
+
+async function getAadhaarOcrClient() {
+  if (typeof window === "undefined") {
+    throw new Error("Aadhaar OCR is only available in the browser");
+  }
+  if (!aadhaarOcrClientPromise) {
+    aadhaarOcrClientPromise = import("@/lib/aadhaar-ocr.client");
+  }
+  return aadhaarOcrClientPromise;
+}
 
 // ---------------- Types ---------------- //
 type AddressBlock = {
@@ -604,6 +615,7 @@ function CandidateWizard({
       else set("aadhaar_image_url", url);
       toast.success(`${slot[0].toUpperCase() + slot.slice(1)} uploaded`);
       if (slot === "aadhaar") {
+        const clientOcr = await getAadhaarOcrClient();
         const reader = new FileReader();
         const dataUrl: string = await new Promise((resolve, reject) => {
           reader.onload = () => resolve(String(reader.result));
@@ -616,12 +628,12 @@ function CandidateWizard({
             data: { fileDataUrl: dataUrl, mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg") },
           })) as AadhaarExtraction;
 
-          if (!hasUsefulAadhaarData(res)) {
-            res = await extractAadhaarClient(file);
+          if (!clientOcr.hasUsefulAadhaarData(res)) {
+            res = await clientOcr.extractAadhaarClient(file);
           }
 
           applyExtraction(res);
-          const filled = countExtractedFields(res);
+          const filled = clientOcr.countExtractedFields(res);
           if (filled === 0) {
             toast.warning("Aadhaar scanned but no fields could be read. Try a clearer scan.");
           } else {
@@ -629,9 +641,9 @@ function CandidateWizard({
           }
         } catch (e) {
           try {
-            const fallback = await extractAadhaarClient(file);
+            const fallback = await clientOcr.extractAadhaarClient(file);
             applyExtraction(fallback);
-            const filled = countExtractedFields(fallback);
+            const filled = clientOcr.countExtractedFields(fallback);
             if (filled === 0) {
               toast.warning("Aadhaar scanned but no fields could be read. Try a clearer scan.");
             } else {
