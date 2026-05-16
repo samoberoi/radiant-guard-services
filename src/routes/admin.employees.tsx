@@ -936,13 +936,21 @@ function CandidateWizard({
   };
 
   // ----- Submit ----- //
-  const uploadsComplete = !!form.photo_url && !!form.aadhaar_image_url && !!form.signature_url;
+  const uploadsComplete =
+    !!form.photo_url && !!form.aadhaar_image_url && !!form.signature_url && !!form.pan_image_url;
   const submit = async () => {
     if (!form.photo_url) return toast.error("Photograph is required");
     if (!form.aadhaar_image_url) return toast.error("Aadhaar upload is required");
     if (!form.signature_url) return toast.error("Signature is required");
+    if (!form.pan_image_url) return toast.error("PAN card upload is required");
     if (!form.full_name.trim()) return toast.error("Name is required");
     if (!form.mobile.trim()) return toast.error("Mobile is required");
+    if (form.pan_number && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(form.pan_number.trim().toUpperCase()))
+      return toast.error("PAN number format is invalid (e.g. ABCDE1234F)");
+    if (form.bank_ifsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.bank_ifsc.trim().toUpperCase()))
+      return toast.error("IFSC code format is invalid (e.g. SBIN0001234)");
+    if (form.bank_account_number && !/^\d{6,18}$/.test(form.bank_account_number.trim()))
+      return toast.error("Bank account number must be 6–18 digits");
     setSubmitting(true);
     try {
       const payload = form.same_as_permanent
