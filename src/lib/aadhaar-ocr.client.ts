@@ -1,3 +1,26 @@
+// Safari (WebKit) lacks `Symbol.asyncIterator` on ReadableStream, which pdfjs v5
+// relies on internally (`for await ... of stream`). Without this polyfill, PDF
+// parsing throws: "undefined is not a function (near '...value of readableStream...')".
+if (
+  typeof ReadableStream !== "undefined" &&
+  !(ReadableStream.prototype as unknown as { [Symbol.asyncIterator]?: unknown })[Symbol.asyncIterator]
+) {
+  (ReadableStream.prototype as unknown as { [Symbol.asyncIterator]: () => AsyncGenerator<unknown> })[
+    Symbol.asyncIterator
+  ] = async function* (this: ReadableStream<unknown>) {
+    const reader = this.getReader();
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) return;
+        yield value;
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  };
+}
+
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
 import type { AadhaarExtraction } from "@/lib/aadhaar.functions";
