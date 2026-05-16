@@ -791,7 +791,18 @@ function CandidateWizard({
     if (editing) {
       const { id: _id, ...rest } = editing;
       void _id;
-      setForm(rest);
+      const restAny = rest as unknown as Partial<CandidateForm> & { contacts?: CandidateContact[] };
+      const existing = Array.isArray(restAny.contacts) ? restAny.contacts : [];
+      let contacts = existing;
+      if (contacts.length === 0 && (rest.emergency_contact_name || rest.emergency_contact_mobile)) {
+        contacts = [{
+          name: rest.emergency_contact_name || "",
+          relation: rest.emergency_contact_relation || "",
+          mobile: rest.emergency_contact_mobile || "",
+          is_emergency: true,
+        }];
+      }
+      setForm({ ...(rest as CandidateForm), contacts });
       setStep("form");
     } else {
       setForm(emptyForm());
