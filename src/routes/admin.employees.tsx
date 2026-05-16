@@ -1,4 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  ComplianceSection,
+  KnowledgeSection,
+  PhysicalSection,
+  IdentificationSection,
+  CriminalSection,
+  OtherSection,
+  ListSection,
+  emptyActivity,
+  emptyDoc,
+  emptyNominee,
+} from "@/components/candidate-extra-sections";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClientOnlyFn, useServerFn } from "@tanstack/react-start";
@@ -166,6 +178,16 @@ type Candidate = {
   unit_id: string | null;
   designation_id: string | null;
   status: string;
+  // Extended (JSONB) sections
+  physical_health: Record<string, any>;
+  compliance: Record<string, any>;
+  identification_proofs: any[];
+  criminal_history: { has_history: boolean; incidents: any[] };
+  extra_curricular: any[];
+  other_info: Record<string, any>;
+  documents: any[];
+  nominations: any[];
+  kyc_completed: boolean;
 };
 
 type CandidateExperience = {
@@ -749,6 +771,15 @@ function emptyForm(): CandidateForm {
     unit_id: null,
     designation_id: null,
     status: "pending",
+    physical_health: {},
+    compliance: {},
+    identification_proofs: [],
+    criminal_history: { has_history: false, incidents: [] },
+    extra_curricular: [],
+    other_info: {},
+    documents: [],
+    nominations: [],
+    kyc_completed: false,
   };
 }
 
@@ -815,6 +846,10 @@ function CandidateWizard({
 
   const set = <K extends keyof CandidateForm>(k: K, v: CandidateForm[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
+  const setAny = (k: string, v: any) =>
+    setForm((f) => ({ ...f, [k]: v }) as CandidateForm);
+  const setSection = (k: string, v: any) =>
+    setForm((f) => ({ ...f, [k]: { ...((f as any)[k] ?? {}), ...v } }) as CandidateForm);
 
   const unit = form.unit_id ? units.find((u) => u.id === form.unit_id) : undefined;
 
@@ -1881,6 +1916,75 @@ function CandidateWizard({
                     </Select>
                   </Field>
                 </div>
+              </Section>
+
+              <Section title="Compliance">
+                <ComplianceSection form={form} setSection={setSection} />
+              </Section>
+
+              <Section title="Knowledge & Experience">
+                <KnowledgeSection form={form} set={setAny} />
+              </Section>
+
+              <Section title="Physical & Health">
+                <PhysicalSection form={form} setSection={setSection} />
+              </Section>
+
+              <Section title="Identification Proofs">
+                <IdentificationSection form={form} set={setAny} setSection={setSection} />
+              </Section>
+
+              <Section title="Criminal History">
+                <CriminalSection form={form} set={setAny} />
+              </Section>
+
+              <Section title="Extra Curricular">
+                <ListSection
+                  title=""
+                  items={form.extra_curricular}
+                  onChange={(v: any[]) => setAny("extra_curricular", v)}
+                  empty={emptyActivity}
+                  fields={[
+                    { key: "activity", label: "Activity" },
+                    { key: "level", label: "Level" },
+                    { key: "year", label: "Year" },
+                  ]}
+                />
+              </Section>
+
+              <Section title="Other Info">
+                <OtherSection form={form} setSection={setSection} />
+              </Section>
+
+              <Section title="Documents">
+                <ListSection
+                  title=""
+                  items={form.documents}
+                  onChange={(v: any[]) => setAny("documents", v)}
+                  empty={emptyDoc}
+                  fields={[
+                    { key: "name", label: "Document Name" },
+                    { key: "type", label: "Type" },
+                    { key: "url", label: "File URL" },
+                    { key: "notes", label: "Notes" },
+                  ]}
+                />
+              </Section>
+
+              <Section title="Nominations">
+                <ListSection
+                  title=""
+                  items={form.nominations}
+                  onChange={(v: any[]) => setAny("nominations", v)}
+                  empty={emptyNominee}
+                  fields={[
+                    { key: "name", label: "Nominee Name" },
+                    { key: "relation", label: "Relation" },
+                    { key: "dob", label: "Date of Birth", type: "date" },
+                    { key: "share_percent", label: "Share %" },
+                    { key: "aadhaar", label: "Aadhaar" },
+                  ]}
+                />
               </Section>
             </div>
           )}
