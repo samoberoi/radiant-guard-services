@@ -1269,20 +1269,6 @@ function UploadTile({
           onPick(f);
         }}
       />
-      {allowCamera && (
-        <input
-          ref={cameraRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={(e) => {
-            const f = e.target.files?.[0] ?? null;
-            e.target.value = "";
-            onPick(f);
-          }}
-        />
-      )}
       {allowCamera ? (
         <div className="grid w-full grid-cols-2 gap-1.5">
           <Button
