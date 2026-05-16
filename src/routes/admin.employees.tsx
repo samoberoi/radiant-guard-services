@@ -635,13 +635,21 @@ function CandidateWizard({
   onOpenChange,
   editing,
   units,
+  unitsLoading,
+  unitsError,
   designations,
+  designationsLoading,
+  designationsError,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   editing: Candidate | null;
   units: UnitLite[];
+  unitsLoading: boolean;
+  unitsError: string | null;
   designations: DesignationLite[];
+  designationsLoading: boolean;
+  designationsError: string | null;
 }) {
   const qc = useQueryClient();
   const extractFn = useServerFn(extractAadhaar);
