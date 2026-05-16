@@ -584,12 +584,13 @@ function EmployeesPage() {
                           </Button>
                           <Button
                             asChild
-                            variant="ghost"
-                            size="icon"
-                            title="Full details"
+                            variant="outline"
+                            size="sm"
+                            title="Open the full 10-section editor (Compliance, Physical & Health, Knowledge, Identification Proofs, etc.)"
                           >
                             <Link to="/admin/candidates/$id/details" params={{ id: c.id }}>
-                              <FileText className="h-4 w-4" />
+                              <FileText className="mr-1 h-4 w-4" />
+                              Details
                             </Link>
                           </Button>
                           <Button
