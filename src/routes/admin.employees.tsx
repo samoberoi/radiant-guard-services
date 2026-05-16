@@ -639,74 +639,61 @@ function CandidateWizard({
         };
         setScanning(true);
         try {
-          let res = (await extractFn({
-            data: { fileDataUrl: dataUrl, mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg") },
-          })) as AadhaarExtraction;
+          const clientResult = (await clientOcr.extractAadhaarClient(file)) as AadhaarExtraction;
+          const normalizedClient =
+            form.aadhaar_number && (!clientResult.aadhaar_number || !/^\d{12}$/.test(clientResult.aadhaar_number))
+              ? { ...clientResult, aadhaar_number: form.aadhaar_number }
+              : clientResult;
 
-          if (form.aadhaar_number && (!res.aadhaar_number || !/^\d{12}$/.test(res.aadhaar_number))) {
-            res = { ...res, aadhaar_number: form.aadhaar_number };
-          }
-
-          const fallback = !isTrustedExtraction(res) || !clientOcr.hasUsefulAadhaarData(res)
-            ? await clientOcr.extractAadhaarClient(file)
-            : null;
-
-          if (fallback) {
-            const prefer = (primary: string, secondary: string) => primary.trim() || secondary.trim();
-            const merged: AadhaarExtraction = {
-              full_name: prefer(res.full_name, fallback.full_name),
-              date_of_birth: prefer(res.date_of_birth, fallback.date_of_birth),
-              gender: prefer(res.gender, fallback.gender),
-              aadhaar_number: form.aadhaar_number || prefer(res.aadhaar_number, fallback.aadhaar_number),
-              address_line1: prefer(res.address_line1, fallback.address_line1),
-              address_line2: prefer(res.address_line2, fallback.address_line2),
-              landmark: prefer(res.landmark, fallback.landmark),
-              city: prefer(res.city, fallback.city),
-              district: prefer(res.district, fallback.district),
-              state: prefer(res.state, fallback.state),
-              pincode: prefer(res.pincode, fallback.pincode),
-              country: prefer(res.country, fallback.country),
-              birthplace: prefer(res.birthplace, fallback.birthplace),
-            };
-
-            res = merged;
-          }
-
-          if (!isTrustedExtraction(res)) {
-            toast.warning("Aadhaar uploaded, but the scan was not reliable enough to auto-fill details.");
-            return;
-          }
-
-          applyExtraction(res);
-          const filled = clientOcr.countExtractedFields(res);
-          if (filled === 0) {
-            toast.warning("Aadhaar scanned but no fields could be read. Try a clearer scan.");
-          } else {
-            toast.success(`Aadhaar scanned — ${filled} field(s) auto-filled`);
-          }
-          } catch (e) {
-          try {
-            const fallback = await clientOcr.extractAadhaarClient(file);
-            if (!isTrustedExtraction(fallback)) {
-              toast.warning("Aadhaar uploaded, but the scan was not reliable enough to auto-fill details.");
-              return;
-            }
-            applyExtraction(fallback);
-            const filled = clientOcr.countExtractedFields(fallback);
+          if (isTrustedExtraction(normalizedClient)) {
+            applyExtraction(normalizedClient);
+            const filled = clientOcr.countExtractedFields(normalizedClient);
             if (filled === 0) {
               toast.warning("Aadhaar scanned but no fields could be read. Try a clearer scan.");
             } else {
               toast.success(`Aadhaar scanned — ${filled} field(s) auto-filled`);
             }
-          } catch (fallbackError) {
-            toast.error(
-              fallbackError instanceof Error
-                ? fallbackError.message
-                : e instanceof Error
-                  ? e.message
-                  : "Aadhaar scan failed",
-            );
+            return;
           }
+
+          let aiResult: AadhaarExtraction | null = null;
+          try {
+            aiResult = (await extractFn({
+              data: { fileDataUrl: dataUrl, mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg") },
+            })) as AadhaarExtraction;
+          } catch {
+            aiResult = null;
+          }
+
+          const normalizedAi = aiResult
+            ? form.aadhaar_number && (!aiResult.aadhaar_number || !/^\d{12}$/.test(aiResult.aadhaar_number))
+              ? { ...aiResult, aadhaar_number: form.aadhaar_number }
+              : aiResult
+            : null;
+
+          const merged = normalizedAi
+            ? clientOcr.mergeAadhaarExtractions(normalizedClient, normalizedAi)
+            : normalizedClient;
+          const finalExtraction = isTrustedExtraction(merged)
+            ? merged
+            : isTrustedExtraction(normalizedAi ?? ({ ...merged, aadhaar_number: "" } as AadhaarExtraction))
+              ? (normalizedAi as AadhaarExtraction)
+              : normalizedClient;
+
+          if (!isTrustedExtraction(finalExtraction)) {
+            toast.warning("Aadhaar uploaded, but the scan was not reliable enough to auto-fill details.");
+            return;
+          }
+
+          applyExtraction(finalExtraction);
+          const filled = clientOcr.countExtractedFields(finalExtraction);
+          if (filled === 0) {
+            toast.warning("Aadhaar scanned but no fields could be read. Try a clearer scan.");
+          } else {
+            toast.success(`Aadhaar scanned — ${filled} field(s) auto-filled`);
+          }
+        } catch (e) {
+          toast.error(e instanceof Error ? e.message : "Aadhaar scan failed");
         } finally {
           setScanning(false);
         }
@@ -724,10 +711,13 @@ function CandidateWizard({
       const next = cleanValue(value);
       if (!next) return false;
       switch (kind) {
-        case "name":
+        case "name": {
           if (!/^[A-Za-z][A-Za-z .'-]{1,79}$/.test(next)) return false;
           const parts = next.match(/[A-Za-z]+/g) ?? [];
-          return parts.filter((part) => part.length >= 2).length >= 2 && parts.join("").length >= 4;
+          const meaningfulParts = parts.filter((part) => part.length >= 2);
+          const longestPart = meaningfulParts.reduce((max, part) => Math.max(max, part.length), 0);
+          return parts.join("").length >= 4 && (meaningfulParts.length >= 2 || longestPart >= 4);
+        }
         case "address":
           return /[A-Za-z]{3,}/.test(next) && !/[`~^*_={}|<>]{2,}/.test(next);
         case "place":
