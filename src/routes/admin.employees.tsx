@@ -847,29 +847,40 @@ function CandidateWizard({
 
           const normalizedAi = normalize(aiResultRaw);
           const normalizedClient = normalize(clientResult);
+          const mergedExtraction =
+            normalizedAi && normalizedClient
+              ? clientOcr.mergeAadhaarExtractions(normalizedClient, normalizedAi)
+              : normalizedAi ?? normalizedClient;
 
-          // For PDFs, prefer AI extraction (more reliable on e-Aadhaar PDFs).
-          // For images, prefer whichever is trusted; merge as a tiebreaker.
-          let finalExtraction: AadhaarExtraction | null = null;
-          if (isPdf) {
-            if (normalizedAi && isTrustedExtraction(normalizedAi)) {
-              finalExtraction = normalizedAi;
-            } else if (normalizedClient && isTrustedExtraction(normalizedClient)) {
-              finalExtraction = normalizedClient;
-            }
-          } else {
-            if (normalizedClient && isTrustedExtraction(normalizedClient)) {
-              finalExtraction = normalizedClient;
-            } else if (normalizedAi && isTrustedExtraction(normalizedAi)) {
-              finalExtraction = normalizedAi;
-            } else if (normalizedAi && normalizedClient) {
-              const merged = clientOcr.mergeAadhaarExtractions(normalizedClient, normalizedAi);
-              if (isTrustedExtraction(merged)) finalExtraction = merged;
-            }
-          }
+          const orderedCandidates = [
+            mergedExtraction,
+            isPdf ? normalizedAi : normalizedClient,
+            isPdf ? normalizedClient : normalizedAi,
+          ].filter((candidate): candidate is AadhaarExtraction => !!candidate);
+
+          const rankedCandidates = orderedCandidates
+            .map((extraction, index) => ({
+              extraction,
+              trusted: isTrustedExtraction(extraction),
+              score: clientOcr.countExtractedFields(extraction),
+              index,
+            }))
+            .sort(
+              (a, b) =>
+                Number(b.trusted) - Number(a.trusted) ||
+                b.score - a.score ||
+                a.index - b.index,
+            );
+
+          const bestCandidate = rankedCandidates[0] ?? null;
+          const finalExtraction = bestCandidate?.trusted
+            ? bestCandidate.extraction
+            : bestCandidate && bestCandidate.score >= 2
+              ? bestCandidate.extraction
+              : null;
 
           if (!finalExtraction) {
-            toast.warning("Aadhaar uploaded, but the scan was not reliable enough to auto-fill details.");
+            toast.warning("Aadhaar uploaded, but no usable details could be read. Please try a clearer scan.");
             return;
           }
 
@@ -877,8 +888,10 @@ function CandidateWizard({
           const filled = clientOcr.countExtractedFields(finalExtraction);
           if (filled === 0) {
             toast.warning("Aadhaar scanned but no fields could be read. Try a clearer scan.");
-          } else {
+          } else if (bestCandidate?.trusted) {
             toast.success(`Aadhaar scanned — ${filled} field(s) auto-filled`);
+          } else {
+            toast.warning(`Aadhaar scanned partially — ${filled} field(s) auto-filled. Please review the mapped details.`);
           }
         } catch (e) {
           toast.error(e instanceof Error ? e.message : "Aadhaar scan failed");
