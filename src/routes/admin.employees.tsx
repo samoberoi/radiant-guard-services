@@ -143,6 +143,19 @@ type Candidate = {
   status: string;
 };
 
+type CandidateListItem = Pick<
+  Candidate,
+  | "id"
+  | "aadhaar_number"
+  | "full_name"
+  | "photo_url"
+  | "mobile"
+  | "email"
+  | "unit_id"
+  | "designation_id"
+  | "status"
+>;
+
 type UnitLite = {
   id: string;
   code: string;
@@ -161,14 +174,17 @@ const QK_DESIG = ["admin", "designations-lite"] as const;
 function useCandidates() {
   return useQuery({
     queryKey: QK,
-    queryFn: async (): Promise<Candidate[]> => {
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async (): Promise<CandidateListItem[]> => {
       const { data, error } = await supabase
         .from("candidates" as never)
-        .select("*")
+        .select("id,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status")
         .order("created_at", { ascending: false })
-        .limit(2000);
+        .limit(250);
       if (error) throw error;
-      return (data as unknown) as Candidate[];
+      return ((data as unknown) as CandidateListItem[]) ?? [];
     },
   });
 }
@@ -176,6 +192,9 @@ function useCandidates() {
 function useUnits() {
   return useQuery({
     queryKey: QK_UNITS,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
     queryFn: async (): Promise<UnitLite[]> => {
       const { data, error } = await supabase
         .from("units" as never)
@@ -201,6 +220,9 @@ function useUnits() {
 function useDesignations() {
   return useQuery({
     queryKey: QK_DESIG,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
     queryFn: async (): Promise<DesignationLite[]> => {
       const { data, error } = await supabase
         .from("designations" as never)
