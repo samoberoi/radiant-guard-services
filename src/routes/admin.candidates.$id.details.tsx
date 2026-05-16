@@ -59,34 +59,22 @@ export const Route = createFileRoute("/admin/candidates/$id/details")({
   component: CandidateDetailsPage,
 });
 
-const BLOOD_GROUPS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
-
-function emptyDoc() {
-  return { id: crypto.randomUUID(), name: "", type: "", url: "", notes: "" };
-}
-function emptyProof() {
-  return { id: crypto.randomUUID(), type: "", number: "", issued_by: "", valid_until: "", url: "" };
-}
-const ID_PROOF_TYPES = ["Driving License", "Passport", "Voter ID", "Ration Card", "Other"];
-function emptyContact() {
-  return { id: crypto.randomUUID(), name: "", relation: "", phone: "", email: "" };
-}
-function emptyIncident() {
-  return { id: crypto.randomUUID(), date: "", description: "", status: "" };
-}
-function emptyActivity() {
-  return { id: crypto.randomUUID(), activity: "", level: "", year: "" };
-}
-function emptyNominee() {
-  return {
-    id: crypto.randomUUID(),
-    name: "",
-    relation: "",
-    dob: "",
-    share_percent: "",
-    aadhaar: "",
-  };
-}
+import {
+  emptyDoc,
+  emptyProof,
+  emptyContact,
+  emptyActivity,
+  emptyNominee,
+  SectionHeader,
+  Field,
+  PhysicalSection,
+  ComplianceSection,
+  KnowledgeSection,
+  CriminalSection,
+  OtherSection,
+  ListSection,
+  IdentificationSection,
+} from "@/components/candidate-extra-sections";
 
 function CandidateDetailsPage() {
   const { id } = Route.useParams();
