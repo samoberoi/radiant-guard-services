@@ -1275,7 +1275,7 @@ function UploadTile({
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => cameraRef.current?.click()}
+            onClick={() => setCameraOpen(true)}
             disabled={uploading}
           >
             {uploading ? (
