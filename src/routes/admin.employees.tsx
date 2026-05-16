@@ -615,7 +615,9 @@ function CandidateWizard({
         const isTrustedExtraction = (extraction: AadhaarExtraction) => {
           const normalizedName = extraction.full_name.trim();
           const nameParts = normalizedName.match(/[A-Za-z]+/g) ?? [];
-          const hasUsefulName = nameParts.filter((part) => part.length >= 2).length >= 2;
+          const meaningfulParts = nameParts.filter((part) => part.length >= 2);
+          const hasUsefulName =
+            meaningfulParts.length >= 2 || meaningfulParts.some((part) => part.length >= 4);
           const hasMatchingAadhaar =
             !extraction.aadhaar_number || !form.aadhaar_number || extraction.aadhaar_number === form.aadhaar_number;
           const hasUsefulAddress = [
@@ -641,8 +643,33 @@ function CandidateWizard({
             data: { fileDataUrl: dataUrl, mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg") },
           })) as AadhaarExtraction;
 
-          if (!isTrustedExtraction(res) || !clientOcr.hasUsefulAadhaarData(res)) {
-            res = await clientOcr.extractAadhaarClient(file);
+          if (form.aadhaar_number && (!res.aadhaar_number || !/^\d{12}$/.test(res.aadhaar_number))) {
+            res = { ...res, aadhaar_number: form.aadhaar_number };
+          }
+
+          const fallback = !isTrustedExtraction(res) || !clientOcr.hasUsefulAadhaarData(res)
+            ? await clientOcr.extractAadhaarClient(file)
+            : null;
+
+          if (fallback) {
+            const prefer = (primary: string, secondary: string) => primary.trim() || secondary.trim();
+            const merged: AadhaarExtraction = {
+              full_name: prefer(res.full_name, fallback.full_name),
+              date_of_birth: prefer(res.date_of_birth, fallback.date_of_birth),
+              gender: prefer(res.gender, fallback.gender),
+              aadhaar_number: form.aadhaar_number || prefer(res.aadhaar_number, fallback.aadhaar_number),
+              address_line1: prefer(res.address_line1, fallback.address_line1),
+              address_line2: prefer(res.address_line2, fallback.address_line2),
+              landmark: prefer(res.landmark, fallback.landmark),
+              city: prefer(res.city, fallback.city),
+              district: prefer(res.district, fallback.district),
+              state: prefer(res.state, fallback.state),
+              pincode: prefer(res.pincode, fallback.pincode),
+              country: prefer(res.country, fallback.country),
+              birthplace: prefer(res.birthplace, fallback.birthplace),
+            };
+
+            res = merged;
           }
 
           if (!isTrustedExtraction(res)) {
