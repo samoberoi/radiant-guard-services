@@ -212,7 +212,15 @@ function CandidateDetailsPage() {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h1 className="text-xl font-semibold">Edit Candidate</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold">Edit Candidate</h1>
+              {form.candidate_code && (
+                <Badge variant="outline" className="font-mono text-xs">
+                  {form.candidate_code}
+                </Badge>
+              )}
+              <StatusPill status={form.status} />
+            </div>
             <p className="text-xs text-muted-foreground">
               {form.full_name || "—"} · {form.mobile || "no mobile"}
             </p>
