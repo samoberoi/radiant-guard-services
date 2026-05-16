@@ -1988,10 +1988,14 @@ function UnitPicker({
   units,
   value,
   onChange,
+  disabled = false,
+  emptyMessage = "No units found.",
 }: {
   units: UnitLite[];
   value: string | null;
   onChange: (id: string | null) => void;
+  disabled?: boolean;
+  emptyMessage?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -2010,7 +2014,7 @@ function UnitPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" className="w-full justify-between font-normal">
+        <Button type="button" variant="outline" role="combobox" disabled={disabled} className="w-full justify-between font-normal">
           {selected ? (
             <span className="truncate">
               <b>{selected.code}</b> · {selected.name}
@@ -2025,7 +2029,7 @@ function UnitPicker({
         <Command shouldFilter={false}>
           <CommandInput placeholder="Search units…" value={query} onValueChange={setQuery} />
           <CommandList>
-            <CommandEmpty>No units found.</CommandEmpty>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
               {filteredUnits.map((u) => (
                 <CommandItem
@@ -2055,10 +2059,14 @@ function DesignationPicker({
   designations,
   value,
   onChange,
+  disabled = false,
+  emptyMessage = "No designations found.",
 }: {
   designations: DesignationLite[];
   value: string | null;
   onChange: (id: string | null) => void;
+  disabled?: boolean;
+  emptyMessage?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -2074,7 +2082,7 @@ function DesignationPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" className="w-full justify-between font-normal">
+        <Button type="button" variant="outline" role="combobox" disabled={disabled} className="w-full justify-between font-normal">
           {selected ? (
             <span className="truncate">
               {selected.code ? <><b>{selected.code}</b> · </> : null}{selected.name}
@@ -2089,7 +2097,7 @@ function DesignationPicker({
         <Command shouldFilter={false}>
           <CommandInput placeholder="Search designations…" value={query} onValueChange={setQuery} />
           <CommandList>
-            <CommandEmpty>No designations found.</CommandEmpty>
+            <CommandEmpty>{emptyMessage}</CommandEmpty>
             <CommandGroup>
               {filtered.map((d) => (
                 <CommandItem
