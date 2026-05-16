@@ -320,7 +320,50 @@ function useDesignations() {
   });
 }
 
-// ---------------- Page ---------------- //
+function useExServices() {
+  return useQuery({
+    queryKey: QK_EX_SERVICES,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async (): Promise<ExServiceLite[]> => {
+      const { data, error } = await runWithQueryTimeout("Ex-Services", async (signal) =>
+        await supabase
+          .from("ex_services" as never)
+          .select("id,name,description,enabled")
+          .eq("enabled", true)
+          .order("name", { ascending: true })
+          .limit(500)
+          .abortSignal(signal),
+      );
+      if (error) throw error;
+      return ((data as unknown) as ExServiceLite[]) ?? [];
+    },
+  });
+}
+
+function useLanguagesLite() {
+  return useQuery({
+    queryKey: QK_LANGUAGES,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async (): Promise<LanguageLite[]> => {
+      const { data, error } = await runWithQueryTimeout("Languages", async (signal) =>
+        await supabase
+          .from("languages" as never)
+          .select("id,name,enabled")
+          .eq("enabled", true)
+          .order("name", { ascending: true })
+          .limit(500)
+          .abortSignal(signal),
+      );
+      if (error) throw error;
+      return ((data as unknown) as LanguageLite[]) ?? [];
+    },
+  });
+}
+
 function EmployeesPage() {
   const candidatesQuery = useCandidates();
   const unitsQuery = useUnits();
