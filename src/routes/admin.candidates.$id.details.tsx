@@ -422,6 +422,7 @@ function BasicSection({ form }: { form: any }) {
     <div>
       <SectionHeader title="Basic Info" desc="Read-only. Edit via the candidate wizard." />
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Field label="Candidate Code"><Input value={form.candidate_code || "—"} readOnly className="font-mono" /></Field>
         <Field label="Full Name"><Input value={form.full_name || ""} readOnly /></Field>
         <Field label="Mobile"><Input value={form.mobile || ""} readOnly /></Field>
         <Field label="Email"><Input value={form.email || ""} readOnly /></Field>
