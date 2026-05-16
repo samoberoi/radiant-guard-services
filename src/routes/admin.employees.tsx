@@ -1229,7 +1229,7 @@ function UploadTile({
   badge?: string;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
   const isPdf = !!url && /\.pdf(\?|$)/i.test(url);
   const done = !!url;
   return (
