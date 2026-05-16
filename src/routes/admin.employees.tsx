@@ -660,27 +660,48 @@ function CandidateWizard({
   };
 
   const applyExtraction = (x: AadhaarExtraction) => {
-    const pick = (incoming: string, current: string) => {
-      const next = incoming?.trim();
-      return next ? next : current;
+    const cleanValue = (incoming: string) => incoming?.trim() ?? "";
+    const looksUseful = (value: string, kind: "name" | "address" | "place" | "pin" | "aadhaar" | "gender") => {
+      const next = cleanValue(value);
+      if (!next) return false;
+      switch (kind) {
+        case "name":
+          return /^[A-Za-z][A-Za-z .'-]{1,79}$/.test(next);
+        case "address":
+          return /[A-Za-z]{3,}/.test(next) && !/[`~^*_={}|<>]{2,}/.test(next);
+        case "place":
+          return /^[A-Za-z][A-Za-z .'-]{1,79}$/.test(next);
+        case "pin":
+          return /^\d{6}$/.test(next);
+        case "aadhaar":
+          return /^\d{12}$/.test(next);
+        case "gender":
+          return /^(male|female|other)$/i.test(next);
+        default:
+          return false;
+      }
+    };
+    const pick = (incoming: string, current: string, kind: Parameters<typeof looksUseful>[1]) => {
+      const next = cleanValue(incoming);
+      return looksUseful(next, kind) ? next : current;
     };
     setForm((f) => {
-      const resolvedName = pick(x.full_name, f.full_name);
+      const resolvedName = pick(x.full_name, f.full_name, "name");
       const next: CandidateForm = {
         ...f,
         full_name: resolvedName,
         date_of_birth: x.date_of_birth ? x.date_of_birth : f.date_of_birth,
-        gender: x.gender ? toTitle(x.gender) : f.gender,
-        aadhaar_number: pick(x.aadhaar_number, f.aadhaar_number),
-        birthplace: pick(x.birthplace, f.birthplace),
-        permanent_address1: pick(x.address_line1, f.permanent_address1),
-        permanent_address2: pick(x.address_line2, f.permanent_address2),
-        permanent_landmark: pick(x.landmark, f.permanent_landmark),
-        permanent_pincode: pick(x.pincode, f.permanent_pincode),
-        permanent_city: pick(x.city, f.permanent_city),
-        permanent_district: pick(x.district, f.permanent_district),
-        permanent_state: pick(x.state, f.permanent_state),
-        permanent_country: pick(x.country, f.permanent_country) || "India",
+        gender: looksUseful(x.gender, "gender") ? toTitle(x.gender) : f.gender,
+        aadhaar_number: pick(x.aadhaar_number, f.aadhaar_number, "aadhaar"),
+        birthplace: pick(x.birthplace, f.birthplace, "place"),
+        permanent_address1: pick(x.address_line1, f.permanent_address1, "address"),
+        permanent_address2: pick(x.address_line2, f.permanent_address2, "address"),
+        permanent_landmark: pick(x.landmark, f.permanent_landmark, "address"),
+        permanent_pincode: pick(x.pincode, f.permanent_pincode, "pin"),
+        permanent_city: pick(x.city, f.permanent_city, "place"),
+        permanent_district: pick(x.district, f.permanent_district, "place"),
+        permanent_state: pick(x.state, f.permanent_state, "place"),
+        permanent_country: cleanValue(x.country) || f.permanent_country || "India",
       };
       if (next.same_as_permanent) {
         next.present_address1 = next.permanent_address1;
