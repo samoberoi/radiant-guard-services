@@ -740,6 +740,8 @@ function CandidateWizard({
   designations,
   designationsLoading,
   designationsError,
+  exServices,
+  languagesList,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -750,6 +752,8 @@ function CandidateWizard({
   designations: DesignationLite[];
   designationsLoading: boolean;
   designationsError: string | null;
+  exServices: ExServiceLite[];
+  languagesList: LanguageLite[];
 }) {
   const qc = useQueryClient();
   const extractFn = useServerFn(extractAadhaar);
