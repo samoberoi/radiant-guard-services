@@ -615,8 +615,18 @@ function CandidateWizard({
             data: { fileDataUrl: dataUrl, mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg") },
           })) as AadhaarExtraction;
           applyExtraction(res);
-          const filled = [res.full_name, res.aadhaar_number, res.date_of_birth, res.address_line1]
-            .filter((v) => v && v.trim()).length;
+          const filled = [
+            res.full_name,
+            res.aadhaar_number,
+            res.date_of_birth,
+            res.gender,
+            res.address_line1,
+            res.address_line2,
+            res.city,
+            res.district,
+            res.state,
+            res.pincode,
+          ].filter((v) => v && v.trim()).length;
           if (filled === 0) {
             toast.warning("Aadhaar scanned but no fields could be read. Try a clearer scan.");
           } else {
@@ -636,12 +646,15 @@ function CandidateWizard({
   };
 
   const applyExtraction = (x: AadhaarExtraction) => {
-    const pick = (incoming: string, current: string) =>
-      incoming && incoming.trim() ? incoming.trim() : current;
+    const pick = (incoming: string, current: string) => {
+      const next = incoming?.trim();
+      return next ? next : current;
+    };
     setForm((f) => {
+      const resolvedName = pick(x.full_name, f.full_name);
       const next: CandidateForm = {
         ...f,
-        full_name: pick(x.full_name, f.full_name),
+        full_name: resolvedName,
         date_of_birth: x.date_of_birth ? x.date_of_birth : f.date_of_birth,
         gender: x.gender ? toTitle(x.gender) : f.gender,
         aadhaar_number: pick(x.aadhaar_number, f.aadhaar_number),

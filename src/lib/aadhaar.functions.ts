@@ -44,7 +44,9 @@ Carefully parse the address block on the back of the Aadhaar card and split it i
 export const extractAadhaar = createServerFn({ method: "POST" })
   .inputValidator((input) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<AadhaarExtraction> => {
-    const apiKey = process.env.LOVABLE_API_KEY;
+    const apiKey =
+      process.env.LOVABLE_API_KEY ||
+      ((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.LOVABLE_API_KEY ?? "");
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const isPdf = data.mimeType === "application/pdf";
@@ -81,9 +83,21 @@ export const extractAadhaar = createServerFn({ method: "POST" })
       throw new Error(`AI gateway error ${res.status}: ${txt.slice(0, 200)}`);
     }
     const json = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
+      choices?: Array<{
+        message?: {
+          content?: string | Array<{ type?: string; text?: string }>;
+        };
+      }>;
     };
-    const content = json.choices?.[0]?.message?.content ?? "{}";
+    const rawContent = json.choices?.[0]?.message?.content;
+    const content =
+      typeof rawContent === "string"
+        ? rawContent
+        : Array.isArray(rawContent)
+          ? rawContent
+              .map((part) => (typeof part?.text === "string" ? part.text : ""))
+              .join("\n")
+          : "{}";
     let parsed: Partial<AadhaarExtraction> = {};
     try {
       parsed = JSON.parse(content);
@@ -98,8 +112,13 @@ export const extractAadhaar = createServerFn({ method: "POST" })
       }
     }
     const s = (v: unknown) => String(v ?? "").trim();
+    const normalizedName = s(parsed.full_name)
+      .replace(/\b(name|address|dob|yob|year of birth|gender|male|female)\b\s*[:\-]?/gi, "")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+
     return {
-      full_name: s(parsed.full_name),
+      full_name: normalizedName,
       date_of_birth: s(parsed.date_of_birth),
       gender: s(parsed.gender),
       aadhaar_number: s(parsed.aadhaar_number).replace(/\D/g, ""),
