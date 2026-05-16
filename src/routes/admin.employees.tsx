@@ -542,13 +542,13 @@ function EmployeesPage() {
             <tbody className="divide-y divide-border">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
+                  <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
                     Loading…
                   </td>
                 </tr>
               ) : candidatesError ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
+                  <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
                     {candidatesError instanceof Error
                       ? candidatesError.message
                       : "Could not load employees right now. Please retry."}
@@ -556,7 +556,7 @@ function EmployeesPage() {
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
+                  <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
                     No candidates yet. Click <b>Add Candidate</b> to start.
                   </td>
                 </tr>
@@ -566,6 +566,9 @@ function EmployeesPage() {
                   const desig = c.designation_id ? desigMap.get(c.designation_id) : undefined;
                   return (
                     <tr key={c.id} className="hover:bg-secondary/30">
+                      <td className="px-4 py-3 font-mono text-xs font-semibold text-foreground">
+                        {c.candidate_code || "—"}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           {c.photo_url ? (
