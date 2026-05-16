@@ -371,7 +371,47 @@ function CandidateDetailsPage() {
           )}
         </section>
       </div>
+
+      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject candidate</DialogTitle>
+            <DialogDescription>
+              Provide a reason. The candidate can be resubmitted for review after edits.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder="Reason for rejection…"
+            rows={4}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectOpen(false)} disabled={statusBusy}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={submitReject} disabled={statusBusy}>
+              {statusBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirm Rejection
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+function StatusPill({ status }: { status: string }) {
+  const map: Record<string, string> = {
+    draft: "bg-slate-500/15 text-slate-600",
+    pending: "bg-amber-500/15 text-amber-600",
+    approved: "bg-emerald-500/15 text-emerald-600",
+    rejected: "bg-rose-500/15 text-rose-600",
+  };
+  return (
+    <Badge className={`border-0 font-semibold capitalize ${map[status] ?? "bg-secondary text-foreground"}`}>
+      {status || "—"}
+    </Badge>
   );
 }
 
