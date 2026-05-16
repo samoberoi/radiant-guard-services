@@ -110,6 +110,8 @@ type AddressBlock = {
 
 type Candidate = {
   id: string;
+  candidate_code: string;
+  rejection_reason: string;
   aadhaar_number: string;
   full_name: string;
   photo_url: string;
