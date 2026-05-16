@@ -20,7 +20,6 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { extractAadhaar, type AadhaarExtraction } from "@/lib/aadhaar.functions";
-import { getEmployeesPageData } from "@/lib/employees.functions";
 import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -293,17 +292,14 @@ function useDesignations() {
 
 // ---------------- Page ---------------- //
 function EmployeesPage() {
-  const fetchEmployeesPageData = useServerFn(getEmployeesPageData);
-  const { data: pageData, isLoading, error: candidatesError } = useQuery({
-    queryKey: ["admin", "employees-page"],
-    queryFn: () => fetchEmployeesPageData(),
-    retry: false,
-    refetchOnWindowFocus: false,
-    staleTime: 60_000,
-  });
-  const candidates = pageData?.candidates ?? [];
-  const units = pageData?.units ?? [];
-  const designations = pageData?.designations ?? [];
+  const candidatesQuery = useCandidates();
+  const unitsQuery = useUnits();
+  const designationsQuery = useDesignations();
+  const candidates = candidatesQuery.data ?? [];
+  const units = unitsQuery.data ?? [];
+  const designations = designationsQuery.data ?? [];
+  const isLoading = candidatesQuery.isLoading;
+  const candidatesError = candidatesQuery.error;
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
@@ -526,7 +522,11 @@ function EmployeesPage() {
         }}
         editing={editing}
         units={units}
+        unitsLoading={unitsQuery.isLoading}
+        unitsError={unitsQuery.error instanceof Error ? unitsQuery.error.message : null}
         designations={designations}
+        designationsLoading={designationsQuery.isLoading}
+        designationsError={designationsQuery.error instanceof Error ? designationsQuery.error.message : null}
       />
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
