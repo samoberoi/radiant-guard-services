@@ -2,7 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 const InputSchema = z.object({
-  imageDataUrl: z.string().min(20).max(15_000_000),
+  fileDataUrl: z.string().min(20).max(20_000_000),
+  mimeType: z.string().min(3).max(100),
 });
 
 export type AadhaarExtraction = {
@@ -21,7 +22,7 @@ export type AadhaarExtraction = {
   birthplace: string;
 };
 
-const SYSTEM_PROMPT = `You are an OCR engine that extracts data from a scanned Indian Aadhaar card (front and/or back).
+const SYSTEM_PROMPT = `You are an OCR engine that extracts data from a scanned Indian Aadhaar card (front and/or back), supplied as either an image or a PDF.
 Return ONLY a strict JSON object with EXACTLY these keys (all strings; use "" if not visible):
 {
   "full_name": "as printed",
@@ -46,6 +47,19 @@ export const extractAadhaar = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
+    const isPdf = data.mimeType === "application/pdf";
+
+    // Gemini (via Lovable AI Gateway OpenAI-compat) accepts PDFs as image_url data URLs.
+    const userContent: Array<Record<string, unknown>> = [
+      {
+        type: "text",
+        text: isPdf
+          ? "Extract the Aadhaar fields and the structured address from this Aadhaar PDF (front and/or back)."
+          : "Extract the Aadhaar fields and the structured address from this card image.",
+      },
+      { type: "image_url", image_url: { url: data.fileDataUrl } },
+    ];
+
     const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -56,16 +70,7 @@ export const extractAadhaar = createServerFn({ method: "POST" })
         model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: "Extract the Aadhaar fields and the structured address from this card image.",
-              },
-              { type: "image_url", image_url: { url: data.imageDataUrl } },
-            ],
-          },
+          { role: "user", content: userContent },
         ],
         response_format: { type: "json_object" },
       }),
