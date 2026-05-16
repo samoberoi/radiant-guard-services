@@ -176,7 +176,7 @@ async function renderPdfPages(file: File) {
     if (!context) continue;
     canvas.width = viewport.width;
     canvas.height = viewport.height;
-    await page.render({ canvasContext: context, viewport }).promise;
+    await page.render({ canvasContext: context, viewport, canvas }).promise;
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.92));
     if (blob) pageImages.push(blob);
   }
