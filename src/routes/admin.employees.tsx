@@ -218,10 +218,14 @@ type UnitLite = {
 };
 
 type DesignationLite = { id: string; name: string; code: string };
+type ExServiceLite = { id: string; name: string; description: string };
+type LanguageLite = { id: string; name: string };
 
 const QK = ["admin", "candidates"] as const;
 const QK_UNITS = ["admin", "units-lite"] as const;
 const QK_DESIG = ["admin", "designations-lite"] as const;
+const QK_EX_SERVICES = ["admin", "ex-services-lite"] as const;
+const QK_LANGUAGES = ["admin", "languages-lite"] as const;
 
 async function runWithQueryTimeout<T>(label: string, run: (signal: AbortSignal) => Promise<T>, timeoutMs = 8_000) {
   const controller = new AbortController();
