@@ -975,46 +975,94 @@ function CandidateWizard({
                 </div>
               </Section>
 
-              <Section title="Address">
-                <div className="space-y-4">
-                  <Field label="Permanent Address (from Aadhaar)">
-                    <Textarea
-                      rows={2}
-                      value={form.permanent_address}
-                      onChange={(e) => set("permanent_address", e.target.value)}
-                    />
-                  </Field>
+              <Section title="Permanent Address (auto-filled from Aadhaar)">
+                <CandidateAddressFields
+                  block={{
+                    address1: form.permanent_address1,
+                    address2: form.permanent_address2,
+                    landmark: form.permanent_landmark,
+                    pincode: form.permanent_pincode,
+                    city: form.permanent_city,
+                    district: form.permanent_district,
+                    state: form.permanent_state,
+                    country: form.permanent_country,
+                  }}
+                  onChange={(patch) => {
+                    setForm((f) => {
+                      const next = { ...f };
+                      for (const [k, v] of Object.entries(patch)) {
+                        const key = `permanent_${k}` as keyof CandidateForm;
+                        (next as Record<string, unknown>)[key] = v;
+                      }
+                      if (f.same_as_permanent) {
+                        for (const [k, v] of Object.entries(patch)) {
+                          const key = `present_${k}` as keyof CandidateForm;
+                          (next as Record<string, unknown>)[key] = v;
+                        }
+                      }
+                      return next;
+                    });
+                  }}
+                />
+                <div className="mt-3">
                   <Field label="Nearest Police Station (Permanent)">
                     <Input
                       value={form.permanent_police_station}
-                      onChange={(e) => set("permanent_police_station", e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setForm((f) => ({
+                          ...f,
+                          permanent_police_station: v,
+                          present_police_station: f.same_as_permanent ? v : f.present_police_station,
+                        }));
+                      }}
                     />
                   </Field>
-                  <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/30 p-3">
-                    <Switch
-                      checked={form.same_as_permanent}
-                      onCheckedChange={(v) => set("same_as_permanent", v)}
+                </div>
+              </Section>
+
+              <Section title="Present Address">
+                <div className="mb-3 flex items-center gap-2 rounded-lg border border-border bg-secondary/30 p-3">
+                  <Switch
+                    checked={form.same_as_permanent}
+                    onCheckedChange={(v) => set("same_as_permanent", v)}
+                  />
+                  <Label className="m-0 cursor-pointer">Same as permanent address</Label>
+                </div>
+                {!form.same_as_permanent && (
+                  <>
+                    <CandidateAddressFields
+                      block={{
+                        address1: form.present_address1,
+                        address2: form.present_address2,
+                        landmark: form.present_landmark,
+                        pincode: form.present_pincode,
+                        city: form.present_city,
+                        district: form.present_district,
+                        state: form.present_state,
+                        country: form.present_country,
+                      }}
+                      onChange={(patch) =>
+                        setForm((f) => {
+                          const next = { ...f };
+                          for (const [k, v] of Object.entries(patch)) {
+                            const key = `present_${k}` as keyof CandidateForm;
+                            (next as Record<string, unknown>)[key] = v;
+                          }
+                          return next;
+                        })
+                      }
                     />
-                    <Label className="m-0 cursor-pointer">Present address same as permanent</Label>
-                  </div>
-                  {!form.same_as_permanent && (
-                    <>
-                      <Field label="Present Address">
-                        <Textarea
-                          rows={2}
-                          value={form.present_address}
-                          onChange={(e) => set("present_address", e.target.value)}
-                        />
-                      </Field>
+                    <div className="mt-3">
                       <Field label="Nearest Police Station (Present)">
                         <Input
                           value={form.present_police_station}
                           onChange={(e) => set("present_police_station", e.target.value)}
                         />
                       </Field>
-                    </>
-                  )}
-                </div>
+                    </div>
+                  </>
+                )}
               </Section>
 
               <Section title="Assignment">
