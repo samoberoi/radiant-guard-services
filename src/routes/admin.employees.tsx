@@ -718,59 +718,68 @@ function CandidateWizard({
         };
         setScanning(true);
         try {
-          const [uploadedUrl, clientResult] = await Promise.all([
+          // Read file as data URL up-front so AI extraction can run in parallel
+          // with the upload + client OCR. For PDFs we trust the AI more than
+          // the client text/OCR layer because UIDAI e-Aadhaar PDFs have
+          // scrambled fonts that fool the client parser.
+          const dataUrlPromise: Promise<string> = new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result));
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(file);
+          });
+
+          const aiPromise = dataUrlPromise
+            .then((dataUrl) =>
+              extractFn({
+                data: {
+                  fileDataUrl: dataUrl,
+                  mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
+                },
+              }) as Promise<AadhaarExtraction>,
+            )
+            .catch(() => null);
+
+          const [uploadedUrl, clientResult, aiResultRaw] = await Promise.all([
             uploadPromise,
-            clientOcr.extractAadhaarClient(file),
+            clientOcr.extractAadhaarClient(file).catch(() => null),
+            aiPromise,
           ]);
           set("aadhaar_image_url", uploadedUrl);
           toast.success("Aadhaar uploaded");
-          const normalizedClient =
-            form.aadhaar_number && (!clientResult.aadhaar_number || !/^\d{12}$/.test(clientResult.aadhaar_number))
-              ? { ...clientResult, aadhaar_number: form.aadhaar_number }
-              : clientResult;
 
-          if (isTrustedExtraction(normalizedClient)) {
-            applyExtraction(normalizedClient);
-            const filled = clientOcr.countExtractedFields(normalizedClient);
-            if (filled === 0) {
-              toast.warning("Aadhaar scanned but no fields could be read. Try a clearer scan.");
-            } else {
-              toast.success(`Aadhaar scanned — ${filled} field(s) auto-filled`);
+          const normalize = (extraction: AadhaarExtraction | null) => {
+            if (!extraction) return null;
+            return form.aadhaar_number &&
+              (!extraction.aadhaar_number || !/^\d{12}$/.test(extraction.aadhaar_number))
+              ? { ...extraction, aadhaar_number: form.aadhaar_number }
+              : extraction;
+          };
+
+          const normalizedAi = normalize(aiResultRaw);
+          const normalizedClient = normalize(clientResult);
+
+          // For PDFs, prefer AI extraction (more reliable on e-Aadhaar PDFs).
+          // For images, prefer whichever is trusted; merge as a tiebreaker.
+          let finalExtraction: AadhaarExtraction | null = null;
+          if (isPdf) {
+            if (normalizedAi && isTrustedExtraction(normalizedAi)) {
+              finalExtraction = normalizedAi;
+            } else if (normalizedClient && isTrustedExtraction(normalizedClient)) {
+              finalExtraction = normalizedClient;
             }
-            return;
+          } else {
+            if (normalizedClient && isTrustedExtraction(normalizedClient)) {
+              finalExtraction = normalizedClient;
+            } else if (normalizedAi && isTrustedExtraction(normalizedAi)) {
+              finalExtraction = normalizedAi;
+            } else if (normalizedAi && normalizedClient) {
+              const merged = clientOcr.mergeAadhaarExtractions(normalizedClient, normalizedAi);
+              if (isTrustedExtraction(merged)) finalExtraction = merged;
+            }
           }
 
-          let aiResult: AadhaarExtraction | null = null;
-          try {
-            const reader = new FileReader();
-            const dataUrl: string = await new Promise((resolve, reject) => {
-              reader.onload = () => resolve(String(reader.result));
-              reader.onerror = () => reject(reader.error);
-              reader.readAsDataURL(file);
-            });
-            aiResult = (await extractFn({
-              data: { fileDataUrl: dataUrl, mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg") },
-            })) as AadhaarExtraction;
-          } catch {
-            aiResult = null;
-          }
-
-          const normalizedAi = aiResult
-            ? form.aadhaar_number && (!aiResult.aadhaar_number || !/^\d{12}$/.test(aiResult.aadhaar_number))
-              ? { ...aiResult, aadhaar_number: form.aadhaar_number }
-              : aiResult
-            : null;
-
-          const merged = normalizedAi
-            ? clientOcr.mergeAadhaarExtractions(normalizedClient, normalizedAi)
-            : normalizedClient;
-          const finalExtraction = isTrustedExtraction(merged)
-            ? merged
-            : isTrustedExtraction(normalizedAi ?? ({ ...merged, aadhaar_number: "" } as AadhaarExtraction))
-              ? (normalizedAi as AadhaarExtraction)
-              : normalizedClient;
-
-          if (!isTrustedExtraction(finalExtraction)) {
+          if (!finalExtraction) {
             toast.warning("Aadhaar uploaded, but the scan was not reliable enough to auto-fill details.");
             return;
           }
