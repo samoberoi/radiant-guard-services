@@ -193,8 +193,8 @@ function useCandidates() {
     refetchOnWindowFocus: false,
     staleTime: 60_000,
     queryFn: async (): Promise<CandidateListItem[]> => {
-      const { data, error } = await runWithQueryTimeout("Employees", (signal) =>
-        supabase
+      const { data, error } = await runWithQueryTimeout("Employees", async (signal) =>
+        await supabase
           .from("candidates" as never)
           .select("id,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status")
           .order("created_at", { ascending: false })
@@ -214,8 +214,8 @@ function useUnits() {
     refetchOnWindowFocus: false,
     staleTime: 60_000,
     queryFn: async (): Promise<UnitLite[]> => {
-      const { data, error } = await runWithQueryTimeout("Units", (signal) =>
-        supabase
+      const { data, error } = await runWithQueryTimeout("Units", async (signal) =>
+        await supabase
           .from("units" as never)
           .select("id,code,name,customer_id")
           .order("name", { ascending: true })
@@ -227,8 +227,8 @@ function useUnits() {
       const custIds = Array.from(new Set(units.map((u) => u.customer_id).filter(Boolean))) as string[];
       let custMap = new Map<string, string>();
       if (custIds.length) {
-        const { data: cs } = await runWithQueryTimeout("Customers", (signal) =>
-          supabase
+        const { data: cs } = await runWithQueryTimeout("Customers", async (signal) =>
+          await supabase
             .from("customers" as never)
             .select("id,name")
             .in("id", custIds)
@@ -248,8 +248,8 @@ function useDesignations() {
     refetchOnWindowFocus: false,
     staleTime: 60_000,
     queryFn: async (): Promise<DesignationLite[]> => {
-      const { data, error } = await runWithQueryTimeout("Designations", (signal) =>
-        supabase
+      const { data, error } = await runWithQueryTimeout("Designations", async (signal) =>
+        await supabase
           .from("designations" as never)
           .select("id,name,code,enabled")
           .eq("enabled", true)
