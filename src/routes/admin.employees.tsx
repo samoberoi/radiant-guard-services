@@ -1315,7 +1315,147 @@ function UploadTile({
           ) : url ? "Replace" : "Upload (Image or PDF)"}
         </Button>
       )}
+      {allowCamera && (
+        <CameraCaptureDialog
+          open={cameraOpen}
+          onOpenChange={setCameraOpen}
+          onCapture={(file) => {
+            setCameraOpen(false);
+            onPick(file);
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function CameraCaptureDialog({
+  open,
+  onOpenChange,
+  onCapture,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onCapture: (file: File) => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [ready, setReady] = useState(false);
+  const [facing, setFacing] = useState<"user" | "environment">("user");
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setError(null);
+    setReady(false);
+
+    (async () => {
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error("Camera API not available in this browser");
+        }
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false,
+        });
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play().catch(() => {});
+          setReady(true);
+        }
+      } catch (e: unknown) {
+        const err = e as { name?: string; message?: string };
+        if (err.name === "NotAllowedError") {
+          setError("Camera permission denied. Enable camera access in your browser settings and retry.");
+        } else if (err.name === "NotFoundError") {
+          setError("No camera found on this device.");
+        } else if (err.name === "NotReadableError") {
+          setError("Camera is in use by another application.");
+        } else {
+          setError(err.message || "Could not start camera");
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      const s = streamRef.current;
+      if (s) {
+        s.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+      if (videoRef.current) videoRef.current.srcObject = null;
+    };
+  }, [open, facing]);
+
+  const snap = () => {
+    const video = videoRef.current;
+    if (!video || !ready) return;
+    const w = video.videoWidth || 1280;
+    const h = video.videoHeight || 720;
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, w, h);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" });
+        onCapture(file);
+      },
+      "image/jpeg",
+      0.92,
+    );
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Take Photograph</DialogTitle>
+          <DialogDescription>Position the subject and click Capture.</DialogDescription>
+        </DialogHeader>
+        <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-md bg-black">
+          {error ? (
+            <div className="px-6 text-center text-sm text-rose-300">{error}</div>
+          ) : (
+            <video ref={videoRef} playsInline muted className="h-full w-full object-contain" />
+          )}
+          {!ready && !error && (
+            <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Starting camera…
+            </div>
+          )}
+        </div>
+        <DialogFooter className="gap-2 sm:justify-between">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setFacing((f) => (f === "user" ? "environment" : "user"))}
+            disabled={!!error}
+          >
+            Switch camera ({facing === "user" ? "front" : "back"})
+          </Button>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={snap} disabled={!ready || !!error}>
+              <Camera className="mr-1.5 h-4 w-4" /> Capture
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
