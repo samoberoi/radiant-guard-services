@@ -858,28 +858,6 @@ function CandidateWizard({
 
   const unit = form.unit_id ? units.find((u) => u.id === form.unit_id) : undefined;
 
-  // ----- Step 1: Aadhaar number ----- //
-  const aadhaarValid = /^\d{12}$/.test(form.aadhaar_number);
-
-  const sendOtp = () => {
-    if (!aadhaarValid) {
-      toast.error("Enter a valid 12-digit Aadhaar number");
-      return;
-    }
-    toast.success(`OTP sent to Aadhaar-linked mobile. (Demo OTP: ${MOCK_OTP})`);
-    setStep("otp");
-  };
-
-  const verifyOtp = () => {
-    if (otp !== MOCK_OTP) {
-      setOtpError("Invalid OTP. Try 1111 (demo).");
-      return;
-    }
-    setOtpError(null);
-    toast.success("Aadhaar verified");
-    setStep("form");
-  };
-
   // ----- File upload helper ----- //
   const uploadFile = async (file: File, slot: "photo" | "signature" | "aadhaar" | "pan"): Promise<string> => {
     const ext = file.name.split(".").pop() || "png";
