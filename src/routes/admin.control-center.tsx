@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BadgeCheck, Briefcase, Calculator, CalendarDays, CalendarRange, ClipboardList, Clock, Coins, HandCoins, Receipt, ReceiptText, Settings } from "lucide-react";
+import { ArrowRight, BadgeCheck, Briefcase, Calculator, CalendarDays, CalendarRange, ClipboardList, Clock, Coins, HandCoins, Receipt, ReceiptText, Settings, Shield } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/admin/control-center")({
@@ -73,6 +73,12 @@ const tiles: Tile[] = [
     label: "Cost Component Manager",
     description: "Configure CTC cost components like EPF, ESI, Bonus, Gratuity, LWF, etc.",
     icon: Calculator,
+  },
+  {
+    to: "/admin/ex-service-manager",
+    label: "Ex-Service Manager",
+    description: "Manage ex-servicemen ranks across Army, Navy, Air Force and CAPF.",
+    icon: Shield,
   },
 ];
 
