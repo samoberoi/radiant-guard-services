@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { countExtractedFields, extractAadhaarClient, hasUsefulAadhaarData } from "@/lib/aadhaar-ocr.client";
 import { extractAadhaar, type AadhaarExtraction } from "@/lib/aadhaar.functions";
 import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
@@ -611,29 +612,40 @@ function CandidateWizard({
         });
         setScanning(true);
         try {
-          const res = (await extractFn({
+          let res = (await extractFn({
             data: { fileDataUrl: dataUrl, mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg") },
           })) as AadhaarExtraction;
+
+          if (!hasUsefulAadhaarData(res)) {
+            res = await extractAadhaarClient(file);
+          }
+
           applyExtraction(res);
-          const filled = [
-            res.full_name,
-            res.aadhaar_number,
-            res.date_of_birth,
-            res.gender,
-            res.address_line1,
-            res.address_line2,
-            res.city,
-            res.district,
-            res.state,
-            res.pincode,
-          ].filter((v) => v && v.trim()).length;
+          const filled = countExtractedFields(res);
           if (filled === 0) {
             toast.warning("Aadhaar scanned but no fields could be read. Try a clearer scan.");
           } else {
             toast.success(`Aadhaar scanned — ${filled} field(s) auto-filled`);
           }
         } catch (e) {
-          toast.error(e instanceof Error ? e.message : "Aadhaar scan failed");
+          try {
+            const fallback = await extractAadhaarClient(file);
+            applyExtraction(fallback);
+            const filled = countExtractedFields(fallback);
+            if (filled === 0) {
+              toast.warning("Aadhaar scanned but no fields could be read. Try a clearer scan.");
+            } else {
+              toast.success(`Aadhaar scanned — ${filled} field(s) auto-filled`);
+            }
+          } catch (fallbackError) {
+            toast.error(
+              fallbackError instanceof Error
+                ? fallbackError.message
+                : e instanceof Error
+                  ? e.message
+                  : "Aadhaar scan failed",
+            );
+          }
         } finally {
           setScanning(false);
         }
