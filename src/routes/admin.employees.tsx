@@ -486,8 +486,9 @@ function EmployeesPage() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           { label: "Total", value: stats.total, tone: "bg-secondary text-foreground" },
-          { label: "Active", value: stats.active, tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+          { label: "Drafts", value: stats.drafts, tone: "bg-slate-500/10 text-slate-600 dark:text-slate-300" },
           { label: "Pending", value: stats.pending, tone: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+          { label: "Approved", value: stats.approved, tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
           { label: "Rejected", value: stats.rejected, tone: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
         ].map((s) => (
           <div key={s.label} className="rounded-xl border border-border bg-card p-4">
