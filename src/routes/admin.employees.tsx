@@ -1905,6 +1905,75 @@ function CandidateWizard({
                   </Field>
                 </div>
               </Section>
+
+              <Section title="Compliance">
+                <ComplianceSection form={form} setSection={setSection} />
+              </Section>
+
+              <Section title="Knowledge & Experience">
+                <KnowledgeSection form={form} set={setAny} />
+              </Section>
+
+              <Section title="Physical & Health">
+                <PhysicalSection form={form} setSection={setSection} />
+              </Section>
+
+              <Section title="Identification Proofs">
+                <IdentificationSection form={form} set={setAny} setSection={setSection} />
+              </Section>
+
+              <Section title="Criminal History">
+                <CriminalSection form={form} set={setAny} />
+              </Section>
+
+              <Section title="Extra Curricular">
+                <ListSection
+                  title=""
+                  items={form.extra_curricular}
+                  onChange={(v) => setAny("extra_curricular", v)}
+                  empty={emptyActivity}
+                  fields={[
+                    { key: "activity", label: "Activity" },
+                    { key: "level", label: "Level" },
+                    { key: "year", label: "Year" },
+                  ]}
+                />
+              </Section>
+
+              <Section title="Other Info">
+                <OtherSection form={form} setSection={setSection} />
+              </Section>
+
+              <Section title="Documents">
+                <ListSection
+                  title=""
+                  items={form.documents}
+                  onChange={(v) => setAny("documents", v)}
+                  empty={emptyDoc}
+                  fields={[
+                    { key: "name", label: "Document Name" },
+                    { key: "type", label: "Type" },
+                    { key: "url", label: "File URL" },
+                    { key: "notes", label: "Notes" },
+                  ]}
+                />
+              </Section>
+
+              <Section title="Nominations">
+                <ListSection
+                  title=""
+                  items={form.nominations}
+                  onChange={(v) => setAny("nominations", v)}
+                  empty={emptyNominee}
+                  fields={[
+                    { key: "name", label: "Nominee Name" },
+                    { key: "relation", label: "Relation" },
+                    { key: "dob", label: "Date of Birth", type: "date" },
+                    { key: "share_percent", label: "Share %" },
+                    { key: "aadhaar", label: "Aadhaar" },
+                  ]}
+                />
+              </Section>
             </div>
           )}
         </div>
