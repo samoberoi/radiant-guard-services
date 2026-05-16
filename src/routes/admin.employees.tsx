@@ -1115,9 +1115,113 @@ function CandidateWizard({
     });
   };
 
-  // ----- Submit ----- //
+  // ----- Profile completion meter ----- //
+  const completionChecks: Array<{ key: string; ok: boolean }> = [
+    { key: "Photograph", ok: !!form.photo_url },
+    { key: "Aadhaar upload", ok: !!form.aadhaar_image_url },
+    { key: "PAN upload", ok: !!form.pan_image_url },
+    { key: "Signature", ok: !!form.signature_url },
+    { key: "Full name", ok: !!form.full_name.trim() },
+    { key: "Aadhaar number", ok: /^\d{12}$/.test(form.aadhaar_number) },
+    { key: "Date of birth", ok: !!form.date_of_birth },
+    { key: "Gender", ok: !!form.gender },
+    { key: "Mobile", ok: !!form.mobile.trim() },
+    { key: "Email", ok: !!form.email.trim() },
+    { key: "Permanent address", ok: !!form.permanent_address1.trim() && !!form.permanent_pincode },
+    { key: "Bank account", ok: !!form.bank_account_number.trim() && !!form.bank_ifsc.trim() },
+    { key: "PAN number", ok: /^[A-Z]{5}[0-9]{4}[A-Z]$/.test((form.pan_number || "").trim().toUpperCase()) },
+    { key: "Unit assignment", ok: !!form.unit_id },
+    { key: "Designation", ok: !!form.designation_id },
+  ];
+  const completionDone = completionChecks.filter((c) => c.ok).length;
+  const completionTotal = completionChecks.length;
+  const completionPct = Math.round((completionDone / completionTotal) * 100);
+  const profileComplete = completionDone === completionTotal;
+
   const uploadsComplete =
     !!form.photo_url && !!form.aadhaar_image_url && !!form.signature_url && !!form.pan_image_url;
+
+  // ----- Build payload helper ----- //
+  const buildPayload = (status: string) => {
+    const emergencyContact = form.contacts.find((c) => c.is_emergency) ?? form.contacts[0] ?? null;
+    const basePayload = form.same_as_permanent
+      ? {
+          ...form,
+          present_address1: form.permanent_address1,
+          present_address2: form.permanent_address2,
+          present_landmark: form.permanent_landmark,
+          present_pincode: form.permanent_pincode,
+          present_city: form.permanent_city,
+          present_district: form.permanent_district,
+          present_state: form.permanent_state,
+          present_country: form.permanent_country,
+          present_police_station: form.permanent_police_station,
+        }
+      : { ...form };
+    return {
+      ...basePayload,
+      status,
+      emergency_contact_name: emergencyContact?.name ?? "",
+      emergency_contact_relation: emergencyContact?.relation ?? "",
+      emergency_contact_mobile: emergencyContact?.mobile ?? "",
+    };
+  };
+
+  const persist = async (status: string, successMsg: string) => {
+    const payload = buildPayload(status);
+    if (editing) {
+      const { data: before } = await supabase
+        .from("candidates" as never)
+        .select("*")
+        .eq("id", editing.id)
+        .maybeSingle();
+      const { error } = await supabase
+        .from("candidates" as never)
+        .update(payload as never)
+        .eq("id", editing.id);
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: "update",
+        entityType: "candidate",
+        entityId: editing.id,
+        entityLabel: payload.full_name,
+        before: (before as unknown as Record<string, unknown>) ?? null,
+        after: payload as unknown as Record<string, unknown>,
+      });
+    } else {
+      const { data, error } = await supabase
+        .from("candidates" as never)
+        .insert(payload as never)
+        .select("id")
+        .single();
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: "create",
+        entityType: "candidate",
+        entityId: (data as { id: string }).id,
+        entityLabel: payload.full_name,
+        after: payload as unknown as Record<string, unknown>,
+      });
+    }
+    toast.success(successMsg);
+    qc.invalidateQueries({ queryKey: QK });
+  };
+
+  const saveDraft = async () => {
+    setSavingDraft(true);
+    try {
+      // Drafts have no strict validation — let user save partial work.
+      await persist(editing && editing.status !== "draft" ? form.status : "draft", "Draft saved");
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not save draft");
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
   const submit = async () => {
     if (!form.photo_url) return toast.error("Photograph is required");
     if (!form.aadhaar_image_url) return toast.error("Aadhaar upload is required");
@@ -1133,66 +1237,9 @@ function CandidateWizard({
       return toast.error("Bank account number must be 6–18 digits");
     setSubmitting(true);
     try {
-      const emergencyContact = form.contacts.find((c) => c.is_emergency) ?? form.contacts[0] ?? null;
-      const basePayload = form.same_as_permanent
-        ? {
-            ...form,
-            present_address1: form.permanent_address1,
-            present_address2: form.permanent_address2,
-            present_landmark: form.permanent_landmark,
-            present_pincode: form.permanent_pincode,
-            present_city: form.permanent_city,
-            present_district: form.permanent_district,
-            present_state: form.permanent_state,
-            present_country: form.permanent_country,
-            present_police_station: form.permanent_police_station,
-          }
-        : { ...form };
-      const payload = {
-        ...basePayload,
-        emergency_contact_name: emergencyContact?.name ?? "",
-        emergency_contact_relation: emergencyContact?.relation ?? "",
-        emergency_contact_mobile: emergencyContact?.mobile ?? "",
-      };
-      if (editing) {
-        const { data: before } = await supabase
-          .from("candidates" as never)
-          .select("*")
-          .eq("id", editing.id)
-          .maybeSingle();
-        const { error } = await supabase
-          .from("candidates" as never)
-          .update(payload as never)
-          .eq("id", editing.id);
-        if (error) throw error;
-        await logActivity({
-          module: "Employees",
-          action: "update",
-          entityType: "candidate",
-          entityId: editing.id,
-          entityLabel: payload.full_name,
-          before: (before as unknown as Record<string, unknown>) ?? null,
-          after: payload as unknown as Record<string, unknown>,
-        });
-        toast.success("Candidate updated");
-      } else {
-        const { data, error } = await supabase
-          .from("candidates" as never)
-          .insert(payload as never)
-          .select("id")
-          .single();
-        if (error) throw error;
-        await logActivity({
-          module: "Employees",
-          action: "create",
-          entityType: "candidate",
-          entityId: (data as { id: string }).id,
-          entityLabel: payload.full_name,
-          after: payload as unknown as Record<string, unknown>,
-        });
-        toast.success("Candidate created");
-      }
-      qc.invalidateQueries({ queryKey: QK });
+      // Creating / re-submitting moves to "pending" so the admin can approve.
+      const nextStatus = editing && editing.status === "approved" ? "approved" : "pending";
+      await persist(nextStatus, editing ? "Candidate updated" : "Candidate submitted for approval");
       onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
@@ -1200,6 +1247,7 @@ function CandidateWizard({
       setSubmitting(false);
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
