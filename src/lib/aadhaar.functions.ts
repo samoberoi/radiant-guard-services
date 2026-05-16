@@ -113,16 +113,23 @@ export const extractAadhaar = createServerFn({ method: "POST" })
       }
     }
     const s = (v: unknown) => String(v ?? "").trim();
-    const looksLikeName = (value: string) => /^[A-Za-z][A-Za-z .'-]{1,79}$/.test(value);
+    const isIsoDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value);
+    const looksLikeName = (value: string) => {
+      if (!/^[A-Za-z][A-Za-z .'-]{1,79}$/.test(value)) return false;
+      const parts = value.match(/[A-Za-z]+/g) ?? [];
+      const meaningfulParts = parts.filter((part) => part.length >= 2);
+      return meaningfulParts.length >= 2 && parts.join("").length >= 4;
+    };
     const normalizedName = s(parsed.full_name)
       .replace(/\b(name|address|dob|yob|year of birth|gender|male|female)\b\s*[:\-]?/gi, "")
       .replace(/\s{2,}/g, " ")
       .trim();
+    const normalizedDob = s(parsed.date_of_birth);
 
     return {
       full_name: looksLikeName(normalizedName) ? normalizedName : "",
-      date_of_birth: s(parsed.date_of_birth),
-      gender: s(parsed.gender),
+      date_of_birth: isIsoDate(normalizedDob) ? normalizedDob : "",
+      gender: /^(male|female|other)$/i.test(s(parsed.gender)) ? s(parsed.gender) : "",
       aadhaar_number: s(parsed.aadhaar_number).replace(/\D/g, ""),
       address_line1: s(parsed.address_line1),
       address_line2: s(parsed.address_line2),
