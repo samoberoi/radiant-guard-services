@@ -1,5 +1,5 @@
-import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -8,8 +8,6 @@ import {
   ArrowLeft,
   Save,
   CheckCircle2,
-  Plus,
-  Trash2,
   Loader2,
   Activity,
   ShieldCheck,
@@ -25,17 +23,23 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  emptyDoc,
+  emptyProof,
+  emptyContact,
+  emptyActivity,
+  emptyNominee,
+  SectionHeader,
+  Field,
+  PhysicalSection,
+  ComplianceSection,
+  KnowledgeSection,
+  CriminalSection,
+  OtherSection,
+  ListSection,
+  IdentificationSection,
+} from "@/components/candidate-extra-sections";
 
 const MODULE = "Candidate Details";
 
@@ -58,23 +62,6 @@ type SectionId = (typeof SECTIONS)[number]["id"];
 export const Route = createFileRoute("/admin/candidates/$id/details")({
   component: CandidateDetailsPage,
 });
-
-import {
-  emptyDoc,
-  emptyProof,
-  emptyContact,
-  emptyActivity,
-  emptyNominee,
-  SectionHeader,
-  Field,
-  PhysicalSection,
-  ComplianceSection,
-  KnowledgeSection,
-  CriminalSection,
-  OtherSection,
-  ListSection,
-  IdentificationSection,
-} from "@/components/candidate-extra-sections";
 
 function CandidateDetailsPage() {
   const { id } = Route.useParams();
