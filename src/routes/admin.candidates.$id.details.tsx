@@ -153,6 +153,48 @@ function CandidateDetailsPage() {
     toast.success("KYC marked completed");
   };
 
+  const changeStatus = async (
+    next: "approved" | "rejected" | "pending",
+    reason = "",
+  ) => {
+    setStatusBusy(true);
+    try {
+      const { error } = await supabase
+        .from("candidates")
+        .update({ status: next, rejection_reason: reason })
+        .eq("id", id);
+      if (error) throw error;
+      setForm((p: any) => ({ ...p, status: next, rejection_reason: reason }));
+      await logActivity({
+        module: MODULE,
+        action: next === "approved" ? "approve" : next === "rejected" ? "reject" : "resubmit",
+        entityType: "candidate",
+        entityId: id,
+        entityLabel: form?.full_name || id,
+        details: reason ? { reason } : undefined,
+      });
+      toast.success(
+        next === "approved" ? "Candidate approved" :
+        next === "rejected" ? "Candidate rejected" :
+        "Candidate resubmitted for review",
+      );
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update status");
+    } finally {
+      setStatusBusy(false);
+    }
+  };
+
+  const submitReject = async () => {
+    if (!rejectReason.trim()) {
+      toast.error("Please provide a rejection reason");
+      return;
+    }
+    await changeStatus("rejected", rejectReason.trim());
+    setRejectOpen(false);
+    setRejectReason("");
+  };
+
   if (isLoading || !form) {
     return (
       <div className="flex h-64 items-center justify-center">
