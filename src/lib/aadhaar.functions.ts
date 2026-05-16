@@ -4,6 +4,7 @@ import { z } from "zod";
 const InputSchema = z.object({
   fileDataUrl: z.string().min(20).max(20_000_000),
   mimeType: z.string().min(3).max(100),
+  pageImageDataUrls: z.array(z.string().min(20).max(20_000_000)).max(3).optional(),
 });
 
 export type AadhaarExtraction = {
@@ -22,7 +23,7 @@ export type AadhaarExtraction = {
   birthplace: string;
 };
 
-const SYSTEM_PROMPT = `You are an OCR engine that extracts data from a scanned Indian Aadhaar card (front and/or back), supplied as either an image or a PDF.
+const SYSTEM_PROMPT = `You are an OCR engine that extracts data from a scanned Indian Aadhaar card (front and/or back), supplied as either an image or page renders from a PDF.
 Return ONLY a strict JSON object with EXACTLY these keys (all strings; use "" if not visible):
 {
   "full_name": "as printed",
@@ -39,6 +40,12 @@ Return ONLY a strict JSON object with EXACTLY these keys (all strings; use "" if
   "country": "India",
   "birthplace": "city/village if printed"
 }
+Rules:
+- Copy only clearly visible English text from the card.
+- If a field is uncertain, garbled, scrambled, or looks like OCR noise, return "" for that field.
+- Never guess missing values.
+- Never return labels like Name, DOB, Address, UIDAI, Government of India as values.
+- For addresses, prefer blank over partial nonsense.
 Carefully parse the address block on the back of the Aadhaar card and split it into the structured fields above. Do not include any commentary or markdown.`;
 
 export const extractAadhaar = createServerFn({ method: "POST" })
