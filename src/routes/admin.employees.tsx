@@ -635,15 +635,16 @@ function CandidateWizard({
         };
         setScanning(true);
         try {
-          const clientResult = (await clientOcr.extractAadhaarClient(file)) as AadhaarExtraction;
+          const [uploadedUrl, clientResult] = await Promise.all([
+            uploadPromise,
+            clientOcr.extractAadhaarClient(file),
+          ]);
+          set("aadhaar_image_url", uploadedUrl);
+          toast.success("Aadhaar uploaded");
           const normalizedClient =
             form.aadhaar_number && (!clientResult.aadhaar_number || !/^\d{12}$/.test(clientResult.aadhaar_number))
               ? { ...clientResult, aadhaar_number: form.aadhaar_number }
               : clientResult;
-
-          const uploadedUrl = await uploadPromise;
-          set("aadhaar_image_url", uploadedUrl);
-          toast.success("Aadhaar uploaded");
 
           if (isTrustedExtraction(normalizedClient)) {
             applyExtraction(normalizedClient);
