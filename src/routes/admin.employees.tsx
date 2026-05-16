@@ -569,8 +569,19 @@ function EmployeesPage() {
                             size="icon"
                             onClick={() => void openEditor(c.id)}
                             disabled={openingCandidateId === c.id}
+                            title="Quick edit"
                           >
                             {openingCandidateId === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="icon"
+                            title="Full details"
+                          >
+                            <Link to="/admin/candidates/$id/details" params={{ id: c.id }}>
+                              <FileText className="h-4 w-4" />
+                            </Link>
                           </Button>
                           <Button
                             variant="ghost"
