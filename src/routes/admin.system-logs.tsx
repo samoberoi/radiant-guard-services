@@ -425,108 +425,185 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatVal(v: unknown): string {
+function formatScalar(v: unknown): string {
   if (v === null || v === undefined || v === "") return "—";
-  if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") return String(v);
-  if (Array.isArray(v)) return `[${v.length} item${v.length === 1 ? "" : "s"}]`;
-  if (typeof v === "object") {
-    const keys = Object.keys(v as Record<string, unknown>);
-    return `{${keys.length} field${keys.length === 1 ? "" : "s"}}`;
-  }
+  if (typeof v === "number") return Number.isInteger(v) ? String(v) : v.toFixed(2);
+  if (typeof v === "boolean") return v ? "yes" : "no";
+  if (typeof v === "string") return v.length > 60 ? v.slice(0, 57) + "…" : v;
   return JSON.stringify(v);
 }
 
-function ChangesSummary({ details }: { details: Record<string, unknown> }) {
-  if (!details || typeof details !== "object") return <span className="text-muted-foreground">—</span>;
+type FlatChange = { path: string; from: unknown; to: unknown };
+
+function isObj(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
+/** Try to find a stable label for an object in an array (resource, component, etc.) */
+function itemLabel(v: unknown, idx: number): string {
+  if (isObj(v)) {
+    const o = v as Record<string, unknown>;
+    for (const k of ["name", "label", "title", "designation", "code"]) {
+      const val = o[k];
+      if (typeof val === "string" && val.trim()) return val;
+    }
+  }
+  return `#${idx + 1}`;
+}
+
+/** Recursively flatten a diff into human-readable scalar-level changes. */
+function flattenDiff(from: unknown, to: unknown, path = ""): FlatChange[] {
+  // Equal — nothing
+  if (JSON.stringify(from) === JSON.stringify(to)) return [];
+
+  // Both arrays — pair by name/label when possible, else by index
+  if (Array.isArray(from) && Array.isArray(to)) {
+    const out: FlatChange[] = [];
+    const max = Math.max(from.length, to.length);
+    // Build label maps
+    const keyOf = (v: unknown, i: number) => itemLabel(v, i);
+    const fromMap = new Map<string, unknown>();
+    from.forEach((v, i) => fromMap.set(keyOf(v, i), v));
+    const seen = new Set<string>();
+    to.forEach((v, i) => {
+      const k = keyOf(v, i);
+      seen.add(k);
+      const prev = fromMap.has(k) ? fromMap.get(k) : undefined;
+      const childPath = path ? `${path} › ${k}` : k;
+      if (prev === undefined) {
+        out.push({ path: childPath, from: "(added)", to: summarize(v) });
+      } else {
+        out.push(...flattenDiff(prev, v, childPath));
+      }
+    });
+    from.forEach((v, i) => {
+      const k = keyOf(v, i);
+      if (!seen.has(k)) {
+        const childPath = path ? `${path} › ${k}` : k;
+        out.push({ path: childPath, from: summarize(v), to: "(removed)" });
+      }
+    });
+    if (out.length === 0 && from.length !== to.length) {
+      out.push({ path: path || "items", from: `${from.length} items`, to: `${to.length} items` });
+    }
+    return out;
+  }
+
+  // Both plain objects — recurse per key
+  if (isObj(from) && isObj(to)) {
+    const out: FlatChange[] = [];
+    const keys = new Set([...Object.keys(from), ...Object.keys(to)]);
+    for (const k of keys) {
+      // Skip noisy/internal keys
+      if (k === "updated_at" || k === "created_at" || k === "id") continue;
+      const childPath = path ? `${path} › ${humanKey(k)}` : humanKey(k);
+      out.push(...flattenDiff(from[k], to[k], childPath));
+    }
+    return out;
+  }
+
+  // Scalar / mixed — emit single change
+  return [{ path: path || "value", from, to }];
+}
+
+function humanKey(k: string): string {
+  return k.replace(/_/g, " ").replace(/\bid\b/gi, "ID");
+}
+
+function summarize(v: unknown): string {
+  if (v === null || v === undefined) return "—";
+  if (Array.isArray(v)) return `[${v.length} items]`;
+  if (isObj(v)) {
+    const o = v as Record<string, unknown>;
+    const lbl = itemLabel(v, 0);
+    const amt = typeof o.amount === "number" ? ` ₹${o.amount}` : "";
+    return lbl + amt;
+  }
+  return formatScalar(v);
+}
+
+function getFlatChanges(details: Record<string, unknown> | undefined | null): FlatChange[] {
+  if (!details) return [];
+  const before = (details.before ?? null) as Record<string, unknown> | null;
+  const after = (details.after ?? null) as Record<string, unknown> | null;
+  if (before || after) return flattenDiff(before, after);
+  // Fallback to raw shallow changes
   const changes = (details as { changes?: Record<string, { from: unknown; to: unknown }> }).changes;
-  if (changes && Object.keys(changes).length > 0) {
-    const keys = Object.keys(changes);
-    const shown = keys.slice(0, 3);
+  if (changes) {
+    return Object.entries(changes).flatMap(([k, v]) => flattenDiff(v.from, v.to, humanKey(k)));
+  }
+  return [];
+}
+
+function ChangesSummary({ details }: { details: Record<string, unknown> }) {
+  const flat = getFlatChanges(details);
+  if (flat.length === 0) {
+    const entries = Object.entries(details ?? {}).filter(
+      ([k]) => !["before", "after", "changes"].includes(k),
+    );
+    if (entries.length === 0) return <span className="text-muted-foreground">—</span>;
     return (
-      <div className="flex flex-wrap gap-1">
-        {shown.map((k) => (
-          <span
-            key={k}
-            className="inline-flex max-w-[260px] items-center gap-1 truncate rounded-md bg-secondary/70 px-2 py-0.5 text-[11px] font-medium text-foreground/80"
-            title={`${k}: ${formatVal(changes[k].from)} → ${formatVal(changes[k].to)}`}
-          >
-            <span className="font-semibold">{k}</span>
-            <span className="text-muted-foreground">{formatVal(changes[k].from)}</span>
-            <span className="text-muted-foreground">→</span>
-            <span>{formatVal(changes[k].to)}</span>
-          </span>
-        ))}
-        {keys.length > shown.length && (
-          <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-            +{keys.length - shown.length} more
-          </span>
-        )}
-      </div>
+      <span className="text-xs text-muted-foreground">
+        {entries.length} field{entries.length === 1 ? "" : "s"}
+      </span>
     );
   }
-  const entries = Object.entries(details).filter(([k]) => !["before", "after", "changes"].includes(k));
-  if (entries.length === 0) return <span className="text-muted-foreground">—</span>;
+  const shown = flat.slice(0, 2);
   return (
-    <div className="flex flex-wrap gap-1">
-      {entries.slice(0, 3).map(([k, v]) => (
-        <span
-          key={k}
-          className="inline-flex max-w-[260px] items-center gap-1 truncate rounded-md bg-secondary/70 px-2 py-0.5 text-[11px]"
-          title={`${k}: ${formatVal(v)}`}
-        >
-          <span className="font-semibold">{k}</span>
-          <span className="text-muted-foreground">{formatVal(v)}</span>
-        </span>
+    <div className="flex flex-col gap-0.5 text-[11px]">
+      {shown.map((c, i) => (
+        <div key={i} className="truncate" title={`${c.path}: ${formatScalar(c.from)} → ${formatScalar(c.to)}`}>
+          <span className="font-medium text-foreground/80">{c.path}</span>
+          <span className="text-muted-foreground">: {formatScalar(c.from)} → </span>
+          <span className="text-foreground">{formatScalar(c.to)}</span>
+        </div>
       ))}
-      {entries.length > 3 && (
-        <span className="rounded-md bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
-          +{entries.length - 3} more
-        </span>
+      {flat.length > shown.length && (
+        <div className="text-muted-foreground">+{flat.length - shown.length} more change{flat.length - shown.length === 1 ? "" : "s"}</div>
       )}
     </div>
   );
 }
 
 function DetailsView({ details }: { details: Record<string, unknown> }) {
-  const changes = (details as { changes?: Record<string, { from: unknown; to: unknown }> }).changes;
+  const flat = getFlatChanges(details);
   const other = Object.fromEntries(
-    Object.entries(details ?? {}).filter(([k]) => !["changes"].includes(k)),
+    Object.entries(details ?? {}).filter(([k]) => !["changes", "before", "after"].includes(k)),
   );
   return (
     <div className="space-y-3">
-      {changes && Object.keys(changes).length > 0 && (
+      {flat.length > 0 ? (
         <div className="overflow-hidden rounded-lg border border-border">
           <table className="w-full text-xs">
             <thead className="bg-secondary/60 text-left uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-3 py-2">Field</th>
+                <th className="px-3 py-2">What changed</th>
                 <th className="px-3 py-2">From</th>
                 <th className="px-3 py-2">To</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {Object.entries(changes).map(([k, v]) => (
-                <tr key={k}>
-                  <td className="px-3 py-2 font-medium text-foreground">{k}</td>
-                  <td className="px-3 py-2 align-top text-foreground/80">
-                    <pre className="whitespace-pre-wrap break-all font-mono text-[11px]">
-                      {typeof v.from === "object" ? JSON.stringify(v.from, null, 2) : String(v.from ?? "—")}
-                    </pre>
-                  </td>
-                  <td className="px-3 py-2 align-top text-foreground/90">
-                    <pre className="whitespace-pre-wrap break-all font-mono text-[11px]">
-                      {typeof v.to === "object" ? JSON.stringify(v.to, null, 2) : String(v.to ?? "—")}
-                    </pre>
-                  </td>
+              {flat.map((c, i) => (
+                <tr key={i}>
+                  <td className="px-3 py-2 font-medium text-foreground">{c.path}</td>
+                  <td className="px-3 py-2 align-top text-muted-foreground">{formatScalar(c.from)}</td>
+                  <td className="px-3 py-2 align-top text-foreground">{formatScalar(c.to)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+      ) : (
+        <div className="text-xs text-muted-foreground">No field-level changes recorded.</div>
       )}
-      <pre className="max-h-72 overflow-auto rounded-lg bg-secondary/50 p-3 text-xs text-foreground/90">
-        {JSON.stringify(other, null, 2)}
-      </pre>
+      {Object.keys(other).length > 0 && (
+        <details className="rounded-lg bg-secondary/40 p-2 text-xs">
+          <summary className="cursor-pointer text-muted-foreground">Raw details</summary>
+          <pre className="mt-2 max-h-72 overflow-auto text-[11px] text-foreground/80">
+            {JSON.stringify(other, null, 2)}
+          </pre>
+        </details>
+      )}
     </div>
   );
 }
