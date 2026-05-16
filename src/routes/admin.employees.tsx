@@ -834,6 +834,10 @@ function CandidateWizard({
 
   const set = <K extends keyof CandidateForm>(k: K, v: CandidateForm[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
+  const setAny = (k: string, v: any) =>
+    setForm((f) => ({ ...f, [k]: v }) as CandidateForm);
+  const setSection = (k: string, v: any) =>
+    setForm((f) => ({ ...f, [k]: { ...((f as any)[k] ?? {}), ...v } }) as CandidateForm);
 
   const unit = form.unit_id ? units.find((u) => u.id === form.unit_id) : undefined;
 
