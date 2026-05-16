@@ -1114,7 +1114,8 @@ function CandidateWizard({
       return toast.error("Bank account number must be 6–18 digits");
     setSubmitting(true);
     try {
-      const payload = form.same_as_permanent
+      const emergencyContact = form.contacts.find((c) => c.is_emergency) ?? form.contacts[0] ?? null;
+      const basePayload = form.same_as_permanent
         ? {
             ...form,
             present_address1: form.permanent_address1,
@@ -1128,6 +1129,12 @@ function CandidateWizard({
             present_police_station: form.permanent_police_station,
           }
         : { ...form };
+      const payload = {
+        ...basePayload,
+        emergency_contact_name: emergencyContact?.name ?? "",
+        emergency_contact_relation: emergencyContact?.relation ?? "",
+        emergency_contact_mobile: emergencyContact?.mobile ?? "",
+      };
       if (editing) {
         const { data: before } = await supabase
           .from("candidates" as never)
