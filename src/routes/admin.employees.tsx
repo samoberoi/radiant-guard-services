@@ -714,6 +714,8 @@ type CandidateForm = Omit<Candidate, "id">;
 
 function emptyForm(): CandidateForm {
   return {
+    candidate_code: "",
+    rejection_reason: "",
     aadhaar_number: "",
     full_name: "",
     photo_url: "",
