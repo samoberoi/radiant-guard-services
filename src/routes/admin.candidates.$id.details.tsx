@@ -155,9 +155,9 @@ function CandidateDetailsPage() {
       await logActivity({
         module: MODULE,
         action: "update",
-        entity_type: "candidate",
-        entity_id: id,
-        entity_label: form.full_name || id,
+        entityType: "candidate",
+        entityId: id,
+        entityLabel: form.full_name || id,
       });
       toast.success("Saved");
       if (closeAfter) navigate({ to: "/admin/employees" });
