@@ -20,6 +20,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { extractAadhaar, type AadhaarExtraction } from "@/lib/aadhaar.functions";
+import { getEmployeesPageData } from "@/lib/employees.functions";
 import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -143,6 +144,19 @@ type Candidate = {
   status: string;
 };
 
+type CandidateListItem = Pick<
+  Candidate,
+  | "id"
+  | "aadhaar_number"
+  | "full_name"
+  | "photo_url"
+  | "mobile"
+  | "email"
+  | "unit_id"
+  | "designation_id"
+  | "status"
+>;
+
 type UnitLite = {
   id: string;
   code: string;
@@ -157,18 +171,39 @@ const QK = ["admin", "candidates"] as const;
 const QK_UNITS = ["admin", "units-lite"] as const;
 const QK_DESIG = ["admin", "designations-lite"] as const;
 
+async function runWithQueryTimeout<T>(label: string, run: (signal: AbortSignal) => Promise<T>, timeoutMs = 8_000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await run(controller.signal);
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`${label} request timed out. Please retry.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 // ---------------- Hooks ---------------- //
 function useCandidates() {
   return useQuery({
     queryKey: QK,
-    queryFn: async (): Promise<Candidate[]> => {
-      const { data, error } = await supabase
-        .from("candidates" as never)
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(2000);
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async (): Promise<CandidateListItem[]> => {
+      const { data, error } = await runWithQueryTimeout("Employees", async (signal) =>
+        await supabase
+          .from("candidates" as never)
+          .select("id,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status")
+          .order("created_at", { ascending: false })
+          .limit(250)
+          .abortSignal(signal),
+      );
       if (error) throw error;
-      return (data as unknown) as Candidate[];
+      return ((data as unknown) as CandidateListItem[]) ?? [];
     },
   });
 }
@@ -176,21 +211,30 @@ function useCandidates() {
 function useUnits() {
   return useQuery({
     queryKey: QK_UNITS,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
     queryFn: async (): Promise<UnitLite[]> => {
-      const { data, error } = await supabase
-        .from("units" as never)
-        .select("id,code,name,customer_id")
-        .order("name", { ascending: true })
-        .limit(2000);
+      const { data, error } = await runWithQueryTimeout("Units", async (signal) =>
+        await supabase
+          .from("units" as never)
+          .select("id,code,name,customer_id")
+          .order("name", { ascending: true })
+          .limit(2000)
+          .abortSignal(signal),
+      );
       if (error) throw error;
       const units = ((data as unknown) as UnitLite[]) ?? [];
       const custIds = Array.from(new Set(units.map((u) => u.customer_id).filter(Boolean))) as string[];
       let custMap = new Map<string, string>();
       if (custIds.length) {
-        const { data: cs } = await supabase
-          .from("customers" as never)
-          .select("id,name")
-          .in("id", custIds);
+        const { data: cs } = await runWithQueryTimeout("Customers", async (signal) =>
+          await supabase
+            .from("customers" as never)
+            .select("id,name")
+            .in("id", custIds)
+            .abortSignal(signal),
+        );
         custMap = new Map(((cs ?? []) as Array<{ id: string; name: string }>).map((c) => [c.id, c.name]));
       }
       return units.map((u) => ({ ...u, customer_name: u.customer_id ? custMap.get(u.customer_id) ?? "" : "" }));
@@ -201,13 +245,19 @@ function useUnits() {
 function useDesignations() {
   return useQuery({
     queryKey: QK_DESIG,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
     queryFn: async (): Promise<DesignationLite[]> => {
-      const { data, error } = await supabase
-        .from("designations" as never)
-        .select("id,name,code,enabled")
-        .eq("enabled", true)
-        .order("name", { ascending: true })
-        .limit(500);
+      const { data, error } = await runWithQueryTimeout("Designations", async (signal) =>
+        await supabase
+          .from("designations" as never)
+          .select("id,name,code,enabled")
+          .eq("enabled", true)
+          .order("name", { ascending: true })
+          .limit(500)
+          .abortSignal(signal),
+      );
       if (error) throw error;
       return ((data as unknown) as DesignationLite[]) ?? [];
     },
@@ -216,15 +266,24 @@ function useDesignations() {
 
 // ---------------- Page ---------------- //
 function EmployeesPage() {
-  const { data: candidates = [], isLoading } = useCandidates();
-  const { data: units = [] } = useUnits();
-  const { data: designations = [] } = useDesignations();
+  const fetchEmployeesPageData = useServerFn(getEmployeesPageData);
+  const { data: pageData, isLoading, error: candidatesError } = useQuery({
+    queryKey: ["admin", "employees-page"],
+    queryFn: () => fetchEmployeesPageData(),
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+  });
+  const candidates = pageData?.candidates ?? [];
+  const units = pageData?.units ?? [];
+  const designations = pageData?.designations ?? [];
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
   const [openWizard, setOpenWizard] = useState(false);
   const [editing, setEditing] = useState<Candidate | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<Candidate | null>(null);
+  const [openingCandidateId, setOpeningCandidateId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<CandidateListItem | null>(null);
 
   const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const desigMap = useMemo(() => new Map(designations.map((d) => [d.id, d])), [designations]);
@@ -246,7 +305,7 @@ function EmployeesPage() {
   }, [candidates]);
 
   const deleteMut = useMutation({
-    mutationFn: async (c: Candidate) => {
+    mutationFn: async (c: CandidateListItem) => {
       const { error } = await supabase.from("candidates" as never).delete().eq("id", c.id);
       if (error) throw error;
       await logActivity({
@@ -264,6 +323,24 @@ function EmployeesPage() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Delete failed"),
   });
+
+  const openEditor = async (candidateId: string) => {
+    setOpeningCandidateId(candidateId);
+    try {
+      const { data, error } = await supabase
+        .from("candidates" as never)
+        .select("*")
+        .eq("id", candidateId)
+        .single();
+      if (error) throw error;
+      setEditing((data as Candidate) ?? null);
+      setOpenWizard(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not open candidate");
+    } finally {
+      setOpeningCandidateId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -334,6 +411,14 @@ function EmployeesPage() {
                     Loading…
                   </td>
                 </tr>
+              ) : candidatesError ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
+                    {candidatesError instanceof Error
+                      ? candidatesError.message
+                      : "Could not load employees right now. Please retry."}
+                  </td>
+                </tr>
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-10 text-center text-muted-foreground">
@@ -382,12 +467,10 @@ function EmployeesPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => {
-                              setEditing(c);
-                              setOpenWizard(true);
-                            }}
+                            onClick={() => void openEditor(c.id)}
+                            disabled={openingCandidateId === c.id}
                           >
-                            <Edit2 className="h-4 w-4" />
+                            {openingCandidateId === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="h-4 w-4" />}
                           </Button>
                           <Button
                             variant="ghost"
