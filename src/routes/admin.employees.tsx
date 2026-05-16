@@ -618,8 +618,34 @@ function CandidateWizard({
             data: { fileDataUrl: dataUrl, mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg") },
           })) as AadhaarExtraction;
 
-          if (!clientOcr.hasUsefulAadhaarData(res)) {
+          const isTrustedExtraction = (extraction: AadhaarExtraction) => {
+            const normalizedName = extraction.full_name.trim();
+            const nameParts = normalizedName.match(/[A-Za-z]+/g) ?? [];
+            const hasUsefulName = nameParts.filter((part) => part.length >= 2).length >= 2;
+            const hasMatchingAadhaar =
+              !extraction.aadhaar_number || !form.aadhaar_number || extraction.aadhaar_number === form.aadhaar_number;
+            const hasUsefulAddress = [
+              extraction.address_line1,
+              extraction.address_line2,
+              extraction.city,
+              extraction.district,
+              extraction.state,
+            ].some((value) => /[A-Za-z]{3,}/.test(value ?? ""));
+
+            return (
+              hasMatchingAadhaar &&
+              /^\d{12}$/.test(extraction.aadhaar_number) &&
+              (hasUsefulName || /^\d{4}-\d{2}-\d{2}$/.test(extraction.date_of_birth) || /^(male|female|other)$/i.test(extraction.gender) || hasUsefulAddress)
+            );
+          };
+
+          if (!isTrustedExtraction(res) || !clientOcr.hasUsefulAadhaarData(res)) {
             res = await clientOcr.extractAadhaarClient(file);
+          }
+
+          if (!isTrustedExtraction(res)) {
+            toast.warning("Aadhaar uploaded, but the scan was not reliable enough to auto-fill details.");
+            return;
           }
 
           applyExtraction(res);
@@ -666,7 +692,9 @@ function CandidateWizard({
       if (!next) return false;
       switch (kind) {
         case "name":
-          return /^[A-Za-z][A-Za-z .'-]{1,79}$/.test(next);
+          if (!/^[A-Za-z][A-Za-z .'-]{1,79}$/.test(next)) return false;
+          const parts = next.match(/[A-Za-z]+/g) ?? [];
+          return parts.filter((part) => part.length >= 2).length >= 2 && parts.join("").length >= 4;
         case "address":
           return /[A-Za-z]{3,}/.test(next) && !/[`~^*_={}|<>]{2,}/.test(next);
         case "place":
