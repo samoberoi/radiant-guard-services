@@ -759,6 +759,15 @@ function emptyForm(): CandidateForm {
     unit_id: null,
     designation_id: null,
     status: "pending",
+    physical_health: {},
+    compliance: {},
+    identification_proofs: [],
+    criminal_history: { has_history: false, incidents: [] },
+    extra_curricular: [],
+    other_info: {},
+    documents: [],
+    nominations: [],
+    kyc_completed: false,
   };
 }
 
