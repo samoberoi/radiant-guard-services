@@ -3,8 +3,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
+  Camera,
   CheckCircle2,
   Edit2,
+  FileText,
   IdCard,
   Loader2,
   Plus,
@@ -542,6 +544,16 @@ function CandidateWizard({
 
   const handleFile = async (file: File | null, slot: "photo" | "signature" | "aadhaar") => {
     if (!file) return;
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf";
+    if (slot === "photo" && !isImage) {
+      toast.error("Photograph must be an image");
+      return;
+    }
+    if ((slot === "aadhaar" || slot === "signature") && !isImage && !isPdf) {
+      toast.error("Only image or PDF files are allowed");
+      return;
+    }
     setUploading(slot);
     try {
       const url = await uploadFile(file, slot);
@@ -549,8 +561,7 @@ function CandidateWizard({
       else if (slot === "signature") set("signature_url", url);
       else set("aadhaar_image_url", url);
       toast.success(`${slot[0].toUpperCase() + slot.slice(1)} uploaded`);
-      if (slot === "aadhaar") {
-        // also run OCR
+      if (slot === "aadhaar" && isImage) {
         const reader = new FileReader();
         const dataUrl: string = await new Promise((resolve, reject) => {
           reader.onload = () => resolve(String(reader.result));
@@ -567,6 +578,8 @@ function CandidateWizard({
         } finally {
           setScanning(false);
         }
+      } else if (slot === "aadhaar" && isPdf) {
+        toast.message("PDF uploaded — please fill Aadhaar fields manually.");
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
@@ -589,7 +602,11 @@ function CandidateWizard({
   };
 
   // ----- Submit ----- //
+  const uploadsComplete = !!form.photo_url && !!form.aadhaar_image_url && !!form.signature_url;
   const submit = async () => {
+    if (!form.photo_url) return toast.error("Photograph is required");
+    if (!form.aadhaar_image_url) return toast.error("Aadhaar upload is required");
+    if (!form.signature_url) return toast.error("Signature is required");
     if (!form.full_name.trim()) return toast.error("Name is required");
     if (!form.mobile.trim()) return toast.error("Mobile is required");
     setSubmitting(true);
@@ -792,24 +809,31 @@ function CandidateWizard({
           {step === "form" && (
             <div className="space-y-6">
               {/* Uploads strip */}
-              <Section title="Uploads">
+              <Section title={`Uploads — all required${uploadsComplete ? "" : " (incomplete)"}`}>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <UploadTile
                     label="Photograph"
+                    required
                     url={form.photo_url}
+                    accept="image/*"
+                    allowCamera
                     onPick={(f) => handleFile(f, "photo")}
                     uploading={uploading === "photo"}
                   />
                   <UploadTile
                     label="Aadhaar Card"
+                    required
                     url={form.aadhaar_image_url}
+                    accept="image/*,application/pdf"
                     onPick={(f) => handleFile(f, "aadhaar")}
                     uploading={uploading === "aadhaar" || scanning}
                     badge={scanning ? "Scanning…" : undefined}
                   />
                   <UploadTile
                     label="Signature"
+                    required
                     url={form.signature_url}
+                    accept="image/*,application/pdf"
                     onPick={(f) => handleFile(f, "signature")}
                     uploading={uploading === "signature"}
                   />
@@ -985,7 +1009,8 @@ function CandidateWizard({
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button
               onClick={submit}
-              disabled={submitting || !!uploading || scanning}
+              disabled={submitting || !!uploading || scanning || !uploadsComplete}
+              title={!uploadsComplete ? "Upload photograph, Aadhaar and signature to continue" : undefined}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {submitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
@@ -1022,50 +1047,124 @@ function Field({ label, required, children }: { label: string; required?: boolea
 
 function UploadTile({
   label,
+  required,
   url,
+  accept = "image/*",
+  allowCamera = false,
   onPick,
   uploading,
   badge,
 }: {
   label: string;
+  required?: boolean;
   url: string;
+  accept?: string;
+  allowCamera?: boolean;
   onPick: (f: File | null) => void;
   uploading: boolean;
   badge?: string;
 }) {
-  const ref = useRef<HTMLInputElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const isPdf = !!url && /\.pdf(\?|$)/i.test(url);
+  const done = !!url;
   return (
-    <div className="relative flex flex-col items-center gap-2 rounded-lg border border-dashed border-border bg-secondary/20 p-3">
-      <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
+    <div
+      className={`relative flex flex-col items-center gap-2 rounded-lg border border-dashed p-3 ${
+        done ? "border-emerald-500/40 bg-emerald-500/5" : required ? "border-rose-400/40 bg-secondary/20" : "border-border bg-secondary/20"
+      }`}
+    >
+      <div className="flex w-full items-center justify-between">
+        <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+          {label} {required && <span className="text-rose-500">*</span>}
+        </div>
+        {done && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />}
+      </div>
       <div className="flex h-28 w-full items-center justify-center overflow-hidden rounded-md bg-background">
         {url ? (
-          <img src={url} alt={label} className="h-full w-full object-contain" />
+          isPdf ? (
+            <a href={url} target="_blank" rel="noreferrer" className="flex flex-col items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+              <FileText className="h-8 w-8" />
+              <span>View PDF</span>
+            </a>
+          ) : (
+            <img src={url} alt={label} className="h-full w-full object-contain" />
+          )
         ) : (
           <Upload className="h-6 w-6 text-muted-foreground" />
         )}
       </div>
       <input
-        ref={ref}
+        ref={fileRef}
         type="file"
-        accept="image/*"
+        accept={accept}
         className="hidden"
-        onChange={(e) => onPick(e.target.files?.[0] ?? null)}
+        onChange={(e) => {
+          const f = e.target.files?.[0] ?? null;
+          e.target.value = "";
+          onPick(f);
+        }}
       />
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => ref.current?.click()}
-        disabled={uploading}
-        className="w-full"
-      >
-        {uploading ? (
-          <>
-            <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-            {badge ?? "Uploading…"}
-          </>
-        ) : url ? "Replace" : "Upload"}
-      </Button>
+      {allowCamera && (
+        <input
+          ref={cameraRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0] ?? null;
+            e.target.value = "";
+            onPick(f);
+          }}
+        />
+      )}
+      {allowCamera ? (
+        <div className="grid w-full grid-cols-2 gap-1.5">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => cameraRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <>
+                <Camera className="mr-1 h-3.5 w-3.5" />
+                Take
+              </>
+            )}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileRef.current?.click()}
+            disabled={uploading}
+          >
+            <Upload className="mr-1 h-3.5 w-3.5" />
+            Upload
+          </Button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => fileRef.current?.click()}
+          disabled={uploading}
+          className="w-full"
+        >
+          {uploading ? (
+            <>
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              {badge ?? "Uploading…"}
+            </>
+          ) : url ? "Replace" : "Upload (Image or PDF)"}
+        </Button>
+      )}
     </div>
   );
 }
