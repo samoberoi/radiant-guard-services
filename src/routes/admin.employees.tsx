@@ -137,12 +137,39 @@ type Candidate = {
   present_country: string;
   present_police_station: string;
   same_as_permanent: boolean;
+  // PAN
+  pan_number: string;
+  pan_image_url: string;
+  // Bank Details
+  bank_account_holder: string;
+  bank_account_number: string;
+  bank_ifsc: string;
+  bank_name: string;
+  bank_branch: string;
+  bank_account_type: string;
+  // Emergency Contact
+  emergency_contact_name: string;
+  emergency_contact_relation: string;
+  emergency_contact_mobile: string;
+  // References
+  references: CandidateReference[];
   application_date: string;
   preferred_joining_date: string | null;
   unit_id: string | null;
   designation_id: string | null;
   status: string;
 };
+
+type CandidateReference = {
+  name: string;
+  relation_type: string;
+  mobile: string;
+  address: string;
+};
+
+const RELATION_TYPES = ["Family", "Friend", "Colleague", "Neighbor", "Other"] as const;
+const REFERENCE_RELATIONS = ["Father", "Mother", "Spouse", "Brother", "Sister", "Son", "Daughter", "Friend", "Colleague", "Neighbor", "Relative", "Other"] as const;
+const BANK_ACCOUNT_TYPES = ["Savings", "Current", "Salary"] as const;
 
 type CandidateListItem = Pick<
   Candidate,
