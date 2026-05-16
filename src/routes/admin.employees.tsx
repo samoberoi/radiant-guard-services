@@ -696,7 +696,7 @@ function CandidateWizard({
   };
 
   // ----- File upload helper ----- //
-  const uploadFile = async (file: File, slot: "photo" | "signature" | "aadhaar"): Promise<string> => {
+  const uploadFile = async (file: File, slot: "photo" | "signature" | "aadhaar" | "pan"): Promise<string> => {
     const ext = file.name.split(".").pop() || "png";
     const path = `${slot}/${form.aadhaar_number || "NEW"}-${Date.now()}.${ext}`;
     const { error } = await supabase.storage
