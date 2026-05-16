@@ -2011,6 +2011,70 @@ function UnitPicker({
   );
 }
 
+function DesignationPicker({
+  designations,
+  value,
+  onChange,
+}: {
+  designations: DesignationLite[];
+  value: string | null;
+  onChange: (id: string | null) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const selected = value ? designations.find((d) => d.id === value) : null;
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return designations;
+    return designations.filter((d) =>
+      [d.code ?? "", d.name].some((p) => p.toLowerCase().includes(needle)),
+    );
+  }, [query, designations]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" role="combobox" className="w-full justify-between font-normal">
+          {selected ? (
+            <span className="truncate">
+              {selected.code ? <><b>{selected.code}</b> · </> : null}{selected.name}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">Search designation…</span>
+          )}
+          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[420px] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Search designations…" value={query} onValueChange={setQuery} />
+          <CommandList>
+            <CommandEmpty>No designations found.</CommandEmpty>
+            <CommandGroup>
+              {filtered.map((d) => (
+                <CommandItem
+                  key={d.id}
+                  value={`${d.code ?? ""} ${d.name}`}
+                  onSelect={() => {
+                    onChange(d.id);
+                    setQuery("");
+                    setOpen(false);
+                  }}
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium">{d.name}</span>
+                    {d.code ? <span className="text-xs text-muted-foreground">{d.code}</span> : null}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function toTitle(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 }
