@@ -18,6 +18,7 @@ import {
   PanelLeftClose,
   ShieldCheck,
   SlidersHorizontal,
+  UserPlus,
   Users,
   Warehouse,
   X,
