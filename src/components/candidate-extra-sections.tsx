@@ -115,56 +115,41 @@ export function PhysicalSection({ form, setSection }: { form: any; setSection: S
 
 export function ComplianceSection({ form, setSection }: { form: any; setSection: SetSection }) {
   const c = form.compliance ?? {};
+  const pf = c.pf_enabled ?? true;
+  const eps = c.eps_enabled ?? true;
+  const esic = c.esic_enabled ?? true;
+  const pt = c.pt_enabled ?? true;
+  const toggleRow = (label: string, desc: string, checked: boolean, onChange: (v: boolean) => void) => (
+    <div className="flex items-center justify-between rounded-md border p-3">
+      <div>
+        <p className="text-sm font-medium">{label}</p>
+        <p className="text-xs text-muted-foreground">{desc}</p>
+      </div>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </div>
+  );
   return (
     <div>
-      <SectionHeader title="Compliance" desc="Statutory identifiers & compliance details" />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <Field label="UAN (Universal Account Number)">
-          <Input value={c.uan ?? ""} onChange={(e) => setSection("compliance", { uan: e.target.value })} />
-        </Field>
-        <Field label="PF Number">
-          <Input value={c.pf_number ?? ""} onChange={(e) => setSection("compliance", { pf_number: e.target.value })} />
-        </Field>
-        <Field label="ESIC Number">
-          <Input value={c.esic_number ?? ""} onChange={(e) => setSection("compliance", { esic_number: e.target.value })} />
-        </Field>
-        <Field label="ESIC Dispensary">
-          <Input value={c.esic_dispensary ?? ""} onChange={(e) => setSection("compliance", { esic_dispensary: e.target.value })} />
-        </Field>
-        <Field label="PRAN (NPS)">
-          <Input value={c.pran ?? ""} onChange={(e) => setSection("compliance", { pran: e.target.value })} />
-        </Field>
-        <Field label="Aadhaar Linked with PF">
-          <Select value={c.aadhaar_linked_pf ?? ""} onValueChange={(v) => setSection("compliance", { aadhaar_linked_pf: v })}>
-            <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="yes">Yes</SelectItem>
-              <SelectItem value="no">No</SelectItem>
-              <SelectItem value="na">Not Applicable</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label="International Worker">
-          <Select value={c.international_worker ?? "no"} onValueChange={(v) => setSection("compliance", { international_worker: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="yes">Yes</SelectItem>
-              <SelectItem value="no">No</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label="Disability Status">
-          <Select value={c.disability ?? "none"} onValueChange={(v) => setSection("compliance", { disability: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              <SelectItem value="physical">Physical</SelectItem>
-              <SelectItem value="visual">Visual</SelectItem>
-              <SelectItem value="hearing">Hearing</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
+      <SectionHeader title="Compliance" desc="Statutory contributions applicable to the candidate" />
+      <div className="space-y-3">
+        {toggleRow("Provident Fund (PF)", "Enable PF contributions for this candidate", pf, (v) => setSection("compliance", { pf_enabled: v }))}
+        {pf && (
+          <div className="ml-3 border-l-2 border-primary/30 pl-4">
+            <Field label="UAN (Universal Account Number)">
+              <Input value={c.uan ?? ""} onChange={(e) => setSection("compliance", { uan: e.target.value })} />
+            </Field>
+          </div>
+        )}
+        {toggleRow("Employees' Pension Scheme (EPS)", "Enable EPS contributions", eps, (v) => setSection("compliance", { eps_enabled: v }))}
+        {toggleRow("Employees' State Insurance (ESIC)", "Enable ESIC coverage", esic, (v) => setSection("compliance", { esic_enabled: v }))}
+        {esic && (
+          <div className="ml-3 border-l-2 border-primary/30 pl-4">
+            <Field label="ESIC Number">
+              <Input value={c.esic_number ?? ""} onChange={(e) => setSection("compliance", { esic_number: e.target.value })} />
+            </Field>
+          </div>
+        )}
+        {toggleRow("Professional Tax (PT)", "Apply Professional Tax deduction", pt, (v) => setSection("compliance", { pt_enabled: v }))}
       </div>
     </div>
   );
