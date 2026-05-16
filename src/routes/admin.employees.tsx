@@ -630,22 +630,24 @@ function CandidateWizard({
   };
 
   const applyExtraction = (x: AadhaarExtraction) => {
+    const pick = (incoming: string, current: string) =>
+      incoming && incoming.trim() ? incoming.trim() : current;
     setForm((f) => {
       const next: CandidateForm = {
         ...f,
-        full_name: f.full_name || x.full_name,
-        date_of_birth: f.date_of_birth || (x.date_of_birth || null),
-        gender: f.gender || (x.gender ? toTitle(x.gender) : ""),
-        aadhaar_number: f.aadhaar_number || x.aadhaar_number,
-        birthplace: f.birthplace || x.birthplace,
-        permanent_address1: f.permanent_address1 || x.address_line1,
-        permanent_address2: f.permanent_address2 || x.address_line2,
-        permanent_landmark: f.permanent_landmark || x.landmark,
-        permanent_pincode: f.permanent_pincode || x.pincode,
-        permanent_city: f.permanent_city || x.city,
-        permanent_district: f.permanent_district || x.district,
-        permanent_state: f.permanent_state || x.state,
-        permanent_country: f.permanent_country || x.country || "India",
+        full_name: pick(x.full_name, f.full_name),
+        date_of_birth: x.date_of_birth ? x.date_of_birth : f.date_of_birth,
+        gender: x.gender ? toTitle(x.gender) : f.gender,
+        aadhaar_number: pick(x.aadhaar_number, f.aadhaar_number),
+        birthplace: pick(x.birthplace, f.birthplace),
+        permanent_address1: pick(x.address_line1, f.permanent_address1),
+        permanent_address2: pick(x.address_line2, f.permanent_address2),
+        permanent_landmark: pick(x.landmark, f.permanent_landmark),
+        permanent_pincode: pick(x.pincode, f.permanent_pincode),
+        permanent_city: pick(x.city, f.permanent_city),
+        permanent_district: pick(x.district, f.permanent_district),
+        permanent_state: pick(x.state, f.permanent_state),
+        permanent_country: pick(x.country, f.permanent_country) || "India",
       };
       if (next.same_as_permanent) {
         next.present_address1 = next.permanent_address1;
