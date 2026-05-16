@@ -146,10 +146,12 @@ type Candidate = {
   bank_name: string;
   bank_branch: string;
   bank_account_type: string;
-  // Emergency Contact
+  // Emergency Contact (legacy, derived from primary contact on save)
   emergency_contact_name: string;
   emergency_contact_relation: string;
   emergency_contact_mobile: string;
+  // Contacts (list, one marked as emergency)
+  contacts: CandidateContact[];
   // References
   references: CandidateReference[];
   // Ex-Service
@@ -190,6 +192,13 @@ type CandidateReference = {
   relation_type: string;
   mobile: string;
   address: string;
+};
+
+type CandidateContact = {
+  name: string;
+  relation: string;
+  mobile: string;
+  is_emergency: boolean;
 };
 
 const RELATION_TYPES = ["Family", "Friend", "Colleague", "Neighbor", "Other"] as const;
@@ -727,6 +736,7 @@ function emptyForm(): CandidateForm {
     emergency_contact_name: "",
     emergency_contact_relation: "",
     emergency_contact_mobile: "",
+    contacts: [],
     references: [],
     is_ex_service: false,
     ex_service_id: null,
