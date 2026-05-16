@@ -20,6 +20,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { extractAadhaar, type AadhaarExtraction } from "@/lib/aadhaar.functions";
+import { getEmployeesPageData } from "@/lib/employees.functions";
 import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -265,9 +266,17 @@ function useDesignations() {
 
 // ---------------- Page ---------------- //
 function EmployeesPage() {
-  const { data: candidates = [], isLoading, error: candidatesError } = useCandidates();
-  const { data: units = [] } = useUnits();
-  const { data: designations = [] } = useDesignations();
+  const fetchEmployeesPageData = useServerFn(getEmployeesPageData);
+  const { data: pageData, isLoading, error: candidatesError } = useQuery({
+    queryKey: ["admin", "employees-page"],
+    queryFn: () => fetchEmployeesPageData(),
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+  });
+  const candidates = pageData?.candidates ?? [];
+  const units = pageData?.units ?? [];
+  const designations = pageData?.designations ?? [];
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
