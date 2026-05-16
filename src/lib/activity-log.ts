@@ -39,12 +39,47 @@ export type LogParams = {
   status?: "success" | "failure";
   errorMessage?: string;
   details?: Record<string, unknown>;
+  /** Snapshot before mutation — used to compute a field-level diff into details.changes */
+  before?: Record<string, unknown> | null;
+  /** Snapshot after mutation — used to compute a field-level diff into details.changes */
+  after?: Record<string, unknown> | null;
   /** override actor (e.g. login flow) */
   userPhone?: string;
   userRole?: string;
   /** override IP if already known (avoids extra fetch) */
   ip?: string;
 };
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return !!v && typeof v === "object" && !Array.isArray(v);
+}
+
+function stableStringify(v: unknown): string {
+  if (v === null || v === undefined) return JSON.stringify(v);
+  if (Array.isArray(v)) return "[" + v.map(stableStringify).join(",") + "]";
+  if (isPlainObject(v)) {
+    const keys = Object.keys(v).sort();
+    return "{" + keys.map((k) => JSON.stringify(k) + ":" + stableStringify(v[k])).join(",") + "}";
+  }
+  return JSON.stringify(v);
+}
+
+/** Compute a shallow diff of changed top-level fields between two objects. */
+export function diffObjects(
+  before: Record<string, unknown> | null | undefined,
+  after: Record<string, unknown> | null | undefined,
+): Record<string, { from: unknown; to: unknown }> {
+  const out: Record<string, { from: unknown; to: unknown }> = {};
+  const a = before ?? {};
+  const b = after ?? {};
+  const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
+  for (const k of keys) {
+    if (stableStringify(a[k]) !== stableStringify(b[k])) {
+      out[k] = { from: a[k] ?? null, to: b[k] ?? null };
+    }
+  }
+  return out;
+}
 
 export async function logActivity(p: LogParams): Promise<void> {
   try {
