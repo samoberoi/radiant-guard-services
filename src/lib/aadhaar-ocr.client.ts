@@ -136,7 +136,15 @@ function isUsefulName(value: string) {
   const meaningfulParts = wordParts.filter((part) => part.length >= 2);
   const totalLetters = wordParts.join("").length;
   const longestPart = meaningfulParts.reduce((max, part) => Math.max(max, part.length), 0);
-  return totalLetters >= 4 && (meaningfulParts.length >= 2 || longestPart >= 4);
+  const singleLetterParts = wordParts.filter((part) => part.length === 1).length;
+  const averageLength = wordParts.length ? totalLetters / wordParts.length : 0;
+  return (
+    totalLetters >= 4 &&
+    (meaningfulParts.length >= 2 || longestPart >= 4) &&
+    wordParts.length <= 5 &&
+    singleLetterParts <= 1 &&
+    averageLength >= 3
+  );
 }
 
 function isUsefulPlace(value: string) {
