@@ -132,12 +132,26 @@ export type Database = {
           id: string
           marital_status: string
           mobile: string
-          permanent_address: string
+          permanent_address1: string
+          permanent_address2: string
+          permanent_city: string
+          permanent_country: string
+          permanent_district: string
+          permanent_landmark: string
+          permanent_pincode: string
           permanent_police_station: string
+          permanent_state: string
           photo_url: string
           preferred_joining_date: string | null
-          present_address: string
+          present_address1: string
+          present_address2: string
+          present_city: string
+          present_country: string
+          present_district: string
+          present_landmark: string
+          present_pincode: string
           present_police_station: string
+          present_state: string
           religion: string
           same_as_permanent: boolean
           signature_url: string
@@ -161,12 +175,26 @@ export type Database = {
           id?: string
           marital_status?: string
           mobile?: string
-          permanent_address?: string
+          permanent_address1?: string
+          permanent_address2?: string
+          permanent_city?: string
+          permanent_country?: string
+          permanent_district?: string
+          permanent_landmark?: string
+          permanent_pincode?: string
           permanent_police_station?: string
+          permanent_state?: string
           photo_url?: string
           preferred_joining_date?: string | null
-          present_address?: string
+          present_address1?: string
+          present_address2?: string
+          present_city?: string
+          present_country?: string
+          present_district?: string
+          present_landmark?: string
+          present_pincode?: string
           present_police_station?: string
+          present_state?: string
           religion?: string
           same_as_permanent?: boolean
           signature_url?: string
@@ -190,12 +218,26 @@ export type Database = {
           id?: string
           marital_status?: string
           mobile?: string
-          permanent_address?: string
+          permanent_address1?: string
+          permanent_address2?: string
+          permanent_city?: string
+          permanent_country?: string
+          permanent_district?: string
+          permanent_landmark?: string
+          permanent_pincode?: string
           permanent_police_station?: string
+          permanent_state?: string
           photo_url?: string
           preferred_joining_date?: string | null
-          present_address?: string
+          present_address1?: string
+          present_address2?: string
+          present_city?: string
+          present_country?: string
+          present_district?: string
+          present_landmark?: string
+          present_pincode?: string
           present_police_station?: string
+          present_state?: string
           religion?: string
           same_as_permanent?: boolean
           signature_url?: string

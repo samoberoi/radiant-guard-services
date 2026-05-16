@@ -86,6 +86,17 @@ const GENDERS = ["Male", "Female", "Other"];
 const MOCK_OTP = "1111";
 
 // ---------------- Types ---------------- //
+type AddressBlock = {
+  address1: string;
+  address2: string;
+  landmark: string;
+  pincode: string;
+  city: string;
+  district: string;
+  state: string;
+  country: string;
+};
+
 type Candidate = {
   id: string;
   aadhaar_number: string;
@@ -102,11 +113,27 @@ type Candidate = {
   mobile: string;
   alt_mobile: string;
   email: string;
-  permanent_address: string;
-  present_address: string;
-  same_as_permanent: boolean;
+  // Permanent address (structured)
+  permanent_address1: string;
+  permanent_address2: string;
+  permanent_landmark: string;
+  permanent_pincode: string;
+  permanent_city: string;
+  permanent_district: string;
+  permanent_state: string;
+  permanent_country: string;
   permanent_police_station: string;
+  // Present address (structured)
+  present_address1: string;
+  present_address2: string;
+  present_landmark: string;
+  present_pincode: string;
+  present_city: string;
+  present_district: string;
+  present_state: string;
+  present_country: string;
   present_police_station: string;
+  same_as_permanent: boolean;
   application_date: string;
   preferred_joining_date: string | null;
   unit_id: string | null;
@@ -452,11 +479,25 @@ function emptyForm(): CandidateForm {
     mobile: "",
     alt_mobile: "",
     email: "",
-    permanent_address: "",
-    present_address: "",
-    same_as_permanent: true,
+    permanent_address1: "",
+    permanent_address2: "",
+    permanent_landmark: "",
+    permanent_pincode: "",
+    permanent_city: "",
+    permanent_district: "",
+    permanent_state: "",
+    permanent_country: "India",
     permanent_police_station: "",
+    present_address1: "",
+    present_address2: "",
+    present_landmark: "",
+    present_pincode: "",
+    present_city: "",
+    present_district: "",
+    present_state: "",
+    present_country: "India",
     present_police_station: "",
+    same_as_permanent: true,
     application_date: new Date().toISOString().slice(0, 10),
     preferred_joining_date: null,
     unit_id: null,
@@ -589,16 +630,36 @@ function CandidateWizard({
   };
 
   const applyExtraction = (x: AadhaarExtraction) => {
-    setForm((f) => ({
-      ...f,
-      full_name: f.full_name || x.full_name,
-      date_of_birth: f.date_of_birth || (x.date_of_birth || null),
-      gender: f.gender || (x.gender ? toTitle(x.gender) : ""),
-      aadhaar_number: f.aadhaar_number || x.aadhaar_number,
-      permanent_address: f.permanent_address || x.address,
-      present_address: f.same_as_permanent ? x.address : f.present_address || x.address,
-      birthplace: f.birthplace || x.birthplace,
-    }));
+    setForm((f) => {
+      const next: CandidateForm = {
+        ...f,
+        full_name: f.full_name || x.full_name,
+        date_of_birth: f.date_of_birth || (x.date_of_birth || null),
+        gender: f.gender || (x.gender ? toTitle(x.gender) : ""),
+        aadhaar_number: f.aadhaar_number || x.aadhaar_number,
+        birthplace: f.birthplace || x.birthplace,
+        permanent_address1: f.permanent_address1 || x.address_line1,
+        permanent_address2: f.permanent_address2 || x.address_line2,
+        permanent_landmark: f.permanent_landmark || x.landmark,
+        permanent_pincode: f.permanent_pincode || x.pincode,
+        permanent_city: f.permanent_city || x.city,
+        permanent_district: f.permanent_district || x.district,
+        permanent_state: f.permanent_state || x.state,
+        permanent_country: f.permanent_country || x.country || "India",
+      };
+      if (next.same_as_permanent) {
+        next.present_address1 = next.permanent_address1;
+        next.present_address2 = next.permanent_address2;
+        next.present_landmark = next.permanent_landmark;
+        next.present_pincode = next.permanent_pincode;
+        next.present_city = next.permanent_city;
+        next.present_district = next.permanent_district;
+        next.present_state = next.permanent_state;
+        next.present_country = next.permanent_country;
+        next.present_police_station = next.permanent_police_station;
+      }
+      return next;
+    });
   };
 
   // ----- Submit ----- //
@@ -611,13 +672,20 @@ function CandidateWizard({
     if (!form.mobile.trim()) return toast.error("Mobile is required");
     setSubmitting(true);
     try {
-      const payload = {
-        ...form,
-        present_address: form.same_as_permanent ? form.permanent_address : form.present_address,
-        present_police_station: form.same_as_permanent
-          ? form.permanent_police_station
-          : form.present_police_station,
-      };
+      const payload = form.same_as_permanent
+        ? {
+            ...form,
+            present_address1: form.permanent_address1,
+            present_address2: form.permanent_address2,
+            present_landmark: form.permanent_landmark,
+            present_pincode: form.permanent_pincode,
+            present_city: form.permanent_city,
+            present_district: form.permanent_district,
+            present_state: form.permanent_state,
+            present_country: form.permanent_country,
+            present_police_station: form.permanent_police_station,
+          }
+        : { ...form };
       if (editing) {
         const { data: before } = await supabase
           .from("candidates" as never)
@@ -907,46 +975,94 @@ function CandidateWizard({
                 </div>
               </Section>
 
-              <Section title="Address">
-                <div className="space-y-4">
-                  <Field label="Permanent Address (from Aadhaar)">
-                    <Textarea
-                      rows={2}
-                      value={form.permanent_address}
-                      onChange={(e) => set("permanent_address", e.target.value)}
-                    />
-                  </Field>
+              <Section title="Permanent Address (auto-filled from Aadhaar)">
+                <CandidateAddressFields
+                  block={{
+                    address1: form.permanent_address1,
+                    address2: form.permanent_address2,
+                    landmark: form.permanent_landmark,
+                    pincode: form.permanent_pincode,
+                    city: form.permanent_city,
+                    district: form.permanent_district,
+                    state: form.permanent_state,
+                    country: form.permanent_country,
+                  }}
+                  onChange={(patch) => {
+                    setForm((f) => {
+                      const next = { ...f };
+                      for (const [k, v] of Object.entries(patch)) {
+                        const key = `permanent_${k}` as keyof CandidateForm;
+                        (next as Record<string, unknown>)[key] = v;
+                      }
+                      if (f.same_as_permanent) {
+                        for (const [k, v] of Object.entries(patch)) {
+                          const key = `present_${k}` as keyof CandidateForm;
+                          (next as Record<string, unknown>)[key] = v;
+                        }
+                      }
+                      return next;
+                    });
+                  }}
+                />
+                <div className="mt-3">
                   <Field label="Nearest Police Station (Permanent)">
                     <Input
                       value={form.permanent_police_station}
-                      onChange={(e) => set("permanent_police_station", e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setForm((f) => ({
+                          ...f,
+                          permanent_police_station: v,
+                          present_police_station: f.same_as_permanent ? v : f.present_police_station,
+                        }));
+                      }}
                     />
                   </Field>
-                  <div className="flex items-center gap-2 rounded-lg border border-border bg-secondary/30 p-3">
-                    <Switch
-                      checked={form.same_as_permanent}
-                      onCheckedChange={(v) => set("same_as_permanent", v)}
+                </div>
+              </Section>
+
+              <Section title="Present Address">
+                <div className="mb-3 flex items-center gap-2 rounded-lg border border-border bg-secondary/30 p-3">
+                  <Switch
+                    checked={form.same_as_permanent}
+                    onCheckedChange={(v) => set("same_as_permanent", v)}
+                  />
+                  <Label className="m-0 cursor-pointer">Same as permanent address</Label>
+                </div>
+                {!form.same_as_permanent && (
+                  <>
+                    <CandidateAddressFields
+                      block={{
+                        address1: form.present_address1,
+                        address2: form.present_address2,
+                        landmark: form.present_landmark,
+                        pincode: form.present_pincode,
+                        city: form.present_city,
+                        district: form.present_district,
+                        state: form.present_state,
+                        country: form.present_country,
+                      }}
+                      onChange={(patch) =>
+                        setForm((f) => {
+                          const next = { ...f };
+                          for (const [k, v] of Object.entries(patch)) {
+                            const key = `present_${k}` as keyof CandidateForm;
+                            (next as Record<string, unknown>)[key] = v;
+                          }
+                          return next;
+                        })
+                      }
                     />
-                    <Label className="m-0 cursor-pointer">Present address same as permanent</Label>
-                  </div>
-                  {!form.same_as_permanent && (
-                    <>
-                      <Field label="Present Address">
-                        <Textarea
-                          rows={2}
-                          value={form.present_address}
-                          onChange={(e) => set("present_address", e.target.value)}
-                        />
-                      </Field>
+                    <div className="mt-3">
                       <Field label="Nearest Police Station (Present)">
                         <Input
                           value={form.present_police_station}
                           onChange={(e) => set("present_police_station", e.target.value)}
                         />
                       </Field>
-                    </>
-                  )}
-                </div>
+                    </div>
+                  </>
+                )}
               </Section>
 
               <Section title="Assignment">
@@ -1041,6 +1157,48 @@ function Field({ label, required, children }: { label: string; required?: boolea
         {label} {required && <span className="text-rose-500">*</span>}
       </Label>
       {children}
+    </div>
+  );
+}
+
+function CandidateAddressFields({
+  block,
+  onChange,
+}: {
+  block: AddressBlock;
+  onChange: (patch: Partial<AddressBlock>) => void;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field label="Address line 1">
+        <Input value={block.address1} onChange={(e) => onChange({ address1: e.target.value })} />
+      </Field>
+      <Field label="Address line 2">
+        <Input value={block.address2} onChange={(e) => onChange({ address2: e.target.value })} />
+      </Field>
+      <Field label="Landmark">
+        <Input value={block.landmark} onChange={(e) => onChange({ landmark: e.target.value })} />
+      </Field>
+      <Field label="Pincode">
+        <Input
+          value={block.pincode}
+          inputMode="numeric"
+          maxLength={6}
+          onChange={(e) => onChange({ pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
+        />
+      </Field>
+      <Field label="City">
+        <Input value={block.city} onChange={(e) => onChange({ city: e.target.value })} />
+      </Field>
+      <Field label="District">
+        <Input value={block.district} onChange={(e) => onChange({ district: e.target.value })} />
+      </Field>
+      <Field label="State">
+        <Input value={block.state} onChange={(e) => onChange({ state: e.target.value })} />
+      </Field>
+      <Field label="Country">
+        <Input value={block.country} onChange={(e) => onChange({ country: e.target.value })} />
+      </Field>
     </div>
   );
 }
