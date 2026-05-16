@@ -1589,17 +1589,11 @@ function CandidateWizard({
                     <Input value={unit?.customer_name ?? ""} disabled placeholder="Auto-filled from unit" />
                   </Field>
                   <Field label="Designation">
-                    <Select
-                      value={form.designation_id ?? undefined}
-                      onValueChange={(v) => set("designation_id", v)}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Select designation" /></SelectTrigger>
-                      <SelectContent>
-                        {designations.map((d) => (
-                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <DesignationPicker
+                      designations={designations}
+                      value={form.designation_id}
+                      onChange={(id) => set("designation_id", id)}
+                    />
                   </Field>
                   <Field label="Status">
                     <Select value={form.status} onValueChange={(v) => set("status", v)}>
