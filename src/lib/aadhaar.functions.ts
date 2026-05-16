@@ -66,7 +66,8 @@ export const extractAadhaar = createServerFn({ method: "POST" })
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        "Lovable-API-Key": apiKey,
+        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
@@ -112,13 +113,14 @@ export const extractAadhaar = createServerFn({ method: "POST" })
       }
     }
     const s = (v: unknown) => String(v ?? "").trim();
+    const looksLikeName = (value: string) => /^[A-Za-z][A-Za-z .'-]{1,79}$/.test(value);
     const normalizedName = s(parsed.full_name)
       .replace(/\b(name|address|dob|yob|year of birth|gender|male|female)\b\s*[:\-]?/gi, "")
       .replace(/\s{2,}/g, " ")
       .trim();
 
     return {
-      full_name: normalizedName,
+      full_name: looksLikeName(normalizedName) ? normalizedName : "",
       date_of_birth: s(parsed.date_of_birth),
       gender: s(parsed.gender),
       aadhaar_number: s(parsed.aadhaar_number).replace(/\D/g, ""),
