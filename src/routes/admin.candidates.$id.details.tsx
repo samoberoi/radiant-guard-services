@@ -65,8 +65,9 @@ function emptyDoc() {
   return { id: crypto.randomUUID(), name: "", type: "", url: "", notes: "" };
 }
 function emptyProof() {
-  return { id: crypto.randomUUID(), type: "", number: "", issued_by: "", url: "" };
+  return { id: crypto.randomUUID(), type: "", number: "", issued_by: "", valid_until: "", url: "" };
 }
+const ID_PROOF_TYPES = ["Driving License", "Passport", "Voter ID", "Ration Card", "Other"];
 function emptyContact() {
   return { id: crypto.randomUUID(), name: "", relation: "", phone: "", email: "" };
 }
@@ -273,19 +274,7 @@ function CandidateDetailsPage() {
             />
           )}
           {active === "identification" && (
-            <ListSection
-              title="Identification Proofs"
-              description="Driving license, voter id, passport, etc."
-              items={form.identification_proofs}
-              onChange={(v) => set("identification_proofs", v)}
-              empty={emptyProof}
-              fields={[
-                { key: "type", label: "Document Type" },
-                { key: "number", label: "Document Number" },
-                { key: "issued_by", label: "Issued By" },
-                { key: "url", label: "File URL" },
-              ]}
-            />
+            <IdentificationSection form={form} set={set} setSection={setSection} />
           )}
           {active === "criminal" && (
             <CriminalSection form={form} set={set} />
@@ -928,6 +917,190 @@ function ListSection({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function IdentificationSection({
+  form,
+  set,
+  setSection,
+}: {
+  form: any;
+  set: (k: string, v: any) => void;
+  setSection: (k: string, v: any) => void;
+}) {
+  const proofs: any[] = Array.isArray(form.identification_proofs) ? form.identification_proofs : [];
+  const weapon = form.other_info?.weapon_license ?? { has_weapon: false, number: "", valid_until: "", valid_area: "" };
+
+  const uploaded = [
+    { label: "Photo", url: form.photo_url },
+    { label: "Aadhaar Card", url: form.aadhaar_image_url, number: form.aadhaar_number },
+    { label: "PAN Card", url: form.pan_image_url, number: form.pan_number },
+    { label: "Signature", url: form.signature_url },
+  ];
+
+  return (
+    <div>
+      <SectionHeader title="Identification Proofs" desc="Uploaded documents, additional proofs and weapon license" />
+
+      {/* Uploaded docs */}
+      <h3 className="mb-3 text-sm font-medium">Uploaded Documents</h3>
+      <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
+        {uploaded.map((u) => (
+          <div key={u.label} className="rounded-md border p-3 text-center">
+            {u.url ? (
+              <a href={u.url} target="_blank" rel="noreferrer" className="block">
+                <img src={u.url} alt={u.label} className="mx-auto h-24 w-full rounded object-contain" />
+              </a>
+            ) : (
+              <div className="flex h-24 items-center justify-center rounded bg-muted text-xs text-muted-foreground">
+                Not uploaded
+              </div>
+            )}
+            <p className="mt-2 text-xs font-medium">{u.label}</p>
+            {u.number && <p className="text-[10px] text-muted-foreground">{u.number}</p>}
+          </div>
+        ))}
+      </div>
+
+      {/* Additional proofs */}
+      <div className="mb-3 flex items-center justify-between">
+        <h3 className="text-sm font-medium">Additional Identification Documents</h3>
+        <Button size="sm" variant="outline" onClick={() => set("identification_proofs", [...proofs, emptyProof()])}>
+          <Plus className="mr-1 h-3 w-3" /> Add Another Document
+        </Button>
+      </div>
+      {proofs.length === 0 ? (
+        <p className="rounded-md border border-dashed py-6 text-center text-xs text-muted-foreground">
+          No additional documents. Click "Add Another Document" to add Driving License, Passport, Voter ID, etc.
+        </p>
+      ) : (
+        <div className="space-y-3">
+          {proofs.map((p, i) => (
+            <div key={p.id ?? i} className="rounded-md border p-3">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <Field label="Document Type">
+                  <Select
+                    value={p.type ?? ""}
+                    onValueChange={(v) => {
+                      const copy = [...proofs];
+                      copy[i] = { ...copy[i], type: v };
+                      set("identification_proofs", copy);
+                    }}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select type" /></SelectTrigger>
+                    <SelectContent>
+                      {ID_PROOF_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Document Number">
+                  <Input
+                    value={p.number ?? ""}
+                    onChange={(e) => {
+                      const copy = [...proofs];
+                      copy[i] = { ...copy[i], number: e.target.value };
+                      set("identification_proofs", copy);
+                    }}
+                  />
+                </Field>
+                <Field label="Issued By">
+                  <Input
+                    value={p.issued_by ?? ""}
+                    onChange={(e) => {
+                      const copy = [...proofs];
+                      copy[i] = { ...copy[i], issued_by: e.target.value };
+                      set("identification_proofs", copy);
+                    }}
+                  />
+                </Field>
+                <Field label="Valid Until">
+                  <Input
+                    type="date"
+                    value={p.valid_until ?? ""}
+                    onChange={(e) => {
+                      const copy = [...proofs];
+                      copy[i] = { ...copy[i], valid_until: e.target.value };
+                      set("identification_proofs", copy);
+                    }}
+                  />
+                </Field>
+                <div className="md:col-span-2">
+                  <Field label="File URL">
+                    <Input
+                      value={p.url ?? ""}
+                      placeholder="https://..."
+                      onChange={(e) => {
+                        const copy = [...proofs];
+                        copy[i] = { ...copy[i], url: e.target.value };
+                        set("identification_proofs", copy);
+                      }}
+                    />
+                  </Field>
+                </div>
+              </div>
+              <div className="mt-2 text-right">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-rose-500"
+                  onClick={() => set("identification_proofs", proofs.filter((_, j) => j !== i))}
+                >
+                  <Trash2 className="mr-1 h-3 w-3" /> Remove
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Weapon license */}
+      <div className="mt-8">
+        <h3 className="mb-3 text-sm font-medium">Weapon License</h3>
+        <div className="mb-3 flex items-center gap-3 rounded-md border p-3">
+          <Switch
+            checked={!!weapon.has_weapon}
+            onCheckedChange={(v) =>
+              setSection("other_info", { weapon_license: { ...weapon, has_weapon: v } })
+            }
+          />
+          <div>
+            <p className="text-sm font-medium">Candidate holds a weapon license</p>
+            <p className="text-xs text-muted-foreground">Toggle on to record license details</p>
+          </div>
+        </div>
+        {weapon.has_weapon && (
+          <div className="grid grid-cols-1 gap-3 rounded-md border p-3 md:grid-cols-3">
+            <Field label="License Number">
+              <Input
+                value={weapon.number ?? ""}
+                onChange={(e) =>
+                  setSection("other_info", { weapon_license: { ...weapon, number: e.target.value } })
+                }
+              />
+            </Field>
+            <Field label="Valid Until">
+              <Input
+                type="date"
+                value={weapon.valid_until ?? ""}
+                onChange={(e) =>
+                  setSection("other_info", { weapon_license: { ...weapon, valid_until: e.target.value } })
+                }
+              />
+            </Field>
+            <Field label="Valid Area">
+              <Input
+                placeholder="e.g. Delhi NCR"
+                value={weapon.valid_area ?? ""}
+                onChange={(e) =>
+                  setSection("other_info", { weapon_license: { ...weapon, valid_area: e.target.value } })
+                }
+              />
+            </Field>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
