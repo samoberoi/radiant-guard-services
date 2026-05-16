@@ -1161,6 +1161,48 @@ function Field({ label, required, children }: { label: string; required?: boolea
   );
 }
 
+function CandidateAddressFields({
+  block,
+  onChange,
+}: {
+  block: AddressBlock;
+  onChange: (patch: Partial<AddressBlock>) => void;
+}) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field label="Address line 1">
+        <Input value={block.address1} onChange={(e) => onChange({ address1: e.target.value })} />
+      </Field>
+      <Field label="Address line 2">
+        <Input value={block.address2} onChange={(e) => onChange({ address2: e.target.value })} />
+      </Field>
+      <Field label="Landmark">
+        <Input value={block.landmark} onChange={(e) => onChange({ landmark: e.target.value })} />
+      </Field>
+      <Field label="Pincode">
+        <Input
+          value={block.pincode}
+          inputMode="numeric"
+          maxLength={6}
+          onChange={(e) => onChange({ pincode: e.target.value.replace(/\D/g, "").slice(0, 6) })}
+        />
+      </Field>
+      <Field label="City">
+        <Input value={block.city} onChange={(e) => onChange({ city: e.target.value })} />
+      </Field>
+      <Field label="District">
+        <Input value={block.district} onChange={(e) => onChange({ district: e.target.value })} />
+      </Field>
+      <Field label="State">
+        <Input value={block.state} onChange={(e) => onChange({ state: e.target.value })} />
+      </Field>
+      <Field label="Country">
+        <Input value={block.country} onChange={(e) => onChange({ country: e.target.value })} />
+      </Field>
+    </div>
+  );
+}
+
 function UploadTile({
   label,
   required,
