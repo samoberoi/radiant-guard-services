@@ -112,7 +112,8 @@ function isUsefulName(value: string) {
   const wordParts = next.match(/[A-Za-z]+/g) ?? [];
   const meaningfulParts = wordParts.filter((part) => part.length >= 2);
   const totalLetters = wordParts.join("").length;
-  return meaningfulParts.length >= 2 && totalLetters >= 4;
+  const longestPart = meaningfulParts.reduce((max, part) => Math.max(max, part.length), 0);
+  return totalLetters >= 4 && (meaningfulParts.length >= 2 || longestPart >= 4);
 }
 
 function isUsefulPlace(value: string) {
