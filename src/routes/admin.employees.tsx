@@ -1942,7 +1942,7 @@ function CandidateWizard({
                 <ListSection
                   title=""
                   items={form.extra_curricular}
-                  onChange={(v) => setAny("extra_curricular", v)}
+                  onChange={(v: any[]) => setAny("extra_curricular", v)}
                   empty={emptyActivity}
                   fields={[
                     { key: "activity", label: "Activity" },
@@ -1960,7 +1960,7 @@ function CandidateWizard({
                 <ListSection
                   title=""
                   items={form.documents}
-                  onChange={(v) => setAny("documents", v)}
+                  onChange={(v: any[]) => setAny("documents", v)}
                   empty={emptyDoc}
                   fields={[
                     { key: "name", label: "Document Name" },
@@ -1975,7 +1975,7 @@ function CandidateWizard({
                 <ListSection
                   title=""
                   items={form.nominations}
-                  onChange={(v) => setAny("nominations", v)}
+                  onChange={(v: any[]) => setAny("nominations", v)}
                   empty={emptyNominee}
                   fields={[
                     { key: "name", label: "Nominee Name" },
