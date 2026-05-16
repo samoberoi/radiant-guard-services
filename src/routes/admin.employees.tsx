@@ -602,7 +602,7 @@ function CandidateWizard({
       else if (slot === "signature") set("signature_url", url);
       else set("aadhaar_image_url", url);
       toast.success(`${slot[0].toUpperCase() + slot.slice(1)} uploaded`);
-      if (slot === "aadhaar" && isImage) {
+      if (slot === "aadhaar") {
         const reader = new FileReader();
         const dataUrl: string = await new Promise((resolve, reject) => {
           reader.onload = () => resolve(String(reader.result));
@@ -613,14 +613,18 @@ function CandidateWizard({
         try {
           const res = (await extractFn({ data: { imageDataUrl: dataUrl } })) as AadhaarExtraction;
           applyExtraction(res);
-          toast.success("Aadhaar scanned — fields auto-filled");
+          const filled = [res.full_name, res.aadhaar_number, res.date_of_birth, res.address_line1]
+            .filter((v) => v && v.trim()).length;
+          if (filled === 0) {
+            toast.warning("Aadhaar scanned but no fields could be read. Try a clearer image.");
+          } else {
+            toast.success(`Aadhaar scanned — ${filled} field(s) auto-filled`);
+          }
         } catch (e) {
           toast.error(e instanceof Error ? e.message : "Aadhaar scan failed");
         } finally {
           setScanning(false);
         }
-      } else if (slot === "aadhaar" && isPdf) {
-        toast.message("PDF uploaded — please fill Aadhaar fields manually.");
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Upload failed");
