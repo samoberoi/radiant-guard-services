@@ -1960,11 +1960,23 @@ function UnitPicker({
   onChange: (id: string | null) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const selected = value ? units.find((u) => u.id === value) : null;
+  const filteredUnits = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return units;
+
+    return units.filter((unit) =>
+      [unit.code, unit.name, unit.customer_name ?? "", unit.id].some((part) =>
+        part.toLowerCase().includes(needle),
+      ),
+    );
+  }, [query, units]);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+        <Button type="button" variant="outline" role="combobox" className="w-full justify-between font-normal">
           {selected ? (
             <span className="truncate">
               <b>{selected.code}</b> · {selected.name}
@@ -1976,17 +1988,18 @@ function UnitPicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[420px] p-0" align="start">
-        <Command>
-          <CommandInput placeholder="Search units…" />
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Search units…" value={query} onValueChange={setQuery} />
           <CommandList>
             <CommandEmpty>No units found.</CommandEmpty>
             <CommandGroup>
-              {units.map((u) => (
+              {filteredUnits.map((u) => (
                 <CommandItem
                   key={u.id}
                   value={`${u.code} ${u.name} ${u.customer_name ?? ""}`}
                   onSelect={() => {
                     onChange(u.id);
+                    setQuery("");
                     setOpen(false);
                   }}
                 >
