@@ -393,17 +393,12 @@ export async function extractAadhaarClient(file: File): Promise<AadhaarExtractio
     return parseText(text);
   }
 
-  const textLayer = await extractPdfText(file);
-  const parsedTextLayer = parseText(textLayer);
-  if (countValidFields(parsedTextLayer) >= 3) {
-    return parsedTextLayer;
-  }
-
+  // NOTE: UIDAI e-Aadhaar PDFs embed a scrambled/CID font, so the text layer
+  // returns gibberish that *looks* like valid words (e.g. "I Coy Dei Ol Gert").
+  // We MUST NOT trust the text layer for PDFs — always rasterize + OCR.
   const pageImages = await renderPdfPages(file);
   const pageTexts = await Promise.all(pageImages.map((blob) => ocrImage(blob)));
-  const parsedOcr = parseText(pageTexts.join("\n"));
-
-  return mergeAadhaarExtractions(parsedTextLayer, parsedOcr);
+  return parseText(pageTexts.join("\n"));
 }
 
 export function countExtractedFields(extraction: AadhaarExtraction) {
