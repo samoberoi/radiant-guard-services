@@ -34,6 +34,7 @@ import { Route as AdminCustomersStateManagerRouteImport } from './routes/admin.c
 import { Route as AdminCustomersCustomerManagerRouteImport } from './routes/admin.customers.customer-manager'
 import { Route as AdminCustomersBranchManagerRouteImport } from './routes/admin.customers.branch-manager'
 import { Route as AdminContractsClientContractsRouteImport } from './routes/admin.contracts.client-contracts'
+import { Route as AdminCandidatesIdDetailsRouteImport } from './routes/admin.candidates.$id.details'
 
 const WelcomeRoute = WelcomeRouteImport.update({
   id: '/welcome',
@@ -167,6 +168,12 @@ const AdminContractsClientContractsRoute =
     path: '/contracts/client-contracts',
     getParentRoute: () => AdminRoute,
   } as any)
+const AdminCandidatesIdDetailsRoute =
+  AdminCandidatesIdDetailsRouteImport.update({
+    id: '/candidates/$id/details',
+    path: '/candidates/$id/details',
+    getParentRoute: () => AdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -194,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -221,6 +229,7 @@ export interface FileRoutesByTo {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -249,6 +258,7 @@ export interface FileRoutesById {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -278,6 +288,7 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/candidates/$id/details'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -305,6 +316,7 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/candidates/$id/details'
   id:
     | '__root__'
     | '/'
@@ -332,6 +344,7 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/candidates/$id/details'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -518,6 +531,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminContractsClientContractsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/candidates/$id/details': {
+      id: '/admin/candidates/$id/details'
+      path: '/candidates/$id/details'
+      fullPath: '/admin/candidates/$id/details'
+      preLoaderRoute: typeof AdminCandidatesIdDetailsRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
@@ -557,6 +577,7 @@ interface AdminRouteChildren {
   AdminServiceTypeManagerRoute: typeof AdminServiceTypeManagerRoute
   AdminSystemLogsRoute: typeof AdminSystemLogsRoute
   AdminContractsClientContractsRoute: typeof AdminContractsClientContractsRoute
+  AdminCandidatesIdDetailsRoute: typeof AdminCandidatesIdDetailsRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -577,6 +598,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminServiceTypeManagerRoute: AdminServiceTypeManagerRoute,
   AdminSystemLogsRoute: AdminSystemLogsRoute,
   AdminContractsClientContractsRoute: AdminContractsClientContractsRoute,
+  AdminCandidatesIdDetailsRoute: AdminCandidatesIdDetailsRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
