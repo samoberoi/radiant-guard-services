@@ -599,27 +599,24 @@ function CandidateWizard({
     }
     setUploading(slot);
     try {
-      const url = await uploadFile(file, slot);
-      if (slot === "photo") set("photo_url", url);
-      else if (slot === "signature") set("signature_url", url);
-      else set("aadhaar_image_url", url);
-      toast.success(`${slot[0].toUpperCase() + slot.slice(1)} uploaded`);
+      const uploadPromise = uploadFile(file, slot);
+      if (slot === "photo" || slot === "signature") {
+        const url = await uploadPromise;
+        if (slot === "photo") set("photo_url", url);
+        else set("signature_url", url);
+        toast.success(`${slot[0].toUpperCase() + slot.slice(1)} uploaded`);
+        return;
+      }
+
       if (slot === "aadhaar") {
         const clientOcr = await getAadhaarOcrClient();
-        const reader = new FileReader();
-        const dataUrl: string = await new Promise((resolve, reject) => {
-          reader.onload = () => resolve(String(reader.result));
-          reader.onerror = () => reject(reader.error);
-          reader.readAsDataURL(file);
-        });
         const isTrustedExtraction = (extraction: AadhaarExtraction) => {
           const normalizedName = extraction.full_name.trim();
           const nameParts = normalizedName.match(/[A-Za-z]+/g) ?? [];
           const meaningfulParts = nameParts.filter((part) => part.length >= 2);
           const hasUsefulName =
             meaningfulParts.length >= 2 || meaningfulParts.some((part) => part.length >= 4);
-          const hasMatchingAadhaar =
-            !extraction.aadhaar_number || !form.aadhaar_number || extraction.aadhaar_number === form.aadhaar_number;
+          const hasValidAadhaar = /^\d{12}$/.test(extraction.aadhaar_number);
           const hasUsefulAddress = [
             extraction.address_line1,
             extraction.address_line2,
@@ -629,8 +626,7 @@ function CandidateWizard({
           ].some((value) => /[A-Za-z]{3,}/.test(value ?? ""));
 
           return (
-            hasMatchingAadhaar &&
-            /^\d{12}$/.test(extraction.aadhaar_number) &&
+            hasValidAadhaar &&
             (hasUsefulName ||
               /^\d{4}-\d{2}-\d{2}$/.test(extraction.date_of_birth) ||
               /^(male|female|other)$/i.test(extraction.gender) ||
@@ -639,7 +635,12 @@ function CandidateWizard({
         };
         setScanning(true);
         try {
-          const clientResult = (await clientOcr.extractAadhaarClient(file)) as AadhaarExtraction;
+          const [uploadedUrl, clientResult] = await Promise.all([
+            uploadPromise,
+            clientOcr.extractAadhaarClient(file),
+          ]);
+          set("aadhaar_image_url", uploadedUrl);
+          toast.success("Aadhaar uploaded");
           const normalizedClient =
             form.aadhaar_number && (!clientResult.aadhaar_number || !/^\d{12}$/.test(clientResult.aadhaar_number))
               ? { ...clientResult, aadhaar_number: form.aadhaar_number }
@@ -658,6 +659,12 @@ function CandidateWizard({
 
           let aiResult: AadhaarExtraction | null = null;
           try {
+            const reader = new FileReader();
+            const dataUrl: string = await new Promise((resolve, reject) => {
+              reader.onload = () => resolve(String(reader.result));
+              reader.onerror = () => reject(reader.error);
+              reader.readAsDataURL(file);
+            });
             aiResult = (await extractFn({
               data: { fileDataUrl: dataUrl, mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg") },
             })) as AadhaarExtraction;
