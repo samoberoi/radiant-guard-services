@@ -807,24 +807,31 @@ function CandidateWizard({
           {step === "form" && (
             <div className="space-y-6">
               {/* Uploads strip */}
-              <Section title="Uploads">
+              <Section title={`Uploads — all required${uploadsComplete ? "" : " (incomplete)"}`}>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <UploadTile
                     label="Photograph"
+                    required
                     url={form.photo_url}
+                    accept="image/*"
+                    allowCamera
                     onPick={(f) => handleFile(f, "photo")}
                     uploading={uploading === "photo"}
                   />
                   <UploadTile
                     label="Aadhaar Card"
+                    required
                     url={form.aadhaar_image_url}
+                    accept="image/*,application/pdf"
                     onPick={(f) => handleFile(f, "aadhaar")}
                     uploading={uploading === "aadhaar" || scanning}
                     badge={scanning ? "Scanning…" : undefined}
                   />
                   <UploadTile
                     label="Signature"
+                    required
                     url={form.signature_url}
+                    accept="image/*,application/pdf"
                     onPick={(f) => handleFile(f, "signature")}
                     uploading={uploading === "signature"}
                   />
