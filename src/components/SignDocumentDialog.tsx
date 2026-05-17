@@ -62,11 +62,15 @@ export function SignDocumentDialog({
   }, [data]);
 
   const [signature, setSignature] = useState<string>("");
+  const [companySignature, setCompanySignature] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) setSignature(data?.prev?.employee_signature_data ?? "");
-  }, [open, data?.prev?.employee_signature_data]);
+    if (open) {
+      setSignature(data?.prev?.employee_signature_data ?? "");
+      setCompanySignature(data?.prev?.company_signature_data ?? "");
+    }
+  }, [open, data?.prev?.employee_signature_data, data?.prev?.company_signature_data]);
 
   const handleSignAndDownload = async () => {
     if (!data || !candidateId) return;
@@ -86,7 +90,7 @@ export function SignDocumentDialog({
           version: data.template.version,
           rendered_body: rendered,
           employee_signature_data: signature,
-          company_signature_data: "",
+          company_signature_data: companySignature,
           signed_at: signedAt,
         })
         .select("id")
@@ -104,6 +108,7 @@ export function SignDocumentDialog({
         title: data.template.title,
         body: rendered,
         employeeSignatureDataUrl: signature,
+        companySignatureDataUrl: companySignature || undefined,
         employeeName: data.candidate.full_name,
         employeeCode: data.candidate.employee_code,
         signedAt,
@@ -128,7 +133,7 @@ export function SignDocumentDialog({
             {DOC_TYPE_LABELS[docType]}
           </DialogTitle>
           <DialogDescription>
-            Review the document, sign in the box, and download a stamped PDF. Radiant Guard's signature is applied automatically.
+            Review the document, sign in the employee box, and add the employer signature. Then download a stamped PDF.
           </DialogDescription>
         </DialogHeader>
 
@@ -154,9 +159,15 @@ export function SignDocumentDialog({
               </pre>
             </div>
 
-            <div className="grid gap-2">
-              <Label>Employee Signature</Label>
-              <SignaturePad value={signature} onChange={setSignature} />
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Employee Signature</Label>
+                <SignaturePad value={signature} onChange={setSignature} />
+              </div>
+              <div className="grid gap-2">
+                <Label>Employer Signature (for Radiant Guard)</Label>
+                <SignaturePad value={companySignature} onChange={setCompanySignature} />
+              </div>
             </div>
           </>
         )}
