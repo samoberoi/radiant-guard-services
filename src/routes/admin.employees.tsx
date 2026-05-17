@@ -421,6 +421,7 @@ function useRolesLite() {
       return ((data as unknown) as RoleLite[]) ?? [];
     },
   });
+}
 
 function EmployeesPage() {
   const candidatesQuery = useCandidates();
