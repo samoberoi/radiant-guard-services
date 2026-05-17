@@ -516,17 +516,29 @@ function computeBenefitAmount(
   benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "amount">,
   wageComponents: ResourceComponent[],
   benefitItems: BenefitItem[] = [],
+  allowanceTypes: AllowanceType[] = [],
 ): number {
   if (benefit.calcType === "fixed") return Number(benefit.amount) || 0;
   const componentsTotal = wageComponents.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const benefitsTotal = benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const norm = (s: string) => s.trim().toLowerCase();
   const grossOf = (label: string): number => {
-    const l = label.trim().toLowerCase();
+    const l = norm(label);
     if (l === "gross" || l === "ctc") {
       return componentsTotal + benefitsTotal;
     }
-    const match = wageComponents.find((c) => c.name.trim().toLowerCase() === l);
-    return match ? Number(match.amount) || 0 : 0;
+    // Direct match on the wage component's stored name (often the short name)
+    let match = wageComponents.find((c) => norm(c.name) === l);
+    if (match) return Number(match.amount) || 0;
+    // Resolve via allowance type aliases: name / displayName / shortName -> allowanceId
+    const at = allowanceTypes.find(
+      (a) => norm(a.name) === l || norm(a.displayName) === l || norm(a.shortName) === l,
+    );
+    if (at) {
+      match = wageComponents.find((c) => c.allowanceId === at.id);
+      if (match) return Number(match.amount) || 0;
+    }
+    return 0;
   };
   const base = benefit.baseComponents.reduce((sum, b) => {
     const v = grossOf(b.label);
