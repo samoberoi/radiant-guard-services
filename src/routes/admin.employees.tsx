@@ -674,6 +674,65 @@ function EmployeesPage() {
             )}
           </td>
           <td className="px-6 py-5 text-sm text-muted-foreground">{desig?.name ?? "—"}</td>
+          {mode === "employee" && (
+            <td className="px-6 py-5">
+              {c.role_key ? (
+                <Select
+                  value={c.role_key}
+                  onValueChange={async (v) => {
+                    if (v === c.role_key) return;
+                    const ok = await confirmAction({
+                      title: "Change role?",
+                      description: `Change role for ${c.full_name || c.employee_code} to ${rolesList.find((r) => r.key === v)?.name ?? v}?`,
+                      confirmText: "Change role",
+                    });
+                    if (!ok) return;
+                    assignRoleMut.mutate({ candidate: c, roleKey: v });
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[160px] rounded-lg border-border/60 bg-card text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rolesList.map((r) => (
+                      <SelectItem key={r.key} value={r.key} className="text-xs">
+                        {r.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-amber-300/70 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+                    No role assigned
+                  </Badge>
+                  <Select
+                    value=""
+                    onValueChange={async (v) => {
+                      const ok = await confirmAction({
+                        title: "Assign role?",
+                        description: `Assign role ${rolesList.find((r) => r.key === v)?.name ?? v} to ${c.full_name || c.employee_code}?`,
+                        confirmText: "Assign",
+                      });
+                      if (!ok) return;
+                      assignRoleMut.mutate({ candidate: c, roleKey: v });
+                    }}
+                  >
+                    <SelectTrigger className="h-7 w-[120px] rounded-lg border-dashed border-border/60 bg-transparent text-xs text-muted-foreground">
+                      <SelectValue placeholder="Map role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rolesList.map((r) => (
+                        <SelectItem key={r.key} value={r.key} className="text-xs">
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </td>
+          )}
           <td className="px-6 py-5">
             <StatusBadge status={c.status} />
             {c.status === "rejected" && c.rejection_reason && (
