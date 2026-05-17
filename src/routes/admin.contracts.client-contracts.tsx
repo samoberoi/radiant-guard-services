@@ -2226,7 +2226,7 @@ function ResourceFormDialog({
       state: c.state,
     };
     if (item.calcType === "percentage") {
-      item.amount = computeBenefitAmount(item, components, benefits);
+      item.amount = computeBenefitAmount(item, components, benefits, allowanceTypes);
     }
     setDeductions((prev) => [...prev, item]);
     setDeductionQuery("");
