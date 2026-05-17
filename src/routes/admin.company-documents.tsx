@@ -11,7 +11,6 @@ import {
   FileText,
   History,
   Power,
-  Power,
   Save,
 } from "lucide-react";
 import { toast } from "sonner";
