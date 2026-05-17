@@ -423,7 +423,7 @@ function RBACPage() {
                       return (
                         <div
                           key={sub.key}
-                          className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)_140px] items-center gap-2 px-4 py-2 pl-14 hover:bg-secondary/40"
+                          className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)] items-center gap-2 px-4 py-2 pl-14 hover:bg-secondary/40"
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-background text-muted-foreground">
