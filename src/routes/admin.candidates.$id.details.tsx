@@ -107,12 +107,17 @@ function CandidateDetailsPage() {
       nominations: Array.isArray(data.nominations) ? data.nominations : [],
       contacts: Array.isArray(data.contacts) ? data.contacts : [],
     });
+    setDirty(false);
   }, [data]);
 
-  const set = (path: string, value: any) =>
+  const set = (path: string, value: any) => {
     setForm((prev: any) => ({ ...prev, [path]: value }));
-  const setSection = (key: string, value: any) =>
+    setDirty(true);
+  };
+  const setSection = (key: string, value: any) => {
     setForm((prev: any) => ({ ...prev, [key]: { ...(prev?.[key] ?? {}), ...value } }));
+    setDirty(true);
+  };
 
   const handleSave = async (closeAfter = false) => {
     if (!form) return;
