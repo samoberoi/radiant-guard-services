@@ -1813,7 +1813,7 @@ function CandidateWizard({
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {submitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-              {editing ? "Save Changes" : "Create Candidate"}
+              {editing ? "Submit" : "Create Candidate"}
             </Button>
           </div>
         </DialogFooter>
