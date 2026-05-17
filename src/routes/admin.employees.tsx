@@ -425,6 +425,7 @@ function EmployeesPage() {
   const [confirmDelete, setConfirmDelete] = useState<CandidateListItem | null>(null);
   const [rejectTarget, setRejectTarget] = useState<CandidateListItem | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [signTarget, setSignTarget] = useState<{ id: string; docType: DocType } | null>(null);
 
   const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const desigMap = useMemo(() => new Map(designations.map((d) => [d.id, d])), [designations]);
