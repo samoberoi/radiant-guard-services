@@ -48,6 +48,13 @@ import {
 import { cn } from "@/lib/utils";
 import { resolvePt, usePincodeRanges, usePtSlabs } from "@/lib/pt-lookup";
 import { MONTH_NAMES, resolveLwf, useLwfRows } from "@/lib/lwf-lookup";
+import {
+  resolveFieldManagersForUnit,
+  resolveGuardsForUnit,
+  SCOPE_TYPE_LABEL,
+  useEmployeesLite,
+  useScopeAssignments,
+} from "@/lib/deployment";
 
 export const Route = createFileRoute("/admin/customers/unit-manager")({
   component: UnitManagerPage,
