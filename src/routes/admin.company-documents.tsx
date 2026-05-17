@@ -387,6 +387,7 @@ function CompanyDocumentsPage() {
       </div>
 
       {/* Edit dialog (in-place edit on an existing version) */}
+      {/* Edit dialog — editing the active version creates a new active version; editing past versions updates in place */}
       <TemplateEditorDialog
         open={!!editing}
         template={editing}
@@ -394,23 +395,14 @@ function CompanyDocumentsPage() {
         onClose={() => setEditing(null)}
         onSubmit={async (title, body) => {
           if (!editing) return;
-          await saveEditMut.mutateAsync({ id: editing.id, title, body });
-          toast.success("Template updated");
+          if (editing.is_active && !editing.is_archived) {
+            const v = await publishNewMut.mutateAsync({ docType: editing.doc_type, title, body });
+            toast.success(`New active version v${v} saved — previous version archived`);
+          } else {
+            await saveEditMut.mutateAsync({ id: editing.id, title, body });
+            toast.success("Template updated");
+          }
           setEditing(null);
-        }}
-      />
-
-      {/* Publish new version dialog (pre-fills from active version) */}
-      <TemplateEditorDialog
-        open={publishOpen}
-        template={activeTemplate ?? null}
-        mode="publish"
-        docType={docType}
-        onClose={() => setPublishOpen(false)}
-        onSubmit={async (title, body) => {
-          const v = await publishNewMut.mutateAsync({ docType, title, body });
-          toast.success(`Published v${v} — previous version archived`);
-          setPublishOpen(false);
         }}
       />
 
