@@ -853,6 +853,23 @@ function EmployeesPage() {
         designationsError={designationsQuery.error instanceof Error ? designationsQuery.error.message : null}
         exServices={exServices}
         languagesList={languagesList}
+        canReview={!!editing && editing.status === "pending"}
+        isApproving={approveMut.isPending}
+        onApprove={() => {
+          if (!editing) return;
+          approveMut.mutate(editing as unknown as CandidateListItem, {
+            onSuccess: () => {
+              setOpenWizard(false);
+              setEditing(null);
+            },
+          });
+        }}
+        onReject={() => {
+          if (!editing) return;
+          setRejectTarget(editing as unknown as CandidateListItem);
+          setRejectReason("");
+          setOpenWizard(false);
+        }}
       />
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
@@ -1058,6 +1075,10 @@ function CandidateWizard({
   designationsError,
   exServices,
   languagesList,
+  canReview = false,
+  isApproving = false,
+  onApprove,
+  onReject,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -1070,6 +1091,10 @@ function CandidateWizard({
   designationsError: string | null;
   exServices: ExServiceLite[];
   languagesList: LanguageLite[];
+  canReview?: boolean;
+  isApproving?: boolean;
+  onApprove?: () => void;
+  onReject?: () => void;
 }) {
   const qc = useQueryClient();
   const extractFn = useServerFn(extractAadhaar);
@@ -2049,9 +2074,33 @@ function CandidateWizard({
         </div>
 
         <DialogFooter className="flex-col gap-2 border-t border-border bg-card px-6 py-4 sm:flex-row sm:justify-between">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="sm:mr-auto">
-            Cancel
-          </Button>
+          <div className="flex flex-wrap items-center gap-2 sm:mr-auto">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            {canReview && (
+              <>
+                <Button
+                  onClick={() => onApprove?.()}
+                  disabled={isApproving || submitting || savingDraft || !!uploading || scanning}
+                  className="bg-emerald-600 text-white hover:bg-emerald-700"
+                  title="Approve & assign Employee ID"
+                >
+                  {isApproving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Check className="mr-1.5 h-4 w-4" />}
+                  Approve
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => onReject?.()}
+                  disabled={submitting || savingDraft || !!uploading || scanning}
+                  className="border-rose-200 bg-rose-50/50 text-rose-600 hover:bg-rose-50 dark:border-rose-500/40 dark:bg-transparent dark:hover:bg-rose-500/10"
+                >
+                  <X className="mr-1.5 h-4 w-4" />
+                  Reject
+                </Button>
+              </>
+            )}
+          </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               variant="secondary"
