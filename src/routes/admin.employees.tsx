@@ -501,7 +501,31 @@ function EmployeesPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Delete failed"),
   });
 
-  const approveMut = useMutation({
+  const assignRoleMut = useMutation({
+    mutationFn: async ({ candidate, roleKey }: { candidate: CandidateListItem; roleKey: string }) => {
+      const { error } = await supabase
+        .from("candidates" as never)
+        .update({ role_key: roleKey } as unknown as never)
+        .eq("id", candidate.id);
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: "assign_role",
+        entityType: "candidate",
+        entityId: candidate.id,
+        entityLabel: candidate.full_name || candidate.employee_code,
+        after: { role_key: roleKey },
+        before: { role_key: candidate.role_key },
+      });
+    },
+    onSuccess: (_d, vars) => {
+      const roleName = rolesList.find((r) => r.key === vars.roleKey)?.name ?? vars.roleKey;
+      toast.success(`Role set to ${roleName}`);
+      qc.invalidateQueries({ queryKey: QK });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to assign role"),
+  });
+
     mutationFn: async (c: CandidateListItem) => {
       const { data, error } = await supabase
         .from("candidates" as never)
