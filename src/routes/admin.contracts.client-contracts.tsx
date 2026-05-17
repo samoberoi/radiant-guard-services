@@ -517,15 +517,20 @@ function computeBenefitAmount(
   wageComponents: ResourceComponent[],
   benefitItems: BenefitItem[] = [],
   allowanceTypes: AllowanceType[] = [],
+  employerItems: BenefitItem[] = [],
 ): number {
   if (benefit.calcType === "fixed") return Number(benefit.amount) || 0;
   const componentsTotal = wageComponents.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const benefitsTotal = benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const employerTotal = employerItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const norm = (s: string) => s.trim().toLowerCase();
   const grossOf = (label: string): number => {
     const l = norm(label);
-    if (l === "gross" || l === "ctc") {
+    if (l === "gross") {
       return componentsTotal + benefitsTotal;
+    }
+    if (l === "ctc" || l === "total ctc") {
+      return componentsTotal + benefitsTotal + employerTotal;
     }
     // Direct match on the wage component's stored name (often the short name)
     let match = wageComponents.find((c) => norm(c.name) === l);
