@@ -146,6 +146,7 @@ function CandidateDetailsPage() {
 
   const handleSave = async (closeAfter = false) => {
     if (!form) return;
+    if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
     setSaving(true);
     try {
       const payload = buildCandidatePayload(form);
