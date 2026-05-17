@@ -919,17 +919,28 @@ function CandidateWizard({
           set("aadhaar_image_url", uploadedUrl);
           toast.success("Aadhaar uploaded — scanning…");
 
-          const extraction = await withTimeout(
-            extractFn({
-              data: {
-                fileDataUrl: dataUrl,
-                mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
-                pageImageDataUrls,
-              },
-            }) as Promise<AadhaarExtraction>,
-            45_000,
-            "Aadhaar scan timed out — please try again or fill the form manually",
-          );
+          let extraction: AadhaarExtraction;
+          try {
+            extraction = await withTimeout(
+              extractFn({
+                data: {
+                  fileDataUrl: dataUrl,
+                  mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
+                  pageImageDataUrls,
+                },
+              }) as Promise<AadhaarExtraction>,
+              45_000,
+              "Aadhaar scan timed out — please try again or fill the form manually",
+            );
+          } catch (serverScanError) {
+            console.warn("Server Aadhaar scan failed, falling back to client OCR", serverScanError);
+            extraction = await withTimeout(
+              clientOcr.extractAadhaarClient(file),
+              45_000,
+              "Aadhaar scan timed out — please try again or fill the form manually",
+            );
+            toast.warning("Server scan unavailable — used local OCR fallback. Please review the extracted fields.");
+          }
 
           // If the user already typed an Aadhaar number and the AI couldn't read one, keep theirs.
           const finalExtraction: AadhaarExtraction =

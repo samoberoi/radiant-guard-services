@@ -51,9 +51,7 @@ Carefully parse the address block on the back of the Aadhaar card and split it i
 export const extractAadhaar = createServerFn({ method: "POST" })
   .inputValidator((input) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<AadhaarExtraction> => {
-    const apiKey =
-      process.env.LOVABLE_API_KEY ||
-      ((import.meta as ImportMeta & { env?: Record<string, string | undefined> }).env?.LOVABLE_API_KEY ?? "");
+    const apiKey = process.env.LOVABLE_API_KEY ?? "";
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const isPdf = data.mimeType === "application/pdf";
@@ -78,8 +76,7 @@ export const extractAadhaar = createServerFn({ method: "POST" })
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Lovable-API-Key": apiKey,
-        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-pro",
