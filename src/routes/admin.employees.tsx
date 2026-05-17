@@ -404,6 +404,24 @@ function useLanguagesLite() {
   });
 }
 
+const QK_ROLES = ["admin", "roles-lite"] as const;
+function useRolesLite() {
+  return useQuery({
+    queryKey: QK_ROLES,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async (): Promise<RoleLite[]> => {
+      const { data, error } = await supabase
+        .from("roles" as never)
+        .select("key,name,sort_order")
+        .order("sort_order", { ascending: true })
+        .limit(200);
+      if (error) throw error;
+      return ((data as unknown) as RoleLite[]) ?? [];
+    },
+  });
+
 function EmployeesPage() {
   const candidatesQuery = useCandidates();
   const unitsQuery = useUnits();
