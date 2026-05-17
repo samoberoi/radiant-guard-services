@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
+import { confirmAction } from "@/components/ConfirmProvider";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -688,6 +689,7 @@ function PayrollDayBaseFormDialog({
           <Button
             disabled={saving}
             onClick={async () => {
+              if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
               setSaving(true);
               const err = await onSubmit({
                 name,
