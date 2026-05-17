@@ -582,37 +582,47 @@ function EmployeesPage() {
       const desig = c.designation_id ? desigMap.get(c.designation_id) : undefined;
       const code = mode === "employee" ? c.employee_code || "—" : c.candidate_code || "—";
       return (
-        <tr key={c.id} className="hover:bg-secondary/30">
-          <td className="px-4 py-3 font-mono text-xs font-semibold text-foreground">{code}</td>
-          <td className="px-4 py-3">
+        <tr key={c.id} className="group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5">
+          <td className="px-6 py-5">
+            <span className="rounded-md bg-secondary px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              {code}
+            </span>
+          </td>
+          <td className="px-6 py-5">
             <div className="flex items-center gap-3">
               {c.photo_url ? (
-                <img src={c.photo_url} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-border" />
+                <img
+                  src={c.photo_url}
+                  alt=""
+                  className="h-10 w-10 flex-shrink-0 rounded-full object-cover shadow-sm ring-2 ring-card"
+                />
               ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground shadow-sm ring-2 ring-card">
                   <UserPlus className="h-4 w-4" />
                 </div>
               )}
-              <div>
-                <div className="font-semibold text-foreground">{c.full_name || "—"}</div>
-                <div className="text-xs text-muted-foreground">{c.email || "—"}</div>
+              <div className="min-w-0">
+                <div className="truncate font-semibold leading-tight text-foreground group-hover:text-amber-900 dark:group-hover:text-amber-300">
+                  {c.full_name || "—"}
+                </div>
+                <div className="truncate text-xs text-muted-foreground">{c.email || "—"}</div>
               </div>
             </div>
           </td>
-          <td className="px-4 py-3 font-mono text-xs">{maskAadhaar(c.aadhaar_number)}</td>
-          <td className="px-4 py-3">{c.mobile || "—"}</td>
-          <td className="px-4 py-3">
+          <td className="px-6 py-5 font-mono text-xs text-muted-foreground">{maskAadhaar(c.aadhaar_number)}</td>
+          <td className="px-6 py-5 text-center text-sm font-medium text-muted-foreground">{c.mobile || "—"}</td>
+          <td className="px-6 py-5">
             {unit ? (
               <div>
-                <div className="font-medium">{unit.name}</div>
+                <div className="text-sm font-semibold text-foreground">{unit.name}</div>
                 <div className="text-xs text-muted-foreground">{unit.customer_name}</div>
               </div>
             ) : (
               "—"
             )}
           </td>
-          <td className="px-4 py-3">{desig?.name ?? "—"}</td>
-          <td className="px-4 py-3">
+          <td className="px-6 py-5 text-sm text-muted-foreground">{desig?.name ?? "—"}</td>
+          <td className="px-6 py-5">
             <StatusBadge status={c.status} />
             {c.status === "rejected" && c.rejection_reason && (
               <div className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground" title={c.rejection_reason}>
@@ -620,18 +630,18 @@ function EmployeesPage() {
               </div>
             )}
           </td>
-          <td className="px-4 py-3 text-right">
-            <div className="inline-flex flex-wrap justify-end gap-1">
+          <td className="px-6 py-5">
+            <div className="flex items-center justify-end gap-2">
               {mode === "candidate" && c.status === "pending" && (
                 <>
                   <Button
                     size="sm"
                     onClick={() => approveMut.mutate(c)}
                     disabled={approveMut.isPending}
-                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                    className="h-8 rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
                     title="Approve & assign Employee ID"
                   >
-                    <Check className="mr-1 h-4 w-4" />
+                    <Check className="mr-1 h-3.5 w-3.5" />
                     Approve
                   </Button>
                   <Button
@@ -641,41 +651,49 @@ function EmployeesPage() {
                       setRejectTarget(c);
                       setRejectReason("");
                     }}
-                    className="border-rose-500/50 text-rose-600 hover:bg-rose-500/10"
+                    className="h-8 rounded-lg border-rose-200 bg-rose-50/50 px-3 text-xs font-bold text-rose-600 transition-all hover:bg-rose-50 active:scale-95 dark:border-rose-500/40 dark:bg-transparent dark:hover:bg-rose-500/10"
                   >
-                    <X className="mr-1 h-4 w-4" />
+                    <X className="mr-1 h-3.5 w-3.5" />
                     Reject
                   </Button>
                 </>
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => void openEditor(c.id)}
-                disabled={openingCandidateId === c.id}
-                title="Quick edit"
-              >
-                {openingCandidateId === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="h-4 w-4" />}
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                title="Open the full 10-section editor"
-              >
-                <Link to="/admin/candidates/$id/details" params={{ id: c.id }}>
-                  <FileText className="mr-1 h-4 w-4" />
-                  Details
-                </Link>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setConfirmDelete(c)}
-                className="text-rose-500 hover:text-rose-600"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="ml-1 flex items-center gap-1 border-l border-border/60 pl-2">
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  title="Open the full 10-section editor"
+                >
+                  <Link to="/admin/candidates/$id/details" params={{ id: c.id }}>
+                    <FileText className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => void openEditor(c.id)}
+                  disabled={openingCandidateId === c.id}
+                  className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  title="Quick edit"
+                >
+                  {openingCandidateId === c.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Edit2 className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setConfirmDelete(c)}
+                  className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+                  title="Delete"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </td>
         </tr>
@@ -684,26 +702,38 @@ function EmployeesPage() {
   };
 
   const renderTable = (rows: CandidateListItem[], mode: "employee" | "candidate") => (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm shadow-stone-200/40 dark:shadow-black/20">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
+          <thead className="border-b border-border/60 bg-secondary/40">
             <tr>
-              <th className="px-4 py-3 text-left font-semibold">
+              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Emp ID" : "Code"}
               </th>
-              <th className="px-4 py-3 text-left font-semibold">
+              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Employee" : "Candidate"}
               </th>
-              <th className="px-4 py-3 text-left font-semibold">Aadhaar</th>
-              <th className="px-4 py-3 text-left font-semibold">Mobile</th>
-              <th className="px-4 py-3 text-left font-semibold">Unit</th>
-              <th className="px-4 py-3 text-left font-semibold">Designation</th>
-              <th className="px-4 py-3 text-left font-semibold">Status</th>
-              <th className="px-4 py-3 text-right font-semibold">Actions</th>
+              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Aadhaar
+              </th>
+              <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Mobile
+              </th>
+              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Unit
+              </th>
+              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Designation
+              </th>
+              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Status
+              </th>
+              <th className="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">{renderRows(rows, mode)}</tbody>
+          <tbody className="divide-y divide-border/50">{renderRows(rows, mode)}</tbody>
         </table>
       </div>
     </div>
@@ -717,60 +747,93 @@ function EmployeesPage() {
         crumbs={[{ label: "Employees" }]}
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         {[
-          { label: "Total", value: stats.total, tone: "bg-secondary text-foreground" },
-          { label: "Drafts", value: stats.drafts, tone: "bg-slate-500/10 text-slate-600 dark:text-slate-300" },
-          { label: "Pending", value: stats.pending, tone: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
-          { label: "Approved", value: stats.approved, tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
-          { label: "Rejected", value: stats.rejected, tone: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
+          { label: "Total", value: stats.total, accent: false, dot: "bg-stone-400" },
+          { label: "Drafts", value: stats.drafts, accent: false, dot: "bg-slate-400" },
+          { label: "Pending", value: stats.pending, accent: true, dot: "bg-amber-500" },
+          { label: "Approved", value: stats.approved, accent: false, dot: "bg-emerald-500" },
+          { label: "Rejected", value: stats.rejected, accent: false, dot: "bg-rose-500" },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl border border-border bg-card p-4">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {s.label}
+          <div
+            key={s.label}
+            className={cn(
+              "group relative overflow-hidden rounded-2xl border p-6 shadow-sm transition-all hover:shadow-md",
+              s.accent
+                ? "border-amber-200/60 bg-amber-50/60 backdrop-blur-md"
+                : "border-border/60 bg-card/80 backdrop-blur-md",
+            )}
+          >
+            <div className="relative z-10 flex items-start justify-between">
+              <p
+                className={cn(
+                  "text-[10px] font-bold uppercase tracking-[0.2em] transition-colors",
+                  s.accent ? "text-amber-700" : "text-muted-foreground group-hover:text-amber-600",
+                )}
+              >
+                {s.label}
+              </p>
+              {s.accent && s.value > 0 && (
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-60" />
+                  <span className={cn("relative inline-flex h-2 w-2 rounded-full", s.dot)} />
+                </span>
+              )}
             </div>
-            <div className={cn("mt-1 inline-flex items-center rounded-md px-2 py-0.5 text-2xl font-bold tabular-nums", s.tone)}>
+            <p className="relative z-10 mt-3 text-4xl font-bold tabular-nums text-foreground">
               {s.value}
-            </div>
+            </p>
+            {s.accent && (
+              <div className="pointer-events-none absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-amber-200/30 blur-2xl" />
+            )}
           </div>
         ))}
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name, Aadhaar, mobile, code…"
-            className="pl-9"
-          />
-        </div>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setOpenWizard(true);
-          }}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add Candidate
-        </Button>
-      </div>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "employee" | "candidate")} className="space-y-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <TabsList className="inline-flex h-auto rounded-xl border border-border/60 bg-secondary/40 p-1 backdrop-blur-sm">
+            <TabsTrigger
+              value="employee"
+              className="rounded-lg px-6 py-2 text-sm font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              Employees <span className="ml-1.5 text-xs opacity-60">({stats.approved})</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="candidate"
+              className="rounded-lg px-6 py-2 text-sm font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              Candidates <span className="ml-1.5 text-xs opacity-60">({stats.total - stats.approved})</span>
+            </TabsTrigger>
+          </TabsList>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as "employee" | "candidate")}>
-        <TabsList>
-          <TabsTrigger value="employee">
-            Employees <span className="ml-1.5 text-xs text-muted-foreground">({stats.approved})</span>
-          </TabsTrigger>
-          <TabsTrigger value="candidate">
-            Candidates <span className="ml-1.5 text-xs text-muted-foreground">({stats.total - stats.approved})</span>
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="employee" className="mt-4">
+          <div className="flex w-full items-center gap-3 md:w-auto">
+            <div className="relative flex-1 md:w-80">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search name, Aadhaar, mobile, code…"
+                className="h-11 rounded-xl border-border/70 bg-card pl-11 shadow-sm focus-visible:ring-4 focus-visible:ring-amber-500/10 focus-visible:border-amber-500/60"
+              />
+            </div>
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setOpenWizard(true);
+              }}
+              className="h-11 whitespace-nowrap rounded-xl bg-stone-900 px-6 font-semibold text-white shadow-lg shadow-stone-900/10 transition-all hover:-translate-y-0.5 hover:bg-stone-800 active:translate-y-0 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add Candidate
+            </Button>
+          </div>
+        </div>
+
+        <TabsContent value="employee" className="mt-0">
           {renderTable(employees, "employee")}
         </TabsContent>
-        <TabsContent value="candidate" className="mt-4">
+        <TabsContent value="candidate" className="mt-0">
           {renderTable(candidateRows, "candidate")}
         </TabsContent>
       </Tabs>
