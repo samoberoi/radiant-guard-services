@@ -880,6 +880,17 @@ function UnitFormDialog({
             </div>
           </Section>
 
+          {editing && (
+            <Section title="Deployment">
+              <UnitDeployment
+                unitId={editing.id}
+                branchId={form.branchId}
+                customerId={form.customerId}
+                stateName={form.billingState}
+              />
+            </Section>
+          )}
+
           {error && <p className="text-xs font-medium text-destructive">{error}</p>}
 
           <DialogFooter>
