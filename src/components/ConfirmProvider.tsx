@@ -46,6 +46,9 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // Register/unregister module-level dispatcher.
+  if (dispatcher !== confirm) dispatcher = confirm;
+
   const settle = (v: boolean) => {
     setOpen(false);
     const r = resolverRef.current;
