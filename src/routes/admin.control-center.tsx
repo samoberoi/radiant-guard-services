@@ -86,6 +86,12 @@ const tiles: Tile[] = [
     description: "Manage languages used in employee profiles.",
     icon: Languages,
   },
+  {
+    to: "/admin/company-documents",
+    label: "Company Documents",
+    description: "Manage NDA and Appointment Letter master templates.",
+    icon: FileSignature,
+  },
 ];
 
 function ControlCenterDashboard() {
