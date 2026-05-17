@@ -234,36 +234,26 @@ function CandidateDetailsPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          {form.kyc_completed ? (
-            <Badge className="bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/15">
-              <CheckCircle2 className="mr-1 h-3 w-3" /> KYC Completed
-            </Badge>
-          ) : (
-            <Button variant="outline" size="sm" onClick={markKyc} disabled={saving}>
-              <CheckCircle2 className="mr-2 h-4 w-4" /> Mark KYC Completed
+          {form.status === "pending" && (
+            <Button
+              size="sm"
+              onClick={() => changeStatus("approved")}
+              disabled={statusBusy}
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+            >
+              {statusBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+              Approve
             </Button>
           )}
-
-          {form.status === "pending" && (
-            <>
-              <Button
-                size="sm"
-                onClick={() => changeStatus("approved")}
-                disabled={statusBusy}
-                className="bg-emerald-600 text-white hover:bg-emerald-700"
-              >
-                {statusBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-                Approve
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                onClick={() => setRejectOpen(true)}
-                disabled={statusBusy}
-              >
-                <XCircle className="mr-2 h-4 w-4" /> Reject
-              </Button>
-            </>
+          {form.status !== "rejected" && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => setRejectOpen(true)}
+              disabled={statusBusy}
+            >
+              <XCircle className="mr-2 h-4 w-4" /> Reject
+            </Button>
           )}
           {form.status === "rejected" && (
             <Button
@@ -276,27 +266,21 @@ function CandidateDetailsPage() {
               Resubmit for Review
             </Button>
           )}
-          {form.status === "approved" && (
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => setRejectOpen(true)}
-              disabled={statusBusy}
-            >
-              <XCircle className="mr-2 h-4 w-4" /> Reject
-            </Button>
-          )}
 
           <Button variant="outline" size="sm" onClick={() => router.history.back()}>
             Cancel
           </Button>
-          <Button size="sm" onClick={() => handleSave(false)} disabled={saving}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save
-          </Button>
-          <Button size="sm" onClick={() => handleSave(true)} disabled={saving}>
-            Save & Close
-          </Button>
+          {dirty && (
+            <>
+              <Button size="sm" onClick={() => handleSave(false)} disabled={saving}>
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Save
+              </Button>
+              <Button size="sm" onClick={() => handleSave(true)} disabled={saving}>
+                Save & Close
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
