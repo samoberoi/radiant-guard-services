@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Download, Edit2, MapPin, Plus, Search, Trash2, Warehouse, X } from "lucide-react";
 import { csvDate, csvJoin, csvMapLink, csvStatus, csvYesNo, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
+import { confirmAction } from "@/components/ConfirmProvider";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -379,6 +380,7 @@ function UnitManagerPage() {
         editing={editing}
         units={units}
         onSubmit={async (data) => {
+          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
           const r = editing ? await updateUnit(editing.id, data) : await addUnit(data);
           if (!r.ok) return r.error;
           toast.success(editing ? "Unit updated" : "Unit added");
@@ -581,6 +583,7 @@ function UnitFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
+            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
             setError(null);
             const err = await onSubmit(form);
             if (err) setError(err);

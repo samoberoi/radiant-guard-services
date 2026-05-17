@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Download, Edit2, Link2, MapPin, Plus, Search, Trash2 } from "lucide-react";
 import { csvJoin, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
+import { confirmAction } from "@/components/ConfirmProvider";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,6 +215,7 @@ function StateManagerPage() {
         onOpenChange={setAddOpen}
         title="Add state"
         onSubmit={async (name) => {
+          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
           const r = await addState(name);
           if (!r.ok) return r.error;
           toast.success("State added");
@@ -227,6 +229,7 @@ function StateManagerPage() {
         onOpenChange={(o) => !o && setEditing(null)}
         title="Edit state"
         onSubmit={async (name) => {
+          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
           if (!editing) return null;
           const r = await updateState(editing.id, name);
           if (!r.ok) return r.error;
@@ -337,6 +340,7 @@ function StateFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
+            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
             const err = await onSubmit(name);
             if (err) setError(err);
             else {

@@ -15,6 +15,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
+import { confirmAction } from "@/components/ConfirmProvider";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -403,6 +404,7 @@ function LwfManagerPage() {
         title="New LWF entry"
         knownStates={states}
         onSubmit={async (p) => {
+          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
           try {
             await addMut.mutateAsync(p);
             toast.success("LWF entry added");
@@ -420,6 +422,7 @@ function LwfManagerPage() {
         title="Edit LWF entry"
         knownStates={states}
         onSubmit={async (p) => {
+          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
           if (!editing) return null;
           try {
             await updateMut.mutateAsync({ id: editing.id, p });
@@ -585,6 +588,7 @@ function LwfFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
+            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
             if (!form.state.trim()) {
               setError("State is required");
               return;

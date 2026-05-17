@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Download, Edit2, ExternalLink, List as ListIcon, MapPin, Network, Plus, Search, Trash2, Users, Warehouse } from "lucide-react";
 import { csvDate, csvStatus, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
+import { confirmAction } from "@/components/ConfirmProvider";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -276,6 +277,7 @@ function CustomerManagerPage() {
         onOpenChange={setFormOpen}
         editing={editing}
         onSubmit={async (data) => {
+          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
           if (editing) {
             const r = await updateCustomer(editing.id, data);
             if (!r.ok) return { error: r.error, id: null };
@@ -671,6 +673,7 @@ function CustomerFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
+            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
             // basic GST validation: skip blanks, enforce length-15 if filled
             const cleaned = gstEntries
               .map((g) => ({ ...g, gstin: g.gstin.trim().toUpperCase() }))
