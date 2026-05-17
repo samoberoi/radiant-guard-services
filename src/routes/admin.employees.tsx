@@ -242,7 +242,7 @@ type CandidateListItem = Pick<
   | "unit_id"
   | "designation_id"
   | "status"
->;
+> & { employee_code: string };
 
 type UnitLite = {
   id: string;
