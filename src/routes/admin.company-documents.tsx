@@ -10,7 +10,6 @@ import {
   FileSignature,
   FileText,
   History,
-  Plus,
   Power,
   Save,
 } from "lucide-react";
@@ -219,7 +218,6 @@ function CompanyDocumentsPage() {
   const [docType, setDocType] = useState<DocType>("nda");
   const [view, setView] = useState<"active" | "archived">("active");
   const [editing, setEditing] = useState<DocumentTemplate | null>(null);
-  const [publishOpen, setPublishOpen] = useState(false);
   const [previewing, setPreviewing] = useState<DocumentTemplate | null>(null);
 
   const filtered = useMemo(() => {
@@ -228,7 +226,7 @@ function CompanyDocumentsPage() {
       .filter((t) => (view === "archived" ? t.is_archived : !t.is_archived));
   }, [items, docType, view]);
 
-  const activeTemplate = items.find((t) => t.doc_type === docType && t.is_active && !t.is_archived);
+  
 
   return (
     <div>
@@ -272,13 +270,9 @@ function CompanyDocumentsPage() {
             <TabsTrigger value="archived">Archived</TabsTrigger>
           </TabsList>
         </Tabs>
-        <Button
-          onClick={() => setPublishOpen(true)}
-          className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Publish New Version
-        </Button>
+        <p className="text-xs text-muted-foreground">
+          Editing the active version automatically archives it and creates a new active version.
+        </p>
       </div>
 
       <div className="space-y-3">
@@ -392,6 +386,7 @@ function CompanyDocumentsPage() {
       </div>
 
       {/* Edit dialog (in-place edit on an existing version) */}
+      {/* Edit dialog — editing the active version creates a new active version; editing past versions updates in place */}
       <TemplateEditorDialog
         open={!!editing}
         template={editing}
@@ -399,23 +394,14 @@ function CompanyDocumentsPage() {
         onClose={() => setEditing(null)}
         onSubmit={async (title, body) => {
           if (!editing) return;
-          await saveEditMut.mutateAsync({ id: editing.id, title, body });
-          toast.success("Template updated");
+          if (editing.is_active && !editing.is_archived) {
+            const v = await publishNewMut.mutateAsync({ docType: editing.doc_type, title, body });
+            toast.success(`New active version v${v} saved — previous version archived`);
+          } else {
+            await saveEditMut.mutateAsync({ id: editing.id, title, body });
+            toast.success("Template updated");
+          }
           setEditing(null);
-        }}
-      />
-
-      {/* Publish new version dialog (pre-fills from active version) */}
-      <TemplateEditorDialog
-        open={publishOpen}
-        template={activeTemplate ?? null}
-        mode="publish"
-        docType={docType}
-        onClose={() => setPublishOpen(false)}
-        onSubmit={async (title, body) => {
-          const v = await publishNewMut.mutateAsync({ docType, title, body });
-          toast.success(`Published v${v} — previous version archived`);
-          setPublishOpen(false);
         }}
       />
 

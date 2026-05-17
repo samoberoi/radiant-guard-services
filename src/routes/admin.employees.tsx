@@ -668,7 +668,7 @@ function EmployeesPage() {
                     size="icon"
                     onClick={() => setSignTarget({ id: c.id, docType: "nda" })}
                     className="h-8 w-8 rounded-lg border-amber-200 bg-amber-50/50 text-amber-700 hover:bg-amber-50 dark:border-amber-500/40 dark:bg-transparent dark:text-amber-300 dark:hover:bg-amber-500/10"
-                    title="Sign &amp; Download NDA"
+                    title="Sign NDA"
                   >
                     <FileSignature className="h-4 w-4" />
                   </Button>
@@ -677,7 +677,7 @@ function EmployeesPage() {
                     size="icon"
                     onClick={() => setSignTarget({ id: c.id, docType: "appointment_letter" })}
                     className="h-8 w-8 rounded-lg border-sky-200 bg-sky-50/50 text-sky-700 hover:bg-sky-50 dark:border-sky-500/40 dark:bg-transparent dark:text-sky-300 dark:hover:bg-sky-500/10"
-                    title="Sign &amp; Download Appointment Letter"
+                    title="Sign Appointment Letter"
                   >
                     <FileText className="h-4 w-4" />
                   </Button>
