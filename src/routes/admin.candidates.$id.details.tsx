@@ -145,6 +145,7 @@ function CandidateDetailsPage() {
         entityLabel: form.full_name || id,
       });
       toast.success("Saved");
+      setDirty(false);
       if (closeAfter) navigate({ to: "/admin/employees" });
     } catch (e: any) {
       toast.error(e.message || "Failed to save");
