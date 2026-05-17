@@ -1213,6 +1213,22 @@ function CandidateWizard({
             {completionDone} of {completionTotal} required fields complete
             {!profileComplete && " — Save as draft to come back later."}
           </p>
+          {!profileComplete && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Still missing:
+              </span>
+              {completionChecks.filter((c) => !c.ok).map((c) => (
+                <Badge
+                  key={c.key}
+                  variant="outline"
+                  className="border-rose-300 bg-rose-50 text-[10px] font-medium text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300"
+                >
+                  {c.key}
+                </Badge>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="px-6 py-5">
@@ -1797,7 +1813,7 @@ function CandidateWizard({
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {submitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-              {editing ? "Save Changes" : "Create Candidate"}
+              {editing ? "Submit" : "Create Candidate"}
             </Button>
           </div>
         </DialogFooter>
