@@ -914,6 +914,70 @@ function EmployeesPage() {
               )}
             </td>
           )}
+          {mode === "employee" && (
+            <td className="px-6 py-5 align-top">
+              {c.role_key === "guard" ? (
+                <Select
+                  value={c.reports_to ?? "__none"}
+                  onValueChange={async (v) => {
+                    const newId = v === "__none" ? null : v;
+                    if (newId === c.reports_to) return;
+                    const name = newId ? fieldManagers.find((m) => m.id === newId)?.full_name ?? "—" : "no one";
+                    const ok = await confirmAction({ title: "Change reporting manager?", description: `${c.full_name} will report to ${name}.`, confirmText: "Update" });
+                    if (!ok) return;
+                    assignManagerMut.mutate({ candidate: c, managerId: newId });
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder="Assign manager" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none" className="text-xs">— No manager —</SelectItem>
+                    {fieldManagers.map((m) => (<SelectItem key={m.id} value={m.id} className="text-xs">{m.full_name} ({m.employee_code})</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              ) : c.role_key === "field_manager" ? (
+                <div className="flex flex-wrap items-center gap-1.5 max-w-[260px]">
+                  {(scopeByCandidate.get(c.id) ?? []).map((s) => (
+                    <Badge key={s.id} variant="outline" className="gap-1 border-sky-300/70 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-300">
+                      <span className="text-[10px] uppercase opacity-70">{SCOPE_TYPE_LABEL[s.scope_type]}</span>
+                      <span className="text-xs">{s.scope_label || s.scope_id.slice(0, 6)}</span>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const ok = await confirmAction({ title: "Remove scope?", description: `Remove ${SCOPE_TYPE_LABEL[s.scope_type]} "${s.scope_label}" from ${c.full_name}?`, confirmText: "Remove" });
+                          if (!ok) return;
+                          removeScopeMut.mutate({ scope: s, candidate: c });
+                        }}
+                        className="ml-0.5 rounded-sm hover:bg-sky-100"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                  <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px] text-muted-foreground" onClick={() => setScopeTarget(c)}>
+                    <Plus className="mr-0.5 h-3 w-3" /> Scope
+                  </Button>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">—</span>
+              )}
+            </td>
+          )}
+          {mode === "employee" && (
+            <td className="px-6 py-5">
+              <Switch
+                checked={c.is_enabled}
+                onCheckedChange={async (v) => {
+                  const ok = await confirmAction({
+                    title: v ? "Enable employee?" : "Disable employee?",
+                    description: `${c.full_name || c.employee_code} will be ${v ? "enabled" : "disabled"}.`,
+                    confirmText: v ? "Enable" : "Disable",
+                  });
+                  if (!ok) return;
+                  toggleEnabledMut.mutate({ candidate: c, enabled: v });
+                }}
+              />
+            </td>
+          )}
           <td className="px-6 py-5">
             <StatusBadge status={c.status} />
             {c.status === "rejected" && c.rejection_reason && (
