@@ -48,6 +48,13 @@ import {
 import { cn } from "@/lib/utils";
 import { resolvePt, usePincodeRanges, usePtSlabs } from "@/lib/pt-lookup";
 import { MONTH_NAMES, resolveLwf, useLwfRows } from "@/lib/lwf-lookup";
+import {
+  resolveFieldManagersForUnit,
+  resolveGuardsForUnit,
+  SCOPE_TYPE_LABEL,
+  useEmployeesLite,
+  useScopeAssignments,
+} from "@/lib/deployment";
 
 export const Route = createFileRoute("/admin/customers/unit-manager")({
   component: UnitManagerPage,
@@ -880,6 +887,17 @@ function UnitFormDialog({
             </div>
           </Section>
 
+          {editing && (
+            <Section title="Deployment">
+              <UnitDeployment
+                unitId={editing.id}
+                branchId={form.branchId}
+                customerId={form.customerId}
+                stateName={form.billingState}
+              />
+            </Section>
+          )}
+
           {error && <p className="text-xs font-medium text-destructive">{error}</p>}
 
           <DialogFooter>
@@ -1157,6 +1175,82 @@ function LwfBlock({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function UnitDeployment({
+  unitId,
+  branchId,
+  customerId,
+  stateName,
+}: {
+  unitId: string;
+  branchId: string | null;
+  customerId: string | null;
+  stateName: string;
+}) {
+  const { useScopeAssignments, useEmployeesLite, resolveFieldManagersForUnit, resolveGuardsForUnit, SCOPE_TYPE_LABEL } =
+    require("@/lib/deployment") as typeof import("@/lib/deployment");
+  const sa = useScopeAssignments();
+  const emp = useEmployeesLite();
+  const assignments = sa.data ?? [];
+  const employees = emp.data ?? [];
+  const ctx = { id: unitId, branch_id: branchId, customer_id: customerId, state_name: stateName };
+  const fms = resolveFieldManagersForUnit(ctx, assignments, employees);
+  const guards = resolveGuardsForUnit(ctx, employees, assignments);
+  const guardsByMgr = new Map<string, typeof guards>();
+  const orphan: typeof guards = [];
+  for (const g of guards) {
+    const key = g.reports_to ?? "";
+    if (key && fms.some((f) => f.fm.id === key)) {
+      if (!guardsByMgr.has(key)) guardsByMgr.set(key, []);
+      guardsByMgr.get(key)!.push(g);
+    } else orphan.push(g);
+  }
+  if (sa.isLoading || emp.isLoading) return <p className="text-xs text-muted-foreground">Loading deployment…</p>;
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <div className="rounded-xl border border-border/60 bg-card p-3">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tree</div>
+        {fms.length === 0 && <p className="text-xs text-muted-foreground">No field manager mapped to this unit (directly or via branch/organization/state).</p>}
+        {fms.map(({ fm, sources }) => (
+          <div key={fm.id} className="mb-2">
+            <div className="flex items-center gap-2 text-sm">
+              <span className="font-semibold">{fm.full_name}</span>
+              <span className="font-mono text-[10px] text-muted-foreground">{fm.employee_code}</span>
+              {sources.map((s) => (<span key={s} className="rounded bg-sky-50 px-1.5 py-0.5 text-[10px] text-sky-700">via {SCOPE_TYPE_LABEL[s]}</span>))}
+            </div>
+            <div className="ml-3 mt-1 space-y-1 border-l-2 border-sky-200 pl-3">
+              {(guardsByMgr.get(fm.id) ?? []).map((g) => (
+                <div key={g.id} className="text-xs">↳ {g.full_name} <span className="font-mono text-muted-foreground">{g.employee_code}</span></div>
+              ))}
+              {(guardsByMgr.get(fm.id) ?? []).length === 0 && <div className="text-xs text-muted-foreground">No guards reporting yet.</div>}
+            </div>
+          </div>
+        ))}
+        {orphan.length > 0 && (
+          <div className="mt-2 rounded border border-dashed border-border/60 p-2">
+            <div className="text-[10px] uppercase text-muted-foreground">Guards without a manager</div>
+            {orphan.map((g) => <div key={g.id} className="text-xs">{g.full_name} <span className="font-mono text-muted-foreground">{g.employee_code}</span></div>)}
+          </div>
+        )}
+      </div>
+      <div className="rounded-xl border border-border/60 bg-card p-3">
+        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Guards deployed ({guards.length})</div>
+        {guards.length === 0 && <p className="text-xs text-muted-foreground">No guards deployed to this unit yet.</p>}
+        <div className="space-y-1">
+          {guards.map((g) => {
+            const mgr = employees.find((e) => e.id === g.reports_to);
+            return (
+              <div key={g.id} className="flex items-center justify-between text-xs">
+                <span><span className="font-mono text-[10px] text-muted-foreground">{g.employee_code}</span> {g.full_name}</span>
+                <span className="text-muted-foreground">{mgr ? `→ ${mgr.full_name}` : "—"}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

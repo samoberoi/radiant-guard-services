@@ -15,13 +15,17 @@ import {
   Camera,
   Check,
   CheckCircle2,
+  ChevronRight,
   Edit2,
   FileSignature,
   FileText,
   IdCard,
+  LayoutList,
   Loader2,
+  Network,
   Plus,
   Search,
+  Settings2,
   ShieldCheck,
   Trash2,
   Upload,
@@ -79,6 +83,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { confirmAction } from "@/components/ConfirmProvider";
+import {
+  QK_SCOPE_ASSIGNMENTS,
+  SCOPE_TYPE_LABEL,
+  useScopeAssignments,
+  type ScopeAssignment,
+  type ScopeType,
+} from "@/lib/deployment";
+import { useBranches, useCustomers, useStates } from "@/lib/admin-data";
 
 export const Route = createFileRoute("/admin/employees")({
   component: EmployeesPage,
@@ -246,7 +258,7 @@ type CandidateListItem = Pick<
   | "unit_id"
   | "designation_id"
   | "status"
-> & { employee_code: string; role_key: string };
+> & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null };
 
 type RoleLite = { key: string; name: string };
 
@@ -294,7 +306,7 @@ function useCandidates() {
       const { data, error } = await runWithQueryTimeout("Employees", async (signal) =>
         await supabase
           .from("candidates" as never)
-          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key")
+          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key,is_enabled,reports_to")
           .order("created_at", { ascending: false })
           .limit(250)
           .abortSignal(signal),
@@ -443,6 +455,7 @@ function EmployeesPage() {
 
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"employee" | "candidate">("employee");
+  const [viewMode, setViewMode] = useState<"list" | "tree">("list");
   const [openWizard, setOpenWizard] = useState(false);
   const [editing, setEditing] = useState<Candidate | null>(null);
   const [openingCandidateId, setOpeningCandidateId] = useState<string | null>(null);
@@ -450,6 +463,43 @@ function EmployeesPage() {
   const [rejectTarget, setRejectTarget] = useState<CandidateListItem | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [signTarget, setSignTarget] = useState<{ id: string; docType: DocType } | null>(null);
+
+  // Filters
+  const [filterRole, setFilterRole] = useState<string>("all");
+  const [filterDesignation, setFilterDesignation] = useState<string>("all");
+  const [filterCustomer, setFilterCustomer] = useState<string>("all");
+  const [filterUnit, setFilterUnit] = useState<string>("all");
+  const [filterManager, setFilterManager] = useState<string>("all");
+  const [filterEnabled, setFilterEnabled] = useState<"all" | "enabled" | "disabled">("all");
+
+  const DEFAULT_FILTERS_VIS = {
+    role: true,
+    designation: true,
+    customer: true,
+    unit: true,
+    manager: true,
+    enabled: true,
+  };
+  const [filtersVisible, setFiltersVisible] = useState<typeof DEFAULT_FILTERS_VIS>(() => {
+    if (typeof window === "undefined") return DEFAULT_FILTERS_VIS;
+    try {
+      const raw = localStorage.getItem("employees.filterPrefs");
+      if (raw) return { ...DEFAULT_FILTERS_VIS, ...JSON.parse(raw) };
+    } catch {}
+    return DEFAULT_FILTERS_VIS;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("employees.filterPrefs", JSON.stringify(filtersVisible));
+    } catch {}
+  }, [filtersVisible]);
+
+  // Customers (org filter) + scope assignments
+  const { customers } = useCustomers();
+  const { branches } = useBranches();
+  const { states } = useStates();
+  const scopeQuery = useScopeAssignments();
+  const scopeAssignments = scopeQuery.data ?? [];
 
   const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const desigMap = useMemo(() => new Map(designations.map((d) => [d.id, d])), [designations]);
@@ -462,16 +512,43 @@ function EmployeesPage() {
     );
   };
 
+  const matchesFilters = (c: CandidateListItem) => {
+    if (filterRole !== "all" && c.role_key !== filterRole) return false;
+    if (filterDesignation !== "all" && c.designation_id !== filterDesignation) return false;
+    if (filterUnit !== "all" && c.unit_id !== filterUnit) return false;
+    if (filterCustomer !== "all") {
+      const unit = c.unit_id ? unitMap.get(c.unit_id) : undefined;
+      if (!unit || unit.customer_id !== filterCustomer) return false;
+    }
+    if (filterManager !== "all" && c.reports_to !== filterManager) return false;
+    if (filterEnabled === "enabled" && !c.is_enabled) return false;
+    if (filterEnabled === "disabled" && c.is_enabled) return false;
+    return true;
+  };
+
   const employees = useMemo(
-    () => candidates.filter((c) => (c.status === "approved" || c.status === "active") && matchesSearch(c)),
+    () => candidates.filter((c) => (c.status === "approved" || c.status === "active") && matchesSearch(c) && matchesFilters(c)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, search],
+    [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, units],
   );
   const candidateRows = useMemo(
     () => candidates.filter((c) => c.status !== "approved" && c.status !== "active" && matchesSearch(c)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [candidates, search],
   );
+
+  const fieldManagers = useMemo(
+    () => candidates.filter((c) => c.role_key === "field_manager" && (c.status === "approved" || c.status === "active")),
+    [candidates],
+  );
+  const scopeByCandidate = useMemo(() => {
+    const m = new Map<string, ScopeAssignment[]>();
+    for (const s of scopeAssignments) {
+      if (!m.has(s.candidate_id)) m.set(s.candidate_id, []);
+      m.get(s.candidate_id)!.push(s);
+    }
+    return m;
+  }, [scopeAssignments]);
 
   const stats = useMemo(() => {
     const total = candidates.length;
@@ -526,6 +603,106 @@ function EmployeesPage() {
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to assign role"),
   });
+
+  const toggleEnabledMut = useMutation({
+    mutationFn: async ({ candidate, enabled }: { candidate: CandidateListItem; enabled: boolean }) => {
+      const { error } = await supabase
+        .from("candidates" as never)
+        .update({ is_enabled: enabled } as unknown as never)
+        .eq("id", candidate.id);
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: enabled ? "enable" : "disable",
+        entityType: "candidate",
+        entityId: candidate.id,
+        entityLabel: candidate.full_name || candidate.employee_code,
+        before: { is_enabled: candidate.is_enabled },
+        after: { is_enabled: enabled },
+      });
+    },
+    onSuccess: (_d, vars) => {
+      toast.success(vars.enabled ? "Employee enabled" : "Employee disabled");
+      qc.invalidateQueries({ queryKey: QK });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Toggle failed"),
+  });
+
+  const assignManagerMut = useMutation({
+    mutationFn: async ({ candidate, managerId }: { candidate: CandidateListItem; managerId: string | null }) => {
+      const { error } = await supabase
+        .from("candidates" as never)
+        .update({ reports_to: managerId } as unknown as never)
+        .eq("id", candidate.id);
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: "assign_manager",
+        entityType: "candidate",
+        entityId: candidate.id,
+        entityLabel: candidate.full_name || candidate.employee_code,
+        before: { reports_to: candidate.reports_to },
+        after: { reports_to: managerId },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Reporting manager updated");
+      qc.invalidateQueries({ queryKey: QK });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to set manager"),
+  });
+
+  const addScopeMut = useMutation({
+    mutationFn: async (input: { candidate: CandidateListItem; scope_type: ScopeType; scope_id: string; scope_label: string }) => {
+      const { error } = await supabase
+        .from("employee_scope_assignments" as never)
+        .insert({
+          candidate_id: input.candidate.id,
+          scope_type: input.scope_type,
+          scope_id: input.scope_id,
+          scope_label: input.scope_label,
+        } as unknown as never);
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: "add_scope",
+        entityType: "candidate",
+        entityId: input.candidate.id,
+        entityLabel: input.candidate.full_name || input.candidate.employee_code,
+        after: { scope_type: input.scope_type, scope_id: input.scope_id, scope_label: input.scope_label },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Scope added");
+      qc.invalidateQueries({ queryKey: QK_SCOPE_ASSIGNMENTS });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to add scope"),
+  });
+
+  const removeScopeMut = useMutation({
+    mutationFn: async ({ scope, candidate }: { scope: ScopeAssignment; candidate: CandidateListItem }) => {
+      const { error } = await supabase
+        .from("employee_scope_assignments" as never)
+        .delete()
+        .eq("id", scope.id);
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: "remove_scope",
+        entityType: "candidate",
+        entityId: candidate.id,
+        entityLabel: candidate.full_name || candidate.employee_code,
+        before: { scope_type: scope.scope_type, scope_id: scope.scope_id, scope_label: scope.scope_label },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Scope removed");
+      qc.invalidateQueries({ queryKey: QK_SCOPE_ASSIGNMENTS });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to remove scope"),
+  });
+
+  const [scopeTarget, setScopeTarget] = useState<CandidateListItem | null>(null);
 
   const approveMut = useMutation({
     mutationFn: async (c: CandidateListItem) => {
@@ -597,10 +774,12 @@ function EmployeesPage() {
   };
 
   const renderRows = (rows: CandidateListItem[], mode: "employee" | "candidate") => {
+    const empCols = 11;
+    const candCols = 8;
     if (isLoading) {
       return (
         <tr>
-          <td colSpan={mode === "employee" ? 9 : 8} className="px-4 py-10 text-center text-muted-foreground">
+          <td colSpan={mode === "employee" ? empCols : candCols} className="px-4 py-10 text-center text-muted-foreground">
             Loading…
           </td>
         </tr>
@@ -609,7 +788,7 @@ function EmployeesPage() {
     if (candidatesError) {
       return (
         <tr>
-          <td colSpan={mode === "employee" ? 9 : 8} className="px-4 py-10 text-center text-muted-foreground">
+          <td colSpan={mode === "employee" ? empCols : candCols} className="px-4 py-10 text-center text-muted-foreground">
             {candidatesError instanceof Error
               ? candidatesError.message
               : "Could not load employees right now. Please retry."}
@@ -620,7 +799,7 @@ function EmployeesPage() {
     if (rows.length === 0) {
       return (
         <tr>
-          <td colSpan={mode === "employee" ? 9 : 8} className="px-4 py-10 text-center text-muted-foreground">
+          <td colSpan={mode === "employee" ? empCols : candCols} className="px-4 py-10 text-center text-muted-foreground">
             {mode === "employee"
               ? "No employees yet. Approve a candidate to generate an Employee ID."
               : "No candidates here. Click "}
@@ -634,8 +813,9 @@ function EmployeesPage() {
       const unit = c.unit_id ? unitMap.get(c.unit_id) : undefined;
       const desig = c.designation_id ? desigMap.get(c.designation_id) : undefined;
       const code = mode === "employee" ? c.employee_code || "—" : c.candidate_code || "—";
+      const isDisabled = mode === "employee" && !c.is_enabled;
       return (
-        <tr key={c.id} className="group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5">
+        <tr key={c.id} className={cn("group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5", isDisabled && "opacity-60")}>
           <td className="px-6 py-5">
             <span className="rounded-md bg-secondary px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               {code}
@@ -732,6 +912,70 @@ function EmployeesPage() {
                   </Select>
                 </div>
               )}
+            </td>
+          )}
+          {mode === "employee" && (
+            <td className="px-6 py-5 align-top">
+              {c.role_key === "guard" ? (
+                <Select
+                  value={c.reports_to ?? "__none"}
+                  onValueChange={async (v) => {
+                    const newId = v === "__none" ? null : v;
+                    if (newId === c.reports_to) return;
+                    const name = newId ? fieldManagers.find((m) => m.id === newId)?.full_name ?? "—" : "no one";
+                    const ok = await confirmAction({ title: "Change reporting manager?", description: `${c.full_name} will report to ${name}.`, confirmText: "Update" });
+                    if (!ok) return;
+                    assignManagerMut.mutate({ candidate: c, managerId: newId });
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder="Assign manager" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none" className="text-xs">— No manager —</SelectItem>
+                    {fieldManagers.map((m) => (<SelectItem key={m.id} value={m.id} className="text-xs">{m.full_name} ({m.employee_code})</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              ) : c.role_key === "field_manager" ? (
+                <div className="flex flex-wrap items-center gap-1.5 max-w-[260px]">
+                  {(scopeByCandidate.get(c.id) ?? []).map((s) => (
+                    <Badge key={s.id} variant="outline" className="gap-1 border-sky-300/70 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-300">
+                      <span className="text-[10px] uppercase opacity-70">{SCOPE_TYPE_LABEL[s.scope_type]}</span>
+                      <span className="text-xs">{s.scope_label || s.scope_id.slice(0, 6)}</span>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const ok = await confirmAction({ title: "Remove scope?", description: `Remove ${SCOPE_TYPE_LABEL[s.scope_type]} "${s.scope_label}" from ${c.full_name}?`, confirmText: "Remove" });
+                          if (!ok) return;
+                          removeScopeMut.mutate({ scope: s, candidate: c });
+                        }}
+                        className="ml-0.5 rounded-sm hover:bg-sky-100"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                  <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px] text-muted-foreground" onClick={() => setScopeTarget(c)}>
+                    <Plus className="mr-0.5 h-3 w-3" /> Scope
+                  </Button>
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">—</span>
+              )}
+            </td>
+          )}
+          {mode === "employee" && (
+            <td className="px-6 py-5">
+              <Switch
+                checked={c.is_enabled}
+                onCheckedChange={async (v) => {
+                  const ok = await confirmAction({
+                    title: v ? "Enable employee?" : "Disable employee?",
+                    description: `${c.full_name || c.employee_code} will be ${v ? "enabled" : "disabled"}.`,
+                    confirmText: v ? "Enable" : "Disable",
+                  });
+                  if (!ok) return;
+                  toggleEnabledMut.mutate({ candidate: c, enabled: v });
+                }}
+              />
             </td>
           )}
           <td className="px-6 py-5">
@@ -863,6 +1107,16 @@ function EmployeesPage() {
                   Role
                 </th>
               )}
+              {mode === "employee" && (
+                <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Reporting / Scope
+                </th>
+              )}
+              {mode === "employee" && (
+                <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Active
+                </th>
+              )}
               <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Status
               </th>
@@ -968,8 +1222,132 @@ function EmployeesPage() {
           </div>
         </div>
 
+        {/* Filter bar (Employees tab only) */}
+        {tab === "employee" && (
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-card/60 p-3 shadow-sm">
+            {filtersVisible.role && (
+              <Select value={filterRole} onValueChange={setFilterRole}>
+                <SelectTrigger className="h-9 w-[150px] text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All roles</SelectItem>
+                  {rolesList.map((r) => (<SelectItem key={r.key} value={r.key} className="text-xs">{r.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            )}
+            {filtersVisible.designation && (
+              <Select value={filterDesignation} onValueChange={setFilterDesignation}>
+                <SelectTrigger className="h-9 w-[170px] text-xs"><SelectValue placeholder="Designation" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All designations</SelectItem>
+                  {designations.map((d) => (<SelectItem key={d.id} value={d.id} className="text-xs">{d.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            )}
+            {filtersVisible.customer && (
+              <Select value={filterCustomer} onValueChange={setFilterCustomer}>
+                <SelectTrigger className="h-9 w-[180px] text-xs"><SelectValue placeholder="Organization" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All organizations</SelectItem>
+                  {customers.map((c) => (<SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            )}
+            {filtersVisible.unit && (
+              <Select value={filterUnit} onValueChange={setFilterUnit}>
+                <SelectTrigger className="h-9 w-[180px] text-xs"><SelectValue placeholder="Unit" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All units</SelectItem>
+                  {units.map((u) => (<SelectItem key={u.id} value={u.id} className="text-xs">{u.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            )}
+            {filtersVisible.manager && (
+              <Select value={filterManager} onValueChange={setFilterManager}>
+                <SelectTrigger className="h-9 w-[180px] text-xs"><SelectValue placeholder="Reports to" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">Any manager</SelectItem>
+                  {fieldManagers.map((m) => (<SelectItem key={m.id} value={m.id} className="text-xs">{m.full_name} ({m.employee_code})</SelectItem>))}
+                </SelectContent>
+              </Select>
+            )}
+            {filtersVisible.enabled && (
+              <Select value={filterEnabled} onValueChange={(v) => setFilterEnabled(v as "all" | "enabled" | "disabled")}>
+                <SelectTrigger className="h-9 w-[130px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All</SelectItem>
+                  <SelectItem value="enabled" className="text-xs">Enabled only</SelectItem>
+                  <SelectItem value="disabled" className="text-xs">Disabled only</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFilterRole("all"); setFilterDesignation("all"); setFilterCustomer("all");
+                setFilterUnit("all"); setFilterManager("all"); setFilterEnabled("all");
+              }}
+              className="h-9 text-xs text-muted-foreground"
+            >
+              Reset
+            </Button>
+            <div className="ml-auto flex items-center gap-2">
+              <div className="flex rounded-lg border border-border/60 bg-secondary/40 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs", viewMode === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground")}
+                >
+                  <LayoutList className="h-3.5 w-3.5" /> List
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("tree")}
+                  className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs", viewMode === "tree" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground")}
+                >
+                  <Network className="h-3.5 w-3.5" /> Tree
+                </button>
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="outline" size="icon" className="h-9 w-9" title="Configure filters">
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-56">
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Show filters</div>
+                    {([
+                      ["role", "Role"], ["designation", "Designation"], ["customer", "Organization"],
+                      ["unit", "Unit"], ["manager", "Reports to"], ["enabled", "Enabled status"],
+                    ] as const).map(([k, label]) => (
+                      <label key={k} className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-secondary">
+                        <span>{label}</span>
+                        <Switch
+                          checked={filtersVisible[k]}
+                          onCheckedChange={(v) => setFiltersVisible((s) => ({ ...s, [k]: v }))}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        )}
+
         <TabsContent value="employee" className="mt-0">
-          {renderTable(employees, "employee")}
+          {viewMode === "tree" ? (
+            <ManagerTree
+              employees={employees}
+              fieldManagers={fieldManagers}
+              scopeByCandidate={scopeByCandidate}
+              unitMap={unitMap}
+            />
+          ) : (
+            renderTable(employees, "employee")
+          )}
         </TabsContent>
         <TabsContent value="candidate" className="mt-0">
           {renderTable(candidateRows, "candidate")}
@@ -1094,9 +1472,191 @@ function EmployeesPage() {
         candidateId={signTarget?.id ?? null}
         docType={signTarget?.docType ?? "nda"}
       />
+
+      <ScopeAddDialog
+        target={scopeTarget}
+        onClose={() => setScopeTarget(null)}
+        customers={customers}
+        branches={branches}
+        states={states}
+        units={units}
+        existing={scopeTarget ? scopeByCandidate.get(scopeTarget.id) ?? [] : []}
+        onAdd={(payload) => {
+          if (!scopeTarget) return;
+          addScopeMut.mutate({ candidate: scopeTarget, ...payload });
+        }}
+      />
     </div>
   );
 }
+
+function ManagerTree({
+  employees,
+  fieldManagers,
+  scopeByCandidate,
+  unitMap,
+}: {
+  employees: CandidateListItem[];
+  fieldManagers: CandidateListItem[];
+  scopeByCandidate: Map<string, ScopeAssignment[]>;
+  unitMap: Map<string, UnitLite>;
+}) {
+  const guards = employees.filter((e) => e.role_key === "guard");
+  const others = employees.filter((e) => e.role_key !== "guard" && e.role_key !== "field_manager");
+  const guardsByMgr = new Map<string, CandidateListItem[]>();
+  const unassigned: CandidateListItem[] = [];
+  for (const g of guards) {
+    if (g.reports_to) {
+      if (!guardsByMgr.has(g.reports_to)) guardsByMgr.set(g.reports_to, []);
+      guardsByMgr.get(g.reports_to)!.push(g);
+    } else unassigned.push(g);
+  }
+  return (
+    <div className="space-y-4">
+      {fieldManagers.length === 0 && (
+        <div className="rounded-2xl border border-border/60 bg-card p-6 text-center text-sm text-muted-foreground">
+          No field managers yet. Assign the Field Manager role to an employee to build the tree.
+        </div>
+      )}
+      {fieldManagers.map((fm) => {
+        const team = guardsByMgr.get(fm.id) ?? [];
+        const scopes = scopeByCandidate.get(fm.id) ?? [];
+        return (
+          <div key={fm.id} className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Network className="h-4 w-4 text-sky-600" />
+              <div className="flex-1">
+                <div className="font-semibold">{fm.full_name} <span className="ml-1 text-xs font-mono text-muted-foreground">{fm.employee_code}</span></div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {scopes.length === 0 && <span className="text-xs text-muted-foreground">No scope assigned</span>}
+                  {scopes.map((s) => (
+                    <Badge key={s.id} variant="outline" className="text-[10px]">{SCOPE_TYPE_LABEL[s.scope_type]}: {s.scope_label}</Badge>
+                  ))}
+                </div>
+              </div>
+              <Badge variant="secondary" className="text-xs">{team.length} guard{team.length === 1 ? "" : "s"}</Badge>
+            </div>
+            {team.length > 0 && (
+              <div className="mt-3 space-y-1.5 border-l-2 border-sky-200 pl-4">
+                {team.map((g) => {
+                  const u = g.unit_id ? unitMap.get(g.unit_id) : undefined;
+                  return (
+                    <div key={g.id} className="flex items-center gap-2 text-sm">
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="font-mono text-[10px] text-muted-foreground">{g.employee_code}</span>
+                      <span className="font-medium">{g.full_name}</span>
+                      {u && <span className="text-xs text-muted-foreground">· {u.name}</span>}
+                      {!g.is_enabled && <Badge variant="outline" className="ml-1 text-[10px]">Disabled</Badge>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {unassigned.length > 0 && (
+        <div className="rounded-2xl border border-dashed border-border/60 bg-card/60 p-4">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Unassigned guards ({unassigned.length})</div>
+          {unassigned.map((g) => (
+            <div key={g.id} className="flex items-center gap-2 text-sm">
+              <span className="font-mono text-[10px] text-muted-foreground">{g.employee_code}</span>
+              <span>{g.full_name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {others.length > 0 && (
+        <div className="text-xs text-muted-foreground">
+          {others.length} other employee{others.length === 1 ? "" : "s"} not shown in the manager tree.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ScopeAddDialog({
+  target,
+  onClose,
+  customers,
+  branches,
+  states,
+  units,
+  existing,
+  onAdd,
+}: {
+  target: CandidateListItem | null;
+  onClose: () => void;
+  customers: Array<{ id: string; name: string }>;
+  branches: Array<{ id: string; code: string }>;
+  states: Array<{ id: string; name: string }>;
+  units: UnitLite[];
+  existing: ScopeAssignment[];
+  onAdd: (payload: { scope_type: ScopeType; scope_id: string; scope_label: string }) => void;
+}) {
+  const [scopeType, setScopeType] = useState<ScopeType>("unit");
+  const [scopeId, setScopeId] = useState<string>("");
+  useEffect(() => {
+    if (target) { setScopeType("unit"); setScopeId(""); }
+  }, [target]);
+  const isDup = existing.some((e) => e.scope_type === scopeType && e.scope_id === scopeId);
+  const options: Array<{ id: string; label: string }> = useMemo(() => {
+    if (scopeType === "unit") return units.map((u) => ({ id: u.id, label: `${u.name}${u.customer_name ? " · " + u.customer_name : ""}` }));
+    if (scopeType === "customer") return customers.map((c) => ({ id: c.id, label: c.name }));
+    if (scopeType === "branch") return branches.map((b) => ({ id: b.id, label: b.code }));
+    return states.map((s) => ({ id: s.name, label: s.name }));
+  }, [scopeType, units, customers, branches, states]);
+  return (
+    <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add scope for {target?.full_name}</DialogTitle>
+          <DialogDescription>Field managers can be mapped to a State, Organization, Branch, or Unit. Guards under that scope will be linked.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label className="text-xs">Scope type</Label>
+            <Select value={scopeType} onValueChange={(v) => { setScopeType(v as ScopeType); setScopeId(""); }}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="state">State</SelectItem>
+                <SelectItem value="customer">Organization</SelectItem>
+                <SelectItem value="branch">Branch</SelectItem>
+                <SelectItem value="unit">Unit</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">{SCOPE_TYPE_LABEL[scopeType]}</Label>
+            <Select value={scopeId} onValueChange={setScopeId}>
+              <SelectTrigger className="h-9"><SelectValue placeholder="Select…" /></SelectTrigger>
+              <SelectContent>
+                {options.map((o) => (<SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </div>
+          {isDup && <p className="text-xs text-rose-600">Already assigned.</p>}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            disabled={!scopeId || isDup}
+            onClick={async () => {
+              const label = options.find((o) => o.id === scopeId)?.label ?? scopeId;
+              const ok = await confirmAction({ title: "Add scope?", description: `Add ${SCOPE_TYPE_LABEL[scopeType]} "${label}" to ${target?.full_name}?`, confirmText: "Add" });
+              if (!ok) return;
+              onAdd({ scope_type: scopeType, scope_id: scopeId, scope_label: label });
+              onClose();
+            }}
+          >
+            Add scope
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
