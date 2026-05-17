@@ -78,6 +78,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { confirmAction } from "@/components/ConfirmProvider";
 
 export const Route = createFileRoute("/admin/employees")({
   component: EmployeesPage,
@@ -245,7 +246,9 @@ type CandidateListItem = Pick<
   | "unit_id"
   | "designation_id"
   | "status"
-> & { employee_code: string };
+> & { employee_code: string; role_key: string };
+
+type RoleLite = { key: string; name: string };
 
 type UnitLite = {
   id: string;
@@ -291,7 +294,7 @@ function useCandidates() {
       const { data, error } = await runWithQueryTimeout("Employees", async (signal) =>
         await supabase
           .from("candidates" as never)
-          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status")
+          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key")
           .order("created_at", { ascending: false })
           .limit(250)
           .abortSignal(signal),
@@ -402,17 +405,38 @@ function useLanguagesLite() {
   });
 }
 
+const QK_ROLES = ["admin", "roles-lite"] as const;
+function useRolesLite() {
+  return useQuery({
+    queryKey: QK_ROLES,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async (): Promise<RoleLite[]> => {
+      const { data, error } = await supabase
+        .from("roles" as never)
+        .select("key,name,sort_order")
+        .order("sort_order", { ascending: true })
+        .limit(200);
+      if (error) throw error;
+      return ((data as unknown) as RoleLite[]) ?? [];
+    },
+  });
+}
+
 function EmployeesPage() {
   const candidatesQuery = useCandidates();
   const unitsQuery = useUnits();
   const designationsQuery = useDesignations();
   const exServicesQuery = useExServices();
   const languagesQuery = useLanguagesLite();
+  const rolesQuery = useRolesLite();
   const candidates = candidatesQuery.data ?? [];
   const units = unitsQuery.data ?? [];
   const designations = designationsQuery.data ?? [];
   const exServices = exServicesQuery.data ?? [];
   const languagesList = languagesQuery.data ?? [];
+  const rolesList = rolesQuery.data ?? [];
   const isLoading = candidatesQuery.isLoading;
   const candidatesError = candidatesQuery.error;
   const qc = useQueryClient();
@@ -476,6 +500,31 @@ function EmployeesPage() {
       qc.invalidateQueries({ queryKey: QK });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Delete failed"),
+  });
+
+  const assignRoleMut = useMutation({
+    mutationFn: async ({ candidate, roleKey }: { candidate: CandidateListItem; roleKey: string }) => {
+      const { error } = await supabase
+        .from("candidates" as never)
+        .update({ role_key: roleKey } as unknown as never)
+        .eq("id", candidate.id);
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: "assign_role",
+        entityType: "candidate",
+        entityId: candidate.id,
+        entityLabel: candidate.full_name || candidate.employee_code,
+        after: { role_key: roleKey },
+        before: { role_key: candidate.role_key },
+      });
+    },
+    onSuccess: (_d, vars) => {
+      const roleName = rolesList.find((r) => r.key === vars.roleKey)?.name ?? vars.roleKey;
+      toast.success(`Role set to ${roleName}`);
+      qc.invalidateQueries({ queryKey: QK });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to assign role"),
   });
 
   const approveMut = useMutation({
@@ -551,7 +600,7 @@ function EmployeesPage() {
     if (isLoading) {
       return (
         <tr>
-          <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+          <td colSpan={mode === "employee" ? 9 : 8} className="px-4 py-10 text-center text-muted-foreground">
             Loading…
           </td>
         </tr>
@@ -560,7 +609,7 @@ function EmployeesPage() {
     if (candidatesError) {
       return (
         <tr>
-          <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+          <td colSpan={mode === "employee" ? 9 : 8} className="px-4 py-10 text-center text-muted-foreground">
             {candidatesError instanceof Error
               ? candidatesError.message
               : "Could not load employees right now. Please retry."}
@@ -571,7 +620,7 @@ function EmployeesPage() {
     if (rows.length === 0) {
       return (
         <tr>
-          <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+          <td colSpan={mode === "employee" ? 9 : 8} className="px-4 py-10 text-center text-muted-foreground">
             {mode === "employee"
               ? "No employees yet. Approve a candidate to generate an Employee ID."
               : "No candidates here. Click "}
@@ -626,6 +675,65 @@ function EmployeesPage() {
             )}
           </td>
           <td className="px-6 py-5 text-sm text-muted-foreground">{desig?.name ?? "—"}</td>
+          {mode === "employee" && (
+            <td className="px-6 py-5">
+              {c.role_key ? (
+                <Select
+                  value={c.role_key}
+                  onValueChange={async (v) => {
+                    if (v === c.role_key) return;
+                    const ok = await confirmAction({
+                      title: "Change role?",
+                      description: `Change role for ${c.full_name || c.employee_code} to ${rolesList.find((r) => r.key === v)?.name ?? v}?`,
+                      confirmText: "Change role",
+                    });
+                    if (!ok) return;
+                    assignRoleMut.mutate({ candidate: c, roleKey: v });
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[160px] rounded-lg border-border/60 bg-card text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {rolesList.map((r) => (
+                      <SelectItem key={r.key} value={r.key} className="text-xs">
+                        {r.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="border-amber-300/70 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300">
+                    No role assigned
+                  </Badge>
+                  <Select
+                    value=""
+                    onValueChange={async (v) => {
+                      const ok = await confirmAction({
+                        title: "Assign role?",
+                        description: `Assign role ${rolesList.find((r) => r.key === v)?.name ?? v} to ${c.full_name || c.employee_code}?`,
+                        confirmText: "Assign",
+                      });
+                      if (!ok) return;
+                      assignRoleMut.mutate({ candidate: c, roleKey: v });
+                    }}
+                  >
+                    <SelectTrigger className="h-7 w-[120px] rounded-lg border-dashed border-border/60 bg-transparent text-xs text-muted-foreground">
+                      <SelectValue placeholder="Map role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {rolesList.map((r) => (
+                        <SelectItem key={r.key} value={r.key} className="text-xs">
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </td>
+          )}
           <td className="px-6 py-5">
             <StatusBadge status={c.status} />
             {c.status === "rejected" && c.rejection_reason && (
@@ -750,6 +858,11 @@ function EmployeesPage() {
               <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Designation
               </th>
+              {mode === "employee" && (
+                <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Role
+                </th>
+              )}
               <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Status
               </th>
