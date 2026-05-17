@@ -844,17 +844,17 @@ function EmployeesPage() {
           </td>
           <td className="px-3 py-3 font-mono text-xs text-muted-foreground">{maskAadhaar(c.aadhaar_number)}</td>
           <td className="px-3 py-3 text-center text-sm font-medium text-muted-foreground">{c.mobile || "—"}</td>
-          <td className="px-3 py-3">
+          <td className="px-3 py-3 max-w-[180px]">
             {unit ? (
-              <div>
-                <div className="text-sm font-semibold text-foreground">{unit.name}</div>
-                <div className="text-xs text-muted-foreground">{unit.customer_name}</div>
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-foreground" title={unit.name}>{unit.name}</div>
+                <div className="truncate text-xs text-muted-foreground" title={unit.customer_name}>{unit.customer_name}</div>
               </div>
             ) : (
               "—"
             )}
           </td>
-          <td className="px-3 py-3 text-sm text-muted-foreground">{desig?.name ?? "—"}</td>
+          <td className="px-3 py-3 text-sm text-muted-foreground max-w-[140px]"><span className="line-clamp-2" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
           {mode === "employee" && (
             <td className="px-3 py-3">
               {c.role_key ? (
