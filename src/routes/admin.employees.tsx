@@ -774,10 +774,12 @@ function EmployeesPage() {
   };
 
   const renderRows = (rows: CandidateListItem[], mode: "employee" | "candidate") => {
+    const empCols = 11;
+    const candCols = 8;
     if (isLoading) {
       return (
         <tr>
-          <td colSpan={mode === "employee" ? 9 : 8} className="px-4 py-10 text-center text-muted-foreground">
+          <td colSpan={mode === "employee" ? empCols : candCols} className="px-4 py-10 text-center text-muted-foreground">
             Loading…
           </td>
         </tr>
@@ -786,7 +788,7 @@ function EmployeesPage() {
     if (candidatesError) {
       return (
         <tr>
-          <td colSpan={mode === "employee" ? 9 : 8} className="px-4 py-10 text-center text-muted-foreground">
+          <td colSpan={mode === "employee" ? empCols : candCols} className="px-4 py-10 text-center text-muted-foreground">
             {candidatesError instanceof Error
               ? candidatesError.message
               : "Could not load employees right now. Please retry."}
@@ -797,7 +799,7 @@ function EmployeesPage() {
     if (rows.length === 0) {
       return (
         <tr>
-          <td colSpan={mode === "employee" ? 9 : 8} className="px-4 py-10 text-center text-muted-foreground">
+          <td colSpan={mode === "employee" ? empCols : candCols} className="px-4 py-10 text-center text-muted-foreground">
             {mode === "employee"
               ? "No employees yet. Approve a candidate to generate an Employee ID."
               : "No candidates here. Click "}
@@ -811,8 +813,9 @@ function EmployeesPage() {
       const unit = c.unit_id ? unitMap.get(c.unit_id) : undefined;
       const desig = c.designation_id ? desigMap.get(c.designation_id) : undefined;
       const code = mode === "employee" ? c.employee_code || "—" : c.candidate_code || "—";
+      const isDisabled = mode === "employee" && !c.is_enabled;
       return (
-        <tr key={c.id} className="group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5">
+        <tr key={c.id} className={cn("group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5", isDisabled && "opacity-60")}>
           <td className="px-6 py-5">
             <span className="rounded-md bg-secondary px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               {code}
