@@ -59,6 +59,43 @@ const SECTIONS = [
 
 type SectionId = (typeof SECTIONS)[number]["id"];
 
+function normalizeCandidate(data: any) {
+  return {
+    ...data,
+    physical_health: data.physical_health ?? {},
+    compliance: data.compliance ?? {},
+    identification_proofs: Array.isArray(data.identification_proofs)
+      ? data.identification_proofs
+      : [],
+    criminal_history:
+      data.criminal_history && typeof data.criminal_history === "object"
+        ? data.criminal_history
+        : { has_history: false, incidents: [] },
+    extra_curricular: Array.isArray(data.extra_curricular) ? data.extra_curricular : [],
+    other_info: data.other_info ?? {},
+    documents: Array.isArray(data.documents) ? data.documents : [],
+    nominations: Array.isArray(data.nominations) ? data.nominations : [],
+    contacts: Array.isArray(data.contacts) ? data.contacts : [],
+  };
+}
+
+function buildCandidatePayload(form: any) {
+  return {
+    physical_health: form.physical_health,
+    compliance: form.compliance,
+    identification_proofs: form.identification_proofs,
+    criminal_history: form.criminal_history,
+    extra_curricular: form.extra_curricular,
+    other_info: form.other_info,
+    documents: form.documents,
+    nominations: form.nominations,
+    contacts: form.contacts,
+    kyc_completed: form.kyc_completed ?? false,
+    status: form.status,
+    rejection_reason: form.rejection_reason ?? "",
+  };
+}
+
 export const Route = createFileRoute("/admin/candidates/$id/details")({
   component: CandidateDetailsPage,
 });
