@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -59,6 +59,43 @@ const SECTIONS = [
 
 type SectionId = (typeof SECTIONS)[number]["id"];
 
+function normalizeCandidate(data: any) {
+  return {
+    ...data,
+    physical_health: data.physical_health ?? {},
+    compliance: data.compliance ?? {},
+    identification_proofs: Array.isArray(data.identification_proofs)
+      ? data.identification_proofs
+      : [],
+    criminal_history:
+      data.criminal_history && typeof data.criminal_history === "object"
+        ? data.criminal_history
+        : { has_history: false, incidents: [] },
+    extra_curricular: Array.isArray(data.extra_curricular) ? data.extra_curricular : [],
+    other_info: data.other_info ?? {},
+    documents: Array.isArray(data.documents) ? data.documents : [],
+    nominations: Array.isArray(data.nominations) ? data.nominations : [],
+    contacts: Array.isArray(data.contacts) ? data.contacts : [],
+  };
+}
+
+function buildCandidatePayload(form: any) {
+  return {
+    physical_health: form.physical_health,
+    compliance: form.compliance,
+    identification_proofs: form.identification_proofs,
+    criminal_history: form.criminal_history,
+    extra_curricular: form.extra_curricular,
+    other_info: form.other_info,
+    documents: form.documents,
+    nominations: form.nominations,
+    contacts: form.contacts,
+    kyc_completed: form.kyc_completed ?? false,
+    status: form.status,
+    rejection_reason: form.rejection_reason ?? "",
+  };
+}
+
 export const Route = createFileRoute("/admin/candidates/$id/details")({
   component: CandidateDetailsPage,
 });
@@ -70,7 +107,7 @@ function CandidateDetailsPage() {
   const [active, setActive] = useState<SectionId>("basic");
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>(null);
-  const [dirty, setDirty] = useState(false);
+  const [baselinePayload, setBaselinePayload] = useState<string>("");
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [statusBusy, setStatusBusy] = useState(false);
@@ -90,51 +127,28 @@ function CandidateDetailsPage() {
 
   useEffect(() => {
     if (!data) return;
-    setForm({
-      ...data,
-      physical_health: data.physical_health ?? {},
-      compliance: data.compliance ?? {},
-      identification_proofs: Array.isArray(data.identification_proofs)
-        ? data.identification_proofs
-        : [],
-      criminal_history:
-        data.criminal_history && typeof data.criminal_history === "object"
-          ? data.criminal_history
-          : { has_history: false, incidents: [] },
-      extra_curricular: Array.isArray(data.extra_curricular) ? data.extra_curricular : [],
-      other_info: data.other_info ?? {},
-      documents: Array.isArray(data.documents) ? data.documents : [],
-      nominations: Array.isArray(data.nominations) ? data.nominations : [],
-      contacts: Array.isArray(data.contacts) ? data.contacts : [],
-    });
-    setDirty(false);
+    const normalized = normalizeCandidate(data);
+    setForm(normalized);
+    setBaselinePayload(JSON.stringify(buildCandidatePayload(normalized)));
   }, [data]);
 
   const set = (path: string, value: any) => {
     setForm((prev: any) => ({ ...prev, [path]: value }));
-    setDirty(true);
   };
   const setSection = (key: string, value: any) => {
     setForm((prev: any) => ({ ...prev, [key]: { ...(prev?.[key] ?? {}), ...value } }));
-    setDirty(true);
   };
+
+  const dirty = useMemo(() => {
+    if (!form || !baselinePayload) return false;
+    return JSON.stringify(buildCandidatePayload(form)) !== baselinePayload;
+  }, [form, baselinePayload]);
 
   const handleSave = async (closeAfter = false) => {
     if (!form) return;
     setSaving(true);
     try {
-      const payload: any = {
-        physical_health: form.physical_health,
-        compliance: form.compliance,
-        identification_proofs: form.identification_proofs,
-        criminal_history: form.criminal_history,
-        extra_curricular: form.extra_curricular,
-        other_info: form.other_info,
-        documents: form.documents,
-        nominations: form.nominations,
-        contacts: form.contacts,
-        kyc_completed: form.kyc_completed ?? false,
-      };
+      const payload = buildCandidatePayload(form);
       const { error } = await supabase.from("candidates").update(payload).eq("id", id);
       if (error) throw error;
       await logActivity({
@@ -145,7 +159,7 @@ function CandidateDetailsPage() {
         entityLabel: form.full_name || id,
       });
       toast.success("Saved");
-      setDirty(false);
+      setBaselinePayload(JSON.stringify(payload));
       if (closeAfter) navigate({ to: "/admin/employees" });
     } catch (e: any) {
       toast.error(e.message || "Failed to save");
@@ -167,7 +181,11 @@ function CandidateDetailsPage() {
         .update({ status: next, rejection_reason: reason })
         .eq("id", id);
       if (error) throw error;
-      setForm((p: any) => ({ ...p, status: next, rejection_reason: reason }));
+      setForm((p: any) => {
+        const updated = { ...p, status: next, rejection_reason: reason };
+        setBaselinePayload(JSON.stringify(buildCandidatePayload(updated)));
+        return updated;
+      });
       await logActivity({
         module: MODULE,
         action: next === "approved" ? "approve" : next === "rejected" ? "reject" : "resubmit",
@@ -241,7 +259,7 @@ function CandidateDetailsPage() {
               Approve
             </Button>
           )}
-          {form.status !== "rejected" && (
+          {form.status === "pending" && (
             <Button
               size="sm"
               variant="destructive"
@@ -286,14 +304,6 @@ function CandidateDetailsPage() {
           <div>
             <div className="font-semibold text-rose-700 dark:text-rose-300">Rejected</div>
             <div className="text-rose-700/90 dark:text-rose-200/90">{form.rejection_reason}</div>
-          </div>
-        </div>
-      )}
-      {form.status === "approved" && (
-        <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-900/40 dark:bg-emerald-950/30">
-          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-          <div className="font-medium text-emerald-700 dark:text-emerald-300">
-            This candidate has been approved.
           </div>
         </div>
       )}
