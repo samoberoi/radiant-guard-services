@@ -1802,6 +1802,7 @@ function ContractFormDialog({
                 toast.error("Please select a unit");
                 return;
               }
+              if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
               setSaving(true);
               const err = await onSubmit({
                 contractCode,
