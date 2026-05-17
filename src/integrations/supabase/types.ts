@@ -420,6 +420,42 @@ export type Database = {
           },
         ]
       }
+      company_document_templates: {
+        Row: {
+          body: string
+          created_at: string
+          doc_type: string
+          id: string
+          is_active: boolean
+          is_archived: boolean
+          title: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          doc_type: string
+          id?: string
+          is_active?: boolean
+          is_archived?: boolean
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          doc_type?: string
+          id?: string
+          is_active?: boolean
+          is_archived?: boolean
+          title?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       contract_resources: {
         Row: {
           benefits: Json
@@ -751,6 +787,48 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      employee_signed_documents: {
+        Row: {
+          candidate_id: string
+          company_signature_data: string
+          created_at: string
+          doc_type: string
+          employee_signature_data: string
+          id: string
+          rendered_body: string
+          signed_at: string | null
+          template_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          candidate_id: string
+          company_signature_data?: string
+          created_at?: string
+          doc_type: string
+          employee_signature_data?: string
+          id?: string
+          rendered_body?: string
+          signed_at?: string | null
+          template_id: string
+          updated_at?: string
+          version: number
+        }
+        Update: {
+          candidate_id?: string
+          company_signature_data?: string
+          created_at?: string
+          doc_type?: string
+          employee_signature_data?: string
+          id?: string
+          rendered_body?: string
+          signed_at?: string | null
+          template_id?: string
+          updated_at?: string
+          version?: number
         }
         Relationships: []
       }
