@@ -543,6 +543,11 @@ function computeBenefitAmount(
       match = wageComponents.find((c) => c.allowanceId === at.id);
       if (match) return Number(match.amount) || 0;
     }
+    // Resolve against benefit / employer item names
+    const benefitMatch = benefitItems.find((b) => norm(b.name) === l);
+    if (benefitMatch) return Number(benefitMatch.amount) || 0;
+    const employerMatch = employerItems.find((b) => norm(b.name) === l);
+    if (employerMatch) return Number(employerMatch.amount) || 0;
     return 0;
   };
   const base = benefit.baseComponents.reduce((sum, b) => {
