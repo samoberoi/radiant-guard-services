@@ -478,7 +478,7 @@ function EmployeesPage() {
     mutationFn: async (c: CandidateListItem) => {
       const { data, error } = await supabase
         .from("candidates" as never)
-        .update({ status: "approved", rejection_reason: "" } as never)
+        .update({ status: "approved", rejection_reason: "" }) as never
         .eq("id", c.id)
         .select("id,employee_code,full_name")
         .single();
@@ -504,7 +504,7 @@ function EmployeesPage() {
     mutationFn: async ({ c, reason }: { c: CandidateListItem; reason: string }) => {
       const { error } = await supabase
         .from("candidates" as never)
-        .update({ status: "rejected", rejection_reason: reason } as never)
+        .update({ status: "rejected", rejection_reason: reason }) as never
         .eq("id", c.id);
       if (error) throw error;
       await logActivity({
