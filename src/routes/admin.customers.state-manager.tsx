@@ -235,6 +235,7 @@ function StateManagerPage() {
           if (!editing) return null;
           const r = await updateState(editing.id, name);
           if (!r.ok) return r.error;
+          void logActivity({ module: "State Manager", action: "update", entityType: "states", entityId: editing.id, entityLabel: name, details: { name } });
           toast.success("State updated");
           setEditing(null);
           return null;
