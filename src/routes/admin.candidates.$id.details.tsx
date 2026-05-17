@@ -311,30 +311,28 @@ function CandidateDetailsPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[240px_1fr]">
-        {/* Sidebar */}
-        <aside className="rounded-lg border bg-card p-2">
-          <nav className="space-y-1">
-            {SECTIONS.map((s) => {
-              const Icon = s.icon;
-              const isActive = active === s.id;
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => setActive(s.id)}
-                  className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition ${
-                    isActive
-                      ? "bg-primary/10 text-primary font-medium"
-                      : "text-muted-foreground hover:bg-muted"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
-                  {s.label}
-                </button>
-              );
-            })}
-          </nav>
-        </aside>
+      <div className="space-y-4">
+        {/* Section tabs (horizontal) */}
+        <nav className="flex flex-wrap gap-1 rounded-lg border bg-card p-1">
+          {SECTIONS.map((s) => {
+            const Icon = s.icon;
+            const isActive = active === s.id;
+            return (
+              <button
+                key={s.id}
+                onClick={() => setActive(s.id)}
+                className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm transition ${
+                  isActive
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-muted-foreground hover:bg-muted"
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {s.label}
+              </button>
+            );
+          })}
+        </nav>
 
         {/* Content */}
         <section className="rounded-lg border bg-card p-6">
