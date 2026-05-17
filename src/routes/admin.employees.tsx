@@ -896,51 +896,10 @@ function CandidateWizard({
 
       if (slot === "aadhaar") {
         const clientOcr = await getAadhaarOcrClient();
-        const looksSuspicious = (value: string) => {
-          const next = value.trim();
-          if (!next) return false;
-          return /[`~^*_={}|<>]/.test(next) || /[;:]{2,}/.test(next) || /\b[il1|]\s*[;:=]\s*/i.test(next);
-        };
-        const isTrustedExtraction = (extraction: AadhaarExtraction) => {
-          const normalizedName = extraction.full_name.trim();
-          const nameParts = normalizedName.match(/[A-Za-z]+/g) ?? [];
-          const meaningfulParts = nameParts.filter((part) => part.length >= 2);
-          const hasUsefulName =
-            meaningfulParts.length >= 2 || meaningfulParts.some((part) => part.length >= 4);
-          const hasValidAadhaar = /^\d{12}$/.test(extraction.aadhaar_number);
-          const hasUsefulAddress = [
-            extraction.address_line1,
-            extraction.address_line2,
-            extraction.city,
-            extraction.district,
-            extraction.state,
-          ].some((value) => /[A-Za-z]{3,}/.test(value ?? "") && !looksSuspicious(value ?? ""));
-
-          if (
-            looksSuspicious(extraction.full_name) ||
-            looksSuspicious(extraction.address_line1) ||
-            looksSuspicious(extraction.address_line2) ||
-            looksSuspicious(extraction.city) ||
-            looksSuspicious(extraction.district) ||
-            looksSuspicious(extraction.state)
-          ) {
-            return false;
-          }
-
-          return (
-            hasValidAadhaar &&
-            (hasUsefulName ||
-              /^\d{4}-\d{2}-\d{2}$/.test(extraction.date_of_birth) ||
-              /^(male|female|other)$/i.test(extraction.gender) ||
-              hasUsefulAddress)
-          );
-        };
         setScanning(true);
         try {
-          // Read file as data URL up-front so AI extraction can run in parallel
-          // with the upload + client OCR. For PDFs we trust the AI more than
-          // the client text/OCR layer because UIDAI e-Aadhaar PDFs have
-          // scrambled fonts that fool the client parser.
+          // Read file as data URL. For PDFs we also rasterize pages so the AI
+          // gets actual image content (UIDAI PDFs use scrambled fonts).
           const dataUrlPromise: Promise<string> = new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(String(reader.result));
@@ -952,85 +911,40 @@ function CandidateWizard({
             ? clientOcr.renderPdfPagesAsDataUrls(file).catch(() => [])
             : Promise.resolve<string[]>([]);
 
-          const aiPromise = Promise.all([dataUrlPromise, pageImageDataUrlsPromise])
-            .then(([dataUrl, pageImageDataUrls]) =>
-              withTimeout(
-                extractFn({
-                  data: {
-                    fileDataUrl: dataUrl,
-                    mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
-                    pageImageDataUrls,
-                  },
-                }) as Promise<AadhaarExtraction>,
-                12_000,
-                "Aadhaar AI extraction timed out",
-              ),
-            )
-            .catch(() => null);
-
-          const [uploadedUrl, clientResult, aiResultRaw] = await Promise.all([
+          const [uploadedUrl, dataUrl, pageImageDataUrls] = await Promise.all([
             uploadPromise,
-            clientOcr.extractAadhaarClient(file).catch(() => null),
-            aiPromise,
+            dataUrlPromise,
+            pageImageDataUrlsPromise,
           ]);
           set("aadhaar_image_url", uploadedUrl);
-          toast.success("Aadhaar uploaded");
+          toast.success("Aadhaar uploaded — scanning…");
 
-          const normalize = (extraction: AadhaarExtraction | null) => {
-            if (!extraction) return null;
-            return form.aadhaar_number &&
-              (!extraction.aadhaar_number || !/^\d{12}$/.test(extraction.aadhaar_number))
+          const extraction = await withTimeout(
+            extractFn({
+              data: {
+                fileDataUrl: dataUrl,
+                mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
+                pageImageDataUrls,
+              },
+            }) as Promise<AadhaarExtraction>,
+            45_000,
+            "Aadhaar scan timed out — please try again or fill the form manually",
+          );
+
+          // If the user already typed an Aadhaar number and the AI couldn't read one, keep theirs.
+          const finalExtraction: AadhaarExtraction =
+            form.aadhaar_number && !/^\d{12}$/.test(extraction.aadhaar_number)
               ? { ...extraction, aadhaar_number: form.aadhaar_number }
               : extraction;
-          };
-
-          const normalizedAi = normalize(aiResultRaw);
-          const normalizedClient = normalize(clientResult);
-          const mergedExtraction =
-            normalizedAi && normalizedClient
-              ? clientOcr.mergeAadhaarExtractions(normalizedClient, normalizedAi)
-              : normalizedAi ?? normalizedClient;
-
-          const orderedCandidates = [
-            mergedExtraction,
-            isPdf ? normalizedAi : normalizedClient,
-            isPdf ? normalizedClient : normalizedAi,
-          ].filter((candidate): candidate is AadhaarExtraction => !!candidate);
-
-          const rankedCandidates = orderedCandidates
-            .map((extraction, index) => ({
-              extraction,
-              trusted: isTrustedExtraction(extraction),
-              score: clientOcr.countExtractedFields(extraction),
-              index,
-            }))
-            .sort(
-              (a, b) =>
-                Number(b.trusted) - Number(a.trusted) ||
-                b.score - a.score ||
-                a.index - b.index,
-            );
-
-          const bestCandidate = rankedCandidates[0] ?? null;
-          const finalExtraction = bestCandidate?.trusted
-            ? bestCandidate.extraction
-            : bestCandidate && bestCandidate.score >= 2
-              ? bestCandidate.extraction
-              : null;
-
-          if (!finalExtraction) {
-            toast.warning("Aadhaar uploaded, but no usable details could be read. Please try a clearer scan.");
-            return;
-          }
 
           applyExtraction(finalExtraction);
           const filled = clientOcr.countExtractedFields(finalExtraction);
           if (filled === 0) {
-            toast.warning("Aadhaar scanned but no fields could be read. Try a clearer scan.");
-          } else if (bestCandidate?.trusted) {
-            toast.success(`Aadhaar scanned — ${filled} field(s) auto-filled`);
+            toast.warning("Scan complete but no fields could be read. Please fill manually or upload a clearer scan.");
+          } else if (filled >= 8) {
+            toast.success(`Aadhaar scanned — ${filled} field(s) auto-filled. Please review.`);
           } else {
-            toast.warning(`Aadhaar scanned partially — ${filled} field(s) auto-filled. Please review the mapped details.`);
+            toast.success(`Aadhaar scanned — ${filled} field(s) auto-filled. Please review and complete the rest.`);
           }
         } catch (e) {
           toast.error(e instanceof Error ? e.message : "Aadhaar scan failed");
