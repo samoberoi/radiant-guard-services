@@ -344,7 +344,7 @@ function RBACPage() {
       {/* Grid */}
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         {/* Header row */}
-        <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)_140px] items-center gap-2 border-b border-border bg-secondary/40 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)] items-center gap-2 border-b border-border bg-secondary/40 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           <div>Module</div>
           {PERMISSION_ACTIONS.map((a) => {
             const Icon = ACTION_META[a].icon;
@@ -355,7 +355,6 @@ function RBACPage() {
               </div>
             );
           })}
-          <div className="text-right">Quick</div>
         </div>
 
         <div className="divide-y divide-border">
