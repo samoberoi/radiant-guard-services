@@ -1075,6 +1075,10 @@ function CandidateWizard({
   designationsError,
   exServices,
   languagesList,
+  canReview = false,
+  isApproving = false,
+  onApprove,
+  onReject,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -1087,6 +1091,10 @@ function CandidateWizard({
   designationsError: string | null;
   exServices: ExServiceLite[];
   languagesList: LanguageLite[];
+  canReview?: boolean;
+  isApproving?: boolean;
+  onApprove?: () => void;
+  onReject?: () => void;
 }) {
   const qc = useQueryClient();
   const extractFn = useServerFn(extractAadhaar);
