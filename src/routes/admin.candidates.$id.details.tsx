@@ -70,6 +70,7 @@ function CandidateDetailsPage() {
   const [active, setActive] = useState<SectionId>("basic");
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<any>(null);
+  const [dirty, setDirty] = useState(false);
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [statusBusy, setStatusBusy] = useState(false);
