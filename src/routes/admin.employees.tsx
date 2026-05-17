@@ -1145,8 +1145,132 @@ function EmployeesPage() {
           </div>
         </div>
 
+        {/* Filter bar (Employees tab only) */}
+        {tab === "employee" && (
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-card/60 p-3 shadow-sm">
+            {filtersVisible.role && (
+              <Select value={filterRole} onValueChange={setFilterRole}>
+                <SelectTrigger className="h-9 w-[150px] text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All roles</SelectItem>
+                  {rolesList.map((r) => (<SelectItem key={r.key} value={r.key} className="text-xs">{r.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            )}
+            {filtersVisible.designation && (
+              <Select value={filterDesignation} onValueChange={setFilterDesignation}>
+                <SelectTrigger className="h-9 w-[170px] text-xs"><SelectValue placeholder="Designation" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All designations</SelectItem>
+                  {designations.map((d) => (<SelectItem key={d.id} value={d.id} className="text-xs">{d.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            )}
+            {filtersVisible.customer && (
+              <Select value={filterCustomer} onValueChange={setFilterCustomer}>
+                <SelectTrigger className="h-9 w-[180px] text-xs"><SelectValue placeholder="Organization" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All organizations</SelectItem>
+                  {customers.map((c) => (<SelectItem key={c.id} value={c.id} className="text-xs">{c.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            )}
+            {filtersVisible.unit && (
+              <Select value={filterUnit} onValueChange={setFilterUnit}>
+                <SelectTrigger className="h-9 w-[180px] text-xs"><SelectValue placeholder="Unit" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All units</SelectItem>
+                  {units.map((u) => (<SelectItem key={u.id} value={u.id} className="text-xs">{u.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
+            )}
+            {filtersVisible.manager && (
+              <Select value={filterManager} onValueChange={setFilterManager}>
+                <SelectTrigger className="h-9 w-[180px] text-xs"><SelectValue placeholder="Reports to" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">Any manager</SelectItem>
+                  {fieldManagers.map((m) => (<SelectItem key={m.id} value={m.id} className="text-xs">{m.full_name} ({m.employee_code})</SelectItem>))}
+                </SelectContent>
+              </Select>
+            )}
+            {filtersVisible.enabled && (
+              <Select value={filterEnabled} onValueChange={(v) => setFilterEnabled(v as "all" | "enabled" | "disabled")}>
+                <SelectTrigger className="h-9 w-[130px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All</SelectItem>
+                  <SelectItem value="enabled" className="text-xs">Enabled only</SelectItem>
+                  <SelectItem value="disabled" className="text-xs">Disabled only</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setFilterRole("all"); setFilterDesignation("all"); setFilterCustomer("all");
+                setFilterUnit("all"); setFilterManager("all"); setFilterEnabled("all");
+              }}
+              className="h-9 text-xs text-muted-foreground"
+            >
+              Reset
+            </Button>
+            <div className="ml-auto flex items-center gap-2">
+              <div className="flex rounded-lg border border-border/60 bg-secondary/40 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => setViewMode("list")}
+                  className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs", viewMode === "list" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground")}
+                >
+                  <LayoutList className="h-3.5 w-3.5" /> List
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode("tree")}
+                  className={cn("inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs", viewMode === "tree" ? "bg-card shadow-sm text-foreground" : "text-muted-foreground")}
+                >
+                  <Network className="h-3.5 w-3.5" /> Tree
+                </button>
+              </div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button type="button" variant="outline" size="icon" className="h-9 w-9" title="Configure filters">
+                    <Settings2 className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-56">
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Show filters</div>
+                    {([
+                      ["role", "Role"], ["designation", "Designation"], ["customer", "Organization"],
+                      ["unit", "Unit"], ["manager", "Reports to"], ["enabled", "Enabled status"],
+                    ] as const).map(([k, label]) => (
+                      <label key={k} className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-secondary">
+                        <span>{label}</span>
+                        <Switch
+                          checked={filtersVisible[k]}
+                          onCheckedChange={(v) => setFiltersVisible((s) => ({ ...s, [k]: v }))}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
+        )}
+
         <TabsContent value="employee" className="mt-0">
-          {renderTable(employees, "employee")}
+          {viewMode === "tree" ? (
+            <ManagerTree
+              employees={employees}
+              fieldManagers={fieldManagers}
+              scopeByCandidate={scopeByCandidate}
+              unitMap={unitMap}
+            />
+          ) : (
+            renderTable(employees, "employee")
+          )}
         </TabsContent>
         <TabsContent value="candidate" className="mt-0">
           {renderTable(candidateRows, "candidate")}
