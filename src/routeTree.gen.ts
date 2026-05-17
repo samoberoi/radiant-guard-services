@@ -27,6 +27,7 @@ import { Route as AdminDesignationManagerRouteImport } from './routes/admin.desi
 import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
 import { Route as AdminCostComponentManagerRouteImport } from './routes/admin.cost-component-manager'
 import { Route as AdminControlCenterRouteImport } from './routes/admin.control-center'
+import { Route as AdminCompanyDocumentsRouteImport } from './routes/admin.company-documents'
 import { Route as AdminBillingTypeManagerRouteImport } from './routes/admin.billing-type-manager'
 import { Route as AdminAllowanceManagerRouteImport } from './routes/admin.allowance-manager'
 import { Route as AdminCustomersUnitManagerRouteImport } from './routes/admin.customers.unit-manager'
@@ -128,6 +129,11 @@ const AdminControlCenterRoute = AdminControlCenterRouteImport.update({
   path: '/control-center',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCompanyDocumentsRoute = AdminCompanyDocumentsRouteImport.update({
+  id: '/company-documents',
+  path: '/company-documents',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminBillingTypeManagerRoute = AdminBillingTypeManagerRouteImport.update({
   id: '/billing-type-manager',
   path: '/billing-type-manager',
@@ -182,6 +188,7 @@ export interface FileRoutesByFullPath {
   '/welcome': typeof WelcomeRoute
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
   '/admin/billing-type-manager': typeof AdminBillingTypeManagerRoute
+  '/admin/company-documents': typeof AdminCompanyDocumentsRoute
   '/admin/control-center': typeof AdminControlCenterRoute
   '/admin/cost-component-manager': typeof AdminCostComponentManagerRoute
   '/admin/customers': typeof AdminCustomersRouteWithChildren
@@ -210,6 +217,7 @@ export interface FileRoutesByTo {
   '/welcome': typeof WelcomeRoute
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
   '/admin/billing-type-manager': typeof AdminBillingTypeManagerRoute
+  '/admin/company-documents': typeof AdminCompanyDocumentsRoute
   '/admin/control-center': typeof AdminControlCenterRoute
   '/admin/cost-component-manager': typeof AdminCostComponentManagerRoute
   '/admin/customers': typeof AdminCustomersRouteWithChildren
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/welcome': typeof WelcomeRoute
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
   '/admin/billing-type-manager': typeof AdminBillingTypeManagerRoute
+  '/admin/company-documents': typeof AdminCompanyDocumentsRoute
   '/admin/control-center': typeof AdminControlCenterRoute
   '/admin/cost-component-manager': typeof AdminCostComponentManagerRoute
   '/admin/customers': typeof AdminCustomersRouteWithChildren
@@ -269,6 +278,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/admin/allowance-manager'
     | '/admin/billing-type-manager'
+    | '/admin/company-documents'
     | '/admin/control-center'
     | '/admin/cost-component-manager'
     | '/admin/customers'
@@ -297,6 +307,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/admin/allowance-manager'
     | '/admin/billing-type-manager'
+    | '/admin/company-documents'
     | '/admin/control-center'
     | '/admin/cost-component-manager'
     | '/admin/customers'
@@ -325,6 +336,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/admin/allowance-manager'
     | '/admin/billing-type-manager'
+    | '/admin/company-documents'
     | '/admin/control-center'
     | '/admin/cost-component-manager'
     | '/admin/customers'
@@ -482,6 +494,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminControlCenterRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/company-documents': {
+      id: '/admin/company-documents'
+      path: '/company-documents'
+      fullPath: '/admin/company-documents'
+      preLoaderRoute: typeof AdminCompanyDocumentsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/billing-type-manager': {
       id: '/admin/billing-type-manager'
       path: '/billing-type-manager'
@@ -562,6 +581,7 @@ const AdminCustomersRouteWithChildren = AdminCustomersRoute._addFileChildren(
 interface AdminRouteChildren {
   AdminAllowanceManagerRoute: typeof AdminAllowanceManagerRoute
   AdminBillingTypeManagerRoute: typeof AdminBillingTypeManagerRoute
+  AdminCompanyDocumentsRoute: typeof AdminCompanyDocumentsRoute
   AdminControlCenterRoute: typeof AdminControlCenterRoute
   AdminCostComponentManagerRoute: typeof AdminCostComponentManagerRoute
   AdminCustomersRoute: typeof AdminCustomersRouteWithChildren
@@ -583,6 +603,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAllowanceManagerRoute: AdminAllowanceManagerRoute,
   AdminBillingTypeManagerRoute: AdminBillingTypeManagerRoute,
+  AdminCompanyDocumentsRoute: AdminCompanyDocumentsRoute,
   AdminControlCenterRoute: AdminControlCenterRoute,
   AdminCostComponentManagerRoute: AdminCostComponentManagerRoute,
   AdminCustomersRoute: AdminCustomersRouteWithChildren,
