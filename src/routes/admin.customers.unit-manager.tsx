@@ -384,6 +384,7 @@ function UnitManagerPage() {
           if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           const r = editing ? await updateUnit(editing.id, data) : await addUnit(data);
           if (!r.ok) return r.error;
+          void logActivity({ module: "Unit Manager", action: editing ? "update" : "create", entityType: "units", entityId: editing?.id, entityLabel: String((data as Record<string, unknown>).code ?? (data as Record<string, unknown>).name ?? ""), details: data as Record<string, unknown> });
           toast.success(editing ? "Unit updated" : "Unit added");
           return null;
         }}
