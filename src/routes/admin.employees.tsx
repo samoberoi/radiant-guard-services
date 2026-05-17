@@ -526,6 +526,7 @@ function EmployeesPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to assign role"),
   });
 
+  const approveMut = useMutation({
     mutationFn: async (c: CandidateListItem) => {
       const { data, error } = await supabase
         .from("candidates" as never)
