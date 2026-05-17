@@ -290,16 +290,44 @@ function RBACPage() {
 
         <div className="flex items-center gap-2">
           {!isSuper && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDraft(serverMap)}
-              disabled={!dirty || saveMutation.isPending}
-              className="h-9"
-            >
-              <RotateCcw className="mr-1.5 h-4 w-4" />
-              Reset
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setDraft(() => {
+                    let next: PermMap = new Map();
+                    for (const m of RBAC_MODULES) next = grantAll(next, m);
+                    return next;
+                  })
+                }
+                className="h-9"
+                title="Grant View, Edit and Delete on every module and sub-module"
+              >
+                <Sparkles className="mr-1.5 h-4 w-4" />
+                Grant full access
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDraft(new Map())}
+                className="h-9"
+                title="Remove every permission for this role"
+              >
+                <Trash2 className="mr-1.5 h-4 w-4" />
+                Revoke all
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDraft(serverMap)}
+                disabled={!dirty || saveMutation.isPending}
+                className="h-9"
+              >
+                <RotateCcw className="mr-1.5 h-4 w-4" />
+                Reset
+              </Button>
+            </>
           )}
           <Button
             size="sm"
