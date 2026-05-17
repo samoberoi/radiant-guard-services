@@ -219,6 +219,7 @@ function StateManagerPage() {
           if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           const r = await addState(name);
           if (!r.ok) return r.error;
+          void logActivity({ module: "State Manager", action: "create", entityType: "states", entityLabel: name, details: { name } });
           toast.success("State added");
           return null;
         }}
