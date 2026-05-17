@@ -121,6 +121,7 @@ export type Database = {
           aadhaar_number: string
           alt_mobile: string
           application_date: string
+          approved_at: string | null
           bank_account_holder: string
           bank_account_number: string
           bank_account_type: string
@@ -142,6 +143,7 @@ export type Database = {
           emergency_contact_mobile: string
           emergency_contact_name: string
           emergency_contact_relation: string
+          employee_code: string
           ex_service_id: string | null
           experiences: Json
           extra_curricular: Json
@@ -180,6 +182,7 @@ export type Database = {
           present_police_station: string
           present_state: string
           references: Json
+          rejected_at: string | null
           rejection_reason: string
           religion: string
           same_as_permanent: boolean
@@ -193,6 +196,7 @@ export type Database = {
           aadhaar_number?: string
           alt_mobile?: string
           application_date?: string
+          approved_at?: string | null
           bank_account_holder?: string
           bank_account_number?: string
           bank_account_type?: string
@@ -214,6 +218,7 @@ export type Database = {
           emergency_contact_mobile?: string
           emergency_contact_name?: string
           emergency_contact_relation?: string
+          employee_code?: string
           ex_service_id?: string | null
           experiences?: Json
           extra_curricular?: Json
@@ -252,6 +257,7 @@ export type Database = {
           present_police_station?: string
           present_state?: string
           references?: Json
+          rejected_at?: string | null
           rejection_reason?: string
           religion?: string
           same_as_permanent?: boolean
@@ -265,6 +271,7 @@ export type Database = {
           aadhaar_number?: string
           alt_mobile?: string
           application_date?: string
+          approved_at?: string | null
           bank_account_holder?: string
           bank_account_number?: string
           bank_account_type?: string
@@ -286,6 +293,7 @@ export type Database = {
           emergency_contact_mobile?: string
           emergency_contact_name?: string
           emergency_contact_relation?: string
+          employee_code?: string
           ex_service_id?: string | null
           experiences?: Json
           extra_curricular?: Json
@@ -324,6 +332,7 @@ export type Database = {
           present_police_station?: string
           present_state?: string
           references?: Json
+          rejected_at?: string | null
           rejection_reason?: string
           religion?: string
           same_as_permanent?: boolean

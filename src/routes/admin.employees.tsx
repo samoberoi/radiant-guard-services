@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClientOnlyFn, useServerFn } from "@tanstack/react-start";
 import {
   Camera,
+  Check,
   CheckCircle2,
   Edit2,
   FileText,
@@ -24,7 +25,9 @@ import {
   Trash2,
   Upload,
   UserPlus,
+  X,
 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -239,7 +242,7 @@ type CandidateListItem = Pick<
   | "unit_id"
   | "designation_id"
   | "status"
->;
+> & { employee_code: string };
 
 type UnitLite = {
   id: string;
@@ -285,7 +288,7 @@ function useCandidates() {
       const { data, error } = await runWithQueryTimeout("Employees", async (signal) =>
         await supabase
           .from("candidates" as never)
-          .select("id,candidate_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status")
+          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status")
           .order("created_at", { ascending: false })
           .limit(250)
           .abortSignal(signal),
@@ -412,21 +415,35 @@ function EmployeesPage() {
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
+  const [tab, setTab] = useState<"employee" | "candidate">("employee");
   const [openWizard, setOpenWizard] = useState(false);
   const [editing, setEditing] = useState<Candidate | null>(null);
   const [openingCandidateId, setOpeningCandidateId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<CandidateListItem | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<CandidateListItem | null>(null);
+  const [rejectReason, setRejectReason] = useState("");
 
   const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const desigMap = useMemo(() => new Map(designations.map((d) => [d.id, d])), [designations]);
 
-  const filtered = useMemo(() => {
+  const matchesSearch = (c: CandidateListItem) => {
     const q = search.trim().toLowerCase();
-    if (!q) return candidates;
-    return candidates.filter((c) =>
-      [c.full_name, c.aadhaar_number, c.mobile, c.email].some((v) => (v ?? "").toLowerCase().includes(q)),
+    if (!q) return true;
+    return [c.full_name, c.aadhaar_number, c.mobile, c.email, c.candidate_code, c.employee_code].some(
+      (v) => (v ?? "").toLowerCase().includes(q),
     );
-  }, [candidates, search]);
+  };
+
+  const employees = useMemo(
+    () => candidates.filter((c) => (c.status === "approved" || c.status === "active") && matchesSearch(c)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [candidates, search],
+  );
+  const candidateRows = useMemo(
+    () => candidates.filter((c) => c.status !== "approved" && c.status !== "active" && matchesSearch(c)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [candidates, search],
+  );
 
   const stats = useMemo(() => {
     const total = candidates.length;
@@ -457,6 +474,57 @@ function EmployeesPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Delete failed"),
   });
 
+  const approveMut = useMutation({
+    mutationFn: async (c: CandidateListItem) => {
+      const { data, error } = await supabase
+        .from("candidates" as never)
+        .update({ status: "approved", rejection_reason: "" } as never)
+        .eq("id", c.id)
+        .select("id,employee_code,full_name")
+        .single();
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: "approve",
+        entityType: "candidate",
+        entityId: c.id,
+        entityLabel: c.full_name || c.aadhaar_number,
+        after: data as unknown as Record<string, unknown>,
+      });
+      return data as { employee_code: string };
+    },
+    onSuccess: (data) => {
+      toast.success(`Approved — ${data?.employee_code ?? "Employee code assigned"}`);
+      qc.invalidateQueries({ queryKey: QK });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Approve failed"),
+  });
+
+  const rejectMut = useMutation({
+    mutationFn: async ({ c, reason }: { c: CandidateListItem; reason: string }) => {
+      const { error } = await supabase
+        .from("candidates" as never)
+        .update({ status: "rejected", rejection_reason: reason } as never)
+        .eq("id", c.id);
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: "reject",
+        entityType: "candidate",
+        entityId: c.id,
+        entityLabel: c.full_name || c.aadhaar_number,
+        after: { rejection_reason: reason },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Candidate rejected");
+      qc.invalidateQueries({ queryKey: QK });
+      setRejectTarget(null);
+      setRejectReason("");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Reject failed"),
+  });
+
   const openEditor = async (candidateId: string) => {
     setOpeningCandidateId(candidateId);
     try {
@@ -474,6 +542,172 @@ function EmployeesPage() {
       setOpeningCandidateId(null);
     }
   };
+
+  const renderRows = (rows: CandidateListItem[], mode: "employee" | "candidate") => {
+    if (isLoading) {
+      return (
+        <tr>
+          <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+            Loading…
+          </td>
+        </tr>
+      );
+    }
+    if (candidatesError) {
+      return (
+        <tr>
+          <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+            {candidatesError instanceof Error
+              ? candidatesError.message
+              : "Could not load employees right now. Please retry."}
+          </td>
+        </tr>
+      );
+    }
+    if (rows.length === 0) {
+      return (
+        <tr>
+          <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+            {mode === "employee"
+              ? "No employees yet. Approve a candidate to generate an Employee ID."
+              : "No candidates here. Click "}
+            {mode === "candidate" && <b>Add Candidate</b>}
+            {mode === "candidate" && " to start."}
+          </td>
+        </tr>
+      );
+    }
+    return rows.map((c) => {
+      const unit = c.unit_id ? unitMap.get(c.unit_id) : undefined;
+      const desig = c.designation_id ? desigMap.get(c.designation_id) : undefined;
+      const code = mode === "employee" ? c.employee_code || "—" : c.candidate_code || "—";
+      return (
+        <tr key={c.id} className="hover:bg-secondary/30">
+          <td className="px-4 py-3 font-mono text-xs font-semibold text-foreground">{code}</td>
+          <td className="px-4 py-3">
+            <div className="flex items-center gap-3">
+              {c.photo_url ? (
+                <img src={c.photo_url} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-border" />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                  <UserPlus className="h-4 w-4" />
+                </div>
+              )}
+              <div>
+                <div className="font-semibold text-foreground">{c.full_name || "—"}</div>
+                <div className="text-xs text-muted-foreground">{c.email || "—"}</div>
+              </div>
+            </div>
+          </td>
+          <td className="px-4 py-3 font-mono text-xs">{maskAadhaar(c.aadhaar_number)}</td>
+          <td className="px-4 py-3">{c.mobile || "—"}</td>
+          <td className="px-4 py-3">
+            {unit ? (
+              <div>
+                <div className="font-medium">{unit.name}</div>
+                <div className="text-xs text-muted-foreground">{unit.customer_name}</div>
+              </div>
+            ) : (
+              "—"
+            )}
+          </td>
+          <td className="px-4 py-3">{desig?.name ?? "—"}</td>
+          <td className="px-4 py-3">
+            <StatusBadge status={c.status} />
+            {c.status === "rejected" && c.rejection_reason && (
+              <div className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground" title={c.rejection_reason}>
+                {c.rejection_reason}
+              </div>
+            )}
+          </td>
+          <td className="px-4 py-3 text-right">
+            <div className="inline-flex flex-wrap justify-end gap-1">
+              {mode === "candidate" && c.status === "pending" && (
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => approveMut.mutate(c)}
+                    disabled={approveMut.isPending}
+                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                    title="Approve & assign Employee ID"
+                  >
+                    <Check className="mr-1 h-4 w-4" />
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setRejectTarget(c);
+                      setRejectReason("");
+                    }}
+                    className="border-rose-500/50 text-rose-600 hover:bg-rose-500/10"
+                  >
+                    <X className="mr-1 h-4 w-4" />
+                    Reject
+                  </Button>
+                </>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => void openEditor(c.id)}
+                disabled={openingCandidateId === c.id}
+                title="Quick edit"
+              >
+                {openingCandidateId === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="h-4 w-4" />}
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                size="sm"
+                title="Open the full 10-section editor"
+              >
+                <Link to="/admin/candidates/$id/details" params={{ id: c.id }}>
+                  <FileText className="mr-1 h-4 w-4" />
+                  Details
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setConfirmDelete(c)}
+                className="text-rose-500 hover:text-rose-600"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          </td>
+        </tr>
+      );
+    });
+  };
+
+  const renderTable = (rows: CandidateListItem[], mode: "employee" | "candidate") => (
+    <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead className="bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-4 py-3 text-left font-semibold">
+                {mode === "employee" ? "Emp ID" : "Code"}
+              </th>
+              <th className="px-4 py-3 text-left font-semibold">
+                {mode === "employee" ? "Employee" : "Candidate"}
+              </th>
+              <th className="px-4 py-3 text-left font-semibold">Aadhaar</th>
+              <th className="px-4 py-3 text-left font-semibold">Mobile</th>
+              <th className="px-4 py-3 text-left font-semibold">Unit</th>
+              <th className="px-4 py-3 text-left font-semibold">Designation</th>
+              <th className="px-4 py-3 text-left font-semibold">Status</th>
+              <th className="px-4 py-3 text-right font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">{renderRows(rows, mode)}</tbody>
+        </table>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -508,7 +742,7 @@ function EmployeesPage() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name, Aadhaar, mobile…"
+            placeholder="Search name, Aadhaar, mobile, code…"
             className="pl-9"
           />
         </div>
@@ -524,122 +758,22 @@ function EmployeesPage() {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead className="bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 text-left font-semibold">Code</th>
-                <th className="px-4 py-3 text-left font-semibold">Candidate</th>
-                <th className="px-4 py-3 text-left font-semibold">Aadhaar</th>
-                <th className="px-4 py-3 text-left font-semibold">Mobile</th>
-                <th className="px-4 py-3 text-left font-semibold">Unit</th>
-                <th className="px-4 py-3 text-left font-semibold">Designation</th>
-                <th className="px-4 py-3 text-left font-semibold">Status</th>
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
-                    Loading…
-                  </td>
-                </tr>
-              ) : candidatesError ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
-                    {candidatesError instanceof Error
-                      ? candidatesError.message
-                      : "Could not load employees right now. Please retry."}
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
-                    No candidates yet. Click <b>Add Candidate</b> to start.
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((c) => {
-                  const unit = c.unit_id ? unitMap.get(c.unit_id) : undefined;
-                  const desig = c.designation_id ? desigMap.get(c.designation_id) : undefined;
-                  return (
-                    <tr key={c.id} className="hover:bg-secondary/30">
-                      <td className="px-4 py-3 font-mono text-xs font-semibold text-foreground">
-                        {c.candidate_code || "—"}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          {c.photo_url ? (
-                            <img src={c.photo_url} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-border" />
-                          ) : (
-                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
-                              <UserPlus className="h-4 w-4" />
-                            </div>
-                          )}
-                          <div>
-                            <div className="font-semibold text-foreground">{c.full_name || "—"}</div>
-                            <div className="text-xs text-muted-foreground">{c.email || "—"}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-xs">{maskAadhaar(c.aadhaar_number)}</td>
-                      <td className="px-4 py-3">{c.mobile || "—"}</td>
-                      <td className="px-4 py-3">
-                        {unit ? (
-                          <div>
-                            <div className="font-medium">{unit.name}</div>
-                            <div className="text-xs text-muted-foreground">{unit.customer_name}</div>
-                          </div>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="px-4 py-3">{desig?.name ?? "—"}</td>
-                      <td className="px-4 py-3">
-                        <StatusBadge status={c.status} />
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="inline-flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => void openEditor(c.id)}
-                            disabled={openingCandidateId === c.id}
-                            title="Quick edit"
-                          >
-                            {openingCandidateId === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="h-4 w-4" />}
-                          </Button>
-                          <Button
-                            asChild
-                            variant="outline"
-                            size="sm"
-                            title="Open the full 10-section editor (Compliance, Physical & Health, Knowledge, Identification Proofs, etc.)"
-                          >
-                            <Link to="/admin/candidates/$id/details" params={{ id: c.id }}>
-                              <FileText className="mr-1 h-4 w-4" />
-                              Details
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setConfirmDelete(c)}
-                            className="text-rose-500 hover:text-rose-600"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "employee" | "candidate")}>
+        <TabsList>
+          <TabsTrigger value="employee">
+            Employees <span className="ml-1.5 text-xs text-muted-foreground">({stats.approved})</span>
+          </TabsTrigger>
+          <TabsTrigger value="candidate">
+            Candidates <span className="ml-1.5 text-xs text-muted-foreground">({stats.total - stats.approved})</span>
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="employee" className="mt-4">
+          {renderTable(employees, "employee")}
+        </TabsContent>
+        <TabsContent value="candidate" className="mt-4">
+          {renderTable(candidateRows, "candidate")}
+        </TabsContent>
+      </Tabs>
 
       <CandidateWizard
         open={openWizard}
@@ -680,6 +814,61 @@ function EmployeesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={!!rejectTarget}
+        onOpenChange={(o) => {
+          if (!o) {
+            setRejectTarget(null);
+            setRejectReason("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject candidate</DialogTitle>
+            <DialogDescription>
+              Provide a reason for rejecting {rejectTarget?.full_name || "this candidate"}. They will see this note.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="reject-reason">Rejection reason</Label>
+            <Textarea
+              id="reject-reason"
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="e.g. Aadhaar details could not be verified…"
+              rows={4}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setRejectTarget(null);
+                setRejectReason("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (!rejectTarget) return;
+                if (!rejectReason.trim()) {
+                  toast.error("Please enter a rejection reason");
+                  return;
+                }
+                rejectMut.mutate({ c: rejectTarget, reason: rejectReason.trim() });
+              }}
+              disabled={rejectMut.isPending}
+              className="bg-rose-600 text-white hover:bg-rose-700"
+            >
+              {rejectMut.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <X className="mr-1 h-4 w-4" />}
+              Reject
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
