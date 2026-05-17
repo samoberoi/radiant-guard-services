@@ -1190,8 +1190,6 @@ function UnitDeployment({
   customerId: string | null;
   stateName: string;
 }) {
-  const { useScopeAssignments, useEmployeesLite, resolveFieldManagersForUnit, resolveGuardsForUnit, SCOPE_TYPE_LABEL } =
-    require("@/lib/deployment") as typeof import("@/lib/deployment");
   const sa = useScopeAssignments();
   const emp = useEmployeesLite();
   const assignments = sa.data ?? [];
