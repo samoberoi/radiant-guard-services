@@ -2088,21 +2088,25 @@ function ResourceFormDialog({
           : b,
       ),
     );
+  }, [components]);
+
+  // Deductions/employer contributions also depend on benefits (Gross = components + benefits)
+  useEffect(() => {
     setDeductions((prev) =>
       prev.map((b) =>
         b.calcType === "percentage"
-          ? { ...b, amount: computeBenefitAmount(b, components) }
+          ? { ...b, amount: computeBenefitAmount(b, components, benefits) }
           : b,
       ),
     );
     setEmployerContributions((prev) =>
       prev.map((b) =>
         b.calcType === "percentage"
-          ? { ...b, amount: computeBenefitAmount(b, components) }
+          ? { ...b, amount: computeBenefitAmount(b, components, benefits) }
           : b,
       ),
     );
-  }, [components]);
+  }, [components, benefits]);
 
   const PT_SYNTHETIC_ID = "__pt__";
   const ptSynthetic: CostComponentOption = {
