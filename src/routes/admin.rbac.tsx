@@ -458,9 +458,6 @@ function RBACPage() {
                               </div>
                             );
                           })}
-                          <div className="text-right text-[10px] text-muted-foreground/70">
-                            {sub.path}
-                          </div>
                         </div>
                       );
                     })}
