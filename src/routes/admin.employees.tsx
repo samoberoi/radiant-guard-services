@@ -630,35 +630,34 @@ function EmployeesPage() {
               </div>
             )}
           </td>
-          <td className="px-6 py-5">
-            <div className="flex items-center justify-end gap-2">
+          <td className="px-4 py-5">
+            <div className="flex items-center justify-end gap-1.5">
               {mode === "candidate" && c.status === "pending" && (
                 <>
                   <Button
-                    size="sm"
+                    size="icon"
                     onClick={() => approveMut.mutate(c)}
                     disabled={approveMut.isPending}
-                    className="h-8 rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
+                    className="h-8 w-8 rounded-lg bg-emerald-600 text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
                     title="Approve & assign Employee ID"
                   >
-                    <Check className="mr-1 h-3.5 w-3.5" />
-                    Approve
+                    <Check className="h-4 w-4" />
                   </Button>
                   <Button
-                    size="sm"
+                    size="icon"
                     variant="outline"
                     onClick={() => {
                       setRejectTarget(c);
                       setRejectReason("");
                     }}
-                    className="h-8 rounded-lg border-rose-200 bg-rose-50/50 px-3 text-xs font-bold text-rose-600 transition-all hover:bg-rose-50 active:scale-95 dark:border-rose-500/40 dark:bg-transparent dark:hover:bg-rose-500/10"
+                    className="h-8 w-8 rounded-lg border-rose-200 bg-rose-50/50 text-rose-600 transition-all hover:bg-rose-50 active:scale-95 dark:border-rose-500/40 dark:bg-transparent dark:hover:bg-rose-500/10"
+                    title="Reject candidate"
                   >
-                    <X className="mr-1 h-3.5 w-3.5" />
-                    Reject
+                    <X className="h-4 w-4" />
                   </Button>
                 </>
               )}
-              <div className="ml-1 flex items-center gap-1 border-l border-border/60 pl-2">
+              <div className="ml-0.5 flex items-center gap-1 border-l border-border/60 pl-1.5">
                 <Button
                   asChild
                   variant="ghost"
