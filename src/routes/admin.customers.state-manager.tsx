@@ -4,6 +4,7 @@ import { Download, Edit2, Link2, MapPin, Plus, Search, Trash2 } from "lucide-rea
 import { csvJoin, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmProvider";
+import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

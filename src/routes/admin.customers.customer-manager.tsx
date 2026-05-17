@@ -4,6 +4,7 @@ import { ChevronRight, Download, Edit2, ExternalLink, List as ListIcon, MapPin, 
 import { csvDate, csvStatus, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmProvider";
+import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
