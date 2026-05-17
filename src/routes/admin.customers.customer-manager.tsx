@@ -314,7 +314,10 @@ function CustomerManagerPage() {
               onClick={async () => {
                 if (!deleting) return;
                 try {
-                  await deleteCustomer(deleting.id);
+                  const _delId = deleting.id;
+                  const _delLabel = String((deleting as Record<string, unknown>).name ?? (deleting as Record<string, unknown>).code ?? _delId);
+                  await deleteCustomer(_delId);
+                  void logActivity({ module: "Organization Manager", action: "delete", entityType: "customers", entityId: _delId, entityLabel: _delLabel });
                   toast.success("Organization deleted");
                   setDeleting(null);
                 } catch (e) {

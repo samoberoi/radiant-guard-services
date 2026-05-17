@@ -274,7 +274,10 @@ function BranchManagerPage() {
               onClick={async () => {
                 if (!deleting) return;
                 try {
-                  await deleteBranch(deleting.id);
+                  const _delId = deleting.id;
+                  const _delLabel = String((deleting as Record<string, unknown>).name ?? (deleting as Record<string, unknown>).code ?? _delId);
+                  await deleteBranch(_delId);
+                  void logActivity({ module: "Branch Manager", action: "delete", entityType: "branches", entityId: _delId, entityLabel: _delLabel });
                   toast.success("Branch deleted");
                   setDeleting(null);
                 } catch (e) {

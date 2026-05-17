@@ -405,7 +405,10 @@ function UnitManagerPage() {
               onClick={async () => {
                 if (!deleting) return;
                 try {
-                  await deleteUnit(deleting.id);
+                  const _delId = deleting.id;
+                  const _delLabel = String((deleting as Record<string, unknown>).name ?? (deleting as Record<string, unknown>).code ?? _delId);
+                  await deleteUnit(_delId);
+                  void logActivity({ module: "Unit Manager", action: "delete", entityType: "units", entityId: _delId, entityLabel: _delLabel });
                   toast.success("Unit deleted");
                   setDeleting(null);
                 } catch (e) {

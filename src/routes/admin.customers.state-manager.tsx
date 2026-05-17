@@ -255,7 +255,10 @@ function StateManagerPage() {
               onClick={async () => {
                 if (!deleting) return;
                 try {
-                  await deleteState(deleting.id);
+                  const _delId = deleting.id;
+                  const _delLabel = String((deleting as Record<string, unknown>).name ?? (deleting as Record<string, unknown>).code ?? _delId);
+                  await deleteState(_delId);
+                  void logActivity({ module: "State Manager", action: "delete", entityType: "states", entityId: _delId, entityLabel: _delLabel });
                   toast.success("State deleted");
                   setDeleting(null);
                 } catch (e) {
