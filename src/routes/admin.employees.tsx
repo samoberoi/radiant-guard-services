@@ -1472,9 +1472,191 @@ function EmployeesPage() {
         candidateId={signTarget?.id ?? null}
         docType={signTarget?.docType ?? "nda"}
       />
+
+      <ScopeAddDialog
+        target={scopeTarget}
+        onClose={() => setScopeTarget(null)}
+        customers={customers}
+        branches={branches}
+        states={states}
+        units={units}
+        existing={scopeTarget ? scopeByCandidate.get(scopeTarget.id) ?? [] : []}
+        onAdd={(payload) => {
+          if (!scopeTarget) return;
+          addScopeMut.mutate({ candidate: scopeTarget, ...payload });
+        }}
+      />
     </div>
   );
 }
+
+function ManagerTree({
+  employees,
+  fieldManagers,
+  scopeByCandidate,
+  unitMap,
+}: {
+  employees: CandidateListItem[];
+  fieldManagers: CandidateListItem[];
+  scopeByCandidate: Map<string, ScopeAssignment[]>;
+  unitMap: Map<string, UnitLite>;
+}) {
+  const guards = employees.filter((e) => e.role_key === "guard");
+  const others = employees.filter((e) => e.role_key !== "guard" && e.role_key !== "field_manager");
+  const guardsByMgr = new Map<string, CandidateListItem[]>();
+  const unassigned: CandidateListItem[] = [];
+  for (const g of guards) {
+    if (g.reports_to) {
+      if (!guardsByMgr.has(g.reports_to)) guardsByMgr.set(g.reports_to, []);
+      guardsByMgr.get(g.reports_to)!.push(g);
+    } else unassigned.push(g);
+  }
+  return (
+    <div className="space-y-4">
+      {fieldManagers.length === 0 && (
+        <div className="rounded-2xl border border-border/60 bg-card p-6 text-center text-sm text-muted-foreground">
+          No field managers yet. Assign the Field Manager role to an employee to build the tree.
+        </div>
+      )}
+      {fieldManagers.map((fm) => {
+        const team = guardsByMgr.get(fm.id) ?? [];
+        const scopes = scopeByCandidate.get(fm.id) ?? [];
+        return (
+          <div key={fm.id} className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <Network className="h-4 w-4 text-sky-600" />
+              <div className="flex-1">
+                <div className="font-semibold">{fm.full_name} <span className="ml-1 text-xs font-mono text-muted-foreground">{fm.employee_code}</span></div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {scopes.length === 0 && <span className="text-xs text-muted-foreground">No scope assigned</span>}
+                  {scopes.map((s) => (
+                    <Badge key={s.id} variant="outline" className="text-[10px]">{SCOPE_TYPE_LABEL[s.scope_type]}: {s.scope_label}</Badge>
+                  ))}
+                </div>
+              </div>
+              <Badge variant="secondary" className="text-xs">{team.length} guard{team.length === 1 ? "" : "s"}</Badge>
+            </div>
+            {team.length > 0 && (
+              <div className="mt-3 space-y-1.5 border-l-2 border-sky-200 pl-4">
+                {team.map((g) => {
+                  const u = g.unit_id ? unitMap.get(g.unit_id) : undefined;
+                  return (
+                    <div key={g.id} className="flex items-center gap-2 text-sm">
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="font-mono text-[10px] text-muted-foreground">{g.employee_code}</span>
+                      <span className="font-medium">{g.full_name}</span>
+                      {u && <span className="text-xs text-muted-foreground">· {u.name}</span>}
+                      {!g.is_enabled && <Badge variant="outline" className="ml-1 text-[10px]">Disabled</Badge>}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {unassigned.length > 0 && (
+        <div className="rounded-2xl border border-dashed border-border/60 bg-card/60 p-4">
+          <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Unassigned guards ({unassigned.length})</div>
+          {unassigned.map((g) => (
+            <div key={g.id} className="flex items-center gap-2 text-sm">
+              <span className="font-mono text-[10px] text-muted-foreground">{g.employee_code}</span>
+              <span>{g.full_name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      {others.length > 0 && (
+        <div className="text-xs text-muted-foreground">
+          {others.length} other employee{others.length === 1 ? "" : "s"} not shown in the manager tree.
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ScopeAddDialog({
+  target,
+  onClose,
+  customers,
+  branches,
+  states,
+  units,
+  existing,
+  onAdd,
+}: {
+  target: CandidateListItem | null;
+  onClose: () => void;
+  customers: Array<{ id: string; name: string }>;
+  branches: Array<{ id: string; code: string }>;
+  states: Array<{ id: string; name: string }>;
+  units: UnitLite[];
+  existing: ScopeAssignment[];
+  onAdd: (payload: { scope_type: ScopeType; scope_id: string; scope_label: string }) => void;
+}) {
+  const [scopeType, setScopeType] = useState<ScopeType>("unit");
+  const [scopeId, setScopeId] = useState<string>("");
+  useEffect(() => {
+    if (target) { setScopeType("unit"); setScopeId(""); }
+  }, [target]);
+  const isDup = existing.some((e) => e.scope_type === scopeType && e.scope_id === scopeId);
+  const options: Array<{ id: string; label: string }> = useMemo(() => {
+    if (scopeType === "unit") return units.map((u) => ({ id: u.id, label: `${u.name}${u.customer_name ? " · " + u.customer_name : ""}` }));
+    if (scopeType === "customer") return customers.map((c) => ({ id: c.id, label: c.name }));
+    if (scopeType === "branch") return branches.map((b) => ({ id: b.id, label: b.code }));
+    return states.map((s) => ({ id: s.name, label: s.name }));
+  }, [scopeType, units, customers, branches, states]);
+  return (
+    <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add scope for {target?.full_name}</DialogTitle>
+          <DialogDescription>Field managers can be mapped to a State, Organization, Branch, or Unit. Guards under that scope will be linked.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div>
+            <Label className="text-xs">Scope type</Label>
+            <Select value={scopeType} onValueChange={(v) => { setScopeType(v as ScopeType); setScopeId(""); }}>
+              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="state">State</SelectItem>
+                <SelectItem value="customer">Organization</SelectItem>
+                <SelectItem value="branch">Branch</SelectItem>
+                <SelectItem value="unit">Unit</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs">{SCOPE_TYPE_LABEL[scopeType]}</Label>
+            <Select value={scopeId} onValueChange={setScopeId}>
+              <SelectTrigger className="h-9"><SelectValue placeholder="Select…" /></SelectTrigger>
+              <SelectContent>
+                {options.map((o) => (<SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>))}
+              </SelectContent>
+            </Select>
+          </div>
+          {isDup && <p className="text-xs text-rose-600">Already assigned.</p>}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            disabled={!scopeId || isDup}
+            onClick={async () => {
+              const label = options.find((o) => o.id === scopeId)?.label ?? scopeId;
+              const ok = await confirmAction({ title: "Add scope?", description: `Add ${SCOPE_TYPE_LABEL[scopeType]} "${label}" to ${target?.full_name}?`, confirmText: "Add" });
+              if (!ok) return;
+              onAdd({ scope_type: scopeType, scope_id: scopeId, scope_label: label });
+              onClose();
+            }}
+          >
+            Add scope
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
