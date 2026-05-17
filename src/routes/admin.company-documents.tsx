@@ -10,7 +10,7 @@ import {
   FileSignature,
   FileText,
   History,
-  History,
+  Power,
   Power,
   Save,
 } from "lucide-react";
@@ -227,7 +227,7 @@ function CompanyDocumentsPage() {
       .filter((t) => (view === "archived" ? t.is_archived : !t.is_archived));
   }, [items, docType, view]);
 
-  const activeTemplate = items.find((t) => t.doc_type === docType && t.is_active && !t.is_archived);
+  
 
   return (
     <div>
