@@ -366,7 +366,7 @@ function RBACPage() {
             return (
               <div key={mod.key}>
                 {/* Parent row */}
-                <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)_140px] items-center gap-2 px-4 py-3 hover:bg-secondary/30">
+                <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)] items-center gap-2 px-4 py-3 hover:bg-secondary/30">
                   <div className="flex items-center gap-2 min-w-0">
                     {hasChildren ? (
                       <button
