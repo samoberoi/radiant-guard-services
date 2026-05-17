@@ -2,9 +2,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
 const InputSchema = z.object({
-  fileDataUrl: z.string().min(20).max(20_000_000),
+  fileDataUrl: z.string().min(20).max(20_000_000).optional(),
+  fileUrl: z.string().url().optional(),
   mimeType: z.string().min(3).max(100),
   pageImageDataUrls: z.array(z.string().min(20).max(20_000_000)).max(3).optional(),
+}).refine((input) => Boolean(input.fileDataUrl || input.fileUrl), {
+  message: "Either fileDataUrl or fileUrl is required",
 });
 
 export type AadhaarExtraction = {
@@ -54,6 +57,21 @@ function dataUrlToInlinePart(dataUrl: string): { inline_data: { mime_type: strin
   return { inline_data: { mime_type: m[1], data: m[2] } };
 }
 
+async function fileUrlToInlinePart(fileUrl: string, mimeType: string): Promise<{ inline_data: { mime_type: string; data: string } }> {
+  const response = await fetch(fileUrl);
+  if (!response.ok) {
+    throw new Error(`Failed to download uploaded Aadhaar file (${response.status})`);
+  }
+
+  const buffer = await response.arrayBuffer();
+  return {
+    inline_data: {
+      mime_type: mimeType,
+      data: Buffer.from(buffer).toString("base64"),
+    },
+  };
+}
+
 export const extractAadhaar = createServerFn({ method: "POST" })
   .inputValidator((input) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<AadhaarExtraction> => {
@@ -70,10 +88,13 @@ export const extractAadhaar = createServerFn({ method: "POST" })
           ? "Extract the Aadhaar fields and the structured address from this Aadhaar PDF. Use only what is clearly visible."
           : "Extract the Aadhaar fields and the structured address from this card image. Use only what is clearly visible.";
 
-    const mediaParts =
-      isPdf && pageImages.length
-        ? pageImages.map(dataUrlToInlinePart)
-        : [dataUrlToInlinePart(data.fileDataUrl)];
+    const mediaParts = isPdf && pageImages.length
+      ? pageImages.map(dataUrlToInlinePart)
+      : [
+          data.fileUrl
+            ? await fileUrlToInlinePart(data.fileUrl, data.mimeType)
+            : dataUrlToInlinePart(data.fileDataUrl!),
+        ];
 
     const parts: Array<Record<string, unknown>> = [{ text: promptText }, ...mediaParts];
 
