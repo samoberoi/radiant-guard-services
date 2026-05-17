@@ -900,20 +900,12 @@ function CandidateWizard({
         try {
           // Read file as data URL. For PDFs we also rasterize pages so the AI
           // gets actual image content (UIDAI PDFs use scrambled fonts).
-          const dataUrlPromise: Promise<string> = new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result));
-            reader.onerror = () => reject(reader.error);
-            reader.readAsDataURL(file);
-          });
-
           const pageImageDataUrlsPromise = isPdf
             ? clientOcr.renderPdfPagesAsDataUrls(file).catch(() => [])
             : Promise.resolve<string[]>([]);
 
-          const [uploadedUrl, dataUrl, pageImageDataUrls] = await Promise.all([
+          const [uploadedUrl, pageImageDataUrls] = await Promise.all([
             uploadPromise,
-            dataUrlPromise,
             pageImageDataUrlsPromise,
           ]);
           set("aadhaar_image_url", uploadedUrl);
@@ -924,7 +916,7 @@ function CandidateWizard({
             extraction = await withTimeout(
               extractFn({
                 data: {
-                  fileDataUrl: dataUrl,
+                  fileUrl: uploadedUrl,
                   mimeType: file.type || (isPdf ? "application/pdf" : "image/jpeg"),
                   pageImageDataUrls,
                 },
