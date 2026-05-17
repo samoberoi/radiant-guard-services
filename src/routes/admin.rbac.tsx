@@ -290,16 +290,44 @@ function RBACPage() {
 
         <div className="flex items-center gap-2">
           {!isSuper && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDraft(serverMap)}
-              disabled={!dirty || saveMutation.isPending}
-              className="h-9"
-            >
-              <RotateCcw className="mr-1.5 h-4 w-4" />
-              Reset
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setDraft(() => {
+                    let next: PermMap = new Map();
+                    for (const m of RBAC_MODULES) next = grantAll(next, m);
+                    return next;
+                  })
+                }
+                className="h-9"
+                title="Grant View, Edit and Delete on every module and sub-module"
+              >
+                <Sparkles className="mr-1.5 h-4 w-4" />
+                Grant full access
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDraft(new Map())}
+                className="h-9"
+                title="Remove every permission for this role"
+              >
+                <Trash2 className="mr-1.5 h-4 w-4" />
+                Revoke all
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDraft(serverMap)}
+                disabled={!dirty || saveMutation.isPending}
+                className="h-9"
+              >
+                <RotateCcw className="mr-1.5 h-4 w-4" />
+                Reset
+              </Button>
+            </>
           )}
           <Button
             size="sm"
@@ -316,7 +344,7 @@ function RBACPage() {
       {/* Grid */}
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         {/* Header row */}
-        <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)_140px] items-center gap-2 border-b border-border bg-secondary/40 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)] items-center gap-2 border-b border-border bg-secondary/40 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           <div>Module</div>
           {PERMISSION_ACTIONS.map((a) => {
             const Icon = ACTION_META[a].icon;
@@ -327,7 +355,6 @@ function RBACPage() {
               </div>
             );
           })}
-          <div className="text-right">Quick</div>
         </div>
 
         <div className="divide-y divide-border">
@@ -339,7 +366,7 @@ function RBACPage() {
             return (
               <div key={mod.key}>
                 {/* Parent row */}
-                <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)_140px] items-center gap-2 px-4 py-3 hover:bg-secondary/30">
+                <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)] items-center gap-2 px-4 py-3 hover:bg-secondary/30">
                   <div className="flex items-center gap-2 min-w-0">
                     {hasChildren ? (
                       <button
@@ -385,26 +412,6 @@ function RBACPage() {
                     );
                   })}
 
-                  <div className="flex justify-end gap-1">
-                    <button
-                      type="button"
-                      disabled={isSuper}
-                      onClick={() => setDraft((m) => grantAll(m, mod))}
-                      className="rounded-md border border-border bg-background px-2 py-1 text-[10px] font-semibold text-foreground/80 hover:border-accent/40 hover:text-accent disabled:opacity-40"
-                      title="Grant all"
-                    >
-                      <Sparkles className="inline h-3 w-3" /> All
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isSuper}
-                      onClick={() => setDraft((m) => clearAll(m, mod))}
-                      className="rounded-md border border-border bg-background px-2 py-1 text-[10px] font-semibold text-foreground/80 hover:border-rose-300 hover:text-rose-500 disabled:opacity-40"
-                      title="Clear"
-                    >
-                      None
-                    </button>
-                  </div>
                 </div>
 
                 {/* Sub-module rows */}
@@ -416,7 +423,7 @@ function RBACPage() {
                       return (
                         <div
                           key={sub.key}
-                          className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)_140px] items-center gap-2 px-4 py-2 pl-14 hover:bg-secondary/40"
+                          className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)] items-center gap-2 px-4 py-2 pl-14 hover:bg-secondary/40"
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-background text-muted-foreground">
@@ -451,9 +458,6 @@ function RBACPage() {
                               </div>
                             );
                           })}
-                          <div className="text-right text-[10px] text-muted-foreground/70">
-                            {sub.path}
-                          </div>
                         </div>
                       );
                     })}
