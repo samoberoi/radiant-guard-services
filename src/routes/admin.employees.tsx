@@ -816,12 +816,12 @@ function EmployeesPage() {
       const isDisabled = mode === "employee" && !c.is_enabled;
       return (
         <tr key={c.id} className={cn("group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5", isDisabled && "opacity-60")}>
-          <td className="px-6 py-5">
+          <td className="px-3 py-3">
             <span className="rounded-md bg-secondary px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               {code}
             </span>
           </td>
-          <td className="px-6 py-5">
+          <td className="px-3 py-3">
             <div className="flex items-center gap-3">
               {c.photo_url ? (
                 <img
@@ -842,9 +842,9 @@ function EmployeesPage() {
               </div>
             </div>
           </td>
-          <td className="px-6 py-5 font-mono text-xs text-muted-foreground">{maskAadhaar(c.aadhaar_number)}</td>
-          <td className="px-6 py-5 text-center text-sm font-medium text-muted-foreground">{c.mobile || "—"}</td>
-          <td className="px-6 py-5">
+          <td className="px-3 py-3 font-mono text-xs text-muted-foreground">{maskAadhaar(c.aadhaar_number)}</td>
+          <td className="px-3 py-3 text-center text-sm font-medium text-muted-foreground">{c.mobile || "—"}</td>
+          <td className="px-3 py-3">
             {unit ? (
               <div>
                 <div className="text-sm font-semibold text-foreground">{unit.name}</div>
@@ -854,9 +854,9 @@ function EmployeesPage() {
               "—"
             )}
           </td>
-          <td className="px-6 py-5 text-sm text-muted-foreground">{desig?.name ?? "—"}</td>
+          <td className="px-3 py-3 text-sm text-muted-foreground">{desig?.name ?? "—"}</td>
           {mode === "employee" && (
-            <td className="px-6 py-5">
+            <td className="px-3 py-3">
               {c.role_key ? (
                 <Select
                   value={c.role_key}
@@ -915,7 +915,7 @@ function EmployeesPage() {
             </td>
           )}
           {mode === "employee" && (
-            <td className="px-6 py-5 align-top">
+            <td className="px-3 py-3 align-top">
               {c.role_key === "guard" ? (
                 <Select
                   value={c.reports_to ?? "__none"}
@@ -963,7 +963,7 @@ function EmployeesPage() {
             </td>
           )}
           {mode === "employee" && (
-            <td className="px-6 py-5">
+            <td className="px-3 py-3">
               <Switch
                 checked={c.is_enabled}
                 onCheckedChange={async (v) => {
@@ -978,7 +978,7 @@ function EmployeesPage() {
               />
             </td>
           )}
-          <td className="px-6 py-5">
+          <td className="px-3 py-3">
             <StatusBadge status={c.status} />
             {c.status === "rejected" && c.rejection_reason && (
               <div className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground" title={c.rejection_reason}>
@@ -1084,43 +1084,43 @@ function EmployeesPage() {
         <table className="min-w-full text-sm">
           <thead className="border-b border-border/60 bg-secondary/40">
             <tr>
-              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Emp ID" : "Code"}
               </th>
-              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Employee" : "Candidate"}
               </th>
-              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Aadhaar
               </th>
-              <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Mobile
               </th>
-              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Unit
               </th>
-              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Designation
               </th>
               {mode === "employee" && (
-                <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Role
                 </th>
               )}
               {mode === "employee" && (
-                <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Reporting / Scope
                 </th>
               )}
               {mode === "employee" && (
-                <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Active
                 </th>
               )}
-              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Status
               </th>
-              <th className="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Actions
               </th>
             </tr>
@@ -2283,7 +2283,7 @@ function CandidateWizard({
           )}
         </div>
 
-        <div className="px-6 py-5">
+        <div className="px-3 py-3">
           {/* ----- Full form (single page) ----- */}
           {true && (
             <div className="space-y-6">
