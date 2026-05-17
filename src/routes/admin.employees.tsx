@@ -258,7 +258,7 @@ type CandidateListItem = Pick<
   | "unit_id"
   | "designation_id"
   | "status"
-> & { employee_code: string; role_key: string };
+> & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null };
 
 type RoleLite = { key: string; name: string };
 
