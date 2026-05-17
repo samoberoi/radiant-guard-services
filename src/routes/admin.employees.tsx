@@ -582,37 +582,47 @@ function EmployeesPage() {
       const desig = c.designation_id ? desigMap.get(c.designation_id) : undefined;
       const code = mode === "employee" ? c.employee_code || "—" : c.candidate_code || "—";
       return (
-        <tr key={c.id} className="hover:bg-secondary/30">
-          <td className="px-4 py-3 font-mono text-xs font-semibold text-foreground">{code}</td>
-          <td className="px-4 py-3">
+        <tr key={c.id} className="group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5">
+          <td className="px-6 py-5">
+            <span className="rounded-md bg-secondary px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              {code}
+            </span>
+          </td>
+          <td className="px-6 py-5">
             <div className="flex items-center gap-3">
               {c.photo_url ? (
-                <img src={c.photo_url} alt="" className="h-10 w-10 rounded-full object-cover ring-1 ring-border" />
+                <img
+                  src={c.photo_url}
+                  alt=""
+                  className="h-10 w-10 flex-shrink-0 rounded-full object-cover shadow-sm ring-2 ring-card"
+                />
               ) : (
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary text-muted-foreground">
+                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground shadow-sm ring-2 ring-card">
                   <UserPlus className="h-4 w-4" />
                 </div>
               )}
-              <div>
-                <div className="font-semibold text-foreground">{c.full_name || "—"}</div>
-                <div className="text-xs text-muted-foreground">{c.email || "—"}</div>
+              <div className="min-w-0">
+                <div className="truncate font-semibold leading-tight text-foreground group-hover:text-amber-900 dark:group-hover:text-amber-300">
+                  {c.full_name || "—"}
+                </div>
+                <div className="truncate text-xs text-muted-foreground">{c.email || "—"}</div>
               </div>
             </div>
           </td>
-          <td className="px-4 py-3 font-mono text-xs">{maskAadhaar(c.aadhaar_number)}</td>
-          <td className="px-4 py-3">{c.mobile || "—"}</td>
-          <td className="px-4 py-3">
+          <td className="px-6 py-5 font-mono text-xs text-muted-foreground">{maskAadhaar(c.aadhaar_number)}</td>
+          <td className="px-6 py-5 text-center text-sm font-medium text-muted-foreground">{c.mobile || "—"}</td>
+          <td className="px-6 py-5">
             {unit ? (
               <div>
-                <div className="font-medium">{unit.name}</div>
+                <div className="text-sm font-semibold text-foreground">{unit.name}</div>
                 <div className="text-xs text-muted-foreground">{unit.customer_name}</div>
               </div>
             ) : (
               "—"
             )}
           </td>
-          <td className="px-4 py-3">{desig?.name ?? "—"}</td>
-          <td className="px-4 py-3">
+          <td className="px-6 py-5 text-sm text-muted-foreground">{desig?.name ?? "—"}</td>
+          <td className="px-6 py-5">
             <StatusBadge status={c.status} />
             {c.status === "rejected" && c.rejection_reason && (
               <div className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground" title={c.rejection_reason}>
@@ -620,18 +630,18 @@ function EmployeesPage() {
               </div>
             )}
           </td>
-          <td className="px-4 py-3 text-right">
-            <div className="inline-flex flex-wrap justify-end gap-1">
+          <td className="px-6 py-5">
+            <div className="flex items-center justify-end gap-2">
               {mode === "candidate" && c.status === "pending" && (
                 <>
                   <Button
                     size="sm"
                     onClick={() => approveMut.mutate(c)}
                     disabled={approveMut.isPending}
-                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                    className="h-8 rounded-lg bg-emerald-600 px-3 text-xs font-bold text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
                     title="Approve & assign Employee ID"
                   >
-                    <Check className="mr-1 h-4 w-4" />
+                    <Check className="mr-1 h-3.5 w-3.5" />
                     Approve
                   </Button>
                   <Button
@@ -641,41 +651,49 @@ function EmployeesPage() {
                       setRejectTarget(c);
                       setRejectReason("");
                     }}
-                    className="border-rose-500/50 text-rose-600 hover:bg-rose-500/10"
+                    className="h-8 rounded-lg border-rose-200 bg-rose-50/50 px-3 text-xs font-bold text-rose-600 transition-all hover:bg-rose-50 active:scale-95 dark:border-rose-500/40 dark:bg-transparent dark:hover:bg-rose-500/10"
                   >
-                    <X className="mr-1 h-4 w-4" />
+                    <X className="mr-1 h-3.5 w-3.5" />
                     Reject
                   </Button>
                 </>
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => void openEditor(c.id)}
-                disabled={openingCandidateId === c.id}
-                title="Quick edit"
-              >
-                {openingCandidateId === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Edit2 className="h-4 w-4" />}
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="sm"
-                title="Open the full 10-section editor"
-              >
-                <Link to="/admin/candidates/$id/details" params={{ id: c.id }}>
-                  <FileText className="mr-1 h-4 w-4" />
-                  Details
-                </Link>
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setConfirmDelete(c)}
-                className="text-rose-500 hover:text-rose-600"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="ml-1 flex items-center gap-1 border-l border-border/60 pl-2">
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  title="Open the full 10-section editor"
+                >
+                  <Link to="/admin/candidates/$id/details" params={{ id: c.id }}>
+                    <FileText className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => void openEditor(c.id)}
+                  disabled={openingCandidateId === c.id}
+                  className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  title="Quick edit"
+                >
+                  {openingCandidateId === c.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Edit2 className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setConfirmDelete(c)}
+                  className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+                  title="Delete"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </td>
         </tr>
@@ -684,26 +702,38 @@ function EmployeesPage() {
   };
 
   const renderTable = (rows: CandidateListItem[], mode: "employee" | "candidate") => (
-    <div className="overflow-hidden rounded-xl border border-border bg-card">
+    <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm shadow-stone-200/40 dark:shadow-black/20">
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
-          <thead className="bg-secondary/40 text-xs uppercase tracking-wider text-muted-foreground">
+          <thead className="border-b border-border/60 bg-secondary/40">
             <tr>
-              <th className="px-4 py-3 text-left font-semibold">
+              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Emp ID" : "Code"}
               </th>
-              <th className="px-4 py-3 text-left font-semibold">
+              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Employee" : "Candidate"}
               </th>
-              <th className="px-4 py-3 text-left font-semibold">Aadhaar</th>
-              <th className="px-4 py-3 text-left font-semibold">Mobile</th>
-              <th className="px-4 py-3 text-left font-semibold">Unit</th>
-              <th className="px-4 py-3 text-left font-semibold">Designation</th>
-              <th className="px-4 py-3 text-left font-semibold">Status</th>
-              <th className="px-4 py-3 text-right font-semibold">Actions</th>
+              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Aadhaar
+              </th>
+              <th className="px-6 py-4 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Mobile
+              </th>
+              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Unit
+              </th>
+              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Designation
+              </th>
+              <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Status
+              </th>
+              <th className="px-6 py-4 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Actions
+              </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">{renderRows(rows, mode)}</tbody>
+          <tbody className="divide-y divide-border/50">{renderRows(rows, mode)}</tbody>
         </table>
       </div>
     </div>
