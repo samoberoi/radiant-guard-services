@@ -151,6 +151,7 @@ export type Database = {
           gender: string
           id: string
           identification_proofs: Json
+          is_enabled: boolean
           is_ex_service: boolean
           kyc_completed: boolean
           languages: Json
@@ -185,6 +186,7 @@ export type Database = {
           rejected_at: string | null
           rejection_reason: string
           religion: string
+          reports_to: string | null
           role_key: string
           same_as_permanent: boolean
           signature_url: string
@@ -227,6 +229,7 @@ export type Database = {
           gender?: string
           id?: string
           identification_proofs?: Json
+          is_enabled?: boolean
           is_ex_service?: boolean
           kyc_completed?: boolean
           languages?: Json
@@ -261,6 +264,7 @@ export type Database = {
           rejected_at?: string | null
           rejection_reason?: string
           religion?: string
+          reports_to?: string | null
           role_key?: string
           same_as_permanent?: boolean
           signature_url?: string
@@ -303,6 +307,7 @@ export type Database = {
           gender?: string
           id?: string
           identification_proofs?: Json
+          is_enabled?: boolean
           is_ex_service?: boolean
           kyc_completed?: boolean
           languages?: Json
@@ -337,6 +342,7 @@ export type Database = {
           rejected_at?: string | null
           rejection_reason?: string
           religion?: string
+          reports_to?: string | null
           role_key?: string
           same_as_permanent?: boolean
           signature_url?: string
@@ -789,6 +795,36 @@ export type Database = {
           hours?: number
           id?: string
           name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      employee_scope_assignments: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          id: string
+          scope_id: string
+          scope_label: string
+          scope_type: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          id?: string
+          scope_id: string
+          scope_label?: string
+          scope_type: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          id?: string
+          scope_id?: string
+          scope_label?: string
+          scope_type?: string
           updated_at?: string
         }
         Relationships: []
