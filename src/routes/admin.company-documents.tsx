@@ -219,7 +219,6 @@ function CompanyDocumentsPage() {
   const [docType, setDocType] = useState<DocType>("nda");
   const [view, setView] = useState<"active" | "archived">("active");
   const [editing, setEditing] = useState<DocumentTemplate | null>(null);
-  const [publishOpen, setPublishOpen] = useState(false);
   const [previewing, setPreviewing] = useState<DocumentTemplate | null>(null);
 
   const filtered = useMemo(() => {
@@ -272,13 +271,9 @@ function CompanyDocumentsPage() {
             <TabsTrigger value="archived">Archived</TabsTrigger>
           </TabsList>
         </Tabs>
-        <Button
-          onClick={() => setPublishOpen(true)}
-          className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Publish New Version
-        </Button>
+        <p className="text-xs text-muted-foreground">
+          Editing the active version automatically archives it and creates a new active version.
+        </p>
       </div>
 
       <div className="space-y-3">
