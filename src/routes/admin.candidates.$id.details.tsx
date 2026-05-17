@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
 import { toast } from "sonner";
+import { confirmAction } from "@/components/ConfirmProvider";
 import {
   ArrowLeft,
   Save,
