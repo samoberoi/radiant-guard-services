@@ -154,11 +154,7 @@ function CandidateDetailsPage() {
     }
   };
 
-  const markKyc = async () => {
-    setForm((p: any) => ({ ...p, kyc_completed: true }));
-    await handleSave(false);
-    toast.success("KYC marked completed");
-  };
+  // markKyc removed per product decision
 
   const changeStatus = async (
     next: "approved" | "rejected" | "pending",
