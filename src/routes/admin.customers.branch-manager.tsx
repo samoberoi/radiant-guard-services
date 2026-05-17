@@ -249,6 +249,7 @@ function BranchManagerPage() {
             : await addBranch(data);
           if (!r.ok) return r.error;
           toast.success(editing ? "Branch updated" : "Branch added");
+          void logActivity({ module: "Branch Manager", action: editing ? "update" : "create", entityType: "branches", entityId: editing?.id, entityLabel: String(data.code ?? data.name ?? ""), details: data as Record<string, unknown> });
           return null;
         }}
       />
