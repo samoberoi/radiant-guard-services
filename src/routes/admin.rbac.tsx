@@ -412,26 +412,6 @@ function RBACPage() {
                     );
                   })}
 
-                  <div className="flex justify-end gap-1">
-                    <button
-                      type="button"
-                      disabled={isSuper}
-                      onClick={() => setDraft((m) => grantAll(m, mod))}
-                      className="rounded-md border border-border bg-background px-2 py-1 text-[10px] font-semibold text-foreground/80 hover:border-accent/40 hover:text-accent disabled:opacity-40"
-                      title="Grant all"
-                    >
-                      <Sparkles className="inline h-3 w-3" /> All
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isSuper}
-                      onClick={() => setDraft((m) => clearAll(m, mod))}
-                      className="rounded-md border border-border bg-background px-2 py-1 text-[10px] font-semibold text-foreground/80 hover:border-rose-300 hover:text-rose-500 disabled:opacity-40"
-                      title="Clear"
-                    >
-                      None
-                    </button>
-                  </div>
                 </div>
 
                 {/* Sub-module rows */}
