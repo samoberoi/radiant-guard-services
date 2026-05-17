@@ -871,7 +871,7 @@ function EmployeesPage() {
                     assignRoleMut.mutate({ candidate: c, roleKey: v });
                   }}
                 >
-                  <SelectTrigger className="h-8 w-[160px] rounded-lg border-border/60 bg-card text-xs">
+                  <SelectTrigger className="h-8 w-[130px] rounded-lg border-border/60 bg-card text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
