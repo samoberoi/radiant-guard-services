@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Building2, Download, Edit2, Plus, Search, Trash2 } from "lucide-react";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
+import { confirmAction } from "@/components/ConfirmProvider";
+import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -242,11 +244,13 @@ function BranchManagerPage() {
         availableStates={availableStates}
         allStates={states}
         onSubmit={async (data) => {
+          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           const r = editing
             ? await updateBranch(editing.id, data)
             : await addBranch(data);
           if (!r.ok) return r.error;
           toast.success(editing ? "Branch updated" : "Branch added");
+          void logActivity({ module: "Branch Manager", action: editing ? "update" : "create", entityType: "branches", entityId: editing?.id, entityLabel: String(data.code ?? data.name ?? ""), details: data as Record<string, unknown> });
           return null;
         }}
       />
@@ -270,7 +274,10 @@ function BranchManagerPage() {
               onClick={async () => {
                 if (!deleting) return;
                 try {
-                  await deleteBranch(deleting.id);
+                  const _delId = deleting.id;
+                  const _delLabel = String((deleting as Record<string, unknown>).name ?? (deleting as Record<string, unknown>).code ?? _delId);
+                  await deleteBranch(_delId);
+                  void logActivity({ module: "Branch Manager", action: "delete", entityType: "branches", entityId: _delId, entityLabel: _delLabel });
                   toast.success("Branch deleted");
                   setDeleting(null);
                 } catch (e) {
@@ -388,6 +395,7 @@ function BranchFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
+            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
             const err = await onSubmit({
               code,
               name: selectedState?.name ?? "",

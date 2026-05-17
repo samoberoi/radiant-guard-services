@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Download, Edit2, ExternalLink, List as ListIcon, MapPin, Network, Plus, Search, Trash2, Users, Warehouse } from "lucide-react";
 import { csvDate, csvStatus, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
+import { confirmAction } from "@/components/ConfirmProvider";
+import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -276,13 +278,16 @@ function CustomerManagerPage() {
         onOpenChange={setFormOpen}
         editing={editing}
         onSubmit={async (data) => {
+          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return { error: null, id: null };
           if (editing) {
             const r = await updateCustomer(editing.id, data);
             if (!r.ok) return { error: r.error, id: null };
+            void logActivity({ module: "Organization Manager", action: "update", entityType: "customers", entityId: editing.id, entityLabel: String(data.name ?? ""), details: data as Record<string, unknown> });
             return { error: null, id: editing.id };
           }
           const r = await addCustomer(data);
           if (!r.ok) return { error: r.error, id: null };
+          void logActivity({ module: "Organization Manager", action: "create", entityType: "customers", entityId: r.id, entityLabel: String(data.name ?? ""), details: data as Record<string, unknown> });
           return { error: null, id: r.id };
         }}
         onSuccess={() => {
@@ -309,7 +314,10 @@ function CustomerManagerPage() {
               onClick={async () => {
                 if (!deleting) return;
                 try {
-                  await deleteCustomer(deleting.id);
+                  const _delId = deleting.id;
+                  const _delLabel = String((deleting as Record<string, unknown>).name ?? (deleting as Record<string, unknown>).code ?? _delId);
+                  await deleteCustomer(_delId);
+                  void logActivity({ module: "Organization Manager", action: "delete", entityType: "customers", entityId: _delId, entityLabel: _delLabel });
                   toast.success("Organization deleted");
                   setDeleting(null);
                 } catch (e) {
@@ -671,6 +679,7 @@ function CustomerFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
+            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
             // basic GST validation: skip blanks, enforce length-15 if filled
             const cleaned = gstEntries
               .map((g) => ({ ...g, gstin: g.gstin.trim().toUpperCase() }))

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
 import { toast } from "sonner";
+import { confirmAction } from "@/components/ConfirmProvider";
 import {
   ArrowLeft,
   Save,
@@ -146,6 +147,7 @@ function CandidateDetailsPage() {
 
   const handleSave = async (closeAfter = false) => {
     if (!form) return;
+    if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
     setSaving(true);
     try {
       const payload = buildCandidatePayload(form);

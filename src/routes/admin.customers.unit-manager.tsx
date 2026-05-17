@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Download, Edit2, MapPin, Plus, Search, Trash2, Warehouse, X } from "lucide-react";
 import { csvDate, csvJoin, csvMapLink, csvStatus, csvYesNo, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
+import { confirmAction } from "@/components/ConfirmProvider";
+import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -379,8 +381,10 @@ function UnitManagerPage() {
         editing={editing}
         units={units}
         onSubmit={async (data) => {
+          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           const r = editing ? await updateUnit(editing.id, data) : await addUnit(data);
           if (!r.ok) return r.error;
+          void logActivity({ module: "Unit Manager", action: editing ? "update" : "create", entityType: "units", entityId: editing?.id, entityLabel: String((data as Record<string, unknown>).code ?? (data as Record<string, unknown>).name ?? ""), details: data as Record<string, unknown> });
           toast.success(editing ? "Unit updated" : "Unit added");
           return null;
         }}
@@ -402,7 +406,10 @@ function UnitManagerPage() {
               onClick={async () => {
                 if (!deleting) return;
                 try {
-                  await deleteUnit(deleting.id);
+                  const _delId = deleting.id;
+                  const _delLabel = String((deleting as Record<string, unknown>).name ?? (deleting as Record<string, unknown>).code ?? _delId);
+                  await deleteUnit(_delId);
+                  void logActivity({ module: "Unit Manager", action: "delete", entityType: "units", entityId: _delId, entityLabel: _delLabel });
                   toast.success("Unit deleted");
                   setDeleting(null);
                 } catch (e) {
@@ -581,6 +588,7 @@ function UnitFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
+            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
             setError(null);
             const err = await onSubmit(form);
             if (err) setError(err);

@@ -14,6 +14,7 @@ import {
   Save,
 } from "lucide-react";
 import { toast } from "sonner";
+import { confirmAction } from "@/components/ConfirmProvider";
 
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -522,6 +523,7 @@ function TemplateEditorDialog({
           <Button
             disabled={saving || !title.trim() || !body.trim()}
             onClick={async () => {
+              if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
               setSaving(true);
               try {
                 await onSubmit(title, body);

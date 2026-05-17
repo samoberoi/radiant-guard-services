@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { Download, Edit2, Link2, MapPin, Plus, Search, Trash2 } from "lucide-react";
 import { csvJoin, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
+import { confirmAction } from "@/components/ConfirmProvider";
+import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -214,8 +216,10 @@ function StateManagerPage() {
         onOpenChange={setAddOpen}
         title="Add state"
         onSubmit={async (name) => {
+          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           const r = await addState(name);
           if (!r.ok) return r.error;
+          void logActivity({ module: "State Manager", action: "create", entityType: "states", entityLabel: name, details: { name } });
           toast.success("State added");
           return null;
         }}
@@ -227,9 +231,11 @@ function StateManagerPage() {
         onOpenChange={(o) => !o && setEditing(null)}
         title="Edit state"
         onSubmit={async (name) => {
+          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           if (!editing) return null;
           const r = await updateState(editing.id, name);
           if (!r.ok) return r.error;
+          void logActivity({ module: "State Manager", action: "update", entityType: "states", entityId: editing.id, entityLabel: name, details: { name } });
           toast.success("State updated");
           setEditing(null);
           return null;
@@ -251,7 +257,10 @@ function StateManagerPage() {
               onClick={async () => {
                 if (!deleting) return;
                 try {
-                  await deleteState(deleting.id);
+                  const _delId = deleting.id;
+                  const _delLabel = String((deleting as Record<string, unknown>).name ?? (deleting as Record<string, unknown>).code ?? _delId);
+                  await deleteState(_delId);
+                  void logActivity({ module: "State Manager", action: "delete", entityType: "states", entityId: _delId, entityLabel: _delLabel });
                   toast.success("State deleted");
                   setDeleting(null);
                 } catch (e) {
@@ -337,6 +346,7 @@ function StateFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
+            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
             const err = await onSubmit(name);
             if (err) setError(err);
             else {
