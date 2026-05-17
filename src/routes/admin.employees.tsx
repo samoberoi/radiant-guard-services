@@ -78,6 +78,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { confirmAction } from "@/components/ConfirmProvider";
 
 export const Route = createFileRoute("/admin/employees")({
   component: EmployeesPage,
