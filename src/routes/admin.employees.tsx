@@ -16,6 +16,7 @@ import {
   Check,
   CheckCircle2,
   Edit2,
+  FileSignature,
   FileText,
   IdCard,
   Loader2,
@@ -27,6 +28,8 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
+import { SignDocumentDialog } from "@/components/SignDocumentDialog";
+import type { DocType } from "@/lib/company-documents";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
