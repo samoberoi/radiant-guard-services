@@ -10,7 +10,7 @@ import {
   FileSignature,
   FileText,
   History,
-  Plus,
+  History,
   Power,
   Save,
 } from "lucide-react";
