@@ -380,7 +380,7 @@ function UnitManagerPage() {
         editing={editing}
         units={units}
         onSubmit={async (data) => {
-          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
+          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           const r = editing ? await updateUnit(editing.id, data) : await addUnit(data);
           if (!r.ok) return r.error;
           toast.success(editing ? "Unit updated" : "Unit added");
@@ -583,7 +583,7 @@ function UnitFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
+            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
             setError(null);
             const err = await onSubmit(form);
             if (err) setError(err);

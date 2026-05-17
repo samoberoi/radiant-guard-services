@@ -277,7 +277,7 @@ function CustomerManagerPage() {
         onOpenChange={setFormOpen}
         editing={editing}
         onSubmit={async (data) => {
-          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
+          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           if (editing) {
             const r = await updateCustomer(editing.id, data);
             if (!r.ok) return { error: r.error, id: null };
@@ -673,7 +673,7 @@ function CustomerFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
+            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
             // basic GST validation: skip blanks, enforce length-15 if filled
             const cleaned = gstEntries
               .map((g) => ({ ...g, gstin: g.gstin.trim().toUpperCase() }))
