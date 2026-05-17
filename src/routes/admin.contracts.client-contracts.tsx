@@ -3031,7 +3031,8 @@ function SalaryBreakdownTable({
 
   const earnedGross = earnedFor(gross);
   const earnedDeductions = earnedFor(deductionsTotal);
-  
+  const netPayable = gross - deductionsTotal;
+  const earnedNetPayable = earnedFor(netPayable);
   const earnedCTC = earnedFor(totalCTC);
 
   return (
@@ -3155,6 +3156,12 @@ function SalaryBreakdownTable({
               <td className="text-center tabular-nums">{deductionsTotal.toFixed(2)}</td>
               <td />
               <td className="text-right tabular-nums">{earnedDeductions.toFixed(2)}</td>
+            </tr>
+            <tr className="bg-cyan-100 font-bold dark:bg-cyan-500/20">
+              <td className="uppercase">Total Amount (Payable) Rs.</td>
+              <td className="text-center tabular-nums">{netPayable.toFixed(2)}</td>
+              <td />
+              <td className="text-right text-base tabular-nums">{earnedNetPayable.toFixed(2)}</td>
             </tr>
             <tr className="bg-muted/40">
               <td className="font-bold uppercase text-foreground">Employer Contribution</td>
