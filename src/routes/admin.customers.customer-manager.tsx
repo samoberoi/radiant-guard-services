@@ -278,14 +278,16 @@ function CustomerManagerPage() {
         onOpenChange={setFormOpen}
         editing={editing}
         onSubmit={async (data) => {
-          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
+          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return { error: null, id: null };
           if (editing) {
             const r = await updateCustomer(editing.id, data);
             if (!r.ok) return { error: r.error, id: null };
+            void logActivity({ module: "Organization Manager", action: "update", entityType: "customers", entityId: editing.id, entityLabel: String(data.name ?? ""), details: data as Record<string, unknown> });
             return { error: null, id: editing.id };
           }
           const r = await addCustomer(data);
           if (!r.ok) return { error: r.error, id: null };
+          void logActivity({ module: "Organization Manager", action: "create", entityType: "customers", entityId: r.id, entityLabel: String(data.name ?? ""), details: data as Record<string, unknown> });
           return { error: null, id: r.id };
         }}
         onSuccess={() => {
