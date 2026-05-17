@@ -600,7 +600,7 @@ function EmployeesPage() {
     if (isLoading) {
       return (
         <tr>
-          <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+          <td colSpan={mode === "employee" ? 9 : 8} className="px-4 py-10 text-center text-muted-foreground">
             Loading…
           </td>
         </tr>
@@ -609,7 +609,7 @@ function EmployeesPage() {
     if (candidatesError) {
       return (
         <tr>
-          <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+          <td colSpan={mode === "employee" ? 9 : 8} className="px-4 py-10 text-center text-muted-foreground">
             {candidatesError instanceof Error
               ? candidatesError.message
               : "Could not load employees right now. Please retry."}
@@ -620,7 +620,7 @@ function EmployeesPage() {
     if (rows.length === 0) {
       return (
         <tr>
-          <td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">
+          <td colSpan={mode === "employee" ? 9 : 8} className="px-4 py-10 text-center text-muted-foreground">
             {mode === "employee"
               ? "No employees yet. Approve a candidate to generate an Employee ID."
               : "No candidates here. Click "}
