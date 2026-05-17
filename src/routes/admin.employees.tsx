@@ -83,6 +83,14 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { confirmAction } from "@/components/ConfirmProvider";
+import {
+  QK_SCOPE_ASSIGNMENTS,
+  SCOPE_TYPE_LABEL,
+  useScopeAssignments,
+  type ScopeAssignment,
+  type ScopeType,
+} from "@/lib/deployment";
+import { useBranches, useCustomers, useStates } from "@/lib/admin-data";
 
 export const Route = createFileRoute("/admin/employees")({
   component: EmployeesPage,
