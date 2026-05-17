@@ -717,60 +717,93 @@ function EmployeesPage() {
         crumbs={[{ label: "Employees" }]}
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
         {[
-          { label: "Total", value: stats.total, tone: "bg-secondary text-foreground" },
-          { label: "Drafts", value: stats.drafts, tone: "bg-slate-500/10 text-slate-600 dark:text-slate-300" },
-          { label: "Pending", value: stats.pending, tone: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
-          { label: "Approved", value: stats.approved, tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
-          { label: "Rejected", value: stats.rejected, tone: "bg-rose-500/10 text-rose-600 dark:text-rose-400" },
+          { label: "Total", value: stats.total, accent: false, dot: "bg-stone-400" },
+          { label: "Drafts", value: stats.drafts, accent: false, dot: "bg-slate-400" },
+          { label: "Pending", value: stats.pending, accent: true, dot: "bg-amber-500" },
+          { label: "Approved", value: stats.approved, accent: false, dot: "bg-emerald-500" },
+          { label: "Rejected", value: stats.rejected, accent: false, dot: "bg-rose-500" },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl border border-border bg-card p-4">
-            <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              {s.label}
+          <div
+            key={s.label}
+            className={cn(
+              "group relative overflow-hidden rounded-2xl border p-6 shadow-sm transition-all hover:shadow-md",
+              s.accent
+                ? "border-amber-200/60 bg-amber-50/60 backdrop-blur-md"
+                : "border-border/60 bg-card/80 backdrop-blur-md",
+            )}
+          >
+            <div className="relative z-10 flex items-start justify-between">
+              <p
+                className={cn(
+                  "text-[10px] font-bold uppercase tracking-[0.2em] transition-colors",
+                  s.accent ? "text-amber-700" : "text-muted-foreground group-hover:text-amber-600",
+                )}
+              >
+                {s.label}
+              </p>
+              {s.accent && s.value > 0 && (
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-60" />
+                  <span className={cn("relative inline-flex h-2 w-2 rounded-full", s.dot)} />
+                </span>
+              )}
             </div>
-            <div className={cn("mt-1 inline-flex items-center rounded-md px-2 py-0.5 text-2xl font-bold tabular-nums", s.tone)}>
+            <p className="relative z-10 mt-3 text-4xl font-bold tabular-nums text-foreground">
               {s.value}
-            </div>
+            </p>
+            {s.accent && (
+              <div className="pointer-events-none absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-amber-200/30 blur-2xl" />
+            )}
           </div>
         ))}
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search name, Aadhaar, mobile, code…"
-            className="pl-9"
-          />
-        </div>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setOpenWizard(true);
-          }}
-          className="bg-primary text-primary-foreground hover:bg-primary/90"
-        >
-          <Plus className="mr-1.5 h-4 w-4" />
-          Add Candidate
-        </Button>
-      </div>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "employee" | "candidate")} className="space-y-5">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <TabsList className="inline-flex h-auto rounded-xl border border-border/60 bg-secondary/40 p-1 backdrop-blur-sm">
+            <TabsTrigger
+              value="employee"
+              className="rounded-lg px-6 py-2 text-sm font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              Employees <span className="ml-1.5 text-xs opacity-60">({stats.approved})</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="candidate"
+              className="rounded-lg px-6 py-2 text-sm font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              Candidates <span className="ml-1.5 text-xs opacity-60">({stats.total - stats.approved})</span>
+            </TabsTrigger>
+          </TabsList>
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as "employee" | "candidate")}>
-        <TabsList>
-          <TabsTrigger value="employee">
-            Employees <span className="ml-1.5 text-xs text-muted-foreground">({stats.approved})</span>
-          </TabsTrigger>
-          <TabsTrigger value="candidate">
-            Candidates <span className="ml-1.5 text-xs text-muted-foreground">({stats.total - stats.approved})</span>
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="employee" className="mt-4">
+          <div className="flex w-full items-center gap-3 md:w-auto">
+            <div className="relative flex-1 md:w-80">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search name, Aadhaar, mobile, code…"
+                className="h-11 rounded-xl border-border/70 bg-card pl-11 shadow-sm focus-visible:ring-4 focus-visible:ring-amber-500/10 focus-visible:border-amber-500/60"
+              />
+            </div>
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setOpenWizard(true);
+              }}
+              className="h-11 whitespace-nowrap rounded-xl bg-stone-900 px-6 font-semibold text-white shadow-lg shadow-stone-900/10 transition-all hover:-translate-y-0.5 hover:bg-stone-800 active:translate-y-0 dark:bg-stone-100 dark:text-stone-900 dark:hover:bg-white"
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              Add Candidate
+            </Button>
+          </div>
+        </div>
+
+        <TabsContent value="employee" className="mt-0">
           {renderTable(employees, "employee")}
         </TabsContent>
-        <TabsContent value="candidate" className="mt-4">
+        <TabsContent value="candidate" className="mt-0">
           {renderTable(candidateRows, "candidate")}
         </TabsContent>
       </Tabs>
