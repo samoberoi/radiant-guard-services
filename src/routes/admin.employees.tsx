@@ -455,6 +455,7 @@ function EmployeesPage() {
 
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"employee" | "candidate">("employee");
+  const [viewMode, setViewMode] = useState<"list" | "tree">("list");
   const [openWizard, setOpenWizard] = useState(false);
   const [editing, setEditing] = useState<Candidate | null>(null);
   const [openingCandidateId, setOpeningCandidateId] = useState<string | null>(null);
@@ -462,6 +463,43 @@ function EmployeesPage() {
   const [rejectTarget, setRejectTarget] = useState<CandidateListItem | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [signTarget, setSignTarget] = useState<{ id: string; docType: DocType } | null>(null);
+
+  // Filters
+  const [filterRole, setFilterRole] = useState<string>("all");
+  const [filterDesignation, setFilterDesignation] = useState<string>("all");
+  const [filterCustomer, setFilterCustomer] = useState<string>("all");
+  const [filterUnit, setFilterUnit] = useState<string>("all");
+  const [filterManager, setFilterManager] = useState<string>("all");
+  const [filterEnabled, setFilterEnabled] = useState<"all" | "enabled" | "disabled">("all");
+
+  const DEFAULT_FILTERS_VIS = {
+    role: true,
+    designation: true,
+    customer: true,
+    unit: true,
+    manager: true,
+    enabled: true,
+  };
+  const [filtersVisible, setFiltersVisible] = useState<typeof DEFAULT_FILTERS_VIS>(() => {
+    if (typeof window === "undefined") return DEFAULT_FILTERS_VIS;
+    try {
+      const raw = localStorage.getItem("employees.filterPrefs");
+      if (raw) return { ...DEFAULT_FILTERS_VIS, ...JSON.parse(raw) };
+    } catch {}
+    return DEFAULT_FILTERS_VIS;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("employees.filterPrefs", JSON.stringify(filtersVisible));
+    } catch {}
+  }, [filtersVisible]);
+
+  // Customers (org filter) + scope assignments
+  const { customers } = useCustomers();
+  const { branches } = useBranches();
+  const { states } = useStates();
+  const scopeQuery = useScopeAssignments();
+  const scopeAssignments = scopeQuery.data ?? [];
 
   const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const desigMap = useMemo(() => new Map(designations.map((d) => [d.id, d])), [designations]);
@@ -474,16 +512,43 @@ function EmployeesPage() {
     );
   };
 
+  const matchesFilters = (c: CandidateListItem) => {
+    if (filterRole !== "all" && c.role_key !== filterRole) return false;
+    if (filterDesignation !== "all" && c.designation_id !== filterDesignation) return false;
+    if (filterUnit !== "all" && c.unit_id !== filterUnit) return false;
+    if (filterCustomer !== "all") {
+      const unit = c.unit_id ? unitMap.get(c.unit_id) : undefined;
+      if (!unit || unit.customer_id !== filterCustomer) return false;
+    }
+    if (filterManager !== "all" && c.reports_to !== filterManager) return false;
+    if (filterEnabled === "enabled" && !c.is_enabled) return false;
+    if (filterEnabled === "disabled" && c.is_enabled) return false;
+    return true;
+  };
+
   const employees = useMemo(
-    () => candidates.filter((c) => (c.status === "approved" || c.status === "active") && matchesSearch(c)),
+    () => candidates.filter((c) => (c.status === "approved" || c.status === "active") && matchesSearch(c) && matchesFilters(c)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, search],
+    [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, units],
   );
   const candidateRows = useMemo(
     () => candidates.filter((c) => c.status !== "approved" && c.status !== "active" && matchesSearch(c)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [candidates, search],
   );
+
+  const fieldManagers = useMemo(
+    () => candidates.filter((c) => c.role_key === "field_manager" && (c.status === "approved" || c.status === "active")),
+    [candidates],
+  );
+  const scopeByCandidate = useMemo(() => {
+    const m = new Map<string, ScopeAssignment[]>();
+    for (const s of scopeAssignments) {
+      if (!m.has(s.candidate_id)) m.set(s.candidate_id, []);
+      m.get(s.candidate_id)!.push(s);
+    }
+    return m;
+  }, [scopeAssignments]);
 
   const stats = useMemo(() => {
     const total = candidates.length;
