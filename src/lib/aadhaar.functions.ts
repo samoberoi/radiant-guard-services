@@ -48,67 +48,58 @@ Rules:
 - For addresses, prefer blank over partial nonsense.
 Carefully parse the address block on the back of the Aadhaar card and split it into the structured fields above. Do not include any commentary or markdown.`;
 
+function dataUrlToInlinePart(dataUrl: string): { inline_data: { mime_type: string; data: string } } {
+  const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
+  if (!m) throw new Error("Invalid data URL");
+  return { inline_data: { mime_type: m[1], data: m[2] } };
+}
+
 export const extractAadhaar = createServerFn({ method: "POST" })
   .inputValidator((input) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<AadhaarExtraction> => {
-    const apiKey = process.env.LOVABLE_API_KEY ?? "";
-    if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
+    const apiKey = process.env.GEMINI_API_KEY ?? "";
+    if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
 
     const isPdf = data.mimeType === "application/pdf";
     const pageImages = data.pageImageDataUrls?.filter(Boolean) ?? [];
 
-    const userContent: Array<Record<string, unknown>> = [
-      {
-        type: "text",
-        text:
-          isPdf && pageImages.length
-            ? "Extract the Aadhaar fields and the structured address from these Aadhaar page images. Use only what is clearly visible."
-            : isPdf
-              ? "Extract the Aadhaar fields and the structured address from this Aadhaar PDF. Use only what is clearly visible."
-              : "Extract the Aadhaar fields and the structured address from this card image. Use only what is clearly visible.",
-      },
-      ...(isPdf && pageImages.length
-        ? pageImages.map((url) => ({ type: "image_url", image_url: { url } }))
-        : [{ type: "image_url", image_url: { url: data.fileDataUrl } }]),
-    ];
+    const promptText =
+      isPdf && pageImages.length
+        ? "Extract the Aadhaar fields and the structured address from these Aadhaar page images. Use only what is clearly visible."
+        : isPdf
+          ? "Extract the Aadhaar fields and the structured address from this Aadhaar PDF. Use only what is clearly visible."
+          : "Extract the Aadhaar fields and the structured address from this card image. Use only what is clearly visible.";
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const mediaParts =
+      isPdf && pageImages.length
+        ? pageImages.map(dataUrlToInlinePart)
+        : [dataUrlToInlinePart(data.fileDataUrl)];
+
+    const parts: Array<Record<string, unknown>> = [{ text: promptText }, ...mediaParts];
+
+    const model = "gemini-2.5-pro";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+    const res = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": apiKey,
-        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userContent },
-        ],
-        response_format: { type: "json_object" },
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: [{ role: "user", parts }],
+        generationConfig: { responseMimeType: "application/json" },
       }),
     });
 
     if (!res.ok) {
       const txt = await res.text().catch(() => "");
-      throw new Error(`AI gateway error ${res.status}: ${txt.slice(0, 200)}`);
+      throw new Error(`Gemini API error ${res.status}: ${txt.slice(0, 300)}`);
     }
     const json = (await res.json()) as {
-      choices?: Array<{
-        message?: {
-          content?: string | Array<{ type?: string; text?: string }>;
-        };
-      }>;
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
     };
-    const rawContent = json.choices?.[0]?.message?.content;
     const content =
-      typeof rawContent === "string"
-        ? rawContent
-        : Array.isArray(rawContent)
-          ? rawContent
-              .map((part) => (typeof part?.text === "string" ? part.text : ""))
-              .join("\n")
-          : "{}";
+      json.candidates?.[0]?.content?.parts?.map((p) => p?.text ?? "").join("") ?? "{}";
+
     let parsed: Partial<AadhaarExtraction> = {};
     try {
       parsed = JSON.parse(content);
