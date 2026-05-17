@@ -1595,61 +1595,128 @@ function ScopeAddDialog({
   onAdd: (payload: { scope_type: ScopeType; scope_id: string; scope_label: string }) => void;
 }) {
   const [scopeType, setScopeType] = useState<ScopeType>("unit");
-  const [scopeId, setScopeId] = useState<string>("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
   useEffect(() => {
-    if (target) { setScopeType("unit"); setScopeId(""); }
+    if (target) { setScopeType("unit"); setSelectedIds(new Set()); setSearch(""); }
   }, [target]);
-  const isDup = existing.some((e) => e.scope_type === scopeType && e.scope_id === scopeId);
-  const options: Array<{ id: string; label: string }> = useMemo(() => {
+  useEffect(() => { setSelectedIds(new Set()); setSearch(""); }, [scopeType]);
+  const allOptions: Array<{ id: string; label: string }> = useMemo(() => {
     if (scopeType === "unit") return units.map((u) => ({ id: u.id, label: `${u.name}${u.customer_name ? " · " + u.customer_name : ""}` }));
     if (scopeType === "customer") return customers.map((c) => ({ id: c.id, label: c.name }));
     if (scopeType === "branch") return branches.map((b) => ({ id: b.id, label: b.code }));
     return states.map((s) => ({ id: s.name, label: s.name }));
   }, [scopeType, units, customers, branches, states]);
+  const existingIds = useMemo(
+    () => new Set(existing.filter((e) => e.scope_type === scopeType).map((e) => e.scope_id)),
+    [existing, scopeType],
+  );
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return allOptions;
+    return allOptions.filter((o) => o.label.toLowerCase().includes(q));
+  }, [allOptions, search]);
+  const toggleId = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const selectableFiltered = filtered.filter((o) => !existingIds.has(o.id));
+  const allFilteredSelected = selectableFiltered.length > 0 && selectableFiltered.every((o) => selectedIds.has(o.id));
+  const toggleAll = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (allFilteredSelected) selectableFiltered.forEach((o) => next.delete(o.id));
+      else selectableFiltered.forEach((o) => next.add(o.id));
+      return next;
+    });
+  };
   return (
     <Dialog open={!!target} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add scope for {target?.full_name}</DialogTitle>
-          <DialogDescription>Field managers can be mapped to a State, Organization, Branch, or Unit. Guards under that scope will be linked.</DialogDescription>
+          <DialogTitle>Map scope · {target?.full_name}</DialogTitle>
+          <DialogDescription>Pick a scope type, then select one or more entries. Guards in the chosen scope get linked automatically.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div>
-            <Label className="text-xs">Scope type</Label>
-            <Select value={scopeType} onValueChange={(v) => { setScopeType(v as ScopeType); setScopeId(""); }}>
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="state">State</SelectItem>
-                <SelectItem value="customer">Organization</SelectItem>
-                <SelectItem value="branch">Branch</SelectItem>
-                <SelectItem value="unit">Unit</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-4 gap-1 rounded-lg border border-border/60 bg-muted/40 p-1">
+            {(["state","customer","branch","unit"] as ScopeType[]).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setScopeType(t)}
+                className={cn(
+                  "rounded-md px-2 py-1.5 text-xs font-medium transition",
+                  scopeType === t ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {SCOPE_TYPE_LABEL[t]}
+              </button>
+            ))}
           </div>
-          <div>
-            <Label className="text-xs">{SCOPE_TYPE_LABEL[scopeType]}</Label>
-            <Select value={scopeId} onValueChange={setScopeId}>
-              <SelectTrigger className="h-9"><SelectValue placeholder="Select…" /></SelectTrigger>
-              <SelectContent>
-                {options.map((o) => (<SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>))}
-              </SelectContent>
-            </Select>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search ${SCOPE_TYPE_LABEL[scopeType].toLowerCase()}…`} className="h-9 pl-8" />
           </div>
-          {isDup && <p className="text-xs text-rose-600">Already assigned.</p>}
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">{selectedIds.size} selected · {selectableFiltered.length} available</span>
+            <button type="button" onClick={toggleAll} disabled={selectableFiltered.length === 0} className="text-primary hover:underline disabled:opacity-40">
+              {allFilteredSelected ? "Clear all" : "Select all"}
+            </button>
+          </div>
+          <div className="max-h-64 overflow-y-auto rounded-lg border border-border/60 divide-y divide-border/40">
+            {filtered.length === 0 && (
+              <div className="p-4 text-center text-xs text-muted-foreground">No {SCOPE_TYPE_LABEL[scopeType].toLowerCase()} found.</div>
+            )}
+            {filtered.map((o) => {
+              const already = existingIds.has(o.id);
+              const checked = selectedIds.has(o.id);
+              return (
+                <label
+                  key={o.id}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 text-sm transition",
+                    already ? "bg-muted/40 cursor-not-allowed opacity-60" : "cursor-pointer hover:bg-muted/40",
+                  )}
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-border accent-primary"
+                    disabled={already}
+                    checked={already || checked}
+                    onChange={() => !already && toggleId(o.id)}
+                  />
+                  <span className="flex-1 truncate">{o.label}</span>
+                  {already && <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">Mapped</span>}
+                </label>
+              );
+            })}
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button
-            disabled={!scopeId || isDup}
+            disabled={selectedIds.size === 0}
             onClick={async () => {
-              const label = options.find((o) => o.id === scopeId)?.label ?? scopeId;
-              const ok = await confirmAction({ title: "Add scope?", description: `Add ${SCOPE_TYPE_LABEL[scopeType]} "${label}" to ${target?.full_name}?`, confirmText: "Add" });
+              const picks = Array.from(selectedIds)
+                .map((id) => allOptions.find((o) => o.id === id))
+                .filter((o): o is { id: string; label: string } => !!o);
+              if (picks.length === 0) return;
+              const ok = await confirmAction({
+                title: `Map ${picks.length} ${SCOPE_TYPE_LABEL[scopeType].toLowerCase()}${picks.length === 1 ? "" : "s"}?`,
+                description: `Assign ${picks.map((p) => `"${p.label}"`).join(", ")} to ${target?.full_name}.`,
+                confirmText: "Map",
+              });
               if (!ok) return;
-              onAdd({ scope_type: scopeType, scope_id: scopeId, scope_label: label });
+              for (const p of picks) {
+                onAdd({ scope_type: scopeType, scope_id: p.id, scope_label: p.label });
+              }
               onClose();
             }}
           >
-            Add scope
+            Map {selectedIds.size > 0 ? `(${selectedIds.size})` : ""}
           </Button>
         </DialogFooter>
       </DialogContent>
