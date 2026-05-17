@@ -515,12 +515,15 @@ function computePayableDays(base: PayrollDayBase | undefined, ref: Date = new Da
 function computeBenefitAmount(
   benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "amount">,
   wageComponents: ResourceComponent[],
+  benefitItems: BenefitItem[] = [],
 ): number {
   if (benefit.calcType === "fixed") return Number(benefit.amount) || 0;
+  const componentsTotal = wageComponents.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const benefitsTotal = benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const grossOf = (label: string): number => {
     const l = label.trim().toLowerCase();
     if (l === "gross" || l === "ctc") {
-      return wageComponents.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+      return componentsTotal + benefitsTotal;
     }
     const match = wageComponents.find((c) => c.name.trim().toLowerCase() === l);
     return match ? Number(match.amount) || 0 : 0;
@@ -530,8 +533,8 @@ function computeBenefitAmount(
     return b.operator === "-" ? sum - v : sum + v;
   }, 0);
   let amt = (Number(benefit.percentage) || 0) * base / 100;
-  if (benefit.capAmount != null && benefit.capAmount > 0 && amt > benefit.capAmount) {
-    amt = benefit.capAmount;
+  if (benefit.capAmount != null && benefit.capAmount > 0 && base > benefit.capAmount) {
+    amt = (Number(benefit.percentage) || 0) * benefit.capAmount / 100;
   }
   return Math.round(amt * 100) / 100;
 }
@@ -2085,21 +2088,25 @@ function ResourceFormDialog({
           : b,
       ),
     );
+  }, [components]);
+
+  // Deductions/employer contributions also depend on benefits (Gross = components + benefits)
+  useEffect(() => {
     setDeductions((prev) =>
       prev.map((b) =>
         b.calcType === "percentage"
-          ? { ...b, amount: computeBenefitAmount(b, components) }
+          ? { ...b, amount: computeBenefitAmount(b, components, benefits) }
           : b,
       ),
     );
     setEmployerContributions((prev) =>
       prev.map((b) =>
         b.calcType === "percentage"
-          ? { ...b, amount: computeBenefitAmount(b, components) }
+          ? { ...b, amount: computeBenefitAmount(b, components, benefits) }
           : b,
       ),
     );
-  }, [components]);
+  }, [components, benefits]);
 
   const PT_SYNTHETIC_ID = "__pt__";
   const ptSynthetic: CostComponentOption = {
@@ -2207,7 +2214,7 @@ function ResourceFormDialog({
       state: c.state,
     };
     if (item.calcType === "percentage") {
-      item.amount = computeBenefitAmount(item, components);
+      item.amount = computeBenefitAmount(item, components, benefits);
     }
     setDeductions((prev) => [...prev, item]);
     setDeductionQuery("");
@@ -2234,7 +2241,7 @@ function ResourceFormDialog({
       state: c.state,
     };
     if (item.calcType === "percentage") {
-      item.amount = computeBenefitAmount(item, components);
+      item.amount = computeBenefitAmount(item, components, benefits);
     }
     setEmployerContributions((prev) => [...prev, item]);
     setEmployerQuery("");
