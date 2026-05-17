@@ -3031,7 +3031,8 @@ function SalaryBreakdownTable({
 
   const earnedGross = earnedFor(gross);
   const earnedDeductions = earnedFor(deductionsTotal);
-  
+  const netPayable = gross - deductionsTotal;
+  const earnedNetPayable = earnedFor(netPayable);
   const earnedCTC = earnedFor(totalCTC);
 
   return (
