@@ -928,18 +928,23 @@ function EmployeesPage() {
                     assignManagerMut.mutate({ candidate: c, managerId: newId });
                   }}
                 >
-                  <SelectTrigger className="h-8 w-[180px] text-xs"><SelectValue placeholder="Assign manager" /></SelectTrigger>
+                  <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue placeholder="Assign manager" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="__none" className="text-xs">— No manager —</SelectItem>
                     {fieldManagers.map((m) => (<SelectItem key={m.id} value={m.id} className="text-xs">{m.full_name} ({m.employee_code})</SelectItem>))}
                   </SelectContent>
                 </Select>
               ) : c.role_key === "field_manager" ? (
-                <div className="flex flex-wrap items-center gap-1.5 max-w-[260px]">
-                  {(scopeByCandidate.get(c.id) ?? []).map((s) => (
-                    <Badge key={s.id} variant="outline" className="gap-1 border-sky-300/70 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-300">
-                      <span className="text-[10px] uppercase opacity-70">{SCOPE_TYPE_LABEL[s.scope_type]}</span>
-                      <span className="text-xs">{s.scope_label || s.scope_id.slice(0, 6)}</span>
+                <div className="flex flex-wrap items-center gap-1 max-w-[220px]">
+                  {(scopeByCandidate.get(c.id) ?? []).slice(0, 3).map((s) => (
+                    <Badge
+                      key={s.id}
+                      variant="outline"
+                      title={`${SCOPE_TYPE_LABEL[s.scope_type]}: ${s.scope_label}`}
+                      className="gap-1 max-w-[140px] border-sky-300/70 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-300"
+                    >
+                      <span className="text-[9px] uppercase opacity-60">{s.scope_type[0]}</span>
+                      <span className="truncate text-[11px]">{s.scope_label || s.scope_id.slice(0, 6)}</span>
                       <button
                         type="button"
                         onClick={async () => {
@@ -953,8 +958,11 @@ function EmployeesPage() {
                       </button>
                     </Badge>
                   ))}
-                  <Button variant="ghost" size="sm" className="h-6 px-2 text-[11px] text-muted-foreground" onClick={() => setScopeTarget(c)}>
-                    <Plus className="mr-0.5 h-3 w-3" /> Scope
+                  {(scopeByCandidate.get(c.id)?.length ?? 0) > 3 && (
+                    <span className="text-[10px] text-muted-foreground">+{(scopeByCandidate.get(c.id)?.length ?? 0) - 3}</span>
+                  )}
+                  <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px] text-muted-foreground" onClick={() => setScopeTarget(c)}>
+                    <Plus className="h-3 w-3" />
                   </Button>
                 </div>
               ) : (
