@@ -2096,29 +2096,29 @@ function ResourceFormDialog({
     setBenefits((prev) =>
       prev.map((b) =>
         b.calcType === "percentage"
-          ? { ...b, amount: computeBenefitAmount(b, components) }
+          ? { ...b, amount: computeBenefitAmount(b, components, [], allowanceTypes) }
           : b,
       ),
     );
-  }, [components]);
+  }, [components, allowanceTypes]);
 
   // Deductions/employer contributions also depend on benefits (Gross = components + benefits)
   useEffect(() => {
     setDeductions((prev) =>
       prev.map((b) =>
         b.calcType === "percentage"
-          ? { ...b, amount: computeBenefitAmount(b, components, benefits) }
+          ? { ...b, amount: computeBenefitAmount(b, components, benefits, allowanceTypes) }
           : b,
       ),
     );
     setEmployerContributions((prev) =>
       prev.map((b) =>
         b.calcType === "percentage"
-          ? { ...b, amount: computeBenefitAmount(b, components, benefits) }
+          ? { ...b, amount: computeBenefitAmount(b, components, benefits, allowanceTypes) }
           : b,
       ),
     );
-  }, [components, benefits]);
+  }, [components, benefits, allowanceTypes]);
 
   const PT_SYNTHETIC_ID = "__pt__";
   const ptSynthetic: CostComponentOption = {
