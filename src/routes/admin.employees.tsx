@@ -13,6 +13,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClientOnlyFn, useServerFn } from "@tanstack/react-start";
 import {
   Camera,
+  Check,
   CheckCircle2,
   Edit2,
   FileText,
@@ -24,7 +25,9 @@ import {
   Trash2,
   Upload,
   UserPlus,
+  X,
 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
