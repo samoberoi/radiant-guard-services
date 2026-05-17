@@ -1107,6 +1107,16 @@ function EmployeesPage() {
                   Role
                 </th>
               )}
+              {mode === "employee" && (
+                <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Reporting / Scope
+                </th>
+              )}
+              {mode === "employee" && (
+                <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Active
+                </th>
+              )}
               <th className="px-6 py-4 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Status
               </th>
