@@ -2116,13 +2116,26 @@ function ResourceFormDialog({
           : b,
       ),
     );
-    setEmployerContributions((prev) =>
-      prev.map((b) =>
-        b.calcType === "percentage"
+    setEmployerContributions((prev) => {
+      const refsCtc = (b: BenefitItem) =>
+        b.baseComponents.some((x) => {
+          const l = x.label.trim().toLowerCase();
+          return l === "ctc" || l === "total ctc";
+        });
+      // First pass: compute all non-CTC-dependent employer items
+      const firstPass = prev.map((b) =>
+        b.calcType === "percentage" && !refsCtc(b)
           ? { ...b, amount: computeBenefitAmount(b, components, benefits, allowanceTypes) }
           : b,
-      ),
-    );
+      );
+      // Second pass: compute CTC-dependent items using first-pass employer totals
+      const ctcBase = firstPass.filter((b) => !refsCtc(b));
+      return firstPass.map((b) =>
+        b.calcType === "percentage" && refsCtc(b)
+          ? { ...b, amount: computeBenefitAmount(b, components, benefits, allowanceTypes, ctcBase) }
+          : b,
+      );
+    });
   }, [components, benefits, allowanceTypes]);
 
   const PT_SYNTHETIC_ID = "__pt__";
