@@ -15,6 +15,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminSystemLogsRouteImport } from './routes/admin.system-logs'
 import { Route as AdminServiceTypeManagerRouteImport } from './routes/admin.service-type-manager'
+import { Route as AdminRbacRouteImport } from './routes/admin.rbac'
 import { Route as AdminProfessionalTaxManagerRouteImport } from './routes/admin.professional-tax-manager'
 import { Route as AdminPayrollManagerRouteImport } from './routes/admin.payroll-manager'
 import { Route as AdminPayrollDaysManagerRouteImport } from './routes/admin.payroll-days-manager'
@@ -65,6 +66,11 @@ const AdminSystemLogsRoute = AdminSystemLogsRouteImport.update({
 const AdminServiceTypeManagerRoute = AdminServiceTypeManagerRouteImport.update({
   id: '/service-type-manager',
   path: '/service-type-manager',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRbacRoute = AdminRbacRouteImport.update({
+  id: '/rbac',
+  path: '/rbac',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminProfessionalTaxManagerRoute =
@@ -201,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
+  '/admin/rbac': typeof AdminRbacRoute
   '/admin/service-type-manager': typeof AdminServiceTypeManagerRoute
   '/admin/system-logs': typeof AdminSystemLogsRoute
   '/admin/contracts/client-contracts': typeof AdminContractsClientContractsRoute
@@ -230,6 +237,7 @@ export interface FileRoutesByTo {
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
+  '/admin/rbac': typeof AdminRbacRoute
   '/admin/service-type-manager': typeof AdminServiceTypeManagerRoute
   '/admin/system-logs': typeof AdminSystemLogsRoute
   '/admin/contracts/client-contracts': typeof AdminContractsClientContractsRoute
@@ -260,6 +268,7 @@ export interface FileRoutesById {
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
+  '/admin/rbac': typeof AdminRbacRoute
   '/admin/service-type-manager': typeof AdminServiceTypeManagerRoute
   '/admin/system-logs': typeof AdminSystemLogsRoute
   '/admin/contracts/client-contracts': typeof AdminContractsClientContractsRoute
@@ -291,6 +300,7 @@ export interface FileRouteTypes {
     | '/admin/payroll-days-manager'
     | '/admin/payroll-manager'
     | '/admin/professional-tax-manager'
+    | '/admin/rbac'
     | '/admin/service-type-manager'
     | '/admin/system-logs'
     | '/admin/contracts/client-contracts'
@@ -320,6 +330,7 @@ export interface FileRouteTypes {
     | '/admin/payroll-days-manager'
     | '/admin/payroll-manager'
     | '/admin/professional-tax-manager'
+    | '/admin/rbac'
     | '/admin/service-type-manager'
     | '/admin/system-logs'
     | '/admin/contracts/client-contracts'
@@ -349,6 +360,7 @@ export interface FileRouteTypes {
     | '/admin/payroll-days-manager'
     | '/admin/payroll-manager'
     | '/admin/professional-tax-manager'
+    | '/admin/rbac'
     | '/admin/service-type-manager'
     | '/admin/system-logs'
     | '/admin/contracts/client-contracts'
@@ -408,6 +420,13 @@ declare module '@tanstack/react-router' {
       path: '/service-type-manager'
       fullPath: '/admin/service-type-manager'
       preLoaderRoute: typeof AdminServiceTypeManagerRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/rbac': {
+      id: '/admin/rbac'
+      path: '/rbac'
+      fullPath: '/admin/rbac'
+      preLoaderRoute: typeof AdminRbacRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/professional-tax-manager': {
@@ -594,6 +613,7 @@ interface AdminRouteChildren {
   AdminPayrollDaysManagerRoute: typeof AdminPayrollDaysManagerRoute
   AdminPayrollManagerRoute: typeof AdminPayrollManagerRoute
   AdminProfessionalTaxManagerRoute: typeof AdminProfessionalTaxManagerRoute
+  AdminRbacRoute: typeof AdminRbacRoute
   AdminServiceTypeManagerRoute: typeof AdminServiceTypeManagerRoute
   AdminSystemLogsRoute: typeof AdminSystemLogsRoute
   AdminContractsClientContractsRoute: typeof AdminContractsClientContractsRoute
@@ -616,6 +636,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminPayrollDaysManagerRoute: AdminPayrollDaysManagerRoute,
   AdminPayrollManagerRoute: AdminPayrollManagerRoute,
   AdminProfessionalTaxManagerRoute: AdminProfessionalTaxManagerRoute,
+  AdminRbacRoute: AdminRbacRoute,
   AdminServiceTypeManagerRoute: AdminServiceTypeManagerRoute,
   AdminSystemLogsRoute: AdminSystemLogsRoute,
   AdminContractsClientContractsRoute: AdminContractsClientContractsRoute,
@@ -633,13 +654,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

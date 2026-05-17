@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BadgeCheck, Briefcase, Calculator, CalendarDays, CalendarRange, ClipboardList, Clock, Coins, FileSignature, HandCoins, Languages, Receipt, ReceiptText, Settings, Shield } from "lucide-react";
+import { ArrowRight, BadgeCheck, Briefcase, Calculator, CalendarDays, CalendarRange, ClipboardList, Clock, Coins, FileSignature, HandCoins, Languages, Receipt, ReceiptText, Settings, Shield, ShieldCheck } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/admin/control-center")({
@@ -91,6 +91,12 @@ const tiles: Tile[] = [
     label: "Company Documents",
     description: "Manage NDA and Appointment Letter master templates.",
     icon: FileSignature,
+  },
+  {
+    to: "/admin/rbac",
+    label: "Role-Based Access Control",
+    description: "Define what each role can view, edit, and delete across modules.",
+    icon: ShieldCheck,
   },
 ];
 
