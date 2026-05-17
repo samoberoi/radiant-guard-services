@@ -974,6 +974,13 @@ function EmployeesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <SignDocumentDialog
+        open={!!signTarget}
+        onOpenChange={(o) => !o && setSignTarget(null)}
+        candidateId={signTarget?.id ?? null}
+        docType={signTarget?.docType ?? "nda"}
+      />
     </div>
   );
 }
