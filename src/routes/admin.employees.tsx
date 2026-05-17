@@ -704,6 +704,7 @@ function EmployeesPage() {
 
   const [scopeTarget, setScopeTarget] = useState<CandidateListItem | null>(null);
 
+  const approveMut = useMutation({
     mutationFn: async (c: CandidateListItem) => {
       const { data, error } = await supabase
         .from("candidates" as never)
