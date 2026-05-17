@@ -853,6 +853,23 @@ function EmployeesPage() {
         designationsError={designationsQuery.error instanceof Error ? designationsQuery.error.message : null}
         exServices={exServices}
         languagesList={languagesList}
+        canReview={!!editing && editing.status === "pending"}
+        isApproving={approveMut.isPending}
+        onApprove={() => {
+          if (!editing) return;
+          approveMut.mutate(editing as unknown as CandidateListItem, {
+            onSuccess: () => {
+              setOpenWizard(false);
+              setEditing(null);
+            },
+          });
+        }}
+        onReject={() => {
+          if (!editing) return;
+          setRejectTarget(editing as unknown as CandidateListItem);
+          setRejectReason("");
+          setOpenWizard(false);
+        }}
       />
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
