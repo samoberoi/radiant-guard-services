@@ -22,6 +22,17 @@ type Ctx = (opts?: ConfirmOptions) => Promise<boolean>;
 
 const ConfirmContext = createContext<Ctx | null>(null);
 
+let dispatcher: Ctx | null = null;
+
+/** Module-level confirm — works anywhere without hooks. */
+export function confirmAction(opts?: ConfirmOptions): Promise<boolean> {
+  if (dispatcher) return dispatcher(opts);
+  if (typeof window === "undefined") return Promise.resolve(true);
+  return Promise.resolve(
+    window.confirm(opts?.description ?? opts?.title ?? "Are you sure?"),
+  );
+}
+
 export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
   const [opts, setOpts] = useState<ConfirmOptions>({});
