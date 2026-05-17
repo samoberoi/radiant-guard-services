@@ -604,7 +604,106 @@ function EmployeesPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to assign role"),
   });
 
-  const approveMut = useMutation({
+  const toggleEnabledMut = useMutation({
+    mutationFn: async ({ candidate, enabled }: { candidate: CandidateListItem; enabled: boolean }) => {
+      const { error } = await supabase
+        .from("candidates" as never)
+        .update({ is_enabled: enabled } as unknown as never)
+        .eq("id", candidate.id);
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: enabled ? "enable" : "disable",
+        entityType: "candidate",
+        entityId: candidate.id,
+        entityLabel: candidate.full_name || candidate.employee_code,
+        before: { is_enabled: candidate.is_enabled },
+        after: { is_enabled: enabled },
+      });
+    },
+    onSuccess: (_d, vars) => {
+      toast.success(vars.enabled ? "Employee enabled" : "Employee disabled");
+      qc.invalidateQueries({ queryKey: QK });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Toggle failed"),
+  });
+
+  const assignManagerMut = useMutation({
+    mutationFn: async ({ candidate, managerId }: { candidate: CandidateListItem; managerId: string | null }) => {
+      const { error } = await supabase
+        .from("candidates" as never)
+        .update({ reports_to: managerId } as unknown as never)
+        .eq("id", candidate.id);
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: "assign_manager",
+        entityType: "candidate",
+        entityId: candidate.id,
+        entityLabel: candidate.full_name || candidate.employee_code,
+        before: { reports_to: candidate.reports_to },
+        after: { reports_to: managerId },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Reporting manager updated");
+      qc.invalidateQueries({ queryKey: QK });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to set manager"),
+  });
+
+  const addScopeMut = useMutation({
+    mutationFn: async (input: { candidate: CandidateListItem; scope_type: ScopeType; scope_id: string; scope_label: string }) => {
+      const { error } = await supabase
+        .from("employee_scope_assignments" as never)
+        .insert({
+          candidate_id: input.candidate.id,
+          scope_type: input.scope_type,
+          scope_id: input.scope_id,
+          scope_label: input.scope_label,
+        } as unknown as never);
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: "add_scope",
+        entityType: "candidate",
+        entityId: input.candidate.id,
+        entityLabel: input.candidate.full_name || input.candidate.employee_code,
+        after: { scope_type: input.scope_type, scope_id: input.scope_id, scope_label: input.scope_label },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Scope added");
+      qc.invalidateQueries({ queryKey: QK_SCOPE_ASSIGNMENTS });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to add scope"),
+  });
+
+  const removeScopeMut = useMutation({
+    mutationFn: async ({ scope, candidate }: { scope: ScopeAssignment; candidate: CandidateListItem }) => {
+      const { error } = await supabase
+        .from("employee_scope_assignments" as never)
+        .delete()
+        .eq("id", scope.id);
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: "remove_scope",
+        entityType: "candidate",
+        entityId: candidate.id,
+        entityLabel: candidate.full_name || candidate.employee_code,
+        before: { scope_type: scope.scope_type, scope_id: scope.scope_id, scope_label: scope.scope_label },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Scope removed");
+      qc.invalidateQueries({ queryKey: QK_SCOPE_ASSIGNMENTS });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed to remove scope"),
+  });
+
+  const [scopeTarget, setScopeTarget] = useState<CandidateListItem | null>(null);
+
     mutationFn: async (c: CandidateListItem) => {
       const { data, error } = await supabase
         .from("candidates" as never)
