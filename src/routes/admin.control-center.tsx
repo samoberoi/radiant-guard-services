@@ -92,6 +92,12 @@ const tiles: Tile[] = [
     description: "Manage NDA and Appointment Letter master templates.",
     icon: FileSignature,
   },
+  {
+    to: "/admin/rbac",
+    label: "Role-Based Access Control",
+    description: "Define what each role can view, edit, and delete across modules.",
+    icon: ShieldCheck,
+  },
 ];
 
 function ControlCenterDashboard() {
