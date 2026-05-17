@@ -185,6 +185,7 @@ export type Database = {
           rejected_at: string | null
           rejection_reason: string
           religion: string
+          role_key: string
           same_as_permanent: boolean
           signature_url: string
           status: string
@@ -260,6 +261,7 @@ export type Database = {
           rejected_at?: string | null
           rejection_reason?: string
           religion?: string
+          role_key?: string
           same_as_permanent?: boolean
           signature_url?: string
           status?: string
@@ -335,6 +337,7 @@ export type Database = {
           rejected_at?: string | null
           rejection_reason?: string
           religion?: string
+          role_key?: string
           same_as_permanent?: boolean
           signature_url?: string
           status?: string
