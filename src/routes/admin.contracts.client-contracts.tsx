@@ -517,15 +517,20 @@ function computeBenefitAmount(
   wageComponents: ResourceComponent[],
   benefitItems: BenefitItem[] = [],
   allowanceTypes: AllowanceType[] = [],
+  employerItems: BenefitItem[] = [],
 ): number {
   if (benefit.calcType === "fixed") return Number(benefit.amount) || 0;
   const componentsTotal = wageComponents.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const benefitsTotal = benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const employerTotal = employerItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const norm = (s: string) => s.trim().toLowerCase();
   const grossOf = (label: string): number => {
     const l = norm(label);
-    if (l === "gross" || l === "ctc") {
+    if (l === "gross") {
       return componentsTotal + benefitsTotal;
+    }
+    if (l === "ctc" || l === "total ctc") {
+      return componentsTotal + benefitsTotal + employerTotal;
     }
     // Direct match on the wage component's stored name (often the short name)
     let match = wageComponents.find((c) => norm(c.name) === l);
@@ -538,6 +543,11 @@ function computeBenefitAmount(
       match = wageComponents.find((c) => c.allowanceId === at.id);
       if (match) return Number(match.amount) || 0;
     }
+    // Resolve against benefit / employer item names
+    const benefitMatch = benefitItems.find((b) => norm(b.name) === l);
+    if (benefitMatch) return Number(benefitMatch.amount) || 0;
+    const employerMatch = employerItems.find((b) => norm(b.name) === l);
+    if (employerMatch) return Number(employerMatch.amount) || 0;
     return 0;
   };
   const base = benefit.baseComponents.reduce((sum, b) => {
@@ -2111,13 +2121,26 @@ function ResourceFormDialog({
           : b,
       ),
     );
-    setEmployerContributions((prev) =>
-      prev.map((b) =>
-        b.calcType === "percentage"
+    setEmployerContributions((prev) => {
+      const refsCtc = (b: BenefitItem) =>
+        b.baseComponents.some((x) => {
+          const l = x.label.trim().toLowerCase();
+          return l === "ctc" || l === "total ctc";
+        });
+      // First pass: compute all non-CTC-dependent employer items
+      const firstPass = prev.map((b) =>
+        b.calcType === "percentage" && !refsCtc(b)
           ? { ...b, amount: computeBenefitAmount(b, components, benefits, allowanceTypes) }
           : b,
-      ),
-    );
+      );
+      // Second pass: compute CTC-dependent items using first-pass employer totals
+      const ctcBase = firstPass.filter((b) => !refsCtc(b));
+      return firstPass.map((b) =>
+        b.calcType === "percentage" && refsCtc(b)
+          ? { ...b, amount: computeBenefitAmount(b, components, benefits, allowanceTypes, ctcBase) }
+          : b,
+      );
+    });
   }, [components, benefits, allowanceTypes]);
 
   const PT_SYNTHETIC_ID = "__pt__";
@@ -2253,7 +2276,17 @@ function ResourceFormDialog({
       state: c.state,
     };
     if (item.calcType === "percentage") {
-      item.amount = computeBenefitAmount(item, components, benefits, allowanceTypes);
+      const l = (s: string) => s.trim().toLowerCase();
+      const refsCtc = item.baseComponents.some(
+        (x) => l(x.label) === "ctc" || l(x.label) === "total ctc",
+      );
+      item.amount = computeBenefitAmount(
+        item,
+        components,
+        benefits,
+        allowanceTypes,
+        refsCtc ? employerContributions : [],
+      );
     }
     setEmployerContributions((prev) => [...prev, item]);
     setEmployerQuery("");
