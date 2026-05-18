@@ -177,8 +177,8 @@ function BranchManagerPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Code</th>
-                <th className="px-5 py-3">Branch (Code – State)</th>
-                <th className="px-5 py-3">State</th>
+                <th className="px-5 py-3">Branch (Code – Location)</th>
+                <th className="px-5 py-3">Location</th>
                 <th className="px-5 py-3">Description</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
