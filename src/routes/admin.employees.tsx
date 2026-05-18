@@ -1915,7 +1915,8 @@ function CandidateWizard({
       }
       // Optimistically seed with the single mirrored unit_id so the picker isn't empty during fetch.
       const initialUnitIds = rest.unit_id ? [rest.unit_id] : [];
-      setForm({ ...(rest as CandidateForm), contacts, unit_ids: initialUnitIds });
+      const normalizedStatus = rest.status === "approved" ? "active" : rest.status;
+      setForm({ ...(rest as CandidateForm), status: normalizedStatus, contacts, unit_ids: initialUnitIds });
       // Load full multi-unit assignment from junction table.
       (async () => {
         const { data, error } = await supabase
