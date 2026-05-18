@@ -2312,10 +2312,10 @@ function CandidateWizard({
     setSubmitting(true);
     try {
       // Creating / re-submitting moves to "pending" so the admin can approve.
-      const isEmployee = !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive" || editing.status === "offboarded");
-      // For employees, preserve the chosen status (active/inactive/offboarded). New/candidate edits go to pending.
+      const isEmployee = !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive");
+      // For employees, preserve the chosen status (active/inactive). New/candidate edits go to pending.
       const nextStatus = isEmployee
-        ? (form.status === "inactive" || form.status === "offboarded" ? form.status : "active")
+        ? (form.status === "inactive" ? "inactive" : "active")
         : "pending";
       const successMsg = editing
         ? (isEmployee ? "Employee updated" : "Candidate updated")
