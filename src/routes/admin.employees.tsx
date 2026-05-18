@@ -16,9 +16,13 @@ import {
   Camera,
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
+  Download,
   Edit2,
+  FileJson,
   FileSignature,
+  FileSpreadsheet,
   FileText,
   IdCard,
   LayoutList,
@@ -33,6 +37,15 @@ import {
   UserPlus,
   X,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { downloadCsv, csvJoin, csvDate, csvYesNo, csvStatus } from "@/lib/csv-export";
 import { SignDocumentDialog } from "@/components/SignDocumentDialog";
 import type { DocType } from "@/lib/company-documents";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
