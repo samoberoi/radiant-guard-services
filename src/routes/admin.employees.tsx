@@ -850,14 +850,38 @@ function EmployeesPage() {
     return m;
   }, [scopeAssignments]);
 
+  const signedDocs = signedDocsQuery.data ?? [];
+  const signedByCandidate = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const s of signedDocs) {
+      if (!s.candidate_id) continue;
+      if (!m.has(s.candidate_id)) m.set(s.candidate_id, new Set());
+      m.get(s.candidate_id)!.add(s.doc_type);
+    }
+    return m;
+  }, [signedDocs]);
+
   const stats = useMemo(() => {
-    const total = candidates.length;
-    const approved = candidates.filter((c) => isEmployeeStatus(c.status)).length;
-    const pending = candidates.filter((c) => c.status === "pending").length;
-    const rejected = candidates.filter((c) => c.status === "rejected").length;
-    const drafts = candidates.filter((c) => c.status === "draft").length;
-    return { total, approved, pending, rejected, drafts };
-  }, [candidates]);
+    // Candidate-tab stats (only non-employee status records)
+    const candidateOnly = candidates.filter((c) => !isEmployeeStatus(c.status));
+    const candTotal = candidateOnly.length;
+    const candDrafts = candidateOnly.filter((c) => c.status === "draft").length;
+    const candPending = candidateOnly.filter((c) => c.status === "pending").length;
+    const candRejected = candidateOnly.filter((c) => c.status === "rejected").length;
+
+    // Employee-tab stats (employees only)
+    const employeeOnly = candidates.filter((c) => isEmployeeStatus(c.status));
+    const empTotal = employeeOnly.length;
+    const empActive = employeeOnly.filter((c) => c.is_enabled && c.status !== "inactive").length;
+    const empInactive = empTotal - empActive;
+    const empNdaSigned = employeeOnly.filter((c) => signedByCandidate.get(c.id)?.has("nda")).length;
+    const empAlSigned = employeeOnly.filter((c) => signedByCandidate.get(c.id)?.has("appointment_letter")).length;
+
+    return {
+      candTotal, candDrafts, candPending, candRejected,
+      empTotal, empActive, empInactive, empNdaSigned, empAlSigned,
+    };
+  }, [candidates, signedByCandidate]);
 
   const deleteMut = useMutation({
     mutationFn: async (c: CandidateListItem) => {
