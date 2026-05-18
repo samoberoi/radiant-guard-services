@@ -2081,9 +2081,13 @@ function CandidateWizard({
   // ----- Build payload helper ----- //
   const buildPayload = (status: string) => {
     const emergencyContact = form.contacts.find((c) => c.is_emergency) ?? form.contacts[0] ?? null;
+    // Strip the form-only field unit_ids; mirror primary into unit_id for backward compat.
+    const { unit_ids, ...rest } = form;
+    const mirroredPrimary = unit_ids[0] ?? null;
     const basePayload = form.same_as_permanent
       ? {
-          ...form,
+          ...rest,
+          unit_id: mirroredPrimary,
           present_address1: form.permanent_address1,
           present_address2: form.permanent_address2,
           present_landmark: form.permanent_landmark,
@@ -2094,7 +2098,7 @@ function CandidateWizard({
           present_country: form.permanent_country,
           present_police_station: form.permanent_police_station,
         }
-      : { ...form };
+      : { ...rest, unit_id: mirroredPrimary };
     return {
       ...basePayload,
       status,
@@ -2102,6 +2106,21 @@ function CandidateWizard({
       emergency_contact_relation: emergencyContact?.relation ?? "",
       emergency_contact_mobile: emergencyContact?.mobile ?? "",
     };
+  };
+
+  /** Replace the candidate's entries in candidate_units with the current form selection. */
+  const syncCandidateUnits = async (candidateId: string) => {
+    // Wipe existing rows then re-insert. Simpler & atomic enough for typical 1-5 units.
+    await supabase.from("candidate_units" as never).delete().eq("candidate_id", candidateId);
+    if (form.unit_ids.length === 0) return;
+    const rows = form.unit_ids.map((unit_id, idx) => ({
+      candidate_id: candidateId,
+      unit_id,
+      is_primary: idx === 0,
+      sort_order: idx,
+    }));
+    const { error } = await supabase.from("candidate_units" as never).insert(rows as never);
+    if (error) throw error;
   };
 
   const persist = async (status: string, successMsg: string) => {
@@ -2117,6 +2136,7 @@ function CandidateWizard({
         .update(payload as never)
         .eq("id", editing.id);
       if (error) throw error;
+      await syncCandidateUnits(editing.id);
       await logActivity({
         module: "Employees",
         action: "update",
@@ -2124,7 +2144,7 @@ function CandidateWizard({
         entityId: editing.id,
         entityLabel: payload.full_name,
         before: (before as unknown as Record<string, unknown>) ?? null,
-        after: payload as unknown as Record<string, unknown>,
+        after: { ...(payload as unknown as Record<string, unknown>), unit_ids: form.unit_ids },
       });
     } else {
       const { data, error } = await supabase
@@ -2133,13 +2153,15 @@ function CandidateWizard({
         .select("id")
         .single();
       if (error) throw error;
+      const newId = (data as { id: string }).id;
+      await syncCandidateUnits(newId);
       await logActivity({
         module: "Employees",
         action: "create",
         entityType: "candidate",
-        entityId: (data as { id: string }).id,
+        entityId: newId,
         entityLabel: payload.full_name,
-        after: payload as unknown as Record<string, unknown>,
+        after: { ...(payload as unknown as Record<string, unknown>), unit_ids: form.unit_ids },
       });
     }
     toast.success(successMsg);
