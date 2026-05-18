@@ -11,7 +11,6 @@ import {
   FileText,
   Plus,
   Search,
-  Trash2,
   Upload,
   Users,
   X,
