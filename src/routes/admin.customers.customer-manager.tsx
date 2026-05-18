@@ -901,7 +901,7 @@ function CustomerFormDialog({
                           value={g.gstin}
                           maxLength={15}
                           onChange={(e) => {
-                            const v = e.target.value.toUpperCase();
+                            const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
                             setGstEntries((rows) =>
                               rows.map((r, i) => (i === idx ? { ...r, gstin: v } : r)),
                             );
