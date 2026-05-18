@@ -18,6 +18,7 @@ import {
   HandCoins,
   LayoutDashboard,
   Languages,
+  LogOut,
   MapPin,
   Receipt,
   ReceiptText,
