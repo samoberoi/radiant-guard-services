@@ -61,7 +61,7 @@ function LocationManagerPage() {
     <div>
       <PageHeader
         title="Location Manager"
-        description="All states served by Radiant Guard. Used as the source of truth for branch mappings."
+        description="All locations served by Radiant Guard. Used as the source of truth for branch mappings."
         crumbs={[
           { label: "Organizations", to: "/admin/customers" },
           { label: "Location Manager" },
@@ -70,7 +70,7 @@ function LocationManagerPage() {
 
       {/* Stats */}
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
-        <StatCard label="Total states" value={states.length} icon={MapPin} />
+        <StatCard label="Total locations" value={states.length} icon={MapPin} />
         <StatCard label="Mapped to branches" value={mappedCount} icon={Link2} />
         <StatCard
           label="Available"
