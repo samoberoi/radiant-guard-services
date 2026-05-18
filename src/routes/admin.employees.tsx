@@ -656,6 +656,167 @@ function EmployeesPage() {
     [candidates, search],
   );
 
+  // ---------------- Export ---------------- //
+  const [exporting, setExporting] = useState(false);
+  const roleNameOf = (key: string | null | undefined) =>
+    rolesList.find((r) => r.key === key)?.name ?? key ?? "";
+  const unitLabel = (id: string | null | undefined) => {
+    if (!id) return "";
+    const u = unitMap.get(id);
+    return u ? `${u.code} — ${u.name}` : "";
+  };
+  const customerNameOfUnit = (id: string | null | undefined) => {
+    if (!id) return "";
+    const u = unitMap.get(id);
+    if (!u?.customer_id) return u?.customer_name ?? "";
+    return customers.find((c) => c.id === u.customer_id)?.name ?? u.customer_name ?? "";
+  };
+  const desigName = (id: string | null | undefined) =>
+    (id && desigMap.get(id)?.name) || "";
+  const managerName = (id: string | null | undefined) =>
+    (id && candidates.find((c) => c.id === id)?.full_name) || "";
+  const offboardReasonName = (id: string | null | undefined) =>
+    (id && offboardReasons.find((r) => r.id === id)?.name) || "";
+
+  const buildSummaryRow = (c: CandidateListItem) => ({
+    employee_code: c.employee_code || "",
+    candidate_code: c.candidate_code || "",
+    full_name: c.full_name || "",
+    aadhaar_number: c.aadhaar_number || "",
+    mobile: c.mobile || "",
+    email: c.email || "",
+    role: roleNameOf(c.role_key),
+    designation: desigName(c.designation_id),
+    unit: unitLabel(c.unit_id),
+    customer: customerNameOfUnit(c.unit_id),
+    reports_to: managerName(c.reports_to),
+    status: csvStatus(c.status),
+    enabled: csvYesNo(c.is_enabled),
+    no_hire: csvYesNo(c.no_hire),
+    offboarding_reason: offboardReasonName(c.offboarding_reason_id),
+    offboarded_at: csvDate(c.offboarded_at),
+    assigned_assets: csvJoin(
+      (c.assigned_asset_ids ?? []).map((aid) => assets.find((a) => a.id === aid)?.name).filter(Boolean),
+    ),
+    rejection_reason: c.rejection_reason || "",
+  });
+
+  const SUMMARY_COLS = [
+    { key: "employee_code", header: "Employee code" },
+    { key: "candidate_code", header: "Candidate code" },
+    { key: "full_name", header: "Full name" },
+    { key: "aadhaar_number", header: "Aadhaar" },
+    { key: "mobile", header: "Mobile" },
+    { key: "email", header: "Email" },
+    { key: "role", header: "Role" },
+    { key: "designation", header: "Designation" },
+    { key: "unit", header: "Unit" },
+    { key: "customer", header: "Customer" },
+    { key: "reports_to", header: "Reports to" },
+    { key: "status", header: "Status" },
+    { key: "enabled", header: "Enabled" },
+    { key: "no_hire", header: "Do not re-hire" },
+    { key: "offboarding_reason", header: "Offboarding reason" },
+    { key: "offboarded_at", header: "Offboarded at" },
+    { key: "assigned_assets", header: "Assigned assets" },
+    { key: "rejection_reason", header: "Rejection reason" },
+  ];
+
+  const flattenValue = (v: unknown): string => {
+    if (v === null || v === undefined) return "";
+    if (v instanceof Date) return v.toISOString();
+    if (typeof v === "object") {
+      try { return JSON.stringify(v); } catch { return String(v); }
+    }
+    return String(v);
+  };
+
+  const fetchFullCandidates = async (ids: string[]) => {
+    if (ids.length === 0) return [] as Array<Record<string, unknown>>;
+    const { data, error } = await supabase
+      .from("candidates" as never)
+      .select("*")
+      .in("id", ids);
+    if (error) throw error;
+    return (data as unknown as Array<Record<string, unknown>>) ?? [];
+  };
+
+  const handleExport = async (kind: "summary-csv" | "full-csv" | "full-json") => {
+    const sourceRows = tab === "employee" ? employees : candidateRows;
+    if (sourceRows.length === 0) {
+      toast.error("Nothing to export");
+      return;
+    }
+    setExporting(true);
+    try {
+      const prefix = tab === "employee" ? "employees" : "candidates";
+      if (kind === "summary-csv") {
+        downloadCsv(prefix + "-summary", sourceRows.map(buildSummaryRow), SUMMARY_COLS);
+      } else {
+        const full = await fetchFullCandidates(sourceRows.map((r) => r.id));
+        // enrich with friendly joins
+        const enriched = full.map((row) => {
+          const id = row.id as string;
+          const src = sourceRows.find((s) => s.id === id);
+          return {
+            ...row,
+            _role_name: roleNameOf((row.role_key as string) ?? src?.role_key),
+            _designation_name: desigName((row.designation_id as string) ?? src?.designation_id ?? null),
+            _unit_label: unitLabel((row.unit_id as string) ?? src?.unit_id ?? null),
+            _customer_name: customerNameOfUnit((row.unit_id as string) ?? src?.unit_id ?? null),
+            _reports_to_name: managerName((row.reports_to as string) ?? src?.reports_to ?? null),
+            _offboarding_reason_name: offboardReasonName(
+              (row.offboarding_reason_id as string) ?? src?.offboarding_reason_id ?? null,
+            ),
+            _assigned_asset_names: csvJoin(
+              ((row.assigned_asset_ids as string[]) ?? src?.assigned_asset_ids ?? [])
+                .map((aid: string) => assets.find((a) => a.id === aid)?.name)
+                .filter(Boolean),
+            ),
+          };
+        });
+        if (kind === "full-json") {
+          const blob = new Blob([JSON.stringify(enriched, null, 2)], {
+            type: "application/json;charset=utf-8;",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+          a.href = url;
+          a.download = `${prefix}-full-${stamp}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        } else {
+          // full-csv: union of all keys, flatten objects to JSON strings
+          const keySet = new Set<string>();
+          for (const r of enriched) for (const k of Object.keys(r)) keySet.add(k);
+          const keys = Array.from(keySet);
+          const cols = keys.map((k) => ({ key: k, header: k }));
+          const rows = enriched.map((r) => {
+            const out: Record<string, string> = {};
+            for (const k of keys) out[k] = flattenValue((r as Record<string, unknown>)[k]);
+            return out;
+          });
+          downloadCsv(prefix + "-full", rows, cols);
+        }
+      }
+      await logActivity({
+        module: "Employees",
+        action: "export",
+        entityType: "candidate",
+        entityLabel: `${sourceRows.length} ${prefix} (${kind})`,
+      });
+      toast.success(`Exported ${sourceRows.length} ${prefix}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
+
   const fieldManagers = useMemo(
     () => candidates.filter((c) => c.role_key === "field_manager" && isEmployeeStatus(c.status)),
     [candidates],
