@@ -1875,7 +1875,8 @@ function CandidateWizard({
   const setSection = (k: string, v: any) =>
     setForm((f) => ({ ...f, [k]: { ...((f as any)[k] ?? {}), ...v } }) as CandidateForm);
 
-  const unit = form.unit_id ? units.find((u) => u.id === form.unit_id) : undefined;
+  const primaryUnitId = form.unit_ids[0] ?? null;
+  const unit = primaryUnitId ? units.find((u) => u.id === primaryUnitId) : undefined;
 
   // ----- File upload helper ----- //
   const uploadFile = async (file: File, slot: "photo" | "signature" | "aadhaar" | "pan"): Promise<string> => {
