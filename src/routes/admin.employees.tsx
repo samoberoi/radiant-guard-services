@@ -2266,7 +2266,11 @@ function CandidateWizard({
     try {
       // Creating / re-submitting moves to "pending" so the admin can approve.
       const nextStatus = editing && editing.status === "approved" ? "approved" : "pending";
-      await persist(nextStatus, editing ? "Candidate updated" : "Candidate submitted for approval");
+      const isEmployee = !!editing && (editing.status === "approved" || editing.status === "active");
+      const successMsg = editing
+        ? (isEmployee ? "Employee updated" : "Candidate updated")
+        : "Candidate submitted for approval";
+      await persist(nextStatus, successMsg);
       onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
