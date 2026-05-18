@@ -743,13 +743,13 @@ function StateSelect({
   onChange: (v: string) => void;
   fallbackStates: string[];
 }) {
-  const { states } = useStates();
+  const { indianStates } = useIndianStates({ onlyEnabled: true });
   const names = useMemo(() => {
     const set = new Set<string>();
-    states.forEach((s) => s.name && set.add(s.name));
+    indianStates.forEach((s) => s.name && set.add(s.name));
     fallbackStates.forEach((s) => s && set.add(s));
     return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [states, fallbackStates]);
+  }, [indianStates, fallbackStates]);
   return (
     <Select value={value || undefined} onValueChange={onChange}>
       <SelectTrigger id="pt-state">
