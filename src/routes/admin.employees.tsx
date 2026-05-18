@@ -3545,7 +3545,7 @@ function DesignationPicker({
   }, [query, designations]);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={setOpen} modal>
       <PopoverTrigger asChild>
         <Button
           ref={triggerRef}
