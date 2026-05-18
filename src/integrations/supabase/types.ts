@@ -145,6 +145,36 @@ export type Database = {
           },
         ]
       }
+      candidate_units: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          id: string
+          is_primary: boolean
+          sort_order: number
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          sort_order?: number
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          sort_order?: number
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       candidates: {
         Row: {
           aadhaar_image_url: string
