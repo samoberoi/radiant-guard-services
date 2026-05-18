@@ -3222,11 +3222,11 @@ function UnitPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const selected = value ? units.find((u) => u.id === value) : null;
   const filteredUnits = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return units;
-
     return units.filter((unit) =>
       [unit.code, unit.name, unit.customer_name ?? "", unit.id].some((part) =>
         part.toLowerCase().includes(needle),
@@ -3237,7 +3237,15 @@ function UnitPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" disabled={disabled} className="w-full justify-between font-normal">
+        <Button
+          ref={triggerRef}
+          type="button"
+          variant="outline"
+          role="combobox"
+          disabled={disabled}
+          className="w-full justify-between font-normal"
+          onMouseDown={(e) => e.preventDefault()}
+        >
           {selected ? (
             <span className="truncate">
               <b>{selected.code}</b> · {selected.name}
@@ -3252,7 +3260,10 @@ function UnitPicker({
         className="w-[420px] p-0"
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
-        onCloseAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          triggerRef.current?.focus({ preventScroll: true });
+        }}
       >
         <Command shouldFilter={false}>
           <CommandInput placeholder="Search units…" value={query} onValueChange={setQuery} />
@@ -3283,6 +3294,216 @@ function UnitPicker({
   );
 }
 
+function MultiUnitPicker({
+  units,
+  value,
+  onChange,
+  disabled = false,
+  emptyMessage = "No units found.",
+}: {
+  units: UnitLite[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+  disabled?: boolean;
+  emptyMessage?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const selectedSet = useMemo(() => new Set(value), [value]);
+  const selectedUnits = useMemo(
+    () => value.map((id) => units.find((u) => u.id === id)).filter(Boolean) as UnitLite[],
+    [value, units],
+  );
+
+  const filteredUnits = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return units;
+    return units.filter((u) =>
+      [u.code, u.name, u.customer_name ?? "", u.id].some((p) => p.toLowerCase().includes(needle)),
+    );
+  }, [query, units]);
+
+  // Group filtered units by customer/organization
+  const grouped = useMemo(() => {
+    const groups = new Map<string, UnitLite[]>();
+    for (const u of filteredUnits) {
+      const key = u.customer_name || "—";
+      const arr = groups.get(key) ?? [];
+      arr.push(u);
+      groups.set(key, arr);
+    }
+    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [filteredUnits]);
+
+  const toggle = (id: string) => {
+    if (selectedSet.has(id)) {
+      onChange(value.filter((v) => v !== id));
+    } else {
+      onChange([...value, id]);
+    }
+  };
+
+  const removeOne = (id: string) => onChange(value.filter((v) => v !== id));
+
+  const makePrimary = (id: string) => {
+    if (value[0] === id) return;
+    onChange([id, ...value.filter((v) => v !== id)]);
+  };
+
+  return (
+    <div className="space-y-2">
+      {/* Chips of selected units */}
+      <div className="flex flex-wrap gap-1.5 rounded-md border border-input bg-background p-2 min-h-[44px]">
+        {selectedUnits.length === 0 && (
+          <span className="self-center px-1 text-sm text-muted-foreground">
+            No units selected — click "Add unit" to assign.
+          </span>
+        )}
+        {selectedUnits.map((u, idx) => {
+          const isPrimary = idx === 0;
+          return (
+            <Badge
+              key={u.id}
+              variant={isPrimary ? "default" : "secondary"}
+              className={cn(
+                "flex items-center gap-1.5 pl-2 pr-1 py-1 text-xs font-normal",
+                isPrimary && "ring-1 ring-primary/40",
+              )}
+            >
+              {isPrimary && (
+                <span className="text-[9px] font-bold uppercase tracking-wider opacity-70">
+                  Primary
+                </span>
+              )}
+              <span className="font-mono font-semibold">{u.code}</span>
+              <span className="opacity-80">· {u.name}</span>
+              {u.customer_name && (
+                <span className="opacity-60 text-[10px]">({u.customer_name})</span>
+              )}
+              {!isPrimary && (
+                <button
+                  type="button"
+                  className="ml-1 rounded p-0.5 opacity-60 hover:bg-background/30 hover:opacity-100"
+                  title="Make primary"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    makePrimary(u.id);
+                  }}
+                  onMouseDown={(e) => e.preventDefault()}
+                >
+                  <Check className="h-3 w-3" />
+                </button>
+              )}
+              <button
+                type="button"
+                className="ml-0.5 rounded p-0.5 opacity-70 hover:bg-background/30 hover:opacity-100"
+                title="Remove"
+                onClick={(e) => {
+                  e.preventDefault();
+                  removeOne(u.id);
+                }}
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          );
+        })}
+      </div>
+
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            ref={triggerRef}
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            className="font-normal"
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            <Plus className="mr-1 h-3.5 w-3.5" />
+            {selectedUnits.length === 0 ? "Add unit…" : "Add / manage units…"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[480px] p-0"
+          align="start"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            triggerRef.current?.focus({ preventScroll: true });
+          }}
+        >
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Search by code, name or organization…"
+              value={query}
+              onValueChange={setQuery}
+            />
+            <CommandList className="max-h-[340px]">
+              <CommandEmpty>{emptyMessage}</CommandEmpty>
+              {grouped.map(([orgName, list]) => (
+                <CommandGroup key={orgName} heading={orgName}>
+                  {list.map((u) => {
+                    const checked = selectedSet.has(u.id);
+                    return (
+                      <CommandItem
+                        key={u.id}
+                        value={`${u.code} ${u.name} ${u.customer_name ?? ""}`}
+                        onSelect={() => toggle(u.id)}
+                        className="flex items-center gap-2"
+                      >
+                        <div
+                          className={cn(
+                            "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                            checked
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-input",
+                          )}
+                        >
+                          {checked && <Check className="h-3 w-3" />}
+                        </div>
+                        <div className="flex flex-1 flex-col">
+                          <span className="font-medium text-sm">
+                            <b>{u.code}</b> · {u.name}
+                          </span>
+                          {u.customer_name && (
+                            <span className="text-[11px] text-muted-foreground">
+                              {u.customer_name}
+                            </span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              ))}
+            </CommandList>
+            <div className="flex items-center justify-between border-t border-border px-2 py-1.5 text-[11px] text-muted-foreground">
+              <span>
+                {value.length} selected
+                {value.length > 0 && " — first one is Primary"}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[11px]"
+                onClick={() => setOpen(false)}
+              >
+                Done
+              </Button>
+            </div>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 function DesignationPicker({
   designations,
   value,
@@ -3298,6 +3519,7 @@ function DesignationPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const selected = value ? designations.find((d) => d.id === value) : null;
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -3310,7 +3532,15 @@ function DesignationPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" disabled={disabled} className="w-full justify-between font-normal">
+        <Button
+          ref={triggerRef}
+          type="button"
+          variant="outline"
+          role="combobox"
+          disabled={disabled}
+          className="w-full justify-between font-normal"
+          onMouseDown={(e) => e.preventDefault()}
+        >
           {selected ? (
             <span className="truncate">
               {selected.code ? <><b>{selected.code}</b> · </> : null}{selected.name}
@@ -3325,7 +3555,10 @@ function DesignationPicker({
         className="w-[420px] p-0"
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
-        onCloseAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          triggerRef.current?.focus({ preventScroll: true });
+        }}
       >
         <Command shouldFilter={false}>
           <CommandInput placeholder="Search designations…" value={query} onValueChange={setQuery} />
