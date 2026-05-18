@@ -745,10 +745,16 @@ function StateSelect({
 }) {
   const { indianStates } = useIndianStates({ onlyEnabled: true });
   const names = useMemo(() => {
-    const set = new Set<string>();
-    indianStates.forEach((s) => s.name && set.add(s.name));
-    fallbackStates.forEach((s) => s && set.add(s));
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
+    const norm = (s: string) =>
+      s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
+    const byNorm = new Map<string, string>();
+    indianStates.forEach((s) => {
+      if (s.name) byNorm.set(norm(s.name), s.name);
+    });
+    fallbackStates.forEach((s) => {
+      if (s && !byNorm.has(norm(s))) byNorm.set(norm(s), s);
+    });
+    return Array.from(byNorm.values()).sort((a, b) => a.localeCompare(b));
   }, [indianStates, fallbackStates]);
   return (
     <Select value={value || undefined} onValueChange={onChange}>
