@@ -711,6 +711,9 @@ function EmployeesPage() {
 
   const toggleEnabledMut = useMutation({
     mutationFn: async ({ candidate, enabled }: { candidate: CandidateListItem; enabled: boolean }) => {
+      if (enabled && candidate.no_hire) {
+        throw new Error("Employee is flagged Do not re-hire and cannot be reactivated.");
+      }
       const patch: Record<string, unknown> = { is_enabled: enabled, status: enabled ? "active" : "inactive" };
       if (enabled) {
         patch.offboarding_reason_id = null;
@@ -1079,6 +1082,10 @@ function EmployeesPage() {
                     setOffboardReasonId("");
                     return;
                   }
+                  if (c.no_hire) {
+                    toast.error("This employee is flagged Do not re-hire and cannot be reactivated.");
+                    return;
+                  }
                   const ok = await confirmAction({
                     title: "Activate employee?",
                     description: `${c.full_name || c.employee_code} will be marked active again.`,
@@ -1087,6 +1094,7 @@ function EmployeesPage() {
                   if (!ok) return;
                   toggleEnabledMut.mutate({ candidate: c, enabled: true });
                 }}
+                disabled={!c.is_enabled && c.no_hire}
               />
             </td>
           )}
@@ -3140,13 +3148,17 @@ function CandidateWizard({
                         onRequestOffboard();
                         return;
                       }
+                      if (isEmp && v === "active" && form.status === "inactive" && form.no_hire) {
+                        toast.error("This employee is flagged Do not re-hire and cannot be reactivated.");
+                        return;
+                      }
                       set("status", v);
                     }}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive") ? (
                           <>
-                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="active" disabled={form.status === "inactive" && form.no_hire}>Active</SelectItem>
                             <SelectItem value="inactive">Inactive</SelectItem>
                           </>
                         ) : (
