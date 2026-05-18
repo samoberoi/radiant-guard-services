@@ -301,6 +301,9 @@ function UnitManagerPage() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-5 py-2 text-xs text-muted-foreground">
+          <span><span className="font-semibold text-foreground">{rows.length}</span> {rows.length === 1 ? "row" : "rows"}</span>
+        </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
