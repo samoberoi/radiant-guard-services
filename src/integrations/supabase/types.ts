@@ -1051,6 +1051,36 @@ export type Database = {
         }
         Relationships: []
       }
+      offboarding_reasons: {
+        Row: {
+          created_at: string
+          description: string
+          enabled: boolean
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payroll_day_bases: {
         Row: {
           code: string
