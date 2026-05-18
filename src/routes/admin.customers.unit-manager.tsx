@@ -700,16 +700,18 @@ function UnitFormDialog({
               <Field label="PAN number">
                 <Input
                   value={form.panNumber}
-                  onChange={(e) => set("panNumber", e.target.value.toUpperCase())}
+                  onChange={(e) => set("panNumber", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10))}
                   placeholder="AAAAA0000A"
+                  maxLength={10}
                   className="font-mono"
                 />
               </Field>
               <Field label="GST number">
                 <Input
                   value={form.gstNumber}
-                  onChange={(e) => set("gstNumber", e.target.value.toUpperCase())}
+                  onChange={(e) => set("gstNumber", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15))}
                   placeholder="22AAAAA0000A1Z5"
+                  maxLength={15}
                   className="font-mono"
                 />
               </Field>
@@ -871,25 +873,25 @@ function UnitFormDialog({
                 <Input value={form.emergencyContactName} onChange={(e) => set("emergencyContactName", e.target.value)} />
               </Field>
               <Field label="Emergency contact mobile">
-                <Input value={form.emergencyContactMobile} onChange={(e) => set("emergencyContactMobile", e.target.value)} inputMode="tel" />
+                <Input value={form.emergencyContactMobile} onChange={(e) => set("emergencyContactMobile", e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" maxLength={10} placeholder="10-digit mobile" />
               </Field>
               <Field label="Nearby hospital">
                 <Input value={form.nearbyHospitalName} onChange={(e) => set("nearbyHospitalName", e.target.value)} />
               </Field>
               <Field label="Hospital mobile">
-                <Input value={form.nearbyHospitalMobile} onChange={(e) => set("nearbyHospitalMobile", e.target.value)} inputMode="tel" />
+                <Input value={form.nearbyHospitalMobile} onChange={(e) => set("nearbyHospitalMobile", e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" maxLength={10} placeholder="10-digit mobile" />
               </Field>
               <Field label="Ambulance service">
                 <Input value={form.ambulanceName} onChange={(e) => set("ambulanceName", e.target.value)} />
               </Field>
               <Field label="Ambulance mobile">
-                <Input value={form.ambulanceMobile} onChange={(e) => set("ambulanceMobile", e.target.value)} inputMode="tel" />
+                <Input value={form.ambulanceMobile} onChange={(e) => set("ambulanceMobile", e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" maxLength={10} placeholder="10-digit mobile" />
               </Field>
               <Field label="Security service">
                 <Input value={form.securityServiceName} onChange={(e) => set("securityServiceName", e.target.value)} />
               </Field>
               <Field label="Security mobile">
-                <Input value={form.securityServiceMobile} onChange={(e) => set("securityServiceMobile", e.target.value)} inputMode="tel" />
+                <Input value={form.securityServiceMobile} onChange={(e) => set("securityServiceMobile", e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" maxLength={10} placeholder="10-digit mobile" />
               </Field>
             </div>
           </Section>
@@ -991,7 +993,7 @@ function AddressFields({
         <Input value={address2} onChange={(e) => onChange({ [k("Address2")]: e.target.value })} />
       </Field>
       <Field label="Pincode">
-        <Input value={pincode} onChange={(e) => onChange({ [k("Pincode")]: e.target.value })} inputMode="numeric" />
+        <Input value={pincode} onChange={(e) => onChange({ [k("Pincode")]: e.target.value.replace(/\D/g, "").slice(0, 6) })} inputMode="numeric" maxLength={6} placeholder="6-digit pincode" />
       </Field>
       <Field label="City">
         <Input value={city} onChange={(e) => onChange({ [k("City")]: e.target.value })} />
