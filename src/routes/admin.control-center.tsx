@@ -87,6 +87,12 @@ const tiles: Tile[] = [
     icon: Building2,
   },
   {
+    to: "/admin/asset-manager",
+    label: "Asset Manager",
+    description: "Manage company-issued assets like Uniform, ID Card, Laptop and SIM.",
+    icon: Package,
+  },
+  {
     to: "/admin/language-manager",
     label: "Language Manager",
     description: "Manage languages used in employee profiles.",
