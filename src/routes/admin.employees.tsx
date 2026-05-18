@@ -206,6 +206,29 @@ type Candidate = {
   documents: any[];
   nominations: any[];
   kyc_completed: boolean;
+  // Offboarding & HR
+  assigned_asset_ids: string[];
+  no_hire: boolean;
+  offboarding_details: OffboardingDetails;
+};
+
+export type OffboardingAssetReturn = {
+  asset_id: string;
+  returned: boolean;
+  remarks?: string;
+};
+
+export type OffboardingDetails = {
+  date_of_offboarding?: string | null;
+  date_of_resignation?: string | null;
+  date_of_last_working?: string | null;
+  date_of_pf_update?: string | null;
+  date_of_esic_update?: string | null;
+  reason_text?: string;
+  review?: string;
+  asset_returns?: OffboardingAssetReturn[];
+  rating?: number;
+  rating_remarks?: string;
 };
 
 type CandidateExperience = {
