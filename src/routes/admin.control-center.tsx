@@ -81,6 +81,12 @@ const tiles: Tile[] = [
     icon: Shield,
   },
   {
+    to: "/admin/esic-branch-manager",
+    label: "ESIC Branch Manager",
+    description: "Manage ESIC branch codes mapped to locations across zones.",
+    icon: Building2,
+  },
+  {
     to: "/admin/language-manager",
     label: "Language Manager",
     description: "Manage languages used in employee profiles.",
