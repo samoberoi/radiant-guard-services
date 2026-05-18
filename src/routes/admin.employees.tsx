@@ -1272,7 +1272,7 @@ function EmployeesPage() {
               size="sm"
               onClick={() => {
                 setFilterRole("all"); setFilterDesignation("all"); setFilterCustomer("all");
-                setFilterUnit("all"); setFilterManager("all"); setFilterEnabled("all");
+                setFilterUnit("all"); setFilterManager("all"); setFilterEnabled("all"); setFilterBillable("all");
               }}
               className="h-9 text-xs text-muted-foreground"
             >
