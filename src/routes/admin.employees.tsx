@@ -1711,7 +1711,10 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
   });
 }
 
-type CandidateForm = Omit<Candidate, "id">;
+type CandidateForm = Omit<Candidate, "id"> & {
+  /** All units assigned to this candidate. First entry is the primary unit (mirrored to candidates.unit_id). */
+  unit_ids: string[];
+};
 
 function emptyForm(): CandidateForm {
   return {
