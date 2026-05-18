@@ -182,6 +182,7 @@ export type Database = {
           alt_mobile: string
           application_date: string
           approved_at: string | null
+          assigned_asset_ids: string[]
           bank_account_holder: string
           bank_account_number: string
           bank_account_type: string
@@ -217,8 +218,10 @@ export type Database = {
           languages: Json
           marital_status: string
           mobile: string
+          no_hire: boolean
           nominations: Json
           offboarded_at: string | null
+          offboarding_details: Json
           offboarding_reason_id: string | null
           other_info: Json
           pan_image_url: string
@@ -262,6 +265,7 @@ export type Database = {
           alt_mobile?: string
           application_date?: string
           approved_at?: string | null
+          assigned_asset_ids?: string[]
           bank_account_holder?: string
           bank_account_number?: string
           bank_account_type?: string
@@ -297,8 +301,10 @@ export type Database = {
           languages?: Json
           marital_status?: string
           mobile?: string
+          no_hire?: boolean
           nominations?: Json
           offboarded_at?: string | null
+          offboarding_details?: Json
           offboarding_reason_id?: string | null
           other_info?: Json
           pan_image_url?: string
@@ -342,6 +348,7 @@ export type Database = {
           alt_mobile?: string
           application_date?: string
           approved_at?: string | null
+          assigned_asset_ids?: string[]
           bank_account_holder?: string
           bank_account_number?: string
           bank_account_type?: string
@@ -377,8 +384,10 @@ export type Database = {
           languages?: Json
           marital_status?: string
           mobile?: string
+          no_hire?: boolean
           nominations?: Json
           offboarded_at?: string | null
+          offboarding_details?: Json
           offboarding_reason_id?: string | null
           other_info?: Json
           pan_image_url?: string
