@@ -863,6 +863,21 @@ function EmployeesPage() {
             )}
           </td>
           <td className="px-3 py-3 text-sm text-muted-foreground max-w-[140px]"><span className="line-clamp-2" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
+          <td className="px-3 py-3 text-center">
+            {desig ? (
+              desig.billable ? (
+                <Badge variant="outline" className="border-emerald-300/70 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300">
+                  Billable
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="border-slate-300/70 bg-slate-50 text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/10 dark:text-slate-300">
+                  Non-billable
+                </Badge>
+              )
+            ) : (
+              <span className="text-xs text-muted-foreground">—</span>
+            )}
+          </td>
           {mode === "employee" && (
             <td className="px-3 py-3">
               {c.role_key ? (
