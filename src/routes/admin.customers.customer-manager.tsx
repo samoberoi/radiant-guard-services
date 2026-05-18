@@ -962,15 +962,26 @@ function CustomerFormDialog({
 
           <SectionHeading title="Billing information" />
           <div className="grid gap-4 sm:grid-cols-2">
-            {billingFields.map((f) => (
-              <Field key={f.key} label={f.label} full={f.full}>
-                <Input
-                  value={(form[f.key] as string) ?? ""}
-                  onChange={(e) => set(f.key, e.target.value as never)}
-                  placeholder={f.placeholder}
-                />
-              </Field>
-            ))}
+            {billingFields.map((f) => {
+              const isPincode = f.key === "billingPincode";
+              const isPhone = f.key === "billingPhone" || f.key === "billingFax";
+              return (
+                <Field key={f.key} label={f.label} full={f.full}>
+                  <Input
+                    value={(form[f.key] as string) ?? ""}
+                    onChange={(e) => {
+                      let v = e.target.value;
+                      if (isPincode) v = v.replace(/\D/g, "").slice(0, 6);
+                      else if (isPhone) v = v.replace(/\D/g, "").slice(0, 10);
+                      set(f.key, v as never);
+                    }}
+                    placeholder={f.placeholder ?? (isPincode ? "6-digit pincode" : isPhone ? "10-digit number" : undefined)}
+                    inputMode={isPincode || isPhone ? "numeric" : undefined}
+                    maxLength={isPincode ? 6 : isPhone ? 10 : undefined}
+                  />
+                </Field>
+              );
+            })}
           </div>
 
           <div>
@@ -986,15 +997,26 @@ function CustomerFormDialog({
             </div>
             {!form.shippingSameAsBilling && (
               <div className="grid gap-4 sm:grid-cols-2">
-                {shippingFields.map((f) => (
-                  <Field key={f.key} label={f.label} full={f.full}>
-                    <Input
-                      value={(form[f.key] as string) ?? ""}
-                      onChange={(e) => set(f.key, e.target.value as never)}
-                      placeholder={f.placeholder}
-                    />
-                  </Field>
-                ))}
+                {shippingFields.map((f) => {
+                  const isPincode = f.key === "shippingPincode";
+                  const isPhone = f.key === "shippingPhone" || f.key === "shippingFax";
+                  return (
+                    <Field key={f.key} label={f.label} full={f.full}>
+                      <Input
+                        value={(form[f.key] as string) ?? ""}
+                        onChange={(e) => {
+                          let v = e.target.value;
+                          if (isPincode) v = v.replace(/\D/g, "").slice(0, 6);
+                          else if (isPhone) v = v.replace(/\D/g, "").slice(0, 10);
+                          set(f.key, v as never);
+                        }}
+                        placeholder={f.placeholder ?? (isPincode ? "6-digit pincode" : isPhone ? "10-digit number" : undefined)}
+                        inputMode={isPincode || isPhone ? "numeric" : undefined}
+                        maxLength={isPincode ? 6 : isPhone ? 10 : undefined}
+                      />
+                    </Field>
+                  );
+                })}
               </div>
             )}
           </div>
