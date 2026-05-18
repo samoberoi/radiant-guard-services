@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useStates } from "@/lib/admin-data";
 import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
@@ -616,19 +617,11 @@ function PtSlabFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="pt-state">State</Label>
-              <Input
-                id="pt-state"
-                list="pt-states-list"
+              <StateSelect
                 value={form.state}
-                onChange={(e) => set("state", e.target.value)}
-                placeholder="e.g. Maharashtra"
-                autoFocus
+                onChange={(v) => set("state", v)}
+                fallbackStates={knownStates}
               />
-              <datalist id="pt-states-list">
-                {knownStates.map((s) => (
-                  <option key={s} value={s} />
-                ))}
-              </datalist>
             </div>
             <div className="space-y-2">
               <Label htmlFor="pt-region">Region label</Label>
@@ -738,5 +731,37 @@ function PtSlabFormDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function StateSelect({
+  value,
+  onChange,
+  fallbackStates,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  fallbackStates: string[];
+}) {
+  const { states } = useStates();
+  const names = useMemo(() => {
+    const set = new Set<string>();
+    states.forEach((s) => s.name && set.add(s.name));
+    fallbackStates.forEach((s) => s && set.add(s));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [states, fallbackStates]);
+  return (
+    <Select value={value || undefined} onValueChange={onChange}>
+      <SelectTrigger id="pt-state">
+        <SelectValue placeholder="Select state" />
+      </SelectTrigger>
+      <SelectContent>
+        {names.map((n) => (
+          <SelectItem key={n} value={n}>
+            {n}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
