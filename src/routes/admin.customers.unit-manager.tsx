@@ -993,7 +993,7 @@ function AddressFields({
         <Input value={address2} onChange={(e) => onChange({ [k("Address2")]: e.target.value })} />
       </Field>
       <Field label="Pincode">
-        <Input value={pincode} onChange={(e) => onChange({ [k("Pincode")]: e.target.value })} inputMode="numeric" />
+        <Input value={pincode} onChange={(e) => onChange({ [k("Pincode")]: e.target.value.replace(/\D/g, "").slice(0, 6) })} inputMode="numeric" maxLength={6} placeholder="6-digit pincode" />
       </Field>
       <Field label="City">
         <Input value={city} onChange={(e) => onChange({ [k("City")]: e.target.value })} />
