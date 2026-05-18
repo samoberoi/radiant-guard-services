@@ -2049,6 +2049,7 @@ function CandidateWizard({
   languagesList,
   esicBranches,
   offboardReasons = [],
+  assets = [],
   canReview = false,
   isApproving = false,
   onApprove,
@@ -2068,6 +2069,7 @@ function CandidateWizard({
   languagesList: LanguageLite[];
   esicBranches: EsicBranchLite[];
   offboardReasons?: { id: string; name: string }[];
+  assets?: { id: string; name: string; category: string }[];
   canReview?: boolean;
   isApproving?: boolean;
   onApprove?: () => void;
