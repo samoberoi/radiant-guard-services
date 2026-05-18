@@ -3332,7 +3332,7 @@ function CandidateWizard({
                   variant="outline"
                   onClick={() => onReject?.()}
                   disabled={submitting || savingDraft || !!uploading || scanning}
-                  className="border-rose-200 bg-rose-50/50 text-rose-600 hover:bg-rose-50 dark:border-rose-500/40 dark:bg-transparent dark:hover:bg-rose-500/10"
+                  className="border-rose-200 bg-rose-50/50 text-rose-600 hover:bg-rose-50 hover:text-rose-600 dark:border-rose-500/40 dark:bg-transparent dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
                 >
                   <X className="mr-1.5 h-4 w-4" />
                   Reject
