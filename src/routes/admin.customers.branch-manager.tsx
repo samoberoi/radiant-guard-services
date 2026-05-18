@@ -136,14 +136,14 @@ function BranchManagerPage() {
                 rows.map((b) => ({
                   branchCode: b.code,
                   branchName: b.name || b.stateName,
-                  state: b.stateName,
+                  location: b.stateName,
                   branchDisplay: `${b.code} – ${b.stateName}`,
                   description: b.description,
                 })),
                 [
                   { key: "branchCode", header: "Branch code" },
                   { key: "branchName", header: "Branch name" },
-                  { key: "state", header: "State" },
+                  { key: "location", header: "Location" },
                   { key: "branchDisplay", header: "Branch display" },
                   { key: "description", header: "Description" },
                 ],
