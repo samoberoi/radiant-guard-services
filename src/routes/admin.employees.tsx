@@ -2901,9 +2901,19 @@ function CandidateWizard({
                     <Select value={form.status} onValueChange={(v) => set("status", v)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
+                        {editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive" || editing.status === "offboarded") ? (
+                          <>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="inactive">Inactive</SelectItem>
+                            <SelectItem value="offboarded">Offboarded</SelectItem>
+                          </>
+                        ) : (
+                          <>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="rejected">Rejected</SelectItem>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </Field>
