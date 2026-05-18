@@ -20,6 +20,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
 import { csvDate, downloadCsv } from "@/lib/csv-export";
+import { DeleteGuardButton } from "@/components/DeleteGuardButton";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmProvider";
 import { PageHeader } from "@/components/PageHeader";
