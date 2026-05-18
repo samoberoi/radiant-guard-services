@@ -134,11 +134,11 @@ function useDesignations() {
     onSuccess: invalidate,
   });
 
-  return { items, addMut, updateMut, toggleMut, deleteMut };
+  return { items, addMut, updateMut, toggleMut, billableMut, deleteMut };
 }
 
 function DesignationManagerPage() {
-  const { items, addMut, updateMut, toggleMut, deleteMut } = useDesignations();
+  const { items, addMut, updateMut, toggleMut, billableMut, deleteMut } = useDesignations();
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Designation | null>(null);
