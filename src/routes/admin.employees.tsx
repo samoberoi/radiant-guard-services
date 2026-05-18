@@ -1523,10 +1523,6 @@ function EmployeesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* dummy closing kept for diff continuity */}
-      <div className="hidden" />
-      <AlertDialog open={false}><AlertDialogContent /></AlertDialog>{/* spacer */}
-      </>
 
       <Dialog
         open={!!rejectTarget}
