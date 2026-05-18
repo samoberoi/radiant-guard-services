@@ -1467,6 +1467,67 @@ function EmployeesPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Offboarding workflow */}
+      <Dialog
+        open={!!offboardTarget}
+        onOpenChange={(o) => {
+          if (!o) {
+            setOffboardTarget(null);
+            setOffboardReasonId("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Offboard employee?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to disable {offboardTarget?.full_name || offboardTarget?.employee_code || "this employee"}? Pick a reason — this will start their offboarding.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Offboarding reason</Label>
+            <Select value={offboardReasonId} onValueChange={setOffboardReasonId}>
+              <SelectTrigger>
+                <SelectValue placeholder={offboardReasonsQuery.isLoading ? "Loading…" : "Select a reason"} />
+              </SelectTrigger>
+              <SelectContent>
+                {offboardReasons.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                ))}
+                {!offboardReasonsQuery.isLoading && offboardReasons.length === 0 && (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">No reasons configured. Add them in Offboarding Reason Manager.</div>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setOffboardTarget(null); setOffboardReasonId(""); }}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-rose-600 text-white hover:bg-rose-700"
+              disabled={!offboardReasonId || offboardMut.isPending}
+              onClick={() => {
+                if (!offboardTarget || !offboardReasonId) return;
+                const reason = offboardReasons.find((r) => r.id === offboardReasonId);
+                offboardMut.mutate({
+                  candidate: offboardTarget,
+                  reasonId: offboardReasonId,
+                  reasonName: reason?.name ?? "",
+                });
+              }}
+            >
+              {offboardMut.isPending ? "Offboarding…" : "Confirm offboarding"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* dummy closing kept for diff continuity */}
+      <div className="hidden" />
+      <AlertDialog open={false}><AlertDialogContent /></AlertDialog>{/* spacer */}
+      </>
+
       <Dialog
         open={!!rejectTarget}
         onOpenChange={(o) => {
