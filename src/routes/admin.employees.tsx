@@ -2780,17 +2780,19 @@ function CandidateWizard({
                       onChange={(e) => set("preferred_joining_date", e.target.value || null)}
                     />
                   </Field>
-                  <Field label="Unit (Client)">
-                    <UnitPicker
-                      units={units}
-                      value={form.unit_id}
-                      onChange={(id) => set("unit_id", id)}
-                      disabled={unitsLoading || !!unitsError}
-                      emptyMessage={unitsError ? `Could not load units: ${unitsError}` : "No units found."}
-                    />
-                  </Field>
-                  <Field label="Organization">
-                    <Input value={unit?.customer_name ?? ""} disabled placeholder="Auto-filled from unit" />
+                  <div className="sm:col-span-2">
+                    <Field label={`Units (Client) — select one or more${form.unit_ids.length > 0 ? ` · ${form.unit_ids.length} selected` : ""}`}>
+                      <MultiUnitPicker
+                        units={units}
+                        value={form.unit_ids}
+                        onChange={(ids) => setForm((f) => ({ ...f, unit_ids: ids, unit_id: ids[0] ?? null }))}
+                        disabled={unitsLoading || !!unitsError}
+                        emptyMessage={unitsError ? `Could not load units: ${unitsError}` : "No units found."}
+                      />
+                    </Field>
+                  </div>
+                  <Field label="Organization (from primary unit)">
+                    <Input value={unit?.customer_name ?? ""} disabled placeholder="Auto-filled from primary unit" />
                   </Field>
                   <Field label="Designation">
                     <DesignationPicker
