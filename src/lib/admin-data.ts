@@ -107,6 +107,7 @@ type AddResult = { ok: true; id: string } | { ok: false; error: string };
 
 const QK = {
   states: ["admin", "states"] as const,
+  indianStates: ["admin", "indian_states"] as const,
   branches: ["admin", "branches"] as const,
   customers: ["admin", "customers"] as const,
 };
