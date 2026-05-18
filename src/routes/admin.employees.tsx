@@ -4406,12 +4406,45 @@ function AssetMultiPicker({
   onChange: (ids: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
   const selectedSet = useMemo(() => new Set(value), [value]);
   const selected = useMemo(() => assets.filter((a) => selectedSet.has(a.id)), [assets, selectedSet]);
+
+  const filtered = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return assets;
+    return assets.filter((a) =>
+      [a.name, a.category].some((p) => (p ?? "").toLowerCase().includes(needle)),
+    );
+  }, [query, assets]);
+
+  const grouped = useMemo(() => {
+    const groups = new Map<string, typeof assets>();
+    for (const a of filtered) {
+      const key = a.category || "—";
+      const arr = groups.get(key) ?? [];
+      arr.push(a);
+      groups.set(key, arr);
+    }
+    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [filtered]);
+
   const toggle = (id: string) => {
     if (selectedSet.has(id)) onChange(value.filter((v) => v !== id));
     else onChange([...value, id]);
   };
+
+  useEffect(() => {
+    if (!open) {
+      setQuery("");
+      return;
+    }
+    const frame = requestAnimationFrame(() => searchInputRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [open]);
+
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5 rounded-md border border-input bg-background p-2 min-h-[44px]">
@@ -4426,7 +4459,7 @@ function AssetMultiPicker({
             <span className="opacity-60 text-[10px]">· {a.category}</span>
             <button
               type="button"
-              className="ml-1 rounded p-0.5 opacity-60 hover:bg-background/30 hover:opacity-100"
+              className="ml-1 rounded p-0.5 opacity-70 hover:bg-background/30 hover:opacity-100"
               title="Remove"
               onClick={(e) => { e.preventDefault(); onChange(value.filter((v) => v !== a.id)); }}
               onMouseDown={(e) => e.preventDefault()}
@@ -4436,36 +4469,71 @@ function AssetMultiPicker({
           </Badge>
         ))}
       </div>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button type="button" variant="outline" size="sm" className="gap-1">
-            <Plus className="h-3.5 w-3.5" /> Add asset
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[320px] p-0" align="start">
-          <Command>
-            <CommandInput placeholder="Search assets…" />
-            <CommandList>
-              <CommandEmpty>No assets found.</CommandEmpty>
-              <CommandGroup>
-                {assets.map((a) => {
-                  const checked = selectedSet.has(a.id);
-                  return (
-                    <CommandItem key={a.id} value={`${a.name} ${a.category}`} onSelect={() => toggle(a.id)}>
-                      <Check className={cn("mr-2 h-4 w-4", checked ? "opacity-100" : "opacity-0")} />
-                      <span>{a.name}</span>
-                      <span className="ml-auto text-[10px] text-muted-foreground">{a.category}</span>
-                    </CommandItem>
-                  );
-                })}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
+
+      <div className="space-y-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="font-normal"
+          onClick={() => setOpen((prev) => !prev)}
+        >
+          <Plus className="mr-1 h-3.5 w-3.5" />
+          {open ? "Close asset selector" : selected.length === 0 ? "Add asset…" : "Add / manage assets…"}
+        </Button>
+
+        {open ? (
+          <div className="rounded-md border border-border bg-background">
+            <div className="border-b border-border p-2">
+              <Input
+                ref={searchInputRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search by name or category…"
+              />
+            </div>
+            <div className="max-h-[340px] overflow-y-auto p-2">
+              {grouped.length === 0 ? (
+                <div className="px-2 py-6 text-center text-sm text-muted-foreground">No assets found.</div>
+              ) : (
+                <div className="space-y-3">
+                  {grouped.map(([cat, list]) => (
+                    <div key={cat} className="space-y-1.5">
+                      <div className="px-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        {cat}
+                      </div>
+                      <div className="space-y-1">
+                        {list.map((a) => {
+                          const checked = selectedSet.has(a.id);
+                          return (
+                            <button
+                              key={a.id}
+                              type="button"
+                              onClick={() => toggle(a.id)}
+                              className={cn(
+                                "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors",
+                                checked ? "bg-primary/10 text-foreground" : "hover:bg-secondary",
+                              )}
+                            >
+                              <Check className={cn("h-4 w-4 shrink-0", checked ? "opacity-100" : "opacity-0")} />
+                              <span className="flex-1 truncate">{a.name}</span>
+                              <span className="text-[10px] text-muted-foreground">{a.category}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
+
 
 function MultiUnitPicker({
   units,
