@@ -743,3 +743,41 @@ function LwfFormDialog({
     </Dialog>
   );
 }
+
+function LwfStateSelect({
+  value,
+  onChange,
+  fallbackStates,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  fallbackStates: string[];
+}) {
+  const { indianStates } = useIndianStates({ onlyEnabled: true });
+  const names = useMemo(() => {
+    const norm = (s: string) =>
+      s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
+    const byNorm = new Map<string, string>();
+    indianStates.forEach((s) => {
+      if (s.name) byNorm.set(norm(s.name), s.name);
+    });
+    fallbackStates.forEach((s) => {
+      if (s && !byNorm.has(norm(s))) byNorm.set(norm(s), s);
+    });
+    return Array.from(byNorm.values()).sort((a, b) => a.localeCompare(b));
+  }, [indianStates, fallbackStates]);
+  return (
+    <Select value={value || undefined} onValueChange={onChange}>
+      <SelectTrigger id="lwf-state">
+        <SelectValue placeholder="Select state" />
+      </SelectTrigger>
+      <SelectContent>
+        {names.map((n) => (
+          <SelectItem key={n} value={n}>
+            {n}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
