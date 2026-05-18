@@ -361,7 +361,7 @@ function useDesignations() {
       const { data, error } = await runWithQueryTimeout("Designations", async (signal) =>
         await supabase
           .from("designations" as never)
-          .select("id,name,code,enabled")
+          .select("id,name,code,enabled,billable")
           .eq("enabled", true)
           .order("name", { ascending: true })
           .limit(500)
