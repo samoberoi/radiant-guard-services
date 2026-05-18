@@ -873,25 +873,25 @@ function UnitFormDialog({
                 <Input value={form.emergencyContactName} onChange={(e) => set("emergencyContactName", e.target.value)} />
               </Field>
               <Field label="Emergency contact mobile">
-                <Input value={form.emergencyContactMobile} onChange={(e) => set("emergencyContactMobile", e.target.value)} inputMode="tel" />
+                <Input value={form.emergencyContactMobile} onChange={(e) => set("emergencyContactMobile", e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" maxLength={10} placeholder="10-digit mobile" />
               </Field>
               <Field label="Nearby hospital">
                 <Input value={form.nearbyHospitalName} onChange={(e) => set("nearbyHospitalName", e.target.value)} />
               </Field>
               <Field label="Hospital mobile">
-                <Input value={form.nearbyHospitalMobile} onChange={(e) => set("nearbyHospitalMobile", e.target.value)} inputMode="tel" />
+                <Input value={form.nearbyHospitalMobile} onChange={(e) => set("nearbyHospitalMobile", e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" maxLength={10} placeholder="10-digit mobile" />
               </Field>
               <Field label="Ambulance service">
                 <Input value={form.ambulanceName} onChange={(e) => set("ambulanceName", e.target.value)} />
               </Field>
               <Field label="Ambulance mobile">
-                <Input value={form.ambulanceMobile} onChange={(e) => set("ambulanceMobile", e.target.value)} inputMode="tel" />
+                <Input value={form.ambulanceMobile} onChange={(e) => set("ambulanceMobile", e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" maxLength={10} placeholder="10-digit mobile" />
               </Field>
               <Field label="Security service">
                 <Input value={form.securityServiceName} onChange={(e) => set("securityServiceName", e.target.value)} />
               </Field>
               <Field label="Security mobile">
-                <Input value={form.securityServiceMobile} onChange={(e) => set("securityServiceMobile", e.target.value)} inputMode="tel" />
+                <Input value={form.securityServiceMobile} onChange={(e) => set("securityServiceMobile", e.target.value.replace(/\D/g, "").slice(0, 10))} inputMode="numeric" maxLength={10} placeholder="10-digit mobile" />
               </Field>
             </div>
           </Section>
