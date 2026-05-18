@@ -3575,33 +3575,63 @@ function CameraCaptureDialog({
         if (!navigator.mediaDevices?.getUserMedia) {
           throw new Error("Camera API not available in this browser");
         }
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: false,
-        });
+        if (!window.isSecureContext) {
+          throw new Error("Camera requires a secure (HTTPS) context.");
+        }
+        // On many Windows laptops / desktop webcams the `facingMode` constraint
+        // is not supported and getUserMedia rejects with OverconstrainedError.
+        // Try the preferred constraints first, then progressively relax.
+        const attempts: MediaStreamConstraints[] = [
+          { video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+          { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+          { video: true, audio: false },
+        ];
+        let stream: MediaStream | null = null;
+        let lastErr: unknown = null;
+        for (const constraints of attempts) {
+          try {
+            stream = await navigator.mediaDevices.getUserMedia(constraints);
+            break;
+          } catch (err) {
+            lastErr = err;
+            const name = (err as { name?: string })?.name;
+            // Only retry on constraint-related failures
+            if (name !== "OverconstrainedError" && name !== "ConstraintNotSatisfiedError" && name !== "NotFoundError") {
+              throw err;
+            }
+          }
+        }
+        if (!stream) throw lastErr ?? new Error("Could not start camera");
         if (cancelled) {
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
         streamRef.current = stream;
         if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          await videoRef.current.play().catch(() => {});
-          setReady(true);
+          const v = videoRef.current;
+          v.srcObject = stream;
+          v.onloadedmetadata = () => {
+            v.play().catch(() => {});
+            setReady(true);
+          };
+          // Fallback in case onloadedmetadata already fired
+          await v.play().catch(() => {});
+          if (v.readyState >= 1) setReady(true);
         }
       } catch (e: unknown) {
         const err = e as { name?: string; message?: string };
-        if (err.name === "NotAllowedError") {
-          setError("Camera permission denied. Enable camera access in your browser settings and retry.");
-        } else if (err.name === "NotFoundError") {
-          setError("No camera found on this device.");
+        if (err.name === "NotAllowedError" || err.name === "SecurityError") {
+          setError("Camera permission denied. Click the camera icon in the browser address bar and allow access, then retry.");
+        } else if (err.name === "NotFoundError" || err.name === "OverconstrainedError") {
+          setError("No compatible camera found on this device.");
         } else if (err.name === "NotReadableError") {
-          setError("Camera is in use by another application.");
+          setError("Camera is in use by another application (e.g. Teams, Zoom). Close it and retry.");
         } else {
           setError(err.message || "Could not start camera");
         }
       }
     })();
+
 
     return () => {
       cancelled = true;
