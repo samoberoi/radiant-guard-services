@@ -1244,7 +1244,7 @@ function EmployeesPage() {
                     variant="outline"
                     size="icon"
                     onClick={() => setSignTarget({ id: c.id, docType: "nda" })}
-                    className="h-8 w-8 rounded-lg border-amber-200 bg-amber-50/50 text-amber-700 hover:bg-amber-50 dark:border-amber-500/40 dark:bg-transparent dark:text-amber-300 dark:hover:bg-amber-500/10"
+                    className="h-8 w-8 rounded-lg border-amber-200 bg-amber-50/50 text-amber-700 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-500/40 dark:bg-transparent dark:text-amber-300 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
                     title="Sign NDA"
                   >
                     <FileSignature className="h-4 w-4" />
