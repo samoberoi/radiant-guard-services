@@ -558,19 +558,21 @@ function EmployeesPage() {
     return true;
   };
 
+  const isEmployeeStatus = (s: string) => s === "approved" || s === "active" || s === "inactive" || s === "offboarded";
+
   const employees = useMemo(
-    () => candidates.filter((c) => (c.status === "approved" || c.status === "active") && matchesSearch(c) && matchesFilters(c)),
+    () => candidates.filter((c) => isEmployeeStatus(c.status) && matchesSearch(c) && matchesFilters(c)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, units, designations],
   );
   const candidateRows = useMemo(
-    () => candidates.filter((c) => c.status !== "approved" && c.status !== "active" && matchesSearch(c)),
+    () => candidates.filter((c) => !isEmployeeStatus(c.status) && matchesSearch(c)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [candidates, search],
   );
 
   const fieldManagers = useMemo(
-    () => candidates.filter((c) => c.role_key === "field_manager" && (c.status === "approved" || c.status === "active")),
+    () => candidates.filter((c) => c.role_key === "field_manager" && isEmployeeStatus(c.status)),
     [candidates],
   );
   const scopeByCandidate = useMemo(() => {
@@ -584,7 +586,7 @@ function EmployeesPage() {
 
   const stats = useMemo(() => {
     const total = candidates.length;
-    const approved = candidates.filter((c) => c.status === "approved" || c.status === "active").length;
+    const approved = candidates.filter((c) => isEmployeeStatus(c.status)).length;
     const pending = candidates.filter((c) => c.status === "pending").length;
     const rejected = candidates.filter((c) => c.status === "rejected").length;
     const drafts = candidates.filter((c) => c.status === "draft").length;
@@ -1741,6 +1743,8 @@ function StatusBadge({ status }: { status: string }) {
     draft: "bg-slate-500/15 text-slate-600",
     approved: "bg-emerald-500/15 text-emerald-600",
     active: "bg-emerald-500/15 text-emerald-600",
+    inactive: "bg-slate-500/15 text-slate-600",
+    offboarded: "bg-rose-500/15 text-rose-600",
     pending: "bg-amber-500/15 text-amber-600",
     rejected: "bg-rose-500/15 text-rose-600",
   };
@@ -1911,7 +1915,8 @@ function CandidateWizard({
       }
       // Optimistically seed with the single mirrored unit_id so the picker isn't empty during fetch.
       const initialUnitIds = rest.unit_id ? [rest.unit_id] : [];
-      setForm({ ...(rest as CandidateForm), contacts, unit_ids: initialUnitIds });
+      const normalizedStatus = rest.status === "approved" ? "active" : rest.status;
+      setForm({ ...(rest as CandidateForm), status: normalizedStatus, contacts, unit_ids: initialUnitIds });
       // Load full multi-unit assignment from junction table.
       (async () => {
         const { data, error } = await supabase
@@ -2265,8 +2270,11 @@ function CandidateWizard({
     setSubmitting(true);
     try {
       // Creating / re-submitting moves to "pending" so the admin can approve.
-      const nextStatus = editing && editing.status === "approved" ? "approved" : "pending";
-      const isEmployee = !!editing && (editing.status === "approved" || editing.status === "active");
+      const isEmployee = !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive" || editing.status === "offboarded");
+      // For employees, preserve the chosen status (active/inactive/offboarded). New/candidate edits go to pending.
+      const nextStatus = isEmployee
+        ? (form.status === "inactive" || form.status === "offboarded" ? form.status : "active")
+        : "pending";
       const successMsg = editing
         ? (isEmployee ? "Employee updated" : "Candidate updated")
         : "Candidate submitted for approval";
@@ -2894,9 +2902,19 @@ function CandidateWizard({
                     <Select value={form.status} onValueChange={(v) => set("status", v)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">Pending</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="rejected">Rejected</SelectItem>
+                        {editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive" || editing.status === "offboarded") ? (
+                          <>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="inactive">Inactive</SelectItem>
+                            <SelectItem value="offboarded">Offboarded</SelectItem>
+                          </>
+                        ) : (
+                          <>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="rejected">Rejected</SelectItem>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </Field>
