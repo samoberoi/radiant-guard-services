@@ -3648,6 +3648,299 @@ function UnitPicker({
   );
 }
 
+// ---------------- Offboarding Dialog ---------------- //
+
+const ABSCONDING_NAMES = new Set(["absconding", "abscond", "absconded"]);
+
+function OffboardingDialog({
+  target,
+  reasons,
+  reasonsLoading,
+  assets,
+  initialReasonId,
+  isSubmitting,
+  onClose,
+  onSubmit,
+}: {
+  target: CandidateListItem | null;
+  reasons: { id: string; name: string }[];
+  reasonsLoading: boolean;
+  assets: { id: string; name: string; category: string }[];
+  initialReasonId: string;
+  isSubmitting: boolean;
+  onClose: () => void;
+  onSubmit: (args: { reasonId: string; details: OffboardingDetails; noHire: boolean }) => void;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [reasonId, setReasonId] = useState<string>(initialReasonId);
+  const [dateOfOffboarding, setDateOfOffboarding] = useState<string>(today);
+  const [dateOfResignation, setDateOfResignation] = useState<string>("");
+  const [dateOfLastWorking, setDateOfLastWorking] = useState<string>("");
+  const [dateOfPfUpdate, setDateOfPfUpdate] = useState<string>("");
+  const [dateOfEsicUpdate, setDateOfEsicUpdate] = useState<string>("");
+  const [reasonText, setReasonText] = useState<string>("");
+  const [review, setReview] = useState<string>("");
+  const [assetReturns, setAssetReturns] = useState<OffboardingAssetReturn[]>([]);
+  const [rating, setRating] = useState<number>(0);
+  const [ratingRemarks, setRatingRemarks] = useState<string>("");
+  const [noHire, setNoHire] = useState<boolean>(false);
+  const [noHireTouched, setNoHireTouched] = useState<boolean>(false);
+
+  // Reset when target changes
+  useEffect(() => {
+    if (!target) return;
+    setReasonId(initialReasonId || "");
+    setDateOfOffboarding(today);
+    setDateOfResignation("");
+    setDateOfLastWorking("");
+    setDateOfPfUpdate("");
+    setDateOfEsicUpdate("");
+    setReasonText("");
+    setReview("");
+    const prefill = (target.assigned_asset_ids ?? []).map((id) => ({ asset_id: id, returned: false, remarks: "" }));
+    setAssetReturns(prefill);
+    setRating(0);
+    setRatingRemarks("");
+    setNoHire(false);
+    setNoHireTouched(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target?.id]);
+
+  const selectedReason = reasons.find((r) => r.id === reasonId);
+  const isAbsconding = !!selectedReason && ABSCONDING_NAMES.has(selectedReason.name.trim().toLowerCase());
+
+  // Auto-enable no-hire on Absconding (unless user manually toggled)
+  useEffect(() => {
+    if (!noHireTouched) {
+      setNoHire(isAbsconding);
+    }
+  }, [isAbsconding, noHireTouched]);
+
+  const assetById = useMemo(() => new Map(assets.map((a) => [a.id, a])), [assets]);
+
+  const toggleReturned = (assetId: string) => {
+    setAssetReturns((rows) =>
+      rows.map((r) => (r.asset_id === assetId ? { ...r, returned: !r.returned } : r)),
+    );
+  };
+  const setReturnRemarks = (assetId: string, remarks: string) => {
+    setAssetReturns((rows) =>
+      rows.map((r) => (r.asset_id === assetId ? { ...r, remarks } : r)),
+    );
+  };
+
+  if (!target) return null;
+
+  return (
+    <Dialog open={!!target} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-h-[92vh] w-[96vw] max-w-3xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Offboard employee</DialogTitle>
+          <DialogDescription>
+            Capture the full offboarding record for{" "}
+            <span className="font-medium text-foreground">
+              {target.full_name || target.employee_code || "this employee"}
+            </span>
+            . Once saved, the employee will be marked Inactive.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Section: Reason + Dates */}
+          <section className="space-y-3">
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+              Offboarding Details
+            </h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Employee</Label>
+                <Input value={`${target.full_name}${target.employee_code ? ` · ${target.employee_code}` : ""}`} disabled />
+              </div>
+              <div className="space-y-1">
+                <Label>Offboarding type *</Label>
+                <Select value={reasonId} onValueChange={setReasonId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={reasonsLoading ? "Loading…" : "Select a type"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {reasons.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Date of offboarding *</Label>
+                <Input type="date" value={dateOfOffboarding} onChange={(e) => setDateOfOffboarding(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Date of resignation</Label>
+                <Input type="date" value={dateOfResignation} onChange={(e) => setDateOfResignation(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Date of last working day</Label>
+                <Input type="date" value={dateOfLastWorking} onChange={(e) => setDateOfLastWorking(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Date of PF update</Label>
+                <Input type="date" value={dateOfPfUpdate} onChange={(e) => setDateOfPfUpdate(e.target.value)} />
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <Label>Date of ESIC update</Label>
+                <Input type="date" value={dateOfEsicUpdate} onChange={(e) => setDateOfEsicUpdate(e.target.value)} />
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <Label>Reason for offboarding</Label>
+                <Textarea
+                  rows={2}
+                  value={reasonText}
+                  onChange={(e) => setReasonText(e.target.value)}
+                  placeholder="Describe the reason in detail (optional)"
+                />
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <Label>Review about employee</Label>
+                <Textarea
+                  rows={3}
+                  value={review}
+                  onChange={(e) => setReview(e.target.value)}
+                  placeholder="Performance, conduct, anything HR / future hiring should know"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Section: Handover Checklist */}
+          <section className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                Handover Checklist
+              </h3>
+              <span className="text-[11px] text-muted-foreground">
+                {assetReturns.filter((r) => r.returned).length} / {assetReturns.length} returned
+              </span>
+            </div>
+            {assetReturns.length === 0 ? (
+              <p className="rounded-md border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+                No assets were assigned to this employee. Assign assets from the Employee Info screen if a handover is required.
+              </p>
+            ) : (
+              <div className="rounded-md border border-border">
+                {assetReturns.map((row, idx) => {
+                  const a = assetById.get(row.asset_id);
+                  return (
+                    <div
+                      key={row.asset_id}
+                      className={cn(
+                        "grid grid-cols-[auto,1fr,2fr] items-center gap-3 p-3",
+                        idx > 0 && "border-t border-border",
+                      )}
+                    >
+                      <Switch checked={row.returned} onCheckedChange={() => toggleReturned(row.asset_id)} />
+                      <div className="text-sm">
+                        <div className="font-medium">{a?.name ?? "Unknown asset"}</div>
+                        {a?.category && <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{a.category}</div>}
+                      </div>
+                      <Input
+                        placeholder="Condition / remarks (optional)"
+                        value={row.remarks ?? ""}
+                        onChange={(e) => setReturnRemarks(row.asset_id, e.target.value)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* Section: Rating */}
+          <section className="space-y-3">
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+              Employee Rating
+            </h3>
+            <div className="space-y-2">
+              <Label>Overall rating</Label>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    type="button"
+                    key={n}
+                    onClick={() => setRating(rating === n ? 0 : n)}
+                    className={cn(
+                      "rounded p-1 text-2xl leading-none transition-colors",
+                      n <= rating ? "text-amber-500" : "text-muted-foreground/40 hover:text-amber-400",
+                    )}
+                    aria-label={`${n} star${n > 1 ? "s" : ""}`}
+                  >
+                    ★
+                  </button>
+                ))}
+                <span className="ml-2 text-xs text-muted-foreground">
+                  {rating > 0 ? `${rating} / 5` : "Not rated"}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Remarks</Label>
+              <Textarea
+                rows={2}
+                value={ratingRemarks}
+                onChange={(e) => setRatingRemarks(e.target.value)}
+                placeholder="Optional notes supporting the rating"
+              />
+            </div>
+          </section>
+
+          {/* Section: Re-hire flag */}
+          <section className="flex items-center justify-between rounded-md border border-border bg-secondary/30 p-3">
+            <div>
+              <Label className="m-0">Do not re-hire</Label>
+              <p className="text-xs text-muted-foreground">
+                {isAbsconding
+                  ? "Auto-enabled because the offboarding type is Absconding."
+                  : "Flag this employee as ineligible for re-hiring."}
+              </p>
+            </div>
+            <Switch
+              checked={noHire}
+              onCheckedChange={(v) => { setNoHireTouched(true); setNoHire(v); }}
+            />
+          </section>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!reasonId || !dateOfOffboarding || isSubmitting}
+            onClick={() => {
+              onSubmit({
+                reasonId,
+                noHire,
+                details: {
+                  date_of_offboarding: dateOfOffboarding || null,
+                  date_of_resignation: dateOfResignation || null,
+                  date_of_last_working: dateOfLastWorking || null,
+                  date_of_pf_update: dateOfPfUpdate || null,
+                  date_of_esic_update: dateOfEsicUpdate || null,
+                  reason_text: reasonText.trim(),
+                  review: review.trim(),
+                  asset_returns: assetReturns,
+                  rating,
+                  rating_remarks: ratingRemarks.trim(),
+                },
+              });
+            }}
+          >
+            {isSubmitting ? "Saving…" : "Confirm offboarding"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function AssetMultiPicker({
   assets,
   value,
