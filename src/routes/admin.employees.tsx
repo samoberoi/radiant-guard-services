@@ -1344,13 +1344,25 @@ function EmployeesPage() {
                 </SelectContent>
               </Select>
             )}
+            {filtersVisible.offboardReason && (
+              <Select value={filterOffboardReason} onValueChange={setFilterOffboardReason}>
+                <SelectTrigger className="h-9 w-[170px] text-xs"><SelectValue placeholder="Any offboarding" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">Any offboarding</SelectItem>
+                  <SelectItem value="none" className="text-xs">No offboarding</SelectItem>
+                  {offboardReasons.map((r) => (
+                    <SelectItem key={r.id} value={r.id} className="text-xs">{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => {
                 setFilterRole("all"); setFilterDesignation("all"); setFilterCustomer("all");
-                setFilterUnit("all"); setFilterManager("all"); setFilterEnabled("all"); setFilterBillable("all");
+                setFilterUnit("all"); setFilterManager("all"); setFilterEnabled("all"); setFilterBillable("all"); setFilterOffboardReason("all");
               }}
               className="h-9 text-xs text-muted-foreground"
             >
