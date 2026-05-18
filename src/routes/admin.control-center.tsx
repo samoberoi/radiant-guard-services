@@ -81,6 +81,12 @@ const tiles: Tile[] = [
     icon: Shield,
   },
   {
+    to: "/admin/offboarding-reason-manager",
+    label: "Offboarding Reason Manager",
+    description: "Manage reasons used to offboard employees (Resignation, Termination, Absconding, Death).",
+    icon: LogOut,
+  },
+  {
     to: "/admin/esic-branch-manager",
     label: "ESIC Branch Manager",
     description: "Manage ESIC branch codes mapped to locations across zones.",
