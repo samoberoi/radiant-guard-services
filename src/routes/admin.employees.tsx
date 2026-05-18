@@ -1511,7 +1511,6 @@ function EmployeesPage() {
               Cancel
             </Button>
             <Button
-              className="bg-rose-600 text-white hover:bg-rose-700"
               disabled={!offboardReasonId || offboardMut.isPending}
               onClick={() => {
                 if (!offboardTarget || !offboardReasonId) return;
