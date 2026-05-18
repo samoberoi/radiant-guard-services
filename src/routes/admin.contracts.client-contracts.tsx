@@ -2342,7 +2342,7 @@ function ResourceFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[min(96vw,1400px)]">
         <DialogHeader>
           <DialogTitle>
             {initial?.id ? "Edit Resource" : "Add Resource"}
