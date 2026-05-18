@@ -279,6 +279,28 @@ const QK_UNITS = ["admin", "units-lite"] as const;
 const QK_DESIG = ["admin", "designations-lite"] as const;
 const QK_EX_SERVICES = ["admin", "ex-services-lite"] as const;
 const QK_LANGUAGES = ["admin", "languages-lite"] as const;
+const QK_ESIC_BRANCHES = ["admin", "esic-branches-lite"] as const;
+
+type EsicBranchLite = { id: string; location: string; esic_code: string };
+
+function useEsicBranchesLite() {
+  return useQuery({
+    queryKey: QK_ESIC_BRANCHES,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async (): Promise<EsicBranchLite[]> => {
+      const { data, error } = await supabase
+        .from("esic_branches" as never)
+        .select("id,location,esic_code,enabled")
+        .eq("enabled", true)
+        .order("location", { ascending: true })
+        .limit(500);
+      if (error) throw error;
+      return ((data as unknown) as EsicBranchLite[]) ?? [];
+    },
+  });
+}
 
 async function runWithQueryTimeout<T>(label: string, run: (signal: AbortSignal) => Promise<T>, timeoutMs = 8_000) {
   const controller = new AbortController();
