@@ -361,7 +361,7 @@ const NOMINEE_SLOTS = [
   { key: "pf", label: "Provident Fund (PF)", enabledKey: "pf_enabled", defaultEnabled: true },
   { key: "eps", label: "Employees' Pension Scheme (EPS)", enabledKey: "eps_enabled", defaultEnabled: true },
   { key: "esic", label: "Employees' State Insurance (ESIC)", enabledKey: "esic_enabled", defaultEnabled: true },
-  { key: "pt", label: "Professional Tax (PT)", enabledKey: "pt_enabled", defaultEnabled: true },
+  
 ] as const;
 
 function contactKey(c: any, idx: number) {
