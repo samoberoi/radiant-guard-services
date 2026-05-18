@@ -1023,15 +1023,21 @@ function EmployeesPage() {
           {mode === "employee" && (
             <td className="px-3 py-3">
               <Switch
-                checked={c.is_enabled}
+                checked={c.is_enabled && c.status !== "inactive"}
                 onCheckedChange={async (v) => {
+                  if (!v) {
+                    // Disabling → start offboarding workflow
+                    setOffboardTarget(c);
+                    setOffboardReasonId("");
+                    return;
+                  }
                   const ok = await confirmAction({
-                    title: v ? "Enable employee?" : "Disable employee?",
-                    description: `${c.full_name || c.employee_code} will be ${v ? "enabled" : "disabled"}.`,
-                    confirmText: v ? "Enable" : "Disable",
+                    title: "Activate employee?",
+                    description: `${c.full_name || c.employee_code} will be marked active again.`,
+                    confirmText: "Activate",
                   });
                   if (!ok) return;
-                  toggleEnabledMut.mutate({ candidate: c, enabled: v });
+                  toggleEnabledMut.mutate({ candidate: c, enabled: true });
                 }}
               />
             </td>
