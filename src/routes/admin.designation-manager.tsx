@@ -220,6 +220,7 @@ function DesignationManagerPage() {
                 <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Code</th>
                 <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Billable</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -241,6 +242,21 @@ function DesignationManagerPage() {
                           { id: i.id, enabled: v },
                           {
                             onSuccess: () => toast.success(v ? "Enabled" : "Disabled"),
+                            onError: (e) =>
+                              toast.error(e instanceof Error ? e.message : "Update failed"),
+                          },
+                        )
+                      }
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <Switch
+                      checked={i.billable}
+                      onCheckedChange={(v) =>
+                        billableMut.mutate(
+                          { id: i.id, billable: v },
+                          {
+                            onSuccess: () => toast.success(v ? "Marked billable" : "Marked non-billable"),
                             onError: (e) =>
                               toast.error(e instanceof Error ? e.message : "Update failed"),
                           },
