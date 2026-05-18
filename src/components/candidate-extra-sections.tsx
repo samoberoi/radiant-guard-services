@@ -191,7 +191,7 @@ export function ComplianceSection({
               )}
             </Field>
             <Field label="ESIC Number">
-              <Input value={c.esic_number ?? ""} onChange={(e) => setSection("compliance", { esic_number: e.target.value })} />
+              <Input value={c.esic_number ?? ""} inputMode="numeric" maxLength={17} placeholder="17-digit ESIC IP" onChange={(e) => setSection("compliance", { esic_number: e.target.value.replace(/\D/g, "").slice(0, 17) })} />
             </Field>
           </div>
         )}
