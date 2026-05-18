@@ -2067,7 +2067,7 @@ function CandidateWizard({
     { key: "Permanent address", ok: !!form.permanent_address1.trim() && !!form.permanent_pincode },
     { key: "Bank account", ok: !!form.bank_account_number.trim() && !!form.bank_ifsc.trim() },
     { key: "PAN number", ok: /^[A-Z]{5}[0-9]{4}[A-Z]$/.test((form.pan_number || "").trim().toUpperCase()) },
-    { key: "Unit assignment", ok: !!form.unit_id },
+    { key: "Unit assignment", ok: form.unit_ids.length > 0 },
     { key: "Designation", ok: !!form.designation_id },
   ];
   const completionDone = completionChecks.filter((c) => c.ok).length;
