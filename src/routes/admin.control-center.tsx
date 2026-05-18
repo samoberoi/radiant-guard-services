@@ -135,7 +135,6 @@ function ControlCenterDashboard() {
         >
           <Settings className="h-4 w-4 transition-transform group-hover:rotate-45" />
           <span className="hidden sm:inline">System Logs</span>
-          <ClipboardList className="h-3.5 w-3.5 opacity-60" />
         </Link>
       </div>
 
