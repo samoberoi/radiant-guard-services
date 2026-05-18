@@ -3167,6 +3167,25 @@ function CandidateWizard({
                       </SelectContent>
                     </Select>
                   </Field>
+                  <div className="sm:col-span-2">
+                    <Field label={`Assigned Assets${form.assigned_asset_ids.length > 0 ? ` · ${form.assigned_asset_ids.length} selected` : ""}`}>
+                      <AssetMultiPicker
+                        assets={assets}
+                        value={form.assigned_asset_ids}
+                        onChange={(ids) => setForm((f) => ({ ...f, assigned_asset_ids: ids }))}
+                      />
+                    </Field>
+                  </div>
+                  <div className="sm:col-span-2 flex items-center justify-between rounded-md border border-border bg-secondary/30 p-3">
+                    <div>
+                      <Label className="m-0">Do not re-hire</Label>
+                      <p className="text-xs text-muted-foreground">Flag this employee as ineligible for re-hiring. Auto-enabled when offboarded as Absconding.</p>
+                    </div>
+                    <Switch
+                      checked={form.no_hire}
+                      onCheckedChange={(v) => set("no_hire", v)}
+                    />
+                  </div>
                 </div>
               </Section>
 
