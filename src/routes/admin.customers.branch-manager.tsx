@@ -267,7 +267,7 @@ function BranchManagerPage() {
               <span className="font-mono font-semibold text-foreground">
                 {deleting?.code}
               </span>{" "}
-              and free up its state mapping.
+              and free up its location mapping.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
