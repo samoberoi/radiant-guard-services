@@ -317,6 +317,25 @@ const QK_DESIG = ["admin", "designations-lite"] as const;
 const QK_EX_SERVICES = ["admin", "ex-services-lite"] as const;
 const QK_LANGUAGES = ["admin", "languages-lite"] as const;
 const QK_ESIC_BRANCHES = ["admin", "esic-branches-lite"] as const;
+const QK_SIGNED_DOCS = ["admin", "signed-docs-summary"] as const;
+
+function useSignedDocsSummary() {
+  return useQuery({
+    queryKey: QK_SIGNED_DOCS,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async (): Promise<Array<{ candidate_id: string; doc_type: string }>> => {
+      const { data, error } = await supabase
+        .from("employee_signed_documents" as never)
+        .select("candidate_id,doc_type,signed_at")
+        .not("signed_at", "is", null)
+        .limit(5000);
+      if (error) throw error;
+      return ((data as unknown) as Array<{ candidate_id: string; doc_type: string }>) ?? [];
+    },
+  });
+}
 
 type EsicBranchLite = { id: string; location: string; esic_code: string };
 
