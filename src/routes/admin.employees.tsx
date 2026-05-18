@@ -3595,8 +3595,16 @@ function CameraCaptureDialog({
           } catch (err) {
             lastErr = err;
             const name = (err as { name?: string })?.name;
-            // Only retry on constraint-related failures
-            if (name !== "OverconstrainedError" && name !== "ConstraintNotSatisfiedError" && name !== "NotFoundError") {
+            // Retry on constraint/availability failures — e.g. a phone-as-webcam
+            // disconnects (NotReadableError/AbortError) or doesn't match the
+            // requested facingMode (OverconstrainedError).
+            if (
+              name !== "OverconstrainedError" &&
+              name !== "ConstraintNotSatisfiedError" &&
+              name !== "NotFoundError" &&
+              name !== "NotReadableError" &&
+              name !== "AbortError"
+            ) {
               throw err;
             }
           }
