@@ -270,7 +270,7 @@ type UnitLite = {
   customer_name?: string;
 };
 
-type DesignationLite = { id: string; name: string; code: string };
+type DesignationLite = { id: string; name: string; code: string; billable: boolean };
 type ExServiceLite = { id: string; name: string; description: string };
 type LanguageLite = { id: string; name: string };
 
@@ -361,7 +361,7 @@ function useDesignations() {
       const { data, error } = await runWithQueryTimeout("Designations", async (signal) =>
         await supabase
           .from("designations" as never)
-          .select("id,name,code,enabled")
+          .select("id,name,code,enabled,billable")
           .eq("enabled", true)
           .order("name", { ascending: true })
           .limit(500)
@@ -471,6 +471,7 @@ function EmployeesPage() {
   const [filterUnit, setFilterUnit] = useState<string>("all");
   const [filterManager, setFilterManager] = useState<string>("all");
   const [filterEnabled, setFilterEnabled] = useState<"all" | "enabled" | "disabled">("all");
+  const [filterBillable, setFilterBillable] = useState<"all" | "billable" | "nonbillable">("all");
 
   const DEFAULT_FILTERS_VIS = {
     role: true,
@@ -479,6 +480,7 @@ function EmployeesPage() {
     unit: true,
     manager: true,
     enabled: true,
+    billable: true,
   };
   const [filtersVisible, setFiltersVisible] = useState<typeof DEFAULT_FILTERS_VIS>(() => {
     if (typeof window === "undefined") return DEFAULT_FILTERS_VIS;
@@ -523,13 +525,19 @@ function EmployeesPage() {
     if (filterManager !== "all" && c.reports_to !== filterManager) return false;
     if (filterEnabled === "enabled" && !c.is_enabled) return false;
     if (filterEnabled === "disabled" && c.is_enabled) return false;
+    if (filterBillable !== "all") {
+      const d = c.designation_id ? desigMap.get(c.designation_id) : undefined;
+      const isBillable = !!d?.billable;
+      if (filterBillable === "billable" && !isBillable) return false;
+      if (filterBillable === "nonbillable" && isBillable) return false;
+    }
     return true;
   };
 
   const employees = useMemo(
     () => candidates.filter((c) => (c.status === "approved" || c.status === "active") && matchesSearch(c) && matchesFilters(c)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, units],
+    [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, units, designations],
   );
   const candidateRows = useMemo(
     () => candidates.filter((c) => c.status !== "approved" && c.status !== "active" && matchesSearch(c)),
@@ -774,8 +782,8 @@ function EmployeesPage() {
   };
 
   const renderRows = (rows: CandidateListItem[], mode: "employee" | "candidate") => {
-    const empCols = 11;
-    const candCols = 8;
+    const empCols = 13;
+    const candCols = 9;
     if (isLoading) {
       return (
         <tr>
@@ -855,6 +863,21 @@ function EmployeesPage() {
             )}
           </td>
           <td className="px-3 py-3 text-sm text-muted-foreground max-w-[140px]"><span className="line-clamp-2" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
+          <td className="px-3 py-3 text-center">
+            {desig ? (
+              desig.billable ? (
+                <Badge variant="outline" className="border-emerald-300/70 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300">
+                  Billable
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="border-slate-300/70 bg-slate-50 text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/10 dark:text-slate-300">
+                  Non-billable
+                </Badge>
+              )
+            ) : (
+              <span className="text-xs text-muted-foreground">—</span>
+            )}
+          </td>
           {mode === "employee" && (
             <td className="px-3 py-3">
               {c.role_key ? (
@@ -1057,6 +1080,9 @@ function EmployeesPage() {
               <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Designation
               </th>
+              <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                Billable
+              </th>
               {mode === "employee" && (
                 <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Role
@@ -1230,13 +1256,23 @@ function EmployeesPage() {
                 </SelectContent>
               </Select>
             )}
+            {filtersVisible.billable && (
+              <Select value={filterBillable} onValueChange={(v) => setFilterBillable(v as "all" | "billable" | "nonbillable")}>
+                <SelectTrigger className="h-9 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All billing</SelectItem>
+                  <SelectItem value="billable" className="text-xs">Billable only</SelectItem>
+                  <SelectItem value="nonbillable" className="text-xs">Non-billable only</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => {
                 setFilterRole("all"); setFilterDesignation("all"); setFilterCustomer("all");
-                setFilterUnit("all"); setFilterManager("all"); setFilterEnabled("all");
+                setFilterUnit("all"); setFilterManager("all"); setFilterEnabled("all"); setFilterBillable("all");
               }}
               className="h-9 text-xs text-muted-foreground"
             >
@@ -1270,7 +1306,7 @@ function EmployeesPage() {
                     <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Show filters</div>
                     {([
                       ["role", "Role"], ["designation", "Designation"], ["customer", "Organization"],
-                      ["unit", "Unit"], ["manager", "Reports to"], ["enabled", "Enabled status"],
+                      ["unit", "Unit"], ["manager", "Reports to"], ["enabled", "Enabled status"], ["billable", "Billable"],
                     ] as const).map(([k, label]) => (
                       <label key={k} className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-secondary">
                         <span>{label}</span>
