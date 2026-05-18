@@ -426,7 +426,7 @@ function BranchFormDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="branch-state">State</Label>
+              <Label htmlFor="branch-state">Location</Label>
               <Select
                 value={stateId}
                 onValueChange={(v) => {
@@ -435,12 +435,12 @@ function BranchFormDialog({
                 }}
               >
                 <SelectTrigger id="branch-state">
-                  <SelectValue placeholder="Select a state" />
+                  <SelectValue placeholder="Select a location" />
                 </SelectTrigger>
                 <SelectContent>
                   {stateOptions.length === 0 ? (
                     <div className="px-2 py-3 text-center text-xs text-muted-foreground">
-                      All states are already mapped.
+                      All locations are already mapped.
                     </div>
                   ) : (
                     stateOptions.map((s) => (
