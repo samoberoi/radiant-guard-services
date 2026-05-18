@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useIndianStates } from "@/lib/admin-data";
+import { useStates } from "@/lib/admin-data";
 import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
@@ -743,19 +743,13 @@ function StateSelect({
   onChange: (v: string) => void;
   fallbackStates: string[];
 }) {
-  const { indianStates } = useIndianStates({ onlyEnabled: true });
+  const { states } = useStates();
   const names = useMemo(() => {
-    const norm = (s: string) =>
-      s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
-    const byNorm = new Map<string, string>();
-    indianStates.forEach((s) => {
-      if (s.name) byNorm.set(norm(s.name), s.name);
-    });
-    fallbackStates.forEach((s) => {
-      if (s && !byNorm.has(norm(s))) byNorm.set(norm(s), s);
-    });
-    return Array.from(byNorm.values()).sort((a, b) => a.localeCompare(b));
-  }, [indianStates, fallbackStates]);
+    const set = new Set<string>();
+    states.forEach((s) => s.name && set.add(s.name));
+    fallbackStates.forEach((s) => s && set.add(s));
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [states, fallbackStates]);
   return (
     <Select value={value || undefined} onValueChange={onChange}>
       <SelectTrigger id="pt-state">

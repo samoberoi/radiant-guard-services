@@ -1003,39 +1003,6 @@ export type Database = {
         }
         Relationships: []
       }
-      indian_states: {
-        Row: {
-          code: string
-          created_at: string
-          enabled: boolean
-          id: string
-          kind: string
-          name: string
-          sort_order: number
-          updated_at: string
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          enabled?: boolean
-          id?: string
-          kind?: string
-          name: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          enabled?: boolean
-          id?: string
-          kind?: string
-          name?: string
-          sort_order?: number
-          updated_at?: string
-        }
-        Relationships: []
-      }
       labour_welfare_funds: {
         Row: {
           created_at: string

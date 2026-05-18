@@ -10,15 +10,6 @@ import { logActivity } from "@/lib/activity-log";
 
 export type State = { id: string; name: string };
 
-export type IndianState = {
-  id: string;
-  name: string;
-  code: string;
-  kind: "state" | "ut";
-  enabled: boolean;
-  sortOrder: number;
-};
-
 export type Branch = {
   id: string;
   code: string;
@@ -107,7 +98,6 @@ type AddResult = { ok: true; id: string } | { ok: false; error: string };
 
 const QK = {
   states: ["admin", "states"] as const,
-  indianStates: ["admin", "indian_states"] as const,
   branches: ["admin", "branches"] as const,
   customers: ["admin", "customers"] as const,
 };
@@ -201,79 +191,6 @@ export function useStates() {
 
   return { states, addState, updateState, deleteState };
 }
-
-// ─────────────────────── Indian States (canonical 28 + 8 UTs) ───────────────────────
-
-type IndianStateRow = {
-  id: string;
-  name: string;
-  code: string;
-  kind: "state" | "ut";
-  enabled: boolean;
-  sort_order: number;
-};
-
-export function useIndianStates(opts: { onlyEnabled?: boolean } = {}) {
-  const qc = useQueryClient();
-  const { onlyEnabled = false } = opts;
-
-  const { data: indianStates = [], isLoading } = useQuery({
-    queryKey: QK.indianStates,
-    queryFn: async (): Promise<IndianState[]> => {
-      const { data, error } = await supabase
-        .from("indian_states" as never)
-        .select("id,name,code,kind,enabled,sort_order")
-        .order("sort_order", { ascending: true });
-      if (error) throw error;
-      return ((data as unknown as IndianStateRow[]) ?? []).map((r) => ({
-        id: r.id,
-        name: r.name,
-        code: r.code,
-        kind: r.kind,
-        enabled: r.enabled,
-        sortOrder: r.sort_order,
-      }));
-    },
-  });
-
-  const invalidate = () => qc.invalidateQueries({ queryKey: QK.indianStates });
-
-  const toggleMut = useMutation({
-    mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
-      const { data: before } = await supabase
-        .from("indian_states" as never)
-        .select("name,enabled")
-        .eq("id", id)
-        .single();
-      const { error } = await supabase
-        .from("indian_states" as never)
-        .update({ enabled } as unknown as never)
-        .eq("id", id);
-      if (error) throw error;
-      const beforeRow = before as unknown as { name?: string; enabled?: boolean } | null;
-      void logActivity({
-        module: "State Manager",
-        action: enabled ? "enable" : "disable",
-        entityType: "indian_states",
-        entityId: id,
-        entityLabel: beforeRow?.name ?? id,
-        before: { enabled: beforeRow?.enabled ?? null },
-        after: { enabled },
-      });
-    },
-    onSuccess: invalidate,
-  });
-
-  const list = onlyEnabled ? indianStates.filter((s) => s.enabled) : indianStates;
-
-  return {
-    indianStates: list,
-    allIndianStates: indianStates,
-    isLoading,
-    toggleEnabled: (id: string, enabled: boolean) => toggleMut.mutateAsync({ id, enabled }),
-  };
-}
-
 
 // ───────────────────────── Branches ─────────────────────────
 

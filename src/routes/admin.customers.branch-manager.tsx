@@ -102,7 +102,7 @@ function BranchManagerPage() {
     <div>
       <PageHeader
         title="Branch Manager"
-        description="Map a unique branch code to each location. Branches display as CODE – LOCATION."
+        description="Map a unique branch code to each state. Branches display as CODE – STATE."
         crumbs={[
           { label: "Organizations", to: "/admin/customers" },
           { label: "Branch Manager" },
@@ -112,8 +112,8 @@ function BranchManagerPage() {
       {/* Stats */}
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
         <StatCard label="Total branches" value={branches.length} />
-        <StatCard label="Locations mapped" value={mappedStateIds.size} />
-        <StatCard label="Locations available" value={availableStates.length} accent />
+        <StatCard label="States mapped" value={mappedStateIds.size} />
+        <StatCard label="States available" value={availableStates.length} accent />
       </div>
 
       {/* Toolbar */}
@@ -123,7 +123,7 @@ function BranchManagerPage() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by code, location, description…"
+            placeholder="Search by code, state, description…"
             className="h-10 rounded-lg pl-9"
           />
         </div>
@@ -136,14 +136,14 @@ function BranchManagerPage() {
                 rows.map((b) => ({
                   branchCode: b.code,
                   branchName: b.name || b.stateName,
-                  location: b.stateName,
+                  state: b.stateName,
                   branchDisplay: `${b.code} – ${b.stateName}`,
                   description: b.description,
                 })),
                 [
                   { key: "branchCode", header: "Branch code" },
                   { key: "branchName", header: "Branch name" },
-                  { key: "location", header: "Location" },
+                  { key: "state", header: "State" },
                   { key: "branchDisplay", header: "Branch display" },
                   { key: "description", header: "Description" },
                 ],
@@ -159,7 +159,7 @@ function BranchManagerPage() {
             onClick={openAdd}
             disabled={availableStates.length === 0}
             className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
-            title={availableStates.length === 0 ? "All locations are already mapped" : ""}
+            title={availableStates.length === 0 ? "All states are already mapped" : ""}
           >
             <Plus className="mr-1.5 h-4 w-4" />
             Add branch
@@ -177,8 +177,8 @@ function BranchManagerPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Code</th>
-                <th className="px-5 py-3">Branch (Code – Location)</th>
-                <th className="px-5 py-3">Location</th>
+                <th className="px-5 py-3">Branch (Code – State)</th>
+                <th className="px-5 py-3">State</th>
                 <th className="px-5 py-3">Description</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
@@ -267,7 +267,7 @@ function BranchManagerPage() {
               <span className="font-mono font-semibold text-foreground">
                 {deleting?.code}
               </span>{" "}
-              and free up its location mapping.
+              and free up its state mapping.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -383,7 +383,7 @@ function BranchFormDialog({
   const selectedState = allStates.find((s) => s.id === stateId);
   const previewName = selectedState
     ? `${code || "BR?"} – ${selectedState.name}`
-    : "Pick a location to preview";
+    : "Pick a state to preview";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -391,7 +391,7 @@ function BranchFormDialog({
         <DialogHeader>
           <DialogTitle>{editing ? "Edit branch" : "Add branch"}</DialogTitle>
           <DialogDescription>
-            One branch per location. The dropdown only lists locations that aren't already mapped.
+            One branch per state. The dropdown only lists states that aren't already mapped.
           </DialogDescription>
         </DialogHeader>
 
@@ -426,7 +426,7 @@ function BranchFormDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="branch-state">Location</Label>
+              <Label htmlFor="branch-state">State</Label>
               <Select
                 value={stateId}
                 onValueChange={(v) => {
@@ -435,12 +435,12 @@ function BranchFormDialog({
                 }}
               >
                 <SelectTrigger id="branch-state">
-                  <SelectValue placeholder="Select a location" />
+                  <SelectValue placeholder="Select a state" />
                 </SelectTrigger>
                 <SelectContent>
                   {stateOptions.length === 0 ? (
                     <div className="px-2 py-3 text-center text-xs text-muted-foreground">
-                      All locations are already mapped.
+                      All states are already mapped.
                     </div>
                   ) : (
                     stateOptions.map((s) => (

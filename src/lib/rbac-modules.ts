@@ -53,7 +53,6 @@ export const RBAC_MODULES: ModuleDef[] = [
     icon: LayoutDashboard,
     subModules: [
       { key: "state_manager",        label: "State Manager",        path: "/admin/customers/state-manager",    icon: MapPin },
-      { key: "location_manager",     label: "Location Manager",     path: "/admin/customers/location-manager", icon: MapPin },
       { key: "branch_manager",       label: "Branch Manager",       path: "/admin/customers/branch-manager",   icon: Building2 },
       { key: "organization_manager", label: "Organization Manager", path: "/admin/customers/customer-manager", icon: Users },
       { key: "unit_manager",         label: "Unit Manager",         path: "/admin/customers/unit-manager",     icon: Warehouse },
