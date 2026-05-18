@@ -258,7 +258,7 @@ type CandidateListItem = Pick<
   | "unit_id"
   | "designation_id"
   | "status"
-> & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null };
+> & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null; offboarding_reason_id: string | null; offboarded_at: string | null };
 
 type RoleLite = { key: string; name: string };
 
@@ -328,7 +328,7 @@ function useCandidates() {
       const { data, error } = await runWithQueryTimeout("Employees", async (signal) =>
         await supabase
           .from("candidates" as never)
-          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key,is_enabled,reports_to")
+          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key,is_enabled,reports_to,offboarding_reason_id,offboarded_at")
           .order("created_at", { ascending: false })
           .limit(250)
           .abortSignal(signal),
@@ -517,6 +517,7 @@ function EmployeesPage() {
   const [filterManager, setFilterManager] = useState<string>("all");
   const [filterEnabled, setFilterEnabled] = useState<"all" | "enabled" | "disabled">("all");
   const [filterBillable, setFilterBillable] = useState<"all" | "billable" | "nonbillable">("all");
+  const [filterOffboardReason, setFilterOffboardReason] = useState<string>("all");
 
   const DEFAULT_FILTERS_VIS = {
     role: true,
@@ -526,6 +527,7 @@ function EmployeesPage() {
     manager: true,
     enabled: true,
     billable: true,
+    offboardReason: true,
   };
   const [filtersVisible, setFiltersVisible] = useState<typeof DEFAULT_FILTERS_VIS>(() => {
     if (typeof window === "undefined") return DEFAULT_FILTERS_VIS;
@@ -576,6 +578,13 @@ function EmployeesPage() {
       if (filterBillable === "billable" && !isBillable) return false;
       if (filterBillable === "nonbillable" && isBillable) return false;
     }
+    if (filterOffboardReason !== "all") {
+      if (filterOffboardReason === "none") {
+        if (c.offboarding_reason_id) return false;
+      } else if (c.offboarding_reason_id !== filterOffboardReason) {
+        return false;
+      }
+    }
     return true;
   };
 
@@ -584,7 +593,7 @@ function EmployeesPage() {
   const employees = useMemo(
     () => candidates.filter((c) => isEmployeeStatus(c.status) && matchesSearch(c) && matchesFilters(c)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, units, designations],
+    [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations],
   );
   const candidateRows = useMemo(
     () => candidates.filter((c) => !isEmployeeStatus(c.status) && matchesSearch(c)),
@@ -1033,6 +1042,16 @@ function EmployeesPage() {
                 {c.rejection_reason}
               </div>
             )}
+            {c.status === "inactive" && c.offboarding_reason_id && (() => {
+              const r = offboardReasons.find((x) => x.id === c.offboarding_reason_id);
+              const date = c.offboarded_at ? new Date(c.offboarded_at).toLocaleDateString() : null;
+              const label = r?.name || "Offboarded";
+              return (
+                <div className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground" title={`${label}${date ? " · " + date : ""}`}>
+                  {label}{date ? ` · ${date}` : ""}
+                </div>
+              );
+            })()}
           </td>
           <td className="px-4 py-5">
             <div className="flex items-center justify-end gap-1.5">
@@ -1335,13 +1354,25 @@ function EmployeesPage() {
                 </SelectContent>
               </Select>
             )}
+            {filtersVisible.offboardReason && (
+              <Select value={filterOffboardReason} onValueChange={setFilterOffboardReason}>
+                <SelectTrigger className="h-9 w-[170px] text-xs"><SelectValue placeholder="Any offboarding" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">Any offboarding</SelectItem>
+                  <SelectItem value="none" className="text-xs">No offboarding</SelectItem>
+                  {offboardReasons.map((r) => (
+                    <SelectItem key={r.id} value={r.id} className="text-xs">{r.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={() => {
                 setFilterRole("all"); setFilterDesignation("all"); setFilterCustomer("all");
-                setFilterUnit("all"); setFilterManager("all"); setFilterEnabled("all"); setFilterBillable("all");
+                setFilterUnit("all"); setFilterManager("all"); setFilterEnabled("all"); setFilterBillable("all"); setFilterOffboardReason("all");
               }}
               className="h-9 text-xs text-muted-foreground"
             >
@@ -1375,7 +1406,7 @@ function EmployeesPage() {
                     <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Show filters</div>
                     {([
                       ["role", "Role"], ["designation", "Designation"], ["customer", "Organization"],
-                      ["unit", "Unit"], ["manager", "Reports to"], ["enabled", "Enabled status"], ["billable", "Billable"],
+                      ["unit", "Unit"], ["manager", "Reports to"], ["enabled", "Enabled status"], ["billable", "Billable"], ["offboardReason", "Offboarding reason"],
                     ] as const).map(([k, label]) => (
                       <label key={k} className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-secondary">
                         <span>{label}</span>
@@ -1425,6 +1456,7 @@ function EmployeesPage() {
         exServices={exServices}
         languagesList={languagesList}
         esicBranches={esicBranches}
+        offboardReasons={offboardReasons}
         canReview={!!editing && editing.status === "pending"}
         isApproving={approveMut.isPending}
         onApprove={() => {
@@ -1971,6 +2003,7 @@ function CandidateWizard({
   exServices,
   languagesList,
   esicBranches,
+  offboardReasons = [],
   canReview = false,
   isApproving = false,
   onApprove,
@@ -1989,6 +2022,7 @@ function CandidateWizard({
   exServices: ExServiceLite[];
   languagesList: LanguageLite[];
   esicBranches: EsicBranchLite[];
+  offboardReasons?: { id: string; name: string }[];
   canReview?: boolean;
   isApproving?: boolean;
   onApprove?: () => void;
@@ -2448,6 +2482,17 @@ function CandidateWizard({
                   {form.mobile}
                 </Badge>
               )}
+              {(() => {
+                const eAny = editing as unknown as { offboarding_reason_id?: string | null; offboarded_at?: string | null };
+                if (!eAny.offboarding_reason_id) return null;
+                const r = offboardReasons.find((x) => x.id === eAny.offboarding_reason_id);
+                const date = eAny.offboarded_at ? new Date(eAny.offboarded_at).toLocaleDateString() : null;
+                return (
+                  <Badge variant="outline" className="border-rose-300/60 bg-rose-500/10 text-[11px] font-medium text-rose-700 dark:text-rose-300">
+                    Offboarded · {r?.name || "Reason"}{date ? ` · ${date}` : ""}
+                  </Badge>
+                );
+              })()}
             </div>
           )}
         </DialogHeader>
