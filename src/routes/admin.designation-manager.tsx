@@ -62,7 +62,7 @@ function useDesignations() {
     queryFn: async (): Promise<Designation[]> => {
       const { data, error } = await supabase
         .from("designations" as never)
-        .select("id,name,code,enabled")
+        .select("id,name,code,enabled,billable")
         .order("name", { ascending: true })
         .limit(2000);
       if (error) throw error;
@@ -76,6 +76,7 @@ function useDesignations() {
     name: p.name.trim(),
     code: p.code.trim(),
     enabled: p.enabled,
+    billable: p.billable,
   });
 
   const addMut = useMutation({
