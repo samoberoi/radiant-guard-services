@@ -617,19 +617,11 @@ function PtSlabFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="pt-state">State</Label>
-              <Input
-                id="pt-state"
-                list="pt-states-list"
+              <StateSelect
                 value={form.state}
-                onChange={(e) => set("state", e.target.value)}
-                placeholder="e.g. Maharashtra"
-                autoFocus
+                onChange={(v) => set("state", v)}
+                fallbackStates={knownStates}
               />
-              <datalist id="pt-states-list">
-                {knownStates.map((s) => (
-                  <option key={s} value={s} />
-                ))}
-              </datalist>
             </div>
             <div className="space-y-2">
               <Label htmlFor="pt-region">Region label</Label>
