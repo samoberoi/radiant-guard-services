@@ -874,6 +874,33 @@ export type Database = {
         }
         Relationships: []
       }
+      esic_branches: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          esic_code: string
+          id: string
+          location: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          esic_code: string
+          id?: string
+          location: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          esic_code?: string
+          id?: string
+          location?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ex_services: {
         Row: {
           created_at: string

@@ -22,6 +22,7 @@ import { Route as AdminPayrollDaysManagerRouteImport } from './routes/admin.payr
 import { Route as AdminLwfManagerRouteImport } from './routes/admin.lwf-manager'
 import { Route as AdminLanguageManagerRouteImport } from './routes/admin.language-manager'
 import { Route as AdminExServiceManagerRouteImport } from './routes/admin.ex-service-manager'
+import { Route as AdminEsicBranchManagerRouteImport } from './routes/admin.esic-branch-manager'
 import { Route as AdminEmployeesRouteImport } from './routes/admin.employees'
 import { Route as AdminDutyManagerRouteImport } from './routes/admin.duty-manager'
 import { Route as AdminDesignationManagerRouteImport } from './routes/admin.designation-manager'
@@ -102,6 +103,11 @@ const AdminLanguageManagerRoute = AdminLanguageManagerRouteImport.update({
 const AdminExServiceManagerRoute = AdminExServiceManagerRouteImport.update({
   id: '/ex-service-manager',
   path: '/ex-service-manager',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminEsicBranchManagerRoute = AdminEsicBranchManagerRouteImport.update({
+  id: '/esic-branch-manager',
+  path: '/esic-branch-manager',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminEmployeesRoute = AdminEmployeesRouteImport.update({
@@ -201,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/admin/designation-manager': typeof AdminDesignationManagerRoute
   '/admin/duty-manager': typeof AdminDutyManagerRoute
   '/admin/employees': typeof AdminEmployeesRoute
+  '/admin/esic-branch-manager': typeof AdminEsicBranchManagerRoute
   '/admin/ex-service-manager': typeof AdminExServiceManagerRoute
   '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
@@ -231,6 +238,7 @@ export interface FileRoutesByTo {
   '/admin/designation-manager': typeof AdminDesignationManagerRoute
   '/admin/duty-manager': typeof AdminDutyManagerRoute
   '/admin/employees': typeof AdminEmployeesRoute
+  '/admin/esic-branch-manager': typeof AdminEsicBranchManagerRoute
   '/admin/ex-service-manager': typeof AdminExServiceManagerRoute
   '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
@@ -262,6 +270,7 @@ export interface FileRoutesById {
   '/admin/designation-manager': typeof AdminDesignationManagerRoute
   '/admin/duty-manager': typeof AdminDutyManagerRoute
   '/admin/employees': typeof AdminEmployeesRoute
+  '/admin/esic-branch-manager': typeof AdminEsicBranchManagerRoute
   '/admin/ex-service-manager': typeof AdminExServiceManagerRoute
   '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
@@ -294,6 +303,7 @@ export interface FileRouteTypes {
     | '/admin/designation-manager'
     | '/admin/duty-manager'
     | '/admin/employees'
+    | '/admin/esic-branch-manager'
     | '/admin/ex-service-manager'
     | '/admin/language-manager'
     | '/admin/lwf-manager'
@@ -324,6 +334,7 @@ export interface FileRouteTypes {
     | '/admin/designation-manager'
     | '/admin/duty-manager'
     | '/admin/employees'
+    | '/admin/esic-branch-manager'
     | '/admin/ex-service-manager'
     | '/admin/language-manager'
     | '/admin/lwf-manager'
@@ -354,6 +365,7 @@ export interface FileRouteTypes {
     | '/admin/designation-manager'
     | '/admin/duty-manager'
     | '/admin/employees'
+    | '/admin/esic-branch-manager'
     | '/admin/ex-service-manager'
     | '/admin/language-manager'
     | '/admin/lwf-manager'
@@ -469,6 +481,13 @@ declare module '@tanstack/react-router' {
       path: '/ex-service-manager'
       fullPath: '/admin/ex-service-manager'
       preLoaderRoute: typeof AdminExServiceManagerRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/esic-branch-manager': {
+      id: '/admin/esic-branch-manager'
+      path: '/esic-branch-manager'
+      fullPath: '/admin/esic-branch-manager'
+      preLoaderRoute: typeof AdminEsicBranchManagerRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/employees': {
@@ -607,6 +626,7 @@ interface AdminRouteChildren {
   AdminDesignationManagerRoute: typeof AdminDesignationManagerRoute
   AdminDutyManagerRoute: typeof AdminDutyManagerRoute
   AdminEmployeesRoute: typeof AdminEmployeesRoute
+  AdminEsicBranchManagerRoute: typeof AdminEsicBranchManagerRoute
   AdminExServiceManagerRoute: typeof AdminExServiceManagerRoute
   AdminLanguageManagerRoute: typeof AdminLanguageManagerRoute
   AdminLwfManagerRoute: typeof AdminLwfManagerRoute
@@ -630,6 +650,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDesignationManagerRoute: AdminDesignationManagerRoute,
   AdminDutyManagerRoute: AdminDutyManagerRoute,
   AdminEmployeesRoute: AdminEmployeesRoute,
+  AdminEsicBranchManagerRoute: AdminEsicBranchManagerRoute,
   AdminExServiceManagerRoute: AdminExServiceManagerRoute,
   AdminLanguageManagerRoute: AdminLanguageManagerRoute,
   AdminLwfManagerRoute: AdminLwfManagerRoute,
