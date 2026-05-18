@@ -40,6 +40,7 @@ type Designation = {
   name: string;
   code: string;
   enabled: boolean;
+  billable: boolean;
 };
 
 const QK = ["admin", "designations"] as const;
@@ -50,6 +51,7 @@ function rowToItem(r: Record<string, unknown>): Designation {
     name: String(r.name ?? ""),
     code: String(r.code ?? ""),
     enabled: Boolean(r.enabled ?? true),
+    billable: Boolean(r.billable ?? false),
   };
 }
 
@@ -60,7 +62,7 @@ function useDesignations() {
     queryFn: async (): Promise<Designation[]> => {
       const { data, error } = await supabase
         .from("designations" as never)
-        .select("id,name,code,enabled")
+        .select("id,name,code,enabled,billable")
         .order("name", { ascending: true })
         .limit(2000);
       if (error) throw error;
@@ -74,6 +76,7 @@ function useDesignations() {
     name: p.name.trim(),
     code: p.code.trim(),
     enabled: p.enabled,
+    billable: p.billable,
   });
 
   const addMut = useMutation({
@@ -110,6 +113,18 @@ function useDesignations() {
     onSuccess: invalidate,
   });
 
+  const billableMut = useMutation({
+    mutationFn: async ({ id, billable }: { id: string; billable: boolean }) => {
+      const { error } = await supabase
+        .from("designations" as never)
+        .update({ billable } as never)
+        .eq("id", id);
+      if (error) throw error;
+      void logActivity({ module: "Designation Manager", action: "update", entityType: "designations", entityId: id, details: { billable } });
+    },
+    onSuccess: invalidate,
+  });
+
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("designations" as never).delete().eq("id", id);
@@ -119,11 +134,11 @@ function useDesignations() {
     onSuccess: invalidate,
   });
 
-  return { items, addMut, updateMut, toggleMut, deleteMut };
+  return { items, addMut, updateMut, toggleMut, billableMut, deleteMut };
 }
 
 function DesignationManagerPage() {
-  const { items, addMut, updateMut, toggleMut, deleteMut } = useDesignations();
+  const { items, addMut, updateMut, toggleMut, billableMut, deleteMut } = useDesignations();
   const [query, setQuery] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Designation | null>(null);
@@ -176,11 +191,13 @@ function DesignationManagerPage() {
                   name: i.name,
                   code: i.code,
                   enabled: i.enabled ? "Yes" : "No",
+                  billable: i.billable ? "Yes" : "No",
                 })),
                 [
                   { key: "name", header: "Name" },
                   { key: "code", header: "Code" },
                   { key: "enabled", header: "Enabled" },
+                  { key: "billable", header: "Billable" },
                 ],
               )
             }
@@ -203,6 +220,7 @@ function DesignationManagerPage() {
                 <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Code</th>
                 <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Billable</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -224,6 +242,21 @@ function DesignationManagerPage() {
                           { id: i.id, enabled: v },
                           {
                             onSuccess: () => toast.success(v ? "Enabled" : "Disabled"),
+                            onError: (e) =>
+                              toast.error(e instanceof Error ? e.message : "Update failed"),
+                          },
+                        )
+                      }
+                    />
+                  </td>
+                  <td className="px-5 py-3">
+                    <Switch
+                      checked={i.billable}
+                      onCheckedChange={(v) =>
+                        billableMut.mutate(
+                          { id: i.id, billable: v },
+                          {
+                            onSuccess: () => toast.success(v ? "Marked billable" : "Marked non-billable"),
                             onError: (e) =>
                               toast.error(e instanceof Error ? e.message : "Update failed"),
                           },
@@ -257,7 +290,7 @@ function DesignationManagerPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     No designations found.
                   </td>
                 </tr>
@@ -348,12 +381,14 @@ function DesignationFormDialog({
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [enabled, setEnabled] = useState(true);
+  const [billable, setBillable] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useResetOnOpen(open, () => {
     setName(initial?.name ?? "");
     setCode(initial?.code ?? "");
     setEnabled(initial?.enabled ?? true);
+    setBillable(initial?.billable ?? false);
   });
 
   return (
@@ -389,6 +424,13 @@ function DesignationFormDialog({
             </div>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
           </div>
+          <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+            <div>
+              <div className="text-sm font-medium">Billable</div>
+              <div className="text-xs text-muted-foreground">Include in client billing</div>
+            </div>
+            <Switch checked={billable} onCheckedChange={setBillable} />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
@@ -399,7 +441,7 @@ function DesignationFormDialog({
             onClick={async () => {
               if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
               setSaving(true);
-              const err = await onSubmit({ name, code, enabled });
+              const err = await onSubmit({ name, code, enabled, billable });
               setSaving(false);
               if (err) toast.error(err);
               else onOpenChange(false);

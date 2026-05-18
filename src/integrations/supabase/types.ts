@@ -744,6 +744,7 @@ export type Database = {
       }
       designations: {
         Row: {
+          billable: boolean
           code: string
           created_at: string
           enabled: boolean
@@ -752,6 +753,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billable?: boolean
           code?: string
           created_at?: string
           enabled?: boolean
@@ -760,6 +762,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billable?: boolean
           code?: string
           created_at?: string
           enabled?: boolean
