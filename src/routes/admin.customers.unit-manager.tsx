@@ -54,6 +54,7 @@ import {
   SCOPE_TYPE_LABEL,
   useEmployeesLite,
   useScopeAssignments,
+  useCandidateUnits,
 } from "@/lib/deployment";
 
 export const Route = createFileRoute("/admin/customers/unit-manager")({
