@@ -2266,7 +2266,7 @@ function CandidateWizard({
     try {
       // Creating / re-submitting moves to "pending" so the admin can approve.
       const nextStatus = editing && editing.status === "approved" ? "approved" : "pending";
-      const isEmployee = !!editing && (editing.status === "approved" || editing.status === "active" || !!editing.employee_code);
+      const isEmployee = !!editing && (editing.status === "approved" || editing.status === "active");
       const successMsg = editing
         ? (isEmployee ? "Employee updated" : "Candidate updated")
         : "Candidate submitted for approval";
