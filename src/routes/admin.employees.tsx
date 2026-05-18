@@ -487,6 +487,27 @@ function EmployeesPage() {
   const [rejectTarget, setRejectTarget] = useState<CandidateListItem | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [signTarget, setSignTarget] = useState<{ id: string; docType: DocType } | null>(null);
+  const [offboardTarget, setOffboardTarget] = useState<CandidateListItem | null>(null);
+  const [offboardReasonId, setOffboardReasonId] = useState<string>("");
+
+  const offboardReasonsQuery = useQuery({
+    queryKey: ["offboarding_reasons_lite"],
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("offboarding_reasons" as never)
+        .select("id,name,enabled,sort_order")
+        .eq("enabled", true)
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true })
+        .limit(100);
+      if (error) throw error;
+      return ((data as unknown) as Array<{ id: string; name: string }>) ?? [];
+    },
+  });
+  const offboardReasons = offboardReasonsQuery.data ?? [];
 
   // Filters
   const [filterRole, setFilterRole] = useState<string>("all");
