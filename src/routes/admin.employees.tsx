@@ -1498,6 +1498,7 @@ function EmployeesPage() {
         languagesList={languagesList}
         esicBranches={esicBranches}
         offboardReasons={offboardReasons}
+        assets={assets}
         canReview={!!editing && editing.status === "pending"}
         isApproving={approveMut.isPending}
         onApprove={() => {
