@@ -558,19 +558,21 @@ function EmployeesPage() {
     return true;
   };
 
+  const isEmployeeStatus = (s: string) => s === "approved" || s === "active" || s === "inactive" || s === "offboarded";
+
   const employees = useMemo(
-    () => candidates.filter((c) => (c.status === "approved" || c.status === "active") && matchesSearch(c) && matchesFilters(c)),
+    () => candidates.filter((c) => isEmployeeStatus(c.status) && matchesSearch(c) && matchesFilters(c)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, units, designations],
   );
   const candidateRows = useMemo(
-    () => candidates.filter((c) => c.status !== "approved" && c.status !== "active" && matchesSearch(c)),
+    () => candidates.filter((c) => !isEmployeeStatus(c.status) && matchesSearch(c)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [candidates, search],
   );
 
   const fieldManagers = useMemo(
-    () => candidates.filter((c) => c.role_key === "field_manager" && (c.status === "approved" || c.status === "active")),
+    () => candidates.filter((c) => c.role_key === "field_manager" && isEmployeeStatus(c.status)),
     [candidates],
   );
   const scopeByCandidate = useMemo(() => {
@@ -584,7 +586,7 @@ function EmployeesPage() {
 
   const stats = useMemo(() => {
     const total = candidates.length;
-    const approved = candidates.filter((c) => c.status === "approved" || c.status === "active").length;
+    const approved = candidates.filter((c) => isEmployeeStatus(c.status)).length;
     const pending = candidates.filter((c) => c.status === "pending").length;
     const rejected = candidates.filter((c) => c.status === "rejected").length;
     const drafts = candidates.filter((c) => c.status === "draft").length;
