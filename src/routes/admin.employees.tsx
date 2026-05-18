@@ -593,7 +593,7 @@ function EmployeesPage() {
   const employees = useMemo(
     () => candidates.filter((c) => isEmployeeStatus(c.status) && matchesSearch(c) && matchesFilters(c)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, units, designations],
+    [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations],
   );
   const candidateRows = useMemo(
     () => candidates.filter((c) => !isEmployeeStatus(c.status) && matchesSearch(c)),
