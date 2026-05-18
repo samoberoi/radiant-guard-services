@@ -711,6 +711,9 @@ function EmployeesPage() {
 
   const toggleEnabledMut = useMutation({
     mutationFn: async ({ candidate, enabled }: { candidate: CandidateListItem; enabled: boolean }) => {
+      if (enabled && candidate.no_hire) {
+        throw new Error("Employee is flagged Do not re-hire and cannot be reactivated.");
+      }
       const patch: Record<string, unknown> = { is_enabled: enabled, status: enabled ? "active" : "inactive" };
       if (enabled) {
         patch.offboarding_reason_id = null;
