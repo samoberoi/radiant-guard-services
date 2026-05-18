@@ -102,7 +102,7 @@ function BranchManagerPage() {
     <div>
       <PageHeader
         title="Branch Manager"
-        description="Map a unique branch code to each state. Branches display as CODE – STATE."
+        description="Map a unique branch code to each location. Branches display as CODE – LOCATION."
         crumbs={[
           { label: "Organizations", to: "/admin/customers" },
           { label: "Branch Manager" },
@@ -112,8 +112,8 @@ function BranchManagerPage() {
       {/* Stats */}
       <div className="mb-5 grid gap-3 sm:grid-cols-3">
         <StatCard label="Total branches" value={branches.length} />
-        <StatCard label="States mapped" value={mappedStateIds.size} />
-        <StatCard label="States available" value={availableStates.length} accent />
+        <StatCard label="Locations mapped" value={mappedStateIds.size} />
+        <StatCard label="Locations available" value={availableStates.length} accent />
       </div>
 
       {/* Toolbar */}
