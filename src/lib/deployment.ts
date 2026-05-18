@@ -57,6 +57,25 @@ export function useEmployeesLite() {
   });
 }
 
+export type CandidateUnit = { candidate_id: string; unit_id: string; is_primary: boolean };
+export const QK_CANDIDATE_UNITS = ["admin", "candidate_units"] as const;
+
+export function useCandidateUnits() {
+  return useQuery({
+    queryKey: QK_CANDIDATE_UNITS,
+    staleTime: 30_000,
+    queryFn: async (): Promise<CandidateUnit[]> => {
+      const { data, error } = await supabase
+        .from("candidate_units" as never)
+        .select("candidate_id,unit_id,is_primary")
+        .limit(5000);
+      if (error) throw error;
+      return ((data as unknown) as CandidateUnit[]) ?? [];
+    },
+  });
+}
+
+
 export type UnitContext = {
   id: string;
   branch_id: string | null;
