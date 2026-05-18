@@ -915,62 +915,6 @@ function EmployeesPage() {
             </td>
           )}
           {mode === "employee" && (
-            <td className="px-3 py-3 align-top">
-              {c.role_key === "guard" ? (
-                <Select
-                  value={c.reports_to ?? "__none"}
-                  onValueChange={async (v) => {
-                    const newId = v === "__none" ? null : v;
-                    if (newId === c.reports_to) return;
-                    const name = newId ? fieldManagers.find((m) => m.id === newId)?.full_name ?? "—" : "no one";
-                    const ok = await confirmAction({ title: "Change reporting manager?", description: `${c.full_name} will report to ${name}.`, confirmText: "Update" });
-                    if (!ok) return;
-                    assignManagerMut.mutate({ candidate: c, managerId: newId });
-                  }}
-                >
-                  <SelectTrigger className="h-8 w-[160px] text-xs"><SelectValue placeholder="Assign manager" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none" className="text-xs">— No manager —</SelectItem>
-                    {fieldManagers.map((m) => (<SelectItem key={m.id} value={m.id} className="text-xs">{m.full_name} ({m.employee_code})</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              ) : c.role_key === "field_manager" ? (
-                <div className="flex flex-wrap items-center gap-1 max-w-[220px]">
-                  {(scopeByCandidate.get(c.id) ?? []).slice(0, 3).map((s) => (
-                    <Badge
-                      key={s.id}
-                      variant="outline"
-                      title={`${SCOPE_TYPE_LABEL[s.scope_type]}: ${s.scope_label}`}
-                      className="gap-1 max-w-[140px] border-sky-300/70 bg-sky-50 text-sky-700 dark:border-sky-500/40 dark:bg-sky-500/10 dark:text-sky-300"
-                    >
-                      <span className="text-[9px] uppercase opacity-60">{s.scope_type[0]}</span>
-                      <span className="truncate text-[11px]">{s.scope_label || s.scope_id.slice(0, 6)}</span>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          const ok = await confirmAction({ title: "Remove scope?", description: `Remove ${SCOPE_TYPE_LABEL[s.scope_type]} "${s.scope_label}" from ${c.full_name}?`, confirmText: "Remove" });
-                          if (!ok) return;
-                          removeScopeMut.mutate({ scope: s, candidate: c });
-                        }}
-                        className="ml-0.5 rounded-sm hover:bg-sky-100"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                  {(scopeByCandidate.get(c.id)?.length ?? 0) > 3 && (
-                    <span className="text-[10px] text-muted-foreground">+{(scopeByCandidate.get(c.id)?.length ?? 0) - 3}</span>
-                  )}
-                  <Button variant="ghost" size="sm" className="h-6 px-1.5 text-[11px] text-muted-foreground" onClick={() => setScopeTarget(c)}>
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                </div>
-              ) : (
-                <span className="text-xs text-muted-foreground">—</span>
-              )}
-            </td>
-          )}
-          {mode === "employee" && (
             <td className="px-3 py-3">
               <Switch
                 checked={c.is_enabled}
@@ -1116,11 +1060,6 @@ function EmployeesPage() {
               {mode === "employee" && (
                 <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Role
-                </th>
-              )}
-              {mode === "employee" && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                  Reporting / Scope
                 </th>
               )}
               {mode === "employee" && (
