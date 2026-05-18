@@ -113,6 +113,18 @@ function useDesignations() {
     onSuccess: invalidate,
   });
 
+  const billableMut = useMutation({
+    mutationFn: async ({ id, billable }: { id: string; billable: boolean }) => {
+      const { error } = await supabase
+        .from("designations" as never)
+        .update({ billable } as never)
+        .eq("id", id);
+      if (error) throw error;
+      void logActivity({ module: "Designation Manager", action: "update", entityType: "designations", entityId: id, details: { billable } });
+    },
+    onSuccess: invalidate,
+  });
+
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("designations" as never).delete().eq("id", id);
