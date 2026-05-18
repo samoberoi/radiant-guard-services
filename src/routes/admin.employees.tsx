@@ -3145,13 +3145,17 @@ function CandidateWizard({
                         onRequestOffboard();
                         return;
                       }
+                      if (isEmp && v === "active" && form.status === "inactive" && form.no_hire) {
+                        toast.error("This employee is flagged Do not re-hire and cannot be reactivated.");
+                        return;
+                      }
                       set("status", v);
                     }}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive") ? (
                           <>
-                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="active" disabled={form.status === "inactive" && form.no_hire}>Active</SelectItem>
                             <SelectItem value="inactive">Inactive</SelectItem>
                           </>
                         ) : (
