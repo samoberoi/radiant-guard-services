@@ -1253,7 +1253,7 @@ function EmployeesPage() {
                     variant="outline"
                     size="icon"
                     onClick={() => setSignTarget({ id: c.id, docType: "appointment_letter" })}
-                    className="h-8 w-8 rounded-lg border-sky-200 bg-sky-50/50 text-sky-700 hover:bg-sky-50 dark:border-sky-500/40 dark:bg-transparent dark:text-sky-300 dark:hover:bg-sky-500/10"
+                    className="h-8 w-8 rounded-lg border-sky-200 bg-sky-50/50 text-sky-700 hover:bg-sky-50 hover:text-sky-700 dark:border-sky-500/40 dark:bg-transparent dark:text-sky-300 dark:hover:bg-sky-500/10 dark:hover:text-sky-300"
                     title="Sign Appointment Letter"
                   >
                     <FileText className="h-4 w-4" />
