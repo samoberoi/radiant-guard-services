@@ -128,7 +128,7 @@ export function ComplianceSection({
   const esic = c.esic_enabled ?? true;
   const pt = c.pt_enabled ?? true;
   const branches = esicBranches ?? [];
-  const branchMissing = esic && !c.esic_branch_id;
+  
   const toggleRow = (label: string, desc: string, checked: boolean, onChange: (v: boolean) => void) => (
     <div className="flex items-center justify-between rounded-md border p-3">
       <div>
