@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Download, Edit2, ExternalLink, List as ListIcon, MapPin, Network, Plus, Search, Trash2, Users, Warehouse } from "lucide-react";
+import { DeleteGuardButton } from "@/components/DeleteGuardButton";
 import { csvDate, csvStatus, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmProvider";
