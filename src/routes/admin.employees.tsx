@@ -206,6 +206,29 @@ type Candidate = {
   documents: any[];
   nominations: any[];
   kyc_completed: boolean;
+  // Offboarding & HR
+  assigned_asset_ids: string[];
+  no_hire: boolean;
+  offboarding_details: OffboardingDetails;
+};
+
+export type OffboardingAssetReturn = {
+  asset_id: string;
+  returned: boolean;
+  remarks?: string;
+};
+
+export type OffboardingDetails = {
+  date_of_offboarding?: string | null;
+  date_of_resignation?: string | null;
+  date_of_last_working?: string | null;
+  date_of_pf_update?: string | null;
+  date_of_esic_update?: string | null;
+  reason_text?: string;
+  review?: string;
+  asset_returns?: OffboardingAssetReturn[];
+  rating?: number;
+  rating_remarks?: string;
 };
 
 type CandidateExperience = {
@@ -258,7 +281,7 @@ type CandidateListItem = Pick<
   | "unit_id"
   | "designation_id"
   | "status"
-> & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null; offboarding_reason_id: string | null; offboarded_at: string | null };
+> & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null; offboarding_reason_id: string | null; offboarded_at: string | null; assigned_asset_ids: string[]; no_hire: boolean; offboarding_details: OffboardingDetails };
 
 type RoleLite = { key: string; name: string };
 
@@ -328,7 +351,7 @@ function useCandidates() {
       const { data, error } = await runWithQueryTimeout("Employees", async (signal) =>
         await supabase
           .from("candidates" as never)
-          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key,is_enabled,reports_to,offboarding_reason_id,offboarded_at")
+          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key,is_enabled,reports_to,offboarding_reason_id,offboarded_at,assigned_asset_ids,no_hire,offboarding_details")
           .order("created_at", { ascending: false })
           .limit(250)
           .abortSignal(signal),
@@ -508,6 +531,24 @@ function EmployeesPage() {
     },
   });
   const offboardReasons = offboardReasonsQuery.data ?? [];
+
+  const assetsQuery = useQuery({
+    queryKey: ["assets_lite"],
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("assets" as never)
+        .select("id,name,category,enabled")
+        .eq("enabled", true)
+        .order("name", { ascending: true })
+        .limit(500);
+      if (error) throw error;
+      return ((data as unknown) as Array<{ id: string; name: string; category: string }>) ?? [];
+    },
+  });
+  const assets = assetsQuery.data ?? [];
 
   // Filters
   const [filterRole, setFilterRole] = useState<string>("all");
@@ -698,7 +739,19 @@ function EmployeesPage() {
   });
 
   const offboardMut = useMutation({
-    mutationFn: async ({ candidate, reasonId, reasonName }: { candidate: CandidateListItem; reasonId: string; reasonName: string }) => {
+    mutationFn: async ({
+      candidate,
+      reasonId,
+      reasonName,
+      details,
+      noHire,
+    }: {
+      candidate: CandidateListItem;
+      reasonId: string;
+      reasonName: string;
+      details: OffboardingDetails;
+      noHire: boolean;
+    }) => {
       const { error } = await supabase
         .from("candidates" as never)
         .update({
@@ -706,6 +759,8 @@ function EmployeesPage() {
           status: "inactive",
           offboarding_reason_id: reasonId,
           offboarded_at: new Date().toISOString(),
+          offboarding_details: details,
+          no_hire: noHire,
         } as unknown as never)
         .eq("id", candidate.id);
       if (error) throw error;
@@ -716,7 +771,7 @@ function EmployeesPage() {
         entityId: candidate.id,
         entityLabel: candidate.full_name || candidate.employee_code,
         before: { is_enabled: candidate.is_enabled, status: candidate.status },
-        after: { is_enabled: false, status: "inactive", offboarding_reason: reasonName },
+        after: { is_enabled: false, status: "inactive", offboarding_reason: reasonName, no_hire: noHire, offboarding_details: details },
       });
     },
     onSuccess: () => {
@@ -1457,6 +1512,7 @@ function EmployeesPage() {
         languagesList={languagesList}
         esicBranches={esicBranches}
         offboardReasons={offboardReasons}
+        assets={assets}
         canReview={!!editing && editing.status === "pending"}
         isApproving={approveMut.isPending}
         onApprove={() => {
@@ -1506,59 +1562,26 @@ function EmployeesPage() {
       </AlertDialog>
 
       {/* Offboarding workflow */}
-      <Dialog
-        open={!!offboardTarget}
-        onOpenChange={(o) => {
-          if (!o) {
-            setOffboardTarget(null);
-            setOffboardReasonId("");
-          }
+      <OffboardingDialog
+        target={offboardTarget}
+        reasons={offboardReasons}
+        reasonsLoading={offboardReasonsQuery.isLoading}
+        assets={assets}
+        initialReasonId={offboardReasonId}
+        isSubmitting={offboardMut.isPending}
+        onClose={() => { setOffboardTarget(null); setOffboardReasonId(""); }}
+        onSubmit={({ reasonId, details, noHire }) => {
+          if (!offboardTarget) return;
+          const reason = offboardReasons.find((r) => r.id === reasonId);
+          offboardMut.mutate({
+            candidate: offboardTarget,
+            reasonId,
+            reasonName: reason?.name ?? "",
+            details,
+            noHire,
+          });
         }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Offboard employee?</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to disable {offboardTarget?.full_name || offboardTarget?.employee_code || "this employee"}? Pick a reason — this will start their offboarding.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label>Offboarding reason</Label>
-            <Select value={offboardReasonId} onValueChange={setOffboardReasonId}>
-              <SelectTrigger>
-                <SelectValue placeholder={offboardReasonsQuery.isLoading ? "Loading…" : "Select a reason"} />
-              </SelectTrigger>
-              <SelectContent>
-                {offboardReasons.map((r) => (
-                  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
-                ))}
-                {!offboardReasonsQuery.isLoading && offboardReasons.length === 0 && (
-                  <div className="px-2 py-1.5 text-xs text-muted-foreground">No reasons configured. Add them in Offboarding Reason Manager.</div>
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setOffboardTarget(null); setOffboardReasonId(""); }}>
-              Cancel
-            </Button>
-            <Button
-              disabled={!offboardReasonId || offboardMut.isPending}
-              onClick={() => {
-                if (!offboardTarget || !offboardReasonId) return;
-                const reason = offboardReasons.find((r) => r.id === offboardReasonId);
-                offboardMut.mutate({
-                  candidate: offboardTarget,
-                  reasonId: offboardReasonId,
-                  reasonName: reason?.name ?? "",
-                });
-              }}
-            >
-              {offboardMut.isPending ? "Offboarding…" : "Confirm offboarding"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      />
 
 
       <Dialog
@@ -1987,6 +2010,9 @@ function emptyForm(): CandidateForm {
     documents: [],
     nominations: [],
     kyc_completed: false,
+    assigned_asset_ids: [],
+    no_hire: false,
+    offboarding_details: {},
   };
 }
 
@@ -2004,6 +2030,7 @@ function CandidateWizard({
   languagesList,
   esicBranches,
   offboardReasons = [],
+  assets = [],
   canReview = false,
   isApproving = false,
   onApprove,
@@ -2023,6 +2050,7 @@ function CandidateWizard({
   languagesList: LanguageLite[];
   esicBranches: EsicBranchLite[];
   offboardReasons?: { id: string; name: string }[];
+  assets?: { id: string; name: string; category: string }[];
   canReview?: boolean;
   isApproving?: boolean;
   onApprove?: () => void;
@@ -2482,6 +2510,17 @@ function CandidateWizard({
                   {form.mobile}
                 </Badge>
               )}
+              {(() => {
+                const eAny = editing as unknown as { offboarding_reason_id?: string | null; offboarded_at?: string | null; no_hire?: boolean };
+                if (eAny.no_hire) {
+                  return (
+                    <Badge variant="outline" className="border-rose-300/60 bg-rose-500/10 text-[11px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">
+                      Do not re-hire
+                    </Badge>
+                  );
+                }
+                return null;
+              })()}
               {(() => {
                 const eAny = editing as unknown as { offboarding_reason_id?: string | null; offboarded_at?: string | null };
                 if (!eAny.offboarding_reason_id) return null;
@@ -3120,6 +3159,25 @@ function CandidateWizard({
                       </SelectContent>
                     </Select>
                   </Field>
+                  <div className="sm:col-span-2">
+                    <Field label={`Assigned Assets${form.assigned_asset_ids.length > 0 ? ` · ${form.assigned_asset_ids.length} selected` : ""}`}>
+                      <AssetMultiPicker
+                        assets={assets}
+                        value={form.assigned_asset_ids}
+                        onChange={(ids) => setForm((f) => ({ ...f, assigned_asset_ids: ids }))}
+                      />
+                    </Field>
+                  </div>
+                  <div className="sm:col-span-2 flex items-center justify-between rounded-md border border-border bg-secondary/30 p-3">
+                    <div>
+                      <Label className="m-0">Do not re-hire</Label>
+                      <p className="text-xs text-muted-foreground">Flag this employee as ineligible for re-hiring. Auto-enabled when offboarded as Absconding.</p>
+                    </div>
+                    <Switch
+                      checked={form.no_hire}
+                      onCheckedChange={(v) => set("no_hire", v)}
+                    />
+                  </div>
                 </div>
               </Section>
 
@@ -3598,6 +3656,370 @@ function UnitPicker({
         </Command>
       </PopoverContent>
     </Popover>
+  );
+}
+
+// ---------------- Offboarding Dialog ---------------- //
+
+const ABSCONDING_NAMES = new Set(["absconding", "abscond", "absconded"]);
+
+function OffboardingDialog({
+  target,
+  reasons,
+  reasonsLoading,
+  assets,
+  initialReasonId,
+  isSubmitting,
+  onClose,
+  onSubmit,
+}: {
+  target: CandidateListItem | null;
+  reasons: { id: string; name: string }[];
+  reasonsLoading: boolean;
+  assets: { id: string; name: string; category: string }[];
+  initialReasonId: string;
+  isSubmitting: boolean;
+  onClose: () => void;
+  onSubmit: (args: { reasonId: string; details: OffboardingDetails; noHire: boolean }) => void;
+}) {
+  const today = new Date().toISOString().slice(0, 10);
+  const [reasonId, setReasonId] = useState<string>(initialReasonId);
+  const [dateOfOffboarding, setDateOfOffboarding] = useState<string>(today);
+  const [dateOfResignation, setDateOfResignation] = useState<string>("");
+  const [dateOfLastWorking, setDateOfLastWorking] = useState<string>("");
+  const [dateOfPfUpdate, setDateOfPfUpdate] = useState<string>("");
+  const [dateOfEsicUpdate, setDateOfEsicUpdate] = useState<string>("");
+  const [reasonText, setReasonText] = useState<string>("");
+  const [review, setReview] = useState<string>("");
+  const [assetReturns, setAssetReturns] = useState<OffboardingAssetReturn[]>([]);
+  const [rating, setRating] = useState<number>(0);
+  const [ratingRemarks, setRatingRemarks] = useState<string>("");
+  const [noHire, setNoHire] = useState<boolean>(false);
+  const [noHireTouched, setNoHireTouched] = useState<boolean>(false);
+
+  // Reset when target changes
+  useEffect(() => {
+    if (!target) return;
+    setReasonId(initialReasonId || "");
+    setDateOfOffboarding(today);
+    setDateOfResignation("");
+    setDateOfLastWorking("");
+    setDateOfPfUpdate("");
+    setDateOfEsicUpdate("");
+    setReasonText("");
+    setReview("");
+    const prefill = (target.assigned_asset_ids ?? []).map((id) => ({ asset_id: id, returned: false, remarks: "" }));
+    setAssetReturns(prefill);
+    setRating(0);
+    setRatingRemarks("");
+    setNoHire(false);
+    setNoHireTouched(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target?.id]);
+
+  const selectedReason = reasons.find((r) => r.id === reasonId);
+  const isAbsconding = !!selectedReason && ABSCONDING_NAMES.has(selectedReason.name.trim().toLowerCase());
+
+  // Auto-enable no-hire on Absconding (unless user manually toggled)
+  useEffect(() => {
+    if (!noHireTouched) {
+      setNoHire(isAbsconding);
+    }
+  }, [isAbsconding, noHireTouched]);
+
+  const assetById = useMemo(() => new Map(assets.map((a) => [a.id, a])), [assets]);
+
+  const toggleReturned = (assetId: string) => {
+    setAssetReturns((rows) =>
+      rows.map((r) => (r.asset_id === assetId ? { ...r, returned: !r.returned } : r)),
+    );
+  };
+  const setReturnRemarks = (assetId: string, remarks: string) => {
+    setAssetReturns((rows) =>
+      rows.map((r) => (r.asset_id === assetId ? { ...r, remarks } : r)),
+    );
+  };
+
+  if (!target) return null;
+
+  return (
+    <Dialog open={!!target} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent className="max-h-[92vh] w-[96vw] max-w-3xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Offboard employee</DialogTitle>
+          <DialogDescription>
+            Capture the full offboarding record for{" "}
+            <span className="font-medium text-foreground">
+              {target.full_name || target.employee_code || "this employee"}
+            </span>
+            . Once saved, the employee will be marked Inactive.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* Section: Reason + Dates */}
+          <section className="space-y-3">
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+              Offboarding Details
+            </h3>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1">
+                <Label>Employee</Label>
+                <Input value={`${target.full_name}${target.employee_code ? ` · ${target.employee_code}` : ""}`} disabled />
+              </div>
+              <div className="space-y-1">
+                <Label>Offboarding type *</Label>
+                <Select value={reasonId} onValueChange={setReasonId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={reasonsLoading ? "Loading…" : "Select a type"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {reasons.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Date of offboarding *</Label>
+                <Input type="date" value={dateOfOffboarding} onChange={(e) => setDateOfOffboarding(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Date of resignation</Label>
+                <Input type="date" value={dateOfResignation} onChange={(e) => setDateOfResignation(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Date of last working day</Label>
+                <Input type="date" value={dateOfLastWorking} onChange={(e) => setDateOfLastWorking(e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <Label>Date of PF update</Label>
+                <Input type="date" value={dateOfPfUpdate} onChange={(e) => setDateOfPfUpdate(e.target.value)} />
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <Label>Date of ESIC update</Label>
+                <Input type="date" value={dateOfEsicUpdate} onChange={(e) => setDateOfEsicUpdate(e.target.value)} />
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <Label>Reason for offboarding</Label>
+                <Textarea
+                  rows={2}
+                  value={reasonText}
+                  onChange={(e) => setReasonText(e.target.value)}
+                  placeholder="Describe the reason in detail (optional)"
+                />
+              </div>
+              <div className="space-y-1 sm:col-span-2">
+                <Label>Review about employee</Label>
+                <Textarea
+                  rows={3}
+                  value={review}
+                  onChange={(e) => setReview(e.target.value)}
+                  placeholder="Performance, conduct, anything HR / future hiring should know"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Section: Handover Checklist */}
+          <section className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                Handover Checklist
+              </h3>
+              <span className="text-[11px] text-muted-foreground">
+                {assetReturns.filter((r) => r.returned).length} / {assetReturns.length} returned
+              </span>
+            </div>
+            {assetReturns.length === 0 ? (
+              <p className="rounded-md border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+                No assets were assigned to this employee. Assign assets from the Employee Info screen if a handover is required.
+              </p>
+            ) : (
+              <div className="rounded-md border border-border">
+                {assetReturns.map((row, idx) => {
+                  const a = assetById.get(row.asset_id);
+                  return (
+                    <div
+                      key={row.asset_id}
+                      className={cn(
+                        "grid grid-cols-[auto,1fr,2fr] items-center gap-3 p-3",
+                        idx > 0 && "border-t border-border",
+                      )}
+                    >
+                      <Switch checked={row.returned} onCheckedChange={() => toggleReturned(row.asset_id)} />
+                      <div className="text-sm">
+                        <div className="font-medium">{a?.name ?? "Unknown asset"}</div>
+                        {a?.category && <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{a.category}</div>}
+                      </div>
+                      <Input
+                        placeholder="Condition / remarks (optional)"
+                        value={row.remarks ?? ""}
+                        onChange={(e) => setReturnRemarks(row.asset_id, e.target.value)}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          {/* Section: Rating */}
+          <section className="space-y-3">
+            <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+              Employee Rating
+            </h3>
+            <div className="space-y-2">
+              <Label>Overall rating</Label>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <button
+                    type="button"
+                    key={n}
+                    onClick={() => setRating(rating === n ? 0 : n)}
+                    className={cn(
+                      "rounded p-1 text-2xl leading-none transition-colors",
+                      n <= rating ? "text-amber-500" : "text-muted-foreground/40 hover:text-amber-400",
+                    )}
+                    aria-label={`${n} star${n > 1 ? "s" : ""}`}
+                  >
+                    ★
+                  </button>
+                ))}
+                <span className="ml-2 text-xs text-muted-foreground">
+                  {rating > 0 ? `${rating} / 5` : "Not rated"}
+                </span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Remarks</Label>
+              <Textarea
+                rows={2}
+                value={ratingRemarks}
+                onChange={(e) => setRatingRemarks(e.target.value)}
+                placeholder="Optional notes supporting the rating"
+              />
+            </div>
+          </section>
+
+          {/* Section: Re-hire flag */}
+          <section className="flex items-center justify-between rounded-md border border-border bg-secondary/30 p-3">
+            <div>
+              <Label className="m-0">Do not re-hire</Label>
+              <p className="text-xs text-muted-foreground">
+                {isAbsconding
+                  ? "Auto-enabled because the offboarding type is Absconding."
+                  : "Flag this employee as ineligible for re-hiring."}
+              </p>
+            </div>
+            <Switch
+              checked={noHire}
+              onCheckedChange={(v) => { setNoHireTouched(true); setNoHire(v); }}
+            />
+          </section>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button
+            disabled={!reasonId || !dateOfOffboarding || isSubmitting}
+            onClick={() => {
+              onSubmit({
+                reasonId,
+                noHire,
+                details: {
+                  date_of_offboarding: dateOfOffboarding || null,
+                  date_of_resignation: dateOfResignation || null,
+                  date_of_last_working: dateOfLastWorking || null,
+                  date_of_pf_update: dateOfPfUpdate || null,
+                  date_of_esic_update: dateOfEsicUpdate || null,
+                  reason_text: reasonText.trim(),
+                  review: review.trim(),
+                  asset_returns: assetReturns,
+                  rating,
+                  rating_remarks: ratingRemarks.trim(),
+                },
+              });
+            }}
+          >
+            {isSubmitting ? "Saving…" : "Confirm offboarding"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AssetMultiPicker({
+  assets,
+  value,
+  onChange,
+}: {
+  assets: { id: string; name: string; category: string }[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedSet = useMemo(() => new Set(value), [value]);
+  const selected = useMemo(() => assets.filter((a) => selectedSet.has(a.id)), [assets, selectedSet]);
+  const toggle = (id: string) => {
+    if (selectedSet.has(id)) onChange(value.filter((v) => v !== id));
+    else onChange([...value, id]);
+  };
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5 rounded-md border border-input bg-background p-2 min-h-[44px]">
+        {selected.length === 0 && (
+          <span className="self-center px-1 text-sm text-muted-foreground">
+            No assets assigned — click "Add asset" to assign company assets.
+          </span>
+        )}
+        {selected.map((a) => (
+          <Badge key={a.id} variant="secondary" className="flex items-center gap-1.5 pl-2 pr-1 py-1 text-xs font-normal">
+            <span className="font-medium">{a.name}</span>
+            <span className="opacity-60 text-[10px]">· {a.category}</span>
+            <button
+              type="button"
+              className="ml-1 rounded p-0.5 opacity-60 hover:bg-background/30 hover:opacity-100"
+              title="Remove"
+              onClick={(e) => { e.preventDefault(); onChange(value.filter((v) => v !== a.id)); }}
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ))}
+      </div>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" size="sm" className="gap-1">
+            <Plus className="h-3.5 w-3.5" /> Add asset
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[320px] p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search assets…" />
+            <CommandList>
+              <CommandEmpty>No assets found.</CommandEmpty>
+              <CommandGroup>
+                {assets.map((a) => {
+                  const checked = selectedSet.has(a.id);
+                  return (
+                    <CommandItem key={a.id} value={`${a.name} ${a.category}`} onSelect={() => toggle(a.id)}>
+                      <Check className={cn("mr-2 h-4 w-4", checked ? "opacity-100" : "opacity-0")} />
+                      <span>{a.name}</span>
+                      <span className="ml-auto text-[10px] text-muted-foreground">{a.category}</span>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }
 
