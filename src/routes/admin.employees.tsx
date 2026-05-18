@@ -7,6 +7,7 @@ import {
   CriminalSection,
   OtherSection,
   ListSection,
+  NomineeSection,
 } from "@/components/candidate-extra-sections";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
