@@ -191,11 +191,13 @@ function DesignationManagerPage() {
                   name: i.name,
                   code: i.code,
                   enabled: i.enabled ? "Yes" : "No",
+                  billable: i.billable ? "Yes" : "No",
                 })),
                 [
                   { key: "name", header: "Name" },
                   { key: "code", header: "Code" },
                   { key: "enabled", header: "Enabled" },
+                  { key: "billable", header: "Billable" },
                 ],
               )
             }
