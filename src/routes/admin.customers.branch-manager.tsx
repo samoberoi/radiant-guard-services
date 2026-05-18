@@ -383,7 +383,7 @@ function BranchFormDialog({
   const selectedState = allStates.find((s) => s.id === stateId);
   const previewName = selectedState
     ? `${code || "BR?"} – ${selectedState.name}`
-    : "Pick a state to preview";
+    : "Pick a location to preview";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
