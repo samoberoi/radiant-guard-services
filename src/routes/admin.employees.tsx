@@ -487,6 +487,27 @@ function EmployeesPage() {
   const [rejectTarget, setRejectTarget] = useState<CandidateListItem | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [signTarget, setSignTarget] = useState<{ id: string; docType: DocType } | null>(null);
+  const [offboardTarget, setOffboardTarget] = useState<CandidateListItem | null>(null);
+  const [offboardReasonId, setOffboardReasonId] = useState<string>("");
+
+  const offboardReasonsQuery = useQuery({
+    queryKey: ["offboarding_reasons_lite"],
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("offboarding_reasons" as never)
+        .select("id,name,enabled,sort_order")
+        .eq("enabled", true)
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true })
+        .limit(100);
+      if (error) throw error;
+      return ((data as unknown) as Array<{ id: string; name: string }>) ?? [];
+    },
+  });
+  const offboardReasons = offboardReasonsQuery.data ?? [];
 
   // Filters
   const [filterRole, setFilterRole] = useState<string>("all");
@@ -558,7 +579,7 @@ function EmployeesPage() {
     return true;
   };
 
-  const isEmployeeStatus = (s: string) => s === "approved" || s === "active" || s === "inactive" || s === "offboarded";
+  const isEmployeeStatus = (s: string) => s === "approved" || s === "active" || s === "inactive";
 
   const employees = useMemo(
     () => candidates.filter((c) => isEmployeeStatus(c.status) && matchesSearch(c) && matchesFilters(c)),
@@ -640,9 +661,14 @@ function EmployeesPage() {
 
   const toggleEnabledMut = useMutation({
     mutationFn: async ({ candidate, enabled }: { candidate: CandidateListItem; enabled: boolean }) => {
+      const patch: Record<string, unknown> = { is_enabled: enabled, status: enabled ? "active" : "inactive" };
+      if (enabled) {
+        patch.offboarding_reason_id = null;
+        patch.offboarded_at = null;
+      }
       const { error } = await supabase
         .from("candidates" as never)
-        .update({ is_enabled: enabled } as unknown as never)
+        .update(patch as unknown as never)
         .eq("id", candidate.id);
       if (error) throw error;
       await logActivity({
@@ -651,15 +677,46 @@ function EmployeesPage() {
         entityType: "candidate",
         entityId: candidate.id,
         entityLabel: candidate.full_name || candidate.employee_code,
-        before: { is_enabled: candidate.is_enabled },
-        after: { is_enabled: enabled },
+        before: { is_enabled: candidate.is_enabled, status: candidate.status },
+        after: { is_enabled: enabled, status: enabled ? "active" : "inactive" },
       });
     },
     onSuccess: (_d, vars) => {
-      toast.success(vars.enabled ? "Employee enabled" : "Employee disabled");
+      toast.success(vars.enabled ? "Employee activated" : "Employee deactivated");
       qc.invalidateQueries({ queryKey: QK });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Toggle failed"),
+  });
+
+  const offboardMut = useMutation({
+    mutationFn: async ({ candidate, reasonId, reasonName }: { candidate: CandidateListItem; reasonId: string; reasonName: string }) => {
+      const { error } = await supabase
+        .from("candidates" as never)
+        .update({
+          is_enabled: false,
+          status: "inactive",
+          offboarding_reason_id: reasonId,
+          offboarded_at: new Date().toISOString(),
+        } as unknown as never)
+        .eq("id", candidate.id);
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: "offboard",
+        entityType: "candidate",
+        entityId: candidate.id,
+        entityLabel: candidate.full_name || candidate.employee_code,
+        before: { is_enabled: candidate.is_enabled, status: candidate.status },
+        after: { is_enabled: false, status: "inactive", offboarding_reason: reasonName },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Employee offboarded");
+      qc.invalidateQueries({ queryKey: QK });
+      setOffboardTarget(null);
+      setOffboardReasonId("");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Offboarding failed"),
   });
 
   const assignManagerMut = useMutation({
@@ -808,8 +865,8 @@ function EmployeesPage() {
   };
 
   const renderRows = (rows: CandidateListItem[], mode: "employee" | "candidate") => {
-    const empCols = 13;
-    const candCols = 9;
+    const empCols = 9;
+    const candCols = 7;
     if (isLoading) {
       return (
         <tr>
@@ -876,7 +933,6 @@ function EmployeesPage() {
               </div>
             </div>
           </td>
-          <td className="px-3 py-3 font-mono text-xs text-muted-foreground">{maskAadhaar(c.aadhaar_number)}</td>
           <td className="px-3 py-3 text-center text-sm font-medium text-muted-foreground">{c.mobile || "—"}</td>
           <td className="px-3 py-3 max-w-[180px]">
             {unit ? (
@@ -889,21 +945,6 @@ function EmployeesPage() {
             )}
           </td>
           <td className="px-3 py-3 text-sm text-muted-foreground max-w-[140px]"><span className="line-clamp-2" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
-          <td className="px-3 py-3 text-center">
-            {desig ? (
-              desig.billable ? (
-                <Badge variant="outline" className="border-emerald-300/70 bg-emerald-50 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-300">
-                  Billable
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="border-slate-300/70 bg-slate-50 text-slate-600 dark:border-slate-500/40 dark:bg-slate-500/10 dark:text-slate-300">
-                  Non-billable
-                </Badge>
-              )
-            ) : (
-              <span className="text-xs text-muted-foreground">—</span>
-            )}
-          </td>
           {mode === "employee" && (
             <td className="px-3 py-3">
               {c.role_key ? (
@@ -966,15 +1007,21 @@ function EmployeesPage() {
           {mode === "employee" && (
             <td className="px-3 py-3">
               <Switch
-                checked={c.is_enabled}
+                checked={c.is_enabled && c.status !== "inactive"}
                 onCheckedChange={async (v) => {
+                  if (!v) {
+                    // Disabling → start offboarding workflow
+                    setOffboardTarget(c);
+                    setOffboardReasonId("");
+                    return;
+                  }
                   const ok = await confirmAction({
-                    title: v ? "Enable employee?" : "Disable employee?",
-                    description: `${c.full_name || c.employee_code} will be ${v ? "enabled" : "disabled"}.`,
-                    confirmText: v ? "Enable" : "Disable",
+                    title: "Activate employee?",
+                    description: `${c.full_name || c.employee_code} will be marked active again.`,
+                    confirmText: "Activate",
                   });
                   if (!ok) return;
-                  toggleEnabledMut.mutate({ candidate: c, enabled: v });
+                  toggleEnabledMut.mutate({ candidate: c, enabled: true });
                 }}
               />
             </td>
@@ -1062,15 +1109,17 @@ function EmployeesPage() {
                     <Edit2 className="h-4 w-4" />
                   )}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setConfirmDelete(c)}
-                  className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
-                  title="Delete"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {mode === "candidate" && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setConfirmDelete(c)}
+                    className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           </td>
@@ -1094,9 +1143,6 @@ function EmployeesPage() {
               <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Employee" : "Candidate"}
               </th>
-              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                Aadhaar
-              </th>
               <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Mobile
               </th>
@@ -1105,9 +1151,6 @@ function EmployeesPage() {
               </th>
               <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Designation
-              </th>
-              <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                Billable
               </th>
               {mode === "employee" && (
                 <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
@@ -1423,6 +1466,63 @@ function EmployeesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Offboarding workflow */}
+      <Dialog
+        open={!!offboardTarget}
+        onOpenChange={(o) => {
+          if (!o) {
+            setOffboardTarget(null);
+            setOffboardReasonId("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Offboard employee?</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to disable {offboardTarget?.full_name || offboardTarget?.employee_code || "this employee"}? Pick a reason — this will start their offboarding.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>Offboarding reason</Label>
+            <Select value={offboardReasonId} onValueChange={setOffboardReasonId}>
+              <SelectTrigger>
+                <SelectValue placeholder={offboardReasonsQuery.isLoading ? "Loading…" : "Select a reason"} />
+              </SelectTrigger>
+              <SelectContent>
+                {offboardReasons.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>
+                ))}
+                {!offboardReasonsQuery.isLoading && offboardReasons.length === 0 && (
+                  <div className="px-2 py-1.5 text-xs text-muted-foreground">No reasons configured. Add them in Offboarding Reason Manager.</div>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setOffboardTarget(null); setOffboardReasonId(""); }}>
+              Cancel
+            </Button>
+            <Button
+              className="bg-rose-600 text-white hover:bg-rose-700"
+              disabled={!offboardReasonId || offboardMut.isPending}
+              onClick={() => {
+                if (!offboardTarget || !offboardReasonId) return;
+                const reason = offboardReasons.find((r) => r.id === offboardReasonId);
+                offboardMut.mutate({
+                  candidate: offboardTarget,
+                  reasonId: offboardReasonId,
+                  reasonName: reason?.name ?? "",
+                });
+              }}
+            >
+              {offboardMut.isPending ? "Offboarding…" : "Confirm offboarding"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
 
       <Dialog
         open={!!rejectTarget}
@@ -1744,7 +1844,6 @@ function StatusBadge({ status }: { status: string }) {
     approved: "bg-emerald-500/15 text-emerald-600",
     active: "bg-emerald-500/15 text-emerald-600",
     inactive: "bg-slate-500/15 text-slate-600",
-    offboarded: "bg-rose-500/15 text-rose-600",
     pending: "bg-amber-500/15 text-amber-600",
     rejected: "bg-rose-500/15 text-rose-600",
   };
@@ -2270,10 +2369,10 @@ function CandidateWizard({
     setSubmitting(true);
     try {
       // Creating / re-submitting moves to "pending" so the admin can approve.
-      const isEmployee = !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive" || editing.status === "offboarded");
-      // For employees, preserve the chosen status (active/inactive/offboarded). New/candidate edits go to pending.
+      const isEmployee = !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive");
+      // For employees, preserve the chosen status (active/inactive). New/candidate edits go to pending.
       const nextStatus = isEmployee
-        ? (form.status === "inactive" || form.status === "offboarded" ? form.status : "active")
+        ? (form.status === "inactive" ? "inactive" : "active")
         : "pending";
       const successMsg = editing
         ? (isEmployee ? "Employee updated" : "Candidate updated")
@@ -2294,11 +2393,56 @@ function CandidateWizard({
         <DialogHeader className="border-b border-border bg-secondary/30 px-6 py-4">
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            {editing ? "Edit Candidate" : "Add Candidate"}
+            {editing
+              ? (editing.status === "approved" || editing.status === "active" || editing.status === "inactive")
+                ? "Edit Employee"
+                : "Edit Candidate"
+              : "Add Candidate"}
           </DialogTitle>
           <DialogDescription>
             Complete the candidate profile. Save a draft any time; only submit when 100% complete.
           </DialogDescription>
+          {editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive") && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <StatusBadge status={form.status || editing.status} />
+              {(editing as { employee_code?: string }).employee_code && (
+                <Badge className="border-0 bg-primary/10 font-mono text-[11px] font-semibold text-primary">
+                  {(editing as { employee_code?: string }).employee_code}
+                </Badge>
+              )}
+              {(() => {
+                const unitId = form.unit_id || editing.unit_id;
+                const unit = unitId ? units.find((u) => u.id === unitId) : null;
+                return unit ? (
+                  <Badge variant="outline" className="border-border/70 bg-card text-[11px] font-medium">
+                    Unit · {unit.name}
+                  </Badge>
+                ) : null;
+              })()}
+              {(() => {
+                const desigId = form.designation_id || editing.designation_id;
+                const desig = desigId ? designations.find((d) => d.id === desigId) : null;
+                return desig ? (
+                  <Badge variant="outline" className="border-border/70 bg-card text-[11px] font-medium">
+                    {desig.name}
+                    <span className={cn(
+                      "ml-2 rounded-sm px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide",
+                      desig.billable
+                        ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                        : "bg-slate-500/15 text-slate-600 dark:text-slate-300",
+                    )}>
+                      {desig.billable ? "Billable" : "Non-billable"}
+                    </span>
+                  </Badge>
+                ) : null;
+              })()}
+              {form.mobile && (
+                <Badge variant="outline" className="border-border/70 bg-card text-[11px] font-medium">
+                  {form.mobile}
+                </Badge>
+              )}
+            </div>
+          )}
         </DialogHeader>
 
         {/* Profile completion meter */}
@@ -2902,11 +3046,10 @@ function CandidateWizard({
                     <Select value={form.status} onValueChange={(v) => set("status", v)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive" || editing.status === "offboarded") ? (
+                        {editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive") ? (
                           <>
                             <SelectItem value="active">Active</SelectItem>
                             <SelectItem value="inactive">Inactive</SelectItem>
-                            <SelectItem value="offboarded">Offboarded</SelectItem>
                           </>
                         ) : (
                           <>

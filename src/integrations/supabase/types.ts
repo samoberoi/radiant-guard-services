@@ -218,6 +218,8 @@ export type Database = {
           marital_status: string
           mobile: string
           nominations: Json
+          offboarded_at: string | null
+          offboarding_reason_id: string | null
           other_info: Json
           pan_image_url: string
           pan_number: string
@@ -296,6 +298,8 @@ export type Database = {
           marital_status?: string
           mobile?: string
           nominations?: Json
+          offboarded_at?: string | null
+          offboarding_reason_id?: string | null
           other_info?: Json
           pan_image_url?: string
           pan_number?: string
@@ -374,6 +378,8 @@ export type Database = {
           marital_status?: string
           mobile?: string
           nominations?: Json
+          offboarded_at?: string | null
+          offboarding_reason_id?: string | null
           other_info?: Json
           pan_image_url?: string
           pan_number?: string
