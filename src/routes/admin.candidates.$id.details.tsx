@@ -58,6 +58,7 @@ const SECTIONS = [
   { id: "contacts", label: "Contacts", icon: Phone },
   { id: "identification", label: "Identification Proofs", icon: FileBadge },
   { id: "criminal", label: "Criminal History", icon: Gavel },
+  { id: "nominee", label: "Nominee", icon: UserCheck },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
