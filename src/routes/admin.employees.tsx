@@ -1120,11 +1120,6 @@ function EmployeesPage() {
               )}
               {mode === "employee" && (
                 <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                  Reporting / Scope
-                </th>
-              )}
-              {mode === "employee" && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Active
                 </th>
               )}
