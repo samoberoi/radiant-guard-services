@@ -187,17 +187,13 @@ function StateManagerPage() {
                         >
                           <Edit2 className="h-4 w-4" />
                         </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                          onClick={() => setDeleting(s)}
-                          disabled={mapped}
-                          title={mapped ? "Unmap branch first" : "Delete"}
-                          aria-label="Delete"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <DeleteGuardButton
+                          id={s.id}
+                          entityLabel="state"
+                          checks={[{ table: "branches", column: "state_id", label: "branches" }]}
+                          onDelete={() => setDeleting(s)}
+                        />
+
                       </div>
                     </td>
                   </tr>
