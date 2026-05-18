@@ -13,6 +13,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { useIndianStates } from "@/lib/admin-data";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmProvider";
@@ -619,19 +620,11 @@ function LwfFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="lwf-state">State</Label>
-              <Input
-                id="lwf-state"
-                list="lwf-states-list"
+              <LwfStateSelect
                 value={form.state}
-                onChange={(e) => set("state", e.target.value)}
-                placeholder="e.g. Karnataka"
-                autoFocus
+                onChange={(v) => set("state", v)}
+                fallbackStates={knownStates}
               />
-              <datalist id="lwf-states-list">
-                {knownStates.map((s) => (
-                  <option key={s} value={s} />
-                ))}
-              </datalist>
             </div>
             <div className="space-y-2">
               <Label>Frequency</Label>
