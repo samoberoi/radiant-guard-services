@@ -34,6 +34,7 @@ import {
   type Unit,
 } from "@/lib/admin-data";
 import { cn } from "@/lib/utils";
+import { UnitDeployedPeople } from "@/components/UnitDeployedPeople";
 
 export const Route = createFileRoute("/admin/customers")({
   component: CustomersLayout,
@@ -513,36 +514,46 @@ function HierarchyTreeDialog({
                         return (
                           <li
                             key={u.id}
-                            className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-2.5"
+                            className="rounded-lg border border-border bg-secondary/30 p-2.5"
                           >
-                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                            <Warehouse className="h-4 w-4 text-accent" />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono text-[11px] font-semibold text-accent">{u.code}</span>
-                                <span className="truncate font-semibold text-foreground">{u.name}</span>
-                                <StatusBadge status={u.status} />
+                            <div className="flex items-center gap-3">
+                              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                              <Warehouse className="h-4 w-4 text-accent" />
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-[11px] font-semibold text-accent">{u.code}</span>
+                                  <span className="truncate font-semibold text-foreground">{u.name}</span>
+                                  <StatusBadge status={u.status} />
+                                </div>
+                                <div className="truncate text-xs text-muted-foreground">
+                                  {c ? (
+                                    <>
+                                      <span className="text-foreground">{c.name}</span>
+                                      <span className="font-mono"> ({c.code})</span> ·{" "}
+                                    </>
+                                  ) : null}
+                                  {u.location || "—"}
+                                </div>
                               </div>
-                              <div className="truncate text-xs text-muted-foreground">
-                                {c ? (
-                                  <>
-                                    <span className="text-foreground">{c.name}</span>
-                                    <span className="font-mono"> ({c.code})</span> ·{" "}
-                                  </>
-                                ) : null}
-                                {u.location || "—"}
-                              </div>
+                              {u.latitude != null && u.longitude != null && (
+                                <a
+                                  href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-accent hover:bg-accent/10"
+                                >
+                                  <MapPin className="h-3 w-3" /> Map
+                                </a>
+                              )}
                             </div>
-                            {u.latitude != null && u.longitude != null && (
-                              <a
-                                href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-accent hover:bg-accent/10"
-                              >
-                                <MapPin className="h-3 w-3" /> Map
-                              </a>
-                            )}
+                            <div className="mt-2 ml-7 border-l-2 border-dashed border-border pl-3">
+                              <UnitDeployedPeople
+                                unitId={u.id}
+                                branchId={u.branchId ?? null}
+                                customerId={u.customerId ?? null}
+                                stateName={state.name}
+                              />
+                            </div>
                           </li>
                         );
                       })}
