@@ -180,15 +180,6 @@ export function ComplianceSection({
                   </SelectContent>
                 </Select>
               )}
-              {branchMissing && branches.length > 0 && (
-                <p className="mt-1 text-xs text-amber-700">
-                  ESIC Branch missing — map a branch from{" "}
-                  <a href="/admin/esic-branch-manager" className="font-semibold underline">
-                    ESIC Branch Manager
-                  </a>
-                  .
-                </p>
-              )}
             </Field>
             <Field label="ESIC Number">
               <Input value={c.esic_number ?? ""} inputMode="numeric" maxLength={17} placeholder="17-digit ESIC IP" onChange={(e) => setSection("compliance", { esic_number: e.target.value.replace(/\D/g, "").slice(0, 17) })} />
