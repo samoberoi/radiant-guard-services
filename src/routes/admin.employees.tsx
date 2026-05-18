@@ -1711,7 +1711,10 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
   });
 }
 
-type CandidateForm = Omit<Candidate, "id">;
+type CandidateForm = Omit<Candidate, "id"> & {
+  /** All units assigned to this candidate. First entry is the primary unit (mirrored to candidates.unit_id). */
+  unit_ids: string[];
+};
 
 function emptyForm(): CandidateForm {
   return {
@@ -1771,6 +1774,7 @@ function emptyForm(): CandidateForm {
     application_date: new Date().toISOString().slice(0, 10),
     preferred_joining_date: null,
     unit_id: null,
+    unit_ids: [],
     designation_id: null,
     status: "pending",
     physical_health: {},
@@ -1842,7 +1846,23 @@ function CandidateWizard({
           is_emergency: true,
         }];
       }
-      setForm({ ...(rest as CandidateForm), contacts });
+      // Optimistically seed with the single mirrored unit_id so the picker isn't empty during fetch.
+      const initialUnitIds = rest.unit_id ? [rest.unit_id] : [];
+      setForm({ ...(rest as CandidateForm), contacts, unit_ids: initialUnitIds });
+      // Load full multi-unit assignment from junction table.
+      (async () => {
+        const { data, error } = await supabase
+          .from("candidate_units" as never)
+          .select("unit_id,is_primary,sort_order")
+          .eq("candidate_id", editing.id)
+          .order("is_primary", { ascending: false })
+          .order("sort_order", { ascending: true });
+        if (error) return;
+        const rows = (data ?? []) as { unit_id: string; is_primary: boolean; sort_order: number }[];
+        if (rows.length === 0) return;
+        const ids = rows.map((r) => r.unit_id);
+        setForm((f) => ({ ...f, unit_ids: ids, unit_id: ids[0] ?? null }));
+      })();
     } else {
       setForm(emptyForm());
     }
@@ -1855,7 +1875,8 @@ function CandidateWizard({
   const setSection = (k: string, v: any) =>
     setForm((f) => ({ ...f, [k]: { ...((f as any)[k] ?? {}), ...v } }) as CandidateForm);
 
-  const unit = form.unit_id ? units.find((u) => u.id === form.unit_id) : undefined;
+  const primaryUnitId = form.unit_ids[0] ?? null;
+  const unit = primaryUnitId ? units.find((u) => u.id === primaryUnitId) : undefined;
 
   // ----- File upload helper ----- //
   const uploadFile = async (file: File, slot: "photo" | "signature" | "aadhaar" | "pan"): Promise<string> => {
@@ -2046,7 +2067,7 @@ function CandidateWizard({
     { key: "Permanent address", ok: !!form.permanent_address1.trim() && !!form.permanent_pincode },
     { key: "Bank account", ok: !!form.bank_account_number.trim() && !!form.bank_ifsc.trim() },
     { key: "PAN number", ok: /^[A-Z]{5}[0-9]{4}[A-Z]$/.test((form.pan_number || "").trim().toUpperCase()) },
-    { key: "Unit assignment", ok: !!form.unit_id },
+    { key: "Unit assignment", ok: form.unit_ids.length > 0 },
     { key: "Designation", ok: !!form.designation_id },
   ];
   const completionDone = completionChecks.filter((c) => c.ok).length;
@@ -2060,9 +2081,13 @@ function CandidateWizard({
   // ----- Build payload helper ----- //
   const buildPayload = (status: string) => {
     const emergencyContact = form.contacts.find((c) => c.is_emergency) ?? form.contacts[0] ?? null;
+    // Strip the form-only field unit_ids; mirror primary into unit_id for backward compat.
+    const { unit_ids, ...rest } = form;
+    const mirroredPrimary = unit_ids[0] ?? null;
     const basePayload = form.same_as_permanent
       ? {
-          ...form,
+          ...rest,
+          unit_id: mirroredPrimary,
           present_address1: form.permanent_address1,
           present_address2: form.permanent_address2,
           present_landmark: form.permanent_landmark,
@@ -2073,7 +2098,7 @@ function CandidateWizard({
           present_country: form.permanent_country,
           present_police_station: form.permanent_police_station,
         }
-      : { ...form };
+      : { ...rest, unit_id: mirroredPrimary };
     return {
       ...basePayload,
       status,
@@ -2081,6 +2106,21 @@ function CandidateWizard({
       emergency_contact_relation: emergencyContact?.relation ?? "",
       emergency_contact_mobile: emergencyContact?.mobile ?? "",
     };
+  };
+
+  /** Replace the candidate's entries in candidate_units with the current form selection. */
+  const syncCandidateUnits = async (candidateId: string) => {
+    // Wipe existing rows then re-insert. Simpler & atomic enough for typical 1-5 units.
+    await supabase.from("candidate_units" as never).delete().eq("candidate_id", candidateId);
+    if (form.unit_ids.length === 0) return;
+    const rows = form.unit_ids.map((unit_id, idx) => ({
+      candidate_id: candidateId,
+      unit_id,
+      is_primary: idx === 0,
+      sort_order: idx,
+    }));
+    const { error } = await supabase.from("candidate_units" as never).insert(rows as never);
+    if (error) throw error;
   };
 
   const persist = async (status: string, successMsg: string) => {
@@ -2096,6 +2136,7 @@ function CandidateWizard({
         .update(payload as never)
         .eq("id", editing.id);
       if (error) throw error;
+      await syncCandidateUnits(editing.id);
       await logActivity({
         module: "Employees",
         action: "update",
@@ -2103,7 +2144,7 @@ function CandidateWizard({
         entityId: editing.id,
         entityLabel: payload.full_name,
         before: (before as unknown as Record<string, unknown>) ?? null,
-        after: payload as unknown as Record<string, unknown>,
+        after: { ...(payload as unknown as Record<string, unknown>), unit_ids: form.unit_ids },
       });
     } else {
       const { data, error } = await supabase
@@ -2112,13 +2153,15 @@ function CandidateWizard({
         .select("id")
         .single();
       if (error) throw error;
+      const newId = (data as { id: string }).id;
+      await syncCandidateUnits(newId);
       await logActivity({
         module: "Employees",
         action: "create",
         entityType: "candidate",
-        entityId: (data as { id: string }).id,
+        entityId: newId,
         entityLabel: payload.full_name,
-        after: payload as unknown as Record<string, unknown>,
+        after: { ...(payload as unknown as Record<string, unknown>), unit_ids: form.unit_ids },
       });
     }
     toast.success(successMsg);
@@ -2737,17 +2780,19 @@ function CandidateWizard({
                       onChange={(e) => set("preferred_joining_date", e.target.value || null)}
                     />
                   </Field>
-                  <Field label="Unit (Client)">
-                    <UnitPicker
-                      units={units}
-                      value={form.unit_id}
-                      onChange={(id) => set("unit_id", id)}
-                      disabled={unitsLoading || !!unitsError}
-                      emptyMessage={unitsError ? `Could not load units: ${unitsError}` : "No units found."}
-                    />
-                  </Field>
-                  <Field label="Organization">
-                    <Input value={unit?.customer_name ?? ""} disabled placeholder="Auto-filled from unit" />
+                  <div className="sm:col-span-2">
+                    <Field label={`Units (Client) — select one or more${form.unit_ids.length > 0 ? ` · ${form.unit_ids.length} selected` : ""}`}>
+                      <MultiUnitPicker
+                        units={units}
+                        value={form.unit_ids}
+                        onChange={(ids) => setForm((f) => ({ ...f, unit_ids: ids, unit_id: ids[0] ?? null }))}
+                        disabled={unitsLoading || !!unitsError}
+                        emptyMessage={unitsError ? `Could not load units: ${unitsError}` : "No units found."}
+                      />
+                    </Field>
+                  </div>
+                  <Field label="Organization (from primary unit)">
+                    <Input value={unit?.customer_name ?? ""} disabled placeholder="Auto-filled from primary unit" />
                   </Field>
                   <Field label="Designation">
                     <DesignationPicker
@@ -3177,11 +3222,11 @@ function UnitPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const selected = value ? units.find((u) => u.id === value) : null;
   const filteredUnits = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return units;
-
     return units.filter((unit) =>
       [unit.code, unit.name, unit.customer_name ?? "", unit.id].some((part) =>
         part.toLowerCase().includes(needle),
@@ -3192,7 +3237,15 @@ function UnitPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" disabled={disabled} className="w-full justify-between font-normal">
+        <Button
+          ref={triggerRef}
+          type="button"
+          variant="outline"
+          role="combobox"
+          disabled={disabled}
+          className="w-full justify-between font-normal"
+          onMouseDown={(e) => e.preventDefault()}
+        >
           {selected ? (
             <span className="truncate">
               <b>{selected.code}</b> · {selected.name}
@@ -3207,7 +3260,10 @@ function UnitPicker({
         className="w-[420px] p-0"
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
-        onCloseAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          triggerRef.current?.focus({ preventScroll: true });
+        }}
       >
         <Command shouldFilter={false}>
           <CommandInput placeholder="Search units…" value={query} onValueChange={setQuery} />
@@ -3238,6 +3294,216 @@ function UnitPicker({
   );
 }
 
+function MultiUnitPicker({
+  units,
+  value,
+  onChange,
+  disabled = false,
+  emptyMessage = "No units found.",
+}: {
+  units: UnitLite[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+  disabled?: boolean;
+  emptyMessage?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  const selectedSet = useMemo(() => new Set(value), [value]);
+  const selectedUnits = useMemo(
+    () => value.map((id) => units.find((u) => u.id === id)).filter(Boolean) as UnitLite[],
+    [value, units],
+  );
+
+  const filteredUnits = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return units;
+    return units.filter((u) =>
+      [u.code, u.name, u.customer_name ?? "", u.id].some((p) => p.toLowerCase().includes(needle)),
+    );
+  }, [query, units]);
+
+  // Group filtered units by customer/organization
+  const grouped = useMemo(() => {
+    const groups = new Map<string, UnitLite[]>();
+    for (const u of filteredUnits) {
+      const key = u.customer_name || "—";
+      const arr = groups.get(key) ?? [];
+      arr.push(u);
+      groups.set(key, arr);
+    }
+    return Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [filteredUnits]);
+
+  const toggle = (id: string) => {
+    if (selectedSet.has(id)) {
+      onChange(value.filter((v) => v !== id));
+    } else {
+      onChange([...value, id]);
+    }
+  };
+
+  const removeOne = (id: string) => onChange(value.filter((v) => v !== id));
+
+  const makePrimary = (id: string) => {
+    if (value[0] === id) return;
+    onChange([id, ...value.filter((v) => v !== id)]);
+  };
+
+  return (
+    <div className="space-y-2">
+      {/* Chips of selected units */}
+      <div className="flex flex-wrap gap-1.5 rounded-md border border-input bg-background p-2 min-h-[44px]">
+        {selectedUnits.length === 0 && (
+          <span className="self-center px-1 text-sm text-muted-foreground">
+            No units selected — click "Add unit" to assign.
+          </span>
+        )}
+        {selectedUnits.map((u, idx) => {
+          const isPrimary = idx === 0;
+          return (
+            <Badge
+              key={u.id}
+              variant={isPrimary ? "default" : "secondary"}
+              className={cn(
+                "flex items-center gap-1.5 pl-2 pr-1 py-1 text-xs font-normal",
+                isPrimary && "ring-1 ring-primary/40",
+              )}
+            >
+              {isPrimary && (
+                <span className="text-[9px] font-bold uppercase tracking-wider opacity-70">
+                  Primary
+                </span>
+              )}
+              <span className="font-mono font-semibold">{u.code}</span>
+              <span className="opacity-80">· {u.name}</span>
+              {u.customer_name && (
+                <span className="opacity-60 text-[10px]">({u.customer_name})</span>
+              )}
+              {!isPrimary && (
+                <button
+                  type="button"
+                  className="ml-1 rounded p-0.5 opacity-60 hover:bg-background/30 hover:opacity-100"
+                  title="Make primary"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    makePrimary(u.id);
+                  }}
+                  onMouseDown={(e) => e.preventDefault()}
+                >
+                  <Check className="h-3 w-3" />
+                </button>
+              )}
+              <button
+                type="button"
+                className="ml-0.5 rounded p-0.5 opacity-70 hover:bg-background/30 hover:opacity-100"
+                title="Remove"
+                onClick={(e) => {
+                  e.preventDefault();
+                  removeOne(u.id);
+                }}
+                onMouseDown={(e) => e.preventDefault()}
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          );
+        })}
+      </div>
+
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            ref={triggerRef}
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={disabled}
+            className="font-normal"
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            <Plus className="mr-1 h-3.5 w-3.5" />
+            {selectedUnits.length === 0 ? "Add unit…" : "Add / manage units…"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          className="w-[480px] p-0"
+          align="start"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            triggerRef.current?.focus({ preventScroll: true });
+          }}
+        >
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Search by code, name or organization…"
+              value={query}
+              onValueChange={setQuery}
+            />
+            <CommandList className="max-h-[340px]">
+              <CommandEmpty>{emptyMessage}</CommandEmpty>
+              {grouped.map(([orgName, list]) => (
+                <CommandGroup key={orgName} heading={orgName}>
+                  {list.map((u) => {
+                    const checked = selectedSet.has(u.id);
+                    return (
+                      <CommandItem
+                        key={u.id}
+                        value={`${u.code} ${u.name} ${u.customer_name ?? ""}`}
+                        onSelect={() => toggle(u.id)}
+                        className="flex items-center gap-2"
+                      >
+                        <div
+                          className={cn(
+                            "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                            checked
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-input",
+                          )}
+                        >
+                          {checked && <Check className="h-3 w-3" />}
+                        </div>
+                        <div className="flex flex-1 flex-col">
+                          <span className="font-medium text-sm">
+                            <b>{u.code}</b> · {u.name}
+                          </span>
+                          {u.customer_name && (
+                            <span className="text-[11px] text-muted-foreground">
+                              {u.customer_name}
+                            </span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    );
+                  })}
+                </CommandGroup>
+              ))}
+            </CommandList>
+            <div className="flex items-center justify-between border-t border-border px-2 py-1.5 text-[11px] text-muted-foreground">
+              <span>
+                {value.length} selected
+                {value.length > 0 && " — first one is Primary"}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-6 text-[11px]"
+                onClick={() => setOpen(false)}
+              >
+                Done
+              </Button>
+            </div>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 function DesignationPicker({
   designations,
   value,
@@ -3253,6 +3519,7 @@ function DesignationPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const selected = value ? designations.find((d) => d.id === value) : null;
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -3265,7 +3532,15 @@ function DesignationPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" role="combobox" disabled={disabled} className="w-full justify-between font-normal">
+        <Button
+          ref={triggerRef}
+          type="button"
+          variant="outline"
+          role="combobox"
+          disabled={disabled}
+          className="w-full justify-between font-normal"
+          onMouseDown={(e) => e.preventDefault()}
+        >
           {selected ? (
             <span className="truncate">
               {selected.code ? <><b>{selected.code}</b> · </> : null}{selected.name}
@@ -3280,7 +3555,10 @@ function DesignationPicker({
         className="w-[420px] p-0"
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
-        onCloseAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => {
+          e.preventDefault();
+          triggerRef.current?.focus({ preventScroll: true });
+        }}
       >
         <Command shouldFilter={false}>
           <CommandInput placeholder="Search designations…" value={query} onValueChange={setQuery} />

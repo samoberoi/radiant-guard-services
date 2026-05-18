@@ -1,103 +1,88 @@
-## Goal
+## Goals
 
-Wire HyperRevamp employees together: a Field Manager role that can be mapped to State / Customer / Branch / Unit (any combination), Guards that report to a Field Manager **and** can be mapped to one or more Units. Show this both ways: in the Employees list (filters + tree by manager) and on the Unit page (tree of Field Manager → Guards deployed there).
-
-Nothing about role privileges is hard-coded — the **roles** table stays as data; we just seed two named rows so the linkage works.
-
----
-
-## 1. Data model (one migration)
-
-New columns on `candidates`:
-- `is_enabled boolean not null default true` — drives the enable/disable toggle (separate from `status`, which is the approval lifecycle).
-- `reports_to uuid` (self-reference to another candidate; soft, no FK) — guard → field manager.
-
-New table `employee_scope_assignments` (the multi-scope mapping):
-- `id uuid pk`
-- `candidate_id uuid not null`
-- `scope_type text not null check in ('state','customer','branch','unit')`
-- `scope_id text not null` — UUID of the target row, or state name for `state` (since `candidates.permanent_state` is text and `states.id` is uuid; we store as text for both)
-- `scope_label text` — denormalized display string ("Karnataka", "ACME / Bangalore HQ", etc.) for cheap UI rendering
-- `created_at`, `updated_at`
-- unique `(candidate_id, scope_type, scope_id)`
-- RLS: authenticated read/write/update/delete (matches existing pattern)
-
-Seed data (via insert tool, not migration):
-- Ensure `roles` has `field_manager` ("Field Manager", sort_order between admin & guard) and `guard` ("Guard"). Both are data rows — permissions are still defined separately in RBAC.
-- Insert one new employee: full_name "Field Manager 1", `role_key='field_manager'`, status `approved` (gets EMP-003 via existing trigger), `is_enabled=true`.
-- Update the two existing guards (EMP-001, EMP-002): `role_key='guard'`, `reports_to=<new FM id>`.
-- Seed `employee_scope_assignments` for the FM covering both guards' current units (so the tree resolves immediately).
+1. Fix cursor/scroll jump when opening the Unit or Designation picker inside the Add/Edit Candidate dialog.
+2. Replace single-unit assignment with multi-unit assignment for candidates/employees.
+3. Provide a better multi-select interface (chip-based, searchable, group-by-organization).
 
 ---
 
-## 2. Employees page (`admin.employees.tsx`)
+## 1. Cursor jump fix
 
-### Filter bar (above the table)
-- Search box (existing).
-- Filters: **Role**, **Designation**, **Organization (customer)**, **Unit**. Each is a `Select` with an "All" option.
-- **Reports to** filter (Field Manager) when role filter = `guard` or "all" — small, optional.
-- **Gear icon** popover (configure filters): checkboxes to show/hide each filter; choice persists to `localStorage` (`employees.filterPrefs`). Default = all visible.
+The pickers are inside a long scrollable Dialog. When the Popover/Command opens, focus moves and the dialog scrolls. Fix in `UnitPicker` and `DesignationPicker`:
 
-### Per-row additions
-- **Enable/Disable switch** in a new "Active" column. Toggling opens the existing `confirmAction` dialog ("Disable employee EMP-003?"). Writes `is_enabled` and calls `logActivity` (action `enable`/`disable`, module `Employees`).
-- Disabled rows render at 60% opacity with a muted "Disabled" badge.
+- Add `onPointerDown` / `onMouseDown` `preventDefault` on the trigger so the button doesn't grab focus and trigger `scrollIntoView`.
+- Pass `tabIndex={-1}` on inner trigger when appropriate.
+- Keep `onOpenAutoFocus={(e) => e.preventDefault()}` and add `onCloseAutoFocus={(e) => e.preventDefault()}` already present.
+- Ensure the popover trigger button does not bubble a focus event that the Dialog's `FocusScope` re-scrolls.
 
-### Reporting linkage UI
-- For employees with role `guard`: a small "Reports to" cell with a Select of all `field_manager` candidates (with confirm + log). Empty state shows "—".
-- For employees with role `field_manager`: a "Scope" cell with a chip list of their `employee_scope_assignments` and a "+ Add scope" trigger that opens a small dialog (scope type + searchable target picker). Add/remove are confirm-gated and logged.
-
-### Manager tree view (toggle above table)
-- A second "Tree" view-mode button next to the table. Renders a collapsible: each Field Manager → their guards. Guards not under any FM appear under an "Unassigned" group.
+This is purely cosmetic/UX, no data changes.
 
 ---
 
-## 3. Unit page (`admin.customers.unit-manager.tsx`)
+## 2. Multi-unit data model
 
-When the user opens / edits a unit, add a new **"Deployment"** section below the existing form sections (and in the read-only detail strip on the row hover, a compact summary).
+Create a junction table:
 
-For the current unit:
-- **Resolve effective Field Manager(s):** any FM whose assignments contain `unit:<id>`, `branch:<unit.branchId>`, `customer:<unit.customerId>`, or `state:<unit.billingState>`. De-duplicated.
-- Render a **tree**: each FM (avatar, name, EMP code, scope-source badge like "via Customer") → list of guards that (a) `reports_to` that FM **and** (b) either `unit_id = this unit` or have a `unit` assignment for this unit.
-- Below the tree, a flat list view of all guards deployed to the unit with their FM column. Both views are always rendered side-by-side on desktop (tree left, list right), stacked on mobile — user asked for both.
-- Read-only here; editing is done from the Employees page (link "Manage assignments →").
+```text
+candidate_units
+  id uuid pk
+  candidate_id uuid not null  -- references candidates(id) by id only (no FK to match existing convention)
+  unit_id uuid not null
+  is_primary boolean default false
+  sort_order int default 0
+  created_at, updated_at
+  unique(candidate_id, unit_id)
+```
 
-A small shared helper in `src/lib/deployment.ts` exposes:
-- `resolveFieldManagersForUnit(unit, assignments, candidates)` → `Array<{ fm, sources: ScopeType[] }>`
-- `resolveGuardsForUnit(unit, candidates, assignments)` → `Array<Candidate>`
-- `buildFmGuardTree(fms, guards)` → grouped structure
+RLS: authenticated full access (matches existing tables).
 
-Same helpers power the Employees tree, the Unit page, and any future Branch/Customer pages.
+Keep `candidates.unit_id` column for backward compatibility, mirrored to the **primary** selected unit. Reason: Organization auto-fill, the "filter by unit" dropdown, the tree view, scope mapping, and exports all read `unit_id` today. Mirroring keeps everything working without a sprawling rewrite, while the junction becomes the source of truth.
 
----
-
-## 4. Confirmation & logging (consistent with existing modules)
-
-Every new mutation (toggle enable, change reports_to, add/remove scope, seed-time inserts done via Insert tool) is gated by `confirmAction` and writes a `logActivity` entry with module `Employees` and a clear `entityLabel` (employee code / name).
-
----
-
-## 5. Out of scope (for this turn)
-
-- Branch-page and Customer-page tree views (helpers will be ready; we can drop the same component in later).
-- Multi-FM-per-guard (current model: one FM per guard, which matches your phrasing).
-- Permission/RBAC changes for the new roles — roles are seeded as data only.
+Migration steps:
+- Create `candidate_units` table + RLS + `updated_at` trigger.
+- Backfill: for every candidate with a non-null `unit_id`, insert a row with `is_primary = true`.
 
 ---
 
-## Files
+## 3. UI changes (`admin.employees.tsx`)
 
-**Migration**
-- `supabase/migrations/<ts>_employee_scope_and_reports_to.sql`
+Replace `UnitPicker` with a new `MultiUnitPicker`:
 
-**Data seed (Insert tool, after migration approval)**
-- Upsert `roles` rows, insert FM employee, update two guards, insert FM scope assignments.
+- Trigger shows chips of selected units (code · name), with × to remove each. "Add unit…" button opens popover.
+- Popover: search field + scrollable list grouped by Organization (customer_name). Each row has a checkbox. Selecting toggles membership.
+- First selected unit is automatically primary; user can pin a different one as primary (star icon on chip).
+- Organization field auto-fills from the primary unit (existing logic).
 
-**New**
-- `src/lib/deployment.ts` — shared resolvers.
+Form state:
+- `unit_ids: string[]` and `primary_unit_id: string | null` on the candidate form.
+- On load: fetch from `candidate_units` for the candidate.
+- On save: upsert `candidate_units` rows, delete removed ones, set `is_primary` correctly, and mirror primary into `candidates.unit_id`.
 
-**Edited**
-- `src/routes/admin.employees.tsx` — filters bar + gear, enable/disable column, role-aware extra column (reports_to / scope chips), tree view toggle, new mutations.
-- `src/routes/admin.customers.unit-manager.tsx` — Deployment section (tree + list) inside the unit dialog.
-- `src/integrations/supabase/types.ts` — regenerated automatically after migration.
+Table/tree display:
+- "Unit" column shows primary unit + "+N" badge if more than one.
+- Tooltip on the badge lists all units.
 
-Approve this and I'll run the migration + seed, then build the UI.
+Filters, exports, tree grouping: continue to use `unit_id` (primary) — unchanged behaviour for now.
+
+DesignationPicker: only cursor-jump fix, stays single-select.
+
+---
+
+## Files touched
+
+- `supabase/migrations/<new>.sql` — junction table + backfill.
+- `src/routes/admin.employees.tsx` — new `MultiUnitPicker`, form state, save/load wiring, table chip display, cursor-jump fix on both pickers.
+- `src/lib/employees.functions.ts` (if it owns the candidate fetch/save) — extend to read/write `candidate_units`.
+- `src/integrations/supabase/types.ts` — regenerated by migration.
+
+`logActivity` calls already exist on save; will keep them.
+
+---
+
+## Out of scope (this turn)
+
+- Reworking unit filter dropdown to be multi-select aware.
+- Reworking tree view to group a candidate under multiple units simultaneously.
+- Contracts module (uses its own `unit_id` on `client_contracts`, unrelated).
+
+If you want either of those reworked, say so and I'll add it after this lands.
