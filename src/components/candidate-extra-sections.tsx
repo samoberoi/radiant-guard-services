@@ -128,7 +128,7 @@ export function ComplianceSection({
   const esic = c.esic_enabled ?? true;
   const pt = c.pt_enabled ?? true;
   const branches = esicBranches ?? [];
-  const branchMissing = esic && !c.esic_branch_id;
+  
   const toggleRow = (label: string, desc: string, checked: boolean, onChange: (v: boolean) => void) => (
     <div className="flex items-center justify-between rounded-md border p-3">
       <div>
@@ -179,15 +179,6 @@ export function ComplianceSection({
                     ))}
                   </SelectContent>
                 </Select>
-              )}
-              {branchMissing && branches.length > 0 && (
-                <p className="mt-1 text-xs text-amber-700">
-                  ESIC Branch missing — map a branch from{" "}
-                  <a href="/admin/esic-branch-manager" className="font-semibold underline">
-                    ESIC Branch Manager
-                  </a>
-                  .
-                </p>
               )}
             </Field>
             <Field label="ESIC Number">
