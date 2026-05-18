@@ -579,7 +579,7 @@ function EmployeesPage() {
     return true;
   };
 
-  const isEmployeeStatus = (s: string) => s === "approved" || s === "active" || s === "inactive" || s === "offboarded";
+  const isEmployeeStatus = (s: string) => s === "approved" || s === "active" || s === "inactive";
 
   const employees = useMemo(
     () => candidates.filter((c) => isEmployeeStatus(c.status) && matchesSearch(c) && matchesFilters(c)),
