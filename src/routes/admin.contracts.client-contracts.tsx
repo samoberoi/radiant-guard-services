@@ -11,7 +11,6 @@ import {
   FileText,
   Plus,
   Search,
-  Trash2,
   Upload,
   Users,
   X,
@@ -20,6 +19,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
 import { csvDate, downloadCsv } from "@/lib/csv-export";
+import { DeleteGuardButton } from "@/components/DeleteGuardButton";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmProvider";
 import { PageHeader } from "@/components/PageHeader";
@@ -1285,15 +1285,15 @@ function ClientContractsPage() {
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleting(c)}
-                        aria-label="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <DeleteGuardButton
+                        id={c.id}
+                        entityLabel="contract"
+                        checks={[
+                          { table: "contract_resources", column: "contract_id", label: "resource lines" },
+                        ]}
+                        onDelete={() => setDeleting(c)}
+                      />
+
                     </div>
                   </td>
                 </tr>

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ChevronRight, Download, Edit2, ExternalLink, List as ListIcon, MapPin, Network, Plus, Search, Trash2, Users, Warehouse } from "lucide-react";
+import { DeleteGuardButton } from "@/components/DeleteGuardButton";
 import { csvDate, csvStatus, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmProvider";
@@ -246,15 +247,16 @@ function CustomerManagerPage() {
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleting(c)}
-                        aria-label="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <DeleteGuardButton
+                        id={c.id}
+                        entityLabel="organization"
+                        checks={[
+                          { table: "units", column: "customer_id", label: "units" },
+                          { table: "customer_gst_numbers", column: "customer_id", label: "GSTINs" },
+                        ]}
+                        onDelete={() => setDeleting(c)}
+                      />
+
                     </div>
                   </td>
                 </tr>
