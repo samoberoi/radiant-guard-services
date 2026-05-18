@@ -43,6 +43,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { gstinStateCode, gstinStateName } from "@/lib/gstin";
 import { cn } from "@/lib/utils";
+import { UnitDeployedPeople } from "@/components/UnitDeployedPeople";
 
 export const Route = createFileRoute("/admin/customers/customer-manager")({
   component: CustomerManagerPage,
