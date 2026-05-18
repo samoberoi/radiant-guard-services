@@ -1,88 +1,65 @@
-## Goals
+# Block deleting parents that still have dependents
 
-1. Fix cursor/scroll jump when opening the Unit or Designation picker inside the Add/Edit Candidate dialog.
-2. Replace single-unit assignment with multi-unit assignment for candidates/employees.
-3. Provide a better multi-select interface (chip-based, searchable, group-by-organization).
+## Goal
 
----
+Wherever a record is referenced by other records, the delete button is **disabled** and shows a tooltip:
+> "Cannot delete — N {dependent} still linked to this {entity}. Remove them first."
 
-## 1. Cursor jump fix
+Same treatment everywhere: list rows, detail screens, and any bulk-delete affordance.
 
-The pickers are inside a long scrollable Dialog. When the Popover/Command opens, focus moves and the dialog scrolls. Fix in `UnitPicker` and `DesignationPicker`:
+## Shared building block
 
-- Add `onPointerDown` / `onMouseDown` `preventDefault` on the trigger so the button doesn't grab focus and trigger `scrollIntoView`.
-- Pass `tabIndex={-1}` on inner trigger when appropriate.
-- Keep `onOpenAutoFocus={(e) => e.preventDefault()}` and add `onCloseAutoFocus={(e) => e.preventDefault()}` already present.
-- Ensure the popover trigger button does not bubble a focus event that the Dialog's `FocusScope` re-scrolls.
+Create `src/lib/dependency-checks.ts` exporting:
 
-This is purely cosmetic/UX, no data changes.
+- `useDependencyCounts(entity, id)` — React Query hook that runs the right Supabase count queries for that entity and returns `{ total, breakdown: [{ label, count, route? }] }`.
+- `<DeleteGuardButton entity id onConfirmDelete />` — wraps the existing trash/delete button, disables it when `total > 0`, and renders a Tooltip with the breakdown. Falls back to the existing confirm dialog when `total === 0`.
 
----
+This keeps each page's diff to: swap `<Button …Trash2…>` → `<DeleteGuardButton …>`.
 
-## 2. Multi-unit data model
-
-Create a junction table:
+## Relationship map (parent → blockers)
 
 ```text
-candidate_units
-  id uuid pk
-  candidate_id uuid not null  -- references candidates(id) by id only (no FK to match existing convention)
-  unit_id uuid not null
-  is_primary boolean default false
-  sort_order int default 0
-  created_at, updated_at
-  unique(candidate_id, unit_id)
+customers           ← units, customer_gst_numbers
+units               ← client_contracts, candidates, candidate_units, employee_scope_assignments
+indian_states       ← branches.state_id, + string refs in lwf.state, pt_slabs.state,
+                       cost_components.state, customers.*_state, units.*_state, pincode_ranges.state
+branches            ← units (by branch fields, if any) — verify
+client_contracts    ← contract_resources
+designations        ← candidates, contract_resources
+service_types       ← client_contracts, contract_resources
+billing_types       ← client_contracts
+payroll_windows     ← client_contracts
+payroll_day_bases   ← contract_resources
+roles               ← candidates.role_key, role_permissions.role_key
+ex_services         ← candidates.ex_service_id
+offboarding_reasons ← candidates.offboarding_reason_id
+esic_branches       ← candidates / units (verify usage)
+languages           ← candidates.languages (jsonb)            ⚠ jsonb scan
+assets              ← candidates.assigned_asset_ids (uuid[])  ⚠ array scan
+allowance_types     ← contract_resources.components (jsonb)   ⚠ jsonb scan
+cost_components     ← contract_resources.* (jsonb)            ⚠ jsonb scan
+duties              ← (verify; likely standalone)
+company_document_templates ← employee_signed_documents.template_id
+candidates          ← employee_signed_documents, candidate_units, employee_scope_assignments
 ```
 
-RLS: authenticated full access (matches existing tables).
+The ⚠ jsonb/array ones need a Postgres function (e.g. `count_allowance_usage(allowance_id)`) to scan efficiently. I'll add those as `SECURITY DEFINER` SQL functions in a single migration.
 
-Keep `candidates.unit_id` column for backward compatibility, mirrored to the **primary** selected unit. Reason: Organization auto-fill, the "filter by unit" dropdown, the tree view, scope mapping, and exports all read `unit_id` today. Mirroring keeps everything working without a sprawling rewrite, while the junction becomes the source of truth.
+## Files touched (22 admin pages)
 
-Migration steps:
-- Create `candidate_units` table + RLS + `updated_at` trigger.
-- Backfill: for every candidate with a non-null `unit_id`, insert a row with `is_primary = true`.
+`admin.customers.customer-manager`, `admin.customers.unit-manager`, `admin.customers.branch-manager`, `admin.customers.state-manager`, `admin.contracts.client-contracts`, `admin.designation-manager`, `admin.service-type-manager`, `admin.billing-type-manager`, `admin.payroll-manager`, `admin.payroll-days-manager`, `admin.rbac` (roles), `admin.ex-service-manager`, `admin.offboarding-reason-manager`, `admin.esic-branch-manager`, `admin.language-manager`, `admin.asset-manager`, `admin.allowance-manager`, `admin.cost-component-manager`, `admin.lwf-manager`, `admin.professional-tax-manager`, `admin.duty-manager`, `admin.employees` (candidates).
 
----
+## Out of scope (confirm)
 
-## 3. UI changes (`admin.employees.tsx`)
+- **Soft-delete / disable** stays untouched — only hard delete is guarded.
+- **System tables** with `is_system = true` (e.g. system roles) already block delete — I'll keep that behavior and stack the dependency tooltip on top.
+- **Cascading auto-delete** is not introduced — we only inform & block.
 
-Replace `UnitPicker` with a new `MultiUnitPicker`:
+## Rollout order
 
-- Trigger shows chips of selected units (code · name), with × to remove each. "Add unit…" button opens popover.
-- Popover: search field + scrollable list grouped by Organization (customer_name). Each row has a checkbox. Selecting toggles membership.
-- First selected unit is automatically primary; user can pin a different one as primary (star icon on chip).
-- Organization field auto-fills from the primary unit (existing logic).
+1. Migration: jsonb/array count functions.
+2. Shared `DeleteGuardButton` + `useDependencyCounts`.
+3. Wire into the 4 most-used parents first: **customers, units, states, client_contracts**.
+4. Roll out to the remaining 18 pages in a follow-up batch.
 
-Form state:
-- `unit_ids: string[]` and `primary_unit_id: string | null` on the candidate form.
-- On load: fetch from `candidate_units` for the candidate.
-- On save: upsert `candidate_units` rows, delete removed ones, set `is_primary` correctly, and mirror primary into `candidates.unit_id`.
-
-Table/tree display:
-- "Unit" column shows primary unit + "+N" badge if more than one.
-- Tooltip on the badge lists all units.
-
-Filters, exports, tree grouping: continue to use `unit_id` (primary) — unchanged behaviour for now.
-
-DesignationPicker: only cursor-jump fix, stays single-select.
-
----
-
-## Files touched
-
-- `supabase/migrations/<new>.sql` — junction table + backfill.
-- `src/routes/admin.employees.tsx` — new `MultiUnitPicker`, form state, save/load wiring, table chip display, cursor-jump fix on both pickers.
-- `src/lib/employees.functions.ts` (if it owns the candidate fetch/save) — extend to read/write `candidate_units`.
-- `src/integrations/supabase/types.ts` — regenerated by migration.
-
-`logActivity` calls already exist on save; will keep them.
-
----
-
-## Out of scope (this turn)
-
-- Reworking unit filter dropdown to be multi-select aware.
-- Reworking tree view to group a candidate under multiple units simultaneously.
-- Contracts module (uses its own `unit_id` on `client_contracts`, unrelated).
-
-If you want either of those reworked, say so and I'll add it after this lands.
+Shall I proceed with step 1+2+3 in this turn, and the rest in the next?
