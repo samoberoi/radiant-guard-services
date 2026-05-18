@@ -2895,7 +2895,7 @@ function CandidateWizard({
               </Section>
 
               <Section title="Compliance">
-                <ComplianceSection form={form} setSection={setSection} />
+                <ComplianceSection form={form} setSection={setSection} esicBranches={esicBranches} />
               </Section>
 
               <Section title="Knowledge & Experience">
