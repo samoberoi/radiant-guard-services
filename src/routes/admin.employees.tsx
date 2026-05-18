@@ -578,6 +578,13 @@ function EmployeesPage() {
       if (filterBillable === "billable" && !isBillable) return false;
       if (filterBillable === "nonbillable" && isBillable) return false;
     }
+    if (filterOffboardReason !== "all") {
+      if (filterOffboardReason === "none") {
+        if (c.offboarding_reason_id) return false;
+      } else if (c.offboarding_reason_id !== filterOffboardReason) {
+        return false;
+      }
+    }
     return true;
   };
 
