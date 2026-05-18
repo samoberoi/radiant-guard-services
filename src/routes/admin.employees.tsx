@@ -1606,6 +1606,46 @@ function EmployeesPage() {
                 className="h-11 rounded-xl border-border/70 bg-card pl-11 shadow-sm focus-visible:ring-4 focus-visible:ring-amber-500/10 focus-visible:border-amber-500/60"
               />
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  disabled={exporting || (tab === "employee" ? employees.length === 0 : candidateRows.length === 0)}
+                  className="h-11 whitespace-nowrap rounded-xl border-border/70 bg-card px-4 font-semibold shadow-sm"
+                >
+                  {exporting ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}
+                  Export
+                  <ChevronDown className="ml-1.5 h-4 w-4 opacity-60" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Export {tab === "employee" ? "employees" : "candidates"}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => handleExport("summary-csv")} className="gap-2">
+                  <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">Summary (CSV)</span>
+                    <span className="text-[11px] text-muted-foreground">Visible list columns</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("full-csv")} className="gap-2">
+                  <FileSpreadsheet className="h-4 w-4 text-amber-600" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">All details (CSV)</span>
+                    <span className="text-[11px] text-muted-foreground">Every field, flattened</span>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("full-json")} className="gap-2">
+                  <FileJson className="h-4 w-4 text-sky-600" />
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">All details (JSON)</span>
+                    <span className="text-[11px] text-muted-foreground">Full record incl. nested</span>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button
               onClick={() => {
                 setEditing(null);
@@ -1616,6 +1656,7 @@ function EmployeesPage() {
               <Plus className="mr-1.5 h-4 w-4" />
               Add Candidate
             </Button>
+
           </div>
         </div>
 
