@@ -2482,6 +2482,17 @@ function CandidateWizard({
                   {form.mobile}
                 </Badge>
               )}
+              {(() => {
+                const eAny = editing as unknown as { offboarding_reason_id?: string | null; offboarded_at?: string | null };
+                if (!eAny.offboarding_reason_id) return null;
+                const r = offboardReasons.find((x) => x.id === eAny.offboarding_reason_id);
+                const date = eAny.offboarded_at ? new Date(eAny.offboarded_at).toLocaleDateString() : null;
+                return (
+                  <Badge variant="outline" className="border-rose-300/60 bg-rose-500/10 text-[11px] font-medium text-rose-700 dark:text-rose-300">
+                    Offboarded · {r?.name || "Reason"}{date ? ` · ${date}` : ""}
+                  </Badge>
+                );
+              })()}
             </div>
           )}
         </DialogHeader>
