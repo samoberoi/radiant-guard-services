@@ -522,6 +522,7 @@ function EmployeesPage() {
   const languagesQuery = useLanguagesLite();
   const rolesQuery = useRolesLite();
   const esicBranchesQuery = useEsicBranchesLite();
+  const signedDocsQuery = useSignedDocsSummary();
   const candidates = candidatesQuery.data ?? [];
   const units = unitsQuery.data ?? [];
   const designations = designationsQuery.data ?? [];
