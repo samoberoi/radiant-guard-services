@@ -1442,6 +1442,12 @@ function EmployeesPage() {
           setRejectReason("");
           setOpenWizard(false);
         }}
+        onRequestOffboard={() => {
+          if (!editing) return;
+          setOffboardTarget(editing as unknown as CandidateListItem);
+          setOffboardReasonId("");
+          setOpenWizard(false);
+        }}
       />
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
