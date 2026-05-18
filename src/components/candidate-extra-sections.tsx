@@ -357,6 +357,103 @@ export function CriminalSection({ form, set }: { form: any; set: SetField }) {
   );
 }
 
+const NOMINEE_SLOTS = [
+  { key: "pf", label: "Provident Fund (PF)", enabledKey: "pf_enabled", defaultEnabled: true },
+  { key: "eps", label: "Employees' Pension Scheme (EPS)", enabledKey: "eps_enabled", defaultEnabled: true },
+  { key: "esic", label: "Employees' State Insurance (ESIC)", enabledKey: "esic_enabled", defaultEnabled: true },
+  { key: "pt", label: "Professional Tax (PT)", enabledKey: "pt_enabled", defaultEnabled: true },
+] as const;
+
+function contactKey(c: any, idx: number) {
+  if (c?.id) return String(c.id);
+  const name = (c?.name ?? "").trim();
+  const mob = (c?.mobile ?? c?.phone ?? "").trim();
+  return name || mob ? `${name}|${mob}` : `idx:${idx}`;
+}
+
+function contactLabel(c: any) {
+  const name = (c?.name ?? "").trim() || "Unnamed contact";
+  const rel = (c?.relation ?? "").trim();
+  const mob = (c?.mobile ?? c?.phone ?? "").trim();
+  const extra = [rel, mob].filter(Boolean).join(" · ");
+  return extra ? `${name} (${extra})` : name;
+}
+
+export function NomineeSection({ form, setSection }: { form: any; setSection: SetSection }) {
+  const compliance = form.compliance ?? {};
+  const contacts: any[] = Array.isArray(form.contacts) ? form.contacts : [];
+  const nominees: Record<string, string> = compliance.nominees ?? {};
+
+  const options = contacts
+    .map((c, idx) => ({ key: contactKey(c, idx), label: contactLabel(c) }))
+    .filter((o) => o.label && o.label !== "Unnamed contact" || true);
+
+  const setNominee = (slot: string, value: string) => {
+    const next = { ...(nominees ?? {}) };
+    if (!value) delete next[slot]; else next[slot] = value;
+    setSection("compliance", { nominees: next });
+  };
+
+  const noContacts = contacts.length === 0;
+
+  return (
+    <div>
+      <SectionHeader
+        title="Nominee"
+        desc="Assign a nominee from your contacts to each statutory benefit. The same contact may be nominated for multiple benefits, or split across different contacts."
+      />
+
+      {noContacts ? (
+        <div className="rounded-md border border-dashed border-amber-300 bg-amber-50 p-6 text-center text-sm text-amber-800">
+          Add at least one contact in the <span className="font-semibold">Contacts</span> section first.
+          Nominees are picked from your candidate's contacts list.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {NOMINEE_SLOTS.map((s) => {
+            const enabled = compliance[s.enabledKey] ?? s.defaultEnabled;
+            const value = nominees[s.key] ?? "";
+            const stale = value && !options.some((o) => o.key === value);
+            return (
+              <div key={s.key} className="rounded-md border p-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="text-sm font-medium">{s.label}</p>
+                  {!enabled && (
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      Disabled
+                    </span>
+                  )}
+                </div>
+                <Select
+                  value={value || undefined}
+                  onValueChange={(v) => setNominee(s.key, v === "__none__" ? "" : v)}
+                  disabled={!enabled}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={enabled ? "Select a nominee from contacts" : "Enable in Compliance to assign"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— No nominee —</SelectItem>
+                    {options.map((o) => (
+                      <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {stale && (
+                  <p className="mt-1.5 text-xs text-amber-600">
+                    Previously selected contact is no longer available. Please pick again.
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
 export function OtherSection({ form, setSection }: { form: any; setSection: SetSection }) {
   const o = form.other_info ?? {};
   return (
