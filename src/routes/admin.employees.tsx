@@ -270,7 +270,7 @@ type UnitLite = {
   customer_name?: string;
 };
 
-type DesignationLite = { id: string; name: string; code: string };
+type DesignationLite = { id: string; name: string; code: string; billable: boolean };
 type ExServiceLite = { id: string; name: string; description: string };
 type LanguageLite = { id: string; name: string };
 
