@@ -44,6 +44,7 @@ import {
   CriminalSection,
   ListSection,
   IdentificationSection,
+  NomineeSection,
 } from "@/components/candidate-extra-sections";
 
 const MODULE = "Candidate Details";
