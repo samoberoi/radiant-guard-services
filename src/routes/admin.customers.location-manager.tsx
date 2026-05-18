@@ -87,7 +87,7 @@ function LocationManagerPage() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search states…"
+            placeholder="Search locations…"
             className="h-10 rounded-lg pl-9"
           />
         </div>
@@ -96,7 +96,7 @@ function LocationManagerPage() {
             variant="outline"
             onClick={() =>
               downloadCsv(
-                "states",
+                "locations",
                 states.map((s) => ({
                   state: s.name,
                   mappedToBranch: mappedStateIds.has(s.id) ? "Yes" : "No",
@@ -130,7 +130,7 @@ function LocationManagerPage() {
             className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
           >
             <Plus className="mr-1.5 h-4 w-4" />
-            Add state
+            Add location
           </Button>
         </div>
       </div>
@@ -145,7 +145,7 @@ function LocationManagerPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">#</th>
-                <th className="px-5 py-3">State</th>
+                <th className="px-5 py-3">Location</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
@@ -217,13 +217,13 @@ function LocationManagerPage() {
       <StateFormDialog
         open={addOpen}
         onOpenChange={setAddOpen}
-        title="Add state"
+        title="Add location"
         onSubmit={async (name) => {
           if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           const r = await addState(name);
           if (!r.ok) return r.error;
-          void logActivity({ module: "Location Manager", action: "create", entityType: "states", entityLabel: name, details: { name } });
-          toast.success("State added");
+          void logActivity({ module: "Location Manager", action: "create", entityType: "locations", entityLabel: name, details: { name } });
+          toast.success("Location added");
           return null;
         }}
       />
@@ -238,8 +238,8 @@ function LocationManagerPage() {
           if (!editing) return null;
           const r = await updateState(editing.id, name);
           if (!r.ok) return r.error;
-          void logActivity({ module: "Location Manager", action: "update", entityType: "states", entityId: editing.id, entityLabel: name, details: { name } });
-          toast.success("State updated");
+          void logActivity({ module: "Location Manager", action: "update", entityType: "locations", entityId: editing.id, entityLabel: name, details: { name } });
+          toast.success("Location updated");
           setEditing(null);
           return null;
         }}
@@ -248,7 +248,7 @@ function LocationManagerPage() {
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete state?</AlertDialogTitle>
+            <AlertDialogTitle>Delete location?</AlertDialogTitle>
             <AlertDialogDescription>
               This will remove <span className="font-semibold text-foreground">{deleting?.name}</span> from the list.
             </AlertDialogDescription>
@@ -263,8 +263,8 @@ function LocationManagerPage() {
                   const _delId = deleting.id;
                   const _delLabel = String((deleting as Record<string, unknown>).name ?? (deleting as Record<string, unknown>).code ?? _delId);
                   await deleteState(_delId);
-                  void logActivity({ module: "Location Manager", action: "delete", entityType: "states", entityId: _delId, entityLabel: _delLabel });
-                  toast.success("State deleted");
+                  void logActivity({ module: "Location Manager", action: "delete", entityType: "locations", entityId: _delId, entityLabel: _delLabel });
+                  toast.success("Location deleted");
                   setDeleting(null);
                 } catch (e) {
                   toast.error(e instanceof Error ? e.message : "Delete failed");
@@ -360,9 +360,9 @@ function StateFormDialog({
           className="space-y-4"
         >
           <div className="space-y-2">
-            <Label htmlFor="state-name">State name</Label>
+            <Label htmlFor="location-name">Location name</Label>
             <Input
-              id="state-name"
+              id="location-name"
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
