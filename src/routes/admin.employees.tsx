@@ -1125,15 +1125,17 @@ function EmployeesPage() {
                     <Edit2 className="h-4 w-4" />
                   )}
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setConfirmDelete(c)}
-                  className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
-                  title="Delete"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {mode === "candidate" && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setConfirmDelete(c)}
+                    className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+                    title="Delete"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
           </td>
