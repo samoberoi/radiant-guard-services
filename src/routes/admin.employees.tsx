@@ -1379,6 +1379,7 @@ function EmployeesPage() {
         designationsError={designationsQuery.error instanceof Error ? designationsQuery.error.message : null}
         exServices={exServices}
         languagesList={languagesList}
+        esicBranches={esicBranches}
         canReview={!!editing && editing.status === "pending"}
         isApproving={approveMut.isPending}
         onApprove={() => {
