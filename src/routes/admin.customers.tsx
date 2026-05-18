@@ -145,16 +145,16 @@ function CustomersDashboard() {
         <StatTile
           label="Branches"
           value={branches.length}
-          sub={`${states.length} states`}
+          sub={`${states.length} locations`}
           icon={Building2}
           to="/admin/customers/branch-manager"
         />
         <StatTile
-          label="States"
+          label="Locations"
           value={states.length}
-          sub="across India"
+          sub="mapped to branches"
           icon={MapPin}
-          to="/admin/customers/state-manager"
+          to="/admin/customers/location-manager"
         />
       </div>
 
