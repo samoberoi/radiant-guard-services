@@ -741,6 +741,89 @@ function EmployeesPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Toggle failed"),
   });
 
+  const reactivateMut = useMutation({
+    mutationFn: async ({ candidate }: { candidate: CandidateListItem }) => {
+      if (candidate.no_hire) {
+        throw new Error("Employee is flagged Do not re-hire and cannot be reactivated.");
+      }
+      // Fetch full source row
+      const { data: src, error: fetchErr } = await supabase
+        .from("candidates" as never)
+        .select("*")
+        .eq("id", candidate.id)
+        .single();
+      if (fetchErr) throw fetchErr;
+      const source = src as unknown as Record<string, unknown>;
+      const stripped: Record<string, unknown> = { ...source };
+      // Remove system / unique columns so a fresh record is created
+      [
+        "id",
+        "created_at",
+        "updated_at",
+        "employee_code",
+        "candidate_code",
+        "approved_at",
+        "rejected_at",
+        "rejection_reason",
+      ].forEach((k) => delete stripped[k]);
+      const today = new Date().toISOString().slice(0, 10);
+      // Reset offboarding + lifecycle fields for the new active record
+      stripped.status = "active";
+      stripped.is_enabled = true;
+      stripped.no_hire = false;
+      stripped.offboarding_reason_id = null;
+      stripped.offboarded_at = null;
+      stripped.offboarding_details = {};
+      stripped.application_date = today;
+      stripped.preferred_joining_date = today;
+      stripped.employee_code = "";
+      stripped.candidate_code = "";
+
+      const { data: inserted, error: insertErr } = await supabase
+        .from("candidates" as never)
+        .insert(stripped as unknown as never)
+        .select("id,employee_code,full_name")
+        .single();
+      if (insertErr) throw insertErr;
+      const newRec = inserted as unknown as { id: string; employee_code: string; full_name: string };
+
+      // Copy candidate_units mapping to the new candidate
+      const { data: units } = await supabase
+        .from("candidate_units" as never)
+        .select("unit_id,is_primary,sort_order")
+        .eq("candidate_id", candidate.id);
+      const unitsArr = (units as unknown as { unit_id: string; is_primary: boolean; sort_order: number }[] | null) ?? [];
+      if (unitsArr.length > 0) {
+        await supabase
+          .from("candidate_units" as never)
+          .insert(
+            unitsArr.map((u) => ({
+              candidate_id: newRec.id,
+              unit_id: u.unit_id,
+              is_primary: u.is_primary,
+              sort_order: u.sort_order,
+            })) as unknown as never,
+          );
+      }
+
+      await logActivity({
+        module: "Employees",
+        action: "reactivate",
+        entityType: "candidate",
+        entityId: newRec.id,
+        entityLabel: newRec.full_name || newRec.employee_code,
+        before: { source_id: candidate.id, source_employee_code: candidate.employee_code },
+        after: { new_employee_code: newRec.employee_code, joining_date: today },
+      });
+      return newRec;
+    },
+    onSuccess: (rec) => {
+      toast.success(`Reactivated as ${rec.employee_code || "new employee"}`);
+      qc.invalidateQueries({ queryKey: QK });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Reactivation failed"),
+  });
+
   const offboardMut = useMutation({
     mutationFn: async ({
       candidate,
@@ -1084,6 +1167,18 @@ function EmployeesPage() {
                   }
                   if (c.no_hire) {
                     toast.error("This employee is flagged Do not re-hire and cannot be reactivated.");
+                    return;
+                  }
+                  // If previously offboarded, spin up a fresh employee record
+                  const wasOffboarded = !!c.offboarding_reason_id || !!c.offboarded_at;
+                  if (wasOffboarded) {
+                    const ok = await confirmAction({
+                      title: "Reactivate employee?",
+                      description: `A new employee record will be created for ${c.full_name || c.employee_code} with today's joining date. All documents and KYC details will be copied over. Offboarding history will be reset on the new record. The original record (${c.employee_code}) stays archived for audit.`,
+                      confirmText: "Reactivate & create new record",
+                    });
+                    if (!ok) return;
+                    reactivateMut.mutate({ candidate: c });
                     return;
                   }
                   const ok = await confirmAction({
