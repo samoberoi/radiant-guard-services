@@ -1286,15 +1286,15 @@ function ClientContractsPage() {
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleting(c)}
-                        aria-label="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <DeleteGuardButton
+                        id={c.id}
+                        entityLabel="contract"
+                        checks={[
+                          { table: "contract_resources", column: "contract_id", label: "resource lines" },
+                        ]}
+                        onDelete={() => setDeleting(c)}
+                      />
+
                     </div>
                   </td>
                 </tr>
