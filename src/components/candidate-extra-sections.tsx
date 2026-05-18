@@ -113,12 +113,22 @@ export function PhysicalSection({ form, setSection }: { form: any; setSection: S
   );
 }
 
-export function ComplianceSection({ form, setSection }: { form: any; setSection: SetSection }) {
+export function ComplianceSection({
+  form,
+  setSection,
+  esicBranches,
+}: {
+  form: any;
+  setSection: SetSection;
+  esicBranches?: Array<{ id: string; location: string; esic_code: string }>;
+}) {
   const c = form.compliance ?? {};
   const pf = c.pf_enabled ?? true;
   const eps = c.eps_enabled ?? true;
   const esic = c.esic_enabled ?? true;
   const pt = c.pt_enabled ?? true;
+  const branches = esicBranches ?? [];
+  const branchMissing = esic && !c.esic_branch_id;
   const toggleRow = (label: string, desc: string, checked: boolean, onChange: (v: boolean) => void) => (
     <div className="flex items-center justify-between rounded-md border p-3">
       <div>
@@ -143,7 +153,43 @@ export function ComplianceSection({ form, setSection }: { form: any; setSection:
         {toggleRow("Employees' Pension Scheme (EPS)", "Enable EPS contributions", eps, (v) => setSection("compliance", { eps_enabled: v }))}
         {toggleRow("Employees' State Insurance (ESIC)", "Enable ESIC coverage", esic, (v) => setSection("compliance", { esic_enabled: v }))}
         {esic && (
-          <div className="ml-3 border-l-2 border-primary/30 pl-4">
+          <div className="ml-3 space-y-3 border-l-2 border-primary/30 pl-4">
+            <Field label="ESIC Branch">
+              {branches.length === 0 ? (
+                <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  No ESIC branches found. Please add branches in{" "}
+                  <a href="/admin/esic-branch-manager" className="font-semibold underline">
+                    ESIC Branch Manager
+                  </a>{" "}
+                  before mapping.
+                </div>
+              ) : (
+                <Select
+                  value={c.esic_branch_id ?? ""}
+                  onValueChange={(v) => setSection("compliance", { esic_branch_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select ESIC branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>
+                        {b.location} ({b.esic_code})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              {branchMissing && branches.length > 0 && (
+                <p className="mt-1 text-xs text-amber-700">
+                  ESIC Branch missing — map a branch from{" "}
+                  <a href="/admin/esic-branch-manager" className="font-semibold underline">
+                    ESIC Branch Manager
+                  </a>
+                  .
+                </p>
+              )}
+            </Field>
             <Field label="ESIC Number">
               <Input value={c.esic_number ?? ""} onChange={(e) => setSection("compliance", { esic_number: e.target.value })} />
             </Field>
