@@ -34,6 +34,7 @@ import {
   type Unit,
 } from "@/lib/admin-data";
 import { cn } from "@/lib/utils";
+import { UnitDeployedPeople } from "@/components/UnitDeployedPeople";
 
 export const Route = createFileRoute("/admin/customers")({
   component: CustomersLayout,
