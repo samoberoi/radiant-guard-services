@@ -192,8 +192,8 @@ function ExServiceManagerPage() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-5 py-2 text-xs text-muted-foreground">
-          <span><span className="font-semibold text-foreground">{filtered.length}</span> {filtered.length === 1 ? "row" : "rows"}</span>
+        <div className="flex items-center justify-between border-b border-border bg-accent/10 px-5 py-2.5 text-xs font-medium text-foreground">
+          <span className="inline-flex items-center gap-2"><span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">{filtered.length}</span><span className="uppercase tracking-[0.14em] text-muted-foreground">Total {filtered.length === 1 ? "row" : "rows"}</span></span>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
