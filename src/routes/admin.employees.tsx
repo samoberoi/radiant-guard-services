@@ -7,6 +7,7 @@ import {
   CriminalSection,
   OtherSection,
   ListSection,
+  NomineeSection,
 } from "@/components/candidate-extra-sections";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -3307,6 +3308,10 @@ function CandidateWizard({
 
               <Section title="Criminal History">
                 <CriminalSection form={form} set={setAny} />
+              </Section>
+
+              <Section title="Nominee">
+                <NomineeSection form={form} setSection={setSection} />
               </Section>
 
             </div>

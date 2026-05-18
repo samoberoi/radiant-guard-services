@@ -20,6 +20,7 @@ import {
   FileBadge,
   Gavel,
   AlertTriangle,
+  UserCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,6 +45,7 @@ import {
   CriminalSection,
   ListSection,
   IdentificationSection,
+  NomineeSection,
 } from "@/components/candidate-extra-sections";
 
 const MODULE = "Candidate Details";
@@ -56,6 +58,7 @@ const SECTIONS = [
   { id: "contacts", label: "Contacts", icon: Phone },
   { id: "identification", label: "Identification Proofs", icon: FileBadge },
   { id: "criminal", label: "Criminal History", icon: Gavel },
+  { id: "nominee", label: "Nominee", icon: UserCheck },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -380,6 +383,9 @@ function CandidateDetailsPage() {
           )}
           {active === "criminal" && (
             <CriminalSection form={form} set={set} />
+          )}
+          {active === "nominee" && (
+            <NomineeSection form={form} setSection={setSection} />
           )}
         </section>
       </div>
