@@ -532,6 +532,24 @@ function EmployeesPage() {
   });
   const offboardReasons = offboardReasonsQuery.data ?? [];
 
+  const assetsQuery = useQuery({
+    queryKey: ["assets_lite"],
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("assets" as never)
+        .select("id,name,category,enabled")
+        .eq("enabled", true)
+        .order("name", { ascending: true })
+        .limit(500);
+      if (error) throw error;
+      return ((data as unknown) as Array<{ id: string; name: string; category: string }>) ?? [];
+    },
+  });
+  const assets = assetsQuery.data ?? [];
+
   // Filters
   const [filterRole, setFilterRole] = useState<string>("all");
   const [filterDesignation, setFilterDesignation] = useState<string>("all");
