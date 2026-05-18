@@ -1774,6 +1774,7 @@ function emptyForm(): CandidateForm {
     application_date: new Date().toISOString().slice(0, 10),
     preferred_joining_date: null,
     unit_id: null,
+    unit_ids: [],
     designation_id: null,
     status: "pending",
     physical_health: {},
