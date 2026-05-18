@@ -123,7 +123,7 @@ function BranchManagerPage() {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by code, state, description…"
+            placeholder="Search by code, location, description…"
             className="h-10 rounded-lg pl-9"
           />
         </div>
