@@ -31,10 +31,10 @@ import { Badge } from "@/components/ui/badge";
 import { useBranches, useStates, type State } from "@/lib/admin-data";
 
 export const Route = createFileRoute("/admin/customers/location-manager")({
-  component: StateManagerPage,
+  component: LocationManagerPage,
 });
 
-function StateManagerPage() {
+function LocationManagerPage() {
   const { states, addState, updateState, deleteState } = useStates();
   const { branches } = useBranches();
 
@@ -60,11 +60,11 @@ function StateManagerPage() {
   return (
     <div>
       <PageHeader
-        title="State Manager"
+        title="Location Manager"
         description="All states served by Radiant Guard. Used as the source of truth for branch mappings."
         crumbs={[
           { label: "Organizations", to: "/admin/customers" },
-          { label: "State Manager" },
+          { label: "Location Manager" },
         ]}
       />
 
@@ -222,7 +222,7 @@ function StateManagerPage() {
           if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           const r = await addState(name);
           if (!r.ok) return r.error;
-          void logActivity({ module: "State Manager", action: "create", entityType: "states", entityLabel: name, details: { name } });
+          void logActivity({ module: "Location Manager", action: "create", entityType: "states", entityLabel: name, details: { name } });
           toast.success("State added");
           return null;
         }}
@@ -238,7 +238,7 @@ function StateManagerPage() {
           if (!editing) return null;
           const r = await updateState(editing.id, name);
           if (!r.ok) return r.error;
-          void logActivity({ module: "State Manager", action: "update", entityType: "states", entityId: editing.id, entityLabel: name, details: { name } });
+          void logActivity({ module: "Location Manager", action: "update", entityType: "states", entityId: editing.id, entityLabel: name, details: { name } });
           toast.success("State updated");
           setEditing(null);
           return null;
@@ -263,7 +263,7 @@ function StateManagerPage() {
                   const _delId = deleting.id;
                   const _delLabel = String((deleting as Record<string, unknown>).name ?? (deleting as Record<string, unknown>).code ?? _delId);
                   await deleteState(_delId);
-                  void logActivity({ module: "State Manager", action: "delete", entityType: "states", entityId: _delId, entityLabel: _delLabel });
+                  void logActivity({ module: "Location Manager", action: "delete", entityType: "states", entityId: _delId, entityLabel: _delLabel });
                   toast.success("State deleted");
                   setDeleting(null);
                 } catch (e) {
