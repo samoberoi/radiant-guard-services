@@ -290,7 +290,7 @@ function DesignationManagerPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     No designations found.
                   </td>
                 </tr>
