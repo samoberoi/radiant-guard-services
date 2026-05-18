@@ -2257,6 +2257,11 @@ function CandidateWizard({
       return toast.error("IFSC code format is invalid (e.g. SBIN0001234)");
     if (form.bank_account_number && !/^\d{6,18}$/.test(form.bank_account_number.trim()))
       return toast.error("Bank account number must be 6–18 digits");
+    const compliance = (form.compliance ?? {}) as Record<string, unknown>;
+    const esicEnabled = compliance.esic_enabled !== false; // default true
+    if (esicEnabled && !compliance.esic_branch_id) {
+      return toast.error("ESIC Branch is missing. Please map a branch from ESIC Branch Manager (Compliance section).");
+    }
     setSubmitting(true);
     try {
       // Creating / re-submitting moves to "pending" so the admin can approve.
