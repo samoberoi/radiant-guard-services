@@ -480,6 +480,7 @@ function EmployeesPage() {
     unit: true,
     manager: true,
     enabled: true,
+    billable: true,
   };
   const [filtersVisible, setFiltersVisible] = useState<typeof DEFAULT_FILTERS_VIS>(() => {
     if (typeof window === "undefined") return DEFAULT_FILTERS_VIS;
