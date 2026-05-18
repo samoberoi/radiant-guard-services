@@ -2010,6 +2010,9 @@ function emptyForm(): CandidateForm {
     documents: [],
     nominations: [],
     kyc_completed: false,
+    assigned_asset_ids: [],
+    no_hire: false,
+    offboarding_details: {},
   };
 }
 
