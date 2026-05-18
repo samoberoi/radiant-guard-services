@@ -2511,6 +2511,17 @@ function CandidateWizard({
                 </Badge>
               )}
               {(() => {
+                const eAny = editing as unknown as { offboarding_reason_id?: string | null; offboarded_at?: string | null; no_hire?: boolean };
+                if (eAny.no_hire) {
+                  return (
+                    <Badge variant="outline" className="border-rose-300/60 bg-rose-500/10 text-[11px] font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-300">
+                      Do not re-hire
+                    </Badge>
+                  );
+                }
+                return null;
+              })()}
+              {(() => {
                 const eAny = editing as unknown as { offboarding_reason_id?: string | null; offboarded_at?: string | null };
                 if (!eAny.offboarding_reason_id) return null;
                 const r = offboardReasons.find((x) => x.id === eAny.offboarding_reason_id);
