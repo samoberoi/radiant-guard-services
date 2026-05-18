@@ -381,12 +381,14 @@ function DesignationFormDialog({
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [enabled, setEnabled] = useState(true);
+  const [billable, setBillable] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useResetOnOpen(open, () => {
     setName(initial?.name ?? "");
     setCode(initial?.code ?? "");
     setEnabled(initial?.enabled ?? true);
+    setBillable(initial?.billable ?? false);
   });
 
   return (
@@ -422,6 +424,13 @@ function DesignationFormDialog({
             </div>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
           </div>
+          <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+            <div>
+              <div className="text-sm font-medium">Billable</div>
+              <div className="text-xs text-muted-foreground">Include in client billing</div>
+            </div>
+            <Switch checked={billable} onCheckedChange={setBillable} />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
@@ -432,7 +441,7 @@ function DesignationFormDialog({
             onClick={async () => {
               if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
               setSaving(true);
-              const err = await onSubmit({ name, code, enabled });
+              const err = await onSubmit({ name, code, enabled, billable });
               setSaving(false);
               if (err) toast.error(err);
               else onOpenChange(false);
