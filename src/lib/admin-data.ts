@@ -10,6 +10,15 @@ import { logActivity } from "@/lib/activity-log";
 
 export type State = { id: string; name: string };
 
+export type IndianState = {
+  id: string;
+  name: string;
+  code: string;
+  kind: "state" | "ut";
+  enabled: boolean;
+  sortOrder: number;
+};
+
 export type Branch = {
   id: string;
   code: string;
