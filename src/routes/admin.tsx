@@ -39,6 +39,7 @@ type NavItem = {
 
 const customersChildren: NavItem[] = [
   { to: "/admin/customers/state-manager", label: "State Manager", icon: MapPin },
+  { to: "/admin/customers/location-manager", label: "Location Manager", icon: MapPin },
   { to: "/admin/customers/branch-manager", label: "Branch Manager", icon: Building2 },
   { to: "/admin/customers/customer-manager", label: "Organization Manager", icon: Users },
   { to: "/admin/customers/unit-manager", label: "Unit Manager", icon: Warehouse },
