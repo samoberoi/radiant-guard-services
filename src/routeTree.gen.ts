@@ -35,7 +35,7 @@ import { Route as AdminBillingTypeManagerRouteImport } from './routes/admin.bill
 import { Route as AdminAssetManagerRouteImport } from './routes/admin.asset-manager'
 import { Route as AdminAllowanceManagerRouteImport } from './routes/admin.allowance-manager'
 import { Route as AdminCustomersUnitManagerRouteImport } from './routes/admin.customers.unit-manager'
-import { Route as AdminCustomersStateManagerRouteImport } from './routes/admin.customers.state-manager'
+import { Route as AdminCustomersLocationManagerRouteImport } from './routes/admin.customers.location-manager'
 import { Route as AdminCustomersCustomerManagerRouteImport } from './routes/admin.customers.customer-manager'
 import { Route as AdminCustomersBranchManagerRouteImport } from './routes/admin.customers.branch-manager'
 import { Route as AdminContractsClientContractsRouteImport } from './routes/admin.contracts.client-contracts'
@@ -175,10 +175,10 @@ const AdminCustomersUnitManagerRoute =
     path: '/unit-manager',
     getParentRoute: () => AdminCustomersRoute,
   } as any)
-const AdminCustomersStateManagerRoute =
-  AdminCustomersStateManagerRouteImport.update({
-    id: '/state-manager',
-    path: '/state-manager',
+const AdminCustomersLocationManagerRoute =
+  AdminCustomersLocationManagerRouteImport.update({
+    id: '/location-manager',
+    path: '/location-manager',
     getParentRoute: () => AdminCustomersRoute,
   } as any)
 const AdminCustomersCustomerManagerRoute =
@@ -235,7 +235,7 @@ export interface FileRoutesByFullPath {
   '/admin/contracts/client-contracts': typeof AdminContractsClientContractsRoute
   '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
-  '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
+  '/admin/customers/location-manager': typeof AdminCustomersLocationManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
@@ -268,7 +268,7 @@ export interface FileRoutesByTo {
   '/admin/contracts/client-contracts': typeof AdminContractsClientContractsRoute
   '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
-  '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
+  '/admin/customers/location-manager': typeof AdminCustomersLocationManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
@@ -302,7 +302,7 @@ export interface FileRoutesById {
   '/admin/contracts/client-contracts': typeof AdminContractsClientContractsRoute
   '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
-  '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
+  '/admin/customers/location-manager': typeof AdminCustomersLocationManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
@@ -337,7 +337,7 @@ export interface FileRouteTypes {
     | '/admin/contracts/client-contracts'
     | '/admin/customers/branch-manager'
     | '/admin/customers/customer-manager'
-    | '/admin/customers/state-manager'
+    | '/admin/customers/location-manager'
     | '/admin/customers/unit-manager'
     | '/admin/candidates/$id/details'
   fileRoutesByTo: FileRoutesByTo
@@ -370,7 +370,7 @@ export interface FileRouteTypes {
     | '/admin/contracts/client-contracts'
     | '/admin/customers/branch-manager'
     | '/admin/customers/customer-manager'
-    | '/admin/customers/state-manager'
+    | '/admin/customers/location-manager'
     | '/admin/customers/unit-manager'
     | '/admin/candidates/$id/details'
   id:
@@ -403,7 +403,7 @@ export interface FileRouteTypes {
     | '/admin/contracts/client-contracts'
     | '/admin/customers/branch-manager'
     | '/admin/customers/customer-manager'
-    | '/admin/customers/state-manager'
+    | '/admin/customers/location-manager'
     | '/admin/customers/unit-manager'
     | '/admin/candidates/$id/details'
   fileRoutesById: FileRoutesById
@@ -599,11 +599,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCustomersUnitManagerRouteImport
       parentRoute: typeof AdminCustomersRoute
     }
-    '/admin/customers/state-manager': {
-      id: '/admin/customers/state-manager'
-      path: '/state-manager'
-      fullPath: '/admin/customers/state-manager'
-      preLoaderRoute: typeof AdminCustomersStateManagerRouteImport
+    '/admin/customers/location-manager': {
+      id: '/admin/customers/location-manager'
+      path: '/location-manager'
+      fullPath: '/admin/customers/location-manager'
+      preLoaderRoute: typeof AdminCustomersLocationManagerRouteImport
       parentRoute: typeof AdminCustomersRoute
     }
     '/admin/customers/customer-manager': {
@@ -640,14 +640,14 @@ declare module '@tanstack/react-router' {
 interface AdminCustomersRouteChildren {
   AdminCustomersBranchManagerRoute: typeof AdminCustomersBranchManagerRoute
   AdminCustomersCustomerManagerRoute: typeof AdminCustomersCustomerManagerRoute
-  AdminCustomersStateManagerRoute: typeof AdminCustomersStateManagerRoute
+  AdminCustomersLocationManagerRoute: typeof AdminCustomersLocationManagerRoute
   AdminCustomersUnitManagerRoute: typeof AdminCustomersUnitManagerRoute
 }
 
 const AdminCustomersRouteChildren: AdminCustomersRouteChildren = {
   AdminCustomersBranchManagerRoute: AdminCustomersBranchManagerRoute,
   AdminCustomersCustomerManagerRoute: AdminCustomersCustomerManagerRoute,
-  AdminCustomersStateManagerRoute: AdminCustomersStateManagerRoute,
+  AdminCustomersLocationManagerRoute: AdminCustomersLocationManagerRoute,
   AdminCustomersUnitManagerRoute: AdminCustomersUnitManagerRoute,
 }
 
@@ -718,3 +718,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

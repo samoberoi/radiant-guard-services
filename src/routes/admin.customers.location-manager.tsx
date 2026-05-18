@@ -30,7 +30,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useBranches, useStates, type State } from "@/lib/admin-data";
 
-export const Route = createFileRoute("/admin/customers/state-manager")({
+export const Route = createFileRoute("/admin/customers/location-manager")({
   component: StateManagerPage,
 });
 
