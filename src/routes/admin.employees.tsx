@@ -525,6 +525,12 @@ function EmployeesPage() {
     if (filterManager !== "all" && c.reports_to !== filterManager) return false;
     if (filterEnabled === "enabled" && !c.is_enabled) return false;
     if (filterEnabled === "disabled" && c.is_enabled) return false;
+    if (filterBillable !== "all") {
+      const d = c.designation_id ? desigMap.get(c.designation_id) : undefined;
+      const isBillable = !!d?.billable;
+      if (filterBillable === "billable" && !isBillable) return false;
+      if (filterBillable === "nonbillable" && isBillable) return false;
+    }
     return true;
   };
 
