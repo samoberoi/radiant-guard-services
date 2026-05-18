@@ -3069,8 +3069,19 @@ function SalaryBreakdownTable({
   const benefitsTotal = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const gross = componentsTotal + benefitsTotal;
   const deductionsTotal = deductions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const employerTotal = employerContributions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const totalCTC = gross + employerTotal;
+
+  const isReliever = (b: BenefitItem) => /reliever/i.test(b.name);
+  const isMgmtFee = (b: BenefitItem) => /management\s*fee/i.test(b.name);
+  const coreEmployer = employerContributions.filter((b) => !isReliever(b) && !isMgmtFee(b));
+  const relieverItems = employerContributions.filter(isReliever);
+  const mgmtFeeItems = employerContributions.filter(isMgmtFee);
+
+  const coreEmployerTotal = coreEmployer.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const relieverTotal = relieverItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const mgmtFeeTotal = mgmtFeeItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const totalCTC = gross + coreEmployerTotal;
+  const totalRate = totalCTC + relieverTotal;
+  const grandTotal = totalRate + mgmtFeeTotal;
 
   const basisLabel = payrollDayBase
     ? payrollDayBase.method === "fixed_days"
@@ -3088,6 +3099,8 @@ function SalaryBreakdownTable({
   const netPayable = gross - deductionsTotal;
   const earnedNetPayable = earnedFor(netPayable);
   const earnedCTC = earnedFor(totalCTC);
+  const earnedRate = earnedFor(totalRate);
+  const earnedGrand = earnedFor(grandTotal);
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
