@@ -340,7 +340,7 @@ function CandidateDetailsPage() {
             <PhysicalSection form={form} setSection={setSection} />
           )}
           {active === "compliance" && (
-            <ComplianceSection form={form} setSection={setSection} />
+            <ComplianceSection form={form} setSection={setSection} esicBranches={esicBranches} />
           )}
           {active === "knowledge" && (
             <KnowledgeSection form={form} set={set} />
