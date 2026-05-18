@@ -1042,6 +1042,16 @@ function EmployeesPage() {
                 {c.rejection_reason}
               </div>
             )}
+            {c.status === "inactive" && c.offboarding_reason_id && (() => {
+              const r = offboardReasons.find((x) => x.id === c.offboarding_reason_id);
+              const date = c.offboarded_at ? new Date(c.offboarded_at).toLocaleDateString() : null;
+              const label = r?.name || "Offboarded";
+              return (
+                <div className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground" title={`${label}${date ? " · " + date : ""}`}>
+                  {label}{date ? ` · ${date}` : ""}
+                </div>
+              );
+            })()}
           </td>
           <td className="px-4 py-5">
             <div className="flex items-center justify-end gap-1.5">
