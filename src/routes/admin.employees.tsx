@@ -661,9 +661,14 @@ function EmployeesPage() {
 
   const toggleEnabledMut = useMutation({
     mutationFn: async ({ candidate, enabled }: { candidate: CandidateListItem; enabled: boolean }) => {
+      const patch: Record<string, unknown> = { is_enabled: enabled, status: enabled ? "active" : "inactive" };
+      if (enabled) {
+        patch.offboarding_reason_id = null;
+        patch.offboarded_at = null;
+      }
       const { error } = await supabase
         .from("candidates" as never)
-        .update({ is_enabled: enabled } as unknown as never)
+        .update(patch as unknown as never)
         .eq("id", candidate.id);
       if (error) throw error;
       await logActivity({
@@ -672,15 +677,46 @@ function EmployeesPage() {
         entityType: "candidate",
         entityId: candidate.id,
         entityLabel: candidate.full_name || candidate.employee_code,
-        before: { is_enabled: candidate.is_enabled },
-        after: { is_enabled: enabled },
+        before: { is_enabled: candidate.is_enabled, status: candidate.status },
+        after: { is_enabled: enabled, status: enabled ? "active" : "inactive" },
       });
     },
     onSuccess: (_d, vars) => {
-      toast.success(vars.enabled ? "Employee enabled" : "Employee disabled");
+      toast.success(vars.enabled ? "Employee activated" : "Employee deactivated");
       qc.invalidateQueries({ queryKey: QK });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Toggle failed"),
+  });
+
+  const offboardMut = useMutation({
+    mutationFn: async ({ candidate, reasonId, reasonName }: { candidate: CandidateListItem; reasonId: string; reasonName: string }) => {
+      const { error } = await supabase
+        .from("candidates" as never)
+        .update({
+          is_enabled: false,
+          status: "inactive",
+          offboarding_reason_id: reasonId,
+          offboarded_at: new Date().toISOString(),
+        } as unknown as never)
+        .eq("id", candidate.id);
+      if (error) throw error;
+      await logActivity({
+        module: "Employees",
+        action: "offboard",
+        entityType: "candidate",
+        entityId: candidate.id,
+        entityLabel: candidate.full_name || candidate.employee_code,
+        before: { is_enabled: candidate.is_enabled, status: candidate.status },
+        after: { is_enabled: false, status: "inactive", offboarding_reason: reasonName },
+      });
+    },
+    onSuccess: () => {
+      toast.success("Employee offboarded");
+      qc.invalidateQueries({ queryKey: QK });
+      setOffboardTarget(null);
+      setOffboardReasonId("");
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Offboarding failed"),
   });
 
   const assignManagerMut = useMutation({
