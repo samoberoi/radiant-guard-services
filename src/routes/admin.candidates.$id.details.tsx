@@ -126,6 +126,21 @@ function CandidateDetailsPage() {
     },
   });
 
+  const { data: esicBranchesData } = useQuery({
+    queryKey: ["esic-branches-lite"],
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("esic_branches" as never)
+        .select("id,location,esic_code,enabled")
+        .eq("enabled", true)
+        .order("location", { ascending: true });
+      if (error) throw error;
+      return (data as unknown) as Array<{ id: string; location: string; esic_code: string }>;
+    },
+  });
+  const esicBranches = esicBranchesData ?? [];
+
   useEffect(() => {
     if (!data) return;
     const normalized = normalizeCandidate(data);
@@ -340,7 +355,7 @@ function CandidateDetailsPage() {
             <PhysicalSection form={form} setSection={setSection} />
           )}
           {active === "compliance" && (
-            <ComplianceSection form={form} setSection={setSection} />
+            <ComplianceSection form={form} setSection={setSection} esicBranches={esicBranches} />
           )}
           {active === "knowledge" && (
             <KnowledgeSection form={form} set={set} />

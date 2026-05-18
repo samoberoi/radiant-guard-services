@@ -279,6 +279,28 @@ const QK_UNITS = ["admin", "units-lite"] as const;
 const QK_DESIG = ["admin", "designations-lite"] as const;
 const QK_EX_SERVICES = ["admin", "ex-services-lite"] as const;
 const QK_LANGUAGES = ["admin", "languages-lite"] as const;
+const QK_ESIC_BRANCHES = ["admin", "esic-branches-lite"] as const;
+
+type EsicBranchLite = { id: string; location: string; esic_code: string };
+
+function useEsicBranchesLite() {
+  return useQuery({
+    queryKey: QK_ESIC_BRANCHES,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async (): Promise<EsicBranchLite[]> => {
+      const { data, error } = await supabase
+        .from("esic_branches" as never)
+        .select("id,location,esic_code,enabled")
+        .eq("enabled", true)
+        .order("location", { ascending: true })
+        .limit(500);
+      if (error) throw error;
+      return ((data as unknown) as EsicBranchLite[]) ?? [];
+    },
+  });
+}
 
 async function runWithQueryTimeout<T>(label: string, run: (signal: AbortSignal) => Promise<T>, timeoutMs = 8_000) {
   const controller = new AbortController();
@@ -443,12 +465,14 @@ function EmployeesPage() {
   const exServicesQuery = useExServices();
   const languagesQuery = useLanguagesLite();
   const rolesQuery = useRolesLite();
+  const esicBranchesQuery = useEsicBranchesLite();
   const candidates = candidatesQuery.data ?? [];
   const units = unitsQuery.data ?? [];
   const designations = designationsQuery.data ?? [];
   const exServices = exServicesQuery.data ?? [];
   const languagesList = languagesQuery.data ?? [];
   const rolesList = rolesQuery.data ?? [];
+  const esicBranches = esicBranchesQuery.data ?? [];
   const isLoading = candidatesQuery.isLoading;
   const candidatesError = candidatesQuery.error;
   const qc = useQueryClient();
@@ -1355,6 +1379,7 @@ function EmployeesPage() {
         designationsError={designationsQuery.error instanceof Error ? designationsQuery.error.message : null}
         exServices={exServices}
         languagesList={languagesList}
+        esicBranches={esicBranches}
         canReview={!!editing && editing.status === "pending"}
         isApproving={approveMut.isPending}
         onApprove={() => {
@@ -1837,6 +1862,7 @@ function CandidateWizard({
   designationsError,
   exServices,
   languagesList,
+  esicBranches,
   canReview = false,
   isApproving = false,
   onApprove,
@@ -1853,6 +1879,7 @@ function CandidateWizard({
   designationsError: string | null;
   exServices: ExServiceLite[];
   languagesList: LanguageLite[];
+  esicBranches: EsicBranchLite[];
   canReview?: boolean;
   isApproving?: boolean;
   onApprove?: () => void;
@@ -2230,6 +2257,11 @@ function CandidateWizard({
       return toast.error("IFSC code format is invalid (e.g. SBIN0001234)");
     if (form.bank_account_number && !/^\d{6,18}$/.test(form.bank_account_number.trim()))
       return toast.error("Bank account number must be 6–18 digits");
+    const compliance = (form.compliance ?? {}) as Record<string, unknown>;
+    const esicEnabled = compliance.esic_enabled !== false; // default true
+    if (esicEnabled && !compliance.esic_branch_id) {
+      return toast.error("ESIC Branch is missing. Please map a branch from ESIC Branch Manager (Compliance section).");
+    }
     setSubmitting(true);
     try {
       // Creating / re-submitting moves to "pending" so the admin can approve.
@@ -2868,7 +2900,7 @@ function CandidateWizard({
               </Section>
 
               <Section title="Compliance">
-                <ComplianceSection form={form} setSection={setSection} />
+                <ComplianceSection form={form} setSection={setSection} esicBranches={esicBranches} />
               </Section>
 
               <Section title="Knowledge & Experience">
