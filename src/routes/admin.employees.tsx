@@ -1088,6 +1088,9 @@ function EmployeesPage() {
 
   const renderTable = (rows: CandidateListItem[], mode: "employee" | "candidate") => (
     <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm shadow-stone-200/40 dark:shadow-black/20">
+      <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-5 py-2 text-xs text-muted-foreground">
+        <span><span className="font-semibold text-foreground">{rows.length}</span> {rows.length === 1 ? "row" : "rows"}</span>
+      </div>
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="border-b border-border/60 bg-secondary/40">
