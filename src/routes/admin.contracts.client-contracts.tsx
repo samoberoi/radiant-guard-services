@@ -3237,7 +3237,7 @@ function SalaryBreakdownTable({
               <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
             </tr>
             {(() => {
-              const visibleEmployer = employerContributions.filter((b) => Number(b.amount) > 0);
+              const visibleEmployer = coreEmployer.filter((b) => Number(b.amount) > 0);
               if (visibleEmployer.length === 0) {
                 return (
                   <tr>
@@ -3273,6 +3273,60 @@ function SalaryBreakdownTable({
               <td />
               <td className="text-right text-base tabular-nums">{earnedCTC.toFixed(2)}</td>
             </tr>
+            {relieverItems.map((b) => (
+              <tr key={`r-${b.costComponentId}`}>
+                <td>
+                  {b.name}
+                  {b.calcType === "percentage" && (
+                    <span className="ml-2 text-[11px] text-muted-foreground">
+                      @ {b.percentage}% of{" "}
+                      {b.baseComponents
+                        .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
+                        .join(" ") || "—"}
+                      {b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}
+                    </span>
+                  )}
+                </td>
+                <td className="text-center tabular-nums">{Number(b.amount).toFixed(2)}</td>
+                <td />
+                <td className="text-right tabular-nums">{earnedFor(Number(b.amount)).toFixed(2)}</td>
+              </tr>
+            ))}
+            {relieverItems.length > 0 && (
+              <tr className="bg-teal-100 font-bold dark:bg-teal-500/20">
+                <td className="uppercase">Total Rate Rs.</td>
+                <td className="text-center tabular-nums">{totalRate.toFixed(2)}</td>
+                <td />
+                <td className="text-right text-base tabular-nums">{earnedRate.toFixed(2)}</td>
+              </tr>
+            )}
+            {mgmtFeeItems.map((b) => (
+              <tr key={`m-${b.costComponentId}`} className="bg-amber-50 dark:bg-amber-500/10">
+                <td className="font-semibold">
+                  {b.name}
+                  {b.calcType === "percentage" && (
+                    <span className="ml-2 text-[11px] text-muted-foreground">
+                      @ {b.percentage}% of{" "}
+                      {b.baseComponents
+                        .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
+                        .join(" ") || "—"}
+                      {b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}
+                    </span>
+                  )}
+                </td>
+                <td className="text-center tabular-nums">{Number(b.amount).toFixed(2)}</td>
+                <td />
+                <td className="text-right tabular-nums">{earnedFor(Number(b.amount)).toFixed(2)}</td>
+              </tr>
+            ))}
+            {mgmtFeeItems.length > 0 && (
+              <tr className="bg-indigo-100 font-bold dark:bg-indigo-500/20">
+                <td className="uppercase">Grand Total Rs.</td>
+                <td className="text-center tabular-nums">{grandTotal.toFixed(2)}</td>
+                <td />
+                <td className="text-right text-base tabular-nums">{earnedGrand.toFixed(2)}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
