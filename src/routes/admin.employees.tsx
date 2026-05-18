@@ -3550,7 +3550,7 @@ function DesignationPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const triggerRef = useRef<HTMLButtonElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const selected = value ? designations.find((d) => d.id === value) : null;
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -3560,63 +3560,67 @@ function DesignationPicker({
     );
   }, [query, designations]);
 
+  useEffect(() => {
+    if (open) {
+      const id = requestAnimationFrame(() => searchInputRef.current?.focus({ preventScroll: true }));
+      return () => cancelAnimationFrame(id);
+    }
+  }, [open]);
+
   return (
-    <Popover open={open} onOpenChange={setOpen} modal>
-      <PopoverTrigger asChild>
-        <Button
-          ref={triggerRef}
-          type="button"
-          variant="outline"
-          role="combobox"
-          disabled={disabled}
-          className="w-full justify-between font-normal"
-          onMouseDown={(e) => e.preventDefault()}
-        >
-          {selected ? (
-            <span className="truncate">
-              {selected.code ? <><b>{selected.code}</b> · </> : null}{selected.name}
-            </span>
-          ) : (
-            <span className="text-muted-foreground">Search designation…</span>
-          )}
-          <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="w-[420px] p-0"
-        align="start"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onCloseAutoFocus={(e) => {
-          e.preventDefault();
-          triggerRef.current?.focus({ preventScroll: true });
-        }}
+    <div className="space-y-2">
+      <Button
+        type="button"
+        variant="outline"
+        disabled={disabled}
+        className="w-full justify-between font-normal"
+        onClick={() => setOpen((o) => !o)}
       >
-        <Command shouldFilter={false}>
-          <CommandInput placeholder="Search designations…" value={query} onValueChange={setQuery} />
-          <CommandList>
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
-            <CommandGroup>
-              {filtered.map((d) => (
-                <CommandItem
-                  key={d.id}
-                  value={`${d.code ?? ""} ${d.name}`}
-                  onSelect={() => {
-                    onChange(d.id);
-                    setQuery("");
-                    setOpen(false);
-                  }}
-                >
-                  <div className="flex flex-col">
-                    <span className="font-medium">{d.name}</span>
+        {selected ? (
+          <span className="truncate">
+            {selected.code ? <><b>{selected.code}</b> · </> : null}{selected.name}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">Search designation…</span>
+        )}
+        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+      </Button>
+      {open && (
+        <div className="rounded-md border bg-popover p-2 space-y-2">
+          <Input
+            ref={searchInputRef}
+            placeholder="Search designations…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="h-8"
+          />
+          <div className="max-h-64 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <div className="text-xs text-muted-foreground px-2 py-3">{emptyMessage}</div>
+            ) : (
+              filtered.map((d) => {
+                const isSel = d.id === value;
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => {
+                      onChange(d.id);
+                      setQuery("");
+                      setOpen(false);
+                    }}
+                    className={`w-full text-left px-2 py-1.5 rounded-sm hover:bg-accent flex flex-col ${isSel ? "bg-accent" : ""}`}
+                  >
+                    <span className="font-medium text-sm">{d.name}</span>
                     {d.code ? <span className="text-xs text-muted-foreground">{d.code}</span> : null}
-                  </div>
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+                  </button>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
