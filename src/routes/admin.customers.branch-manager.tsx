@@ -391,7 +391,7 @@ function BranchFormDialog({
         <DialogHeader>
           <DialogTitle>{editing ? "Edit branch" : "Add branch"}</DialogTitle>
           <DialogDescription>
-            One branch per state. The dropdown only lists states that aren't already mapped.
+            One branch per location. The dropdown only lists locations that aren't already mapped.
           </DialogDescription>
         </DialogHeader>
 
