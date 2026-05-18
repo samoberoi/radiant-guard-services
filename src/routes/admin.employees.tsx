@@ -317,6 +317,25 @@ const QK_DESIG = ["admin", "designations-lite"] as const;
 const QK_EX_SERVICES = ["admin", "ex-services-lite"] as const;
 const QK_LANGUAGES = ["admin", "languages-lite"] as const;
 const QK_ESIC_BRANCHES = ["admin", "esic-branches-lite"] as const;
+const QK_SIGNED_DOCS = ["admin", "signed-docs-summary"] as const;
+
+function useSignedDocsSummary() {
+  return useQuery({
+    queryKey: QK_SIGNED_DOCS,
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 60_000,
+    queryFn: async (): Promise<Array<{ candidate_id: string; doc_type: string }>> => {
+      const { data, error } = await supabase
+        .from("employee_signed_documents" as never)
+        .select("candidate_id,doc_type,signed_at")
+        .not("signed_at", "is", null)
+        .limit(5000);
+      if (error) throw error;
+      return ((data as unknown) as Array<{ candidate_id: string; doc_type: string }>) ?? [];
+    },
+  });
+}
 
 type EsicBranchLite = { id: string; location: string; esic_code: string };
 
@@ -503,6 +522,7 @@ function EmployeesPage() {
   const languagesQuery = useLanguagesLite();
   const rolesQuery = useRolesLite();
   const esicBranchesQuery = useEsicBranchesLite();
+  const signedDocsQuery = useSignedDocsSummary();
   const candidates = candidatesQuery.data ?? [];
   const units = unitsQuery.data ?? [];
   const designations = designationsQuery.data ?? [];
@@ -830,14 +850,38 @@ function EmployeesPage() {
     return m;
   }, [scopeAssignments]);
 
+  const signedDocs = signedDocsQuery.data ?? [];
+  const signedByCandidate = useMemo(() => {
+    const m = new Map<string, Set<string>>();
+    for (const s of signedDocs) {
+      if (!s.candidate_id) continue;
+      if (!m.has(s.candidate_id)) m.set(s.candidate_id, new Set());
+      m.get(s.candidate_id)!.add(s.doc_type);
+    }
+    return m;
+  }, [signedDocs]);
+
   const stats = useMemo(() => {
-    const total = candidates.length;
-    const approved = candidates.filter((c) => isEmployeeStatus(c.status)).length;
-    const pending = candidates.filter((c) => c.status === "pending").length;
-    const rejected = candidates.filter((c) => c.status === "rejected").length;
-    const drafts = candidates.filter((c) => c.status === "draft").length;
-    return { total, approved, pending, rejected, drafts };
-  }, [candidates]);
+    // Candidate-tab stats (only non-employee status records)
+    const candidateOnly = candidates.filter((c) => !isEmployeeStatus(c.status));
+    const candTotal = candidateOnly.length;
+    const candDrafts = candidateOnly.filter((c) => c.status === "draft").length;
+    const candPending = candidateOnly.filter((c) => c.status === "pending").length;
+    const candRejected = candidateOnly.filter((c) => c.status === "rejected").length;
+
+    // Employee-tab stats (employees only)
+    const employeeOnly = candidates.filter((c) => isEmployeeStatus(c.status));
+    const empTotal = employeeOnly.length;
+    const empActive = employeeOnly.filter((c) => c.is_enabled && c.status !== "inactive").length;
+    const empInactive = empTotal - empActive;
+    const empNdaSigned = employeeOnly.filter((c) => signedByCandidate.get(c.id)?.has("nda")).length;
+    const empAlSigned = employeeOnly.filter((c) => signedByCandidate.get(c.id)?.has("appointment_letter")).length;
+
+    return {
+      candTotal, candDrafts, candPending, candRejected,
+      empTotal, empActive, empInactive, empNdaSigned, empAlSigned,
+    };
+  }, [candidates, signedByCandidate]);
 
   const deleteMut = useMutation({
     mutationFn: async (c: CandidateListItem) => {
@@ -1537,18 +1581,45 @@ function EmployeesPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        {[
-          { label: "Total", value: stats.total, accent: false, dot: "bg-stone-400" },
-          { label: "Drafts", value: stats.drafts, accent: false, dot: "bg-slate-400" },
-          { label: "Pending", value: stats.pending, accent: true, dot: "bg-amber-500" },
-          { label: "Approved", value: stats.approved, accent: false, dot: "bg-emerald-500" },
-          { label: "Rejected", value: stats.rejected, accent: false, dot: "bg-rose-500" },
-        ].map((s) => (
+        {(tab === "employee"
+          ? [
+              { label: "Total", value: stats.empTotal, accent: false as const, dot: "bg-stone-400", tone: "neutral" as const },
+              { label: "Active", value: stats.empActive, accent: false as const, dot: "bg-emerald-500", tone: "neutral" as const },
+              { label: "Inactive", value: stats.empInactive, accent: false as const, dot: "bg-slate-400", tone: "neutral" as const },
+              {
+                label: "NDA Signed",
+                value: stats.empNdaSigned,
+                accent: stats.empTotal > 0 && stats.empNdaSigned < stats.empTotal,
+                dot: "bg-rose-500",
+                tone: (stats.empTotal > 0 && stats.empNdaSigned < stats.empTotal ? "alert" : "neutral") as "alert" | "neutral",
+                suffix: `/ ${stats.empTotal}`,
+              },
+              {
+                label: "Appt. Letter Signed",
+                value: stats.empAlSigned,
+                accent: stats.empTotal > 0 && stats.empAlSigned < stats.empTotal,
+                dot: "bg-rose-500",
+                tone: (stats.empTotal > 0 && stats.empAlSigned < stats.empTotal ? "alert" : "neutral") as "alert" | "neutral",
+                suffix: `/ ${stats.empTotal}`,
+              },
+            ]
+          : [
+              { label: "Total", value: stats.candTotal, accent: false as const, dot: "bg-stone-400", tone: "neutral" as const },
+              { label: "Drafts", value: stats.candDrafts, accent: false as const, dot: "bg-slate-400", tone: "neutral" as const },
+              { label: "Pending", value: stats.candPending, accent: stats.candPending > 0, dot: "bg-amber-500", tone: "neutral" as const },
+              { label: "Rejected", value: stats.candRejected, accent: false as const, dot: "bg-rose-500", tone: "neutral" as const },
+            ]
+        ).map((s) => {
+          const isAlert = (s as { tone?: string }).tone === "alert";
+          const suffix = (s as { suffix?: string }).suffix;
+          return (
           <div
             key={s.label}
             className={cn(
               "group relative overflow-hidden rounded-2xl border p-6 shadow-sm transition-all hover:shadow-md",
-              s.accent
+              isAlert
+                ? "border-rose-300/70 bg-rose-50/70 backdrop-blur-md"
+                : s.accent
                 ? "border-amber-200/60 bg-amber-50/60 backdrop-blur-md"
                 : "border-border/60 bg-card/80 backdrop-blur-md",
             )}
@@ -1557,27 +1628,34 @@ function EmployeesPage() {
               <p
                 className={cn(
                   "text-[10px] font-bold uppercase tracking-[0.2em] transition-colors",
-                  s.accent ? "text-amber-700" : "text-muted-foreground group-hover:text-amber-600",
+                  isAlert
+                    ? "text-rose-700"
+                    : s.accent
+                    ? "text-amber-700"
+                    : "text-muted-foreground group-hover:text-amber-600",
                 )}
               >
                 {s.label}
               </p>
-              {s.accent && s.value > 0 && (
+              {(isAlert || (s.accent && s.value > 0)) && (
                 <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-60" />
+                  <span className={cn("absolute inline-flex h-full w-full animate-ping rounded-full opacity-60", isAlert ? "bg-rose-400" : "bg-amber-400")} />
                   <span className={cn("relative inline-flex h-2 w-2 rounded-full", s.dot)} />
                 </span>
               )}
             </div>
             <p className="relative z-10 mt-3 text-4xl font-bold tabular-nums text-foreground">
               {s.value}
+              {suffix && <span className="ml-1 text-base font-medium text-muted-foreground">{suffix}</span>}
             </p>
-            {s.accent && (
-              <div className="pointer-events-none absolute -right-4 -bottom-4 h-16 w-16 rounded-full bg-amber-200/30 blur-2xl" />
+            {(isAlert || s.accent) && (
+              <div className={cn("pointer-events-none absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl", isAlert ? "bg-rose-200/40" : "bg-amber-200/30")} />
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
+
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as "employee" | "candidate")} className="space-y-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -1586,13 +1664,13 @@ function EmployeesPage() {
               value="employee"
               className="rounded-lg px-6 py-2 text-sm font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
             >
-              Employees <span className="ml-1.5 text-xs opacity-60">({stats.approved})</span>
+              Employees <span className="ml-1.5 text-xs opacity-60">({stats.empTotal})</span>
             </TabsTrigger>
             <TabsTrigger
               value="candidate"
               className="rounded-lg px-6 py-2 text-sm font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
             >
-              Candidates <span className="ml-1.5 text-xs opacity-60">({stats.total - stats.approved})</span>
+              Candidates <span className="ml-1.5 text-xs opacity-60">({stats.candTotal})</span>
             </TabsTrigger>
           </TabsList>
 
