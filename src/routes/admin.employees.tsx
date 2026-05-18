@@ -471,6 +471,7 @@ function EmployeesPage() {
   const [filterUnit, setFilterUnit] = useState<string>("all");
   const [filterManager, setFilterManager] = useState<string>("all");
   const [filterEnabled, setFilterEnabled] = useState<"all" | "enabled" | "disabled">("all");
+  const [filterBillable, setFilterBillable] = useState<"all" | "billable" | "nonbillable">("all");
 
   const DEFAULT_FILTERS_VIS = {
     role: true,
