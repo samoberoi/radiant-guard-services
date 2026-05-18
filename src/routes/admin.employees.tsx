@@ -1862,6 +1862,7 @@ function CandidateWizard({
   designationsError,
   exServices,
   languagesList,
+  esicBranches,
   canReview = false,
   isApproving = false,
   onApprove,
@@ -1878,6 +1879,7 @@ function CandidateWizard({
   designationsError: string | null;
   exServices: ExServiceLite[];
   languagesList: LanguageLite[];
+  esicBranches: EsicBranchLite[];
   canReview?: boolean;
   isApproving?: boolean;
   onApprove?: () => void;
