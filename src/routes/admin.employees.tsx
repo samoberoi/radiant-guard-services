@@ -2405,9 +2405,9 @@ function CandidateWizard({
           {editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive") && (
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <StatusBadge status={form.status || editing.status} />
-              {editing.employee_code && (
+              {(editing as { employee_code?: string }).employee_code && (
                 <Badge className="border-0 bg-primary/10 font-mono text-[11px] font-semibold text-primary">
-                  {editing.employee_code}
+                  {(editing as { employee_code?: string }).employee_code}
                 </Badge>
               )}
               {(() => {
