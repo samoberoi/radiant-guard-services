@@ -3310,6 +3310,10 @@ function CandidateWizard({
                 <CriminalSection form={form} set={setAny} />
               </Section>
 
+              <Section title="Nominee">
+                <NomineeSection form={form} setSection={setSection} />
+              </Section>
+
             </div>
           )}
         </div>
