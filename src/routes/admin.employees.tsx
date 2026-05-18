@@ -1970,6 +1970,7 @@ function CandidateWizard({
   isApproving = false,
   onApprove,
   onReject,
+  onRequestOffboard,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -1987,6 +1988,7 @@ function CandidateWizard({
   isApproving?: boolean;
   onApprove?: () => void;
   onReject?: () => void;
+  onRequestOffboard?: () => void;
 }) {
   const qc = useQueryClient();
   const extractFn = useServerFn(extractAadhaar);
