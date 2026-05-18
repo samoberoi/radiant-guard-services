@@ -739,7 +739,19 @@ function EmployeesPage() {
   });
 
   const offboardMut = useMutation({
-    mutationFn: async ({ candidate, reasonId, reasonName }: { candidate: CandidateListItem; reasonId: string; reasonName: string }) => {
+    mutationFn: async ({
+      candidate,
+      reasonId,
+      reasonName,
+      details,
+      noHire,
+    }: {
+      candidate: CandidateListItem;
+      reasonId: string;
+      reasonName: string;
+      details: OffboardingDetails;
+      noHire: boolean;
+    }) => {
       const { error } = await supabase
         .from("candidates" as never)
         .update({
@@ -747,6 +759,8 @@ function EmployeesPage() {
           status: "inactive",
           offboarding_reason_id: reasonId,
           offboarded_at: new Date().toISOString(),
+          offboarding_details: details,
+          no_hire: noHire,
         } as unknown as never)
         .eq("id", candidate.id);
       if (error) throw error;
@@ -757,7 +771,7 @@ function EmployeesPage() {
         entityId: candidate.id,
         entityLabel: candidate.full_name || candidate.employee_code,
         before: { is_enabled: candidate.is_enabled, status: candidate.status },
-        after: { is_enabled: false, status: "inactive", offboarding_reason: reasonName },
+        after: { is_enabled: false, status: "inactive", offboarding_reason: reasonName, no_hire: noHire, offboarding_details: details },
       });
     },
     onSuccess: () => {
