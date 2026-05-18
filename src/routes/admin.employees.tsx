@@ -1231,7 +1231,7 @@ function EmployeesPage() {
                       setRejectTarget(c);
                       setRejectReason("");
                     }}
-                    className="h-8 w-8 rounded-lg border-rose-200 bg-rose-50/50 text-rose-600 transition-all hover:bg-rose-50 active:scale-95 dark:border-rose-500/40 dark:bg-transparent dark:hover:bg-rose-500/10"
+                    className="h-8 w-8 rounded-lg border-rose-200 bg-rose-50/50 text-rose-600 transition-all hover:bg-rose-50 hover:text-rose-600 active:scale-95 dark:border-rose-500/40 dark:bg-transparent dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
                     title="Reject candidate"
                   >
                     <X className="h-4 w-4" />
