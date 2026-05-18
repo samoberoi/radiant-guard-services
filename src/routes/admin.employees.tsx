@@ -1306,7 +1306,7 @@ function EmployeesPage() {
                     <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Show filters</div>
                     {([
                       ["role", "Role"], ["designation", "Designation"], ["customer", "Organization"],
-                      ["unit", "Unit"], ["manager", "Reports to"], ["enabled", "Enabled status"],
+                      ["unit", "Unit"], ["manager", "Reports to"], ["enabled", "Enabled status"], ["billable", "Billable"],
                     ] as const).map(([k, label]) => (
                       <label key={k} className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-secondary">
                         <span>{label}</span>
