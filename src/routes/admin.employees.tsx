@@ -1079,6 +1079,10 @@ function EmployeesPage() {
                     setOffboardReasonId("");
                     return;
                   }
+                  if (c.no_hire) {
+                    toast.error("This employee is flagged Do not re-hire and cannot be reactivated.");
+                    return;
+                  }
                   const ok = await confirmAction({
                     title: "Activate employee?",
                     description: `${c.full_name || c.employee_code} will be marked active again.`,
@@ -1087,6 +1091,7 @@ function EmployeesPage() {
                   if (!ok) return;
                   toggleEnabledMut.mutate({ candidate: c, enabled: true });
                 }}
+                disabled={!c.is_enabled && c.no_hire}
               />
             </td>
           )}
