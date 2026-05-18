@@ -359,15 +359,17 @@ function UnitManagerPage() {
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleting(u)}
-                        aria-label="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <DeleteGuardButton
+                        id={u.id}
+                        entityLabel="unit"
+                        checks={[
+                          { table: "client_contracts", column: "unit_id", label: "client contracts" },
+                          { table: "candidates", column: "unit_id", label: "candidates" },
+                          { table: "candidate_units", column: "unit_id", label: "candidate links" },
+                        ]}
+                        onDelete={() => setDeleting(u)}
+                      />
+
                     </div>
                   </td>
                 </tr>
