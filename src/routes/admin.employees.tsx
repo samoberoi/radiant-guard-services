@@ -2785,15 +2785,30 @@ function CandidateWizard({
                       <MultiUnitPicker
                         units={units}
                         value={form.unit_ids}
-                        onChange={(ids) => setForm((f) => ({ ...f, unit_ids: ids, unit_id: ids[0] ?? null }))}
+                        onChange={(ids) => setForm((f) => ({ ...f, unit_ids: ids }))}
                         disabled={unitsLoading || !!unitsError}
                         emptyMessage={unitsError ? `Could not load units: ${unitsError}` : "No units found."}
                       />
                     </Field>
                   </div>
-                  <Field label="Organization (from primary unit)">
-                    <Input value={unit?.customer_name ?? ""} disabled placeholder="Auto-filled from primary unit" />
-                  </Field>
+                  <div className="sm:col-span-2">
+                    <Field label={`Organizations${(() => {
+                      const orgs = Array.from(new Set(form.unit_ids.map((id) => units.find((u) => u.id === id)?.customer_name).filter(Boolean) as string[]));
+                      return orgs.length > 0 ? ` · ${orgs.length}` : "";
+                    })()}`}>
+                      <div className="flex flex-wrap gap-1.5 rounded-md border border-input bg-muted/30 p-2 min-h-[44px]">
+                        {(() => {
+                          const orgs = Array.from(new Set(form.unit_ids.map((id) => units.find((u) => u.id === id)?.customer_name).filter(Boolean) as string[]));
+                          if (orgs.length === 0) {
+                            return <span className="self-center px-1 text-sm text-muted-foreground">Select a unit to see its organization.</span>;
+                          }
+                          return orgs.map((org) => (
+                            <Badge key={org} variant="secondary" className="font-normal">{org}</Badge>
+                          ));
+                        })()}
+                      </div>
+                    </Field>
+                  </div>
                   <Field label="Designation">
                     <DesignationPicker
                       designations={designations}
