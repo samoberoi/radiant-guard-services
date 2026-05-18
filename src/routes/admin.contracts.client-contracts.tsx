@@ -3069,8 +3069,19 @@ function SalaryBreakdownTable({
   const benefitsTotal = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const gross = componentsTotal + benefitsTotal;
   const deductionsTotal = deductions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const employerTotal = employerContributions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const totalCTC = gross + employerTotal;
+
+  const isReliever = (b: BenefitItem) => /reliever/i.test(b.name);
+  const isMgmtFee = (b: BenefitItem) => /management\s*fee/i.test(b.name);
+  const coreEmployer = employerContributions.filter((b) => !isReliever(b) && !isMgmtFee(b));
+  const relieverItems = employerContributions.filter(isReliever);
+  const mgmtFeeItems = employerContributions.filter(isMgmtFee);
+
+  const coreEmployerTotal = coreEmployer.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const relieverTotal = relieverItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const mgmtFeeTotal = mgmtFeeItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const totalCTC = gross + coreEmployerTotal;
+  const totalRate = totalCTC + relieverTotal;
+  const grandTotal = totalRate + mgmtFeeTotal;
 
   const basisLabel = payrollDayBase
     ? payrollDayBase.method === "fixed_days"
@@ -3088,6 +3099,8 @@ function SalaryBreakdownTable({
   const netPayable = gross - deductionsTotal;
   const earnedNetPayable = earnedFor(netPayable);
   const earnedCTC = earnedFor(totalCTC);
+  const earnedRate = earnedFor(totalRate);
+  const earnedGrand = earnedFor(grandTotal);
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -3224,7 +3237,7 @@ function SalaryBreakdownTable({
               <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
             </tr>
             {(() => {
-              const visibleEmployer = employerContributions.filter((b) => Number(b.amount) > 0);
+              const visibleEmployer = coreEmployer.filter((b) => Number(b.amount) > 0);
               if (visibleEmployer.length === 0) {
                 return (
                   <tr>
@@ -3260,6 +3273,60 @@ function SalaryBreakdownTable({
               <td />
               <td className="text-right text-base tabular-nums">{earnedCTC.toFixed(2)}</td>
             </tr>
+            {relieverItems.map((b) => (
+              <tr key={`r-${b.costComponentId}`}>
+                <td>
+                  {b.name}
+                  {b.calcType === "percentage" && (
+                    <span className="ml-2 text-[11px] text-muted-foreground">
+                      @ {b.percentage}% of{" "}
+                      {b.baseComponents
+                        .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
+                        .join(" ") || "—"}
+                      {b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}
+                    </span>
+                  )}
+                </td>
+                <td className="text-center tabular-nums">{Number(b.amount).toFixed(2)}</td>
+                <td />
+                <td className="text-right tabular-nums">{earnedFor(Number(b.amount)).toFixed(2)}</td>
+              </tr>
+            ))}
+            {relieverItems.length > 0 && (
+              <tr className="bg-teal-100 font-bold dark:bg-teal-500/20">
+                <td className="uppercase">Total Rate Rs.</td>
+                <td className="text-center tabular-nums">{totalRate.toFixed(2)}</td>
+                <td />
+                <td className="text-right text-base tabular-nums">{earnedRate.toFixed(2)}</td>
+              </tr>
+            )}
+            {mgmtFeeItems.map((b) => (
+              <tr key={`m-${b.costComponentId}`} className="bg-amber-50 dark:bg-amber-500/10">
+                <td className="font-semibold">
+                  {b.name}
+                  {b.calcType === "percentage" && (
+                    <span className="ml-2 text-[11px] text-muted-foreground">
+                      @ {b.percentage}% of{" "}
+                      {b.baseComponents
+                        .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
+                        .join(" ") || "—"}
+                      {b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}
+                    </span>
+                  )}
+                </td>
+                <td className="text-center tabular-nums">{Number(b.amount).toFixed(2)}</td>
+                <td />
+                <td className="text-right tabular-nums">{earnedFor(Number(b.amount)).toFixed(2)}</td>
+              </tr>
+            ))}
+            {mgmtFeeItems.length > 0 && (
+              <tr className="bg-indigo-100 font-bold dark:bg-indigo-500/20">
+                <td className="uppercase">Grand Total Rs.</td>
+                <td className="text-center tabular-nums">{grandTotal.toFixed(2)}</td>
+                <td />
+                <td className="text-right text-base tabular-nums">{earnedGrand.toFixed(2)}</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
