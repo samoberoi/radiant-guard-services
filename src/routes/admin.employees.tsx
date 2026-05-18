@@ -3043,7 +3043,14 @@ function CandidateWizard({
                     />
                   </Field>
                   <Field label="Status">
-                    <Select value={form.status} onValueChange={(v) => set("status", v)}>
+                    <Select value={form.status} onValueChange={(v) => {
+                      const isEmp = !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive");
+                      if (isEmp && v === "inactive" && form.status !== "inactive" && onRequestOffboard) {
+                        onRequestOffboard();
+                        return;
+                      }
+                      set("status", v);
+                    }}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive") ? (
