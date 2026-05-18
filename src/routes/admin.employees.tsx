@@ -3667,6 +3667,77 @@ function UnitPicker({
   );
 }
 
+function AssetMultiPicker({
+  assets,
+  value,
+  onChange,
+}: {
+  assets: { id: string; name: string; category: string }[];
+  value: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedSet = useMemo(() => new Set(value), [value]);
+  const selected = useMemo(() => assets.filter((a) => selectedSet.has(a.id)), [assets, selectedSet]);
+  const toggle = (id: string) => {
+    if (selectedSet.has(id)) onChange(value.filter((v) => v !== id));
+    else onChange([...value, id]);
+  };
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5 rounded-md border border-input bg-background p-2 min-h-[44px]">
+        {selected.length === 0 && (
+          <span className="self-center px-1 text-sm text-muted-foreground">
+            No assets assigned — click "Add asset" to assign company assets.
+          </span>
+        )}
+        {selected.map((a) => (
+          <Badge key={a.id} variant="secondary" className="flex items-center gap-1.5 pl-2 pr-1 py-1 text-xs font-normal">
+            <span className="font-medium">{a.name}</span>
+            <span className="opacity-60 text-[10px]">· {a.category}</span>
+            <button
+              type="button"
+              className="ml-1 rounded p-0.5 opacity-60 hover:bg-background/30 hover:opacity-100"
+              title="Remove"
+              onClick={(e) => { e.preventDefault(); onChange(value.filter((v) => v !== a.id)); }}
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        ))}
+      </div>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline" size="sm" className="gap-1">
+            <Plus className="h-3.5 w-3.5" /> Add asset
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[320px] p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search assets…" />
+            <CommandList>
+              <CommandEmpty>No assets found.</CommandEmpty>
+              <CommandGroup>
+                {assets.map((a) => {
+                  const checked = selectedSet.has(a.id);
+                  return (
+                    <CommandItem key={a.id} value={`${a.name} ${a.category}`} onSelect={() => toggle(a.id)}>
+                      <Check className={cn("mr-2 h-4 w-4", checked ? "opacity-100" : "opacity-0")} />
+                      <span>{a.name}</span>
+                      <span className="ml-auto text-[10px] text-muted-foreground">{a.category}</span>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+    </div>
+  );
+}
+
 function MultiUnitPicker({
   units,
   value,
