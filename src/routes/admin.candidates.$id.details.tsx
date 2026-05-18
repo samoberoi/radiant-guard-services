@@ -384,6 +384,9 @@ function CandidateDetailsPage() {
           {active === "criminal" && (
             <CriminalSection form={form} set={set} />
           )}
+          {active === "nominee" && (
+            <NomineeSection form={form} setSection={setSection} />
+          )}
         </section>
       </div>
 
