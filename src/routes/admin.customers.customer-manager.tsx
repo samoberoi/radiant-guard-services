@@ -486,39 +486,54 @@ function CustomerUnitsDialog({
               <span className="font-mono text-xs text-muted-foreground">({customer?.code})</span>
             </div>
             <ul className="mt-2 space-y-1.5 border-l-2 border-dashed border-border pl-4">
-              {orgUnits.map((u) => (
-                <li
-                  key={u.id}
-                  className="relative flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-3"
-                >
-                  <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                  <Warehouse className="h-4 w-4 text-accent" />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-semibold text-accent">{u.code}</span>
-                      <span className="font-semibold text-foreground">{u.name}</span>
-                      <StatusBadge status={u.status} />
+              {orgUnits.map((u) => {
+                const stName = u.branchId
+                  ? stateById.get(branchById.get(u.branchId)?.stateId ?? "")?.name ?? ""
+                  : "";
+                return (
+                  <li
+                    key={u.id}
+                    className="relative rounded-lg border border-border bg-secondary/30 p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      <Warehouse className="h-4 w-4 text-accent" />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-semibold text-accent">{u.code}</span>
+                          <span className="font-semibold text-foreground">{u.name}</span>
+                          <StatusBadge status={u.status} />
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {branchLabel(u)} · {u.location || "—"}
+                        </div>
+                      </div>
+                      {u.latitude != null && u.longitude != null && (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-accent hover:bg-accent/10"
+                        >
+                          <MapPin className="h-3 w-3" /> Map
+                        </a>
+                      )}
+                      <Switch
+                        checked={u.status === "active"}
+                        onCheckedChange={() => toggleStatus(u)}
+                      />
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {branchLabel(u)} · {u.location || "—"}
+                    <div className="mt-2 ml-7 border-l-2 border-dashed border-border pl-3">
+                      <UnitDeployedPeople
+                        unitId={u.id}
+                        branchId={u.branchId ?? null}
+                        customerId={u.customerId ?? null}
+                        stateName={stName}
+                      />
                     </div>
-                  </div>
-                  {u.latitude != null && u.longitude != null && (
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-accent hover:bg-accent/10"
-                    >
-                      <MapPin className="h-3 w-3" /> Map
-                    </a>
-                  )}
-                  <Switch
-                    checked={u.status === "active"}
-                    onCheckedChange={() => toggleStatus(u)}
-                  />
-                </li>
-              ))}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         )}
