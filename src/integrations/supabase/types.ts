@@ -50,6 +50,36 @@ export type Database = {
         }
         Relationships: []
       }
+      assets: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          enabled: boolean
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       billing_types: {
         Row: {
           created_at: string
