@@ -1256,6 +1256,16 @@ function EmployeesPage() {
                 </SelectContent>
               </Select>
             )}
+            {filtersVisible.billable && (
+              <Select value={filterBillable} onValueChange={(v) => setFilterBillable(v as "all" | "billable" | "nonbillable")}>
+                <SelectTrigger className="h-9 w-[150px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all" className="text-xs">All billing</SelectItem>
+                  <SelectItem value="billable" className="text-xs">Billable only</SelectItem>
+                  <SelectItem value="nonbillable" className="text-xs">Non-billable only</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
             <Button
               type="button"
               variant="ghost"
