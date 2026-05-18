@@ -246,15 +246,16 @@ function CustomerManagerPage() {
                       >
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleting(c)}
-                        aria-label="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <DeleteGuardButton
+                        id={c.id}
+                        entityLabel="organization"
+                        checks={[
+                          { table: "units", column: "customer_id", label: "units" },
+                          { table: "customer_gst_numbers", column: "customer_id", label: "GSTINs" },
+                        ]}
+                        onDelete={() => setDeleting(c)}
+                      />
+
                     </div>
                   </td>
                 </tr>
