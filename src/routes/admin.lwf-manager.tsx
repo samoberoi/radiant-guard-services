@@ -13,6 +13,7 @@ import {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { useIndianStates } from "@/lib/admin-data";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmProvider";
@@ -619,19 +620,11 @@ function LwfFormDialog({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="lwf-state">State</Label>
-              <Input
-                id="lwf-state"
-                list="lwf-states-list"
+              <LwfStateSelect
                 value={form.state}
-                onChange={(e) => set("state", e.target.value)}
-                placeholder="e.g. Karnataka"
-                autoFocus
+                onChange={(v) => set("state", v)}
+                fallbackStates={knownStates}
               />
-              <datalist id="lwf-states-list">
-                {knownStates.map((s) => (
-                  <option key={s} value={s} />
-                ))}
-              </datalist>
             </div>
             <div className="space-y-2">
               <Label>Frequency</Label>
@@ -748,5 +741,43 @@ function LwfFormDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function LwfStateSelect({
+  value,
+  onChange,
+  fallbackStates,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  fallbackStates: string[];
+}) {
+  const { indianStates } = useIndianStates({ onlyEnabled: true });
+  const names = useMemo(() => {
+    const norm = (s: string) =>
+      s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
+    const byNorm = new Map<string, string>();
+    indianStates.forEach((s) => {
+      if (s.name) byNorm.set(norm(s.name), s.name);
+    });
+    fallbackStates.forEach((s) => {
+      if (s && !byNorm.has(norm(s))) byNorm.set(norm(s), s);
+    });
+    return Array.from(byNorm.values()).sort((a, b) => a.localeCompare(b));
+  }, [indianStates, fallbackStates]);
+  return (
+    <Select value={value || undefined} onValueChange={onChange}>
+      <SelectTrigger id="lwf-state">
+        <SelectValue placeholder="Select state" />
+      </SelectTrigger>
+      <SelectContent>
+        {names.map((n) => (
+          <SelectItem key={n} value={n}>
+            {n}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
