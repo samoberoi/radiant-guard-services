@@ -31,6 +31,7 @@ import { Route as AdminCostComponentManagerRouteImport } from './routes/admin.co
 import { Route as AdminControlCenterRouteImport } from './routes/admin.control-center'
 import { Route as AdminCompanyDocumentsRouteImport } from './routes/admin.company-documents'
 import { Route as AdminBillingTypeManagerRouteImport } from './routes/admin.billing-type-manager'
+import { Route as AdminAssetManagerRouteImport } from './routes/admin.asset-manager'
 import { Route as AdminAllowanceManagerRouteImport } from './routes/admin.allowance-manager'
 import { Route as AdminCustomersUnitManagerRouteImport } from './routes/admin.customers.unit-manager'
 import { Route as AdminCustomersStateManagerRouteImport } from './routes/admin.customers.state-manager'
@@ -151,6 +152,11 @@ const AdminBillingTypeManagerRoute = AdminBillingTypeManagerRouteImport.update({
   path: '/billing-type-manager',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAssetManagerRoute = AdminAssetManagerRouteImport.update({
+  id: '/asset-manager',
+  path: '/asset-manager',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAllowanceManagerRoute = AdminAllowanceManagerRouteImport.update({
   id: '/allowance-manager',
   path: '/allowance-manager',
@@ -199,6 +205,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
+  '/admin/asset-manager': typeof AdminAssetManagerRoute
   '/admin/billing-type-manager': typeof AdminBillingTypeManagerRoute
   '/admin/company-documents': typeof AdminCompanyDocumentsRoute
   '/admin/control-center': typeof AdminControlCenterRoute
@@ -230,6 +237,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
+  '/admin/asset-manager': typeof AdminAssetManagerRoute
   '/admin/billing-type-manager': typeof AdminBillingTypeManagerRoute
   '/admin/company-documents': typeof AdminCompanyDocumentsRoute
   '/admin/control-center': typeof AdminControlCenterRoute
@@ -262,6 +270,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
+  '/admin/asset-manager': typeof AdminAssetManagerRoute
   '/admin/billing-type-manager': typeof AdminBillingTypeManagerRoute
   '/admin/company-documents': typeof AdminCompanyDocumentsRoute
   '/admin/control-center': typeof AdminControlCenterRoute
@@ -295,6 +304,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/welcome'
     | '/admin/allowance-manager'
+    | '/admin/asset-manager'
     | '/admin/billing-type-manager'
     | '/admin/company-documents'
     | '/admin/control-center'
@@ -326,6 +336,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/welcome'
     | '/admin/allowance-manager'
+    | '/admin/asset-manager'
     | '/admin/billing-type-manager'
     | '/admin/company-documents'
     | '/admin/control-center'
@@ -357,6 +368,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/welcome'
     | '/admin/allowance-manager'
+    | '/admin/asset-manager'
     | '/admin/billing-type-manager'
     | '/admin/company-documents'
     | '/admin/control-center'
@@ -546,6 +558,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBillingTypeManagerRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/asset-manager': {
+      id: '/admin/asset-manager'
+      path: '/asset-manager'
+      fullPath: '/admin/asset-manager'
+      preLoaderRoute: typeof AdminAssetManagerRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/allowance-manager': {
       id: '/admin/allowance-manager'
       path: '/allowance-manager'
@@ -618,6 +637,7 @@ const AdminCustomersRouteWithChildren = AdminCustomersRoute._addFileChildren(
 
 interface AdminRouteChildren {
   AdminAllowanceManagerRoute: typeof AdminAllowanceManagerRoute
+  AdminAssetManagerRoute: typeof AdminAssetManagerRoute
   AdminBillingTypeManagerRoute: typeof AdminBillingTypeManagerRoute
   AdminCompanyDocumentsRoute: typeof AdminCompanyDocumentsRoute
   AdminControlCenterRoute: typeof AdminControlCenterRoute
@@ -642,6 +662,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAllowanceManagerRoute: AdminAllowanceManagerRoute,
+  AdminAssetManagerRoute: AdminAssetManagerRoute,
   AdminBillingTypeManagerRoute: AdminBillingTypeManagerRoute,
   AdminCompanyDocumentsRoute: AdminCompanyDocumentsRoute,
   AdminControlCenterRoute: AdminControlCenterRoute,
