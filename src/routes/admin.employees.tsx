@@ -1846,7 +1846,23 @@ function CandidateWizard({
           is_emergency: true,
         }];
       }
-      setForm({ ...(rest as CandidateForm), contacts });
+      // Optimistically seed with the single mirrored unit_id so the picker isn't empty during fetch.
+      const initialUnitIds = rest.unit_id ? [rest.unit_id] : [];
+      setForm({ ...(rest as CandidateForm), contacts, unit_ids: initialUnitIds });
+      // Load full multi-unit assignment from junction table.
+      (async () => {
+        const { data, error } = await supabase
+          .from("candidate_units" as never)
+          .select("unit_id,is_primary,sort_order")
+          .eq("candidate_id", editing.id)
+          .order("is_primary", { ascending: false })
+          .order("sort_order", { ascending: true });
+        if (error) return;
+        const rows = (data ?? []) as { unit_id: string; is_primary: boolean; sort_order: number }[];
+        if (rows.length === 0) return;
+        const ids = rows.map((r) => r.unit_id);
+        setForm((f) => ({ ...f, unit_ids: ids, unit_id: ids[0] ?? null }));
+      })();
     } else {
       setForm(emptyForm());
     }
