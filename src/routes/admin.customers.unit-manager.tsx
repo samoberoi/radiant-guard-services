@@ -54,6 +54,7 @@ import {
   SCOPE_TYPE_LABEL,
   useEmployeesLite,
   useScopeAssignments,
+  useCandidateUnits,
 } from "@/lib/deployment";
 
 export const Route = createFileRoute("/admin/customers/unit-manager")({
@@ -1195,11 +1196,13 @@ function UnitDeployment({
 }) {
   const sa = useScopeAssignments();
   const emp = useEmployeesLite();
+  const cu = useCandidateUnits();
   const assignments = sa.data ?? [];
   const employees = emp.data ?? [];
+  const candidateUnits = cu.data ?? [];
   const ctx = { id: unitId, branch_id: branchId, customer_id: customerId, state_name: stateName };
-  const fms = resolveFieldManagersForUnit(ctx, assignments, employees);
-  const guards = resolveGuardsForUnit(ctx, employees, assignments);
+  const fms = resolveFieldManagersForUnit(ctx, assignments, employees, candidateUnits);
+  const guards = resolveGuardsForUnit(ctx, employees, assignments, candidateUnits);
   const guardsByMgr = new Map<string, typeof guards>();
   const orphan: typeof guards = [];
   for (const g of guards) {
@@ -1209,7 +1212,7 @@ function UnitDeployment({
       guardsByMgr.get(key)!.push(g);
     } else orphan.push(g);
   }
-  if (sa.isLoading || emp.isLoading) return <p className="text-xs text-muted-foreground">Loading deployment…</p>;
+  if (sa.isLoading || emp.isLoading || cu.isLoading) return <p className="text-xs text-muted-foreground">Loading deployment…</p>;
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <div className="rounded-xl border border-border/60 bg-card p-3">

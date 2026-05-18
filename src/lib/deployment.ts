@@ -57,6 +57,25 @@ export function useEmployeesLite() {
   });
 }
 
+export type CandidateUnit = { candidate_id: string; unit_id: string; is_primary: boolean };
+export const QK_CANDIDATE_UNITS = ["admin", "candidate_units"] as const;
+
+export function useCandidateUnits() {
+  return useQuery({
+    queryKey: QK_CANDIDATE_UNITS,
+    staleTime: 30_000,
+    queryFn: async (): Promise<CandidateUnit[]> => {
+      const { data, error } = await supabase
+        .from("candidate_units" as never)
+        .select("candidate_id,unit_id,is_primary")
+        .limit(5000);
+      if (error) throw error;
+      return ((data as unknown) as CandidateUnit[]) ?? [];
+    },
+  });
+}
+
+
 export type UnitContext = {
   id: string;
   branch_id: string | null;
@@ -68,6 +87,7 @@ export function resolveFieldManagersForUnit(
   unit: UnitContext,
   assignments: ScopeAssignment[],
   employees: EmployeeLite[],
+  candidateUnits: CandidateUnit[] = [],
 ): Array<{ fm: EmployeeLite; sources: ScopeType[] }> {
   const fmIndex = new Map<string, Set<ScopeType>>();
   for (const a of assignments) {
@@ -79,6 +99,12 @@ export function resolveFieldManagersForUnit(
     if (!match) continue;
     if (!fmIndex.has(a.candidate_id)) fmIndex.set(a.candidate_id, new Set());
     fmIndex.get(a.candidate_id)!.add(match);
+  }
+  // Also treat direct candidate_units mappings as a "unit" scope source.
+  for (const cu of candidateUnits) {
+    if (cu.unit_id !== unit.id) continue;
+    if (!fmIndex.has(cu.candidate_id)) fmIndex.set(cu.candidate_id, new Set());
+    fmIndex.get(cu.candidate_id)!.add("unit");
   }
   const out: Array<{ fm: EmployeeLite; sources: ScopeType[] }> = [];
   for (const [cid, sources] of fmIndex) {
@@ -93,14 +119,21 @@ export function resolveGuardsForUnit(
   unit: UnitContext,
   employees: EmployeeLite[],
   assignments: ScopeAssignment[],
+  candidateUnits: CandidateUnit[] = [],
 ): EmployeeLite[] {
   const guardIdsFromAssign = new Set(
     assignments.filter((a) => a.scope_type === "unit" && a.scope_id === unit.id).map((a) => a.candidate_id),
   );
+  const guardIdsFromCU = new Set(
+    candidateUnits.filter((c) => c.unit_id === unit.id).map((c) => c.candidate_id),
+  );
   return employees.filter(
-    (e) => e.role_key === "guard" && (e.unit_id === unit.id || guardIdsFromAssign.has(e.id)),
+    (e) =>
+      e.role_key === "guard" &&
+      (e.unit_id === unit.id || guardIdsFromAssign.has(e.id) || guardIdsFromCU.has(e.id)),
   );
 }
+
 
 export const SCOPE_TYPE_LABEL: Record<ScopeType, string> = {
   state: "State",
