@@ -159,7 +159,7 @@ function BranchManagerPage() {
             onClick={openAdd}
             disabled={availableStates.length === 0}
             className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
-            title={availableStates.length === 0 ? "All states are already mapped" : ""}
+            title={availableStates.length === 0 ? "All locations are already mapped" : ""}
           >
             <Plus className="mr-1.5 h-4 w-4" />
             Add branch
