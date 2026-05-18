@@ -40,6 +40,7 @@ type Designation = {
   name: string;
   code: string;
   enabled: boolean;
+  billable: boolean;
 };
 
 const QK = ["admin", "designations"] as const;
@@ -50,6 +51,7 @@ function rowToItem(r: Record<string, unknown>): Designation {
     name: String(r.name ?? ""),
     code: String(r.code ?? ""),
     enabled: Boolean(r.enabled ?? true),
+    billable: Boolean(r.billable ?? false),
   };
 }
 
