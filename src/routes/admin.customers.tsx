@@ -444,6 +444,8 @@ function HierarchyTreeDialog({
   units: Unit[];
   customerById: Map<string, Customer>;
 }) {
+  const [mode, setMode] = useState<"state" | "org">("state");
+
   const tree = useMemo(() => {
     const branchUnits = new Map<string, Unit[]>();
     for (const u of units) {
@@ -468,11 +470,32 @@ function HierarchyTreeDialog({
       .filter((s) => s.branches.length > 0);
   }, [states, branches, units]);
 
+  const stateById = useMemo(() => new Map(states.map((s) => [s.id, s])), [states]);
+  const branchById = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
+
+  const orgTree = useMemo(() => {
+    const byCustomer = new Map<string, Unit[]>();
+    for (const u of units) {
+      if (!u.customerId) continue;
+      const arr = byCustomer.get(u.customerId) ?? [];
+      arr.push(u);
+      byCustomer.set(u.customerId, arr);
+    }
+    return [...customerById.values()]
+      .map((c) => ({
+        customer: c,
+        units: (byCustomer.get(c.id) ?? []).sort((x, y) => x.code.localeCompare(y.code)),
+      }))
+      .filter((g) => g.units.length > 0)
+      .sort((a, b) => a.customer.name.localeCompare(b.customer.name));
+  }, [units, customerById]);
+
   const totalBranches = tree.reduce((n, s) => n + s.branches.length, 0);
   const totalUnits = tree.reduce(
     (n, s) => n + s.branches.reduce((m, b) => m + b.units.length, 0),
     0,
   );
+  const orgTotalUnits = orgTree.reduce((n, g) => n + g.units.length, 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -480,95 +503,197 @@ function HierarchyTreeDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Network className="h-4 w-4 text-accent" />
-            States → Branches → Units
+            {mode === "state" ? "States → Branches → Units" : "Organizations → Units"}
           </DialogTitle>
           <DialogDescription>
-            {tree.length} active states · {totalBranches} mapped branches · {totalUnits} units
+            {mode === "state"
+              ? `${tree.length} active states · ${totalBranches} mapped branches · ${totalUnits} units`
+              : `${orgTree.length} organizations · ${orgTotalUnits} units`}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3">
-          {tree.map(({ state, branches: br }) => (
-            <div key={state.id} className="rounded-xl border border-border bg-card p-4">
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-accent" />
-                <span className="font-semibold text-foreground">{state.name}</span>
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {br.length} branch{br.length === 1 ? "" : "es"}
-                </span>
-              </div>
-              <ul className="mt-2 space-y-2 border-l-2 border-dashed border-border pl-4">
-                {br.map((b) => (
-                  <li key={b.id}>
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4 text-accent" />
-                      <span className="font-mono text-[11px] font-semibold text-accent">{b.code}</span>
-                      <span className="font-semibold text-foreground">{b.name || "—"}</span>
-                      <span className="ml-auto text-xs text-muted-foreground">
-                        {b.units.length} unit{b.units.length === 1 ? "" : "s"}
-                      </span>
-                    </div>
-                    <ul className="mt-1.5 space-y-1.5 border-l-2 border-dashed border-border pl-4">
-                      {b.units.map((u) => {
-                        const c = u.customerId ? customerById.get(u.customerId) : undefined;
-                        return (
-                          <li
-                            key={u.id}
-                            className="rounded-lg border border-border bg-secondary/30 p-2.5"
-                          >
-                            <div className="flex items-center gap-3">
-                              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                              <Warehouse className="h-4 w-4 text-accent" />
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-[11px] font-semibold text-accent">{u.code}</span>
-                                  <span className="truncate font-semibold text-foreground">{u.name}</span>
-                                  <StatusBadge status={u.status} />
-                                </div>
-                                <div className="truncate text-xs text-muted-foreground">
-                                  {c ? (
-                                    <>
-                                      <span className="text-foreground">{c.name}</span>
-                                      <span className="font-mono"> ({c.code})</span> ·{" "}
-                                    </>
-                                  ) : null}
-                                  {u.location || "—"}
-                                </div>
-                              </div>
-                              {u.latitude != null && u.longitude != null && (
-                                <a
-                                  href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-accent hover:bg-accent/10"
-                                >
-                                  <MapPin className="h-3 w-3" /> Map
-                                </a>
-                              )}
-                            </div>
-                            <div className="mt-2 ml-7 border-l-2 border-dashed border-border pl-3">
-                              <UnitDeployedPeople
-                                unitId={u.id}
-                                branchId={u.branchId ?? null}
-                                customerId={u.customerId ?? null}
-                                stateName={state.name}
-                              />
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-          {tree.length === 0 && (
-            <div className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
-              No mapped states with units yet.
-            </div>
-          )}
+        <div className="inline-flex w-fit rounded-lg border border-border bg-secondary/40 p-1 text-xs font-semibold">
+          <button
+            type="button"
+            onClick={() => setMode("state")}
+            className={cn(
+              "rounded-md px-3 py-1.5 transition-colors",
+              mode === "state"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            State → Branch → Unit
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("org")}
+            className={cn(
+              "rounded-md px-3 py-1.5 transition-colors",
+              mode === "org"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            Organization → Unit
+          </button>
         </div>
+
+        {mode === "state" ? (
+          <div className="space-y-3">
+            {tree.map(({ state, branches: br }) => (
+              <div key={state.id} className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-accent" />
+                  <span className="font-semibold text-foreground">{state.name}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {br.length} branch{br.length === 1 ? "" : "es"}
+                  </span>
+                </div>
+                <ul className="mt-2 space-y-2 border-l-2 border-dashed border-border pl-4">
+                  {br.map((b) => (
+                    <li key={b.id}>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4 text-accent" />
+                        <span className="font-mono text-[11px] font-semibold text-accent">{b.code}</span>
+                        <span className="font-semibold text-foreground">{b.name || "—"}</span>
+                        <span className="ml-auto text-xs text-muted-foreground">
+                          {b.units.length} unit{b.units.length === 1 ? "" : "s"}
+                        </span>
+                      </div>
+                      <ul className="mt-1.5 space-y-1.5 border-l-2 border-dashed border-border pl-4">
+                        {b.units.map((u) => {
+                          const c = u.customerId ? customerById.get(u.customerId) : undefined;
+                          return (
+                            <li
+                              key={u.id}
+                              className="rounded-lg border border-border bg-secondary/30 p-2.5"
+                            >
+                              <div className="flex items-center gap-3">
+                                <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                                <Warehouse className="h-4 w-4 text-accent" />
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono text-[11px] font-semibold text-accent">{u.code}</span>
+                                    <span className="truncate font-semibold text-foreground">{u.name}</span>
+                                    <StatusBadge status={u.status} />
+                                  </div>
+                                  <div className="truncate text-xs text-muted-foreground">
+                                    {c ? (
+                                      <>
+                                        <span className="text-foreground">{c.name}</span>
+                                        <span className="font-mono"> ({c.code})</span> ·{" "}
+                                      </>
+                                    ) : null}
+                                    {u.location || "—"}
+                                  </div>
+                                </div>
+                                {u.latitude != null && u.longitude != null && (
+                                  <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-accent hover:bg-accent/10"
+                                  >
+                                    <MapPin className="h-3 w-3" /> Map
+                                  </a>
+                                )}
+                              </div>
+                              <div className="mt-2 ml-7 border-l-2 border-dashed border-border pl-3">
+                                <UnitDeployedPeople
+                                  unitId={u.id}
+                                  branchId={u.branchId ?? null}
+                                  customerId={u.customerId ?? null}
+                                  stateName={state.name}
+                                />
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+            {tree.length === 0 && (
+              <div className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+                No mapped states with units yet.
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {orgTree.map(({ customer, units: us }) => (
+              <div key={customer.id} className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-accent" />
+                  <span className="font-mono text-[11px] font-semibold text-accent">{customer.code}</span>
+                  <span className="font-semibold text-foreground">{customer.name}</span>
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {us.length} unit{us.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <ul className="mt-2 space-y-1.5 border-l-2 border-dashed border-border pl-4">
+                  {us.map((u) => {
+                    const br = u.branchId ? branchById.get(u.branchId) : undefined;
+                    const st = br ? stateById.get(br.stateId) : undefined;
+                    return (
+                      <li
+                        key={u.id}
+                        className="rounded-lg border border-border bg-secondary/30 p-2.5"
+                      >
+                        <div className="flex items-center gap-3">
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                          <Warehouse className="h-4 w-4 text-accent" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-[11px] font-semibold text-accent">{u.code}</span>
+                              <span className="truncate font-semibold text-foreground">{u.name}</span>
+                              <StatusBadge status={u.status} />
+                            </div>
+                            <div className="truncate text-xs text-muted-foreground">
+                              {br ? (
+                                <>
+                                  <span className="text-foreground">{br.name || br.code}</span>
+                                  {st ? <> · {st.name}</> : null} ·{" "}
+                                </>
+                              ) : null}
+                              {u.location || "—"}
+                            </div>
+                          </div>
+                          {u.latitude != null && u.longitude != null && (
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-accent hover:bg-accent/10"
+                            >
+                              <MapPin className="h-3 w-3" /> Map
+                            </a>
+                          )}
+                        </div>
+                        <div className="mt-2 ml-7 border-l-2 border-dashed border-border pl-3">
+                          <UnitDeployedPeople
+                            unitId={u.id}
+                            branchId={u.branchId ?? null}
+                            customerId={u.customerId ?? null}
+                            stateName={st?.name ?? ""}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+            {orgTree.length === 0 && (
+              <div className="rounded-xl border border-dashed border-border p-10 text-center text-sm text-muted-foreground">
+                No organizations with units yet.
+              </div>
+            )}
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   );
