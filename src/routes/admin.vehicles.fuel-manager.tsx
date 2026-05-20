@@ -381,6 +381,19 @@ function AddEntryDialog({
   const [pumpFile, setPumpFile] = useState<File | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [vehOpen, setVehOpen] = useState(false);
+
+  const minOdo = vehicleId ? (lastOdoByVehicle.get(vehicleId) ?? 0) : 0;
+  const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
+
+  function pickVehicle(id: string) {
+    setVehicleId(id);
+    setVehOpen(false);
+    const last = lastOdoByVehicle.get(id) ?? 0;
+    // Prefill odometer with last reading so user types upwards from there
+    if (last > 0) setOdometer(String(last));
+    else setOdometer("");
+  }
 
   // Auto-amount when qty + rate set
   function recalcAmount(q: string, r: string) {
