@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useResetOnOpen, useVehicleOptions, vehicleLabel } from "@/lib/vehicle-helpers";
+import { useResetOnOpen, useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
 
 export const Route = createFileRoute("/admin/vehicles/fastags")({
   component: FastTagManagerPage,
@@ -241,11 +241,11 @@ function FastTagManagerPage() {
                 const v = vMap.get(i.vehicle_id);
                 return (
                   <tr key={i.id} className="hover:bg-secondary/30">
-                    <td className="px-5 py-3 font-mono font-semibold text-foreground">{v ? vehicleLabel(v) : "—"}</td>
+                    <td className="px-5 py-3 font-mono font-semibold text-foreground">{v?.vehicle_number || "—"}</td>
                     <td className="px-5 py-3 font-mono text-foreground/90">{i.fastag_number || "—"}</td>
                     <td className="px-5 py-3 text-foreground/90">{i.bank_name || "—"}</td>
                     <td className="px-5 py-3 text-foreground/90">₹ {i.balance.toLocaleString("en-IN")}</td>
-                    <td className="px-5 py-3 text-foreground/90">{i.expiry_date ?? "—"}</td>
+                    <td className="px-5 py-3 text-foreground/90">{fmtDate(i.expiry_date)}</td>
                     <td className="px-5 py-3">
                       <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{i.status}</span>
                     </td>
@@ -353,7 +353,7 @@ function FastTagFormDialog({ open, onOpenChange, title, initial, vehicles, onSub
             <Label>Vehicle *</Label>
             <Select value={vehicleId} onValueChange={setVehicleId}>
               <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
-              <SelectContent>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{vehicleLabel(v)}</SelectItem>)}</SelectContent>
+              <SelectContent>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.vehicle_number}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="grid gap-2 sm:col-span-2">

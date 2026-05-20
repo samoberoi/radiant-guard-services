@@ -32,3 +32,11 @@ export function useResetOnOpen(open: boolean, reset: () => void) {
 export function vehicleLabel(v: { vehicle_number: string; name?: string }) {
   return v.name ? `${v.vehicle_number} — ${v.name}` : v.vehicle_number;
 }
+
+/** Format ISO date (YYYY-MM-DD) as DD/MM/YYYY */
+export function fmtDate(d: string | null | undefined): string {
+  if (!d) return "—";
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
+  if (!m) return d;
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}

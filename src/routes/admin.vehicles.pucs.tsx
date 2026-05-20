@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useResetOnOpen, useVehicleOptions, vehicleLabel } from "@/lib/vehicle-helpers";
+import { useResetOnOpen, useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
 
 export const Route = createFileRoute("/admin/vehicles/pucs")({
   component: PucManagerPage,
@@ -192,13 +192,13 @@ function PucManagerPage() {
                 const expired = i.expiry_date && i.expiry_date < today;
                 return (
                   <tr key={i.id} className="hover:bg-secondary/30">
-                    <td className="px-5 py-3 font-mono font-semibold text-foreground">{v ? vehicleLabel(v) : "—"}</td>
+                    <td className="px-5 py-3 font-mono font-semibold text-foreground">{v?.vehicle_number || "—"}</td>
                     <td className="px-5 py-3 font-mono text-foreground/90">{i.puc_number || "—"}</td>
                     <td className="px-5 py-3 text-foreground/90">{i.issuing_authority || "—"}</td>
-                    <td className="px-5 py-3 text-foreground/90">{i.issued_date ?? "—"}</td>
+                    <td className="px-5 py-3 text-foreground/90">{fmtDate(i.issued_date)}</td>
                     <td className="px-5 py-3">
                       <span className={expired ? "rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-semibold text-destructive" : "text-foreground/90"}>
-                        {i.expiry_date ?? "—"}{expired ? " · Expired" : ""}
+                        {fmtDate(i.expiry_date)}{expired ? " · Expired" : ""}
                       </span>
                     </td>
                     <td className="px-5 py-3">
@@ -288,7 +288,7 @@ function PucFormDialog({ open, onOpenChange, title, initial, vehicles, onSubmit 
             <Label>Vehicle *</Label>
             <Select value={vehicleId} onValueChange={setVehicleId}>
               <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
-              <SelectContent>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{vehicleLabel(v)}</SelectItem>)}</SelectContent>
+              <SelectContent>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.vehicle_number}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="grid gap-2"><Label>PUC Certificate Number</Label><Input value={pucNumber} onChange={(e) => setPucNumber(e.target.value)} /></div>
