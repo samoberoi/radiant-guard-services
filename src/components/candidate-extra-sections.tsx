@@ -400,8 +400,9 @@ export function NomineeSection({ form, setSection }: { form: any; setSection: Se
         <div className="space-y-3">
           {NOMINEE_SLOTS.map((s) => {
             const enabled = compliance[s.enabledKey] ?? s.defaultEnabled;
-            const value = nominees[s.key] ?? "";
-            const stale = value && !options.some((o) => o.key === value);
+            const entries = normalizeSlot(rawNominees[s.key]);
+            const total = entries.reduce((a, e) => a + (Number.isFinite(e.percent) ? e.percent : 0), 0);
+            const balanced = entries.length === 0 || total === 100;
             return (
               <div key={s.key} className="rounded-md border p-3">
                 <div className="mb-2 flex items-center justify-between gap-3">
@@ -412,26 +413,85 @@ export function NomineeSection({ form, setSection }: { form: any; setSection: Se
                     </span>
                   )}
                 </div>
-                <Select
-                  value={value || undefined}
-                  onValueChange={(v) => setNominee(s.key, v === "__none__" ? "" : v)}
-                  disabled={!enabled}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={enabled ? "Select a nominee from contacts" : "Enable in Compliance to assign"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">— No nominee —</SelectItem>
-                    {options.map((o) => (
-                      <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {stale && (
-                  <p className="mt-1.5 text-xs text-amber-600">
-                    Previously selected contact is no longer available. Please pick again.
-                  </p>
+                {entries.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No nominees assigned.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {entries.map((e, i) => {
+                      const stale = e.contact && !options.some((o) => o.key === e.contact);
+                      const update = (patch: Partial<NomineeEntry>) => {
+                        const copy = [...entries];
+                        copy[i] = { ...copy[i], ...patch };
+                        setSlot(s.key, copy);
+                      };
+                      return (
+                        <div key={i} className="flex flex-wrap items-center gap-2">
+                          <div className="min-w-[200px] flex-1">
+                            <Select
+                              value={e.contact || undefined}
+                              onValueChange={(v) => update({ contact: v })}
+                              disabled={!enabled}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select contact" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {options.map((o) => (
+                                  <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {stale && (
+                              <p className="mt-1 text-[11px] text-amber-600">Contact no longer available.</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              className="w-20"
+                              value={e.percent}
+                              disabled={!enabled}
+                              onChange={(ev) => {
+                                const n = Math.max(0, Math.min(100, Number(ev.target.value) || 0));
+                                update({ percent: n });
+                              }}
+                            />
+                            <span className="text-xs text-muted-foreground">%</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-rose-500"
+                            disabled={!enabled}
+                            onClick={() => setSlot(s.key, entries.filter((_, j) => j !== i))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
+                <div className="mt-2 flex items-center justify-between">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!enabled}
+                    onClick={() => {
+                      const remaining = Math.max(0, 100 - total);
+                      setSlot(s.key, [...entries, { contact: "", percent: remaining }]);
+                    }}
+                  >
+                    <Plus className="mr-1 h-3 w-3" /> Add nominee
+                  </Button>
+                  {entries.length > 0 && (
+                    <span className={`text-xs ${balanced ? "text-muted-foreground" : "text-rose-600 font-medium"}`}>
+                      Total: {total}%{balanced ? "" : " — must equal 100%"}
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })}
