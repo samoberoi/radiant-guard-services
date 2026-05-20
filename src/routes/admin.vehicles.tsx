@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Car, CheckCircle2, Fuel, Radio, ShieldAlert, ShieldCheck, Wind, Wrench } from "lucide-react";
+import { Car, CheckCircle2, Fuel, ShieldAlert, ShieldCheck, Wind } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtDate } from "@/lib/vehicle-helpers";
@@ -11,13 +11,6 @@ export const Route = createFileRoute("/admin/vehicles")({
   component: VehiclesLayout,
 });
 
-const tiles = [
-  { to: "/admin/vehicles/inventory", label: "Vehicle Inventory", icon: Car },
-  { to: "/admin/vehicles/fastags", label: "FastTag Manager", icon: Radio },
-  { to: "/admin/vehicles/insurances", label: "Insurance Manager", icon: ShieldCheck },
-  { to: "/admin/vehicles/pucs", label: "PUC Manager", icon: Wind },
-  { to: "/admin/vehicles/service-manager", label: "Service Manager", icon: Wrench },
-] as const;
 
 function VehiclesLayout() {
   const location = useLocation();
@@ -112,12 +105,40 @@ function VehiclesDashboard() {
         crumbs={[{ label: "Vehicles" }]}
       />
 
-      {/* Top stat cards */}
+      {/* Top stat cards — clickable, deep-link into managers with filter */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total Vehicles" value={totalVehicles} icon={Car} accent="accent" />
-        <StatCard label="Insurance Expired" value={insExpired.length} icon={ShieldAlert} accent="destructive" />
-        <StatCard label="Insurance Renewal (≤60d)" value={insRenewal.length} icon={ShieldCheck} accent="warning" />
-        <StatCard label="PUC Expiring (≤60d)" value={pucExpiring.length + pucExpired.length} icon={Wind} accent="warning" subtle={pucExpired.length > 0 ? `${pucExpired.length} already expired` : undefined} />
+        <StatCard
+          label="Total Vehicles"
+          value={totalVehicles}
+          icon={Car}
+          accent="accent"
+          to="/admin/vehicles/inventory"
+        />
+        <StatCard
+          label="Insurance Expired"
+          value={insExpired.length}
+          icon={ShieldAlert}
+          accent="destructive"
+          to="/admin/vehicles/insurances"
+          search={{ status: "expired" }}
+        />
+        <StatCard
+          label="Insurance Renewal (≤60d)"
+          value={insRenewal.length}
+          icon={ShieldCheck}
+          accent="warning"
+          to="/admin/vehicles/insurances"
+          search={{ status: "renewal" }}
+        />
+        <StatCard
+          label="PUC Expiring (≤60d)"
+          value={pucExpiring.length + pucExpired.length}
+          icon={Wind}
+          accent="warning"
+          subtle={pucExpired.length > 0 ? `${pucExpired.length} already expired` : undefined}
+          to="/admin/vehicles/pucs"
+          search={{ status: "due" }}
+        />
       </div>
 
       {/* Fuel mix */}
@@ -199,34 +220,16 @@ function VehiclesDashboard() {
         />
       </div>
 
-      {/* Quick nav */}
-      <div className="mt-6">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Manage</div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {tiles.map((tile) => (
-            <Link
-              key={tile.to}
-              to={tile.to}
-              className="group flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 transition-colors hover:border-accent/40 hover:bg-accent/5"
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/15 text-accent">
-                <tile.icon className="h-4 w-4" />
-              </div>
-              <span className="flex-1 text-sm font-semibold">{tile.label}</span>
-              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
 
 function StatCard({
-  label, value, icon: Icon, accent, subtle,
+  label, value, icon: Icon, accent, subtle, to, search,
 }: {
   label: string; value: number; icon: React.ComponentType<{ className?: string }>;
   accent: "accent" | "destructive" | "warning"; subtle?: string;
+  to: string; search?: Record<string, string>;
 }) {
   const palette = accent === "destructive"
     ? "bg-destructive/15 text-destructive"
@@ -234,18 +237,22 @@ function StatCard({
       ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
       : "bg-accent/15 text-accent";
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+    <Link
+      to={to}
+      search={search as never}
+      className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:border-accent/50 hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    >
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
           <div className="mt-2 font-display text-3xl font-bold tracking-tight">{value}</div>
           {subtle && <div className="mt-1 text-xs text-muted-foreground">{subtle}</div>}
         </div>
-        <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl", palette)}>
+        <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-105", palette)}>
           <Icon className="h-5 w-5" />
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

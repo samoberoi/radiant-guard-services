@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Download, Edit2, Plus, Search, Trash2, Wind } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +18,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useResetOnOpen, useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
 
+type StatusFilter = "all" | "expired" | "renewal" | "due" | "active";
+const STATUS_VALUES: StatusFilter[] = ["all", "expired", "renewal", "due", "active"];
+
 export const Route = createFileRoute("/admin/vehicles/pucs")({
+  validateSearch: (search: Record<string, unknown>): { status: StatusFilter } => {
+    const s = String(search.status ?? "all") as StatusFilter;
+    return { status: STATUS_VALUES.includes(s) ? s : "all" };
+  },
   component: PucManagerPage,
 });
 
@@ -118,19 +125,35 @@ function PucManagerPage() {
   const [editing, setEditing] = useState<Puc | null>(null);
   const [deleting, setDeleting] = useState<Puc | null>(null);
 
+  const { status } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+
   const today = new Date().toISOString().slice(0, 10);
+  const in60Date = new Date(); in60Date.setDate(in60Date.getDate() + 60);
+  const in60 = in60Date.toISOString().slice(0, 10);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return items;
     return items.filter((i) => {
-      const v = vMap.get(i.vehicle_id);
-      return (
-        i.puc_number.toLowerCase().includes(q) ||
-        i.issuing_authority.toLowerCase().includes(q) ||
-        (v?.vehicle_number.toLowerCase().includes(q) ?? false)
-      );
+      if (q) {
+        const v = vMap.get(i.vehicle_id);
+        const hit =
+          i.puc_number.toLowerCase().includes(q) ||
+          i.issuing_authority.toLowerCase().includes(q) ||
+          (v?.vehicle_number.toLowerCase().includes(q) ?? false);
+        if (!hit) return false;
+      }
+      if (status === "all") return true;
+      const end = i.expiry_date;
+      const isExpired = !!end && end < today;
+      const isRenewal = !!end && end >= today && end <= in60;
+      if (status === "expired") return isExpired;
+      if (status === "renewal") return isRenewal;
+      if (status === "due") return isExpired || isRenewal;
+      if (status === "active") return !isExpired;
+      return true;
     });
-  }, [items, query, vMap]);
+  }, [items, query, vMap, status, today, in60]);
 
   return (
     <div>
@@ -141,9 +164,26 @@ function PucManagerPage() {
       />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by vehicle…" className="h-10 rounded-lg pl-9" />
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:max-w-xl">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by vehicle…" className="h-10 rounded-lg pl-9" />
+          </div>
+          <Select
+            value={status}
+            onValueChange={(v) => navigate({ search: { status: v as StatusFilter }, replace: true })}
+          >
+            <SelectTrigger className="h-10 w-full sm:w-56 rounded-lg">
+              <SelectValue placeholder="Filter status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All PUCs</SelectItem>
+              <SelectItem value="expired">Expired</SelectItem>
+              <SelectItem value="renewal">Coming up soon (≤60d)</SelectItem>
+              <SelectItem value="due">Expired + Coming up soon</SelectItem>
+              <SelectItem value="active">Active (not expired)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setAddOpen(true)} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="mr-1.5 h-4 w-4" />Add PUC</Button>
