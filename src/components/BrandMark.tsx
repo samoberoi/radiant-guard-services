@@ -1,4 +1,4 @@
-import logo from "@/assets/radiant-logo.png";
+import logo from "@/assets/radiant-logo-v2.png";
 
 type BrandMarkProps = {
   className?: string;
