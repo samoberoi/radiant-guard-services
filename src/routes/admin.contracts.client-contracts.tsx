@@ -1466,13 +1466,13 @@ function ContractFormDialog({
   open,
   onOpenChange,
   editing,
-  existingCodes,
+  existingProspectCodes,
   onSubmit,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   editing: ClientContract | null;
-  existingCodes: string[];
+  existingProspectCodes: string[];
   onSubmit: (
     p: Omit<ClientContract, "id">,
     resources: ContractResource[],
@@ -1490,6 +1490,7 @@ function ContractFormDialog({
   );
 
   const [contractCode, setContractCode] = useState("");
+  const [prospectCode, setProspectCode] = useState("");
   const [unitId, setUnitId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -1498,7 +1499,6 @@ function ContractFormDialog({
   const [payrollWindowId, setPayrollWindowId] = useState<string>("");
   const [billingTypeId, setBillingTypeId] = useState<string>("");
   const [gstOption, setGstOption] = useState<GstOption>("csgst");
-  const [status, setStatus] = useState<ContractStatus>("active");
   const [unitPickerOpen, setUnitPickerOpen] = useState(false);
   const [unitQuery, setUnitQuery] = useState("");
   const [saving, setSaving] = useState(false);
@@ -1516,6 +1516,7 @@ function ContractFormDialog({
     if (!open) return;
     if (editing) {
       setContractCode(editing.contractCode);
+      setProspectCode(editing.prospectCode);
       setUnitId(editing.unitId);
       setStartDate(editing.startDate);
       setEndDate(editing.endDate);
@@ -1524,9 +1525,9 @@ function ContractFormDialog({
       setPayrollWindowId(editing.payrollWindowId ?? "");
       setBillingTypeId(editing.billingTypeId ?? "");
       setGstOption(editing.gstOption);
-      setStatus(editing.status);
     } else {
-      setContractCode(nextContractCode(existingCodes));
+      setContractCode("");
+      setProspectCode(nextProspectCode(existingProspectCodes));
       setUnitId("");
       setStartDate("");
       setEndDate("");
@@ -1535,7 +1536,6 @@ function ContractFormDialog({
       setPayrollWindowId("");
       setBillingTypeId("");
       setGstOption("csgst");
-      setStatus("active");
     }
     setResources([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
