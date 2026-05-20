@@ -184,7 +184,7 @@ function VehiclesDashboard() {
           search={{ status: "due" }}
         />
         <StatCard
-          label="Fuel Spend (30d)"
+          label="Fuel Spend (This Month)"
           value={Math.round(fuelSpend.total)}
           valuePrefix="₹"
           icon={Fuel}
@@ -194,11 +194,12 @@ function VehiclesDashboard() {
         />
       </div>
 
-      {/* Fuel spend breakdown — last 30 days */}
+      {/* Fuel spend breakdown — this month */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <BreakdownCard
-          title="Fuel Spend by Fuel Type (30d)"
+          title="Fuel Spend by Fuel Type (This Month)"
           total={fuelSpend.total}
+          to="/admin/vehicles/fuel-manager"
           rows={[
             { label: "Petrol", value: fuelSpend.byFuel.Petrol, color: "hsl(35 92% 55%)" },
             { label: "Diesel", value: fuelSpend.byFuel.Diesel, color: "hsl(220 70% 55%)" },
@@ -206,8 +207,9 @@ function VehiclesDashboard() {
           ]}
         />
         <BreakdownCard
-          title="Fuel Spend by Payment (30d)"
+          title="Fuel Spend by Payment (This Month)"
           total={fuelSpend.total}
+          to="/admin/vehicles/fuel-manager"
           rows={[
             { label: "PetroCard", value: fuelSpend.byPay.PetroCard, color: "hsl(265 70% 60%)" },
             { label: "Cash",      value: fuelSpend.byPay.Cash,      color: "hsl(150 65% 45%)" },
