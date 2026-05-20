@@ -81,20 +81,13 @@ function FastTagManagerPage() {
     queryFn: async (): Promise<FastTag[]> => {
       const { data, error } = await supabase
         .from("vehicle_fastags" as never)
-        .select("id,vehicle_id,fastag_number,bank_name,account_number,balance,issued_date,expiry_date,status,notes,enabled")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return ((data as unknown) as Record<string, unknown>[]).map(rowTo);
-    },
-  });
-
-  const invalidate = () => qc.invalidateQueries({ queryKey: QK });
         .select("id,vehicle_id,fastag_number,bank_name,account_number,balance,issued_date,expiry_date,status,notes,enabled,login_type,login_id,login_password,registered_email")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowTo);
     },
   });
+
 
   const invalidate = () => qc.invalidateQueries({ queryKey: QK });
   type Payload = Omit<FastTag, "id">;
