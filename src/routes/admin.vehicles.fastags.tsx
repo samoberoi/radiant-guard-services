@@ -353,7 +353,7 @@ function FastTagFormDialog({ open, onOpenChange, title, initial, vehicles, onSub
             <Label>Vehicle *</Label>
             <Select value={vehicleId} onValueChange={setVehicleId}>
               <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
-              <SelectContent>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{vehicleLabel(v)}</SelectItem>)}</SelectContent>
+              <SelectContent>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.vehicle_number}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="grid gap-2 sm:col-span-2">
