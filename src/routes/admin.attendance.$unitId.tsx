@@ -59,13 +59,15 @@ function MusterRollPage() {
   const { data: employees, isLoading } = useQuery({
     queryKey: ["attendance-roster", unitId],
     queryFn: async () => {
+      const rosterSelect = "id, employee_code, full_name, designation_id, preferred_joining_date, date_of_birth, is_enabled, status, role_key";
+
       // Primary unit assignment on candidates
       const { data: prim } = await supabase
         .from("candidates")
-        .select("id, employee_code, full_name, designation_id, is_enabled, status")
+        .select(rosterSelect)
         .eq("unit_id", unitId)
         .eq("is_enabled", true)
-        .eq("status", "approved");
+        .in("status", ["approved", "active"]);
 
       // Multi-unit assignments
       const { data: links } = await supabase
@@ -77,10 +79,10 @@ function MusterRollPage() {
       if (linkIds.length) {
         const { data } = await supabase
           .from("candidates")
-          .select("id, employee_code, full_name, designation_id, is_enabled, status")
+          .select(rosterSelect)
           .in("id", linkIds)
           .eq("is_enabled", true)
-          .eq("status", "approved");
+          .in("status", ["approved", "active"]);
         extra = data ?? [];
       }
       const all = [...(prim ?? []), ...(extra ?? [])];
@@ -101,6 +103,7 @@ function MusterRollPage() {
           employee_code: c.employee_code || "",
           full_name: c.full_name || "",
           designation: (c.designation_id && dMap.get(c.designation_id)) || "",
+          doj: c.preferred_joining_date || "",
         }))
         .sort((a, b) =>
           (a.employee_code || a.full_name).localeCompare(b.employee_code || b.full_name),
@@ -263,6 +266,9 @@ function MusterRollPage() {
                         {emp.designation || "—"}
                       </td>
                       <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
+                      <td className={cn(rowBase, "p-1")} rowSpan={2}>
+                        {emp.doj ? new Date(emp.doj).toLocaleDateString("en-GB") : "—"}
+                      </td>
                       {dayList.map((d) => (
                         <td
                           key={`a-${d}`}
