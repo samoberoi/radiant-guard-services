@@ -75,6 +75,18 @@ export const RBAC_MODULES: ModuleDef[] = [
     subModules: [],
   },
   {
+    key: "vehicles",
+    label: "Vehicles",
+    path: "/admin/vehicles",
+    icon: Briefcase,
+    subModules: [
+      { key: "vehicle_inventory",  label: "Vehicle Inventory",   path: "/admin/vehicles/inventory",  icon: Briefcase },
+      { key: "fastag_manager",     label: "FastTag Manager",     path: "/admin/vehicles/fastags",    icon: Briefcase },
+      { key: "insurance_manager",  label: "Insurance Manager",   path: "/admin/vehicles/insurances", icon: ShieldCheck },
+      { key: "puc_manager",        label: "PUC Manager",         path: "/admin/vehicles/pucs",       icon: Briefcase },
+    ],
+  },
+  {
     key: "control_center",
     label: "Control Center",
     path: "/admin/control-center",
