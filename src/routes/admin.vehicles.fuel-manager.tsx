@@ -555,42 +555,7 @@ function AddEntryDialog({
             <FileTile label="Pump / units photo *" file={pumpFile} onChange={setPumpFile} />
             <FileTile label="Receipt photo *" file={receiptFile} onChange={setReceiptFile} />
           </div>
-        </>
-      ),
-    } as never;
-  }
-  return null;
-}
 
-function FuelMeter({ label, amount, total, color }: { label: string; amount: number; total: number; color: string }) {
-  const pct = total > 0 ? Math.min(100, (amount / total) * 100) : 0;
-  const r = 38;
-  const c = 2 * Math.PI * r;
-  const dash = (pct / 100) * c;
-  return (
-    <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
-      <svg width={96} height={96} viewBox="0 0 96 96" className="-rotate-90">
-        <circle cx={48} cy={48} r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth={8} />
-        <circle
-          cx={48} cy={48} r={r} fill="none"
-          stroke={color} strokeWidth={8} strokeLinecap="round"
-          strokeDasharray={`${dash} ${c - dash}`}
-        />
-        <text x={48} y={52} textAnchor="middle" className="rotate-90 fill-foreground text-[14px] font-semibold" transform="rotate(90 48 48)">
-          {Math.round(pct)}%
-        </text>
-      </svg>
-      <div className="min-w-0">
-        <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-        <div className="mt-0.5 text-xl font-bold tabular-nums">₹{amount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</div>
-        <div className="text-xs text-muted-foreground">of total spend</div>
-      </div>
-    </div>
-  );
-}
-
-// removed stray block
-          </div>
 
           <div>
             <Label>Notes</Label>
