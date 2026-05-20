@@ -357,12 +357,16 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
 }) {
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [name, setName] = useState("");
+  const [owner, setOwner] = useState("");
   const [brand, setBrand] = useState("");
   const [make, setMake] = useState("");
   const [type, setType] = useState("Car");
+  const [fuelType, setFuelType] = useState("Petrol");
   const [year, setYear] = useState<string>("");
   const [color, setColor] = useState("");
   const [registrationDate, setRegistrationDate] = useState("");
+  const [engineNumber, setEngineNumber] = useState("");
+  const [chassisNumber, setChassisNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -370,28 +374,33 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
   useResetOnOpen(open, () => {
     setVehicleNumber(initial?.vehicle_number ?? "");
     setName(initial?.name ?? "");
+    setOwner(initial?.owner ?? "");
     setBrand(initial?.brand ?? "");
     setMake(initial?.make ?? "");
     setType(initial?.type || "Car");
+    setFuelType(initial?.fuel_type || "Petrol");
     setYear(initial?.year != null ? String(initial.year) : "");
     setColor(initial?.color ?? "");
     setRegistrationDate(initial?.registration_date ?? "");
+    setEngineNumber(initial?.engine_number ?? "");
+    setChassisNumber(initial?.chassis_number ?? "");
     setNotes(initial?.notes ?? "");
     setEnabled(initial?.enabled ?? true);
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>Vehicle registration details.</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-2 sm:grid-cols-2">
-          <div className="grid gap-2 sm:col-span-2">
+        <div className="grid gap-4 py-2 sm:grid-cols-2 max-h-[70vh] overflow-y-auto pr-1">
+          <div className="grid gap-2">
             <Label>Vehicle Number *</Label>
             <Input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())} placeholder="e.g. KA01AB1234" />
           </div>
+          <div className="grid gap-2"><Label>Owner</Label><Input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="Owner name / company" /></div>
           <div className="grid gap-2"><Label>Name / Label</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Manager Car" /></div>
           <div className="grid gap-2">
             <Label>Type</Label>
@@ -400,10 +409,19 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
               <SelectContent>{TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select>
           </div>
+          <div className="grid gap-2">
+            <Label>Fuel Type</Label>
+            <Select value={fuelType} onValueChange={setFuelType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{FUEL_TYPES.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
           <div className="grid gap-2"><Label>Brand</Label><Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Maruti Suzuki" /></div>
           <div className="grid gap-2"><Label>Make / Model</Label><Input value={make} onChange={(e) => setMake(e.target.value)} placeholder="e.g. Swift VXi" /></div>
           <div className="grid gap-2"><Label>Year</Label><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} placeholder="e.g. 2022" min={1980} max={2100} /></div>
           <div className="grid gap-2"><Label>Color</Label><Input value={color} onChange={(e) => setColor(e.target.value)} placeholder="e.g. White" /></div>
+          <div className="grid gap-2"><Label>Engine Number</Label><Input value={engineNumber} onChange={(e) => setEngineNumber(e.target.value.toUpperCase())} placeholder="Engine no." /></div>
+          <div className="grid gap-2"><Label>Chassis Number</Label><Input value={chassisNumber} onChange={(e) => setChassisNumber(e.target.value.toUpperCase())} placeholder="Chassis / VIN" /></div>
           <div className="grid gap-2 sm:col-span-2"><Label>Registration Date</Label><Input type="date" value={registrationDate} onChange={(e) => setRegistrationDate(e.target.value)} /></div>
           <div className="grid gap-2 sm:col-span-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 sm:col-span-2">
@@ -420,7 +438,10 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
               setSaving(true);
               const err = await onSubmit({
                 vehicle_number: vehicleNumber,
-                name, brand, make, type, color, notes, enabled,
+                name, owner, brand, make, type, color, notes, enabled,
+                fuel_type: fuelType,
+                engine_number: engineNumber,
+                chassis_number: chassisNumber,
                 year: year ? Number(year) : null,
                 registration_date: registrationDate || null,
               });
