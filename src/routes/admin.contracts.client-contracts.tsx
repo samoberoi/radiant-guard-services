@@ -1179,7 +1179,7 @@ function ClientContractsPage() {
             <StatCard label="Total Prospects" value={(stats as { total: number }).total} tone="default" />
             <StatCard label="Pending Approval" value={(stats as { pending: number }).pending} tone="inactive" />
             <StatCard label="Rejected" value={(stats as { rejected: number }).rejected} tone="expired" />
-            <StatCard label="Promoted (Clients)" value={tabCounts.clients} tone="active" />
+            <StatCard label="Lost" value={(stats as { lost: number }).lost} tone="expired" />
           </>
         )}
       </div>
