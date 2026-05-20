@@ -109,6 +109,7 @@ type ClientContract = {
   gstOption: GstOption;
   status: ContractStatus;
   approvalStatus: ApprovalStatus;
+  prospectStage: ProspectStage;
   rejectionReason: string;
   createdBy: string | null;
   promotedAt: string | null;
