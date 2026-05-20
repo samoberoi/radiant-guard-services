@@ -17,7 +17,6 @@ import {
   MapPin,
   Menu,
   PanelLeftClose,
-  ShieldCheck,
   SlidersHorizontal,
   UserPlus,
   Users,
@@ -25,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BrandMark } from "@/components/BrandMark";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -111,17 +111,11 @@ function AdminLayout() {
         {/* Brand */}
         <div className="relative flex h-16 items-center justify-between border-b border-white/10 px-4">
           <Link to="/admin/customers" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent-foreground shadow">
-              <ShieldCheck className="h-5 w-5" strokeWidth={2.4} />
-            </div>
-            {!collapsed && (
-              <div className="leading-tight">
-                <div className="font-display text-sm font-bold tracking-tight">Radiant Guard</div>
-                <div className="text-[9px] font-semibold uppercase tracking-[0.22em] text-primary-foreground/60">
-                  Admin Console
-                </div>
-              </div>
-            )}
+            <BrandMark
+              compact={collapsed}
+              variant="inverse"
+              className="min-w-0"
+            />
           </Link>
           <button
             type="button"

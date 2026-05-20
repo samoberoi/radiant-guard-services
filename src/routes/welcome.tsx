@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-import { LogOut, ShieldCheck, Sparkles } from "lucide-react";
+import { LogOut, Sparkles } from "lucide-react";
+import { BrandMark } from "@/components/BrandMark";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 
@@ -52,8 +53,8 @@ function WelcomePage() {
 
       <div className="relative z-10 w-full max-w-xl">
         <div className="glass glow-accent rounded-3xl p-8 text-center sm:p-12">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-lg">
-            <ShieldCheck className="h-8 w-8 text-accent" strokeWidth={2.4} />
+          <div className="flex justify-center">
+            <BrandMark className="justify-center" />
           </div>
 
           <span className="mt-7 inline-flex items-center gap-2 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
