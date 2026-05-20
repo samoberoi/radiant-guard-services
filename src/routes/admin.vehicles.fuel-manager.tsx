@@ -553,7 +553,19 @@ function AddEntryDialog({
             </div>
             <div>
               <Label>Odometer (km) *</Label>
-              <Input type="number" inputMode="numeric" value={odometer} onChange={(e) => setOdometer(e.target.value)} placeholder="e.g. 43250" />
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={minOdo || undefined}
+                value={odometer}
+                onChange={(e) => setOdometer(e.target.value)}
+                placeholder={minOdo > 0 ? `≥ ${minOdo.toLocaleString()}` : "e.g. 43250"}
+              />
+              {minOdo > 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Last recorded: {minOdo.toLocaleString()} km — new reading must be equal or higher.
+                </p>
+              )}
             </div>
             <div>
               <Label>Payment Mode</Label>
