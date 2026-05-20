@@ -3,18 +3,23 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import {
   Check,
+  CheckCircle2,
   ChevronsUpDown,
   Copy,
   Download,
   Edit2,
+  FileSignature,
   FileSpreadsheet,
   FileText,
   Plus,
   Search,
+  ShieldAlert,
   Upload,
   Users,
   X,
+  XCircle,
 } from "lucide-react";
+import { ContractApprovalDialog, type ApprovalMode } from "@/components/ContractApprovalDialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -74,6 +79,7 @@ export const Route = createFileRoute("/admin/contracts/client-contracts")({
 
 type GstOption = "csgst" | "igst" | "none";
 type ContractStatus = "active" | "inactive" | "expired";
+type ApprovalStatus = "pending" | "approved" | "rejected";
 
 type ClientContract = {
   id: string;
@@ -87,6 +93,9 @@ type ClientContract = {
   billingTypeId: string | null;
   gstOption: GstOption;
   status: ContractStatus;
+  approvalStatus: ApprovalStatus;
+  rejectionReason: string;
+  createdBy: string | null;
 };
 
 type ServiceType = { id: string; name: string };
@@ -177,7 +186,10 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
     payrollWindowId: r.payroll_window_id ? String(r.payroll_window_id) : null,
     billingTypeId: r.billing_type_id ? String(r.billing_type_id) : null,
     gstOption: (r.gst_option as GstOption) ?? "csgst",
-    status: (r.status as ContractStatus) ?? "active",
+    status: (r.status as ContractStatus) ?? "inactive",
+    approvalStatus: (r.approval_status as ApprovalStatus) ?? "pending",
+    rejectionReason: String(r.rejection_reason ?? ""),
+    createdBy: r.created_by ? String(r.created_by) : null,
   };
 }
 
@@ -198,16 +210,17 @@ function useContracts() {
       const { data, error } = await supabase
         .from("client_contracts" as never)
         .select(
-          "id,contract_code,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,gst_option,status",
+          "id,contract_code,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,gst_option,status,approval_status,rejection_reason,created_by",
         )
         .order("contract_code", { ascending: false });
       if (error) throw error;
       const rows = data as unknown as Record<string, unknown>[];
-      // Auto-expire: any active contract whose end_date has passed → mark expired
+      // Auto-expire: any approved+active contract whose end_date has passed → expired
       const today = new Date().toISOString().slice(0, 10);
       const toExpire = rows.filter(
         (r) =>
-          (r.status ?? "active") === "active" &&
+          (r.status ?? "inactive") === "active" &&
+          (r.approval_status ?? "pending") === "approved" &&
           r.end_date &&
           String(r.end_date) < today,
       );
@@ -235,25 +248,34 @@ function useContracts() {
   const invalidate = () => qc.invalidateQueries({ queryKey: QK });
 
   type Payload = Omit<ClientContract, "id">;
-  const toRow = (p: Payload) => ({
-    contract_code: p.contractCode,
-    unit_id: p.unitId,
-    start_date: p.startDate || null,
-    end_date: p.endDate || null,
-    description: p.description.trim(),
-    service_type_id: p.serviceTypeId,
-    payroll_window_id: p.payrollWindowId,
-    billing_type_id: p.billingTypeId,
-    gst_option: p.gstOption,
-    status: p.status,
-  });
+  const toRow = (p: Payload, opts: { isNew: boolean }) => {
+    const base: Record<string, unknown> = {
+      contract_code: p.contractCode,
+      unit_id: p.unitId,
+      start_date: p.startDate || null,
+      end_date: p.endDate || null,
+      description: p.description.trim(),
+      service_type_id: p.serviceTypeId,
+      payroll_window_id: p.payrollWindowId,
+      billing_type_id: p.billingTypeId,
+      gst_option: p.gstOption,
+    };
+    if (opts.isNew) {
+      // New contracts are always inactive + pending approval.
+      base.status = "inactive";
+      base.approval_status = "pending";
+    }
+    return base;
+  };
 
   const addMut = useMutation({
     mutationFn: async (p: Payload): Promise<string> => {
       if (!p.unitId) throw new Error("Unit is required");
+      const uidRes = await supabase.auth.getUser();
+      const insertRow = { ...toRow(p, { isNew: true }), created_by: uidRes.data.user?.id ?? null };
       const { data, error } = await supabase
         .from("client_contracts" as never)
-        .insert(toRow(p) as never)
+        .insert(insertRow as never)
         .select("id")
         .single();
       if (error) throw error;
@@ -272,7 +294,7 @@ function useContracts() {
         .eq("id", id)
         .single();
       const before = (beforeRes.data ?? null) as Record<string, unknown> | null;
-      const after = toRow(p);
+      const after = toRow(p, { isNew: false });
       const { error } = await supabase
         .from("client_contracts" as never)
         .update(after as never)
@@ -1816,6 +1838,9 @@ function ContractFormDialog({
                 billingTypeId: billingTypeId || null,
                 gstOption,
                 status,
+                approvalStatus: "pending",
+                rejectionReason: "",
+                createdBy: null,
               }, resources);
               setSaving(false);
               if (err) toast.error(err);
