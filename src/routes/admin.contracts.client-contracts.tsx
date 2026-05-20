@@ -1147,9 +1147,10 @@ function ClientContractsPage() {
   const stats = useMemo(() => {
     const scoped = items.filter((c) => c.recordType === tab);
     if (tab === "prospect") {
-      const s = { total: scoped.length, pending: 0, rejected: 0 };
+      const s = { total: scoped.length, pending: 0, rejected: 0, lost: 0 };
       for (const c of scoped) {
-        if (c.approvalStatus === "rejected") s.rejected++;
+        if (c.prospectStage === "lost") s.lost++;
+        else if (c.approvalStatus === "rejected") s.rejected++;
         else s.pending++;
       }
       return s;
