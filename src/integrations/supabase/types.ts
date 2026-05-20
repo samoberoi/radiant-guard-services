@@ -444,6 +444,7 @@ export type Database = {
           payroll_window_id: string | null
           promoted_at: string | null
           prospect_code: string | null
+          prospect_stage: string
           record_type: string
           rejected_at: string | null
           rejected_by: string | null
@@ -472,6 +473,7 @@ export type Database = {
           payroll_window_id?: string | null
           promoted_at?: string | null
           prospect_code?: string | null
+          prospect_stage?: string
           record_type?: string
           rejected_at?: string | null
           rejected_by?: string | null
@@ -500,6 +502,7 @@ export type Database = {
           payroll_window_id?: string | null
           promoted_at?: string | null
           prospect_code?: string | null
+          prospect_stage?: string
           record_type?: string
           rejected_at?: string | null
           rejected_by?: string | null
