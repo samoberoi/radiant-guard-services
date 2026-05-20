@@ -1148,6 +1148,24 @@ function ClientContractsPage() {
         crumbs={[{ label: "Contracts" }, { label: "Client Contracts" }]}
       />
 
+      <Tabs
+        value={tab}
+        onValueChange={(v) => {
+          setTab(v as RecordType);
+          setStatusFilter("all");
+        }}
+        className="mb-4"
+      >
+        <TabsList>
+          <TabsTrigger value="client">
+            Clients <span className="ml-1.5 text-xs text-muted-foreground">({tabCounts.clients})</span>
+          </TabsTrigger>
+          <TabsTrigger value="prospect">
+            Prospects <span className="ml-1.5 text-xs text-muted-foreground">({tabCounts.prospects})</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       <div className="mb-4 flex justify-end gap-2">
         <Button
           variant="outline"
