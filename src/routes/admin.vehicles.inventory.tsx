@@ -199,6 +199,7 @@ function VehicleInventoryPage() {
               downloadCsv(
                 "vehicles",
                 filtered.map((i) => ({
+                  vehicle_id: i.vehicle_id,
                   vehicle_number: i.vehicle_number,
                   name: i.name,
                   owner: i.owner,
