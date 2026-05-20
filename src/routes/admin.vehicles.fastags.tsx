@@ -89,29 +89,46 @@ function FastTagManagerPage() {
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: QK });
-  type Payload = Omit<FastTag, "id">;
-  const toRow = (p: Payload) => ({
-    vehicle_id: p.vehicle_id,
-    fastag_number: p.fastag_number.trim(),
-    bank_name: p.bank_name.trim(),
-    account_number: p.account_number.trim(),
-    balance: Number(p.balance) || 0,
-    issued_date: p.issued_date || null,
-    expiry_date: p.expiry_date || null,
-    status: p.status,
-    notes: p.notes.trim(),
-    enabled: p.enabled,
+        .select("id,vehicle_id,fastag_number,bank_name,account_number,balance,issued_date,expiry_date,status,notes,enabled,login_type,login_id,login_password,registered_email")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return ((data as unknown) as Record<string, unknown>[]).map(rowTo);
+    },
   });
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: QK });
+  type Payload = Omit<FastTag, "id">;
+  const toRow = (p: Payload) => {
+    const v = vMap.get(p.vehicle_id);
+    return {
+      vehicle_id: p.vehicle_id,
+      fastag_number: (v?.vehicle_number ?? p.fastag_number).trim(),
+      bank_name: p.bank_name.trim(),
+      account_number: p.account_number.trim(),
+      balance: Number(p.balance) || 0,
+      issued_date: p.issued_date || null,
+      expiry_date: p.expiry_date || null,
+      status: p.status,
+      notes: p.notes.trim(),
+      enabled: p.enabled,
+      login_type: p.login_type,
+      login_id: p.login_id.trim(),
+      login_password: p.login_password,
+      registered_email: p.registered_email.trim(),
+    };
+  };
 
   const addMut = useMutation({
     mutationFn: async (p: Payload) => {
       if (!p.vehicle_id) throw new Error("Vehicle is required");
-      const { error } = await supabase.from("vehicle_fastags" as never).insert(toRow(p) as never);
+      const row = toRow(p);
+      const { error } = await supabase.from("vehicle_fastags" as never).insert(row as never);
       if (error) throw error;
-      void logActivity({ module: MODULE, action: "create", entityType: ENTITY, entityLabel: p.fastag_number || vMap.get(p.vehicle_id)?.vehicle_number || "FastTag", details: p as Record<string, unknown> });
+      void logActivity({ module: MODULE, action: "create", entityType: ENTITY, entityLabel: row.fastag_number || "FastTag", details: row as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
+
   const updateMut = useMutation({
     mutationFn: async ({ id, p }: { id: string; p: Payload }) => {
       const { error } = await supabase.from("vehicle_fastags" as never).update(toRow(p) as never).eq("id", id);
