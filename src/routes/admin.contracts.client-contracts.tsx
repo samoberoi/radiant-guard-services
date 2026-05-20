@@ -1838,6 +1838,9 @@ function ContractFormDialog({
                 billingTypeId: billingTypeId || null,
                 gstOption,
                 status,
+                approvalStatus: "pending",
+                rejectionReason: "",
+                createdBy: null,
               }, resources);
               setSaving(false);
               if (err) toast.error(err);
