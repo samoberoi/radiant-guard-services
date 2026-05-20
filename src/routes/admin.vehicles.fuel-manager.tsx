@@ -239,7 +239,7 @@ function FuelManagerPage() {
           total={stats.totalSpend}
           entries={stats.entries}
           segments={[
-            { label: "Fuel Card", value: stats.byPayment["Fuel Card"] ?? 0, color: "hsl(265 70% 60%)" },
+            { label: "PetroCard", value: stats.byPayment["PetroCard"] ?? 0, color: "hsl(265 70% 60%)" },
             { label: "Cash",      value: stats.byPayment["Cash"] ?? 0,      color: "hsl(150 65% 45%)" },
             { label: "UPI",       value: stats.byPayment["UPI"] ?? 0,       color: "hsl(200 80% 55%)" },
             { label: "Other",     value: stats.byPayment["Other"] ?? 0,     color: "hsl(0 0% 60%)" },
