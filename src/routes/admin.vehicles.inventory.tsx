@@ -31,6 +31,10 @@ type Vehicle = {
   year: number | null;
   color: string;
   registration_date: string | null;
+  engine_number: string;
+  chassis_number: string;
+  fuel_type: string;
+  owner: string;
   notes: string;
   enabled: boolean;
 };
@@ -39,6 +43,7 @@ const QK = ["admin", "vehicles"] as const;
 const MODULE = "Vehicle Inventory";
 const ENTITY = "vehicles";
 const TYPES = ["Car", "SUV", "Sedan", "Hatchback", "Bike", "Scooter", "Truck", "Van", "Bus", "Tempo", "Auto", "Other"];
+const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid", "LPG"];
 
 function rowToItem(r: Record<string, unknown>): Vehicle {
   return {
@@ -51,6 +56,10 @@ function rowToItem(r: Record<string, unknown>): Vehicle {
     year: r.year == null ? null : Number(r.year),
     color: String(r.color ?? ""),
     registration_date: (r.registration_date as string) ?? null,
+    engine_number: String(r.engine_number ?? ""),
+    chassis_number: String(r.chassis_number ?? ""),
+    fuel_type: String(r.fuel_type ?? ""),
+    owner: String(r.owner ?? ""),
     notes: String(r.notes ?? ""),
     enabled: Boolean(r.enabled ?? true),
   };
@@ -63,7 +72,7 @@ function useVehicles() {
     queryFn: async (): Promise<Vehicle[]> => {
       const { data, error } = await supabase
         .from("vehicles" as never)
-        .select("id,vehicle_number,name,brand,make,type,year,color,registration_date,notes,enabled")
+        .select("id,vehicle_number,name,brand,make,type,year,color,registration_date,engine_number,chassis_number,fuel_type,owner,notes,enabled")
         .order("vehicle_number", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
@@ -81,6 +90,10 @@ function useVehicles() {
     year: p.year,
     color: p.color.trim(),
     registration_date: p.registration_date || null,
+    engine_number: p.engine_number.trim().toUpperCase(),
+    chassis_number: p.chassis_number.trim().toUpperCase(),
+    fuel_type: p.fuel_type.trim(),
+    owner: p.owner.trim(),
     notes: p.notes.trim(),
     enabled: p.enabled,
   });
@@ -142,7 +155,10 @@ function VehicleInventoryPage() {
         i.vehicle_number.toLowerCase().includes(q) ||
         i.name.toLowerCase().includes(q) ||
         i.brand.toLowerCase().includes(q) ||
-        i.make.toLowerCase().includes(q)
+        i.make.toLowerCase().includes(q) ||
+        i.engine_number.toLowerCase().includes(q) ||
+        i.chassis_number.toLowerCase().includes(q) ||
+        i.owner.toLowerCase().includes(q)
       );
     });
   }, [items, query, typeFilter]);
@@ -182,22 +198,30 @@ function VehicleInventoryPage() {
                 filtered.map((i) => ({
                   vehicle_number: i.vehicle_number,
                   name: i.name,
+                  owner: i.owner,
                   brand: i.brand,
                   make: i.make,
                   type: i.type,
+                  fuel_type: i.fuel_type,
                   year: i.year ?? "",
                   color: i.color,
+                  engine_number: i.engine_number,
+                  chassis_number: i.chassis_number,
                   registration_date: i.registration_date ?? "",
                   enabled: i.enabled ? "Yes" : "No",
                 })),
                 [
                   { key: "vehicle_number", header: "Vehicle Number" },
                   { key: "name", header: "Name" },
+                  { key: "owner", header: "Owner" },
                   { key: "brand", header: "Brand" },
                   { key: "make", header: "Make" },
                   { key: "type", header: "Type" },
+                  { key: "fuel_type", header: "Fuel Type" },
                   { key: "year", header: "Year" },
                   { key: "color", header: "Color" },
+                  { key: "engine_number", header: "Engine No." },
+                  { key: "chassis_number", header: "Chassis No." },
                   { key: "registration_date", header: "Registration Date" },
                   { key: "enabled", header: "Enabled" },
                 ],
@@ -222,10 +246,11 @@ function VehicleInventoryPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Vehicle No.</th>
-                <th className="px-5 py-3">Name</th>
+                <th className="px-5 py-3">Owner</th>
                 <th className="px-5 py-3">Brand / Make</th>
-                <th className="px-5 py-3">Type</th>
-                <th className="px-5 py-3">Year</th>
+                <th className="px-5 py-3">Type / Fuel</th>
+                <th className="px-5 py-3">Engine / Chassis</th>
+                <th className="px-5 py-3">Reg. Date</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
@@ -235,15 +260,21 @@ function VehicleInventoryPage() {
                 <tr key={i.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono font-semibold text-foreground">
                     <span className="inline-flex items-center gap-2"><Car className="h-4 w-4 text-muted-foreground" />{i.vehicle_number}</span>
+                    {i.name && <div className="mt-0.5 text-[11px] font-sans font-normal text-muted-foreground">{i.name}</div>}
                   </td>
-                  <td className="px-5 py-3 text-foreground/90">{i.name || "—"}</td>
-                  <td className="px-5 py-3 text-foreground/90">{[i.brand, i.make].filter(Boolean).join(" / ") || "—"}</td>
+                  <td className="px-5 py-3 text-foreground/90">{i.owner || "—"}</td>
+                  <td className="px-5 py-3 text-foreground/90">{[i.brand, i.make].filter(Boolean).join(" / ") || "—"}{i.year && <div className="text-[11px] text-muted-foreground">{i.year}</div>}</td>
                   <td className="px-5 py-3">
-                    {i.type ? (
-                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{i.type}</span>
-                    ) : "—"}
+                    <div className="flex flex-col gap-1">
+                      {i.type ? <span className="w-fit rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{i.type}</span> : "—"}
+                      {i.fuel_type && <span className="w-fit rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">{i.fuel_type}</span>}
+                    </div>
                   </td>
-                  <td className="px-5 py-3 text-foreground/90">{i.year ?? "—"}</td>
+                  <td className="px-5 py-3 font-mono text-[12px] text-foreground/80">
+                    <div>{i.engine_number || "—"}</div>
+                    <div className="text-muted-foreground">{i.chassis_number || "—"}</div>
+                  </td>
+                  <td className="px-5 py-3 text-foreground/90">{i.registration_date ?? "—"}</td>
                   <td className="px-5 py-3">
                     <Switch
                       checked={i.enabled}
@@ -264,7 +295,7 @@ function VehicleInventoryPage() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">No vehicles found.</td></tr>
+                <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground">No vehicles found.</td></tr>
               )}
             </tbody>
           </table>
@@ -326,12 +357,16 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
 }) {
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [name, setName] = useState("");
+  const [owner, setOwner] = useState("");
   const [brand, setBrand] = useState("");
   const [make, setMake] = useState("");
   const [type, setType] = useState("Car");
+  const [fuelType, setFuelType] = useState("Petrol");
   const [year, setYear] = useState<string>("");
   const [color, setColor] = useState("");
   const [registrationDate, setRegistrationDate] = useState("");
+  const [engineNumber, setEngineNumber] = useState("");
+  const [chassisNumber, setChassisNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -339,28 +374,33 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
   useResetOnOpen(open, () => {
     setVehicleNumber(initial?.vehicle_number ?? "");
     setName(initial?.name ?? "");
+    setOwner(initial?.owner ?? "");
     setBrand(initial?.brand ?? "");
     setMake(initial?.make ?? "");
     setType(initial?.type || "Car");
+    setFuelType(initial?.fuel_type || "Petrol");
     setYear(initial?.year != null ? String(initial.year) : "");
     setColor(initial?.color ?? "");
     setRegistrationDate(initial?.registration_date ?? "");
+    setEngineNumber(initial?.engine_number ?? "");
+    setChassisNumber(initial?.chassis_number ?? "");
     setNotes(initial?.notes ?? "");
     setEnabled(initial?.enabled ?? true);
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>Vehicle registration details.</DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-2 sm:grid-cols-2">
-          <div className="grid gap-2 sm:col-span-2">
+        <div className="grid gap-4 py-2 sm:grid-cols-2 max-h-[70vh] overflow-y-auto pr-1">
+          <div className="grid gap-2">
             <Label>Vehicle Number *</Label>
             <Input value={vehicleNumber} onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())} placeholder="e.g. KA01AB1234" />
           </div>
+          <div className="grid gap-2"><Label>Owner</Label><Input value={owner} onChange={(e) => setOwner(e.target.value)} placeholder="Owner name / company" /></div>
           <div className="grid gap-2"><Label>Name / Label</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Manager Car" /></div>
           <div className="grid gap-2">
             <Label>Type</Label>
@@ -369,10 +409,19 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
               <SelectContent>{TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select>
           </div>
+          <div className="grid gap-2">
+            <Label>Fuel Type</Label>
+            <Select value={fuelType} onValueChange={setFuelType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{FUEL_TYPES.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
           <div className="grid gap-2"><Label>Brand</Label><Input value={brand} onChange={(e) => setBrand(e.target.value)} placeholder="e.g. Maruti Suzuki" /></div>
           <div className="grid gap-2"><Label>Make / Model</Label><Input value={make} onChange={(e) => setMake(e.target.value)} placeholder="e.g. Swift VXi" /></div>
           <div className="grid gap-2"><Label>Year</Label><Input type="number" value={year} onChange={(e) => setYear(e.target.value)} placeholder="e.g. 2022" min={1980} max={2100} /></div>
           <div className="grid gap-2"><Label>Color</Label><Input value={color} onChange={(e) => setColor(e.target.value)} placeholder="e.g. White" /></div>
+          <div className="grid gap-2"><Label>Engine Number</Label><Input value={engineNumber} onChange={(e) => setEngineNumber(e.target.value.toUpperCase())} placeholder="Engine no." /></div>
+          <div className="grid gap-2"><Label>Chassis Number</Label><Input value={chassisNumber} onChange={(e) => setChassisNumber(e.target.value.toUpperCase())} placeholder="Chassis / VIN" /></div>
           <div className="grid gap-2 sm:col-span-2"><Label>Registration Date</Label><Input type="date" value={registrationDate} onChange={(e) => setRegistrationDate(e.target.value)} /></div>
           <div className="grid gap-2 sm:col-span-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 sm:col-span-2">
@@ -389,7 +438,10 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
               setSaving(true);
               const err = await onSubmit({
                 vehicle_number: vehicleNumber,
-                name, brand, make, type, color, notes, enabled,
+                name, owner, brand, make, type, color, notes, enabled,
+                fuel_type: fuelType,
+                engine_number: engineNumber,
+                chassis_number: chassisNumber,
                 year: year ? Number(year) : null,
                 registration_date: registrationDate || null,
               });

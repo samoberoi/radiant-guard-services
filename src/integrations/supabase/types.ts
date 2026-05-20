@@ -1875,13 +1875,17 @@ export type Database = {
       vehicles: {
         Row: {
           brand: string
+          chassis_number: string
           color: string
           created_at: string
           enabled: boolean
+          engine_number: string
+          fuel_type: string
           id: string
           make: string
           name: string
           notes: string
+          owner: string
           registration_date: string | null
           type: string
           updated_at: string
@@ -1890,13 +1894,17 @@ export type Database = {
         }
         Insert: {
           brand?: string
+          chassis_number?: string
           color?: string
           created_at?: string
           enabled?: boolean
+          engine_number?: string
+          fuel_type?: string
           id?: string
           make?: string
           name?: string
           notes?: string
+          owner?: string
           registration_date?: string | null
           type?: string
           updated_at?: string
@@ -1905,13 +1913,17 @@ export type Database = {
         }
         Update: {
           brand?: string
+          chassis_number?: string
           color?: string
           created_at?: string
           enabled?: boolean
+          engine_number?: string
+          fuel_type?: string
           id?: string
           make?: string
           name?: string
           notes?: string
+          owner?: string
           registration_date?: string | null
           type?: string
           updated_at?: string
