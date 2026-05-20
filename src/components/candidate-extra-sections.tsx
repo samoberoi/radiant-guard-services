@@ -299,58 +299,32 @@ export function KnowledgeSection({ form, set }: { form: any; set: SetField }) {
 
 export function CriminalSection({ form, set }: { form: any; set: SetField }) {
   const ch = form.criminal_history ?? { has_history: false, incidents: [] };
-  const incidents = Array.isArray(ch.incidents) ? ch.incidents : [];
+  const hasHistory = !!ch.has_history;
   return (
     <div>
-      <SectionHeader title="Criminal History" desc="Declarations and incidents" />
+      <SectionHeader title="Criminal History" desc="Declaration of past criminal record" />
       <div className="mb-4 flex items-center gap-3 rounded-md border p-3">
-        <Switch checked={!!ch.has_history} onCheckedChange={(v) => set("criminal_history", { ...ch, has_history: v })} />
+        <Switch
+          checked={hasHistory}
+          onCheckedChange={(v) => {
+            set("criminal_history", { ...ch, has_history: v, incidents: [] });
+            if (v) set("no_hire", true);
+          }}
+        />
         <div>
           <p className="text-sm font-medium">Candidate has criminal history</p>
-          <p className="text-xs text-muted-foreground">Toggle on to record incident details below</p>
+          <p className="text-xs text-muted-foreground">
+            If turned on, the candidate is automatically marked Do-Not-Hire and cannot be onboarded.
+          </p>
         </div>
       </div>
-      {ch.has_history && (
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-medium">Criminal History Records</h3>
-            <Button size="sm" variant="outline" onClick={() => set("criminal_history", { ...ch, incidents: [...incidents, emptyIncident()] })}>
-              <Plus className="mr-1 h-3 w-3" /> Add Criminal History
-            </Button>
-          </div>
-          {incidents.length === 0 ? (
-            <p className="rounded-md border border-dashed py-8 text-center text-xs text-muted-foreground">No records yet. Click Add to create one.</p>
-          ) : (
-            <div className="space-y-3">
-              {incidents.map((inc: any, i: number) => {
-                const update = (patch: any) => {
-                  const copy = [...incidents];
-                  copy[i] = { ...copy[i], ...patch };
-                  set("criminal_history", { ...ch, incidents: copy });
-                };
-                return (
-                  <div key={inc.id ?? i} className="rounded-md border p-3">
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <Field label="FIR No."><Input value={inc.fir_no ?? ""} onChange={(e) => update({ fir_no: e.target.value })} /></Field>
-                      <Field label="IPC Section"><Input value={inc.ipc_section ?? ""} onChange={(e) => update({ ipc_section: e.target.value })} /></Field>
-                      <Field label="Police Station"><Input value={inc.police_station ?? ""} onChange={(e) => update({ police_station: e.target.value })} /></Field>
-                      <Field label="Case No."><Input value={inc.case_no ?? ""} onChange={(e) => update({ case_no: e.target.value })} /></Field>
-                      <Field label="Name of Court"><Input value={inc.court ?? ""} onChange={(e) => update({ court: e.target.value })} /></Field>
-                      <Field label="Judgement Date"><Input type="date" value={inc.judgement_date ?? ""} onChange={(e) => update({ judgement_date: e.target.value })} /></Field>
-                    </div>
-                    <div className="mt-3">
-                      <Field label="Remarks"><Textarea rows={2} value={inc.remarks ?? ""} onChange={(e) => update({ remarks: e.target.value })} /></Field>
-                    </div>
-                    <div className="mt-2 text-right">
-                      <Button variant="ghost" size="sm" className="text-rose-500" onClick={() => set("criminal_history", { ...ch, incidents: incidents.filter((_: any, j: number) => j !== i) })}>
-                        <Trash2 className="mr-1 h-3 w-3" /> Remove
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+      {hasHistory && (
+        <div className="rounded-md border border-rose-300 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-200">
+          <p className="font-semibold">Marked as Do-Not-Hire</p>
+          <p className="mt-1 text-xs">
+            This candidate has declared a criminal history and will not be processed further.
+            Approval, onboarding and asset assignment are blocked.
+          </p>
         </div>
       )}
     </div>
@@ -379,18 +353,32 @@ function contactLabel(c: any) {
   return extra ? `${name} (${extra})` : name;
 }
 
+type NomineeEntry = { contact: string; percent: number };
+
+function normalizeSlot(v: any): NomineeEntry[] {
+  if (!v) return [];
+  if (typeof v === "string") return [{ contact: v, percent: 100 }];
+  if (Array.isArray(v)) {
+    return v
+      .filter((e) => e && typeof e === "object")
+      .map((e) => ({ contact: String(e.contact ?? ""), percent: Number(e.percent ?? 0) }));
+  }
+  return [];
+}
+
 export function NomineeSection({ form, setSection }: { form: any; setSection: SetSection }) {
   const compliance = form.compliance ?? {};
   const contacts: any[] = Array.isArray(form.contacts) ? form.contacts : [];
-  const nominees: Record<string, string> = compliance.nominees ?? {};
+  const rawNominees: Record<string, any> = compliance.nominees ?? {};
 
   const options = contacts
     .map((c, idx) => ({ key: contactKey(c, idx), label: contactLabel(c) }))
     .filter((o) => o.label && o.label !== "Unnamed contact" || true);
 
-  const setNominee = (slot: string, value: string) => {
-    const next = { ...(nominees ?? {}) };
-    if (!value) delete next[slot]; else next[slot] = value;
+  const setSlot = (slot: string, entries: NomineeEntry[]) => {
+    const next: Record<string, any> = { ...(rawNominees ?? {}) };
+    if (entries.length === 0) delete next[slot];
+    else next[slot] = entries;
     setSection("compliance", { nominees: next });
   };
 
@@ -412,8 +400,9 @@ export function NomineeSection({ form, setSection }: { form: any; setSection: Se
         <div className="space-y-3">
           {NOMINEE_SLOTS.map((s) => {
             const enabled = compliance[s.enabledKey] ?? s.defaultEnabled;
-            const value = nominees[s.key] ?? "";
-            const stale = value && !options.some((o) => o.key === value);
+            const entries = normalizeSlot(rawNominees[s.key]);
+            const total = entries.reduce((a, e) => a + (Number.isFinite(e.percent) ? e.percent : 0), 0);
+            const balanced = entries.length === 0 || total === 100;
             return (
               <div key={s.key} className="rounded-md border p-3">
                 <div className="mb-2 flex items-center justify-between gap-3">
@@ -424,26 +413,85 @@ export function NomineeSection({ form, setSection }: { form: any; setSection: Se
                     </span>
                   )}
                 </div>
-                <Select
-                  value={value || undefined}
-                  onValueChange={(v) => setNominee(s.key, v === "__none__" ? "" : v)}
-                  disabled={!enabled}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={enabled ? "Select a nominee from contacts" : "Enable in Compliance to assign"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">— No nominee —</SelectItem>
-                    {options.map((o) => (
-                      <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {stale && (
-                  <p className="mt-1.5 text-xs text-amber-600">
-                    Previously selected contact is no longer available. Please pick again.
-                  </p>
+                {entries.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No nominees assigned.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {entries.map((e, i) => {
+                      const stale = e.contact && !options.some((o) => o.key === e.contact);
+                      const update = (patch: Partial<NomineeEntry>) => {
+                        const copy = [...entries];
+                        copy[i] = { ...copy[i], ...patch };
+                        setSlot(s.key, copy);
+                      };
+                      return (
+                        <div key={i} className="flex flex-wrap items-center gap-2">
+                          <div className="min-w-[200px] flex-1">
+                            <Select
+                              value={e.contact || undefined}
+                              onValueChange={(v) => update({ contact: v })}
+                              disabled={!enabled}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select contact" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {options.map((o) => (
+                                  <SelectItem key={o.key} value={o.key}>{o.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {stale && (
+                              <p className="mt-1 text-[11px] text-amber-600">Contact no longer available.</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              className="w-20"
+                              value={e.percent}
+                              disabled={!enabled}
+                              onChange={(ev) => {
+                                const n = Math.max(0, Math.min(100, Number(ev.target.value) || 0));
+                                update({ percent: n });
+                              }}
+                            />
+                            <span className="text-xs text-muted-foreground">%</span>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-rose-500"
+                            disabled={!enabled}
+                            onClick={() => setSlot(s.key, entries.filter((_, j) => j !== i))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
+                <div className="mt-2 flex items-center justify-between">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={!enabled}
+                    onClick={() => {
+                      const remaining = Math.max(0, 100 - total);
+                      setSlot(s.key, [...entries, { contact: "", percent: remaining }]);
+                    }}
+                  >
+                    <Plus className="mr-1 h-3 w-3" /> Add nominee
+                  </Button>
+                  {entries.length > 0 && (
+                    <span className={`text-xs ${balanced ? "text-muted-foreground" : "text-rose-600 font-medium"}`}>
+                      Total: {total}%{balanced ? "" : " — must equal 100%"}
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })}

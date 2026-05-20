@@ -3567,6 +3567,8 @@ function CandidateWizard({
                         assets={assets}
                         value={form.assigned_asset_ids}
                         onChange={(ids) => setForm((f) => ({ ...f, assigned_asset_ids: ids }))}
+                        sizes={(form.other_info?.uniform_sizes ?? {}) as Record<string, string>}
+                        onSizesChange={(next) => setForm((f) => ({ ...f, other_info: { ...(f.other_info ?? {}), uniform_sizes: next } }))}
                       />
                     </Field>
                   </div>
@@ -4400,10 +4402,14 @@ function AssetMultiPicker({
   assets,
   value,
   onChange,
+  sizes,
+  onSizesChange,
 }: {
   assets: { id: string; name: string; category: string }[];
   value: string[];
   onChange: (ids: string[]) => void;
+  sizes?: Record<string, string>;
+  onSizesChange?: (next: Record<string, string>) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -4432,9 +4438,20 @@ function AssetMultiPicker({
   }, [filtered]);
 
   const toggle = (id: string) => {
-    if (selectedSet.has(id)) onChange(value.filter((v) => v !== id));
-    else onChange([...value, id]);
+    if (selectedSet.has(id)) {
+      onChange(value.filter((v) => v !== id));
+      if (sizes && onSizesChange && sizes[id] != null) {
+        const next = { ...sizes };
+        delete next[id];
+        onSizesChange(next);
+      }
+    } else onChange([...value, id]);
   };
+
+  const isUniform = (a: { category: string; name: string }) =>
+    /uniform/i.test(a.category ?? "") || /uniform/i.test(a.name ?? "");
+
+  const uniformSelected = selected.filter(isUniform);
 
   useEffect(() => {
     if (!open) {
@@ -4461,7 +4478,7 @@ function AssetMultiPicker({
               type="button"
               className="ml-1 rounded p-0.5 opacity-70 hover:bg-background/30 hover:opacity-100"
               title="Remove"
-              onClick={(e) => { e.preventDefault(); onChange(value.filter((v) => v !== a.id)); }}
+              onClick={(e) => { e.preventDefault(); toggle(a.id); }}
               onMouseDown={(e) => e.preventDefault()}
             >
               <X className="h-3 w-3" />
@@ -4469,6 +4486,27 @@ function AssetMultiPicker({
           </Badge>
         ))}
       </div>
+
+      {onSizesChange && uniformSelected.length > 0 && (
+        <div className="rounded-md border border-dashed border-primary/40 bg-primary/5 p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">
+            Uniform sizes
+          </p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {uniformSelected.map((a) => (
+              <div key={a.id} className="flex items-center gap-2">
+                <Label className="flex-1 text-xs">{a.name}</Label>
+                <Input
+                  className="h-8 w-28"
+                  placeholder="e.g. L, 40"
+                  value={(sizes ?? {})[a.id] ?? ""}
+                  onChange={(e) => onSizesChange({ ...(sizes ?? {}), [a.id]: e.target.value })}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Button
