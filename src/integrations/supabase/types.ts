@@ -1889,6 +1889,7 @@ export type Database = {
           registration_date: string | null
           type: string
           updated_at: string
+          vehicle_id: string
           vehicle_number: string
           year: number | null
         }
@@ -1908,6 +1909,7 @@ export type Database = {
           registration_date?: string | null
           type?: string
           updated_at?: string
+          vehicle_id?: string
           vehicle_number: string
           year?: number | null
         }
@@ -1927,6 +1929,7 @@ export type Database = {
           registration_date?: string | null
           type?: string
           updated_at?: string
+          vehicle_id?: string
           vehicle_number?: string
           year?: number | null
         }

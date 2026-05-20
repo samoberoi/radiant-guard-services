@@ -23,6 +23,7 @@ export const Route = createFileRoute("/admin/vehicles/inventory")({
 
 type Vehicle = {
   id: string;
+  vehicle_id: string;
   vehicle_number: string;
   name: string;
   brand: string;
@@ -48,6 +49,7 @@ const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid", "LPG"];
 function rowToItem(r: Record<string, unknown>): Vehicle {
   return {
     id: String(r.id),
+    vehicle_id: String(r.vehicle_id ?? ""),
     vehicle_number: String(r.vehicle_number ?? ""),
     name: String(r.name ?? ""),
     brand: String(r.brand ?? ""),
@@ -72,15 +74,15 @@ function useVehicles() {
     queryFn: async (): Promise<Vehicle[]> => {
       const { data, error } = await supabase
         .from("vehicles" as never)
-        .select("id,vehicle_number,name,brand,make,type,year,color,registration_date,engine_number,chassis_number,fuel_type,owner,notes,enabled")
-        .order("vehicle_number", { ascending: true });
+        .select("id,vehicle_id,vehicle_number,name,brand,make,type,year,color,registration_date,engine_number,chassis_number,fuel_type,owner,notes,enabled")
+        .order("vehicle_id", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
     },
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: QK });
-  type Payload = Omit<Vehicle, "id">;
+  type Payload = Omit<Vehicle, "id" | "vehicle_id">;
   const toRow = (p: Payload) => ({
     vehicle_number: p.vehicle_number.trim().toUpperCase(),
     name: p.name.trim(),
@@ -152,6 +154,7 @@ function VehicleInventoryPage() {
       if (typeFilter !== "all" && i.type !== typeFilter) return false;
       if (!q) return true;
       return (
+        i.vehicle_id.toLowerCase().includes(q) ||
         i.vehicle_number.toLowerCase().includes(q) ||
         i.name.toLowerCase().includes(q) ||
         i.brand.toLowerCase().includes(q) ||
@@ -196,6 +199,7 @@ function VehicleInventoryPage() {
               downloadCsv(
                 "vehicles",
                 filtered.map((i) => ({
+                  vehicle_id: i.vehicle_id,
                   vehicle_number: i.vehicle_number,
                   name: i.name,
                   owner: i.owner,
@@ -211,6 +215,7 @@ function VehicleInventoryPage() {
                   enabled: i.enabled ? "Yes" : "No",
                 })),
                 [
+                  { key: "vehicle_id", header: "Vehicle ID" },
                   { key: "vehicle_number", header: "Vehicle Number" },
                   { key: "name", header: "Name" },
                   { key: "owner", header: "Owner" },
@@ -245,11 +250,13 @@ function VehicleInventoryPage() {
           <table className="w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
+                <th className="px-5 py-3">Vehicle ID</th>
                 <th className="px-5 py-3">Vehicle No.</th>
                 <th className="px-5 py-3">Owner</th>
                 <th className="px-5 py-3">Brand / Make</th>
                 <th className="px-5 py-3">Type / Fuel</th>
-                <th className="px-5 py-3">Engine / Chassis</th>
+                <th className="px-5 py-3">Engine No.</th>
+                <th className="px-5 py-3">Chassis No.</th>
                 <th className="px-5 py-3">Reg. Date</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
@@ -258,6 +265,7 @@ function VehicleInventoryPage() {
             <tbody className="divide-y divide-border">
               {filtered.map((i) => (
                 <tr key={i.id} className="hover:bg-secondary/30">
+                  <td className="px-5 py-3 font-mono text-[12px] font-semibold text-accent">{i.vehicle_id || "—"}</td>
                   <td className="px-5 py-3 font-mono font-semibold text-foreground">
                     <span className="inline-flex items-center gap-2"><Car className="h-4 w-4 text-muted-foreground" />{i.vehicle_number}</span>
                     {i.name && <div className="mt-0.5 text-[11px] font-sans font-normal text-muted-foreground">{i.name}</div>}
@@ -270,10 +278,8 @@ function VehicleInventoryPage() {
                       {i.fuel_type && <span className="w-fit rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">{i.fuel_type}</span>}
                     </div>
                   </td>
-                  <td className="px-5 py-3 font-mono text-[12px] text-foreground/80">
-                    <div>{i.engine_number || "—"}</div>
-                    <div className="text-muted-foreground">{i.chassis_number || "—"}</div>
-                  </td>
+                  <td className="px-5 py-3 font-mono text-[12px] text-foreground/80">{i.engine_number || "—"}</td>
+                  <td className="px-5 py-3 font-mono text-[12px] text-foreground/80">{i.chassis_number || "—"}</td>
                   <td className="px-5 py-3 text-foreground/90">{i.registration_date ?? "—"}</td>
                   <td className="px-5 py-3">
                     <Switch
@@ -295,7 +301,7 @@ function VehicleInventoryPage() {
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground">No vehicles found.</td></tr>
+                <tr><td colSpan={10} className="px-5 py-12 text-center text-sm text-muted-foreground">No vehicles found.</td></tr>
               )}
             </tbody>
           </table>
@@ -353,7 +359,7 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
   onOpenChange: (o: boolean) => void;
   title: string;
   initial?: Vehicle | null;
-  onSubmit: (p: Omit<Vehicle, "id">) => Promise<string | null>;
+  onSubmit: (p: Omit<Vehicle, "id" | "vehicle_id">) => Promise<string | null>;
 }) {
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [name, setName] = useState("");
