@@ -48,10 +48,7 @@ function ServiceManagerPage() {
         )
       : list;
     return filtered.map((v) => {
-      const currentKm = dummyCurrentKm(v.vehicle_number);
-      const dueKm = nextServiceDueKm(currentKm);
-      const kmToService = dueKm - currentKm;
-      const dueSoon = kmToService <= ADVANCE_ALERT_KM;
+      const { currentKm, dueKm, kmToService, dueSoon } = serviceStatusFor(v.vehicle_number);
       return { v, currentKm, dueKm, kmToService, dueSoon };
     });
   }, [data, search]);
