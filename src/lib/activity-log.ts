@@ -152,6 +152,20 @@ export async function logActivity(p: LogParams): Promise<void> {
     } as never);
     // Kick off IP resolution for next call if missing
     if (!cachedIp) void getClientIp();
+    // Auto-broadcast a notification to admins for meaningful actions.
+    if ((p.status ?? "success") === "success" && !SILENT_ACTIONS.has(p.action.toLowerCase())) {
+      const link = MODULE_LINKS[p.module] ?? "";
+      const label = p.entityLabel || p.entityType || "record";
+      const actionTitle = titleCase(p.action);
+      void notifyAdmins({
+        type: `${p.module}:${p.action}`.toLowerCase().replace(/\s+/g, "_"),
+        title: `${p.module} — ${actionTitle}`,
+        message: `${actionTitle} ${label}${phone ? ` by ${phone}` : ""}`,
+        link,
+        entityType: p.entityType ?? "",
+        entityId: p.entityId ?? "",
+      }).catch((err) => console.warn("notifyAdmins (auto) failed", err));
+    }
   } catch (e) {
     // Logging must never break flows
     // eslint-disable-next-line no-console
