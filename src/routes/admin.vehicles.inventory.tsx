@@ -31,6 +31,10 @@ type Vehicle = {
   year: number | null;
   color: string;
   registration_date: string | null;
+  engine_number: string;
+  chassis_number: string;
+  fuel_type: string;
+  owner: string;
   notes: string;
   enabled: boolean;
 };
@@ -39,6 +43,7 @@ const QK = ["admin", "vehicles"] as const;
 const MODULE = "Vehicle Inventory";
 const ENTITY = "vehicles";
 const TYPES = ["Car", "SUV", "Sedan", "Hatchback", "Bike", "Scooter", "Truck", "Van", "Bus", "Tempo", "Auto", "Other"];
+const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid", "LPG"];
 
 function rowToItem(r: Record<string, unknown>): Vehicle {
   return {
@@ -51,6 +56,10 @@ function rowToItem(r: Record<string, unknown>): Vehicle {
     year: r.year == null ? null : Number(r.year),
     color: String(r.color ?? ""),
     registration_date: (r.registration_date as string) ?? null,
+    engine_number: String(r.engine_number ?? ""),
+    chassis_number: String(r.chassis_number ?? ""),
+    fuel_type: String(r.fuel_type ?? ""),
+    owner: String(r.owner ?? ""),
     notes: String(r.notes ?? ""),
     enabled: Boolean(r.enabled ?? true),
   };
@@ -63,7 +72,7 @@ function useVehicles() {
     queryFn: async (): Promise<Vehicle[]> => {
       const { data, error } = await supabase
         .from("vehicles" as never)
-        .select("id,vehicle_number,name,brand,make,type,year,color,registration_date,notes,enabled")
+        .select("id,vehicle_number,name,brand,make,type,year,color,registration_date,engine_number,chassis_number,fuel_type,owner,notes,enabled")
         .order("vehicle_number", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
@@ -81,6 +90,10 @@ function useVehicles() {
     year: p.year,
     color: p.color.trim(),
     registration_date: p.registration_date || null,
+    engine_number: p.engine_number.trim().toUpperCase(),
+    chassis_number: p.chassis_number.trim().toUpperCase(),
+    fuel_type: p.fuel_type.trim(),
+    owner: p.owner.trim(),
     notes: p.notes.trim(),
     enabled: p.enabled,
   });
