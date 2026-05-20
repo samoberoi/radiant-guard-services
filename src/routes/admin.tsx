@@ -76,6 +76,8 @@ function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [customersOpen, setCustomersOpen] = useState(true);
   const [contractsOpen, setContractsOpen] = useState(true);
+  const [vehiclesOpen, setVehiclesOpen] = useState(true);
+  
   
 
   // Auth guard — wait for hydration; if no token in storage, kick to login.
