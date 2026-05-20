@@ -1398,23 +1398,54 @@ function ClientContractsPage() {
                   <td className="px-5 py-3">
                     {tab === "client" ? (
                       <StatusBadge status={c.status} />
-                    ) : (
+                    ) : c.approvalStatus === "rejected" || c.approvalStatus === "approved" ? (
                       <ApprovalBadge status={c.approvalStatus} />
+                    ) : (
+                      <Select
+                        value={c.prospectStage}
+                        onValueChange={(v) =>
+                          updateStageMut.mutate({
+                            id: c.id,
+                            stage: v as ProspectStage,
+                            label: c.prospectCode,
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-8 w-[160px] rounded-full border-accent/30 bg-accent/10 text-[11px] font-semibold uppercase tracking-wider text-accent">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PROSPECT_STAGES.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>
+                              {s.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
                       {tab === "prospect" && c.approvalStatus === "pending" && (
                         <>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 px-2 text-accent hover:bg-accent/10"
-                            onClick={() => setApprovalTarget({ contract: c, mode: "approve" })}
-                            title="Approve & sign"
-                          >
-                            <CheckCircle2 className="mr-1 h-4 w-4" /> Approve
-                          </Button>
+                          {c.prospectStage === "completed" ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-accent hover:bg-accent/10"
+                              onClick={() => setApprovalTarget({ contract: c, mode: "approve" })}
+                              title="Approve & sign — promote to client"
+                            >
+                              <CheckCircle2 className="mr-1 h-4 w-4" /> Approve
+                            </Button>
+                          ) : (
+                            <span
+                              className="hidden items-center px-2 text-[11px] text-muted-foreground sm:inline-flex"
+                              title={`Complete ${PROSPECT_STAGE_LABEL[c.prospectStage]} stage to enable approval`}
+                            >
+                              → {PROSPECT_STAGE_LABEL[c.prospectStage]}
+                            </span>
+                          )}
                           <Button
                             size="sm"
                             variant="ghost"
