@@ -215,6 +215,7 @@ function InsuranceManagerPage() {
                       <div>{i.engine_number || "—"}</div>
                       <div>{i.chassis_number || "—"}</div>
                     </td>
+                    <td className="px-5 py-3 text-foreground/90">{i.start_date ?? "—"}</td>
                     <td className="px-5 py-3">
                       <span className={expired ? "rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-semibold text-destructive" : "text-foreground/90"}>
                         {i.end_date ?? "—"}{expired ? " · Expired" : ""}
