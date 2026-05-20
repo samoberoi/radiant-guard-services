@@ -195,7 +195,6 @@ function InsuranceManagerPage() {
                 <th className="px-5 py-3">Vehicle</th>
                 <th className="px-5 py-3">Insurer</th>
                 <th className="px-5 py-3">Policy No.</th>
-                <th className="px-5 py-3">Engine / Chassis</th>
                 <th className="px-5 py-3">Valid From</th>
                 <th className="px-5 py-3">Valid Till</th>
                 <th className="px-5 py-3">Enabled</th>
@@ -208,17 +207,13 @@ function InsuranceManagerPage() {
                 const expired = i.end_date && i.end_date < today;
                 return (
                   <tr key={i.id} className="hover:bg-secondary/30">
-                    <td className="px-5 py-3 font-mono font-semibold text-foreground">{v ? vehicleLabel(v) : "—"}</td>
+                    <td className="px-5 py-3 font-mono font-semibold text-foreground">{v?.vehicle_number || "—"}</td>
                     <td className="px-5 py-3 text-foreground/90">{i.insurance_company || "—"}</td>
                     <td className="px-5 py-3 font-mono text-foreground/90">{i.policy_number || "—"}</td>
-                    <td className="px-5 py-3 font-mono text-xs text-muted-foreground">
-                      <div>{i.engine_number || "—"}</div>
-                      <div>{i.chassis_number || "—"}</div>
-                    </td>
-                    <td className="px-5 py-3 text-foreground/90">{i.start_date ?? "—"}</td>
+                    <td className="px-5 py-3 text-foreground/90">{fmtDate(i.start_date)}</td>
                     <td className="px-5 py-3">
                       <span className={expired ? "rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-semibold text-destructive" : "text-foreground/90"}>
-                        {i.end_date ?? "—"}{expired ? " · Expired" : ""}
+                        {fmtDate(i.end_date)}{expired ? " · Expired" : ""}
                       </span>
                     </td>
                     <td className="px-5 py-3">
@@ -238,7 +233,7 @@ function InsuranceManagerPage() {
                 );
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground">No insurance records found.</td></tr>
+                <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">No insurance records found.</td></tr>
               )}
             </tbody>
           </table>
