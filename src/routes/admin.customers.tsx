@@ -444,7 +444,7 @@ function HierarchyTreeDialog({
   units: Unit[];
   customerById: Map<string, Customer>;
 }) {
-  const [mode, setMode] = useState<"state" | "org">("state");
+  const [mode, setMode] = useState<"state" | "org">("org");
 
   const tree = useMemo(() => {
     const branchUnits = new Map<string, Unit[]>();
@@ -515,18 +515,6 @@ function HierarchyTreeDialog({
         <div className="inline-flex w-fit rounded-lg border border-border bg-secondary/40 p-1 text-xs font-semibold">
           <button
             type="button"
-            onClick={() => setMode("state")}
-            className={cn(
-              "rounded-md px-3 py-1.5 transition-colors",
-              mode === "state"
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            State → Branch → Unit
-          </button>
-          <button
-            type="button"
             onClick={() => setMode("org")}
             className={cn(
               "rounded-md px-3 py-1.5 transition-colors",
@@ -536,6 +524,18 @@ function HierarchyTreeDialog({
             )}
           >
             Organization → Unit
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode("state")}
+            className={cn(
+              "rounded-md px-3 py-1.5 transition-colors",
+              mode === "state"
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            State → Branch → Unit
           </button>
         </div>
 
