@@ -1850,6 +1850,8 @@ function ContractFormDialog({
               setSaving(true);
               const err = await onSubmit({
                 contractCode,
+                prospectCode,
+                recordType: editing?.recordType ?? "prospect",
                 unitId,
                 startDate,
                 endDate,
@@ -1858,10 +1860,11 @@ function ContractFormDialog({
                 payrollWindowId: payrollWindowId || null,
                 billingTypeId: billingTypeId || null,
                 gstOption,
-                status,
-                approvalStatus: "pending",
-                rejectionReason: "",
-                createdBy: null,
+                status: editing?.status ?? "inactive",
+                approvalStatus: editing?.approvalStatus ?? "pending",
+                rejectionReason: editing?.rejectionReason ?? "",
+                createdBy: editing?.createdBy ?? null,
+                promotedAt: editing?.promotedAt ?? null,
               }, resources);
               setSaving(false);
               if (err) toast.error(err);
