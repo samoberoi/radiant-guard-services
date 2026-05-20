@@ -22,7 +22,7 @@ export function NotificationBell() {
   const { data: items = [] } = useQuery({
     queryKey: NQK,
     queryFn: listMyNotifications,
-    refetchInterval: 30_000,
+    refetchInterval: 10_000,
   });
   const unread = items.filter((n) => !n.readAt).length;
   const top = items.slice(0, 8);
