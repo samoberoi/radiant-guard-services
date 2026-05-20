@@ -196,6 +196,7 @@ function InsuranceManagerPage() {
                 <th className="px-5 py-3">Insurer</th>
                 <th className="px-5 py-3">Policy No.</th>
                 <th className="px-5 py-3">Engine / Chassis</th>
+                <th className="px-5 py-3">Valid From</th>
                 <th className="px-5 py-3">Valid Till</th>
                 <th className="px-5 py-3">Enabled</th>
                 <th className="px-5 py-3 text-right">Actions</th>
