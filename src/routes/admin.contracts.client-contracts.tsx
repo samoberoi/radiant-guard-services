@@ -1052,6 +1052,11 @@ function ClientContractsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ClientContract | null>(null);
   const [deleting, setDeleting] = useState<ClientContract | null>(null);
+  const [tab, setTab] = useState<RecordType>("client");
+  const [approvalTarget, setApprovalTarget] = useState<{
+    contract: ClientContract;
+    mode: ApprovalMode;
+  } | null>(null);
 
   const enriched = useMemo(() => {
     return items.map((c) => {
