@@ -54,9 +54,10 @@ function VehiclesDashboard() {
     },
   });
   const fuelQ = useQuery({
-    queryKey: ["dashboard", "fuel-entries-30d"],
+    queryKey: ["dashboard", "fuel-entries-mtd"],
     queryFn: async () => {
-      const since = new Date(); since.setDate(since.getDate() - 30);
+      const now = new Date();
+      const since = new Date(now.getFullYear(), now.getMonth(), 1);
       const sinceIso = since.toISOString().slice(0, 10);
       const { data, error } = await supabase
         .from("vehicle_fuel_entries" as never)
