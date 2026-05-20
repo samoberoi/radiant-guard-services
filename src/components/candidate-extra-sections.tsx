@@ -353,18 +353,32 @@ function contactLabel(c: any) {
   return extra ? `${name} (${extra})` : name;
 }
 
+type NomineeEntry = { contact: string; percent: number };
+
+function normalizeSlot(v: any): NomineeEntry[] {
+  if (!v) return [];
+  if (typeof v === "string") return [{ contact: v, percent: 100 }];
+  if (Array.isArray(v)) {
+    return v
+      .filter((e) => e && typeof e === "object")
+      .map((e) => ({ contact: String(e.contact ?? ""), percent: Number(e.percent ?? 0) }));
+  }
+  return [];
+}
+
 export function NomineeSection({ form, setSection }: { form: any; setSection: SetSection }) {
   const compliance = form.compliance ?? {};
   const contacts: any[] = Array.isArray(form.contacts) ? form.contacts : [];
-  const nominees: Record<string, string> = compliance.nominees ?? {};
+  const rawNominees: Record<string, any> = compliance.nominees ?? {};
 
   const options = contacts
     .map((c, idx) => ({ key: contactKey(c, idx), label: contactLabel(c) }))
     .filter((o) => o.label && o.label !== "Unnamed contact" || true);
 
-  const setNominee = (slot: string, value: string) => {
-    const next = { ...(nominees ?? {}) };
-    if (!value) delete next[slot]; else next[slot] = value;
+  const setSlot = (slot: string, entries: NomineeEntry[]) => {
+    const next: Record<string, any> = { ...(rawNominees ?? {}) };
+    if (entries.length === 0) delete next[slot];
+    else next[slot] = entries;
     setSection("compliance", { nominees: next });
   };
 
