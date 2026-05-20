@@ -324,7 +324,7 @@ function useContracts() {
         action: "update",
         entityType: "client_contracts",
         entityId: id,
-        entityLabel: p.contractCode,
+        entityLabel: p.contractCode || p.prospectCode,
         before,
         after: after as unknown as Record<string, unknown>,
       });
