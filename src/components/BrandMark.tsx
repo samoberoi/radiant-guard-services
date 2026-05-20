@@ -1,11 +1,13 @@
-import { ShieldCheck } from "lucide-react";
+import logo from "@/assets/radiant-logo.png";
 
 export function BrandMark({ className = "" }: { className?: string }) {
   return (
     <div className={`flex items-center gap-3 ${className}`}>
-      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-md">
-        <ShieldCheck className="h-5 w-5 text-accent" strokeWidth={2.4} />
-      </div>
+      <img
+        src={logo}
+        alt="Radiant Guard Services Pvt. Ltd."
+        className="h-10 w-10 shrink-0 object-contain"
+      />
       <div className="leading-tight">
         <div className="font-display text-base font-bold tracking-tight text-foreground">
           Radiant Guard
