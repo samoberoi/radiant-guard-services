@@ -185,7 +185,7 @@ function VehiclesDashboard() {
         <StatCard
           label="Fuel Spend (30d)"
           value={Math.round(fuelSpend.total)}
-          prefix="₹"
+          valuePrefix="₹"
           icon={Fuel}
           accent="accent"
           subtle={`${fuelSpend.count} top-ups`}
