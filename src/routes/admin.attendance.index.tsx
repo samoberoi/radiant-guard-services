@@ -80,9 +80,9 @@ function AttendanceUnitsPage() {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader
-        icon={ClipboardList}
         title="Attendance"
         description="Pick a unit to open its monthly muster roll (Form XVI)."
+        crumbs={[{ label: "Attendance" }]}
       />
 
       <div className="relative max-w-md">
