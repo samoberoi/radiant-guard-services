@@ -112,12 +112,22 @@ function VehiclesDashboard() {
 
       {/* Top stat cards — clickable, deep-link into managers with filter */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Top stat cards — clickable, deep-link into managers with filter */}
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
           label="Total Vehicles"
           value={totalVehicles}
           icon={Car}
           accent="accent"
           to="/admin/vehicles/inventory"
+        />
+        <StatCard
+          label="Service Due Soon"
+          value={serviceDueSoon}
+          icon={Wrench}
+          accent="warning"
+          subtle="Within 2,500 km of next service"
+          to="/admin/vehicles/service-manager"
         />
         <StatCard
           label="Insurance Expired"
