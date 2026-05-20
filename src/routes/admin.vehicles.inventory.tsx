@@ -355,7 +355,7 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
   onOpenChange: (o: boolean) => void;
   title: string;
   initial?: Vehicle | null;
-  onSubmit: (p: Omit<Vehicle, "id">) => Promise<string | null>;
+  onSubmit: (p: Omit<Vehicle, "id" | "vehicle_id">) => Promise<string | null>;
 }) {
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [name, setName] = useState("");
