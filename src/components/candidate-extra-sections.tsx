@@ -688,6 +688,7 @@ export function IdentificationSection({ form, set, setSection }: { form: any; se
         </div>
         {weapon.has_weapon && (
           <div className="grid grid-cols-1 gap-3 rounded-md border p-3 md:grid-cols-3">
+            <Field label="UAN Number"><Input value={weapon.uan ?? ""} placeholder="Unique Arms Number" onChange={(e) => setSection("other_info", { weapon_license: { ...weapon, uan: e.target.value } })} /></Field>
             <Field label="License Number"><Input value={weapon.number ?? ""} onChange={(e) => setSection("other_info", { weapon_license: { ...weapon, number: e.target.value } })} /></Field>
             <Field label="Valid Until"><Input type="date" value={weapon.valid_until ?? ""} onChange={(e) => setSection("other_info", { weapon_license: { ...weapon, valid_until: e.target.value } })} /></Field>
             <Field label="Valid Area"><Input placeholder="e.g. Delhi NCR" value={weapon.valid_area ?? ""} onChange={(e) => setSection("other_info", { weapon_license: { ...weapon, valid_area: e.target.value } })} /></Field>
