@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Car, CheckCircle2, Fuel, Radio, ShieldAlert, ShieldCheck, Wind, Wrench } from "lucide-react";
+import { Car, CheckCircle2, Fuel, ShieldAlert, ShieldCheck, Wind } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtDate } from "@/lib/vehicle-helpers";
@@ -11,13 +11,6 @@ export const Route = createFileRoute("/admin/vehicles")({
   component: VehiclesLayout,
 });
 
-const tiles = [
-  { to: "/admin/vehicles/inventory", label: "Vehicle Inventory", icon: Car },
-  { to: "/admin/vehicles/fastags", label: "FastTag Manager", icon: Radio },
-  { to: "/admin/vehicles/insurances", label: "Insurance Manager", icon: ShieldCheck },
-  { to: "/admin/vehicles/pucs", label: "PUC Manager", icon: Wind },
-  { to: "/admin/vehicles/service-manager", label: "Service Manager", icon: Wrench },
-] as const;
 
 function VehiclesLayout() {
   const location = useLocation();
