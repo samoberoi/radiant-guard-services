@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Fuel, MapPin, Plus, Trash2, Upload, Image as ImageIcon, X } from "lucide-react";
+import { Download, Fuel, MapPin, Plus, Trash2, Upload, Image as ImageIcon, X, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -15,6 +15,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
 import { cn } from "@/lib/utils";
 
@@ -321,6 +323,14 @@ function FuelManagerPage() {
         open={open}
         onOpenChange={setOpen}
         vehicles={vehicles}
+        lastOdoByVehicle={useMemo(() => {
+          const m = new Map<string, number>();
+          for (const e of entries) {
+            const prev = m.get(e.vehicle_id);
+            if (prev == null || (e.odometer_km ?? 0) > prev) m.set(e.vehicle_id, e.odometer_km ?? 0);
+          }
+          return m;
+        }, [entries])}
         onSaved={() => qc.invalidateQueries({ queryKey: QK })}
       />
     </div>
@@ -347,11 +357,12 @@ function ProofThumb({ url, label }: { url: string; label: string }) {
 type Vehicle = { id: string; vehicle_number: string; name: string };
 
 function AddEntryDialog({
-  open, onOpenChange, vehicles, onSaved,
+  open, onOpenChange, vehicles, lastOdoByVehicle, onSaved,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   vehicles: Vehicle[];
+  lastOdoByVehicle: Map<string, number>;
   onSaved: () => void;
 }) {
   const [vehicleId, setVehicleId] = useState("");
@@ -370,6 +381,19 @@ function AddEntryDialog({
   const [pumpFile, setPumpFile] = useState<File | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [vehOpen, setVehOpen] = useState(false);
+
+  const minOdo = vehicleId ? (lastOdoByVehicle.get(vehicleId) ?? 0) : 0;
+  const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
+
+  function pickVehicle(id: string) {
+    setVehicleId(id);
+    setVehOpen(false);
+    const last = lastOdoByVehicle.get(id) ?? 0;
+    // Prefill odometer with last reading so user types upwards from there
+    if (last > 0) setOdometer(String(last));
+    else setOdometer("");
+  }
 
   // Auto-amount when qty + rate set
   function recalcAmount(q: string, r: string) {
@@ -410,6 +434,10 @@ function AddEntryDialog({
   async function handleSave() {
     if (!vehicleId) { toast.error("Select a vehicle"); return; }
     if (!odometer) { toast.error("Enter odometer reading"); return; }
+    if (minOdo > 0 && Number(odometer) < minOdo) {
+      toast.error(`Odometer must be at least ${minOdo.toLocaleString()} km (last recorded reading)`);
+      return;
+    }
     if (!amount) { toast.error("Enter amount"); return; }
     if (!odoFile || !pumpFile || !receiptFile) { toast.error("Upload all 3 proof photos (odometer, pump, receipt)"); return; }
     setBusy(true);
@@ -472,14 +500,39 @@ function AddEntryDialog({
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label>Vehicle *</Label>
-              <Select value={vehicleId} onValueChange={setVehicleId}>
-                <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
-                <SelectContent>
-                  {vehicles.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>{v.vehicle_number}{v.name ? ` — ${v.name}` : ""}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={vehOpen} onOpenChange={setVehOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between font-normal"
+                  >
+                    {selectedVehicle ? selectedVehicle.vehicle_number : <span className="text-muted-foreground">Select vehicle</span>}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search vehicle number…" />
+                    <CommandList>
+                      <CommandEmpty>No vehicle found.</CommandEmpty>
+                      <CommandGroup>
+                        {vehicles.map((v) => (
+                          <CommandItem
+                            key={v.id}
+                            value={v.vehicle_number}
+                            onSelect={() => pickVehicle(v.id)}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", vehicleId === v.id ? "opacity-100" : "opacity-0")} />
+                            {v.vehicle_number}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             <div>
               <Label>Fuel Type</Label>
@@ -500,7 +553,19 @@ function AddEntryDialog({
             </div>
             <div>
               <Label>Odometer (km) *</Label>
-              <Input type="number" inputMode="numeric" value={odometer} onChange={(e) => setOdometer(e.target.value)} placeholder="e.g. 43250" />
+              <Input
+                type="number"
+                inputMode="numeric"
+                min={minOdo || undefined}
+                value={odometer}
+                onChange={(e) => setOdometer(e.target.value)}
+                placeholder={minOdo > 0 ? `≥ ${minOdo.toLocaleString()}` : "e.g. 43250"}
+              />
+              {minOdo > 0 && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Last recorded: {minOdo.toLocaleString()} km — new reading must be equal or higher.
+                </p>
+              )}
             </div>
             <div>
               <Label>Payment Mode</Label>
