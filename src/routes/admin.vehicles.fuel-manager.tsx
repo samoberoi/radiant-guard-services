@@ -165,36 +165,8 @@ function FuelManagerPage() {
         crumbs={[{ label: "Vehicles", to: "/admin/vehicles" }, { label: "Fuel Manager" }]}
       />
 
-      {/* Payment mode breakdown chips */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Payment mix</span>
-        {(["Fuel Card", "Cash", "UPI", "Other"] as const).map((pm) => {
-          const v = stats.byPayment[pm] ?? 0;
-          const pct = stats.totalSpend > 0 ? Math.round((v / stats.totalSpend) * 100) : 0;
-          return (
-            <div key={pm} className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs">
-              <span className="font-medium">{pm}</span>
-              <span className="tabular-nums text-muted-foreground">{inr(v)}</span>
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums">{pct}%</span>
-            </div>
-          );
-        })}
-        <div className="ml-auto rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs">
-          <span className="font-medium text-accent">Total Spend</span>
-          <span className="ml-2 tabular-nums font-semibold">{inr(stats.totalSpend)}</span>
-          <span className="ml-2 text-muted-foreground">· {stats.entries} entries</span>
-        </div>
-      </div>
-
-      {/* Fuel-type circular meters */}
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <FuelMeter label="Petrol" amount={stats.byFuel.Petrol} total={stats.totalSpend} color="hsl(35 92% 55%)" />
-        <FuelMeter label="Diesel" amount={stats.byFuel.Diesel} total={stats.totalSpend} color="hsl(220 70% 55%)" />
-        <FuelMeter label="CNG"    amount={stats.byFuel.CNG}    total={stats.totalSpend} color="hsl(150 65% 45%)" />
-      </div>
-
-
-      <div className="mb-3 flex flex-wrap items-end gap-2">
+      {/* Filters on top */}
+      <div className="mb-4 flex flex-wrap items-end gap-2">
         <div>
           <Label className="text-xs text-muted-foreground">Vehicle</Label>
           <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
@@ -248,6 +220,31 @@ function FuelManagerPage() {
             <Plus className="mr-2 h-4 w-4" /> Add Entry
           </Button>
         </div>
+      </div>
+
+      {/* Two donut breakdowns of total spend */}
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+        <DonutBreakdown
+          title="Spend by Fuel"
+          total={stats.totalSpend}
+          entries={stats.entries}
+          segments={[
+            { label: "Petrol", value: stats.byFuel.Petrol, color: "hsl(35 92% 55%)" },
+            { label: "Diesel", value: stats.byFuel.Diesel, color: "hsl(220 70% 55%)" },
+            { label: "CNG",    value: stats.byFuel.CNG,    color: "hsl(150 65% 45%)" },
+          ]}
+        />
+        <DonutBreakdown
+          title="Spend by Payment"
+          total={stats.totalSpend}
+          entries={stats.entries}
+          segments={[
+            { label: "Fuel Card", value: stats.byPayment["Fuel Card"] ?? 0, color: "hsl(265 70% 60%)" },
+            { label: "Cash",      value: stats.byPayment["Cash"] ?? 0,      color: "hsl(150 65% 45%)" },
+            { label: "UPI",       value: stats.byPayment["UPI"] ?? 0,       color: "hsl(200 80% 55%)" },
+            { label: "Other",     value: stats.byPayment["Other"] ?? 0,     color: "hsl(0 0% 60%)" },
+          ]}
+        />
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
@@ -613,30 +610,63 @@ function FileTile({
   );
 }
 
-function FuelMeter({ label, amount, total, color }: { label: string; amount: number; total: number; color: string }) {
-  const pct = total > 0 ? Math.min(100, (amount / total) * 100) : 0;
-  const r = 38;
+type DonutSeg = { label: string; value: number; color: string };
+
+function DonutBreakdown({
+  title, total, entries, segments,
+}: { title: string; total: number; entries: number; segments: DonutSeg[] }) {
+  const size = 140;
+  const stroke = 16;
+  const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  const dash = (pct / 100) * c;
+  const denom = segments.reduce((s, x) => s + (x.value || 0), 0) || 1;
+  let offset = 0;
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
-      <svg width={96} height={96} viewBox="0 0 96 96">
-        <circle cx={48} cy={48} r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth={8} />
-        <circle
-          cx={48} cy={48} r={r} fill="none"
-          stroke={color} strokeWidth={8} strokeLinecap="round"
-          strokeDasharray={`${dash} ${c - dash}`}
-          transform="rotate(-90 48 48)"
-        />
-        <text x={48} y={53} textAnchor="middle" className="fill-foreground text-[14px] font-semibold">
-          {Math.round(pct)}%
-        </text>
-      </svg>
-      <div className="min-w-0">
-        <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
-        <div className="mt-0.5 text-xl font-bold tabular-nums">₹{amount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</div>
-        <div className="text-xs text-muted-foreground">of total spend</div>
+    <div className="rounded-2xl border border-border bg-card p-4">
+      <div className="mb-3 flex items-baseline justify-between">
+        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</div>
+        <div className="text-xs text-muted-foreground">{entries} entries</div>
+      </div>
+      <div className="flex items-center gap-5">
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
+          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth={stroke} />
+          {segments.map((s) => {
+            const frac = (s.value || 0) / denom;
+            const len = frac * c;
+            const dash = `${len} ${c - len}`;
+            const dashOffset = -offset;
+            offset += len;
+            if (len <= 0) return null;
+            return (
+              <circle
+                key={s.label}
+                cx={size / 2} cy={size / 2} r={r}
+                fill="none" stroke={s.color} strokeWidth={stroke}
+                strokeDasharray={dash} strokeDashoffset={dashOffset}
+                transform={`rotate(-90 ${size / 2} ${size / 2})`}
+              />
+            );
+          })}
+          <text x={size / 2} y={size / 2 - 4} textAnchor="middle" className="fill-muted-foreground text-[10px] uppercase tracking-wide">Total</text>
+          <text x={size / 2} y={size / 2 + 14} textAnchor="middle" className="fill-foreground text-[15px] font-bold">
+            ₹{Math.round(total).toLocaleString("en-IN")}
+          </text>
+        </svg>
+        <ul className="min-w-0 flex-1 space-y-1.5">
+          {segments.map((s) => {
+            const pct = total > 0 ? Math.round((s.value / total) * 100) : 0;
+            return (
+              <li key={s.label} className="flex items-center gap-2 text-sm">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: s.color }} />
+                <span className="min-w-0 flex-1 truncate">{s.label}</span>
+                <span className="tabular-nums text-muted-foreground">₹{Math.round(s.value).toLocaleString("en-IN")}</span>
+                <span className="w-10 rounded-full bg-muted px-1.5 py-0.5 text-center text-[10px] tabular-nums">{pct}%</span>
+              </li>
+            );
+          })}
+        </ul>
       </div>
     </div>
   );
 }
+
