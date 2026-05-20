@@ -358,6 +358,25 @@ function AdminLayout() {
             </Link>
           </div>
 
+          {/* Notification Center link */}
+          <div className="mt-2">
+            <Link
+              to="/admin/notifications"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+                isActive("/admin/notifications")
+                  ? "bg-accent/20 text-accent"
+                  : "text-primary-foreground/85 hover:bg-white/5",
+                collapsed && "justify-center",
+              )}
+              title={collapsed ? "Notification Center" : undefined}
+            >
+              <Bell className="h-4.5 w-4.5 shrink-0" />
+              {!collapsed && <span>Notification Center</span>}
+            </Link>
+          </div>
+
+
         </nav>
 
         {/* Footer */}
