@@ -207,6 +207,7 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
     gstOption: (r.gst_option as GstOption) ?? "csgst",
     status: (r.status as ContractStatus) ?? "inactive",
     approvalStatus: (r.approval_status as ApprovalStatus) ?? "pending",
+    prospectStage: (r.prospect_stage as ProspectStage) ?? "new",
     rejectionReason: String(r.rejection_reason ?? ""),
     createdBy: r.created_by ? String(r.created_by) : null,
     promotedAt: r.promoted_at ? String(r.promoted_at) : null,
