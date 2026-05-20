@@ -1206,6 +1206,14 @@ function EmployeesPage() {
         entityLabel: c.full_name || c.aadhaar_number,
         after: { rejection_reason: reason },
       });
+      await notifyAdmins({
+        type: "candidate_rejected",
+        title: "Candidate rejected",
+        message: `${c.full_name || c.aadhaar_number || "Candidate"} was rejected. Reason: ${reason}`,
+        link: "/admin/employees",
+        entityType: "candidate",
+        entityId: c.id,
+      }).catch((e) => console.error("notifyAdmins reject failed", e));
     },
     onSuccess: () => {
       toast.success("Candidate rejected");
