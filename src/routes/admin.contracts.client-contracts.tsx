@@ -82,13 +82,20 @@ type GstOption = "csgst" | "igst" | "none";
 type ContractStatus = "active" | "inactive" | "expired";
 type ApprovalStatus = "pending" | "approved" | "rejected";
 type RecordType = "prospect" | "client";
-type ProspectStage = "new" | "qualified" | "contract_sent" | "negotiation" | "completed";
+type ProspectStage =
+  | "new"
+  | "qualified"
+  | "contract_sent"
+  | "negotiation"
+  | "closed"
+  | "lost";
 const PROSPECT_STAGES: { value: ProspectStage; label: string }[] = [
   { value: "new", label: "New" },
   { value: "qualified", label: "Qualified" },
   { value: "contract_sent", label: "Contract Sent" },
   { value: "negotiation", label: "Negotiation" },
-  { value: "completed", label: "Completed" },
+  { value: "closed", label: "Closed" },
+  { value: "lost", label: "Lost" },
 ];
 const PROSPECT_STAGE_LABEL: Record<ProspectStage, string> = Object.fromEntries(
   PROSPECT_STAGES.map((s) => [s.value, s.label]),
@@ -1140,9 +1147,10 @@ function ClientContractsPage() {
   const stats = useMemo(() => {
     const scoped = items.filter((c) => c.recordType === tab);
     if (tab === "prospect") {
-      const s = { total: scoped.length, pending: 0, rejected: 0 };
+      const s = { total: scoped.length, pending: 0, rejected: 0, lost: 0 };
       for (const c of scoped) {
-        if (c.approvalStatus === "rejected") s.rejected++;
+        if (c.prospectStage === "lost") s.lost++;
+        else if (c.approvalStatus === "rejected") s.rejected++;
         else s.pending++;
       }
       return s;
@@ -1171,7 +1179,7 @@ function ClientContractsPage() {
             <StatCard label="Total Prospects" value={(stats as { total: number }).total} tone="default" />
             <StatCard label="Pending Approval" value={(stats as { pending: number }).pending} tone="inactive" />
             <StatCard label="Rejected" value={(stats as { rejected: number }).rejected} tone="expired" />
-            <StatCard label="Promoted (Clients)" value={tabCounts.clients} tone="active" />
+            <StatCard label="Lost" value={(stats as { lost: number }).lost} tone="expired" />
           </>
         )}
       </div>
@@ -1398,37 +1406,21 @@ function ClientContractsPage() {
                   <td className="px-5 py-3">
                     {tab === "client" ? (
                       <StatusBadge status={c.status} />
-                    ) : c.approvalStatus === "rejected" || c.approvalStatus === "approved" ? (
-                      <ApprovalBadge status={c.approvalStatus} />
+                    ) : c.prospectStage === "lost" ? (
+                      <LostBadge />
                     ) : (
-                      <Select
-                        value={c.prospectStage}
-                        onValueChange={(v) =>
-                          updateStageMut.mutate({
-                            id: c.id,
-                            stage: v as ProspectStage,
-                            label: c.prospectCode,
-                          })
-                        }
-                      >
-                        <SelectTrigger className="h-8 w-[160px] rounded-full border-accent/30 bg-accent/10 text-[11px] font-semibold uppercase tracking-wider text-accent">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PROSPECT_STAGES.map((s) => (
-                            <SelectItem key={s.value} value={s.value}>
-                              {s.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <ApprovalBadge
+                        status={c.approvalStatus}
+                        reason={c.rejectionReason}
+                      />
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
-                      {tab === "prospect" && c.approvalStatus === "pending" && (
-                        <>
-                          {c.prospectStage === "completed" ? (
+                      {tab === "prospect" &&
+                        c.approvalStatus === "pending" &&
+                        c.prospectStage !== "lost" && (
+                          <>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -1438,25 +1430,32 @@ function ClientContractsPage() {
                             >
                               <CheckCircle2 className="mr-1 h-4 w-4" /> Approve
                             </Button>
-                          ) : (
-                            <span
-                              className="hidden items-center px-2 text-[11px] text-muted-foreground sm:inline-flex"
-                              title={`Complete ${PROSPECT_STAGE_LABEL[c.prospectStage]} stage to enable approval`}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-destructive hover:bg-destructive/10"
+                              onClick={() => setApprovalTarget({ contract: c, mode: "reject" })}
+                              title="Reject"
                             >
-                              → {PROSPECT_STAGE_LABEL[c.prospectStage]}
-                            </span>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 px-2 text-destructive hover:bg-destructive/10"
-                            onClick={() => setApprovalTarget({ contract: c, mode: "reject" })}
-                            title="Reject"
-                          >
-                            <XCircle className="mr-1 h-4 w-4" /> Reject
-                          </Button>
-                        </>
-                      )}
+                              <XCircle className="mr-1 h-4 w-4" /> Reject
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-muted-foreground hover:bg-muted"
+                              onClick={() =>
+                                updateStageMut.mutate({
+                                  id: c.id,
+                                  stage: "lost",
+                                  label: c.prospectCode,
+                                })
+                              }
+                              title="Mark prospect as lost (stays in prospects)"
+                            >
+                              Mark Lost
+                            </Button>
+                          </>
+                        )}
                       <Button
                         size="sm"
                         variant="ghost"
@@ -1598,7 +1597,7 @@ function ClientContractsPage() {
   );
 }
 
-function ApprovalBadge({ status }: { status: ApprovalStatus }) {
+function ApprovalBadge({ status, reason }: { status: ApprovalStatus; reason?: string }) {
   const map: Record<ApprovalStatus, { cls: string; label: string }> = {
     pending: { cls: "bg-amber-500/15 text-amber-600 dark:text-amber-400", label: "Pending" },
     approved: { cls: "bg-accent/15 text-accent", label: "Approved" },
@@ -1606,14 +1605,31 @@ function ApprovalBadge({ status }: { status: ApprovalStatus }) {
   };
   const { cls, label } = map[status];
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider",
-        cls,
-      )}
-    >
+    <div className="flex flex-col gap-0.5">
+      <span
+        className={cn(
+          "inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider",
+          cls,
+        )}
+        title={status === "rejected" && reason ? reason : undefined}
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-current" />
+        {label}
+      </span>
+      {status === "rejected" && reason ? (
+        <span className="max-w-[220px] truncate text-[11px] text-destructive/80" title={reason}>
+          {reason}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function LostBadge() {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {label}
+      Lost
     </span>
   );
 }
