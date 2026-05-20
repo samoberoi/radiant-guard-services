@@ -82,6 +82,17 @@ type GstOption = "csgst" | "igst" | "none";
 type ContractStatus = "active" | "inactive" | "expired";
 type ApprovalStatus = "pending" | "approved" | "rejected";
 type RecordType = "prospect" | "client";
+type ProspectStage = "new" | "qualified" | "contract_sent" | "negotiation" | "completed";
+const PROSPECT_STAGES: { value: ProspectStage; label: string }[] = [
+  { value: "new", label: "New" },
+  { value: "qualified", label: "Qualified" },
+  { value: "contract_sent", label: "Contract Sent" },
+  { value: "negotiation", label: "Negotiation" },
+  { value: "completed", label: "Completed" },
+];
+const PROSPECT_STAGE_LABEL: Record<ProspectStage, string> = Object.fromEntries(
+  PROSPECT_STAGES.map((s) => [s.value, s.label]),
+) as Record<ProspectStage, string>;
 
 type ClientContract = {
   id: string;
