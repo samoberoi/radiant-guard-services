@@ -186,7 +186,10 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
     payrollWindowId: r.payroll_window_id ? String(r.payroll_window_id) : null,
     billingTypeId: r.billing_type_id ? String(r.billing_type_id) : null,
     gstOption: (r.gst_option as GstOption) ?? "csgst",
-    status: (r.status as ContractStatus) ?? "active",
+    status: (r.status as ContractStatus) ?? "inactive",
+    approvalStatus: (r.approval_status as ApprovalStatus) ?? "pending",
+    rejectionReason: String(r.rejection_reason ?? ""),
+    createdBy: r.created_by ? String(r.created_by) : null,
   };
 }
 
