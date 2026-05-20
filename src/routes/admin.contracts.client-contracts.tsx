@@ -228,13 +228,14 @@ function useContracts() {
         .select(
           "id,contract_code,prospect_code,record_type,promoted_at,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,gst_option,status,approval_status,rejection_reason,created_by",
         )
-        .order("contract_code", { ascending: false });
+        .order("created_at", { ascending: false });
       if (error) throw error;
       const rows = data as unknown as Record<string, unknown>[];
-      // Auto-expire: any approved+active contract whose end_date has passed → expired
+      // Auto-expire: any approved+active client contract whose end_date has passed → expired
       const today = new Date().toISOString().slice(0, 10);
       const toExpire = rows.filter(
         (r) =>
+          (r.record_type ?? "prospect") === "client" &&
           (r.status ?? "inactive") === "active" &&
           (r.approval_status ?? "pending") === "approved" &&
           r.end_date &&
@@ -266,7 +267,6 @@ function useContracts() {
   type Payload = Omit<ClientContract, "id">;
   const toRow = (p: Payload, opts: { isNew: boolean }) => {
     const base: Record<string, unknown> = {
-      contract_code: p.contractCode,
       unit_id: p.unitId,
       start_date: p.startDate || null,
       end_date: p.endDate || null,
@@ -277,9 +277,12 @@ function useContracts() {
       gst_option: p.gstOption,
     };
     if (opts.isNew) {
-      // New contracts are always inactive + pending approval.
+      // New entries are always prospects, inactive, pending approval.
+      base.record_type = "prospect";
+      base.prospect_code = p.prospectCode;
       base.status = "inactive";
       base.approval_status = "pending";
+      // contract_code is intentionally null until promoted.
     }
     return base;
   };
@@ -296,7 +299,7 @@ function useContracts() {
         .single();
       if (error) throw error;
       const id = String((data as Record<string, unknown>).id);
-      void logActivity({ module: "Client Contracts", action: "create", entityType: "client_contracts", entityId: id, entityLabel: p.contractCode, details: p as unknown as Record<string, unknown> });
+      void logActivity({ module: "Client Contracts", action: "create", entityType: "client_contracts", entityId: id, entityLabel: p.prospectCode, details: p as unknown as Record<string, unknown> });
       return id;
     },
     onSuccess: invalidate,
