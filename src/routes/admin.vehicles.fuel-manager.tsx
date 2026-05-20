@@ -357,11 +357,12 @@ function ProofThumb({ url, label }: { url: string; label: string }) {
 type Vehicle = { id: string; vehicle_number: string; name: string };
 
 function AddEntryDialog({
-  open, onOpenChange, vehicles, onSaved,
+  open, onOpenChange, vehicles, lastOdoByVehicle, onSaved,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   vehicles: Vehicle[];
+  lastOdoByVehicle: Map<string, number>;
   onSaved: () => void;
 }) {
   const [vehicleId, setVehicleId] = useState("");
