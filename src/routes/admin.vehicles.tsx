@@ -301,11 +301,11 @@ function VehiclesDashboard() {
 }
 
 function StatCard({
-  label, value, icon: Icon, accent, subtle, to, search,
+  label, value, icon: Icon, accent, subtle, to, search, valuePrefix,
 }: {
   label: string; value: number; icon: React.ComponentType<{ className?: string }>;
   accent: "accent" | "destructive" | "warning"; subtle?: string;
-  to: string; search?: Record<string, string>;
+  to: string; search?: Record<string, string>; valuePrefix?: string;
 }) {
   const palette = accent === "destructive"
     ? "bg-destructive/15 text-destructive"
@@ -321,7 +321,9 @@ function StatCard({
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
-          <div className="mt-2 font-display text-3xl font-bold tracking-tight">{value}</div>
+          <div className="mt-2 font-display text-3xl font-bold tracking-tight tabular-nums">
+            {valuePrefix}{value.toLocaleString("en-IN")}
+          </div>
           {subtle && <div className="mt-1 text-xs text-muted-foreground">{subtle}</div>}
         </div>
         <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-105", palette)}>
@@ -331,6 +333,44 @@ function StatCard({
     </Link>
   );
 }
+
+function BreakdownCard({ title, total, rows }: {
+  title: string; total: number; rows: { label: string; value: number; color: string }[];
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-baseline justify-between">
+        <div className="font-display text-sm font-bold tracking-tight">{title}</div>
+        <div className="text-xs tabular-nums text-muted-foreground">
+          ₹{Math.round(total).toLocaleString("en-IN")}
+        </div>
+      </div>
+      <ul className="mt-4 space-y-3">
+        {rows.map((r) => {
+          const pct = total > 0 ? Math.round((r.value / total) * 100) : 0;
+          return (
+            <li key={r.label}>
+              <div className="flex items-center justify-between text-xs">
+                <span className="flex items-center gap-2 font-medium text-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: r.color }} />
+                  {r.label}
+                </span>
+                <span className="tabular-nums text-muted-foreground">
+                  ₹{Math.round(r.value).toLocaleString("en-IN")} · {pct}%
+                </span>
+              </div>
+              <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full" style={{ width: `${pct}%`, background: r.color }} />
+              </div>
+            </li>
+          );
+        })}
+        {total === 0 && <p className="text-sm text-muted-foreground">No spend in the last 30 days.</p>}
+      </ul>
+    </div>
+  );
+}
+
 
 type DueRow = { id: string; vehicle: string; date: string; meta: string; status: "expired" | "due"; days: number };
 
