@@ -265,7 +265,6 @@ function MusterRollPage() {
                       <td className={cn(rowBase, "p-1 text-left")} rowSpan={2}>
                         {emp.designation || "—"}
                       </td>
-                      <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
                       <td className={cn(rowBase, "p-1")} rowSpan={2}>
                         {emp.doj ? new Date(emp.doj).toLocaleDateString("en-GB") : "—"}
                       </td>
