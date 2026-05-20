@@ -2013,6 +2013,7 @@ function ContractFormDialog({
                 gstOption,
                 status: editing?.status ?? "inactive",
                 approvalStatus: editing?.approvalStatus ?? "pending",
+                prospectStage: editing?.prospectStage ?? "new",
                 rejectionReason: editing?.rejectionReason ?? "",
                 createdBy: editing?.createdBy ?? null,
                 promotedAt: editing?.promotedAt ?? null,
