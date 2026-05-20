@@ -119,10 +119,13 @@ function FuelManagerPage() {
 
   const stats = useMemo(() => {
     const totalSpend = filtered.reduce((s, e) => s + (e.amount || 0), 0);
-    const totalQty = filtered.reduce((s, e) => s + (e.quantity || 0), 0);
-    const byFuel: Record<string, number> = {};
-    for (const e of filtered) byFuel[e.fuel_type] = (byFuel[e.fuel_type] ?? 0) + (e.amount || 0);
-    return { totalSpend, totalQty, entries: filtered.length, byFuel };
+    const byFuel: Record<string, number> = { Petrol: 0, Diesel: 0, CNG: 0 };
+    const byPayment: Record<string, number> = {};
+    for (const e of filtered) {
+      if (e.fuel_type in byFuel) byFuel[e.fuel_type] += e.amount || 0;
+      byPayment[e.payment_mode] = (byPayment[e.payment_mode] ?? 0) + (e.amount || 0);
+    }
+    return { totalSpend, entries: filtered.length, byFuel, byPayment };
   }, [filtered]);
 
   const [open, setOpen] = useState(false);
@@ -162,12 +165,34 @@ function FuelManagerPage() {
         crumbs={[{ label: "Vehicles", to: "/admin/vehicles" }, { label: "Fuel Manager" }]}
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MiniStat label="Entries" value={stats.entries} tone="accent" />
-        <MiniStat label="Total Spend" value={inr(stats.totalSpend)} />
-        <MiniStat label="Total Qty (L/kg)" value={stats.totalQty.toLocaleString("en-IN", { maximumFractionDigits: 2 })} />
-        <MiniStat label="Fuel Mix" value={Object.entries(stats.byFuel).map(([k, v]) => `${k}: ${inr(v)}`).join("  ·  ") || "—"} subtle="Spend by fuel type" />
+      {/* Payment mode breakdown chips */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Payment mix</span>
+        {(["Fuel Card", "Cash", "UPI", "Other"] as const).map((pm) => {
+          const v = stats.byPayment[pm] ?? 0;
+          const pct = stats.totalSpend > 0 ? Math.round((v / stats.totalSpend) * 100) : 0;
+          return (
+            <div key={pm} className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs">
+              <span className="font-medium">{pm}</span>
+              <span className="tabular-nums text-muted-foreground">{inr(v)}</span>
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums">{pct}%</span>
+            </div>
+          );
+        })}
+        <div className="ml-auto rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs">
+          <span className="font-medium text-accent">Total Spend</span>
+          <span className="ml-2 tabular-nums font-semibold">{inr(stats.totalSpend)}</span>
+          <span className="ml-2 text-muted-foreground">· {stats.entries} entries</span>
+        </div>
       </div>
+
+      {/* Fuel-type circular meters */}
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <FuelMeter label="Petrol" amount={stats.byFuel.Petrol} total={stats.totalSpend} color="hsl(35 92% 55%)" />
+        <FuelMeter label="Diesel" amount={stats.byFuel.Diesel} total={stats.totalSpend} color="hsl(220 70% 55%)" />
+        <FuelMeter label="CNG"    amount={stats.byFuel.CNG}    total={stats.totalSpend} color="hsl(150 65% 45%)" />
+      </div>
+
 
       <div className="mb-3 flex flex-wrap items-end gap-2">
         <div>
