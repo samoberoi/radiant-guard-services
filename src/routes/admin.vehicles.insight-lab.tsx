@@ -250,18 +250,19 @@ function InsightLabPage() {
         const fd = dataset.fields.find((x) => x.key === f.field);
         if (!fd) continue;
         const v = f.value;
+        const cast = castVal(v, fd.type);
         switch (f.op) {
-          case "eq": q = q.eq(f.field, castVal(v, fd.type)); break;
-          case "neq": q = q.neq(f.field, castVal(v, fd.type)); break;
-          case "gt": q = q.gt(f.field, castVal(v, fd.type)); break;
-          case "gte": q = q.gte(f.field, castVal(v, fd.type)); break;
-          case "lt": q = q.lt(f.field, castVal(v, fd.type)); break;
-          case "lte": q = q.lte(f.field, castVal(v, fd.type)); break;
+          case "eq": if (cast !== null) q = q.eq(f.field, cast as never); break;
+          case "neq": if (cast !== null) q = q.neq(f.field, cast as never); break;
+          case "gt": if (cast !== null) q = q.gt(f.field, cast as never); break;
+          case "gte": if (cast !== null) q = q.gte(f.field, cast as never); break;
+          case "lt": if (cast !== null) q = q.lt(f.field, cast as never); break;
+          case "lte": if (cast !== null) q = q.lte(f.field, cast as never); break;
           case "contains": q = q.ilike(f.field, `%${v}%`); break;
           case "in":
             q = q.in(
               f.field,
-              v.split(",").map((s) => castVal(s.trim(), fd.type)) as never,
+              v.split(",").map((s) => castVal(s.trim(), fd.type)).filter((x) => x !== null) as never,
             );
             break;
           case "is_null": q = q.is(f.field, null); break;
