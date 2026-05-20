@@ -1,4 +1,43 @@
 import { supabase } from "@/integrations/supabase/client";
+import { notifyAdmins } from "@/lib/notifications";
+
+// Module → in-app link map for notifications.
+const MODULE_LINKS: Record<string, string> = {
+  "Employees": "/admin/employees",
+  "Client Contracts": "/admin/contracts/client-contracts",
+  "Customer Manager": "/admin/customers/customer-manager",
+  "Branch Manager": "/admin/customers/branch-manager",
+  "Unit Manager": "/admin/customers/unit-manager",
+  "State Manager": "/admin/customers/state-manager",
+  "Designation Manager": "/admin/designation-manager",
+  "Asset Manager": "/admin/asset-manager",
+  "Duty Manager": "/admin/duty-manager",
+  "Allowance Manager": "/admin/allowance-manager",
+  "Billing Type Manager": "/admin/billing-type-manager",
+  "Cost Component Manager": "/admin/cost-component-manager",
+  "Company Documents": "/admin/company-documents",
+  "ESIC Branch Manager": "/admin/esic-branch-manager",
+  "Ex-Service Manager": "/admin/ex-service-manager",
+  "Language Manager": "/admin/language-manager",
+  "LWF Manager": "/admin/lwf-manager",
+  "Offboarding Reason Manager": "/admin/offboarding-reason-manager",
+  "Payroll Manager": "/admin/payroll-manager",
+  "Payroll Days Manager": "/admin/payroll-days-manager",
+  "Professional Tax Manager": "/admin/professional-tax-manager",
+  "RBAC": "/admin/rbac",
+  "Service Type Manager": "/admin/service-type-manager",
+  "Candidate Details": "/admin/employees",
+};
+
+// Actions that should NOT broadcast a notification (too noisy / internal).
+const SILENT_ACTIONS = new Set([
+  "login", "logout", "view", "open", "search", "filter", "export",
+  "draft", "save_draft",
+]);
+
+function titleCase(s: string) {
+  return s.replace(/[_-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
 
 const STORAGE_KEY = "radiant.auth";
 
@@ -113,6 +152,20 @@ export async function logActivity(p: LogParams): Promise<void> {
     } as never);
     // Kick off IP resolution for next call if missing
     if (!cachedIp) void getClientIp();
+    // Auto-broadcast a notification to admins for meaningful actions.
+    if ((p.status ?? "success") === "success" && !SILENT_ACTIONS.has(p.action.toLowerCase())) {
+      const link = MODULE_LINKS[p.module] ?? "";
+      const label = p.entityLabel || p.entityType || "record";
+      const actionTitle = titleCase(p.action);
+      void notifyAdmins({
+        type: `${p.module}:${p.action}`.toLowerCase().replace(/\s+/g, "_"),
+        title: `${p.module} — ${actionTitle}`,
+        message: `${actionTitle} ${label}${phone ? ` by ${phone}` : ""}`,
+        link,
+        entityType: p.entityType ?? "",
+        entityId: p.entityId ?? "",
+      }).catch((err) => console.warn("notifyAdmins (auto) failed", err));
+    }
   } catch (e) {
     // Logging must never break flows
     // eslint-disable-next-line no-console
