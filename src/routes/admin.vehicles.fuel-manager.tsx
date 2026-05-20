@@ -165,36 +165,8 @@ function FuelManagerPage() {
         crumbs={[{ label: "Vehicles", to: "/admin/vehicles" }, { label: "Fuel Manager" }]}
       />
 
-      {/* Payment mode breakdown chips */}
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Payment mix</span>
-        {(["Fuel Card", "Cash", "UPI", "Other"] as const).map((pm) => {
-          const v = stats.byPayment[pm] ?? 0;
-          const pct = stats.totalSpend > 0 ? Math.round((v / stats.totalSpend) * 100) : 0;
-          return (
-            <div key={pm} className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs">
-              <span className="font-medium">{pm}</span>
-              <span className="tabular-nums text-muted-foreground">{inr(v)}</span>
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums">{pct}%</span>
-            </div>
-          );
-        })}
-        <div className="ml-auto rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs">
-          <span className="font-medium text-accent">Total Spend</span>
-          <span className="ml-2 tabular-nums font-semibold">{inr(stats.totalSpend)}</span>
-          <span className="ml-2 text-muted-foreground">· {stats.entries} entries</span>
-        </div>
-      </div>
-
-      {/* Fuel-type circular meters */}
-      <div className="mb-4 grid gap-3 sm:grid-cols-3">
-        <FuelMeter label="Petrol" amount={stats.byFuel.Petrol} total={stats.totalSpend} color="hsl(35 92% 55%)" />
-        <FuelMeter label="Diesel" amount={stats.byFuel.Diesel} total={stats.totalSpend} color="hsl(220 70% 55%)" />
-        <FuelMeter label="CNG"    amount={stats.byFuel.CNG}    total={stats.totalSpend} color="hsl(150 65% 45%)" />
-      </div>
-
-
-      <div className="mb-3 flex flex-wrap items-end gap-2">
+      {/* Filters on top */}
+      <div className="mb-4 flex flex-wrap items-end gap-2">
         <div>
           <Label className="text-xs text-muted-foreground">Vehicle</Label>
           <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
@@ -248,6 +220,31 @@ function FuelManagerPage() {
             <Plus className="mr-2 h-4 w-4" /> Add Entry
           </Button>
         </div>
+      </div>
+
+      {/* Two donut breakdowns of total spend */}
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+        <DonutBreakdown
+          title="Spend by Fuel"
+          total={stats.totalSpend}
+          entries={stats.entries}
+          segments={[
+            { label: "Petrol", value: stats.byFuel.Petrol, color: "hsl(35 92% 55%)" },
+            { label: "Diesel", value: stats.byFuel.Diesel, color: "hsl(220 70% 55%)" },
+            { label: "CNG",    value: stats.byFuel.CNG,    color: "hsl(150 65% 45%)" },
+          ]}
+        />
+        <DonutBreakdown
+          title="Spend by Payment"
+          total={stats.totalSpend}
+          entries={stats.entries}
+          segments={[
+            { label: "Fuel Card", value: stats.byPayment["Fuel Card"] ?? 0, color: "hsl(265 70% 60%)" },
+            { label: "Cash",      value: stats.byPayment["Cash"] ?? 0,      color: "hsl(150 65% 45%)" },
+            { label: "UPI",       value: stats.byPayment["UPI"] ?? 0,       color: "hsl(200 80% 55%)" },
+            { label: "Other",     value: stats.byPayment["Other"] ?? 0,     color: "hsl(0 0% 60%)" },
+          ]}
+        />
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
