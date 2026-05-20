@@ -34,12 +34,20 @@ type FastTag = {
   status: string;
   notes: string;
   enabled: boolean;
+  login_type: string;
+  login_id: string;
+  login_password: string;
+  registered_email: string;
 };
 
 const QK = ["admin", "vehicle_fastags"] as const;
 const MODULE = "FastTag Manager";
 const ENTITY = "vehicle_fastags";
 const STATUS = ["active", "inactive", "blocked", "expired"];
+const LOGIN_TYPES = [
+  { value: "individual", label: "Individual" },
+  { value: "corporate", label: "Corporate" },
+];
 const BANKS = ["ICICI Bank", "HDFC Bank", "Axis Bank", "SBI", "Paytm Payments Bank", "IDFC FIRST Bank", "Kotak Mahindra Bank", "IndusInd Bank", "Bank of Baroda", "Federal Bank", "Other"];
 
 function rowTo(r: Record<string, unknown>): FastTag {
@@ -55,8 +63,13 @@ function rowTo(r: Record<string, unknown>): FastTag {
     status: String(r.status ?? "active"),
     notes: String(r.notes ?? ""),
     enabled: Boolean(r.enabled ?? true),
+    login_type: String(r.login_type ?? "individual"),
+    login_id: String(r.login_id ?? ""),
+    login_password: String(r.login_password ?? ""),
+    registered_email: String(r.registered_email ?? ""),
   };
 }
+
 
 function FastTagManagerPage() {
   const qc = useQueryClient();
