@@ -36,6 +36,7 @@ import { Route as AdminCompanyDocumentsRouteImport } from './routes/admin.compan
 import { Route as AdminBillingTypeManagerRouteImport } from './routes/admin.billing-type-manager'
 import { Route as AdminAssetManagerRouteImport } from './routes/admin.asset-manager'
 import { Route as AdminAllowanceManagerRouteImport } from './routes/admin.allowance-manager'
+import { Route as AdminVehiclesServiceManagerRouteImport } from './routes/admin.vehicles.service-manager'
 import { Route as AdminVehiclesPucsRouteImport } from './routes/admin.vehicles.pucs'
 import { Route as AdminVehiclesInventoryRouteImport } from './routes/admin.vehicles.inventory'
 import { Route as AdminVehiclesInsurancesRouteImport } from './routes/admin.vehicles.insurances'
@@ -185,6 +186,12 @@ const AdminAllowanceManagerRoute = AdminAllowanceManagerRouteImport.update({
   path: '/allowance-manager',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminVehiclesServiceManagerRoute =
+  AdminVehiclesServiceManagerRouteImport.update({
+    id: '/service-manager',
+    path: '/service-manager',
+    getParentRoute: () => AdminVehiclesRoute,
+  } as any)
 const AdminVehiclesPucsRoute = AdminVehiclesPucsRouteImport.update({
   id: '/pucs',
   path: '/pucs',
@@ -279,6 +286,7 @@ export interface FileRoutesByFullPath {
   '/admin/vehicles/insurances': typeof AdminVehiclesInsurancesRoute
   '/admin/vehicles/inventory': typeof AdminVehiclesInventoryRoute
   '/admin/vehicles/pucs': typeof AdminVehiclesPucsRoute
+  '/admin/vehicles/service-manager': typeof AdminVehiclesServiceManagerRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
 export interface FileRoutesByTo {
@@ -318,6 +326,7 @@ export interface FileRoutesByTo {
   '/admin/vehicles/insurances': typeof AdminVehiclesInsurancesRoute
   '/admin/vehicles/inventory': typeof AdminVehiclesInventoryRoute
   '/admin/vehicles/pucs': typeof AdminVehiclesPucsRoute
+  '/admin/vehicles/service-manager': typeof AdminVehiclesServiceManagerRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
 export interface FileRoutesById {
@@ -358,6 +367,7 @@ export interface FileRoutesById {
   '/admin/vehicles/insurances': typeof AdminVehiclesInsurancesRoute
   '/admin/vehicles/inventory': typeof AdminVehiclesInventoryRoute
   '/admin/vehicles/pucs': typeof AdminVehiclesPucsRoute
+  '/admin/vehicles/service-manager': typeof AdminVehiclesServiceManagerRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
 export interface FileRouteTypes {
@@ -399,6 +409,7 @@ export interface FileRouteTypes {
     | '/admin/vehicles/insurances'
     | '/admin/vehicles/inventory'
     | '/admin/vehicles/pucs'
+    | '/admin/vehicles/service-manager'
     | '/admin/candidates/$id/details'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -438,6 +449,7 @@ export interface FileRouteTypes {
     | '/admin/vehicles/insurances'
     | '/admin/vehicles/inventory'
     | '/admin/vehicles/pucs'
+    | '/admin/vehicles/service-manager'
     | '/admin/candidates/$id/details'
   id:
     | '__root__'
@@ -477,6 +489,7 @@ export interface FileRouteTypes {
     | '/admin/vehicles/insurances'
     | '/admin/vehicles/inventory'
     | '/admin/vehicles/pucs'
+    | '/admin/vehicles/service-manager'
     | '/admin/candidates/$id/details'
   fileRoutesById: FileRoutesById
 }
@@ -678,6 +691,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAllowanceManagerRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/vehicles/service-manager': {
+      id: '/admin/vehicles/service-manager'
+      path: '/service-manager'
+      fullPath: '/admin/vehicles/service-manager'
+      preLoaderRoute: typeof AdminVehiclesServiceManagerRouteImport
+      parentRoute: typeof AdminVehiclesRoute
+    }
     '/admin/vehicles/pucs': {
       id: '/admin/vehicles/pucs'
       path: '/pucs'
@@ -774,6 +794,7 @@ interface AdminVehiclesRouteChildren {
   AdminVehiclesInsurancesRoute: typeof AdminVehiclesInsurancesRoute
   AdminVehiclesInventoryRoute: typeof AdminVehiclesInventoryRoute
   AdminVehiclesPucsRoute: typeof AdminVehiclesPucsRoute
+  AdminVehiclesServiceManagerRoute: typeof AdminVehiclesServiceManagerRoute
 }
 
 const AdminVehiclesRouteChildren: AdminVehiclesRouteChildren = {
@@ -781,6 +802,7 @@ const AdminVehiclesRouteChildren: AdminVehiclesRouteChildren = {
   AdminVehiclesInsurancesRoute: AdminVehiclesInsurancesRoute,
   AdminVehiclesInventoryRoute: AdminVehiclesInventoryRoute,
   AdminVehiclesPucsRoute: AdminVehiclesPucsRoute,
+  AdminVehiclesServiceManagerRoute: AdminVehiclesServiceManagerRoute,
 }
 
 const AdminVehiclesRouteWithChildren = AdminVehiclesRoute._addFileChildren(
