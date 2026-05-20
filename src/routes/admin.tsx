@@ -17,7 +17,6 @@ import {
   MapPin,
   Menu,
   PanelLeftClose,
-  ShieldCheck,
   SlidersHorizontal,
   UserPlus,
   Users,
