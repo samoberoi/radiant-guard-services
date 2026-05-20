@@ -4496,12 +4496,19 @@ function AssetMultiPicker({
             {uniformSelected.map((a) => (
               <div key={a.id} className="flex items-center gap-2">
                 <Label className="flex-1 text-xs">{a.name}</Label>
-                <Input
-                  className="h-8 w-28"
-                  placeholder="e.g. L, 40"
+                <Select
                   value={(sizes ?? {})[a.id] ?? ""}
-                  onChange={(e) => onSizesChange({ ...(sizes ?? {}), [a.id]: e.target.value })}
-                />
+                  onValueChange={(v) => onSizesChange({ ...(sizes ?? {}), [a.id]: v })}
+                >
+                  <SelectTrigger className="h-8 w-28">
+                    <SelectValue placeholder="Size" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {["XS", "S", "M", "L", "XL", "XXL", "XXXL", "28", "30", "32", "34", "36", "38", "40", "42", "44", "46"].map((sz) => (
+                      <SelectItem key={sz} value={sz}>{sz}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             ))}
           </div>
