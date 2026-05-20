@@ -1510,7 +1510,47 @@ function ClientContractsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ContractApprovalDialog
+        open={!!approvalTarget}
+        onOpenChange={(o) => !o && setApprovalTarget(null)}
+        mode={approvalTarget?.mode ?? "approve"}
+        contract={
+          approvalTarget
+            ? {
+                id: approvalTarget.contract.id,
+                prospectCode: approvalTarget.contract.prospectCode,
+                contractCode: approvalTarget.contract.contractCode,
+                createdBy: approvalTarget.contract.createdBy,
+              }
+            : null
+        }
+        onDone={() => {
+          void qc.invalidateQueries({ queryKey: QK });
+          setApprovalTarget(null);
+        }}
+      />
     </div>
+  );
+}
+
+function ApprovalBadge({ status }: { status: ApprovalStatus }) {
+  const map: Record<ApprovalStatus, { cls: string; label: string }> = {
+    pending: { cls: "bg-amber-500/15 text-amber-600 dark:text-amber-400", label: "Pending" },
+    approved: { cls: "bg-accent/15 text-accent", label: "Approved" },
+    rejected: { cls: "bg-destructive/15 text-destructive", label: "Rejected" },
+  };
+  const { cls, label } = map[status];
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider",
+        cls,
+      )}
+    >
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
+      {label}
+    </span>
   );
 }
 
