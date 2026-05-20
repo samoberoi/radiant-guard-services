@@ -97,6 +97,10 @@ function VehiclesDashboard() {
   });
 
   const totalVehicles = vehicles.length;
+  const serviceDueSoon = useMemo(
+    () => vehicles.filter((v) => v.enabled !== false && serviceStatusFor(String(v.vehicle_number ?? "")).dueSoon).length,
+    [vehicles],
+  );
 
   return (
     <div>
