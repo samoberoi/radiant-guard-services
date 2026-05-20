@@ -9,6 +9,7 @@ import {
   ListSection,
   NomineeSection,
 } from "@/components/candidate-extra-sections";
+import { notifyAdmins } from "@/lib/notifications";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClientOnlyFn, useServerFn } from "@tanstack/react-start";
@@ -2796,6 +2797,16 @@ function CandidateWizard({
         entityLabel: payload.full_name,
         after: { ...(payload as unknown as Record<string, unknown>), unit_ids: form.unit_ids },
       });
+      if (status === "pending") {
+        await notifyAdmins({
+          type: "candidate_pending_approval",
+          title: "New candidate awaiting approval",
+          message: `${payload.full_name || "A new candidate"} has been submitted and needs your approval.`,
+          link: "/admin/employees",
+          entityType: "candidate",
+          entityId: newId,
+        });
+      }
     }
     toast.success(successMsg);
     qc.invalidateQueries({ queryKey: QK });

@@ -71,6 +71,34 @@ export async function createNotification(input: {
   if (error) throw error;
 }
 
+export async function getAdminUserIds(): Promise<string[]> {
+  const { data, error } = await supabase.rpc("get_admin_user_ids" as never);
+  if (error) {
+    console.error("getAdminUserIds error", error);
+    return [];
+  }
+  return ((data as unknown) as Array<{ user_id: string }>).map((r) => r.user_id);
+}
+
+export async function notifyAdmins(input: {
+  type: string;
+  title: string;
+  message: string;
+  link?: string;
+  entityType?: string;
+  entityId?: string;
+}) {
+  const ids = await getAdminUserIds();
+  if (ids.length === 0) return;
+  await Promise.all(
+    ids.map((uid) =>
+      createNotification({ userId: uid, ...input }).catch((e) =>
+        console.error("notifyAdmins insert failed", e),
+      ),
+    ),
+  );
+}
+
 export async function markNotificationRead(id: string) {
   const { error } = await supabase
     .from("notifications" as never)

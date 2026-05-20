@@ -1718,7 +1718,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_admin_user_ids: {
+        Args: never
+        Returns: {
+          user_id: string
+        }[]
+      }
     }
     Enums: {
       customer_status: "active" | "inactive"
