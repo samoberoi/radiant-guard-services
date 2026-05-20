@@ -294,7 +294,7 @@ function useContracts() {
         .eq("id", id)
         .single();
       const before = (beforeRes.data ?? null) as Record<string, unknown> | null;
-      const after = toRow(p);
+      const after = toRow(p, { isNew: false });
       const { error } = await supabase
         .from("client_contracts" as never)
         .update(after as never)
