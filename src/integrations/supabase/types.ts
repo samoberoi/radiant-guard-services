@@ -434,7 +434,7 @@ export type Database = {
           approved_by: string | null
           billing_type_id: string | null
           company_signature_data: string
-          contract_code: string
+          contract_code: string | null
           created_at: string
           created_by: string | null
           description: string
@@ -442,6 +442,9 @@ export type Database = {
           gst_option: string
           id: string
           payroll_window_id: string | null
+          promoted_at: string | null
+          prospect_code: string | null
+          record_type: string
           rejected_at: string | null
           rejected_by: string | null
           rejection_reason: string
@@ -459,7 +462,7 @@ export type Database = {
           approved_by?: string | null
           billing_type_id?: string | null
           company_signature_data?: string
-          contract_code: string
+          contract_code?: string | null
           created_at?: string
           created_by?: string | null
           description?: string
@@ -467,6 +470,9 @@ export type Database = {
           gst_option?: string
           id?: string
           payroll_window_id?: string | null
+          promoted_at?: string | null
+          prospect_code?: string | null
+          record_type?: string
           rejected_at?: string | null
           rejected_by?: string | null
           rejection_reason?: string
@@ -484,7 +490,7 @@ export type Database = {
           approved_by?: string | null
           billing_type_id?: string | null
           company_signature_data?: string
-          contract_code?: string
+          contract_code?: string | null
           created_at?: string
           created_by?: string | null
           description?: string
@@ -492,6 +498,9 @@ export type Database = {
           gst_option?: string
           id?: string
           payroll_window_id?: string | null
+          promoted_at?: string | null
+          prospect_code?: string | null
+          record_type?: string
           rejected_at?: string | null
           rejected_by?: string | null
           rejection_reason?: string

@@ -80,10 +80,13 @@ export const Route = createFileRoute("/admin/contracts/client-contracts")({
 type GstOption = "csgst" | "igst" | "none";
 type ContractStatus = "active" | "inactive" | "expired";
 type ApprovalStatus = "pending" | "approved" | "rejected";
+type RecordType = "prospect" | "client";
 
 type ClientContract = {
   id: string;
   contractCode: string;
+  prospectCode: string;
+  recordType: RecordType;
   unitId: string;
   startDate: string;
   endDate: string;
@@ -96,6 +99,7 @@ type ClientContract = {
   approvalStatus: ApprovalStatus;
   rejectionReason: string;
   createdBy: string | null;
+  promotedAt: string | null;
 };
 
 type ServiceType = { id: string; name: string };
@@ -178,6 +182,8 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
   return {
     id: String(r.id),
     contractCode: String(r.contract_code ?? ""),
+    prospectCode: String(r.prospect_code ?? ""),
+    recordType: (r.record_type as RecordType) ?? "prospect",
     unitId: String(r.unit_id ?? ""),
     startDate: r.start_date ? String(r.start_date) : "",
     endDate: r.end_date ? String(r.end_date) : "",
@@ -190,6 +196,7 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
     approvalStatus: (r.approval_status as ApprovalStatus) ?? "pending",
     rejectionReason: String(r.rejection_reason ?? ""),
     createdBy: r.created_by ? String(r.created_by) : null,
+    promotedAt: r.promoted_at ? String(r.promoted_at) : null,
   };
 }
 
@@ -202,6 +209,15 @@ function nextContractCode(existing: string[]): string {
   return `CON${String(max + 1).padStart(5, "0")}`;
 }
 
+function nextProspectCode(existing: string[]): string {
+  let max = 0;
+  for (const code of existing) {
+    const m = code?.match(/PROS-(\d+)/i);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `PROS-${String(max + 1).padStart(4, "0")}`;
+}
+
 function useContracts() {
   const qc = useQueryClient();
   const { data: items = [] } = useQuery({
@@ -210,15 +226,16 @@ function useContracts() {
       const { data, error } = await supabase
         .from("client_contracts" as never)
         .select(
-          "id,contract_code,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,gst_option,status,approval_status,rejection_reason,created_by",
+          "id,contract_code,prospect_code,record_type,promoted_at,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,gst_option,status,approval_status,rejection_reason,created_by",
         )
-        .order("contract_code", { ascending: false });
+        .order("created_at", { ascending: false });
       if (error) throw error;
       const rows = data as unknown as Record<string, unknown>[];
-      // Auto-expire: any approved+active contract whose end_date has passed → expired
+      // Auto-expire: any approved+active client contract whose end_date has passed → expired
       const today = new Date().toISOString().slice(0, 10);
       const toExpire = rows.filter(
         (r) =>
+          (r.record_type ?? "prospect") === "client" &&
           (r.status ?? "inactive") === "active" &&
           (r.approval_status ?? "pending") === "approved" &&
           r.end_date &&
@@ -250,7 +267,6 @@ function useContracts() {
   type Payload = Omit<ClientContract, "id">;
   const toRow = (p: Payload, opts: { isNew: boolean }) => {
     const base: Record<string, unknown> = {
-      contract_code: p.contractCode,
       unit_id: p.unitId,
       start_date: p.startDate || null,
       end_date: p.endDate || null,
@@ -261,9 +277,12 @@ function useContracts() {
       gst_option: p.gstOption,
     };
     if (opts.isNew) {
-      // New contracts are always inactive + pending approval.
+      // New entries are always prospects, inactive, pending approval.
+      base.record_type = "prospect";
+      base.prospect_code = p.prospectCode;
       base.status = "inactive";
       base.approval_status = "pending";
+      // contract_code is intentionally null until promoted.
     }
     return base;
   };
@@ -280,7 +299,7 @@ function useContracts() {
         .single();
       if (error) throw error;
       const id = String((data as Record<string, unknown>).id);
-      void logActivity({ module: "Client Contracts", action: "create", entityType: "client_contracts", entityId: id, entityLabel: p.contractCode, details: p as unknown as Record<string, unknown> });
+      void logActivity({ module: "Client Contracts", action: "create", entityType: "client_contracts", entityId: id, entityLabel: p.prospectCode, details: p as unknown as Record<string, unknown> });
       return id;
     },
     onSuccess: invalidate,
@@ -305,7 +324,7 @@ function useContracts() {
         action: "update",
         entityType: "client_contracts",
         entityId: id,
-        entityLabel: p.contractCode,
+        entityLabel: p.contractCode || p.prospectCode,
         before,
         after: after as unknown as Record<string, unknown>,
       });
@@ -1447,13 +1466,13 @@ function ContractFormDialog({
   open,
   onOpenChange,
   editing,
-  existingCodes,
+  existingProspectCodes,
   onSubmit,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   editing: ClientContract | null;
-  existingCodes: string[];
+  existingProspectCodes: string[];
   onSubmit: (
     p: Omit<ClientContract, "id">,
     resources: ContractResource[],
@@ -1471,6 +1490,7 @@ function ContractFormDialog({
   );
 
   const [contractCode, setContractCode] = useState("");
+  const [prospectCode, setProspectCode] = useState("");
   const [unitId, setUnitId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -1479,7 +1499,6 @@ function ContractFormDialog({
   const [payrollWindowId, setPayrollWindowId] = useState<string>("");
   const [billingTypeId, setBillingTypeId] = useState<string>("");
   const [gstOption, setGstOption] = useState<GstOption>("csgst");
-  const [status, setStatus] = useState<ContractStatus>("active");
   const [unitPickerOpen, setUnitPickerOpen] = useState(false);
   const [unitQuery, setUnitQuery] = useState("");
   const [saving, setSaving] = useState(false);
@@ -1497,6 +1516,7 @@ function ContractFormDialog({
     if (!open) return;
     if (editing) {
       setContractCode(editing.contractCode);
+      setProspectCode(editing.prospectCode);
       setUnitId(editing.unitId);
       setStartDate(editing.startDate);
       setEndDate(editing.endDate);
@@ -1505,9 +1525,9 @@ function ContractFormDialog({
       setPayrollWindowId(editing.payrollWindowId ?? "");
       setBillingTypeId(editing.billingTypeId ?? "");
       setGstOption(editing.gstOption);
-      setStatus(editing.status);
     } else {
-      setContractCode(nextContractCode(existingCodes));
+      setContractCode("");
+      setProspectCode(nextProspectCode(existingProspectCodes));
       setUnitId("");
       setStartDate("");
       setEndDate("");
@@ -1516,7 +1536,6 @@ function ContractFormDialog({
       setPayrollWindowId("");
       setBillingTypeId("");
       setGstOption("csgst");
-      setStatus("active");
     }
     setResources([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1566,8 +1585,12 @@ function ContractFormDialog({
           {/* Client Information */}
           <Section title="Client Information">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Contract ID">
-                <Input value={contractCode} readOnly className="font-mono" />
+              <Field label={editing && editing.recordType === "client" ? "Contract ID" : "Prospect ID"}>
+                <Input
+                  value={editing && editing.recordType === "client" ? contractCode : prospectCode}
+                  readOnly
+                  className="font-mono"
+                />
               </Field>
               <Field label="Unit ID *">
                 <Popover open={unitPickerOpen} onOpenChange={setUnitPickerOpen}>
@@ -1680,17 +1703,15 @@ function ContractFormDialog({
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Status">
-                <Select value={status} onValueChange={(v) => setStatus(v as ContractStatus)}>
-                  <SelectTrigger className="h-10 rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="expired">Expired</SelectItem>
-                  </SelectContent>
-                </Select>
+              <Field label="Approval Status">
+                <Input
+                  value={
+                    editing
+                      ? `${editing.recordType === "client" ? "Client" : "Prospect"} · ${editing.approvalStatus}`
+                      : "Prospect · pending"
+                  }
+                  readOnly
+                />
               </Field>
               <div className="sm:col-span-2">
                 <Field label="Description">
@@ -1829,6 +1850,8 @@ function ContractFormDialog({
               setSaving(true);
               const err = await onSubmit({
                 contractCode,
+                prospectCode,
+                recordType: editing?.recordType ?? "prospect",
                 unitId,
                 startDate,
                 endDate,
@@ -1837,10 +1860,11 @@ function ContractFormDialog({
                 payrollWindowId: payrollWindowId || null,
                 billingTypeId: billingTypeId || null,
                 gstOption,
-                status,
-                approvalStatus: "pending",
-                rejectionReason: "",
-                createdBy: null,
+                status: editing?.status ?? "inactive",
+                approvalStatus: editing?.approvalStatus ?? "pending",
+                rejectionReason: editing?.rejectionReason ?? "",
+                createdBy: editing?.createdBy ?? null,
+                promotedAt: editing?.promotedAt ?? null,
               }, resources);
               setSaving(false);
               if (err) toast.error(err);

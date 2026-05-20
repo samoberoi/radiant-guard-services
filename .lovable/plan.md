@@ -1,70 +1,62 @@
 ## Goal
 
-Add an approval + signature + notification workflow to client contracts, mirroring the candidate→employee approval pattern, plus a project-wide notification system (bell icon + Notification Center).
+Add a Prospects vs Clients workflow to the Client Contracts page, mirroring the Employees module pattern. Prospect contracts go through the same approval + signature flow already built; on sign, they "promote" to Client and a contract code is issued.
 
-## Contract status model
+## Lifecycle
 
-New lifecycle (replaces current "active by default"):
-
-```text
-draft → pending_approval → approved → signed (= effectively "active")
-                       ↘ rejected
-any signed contract whose end_date < today → expired (auto)
+```
+Prospect (draft)
+   └─ submit → Prospect (pending_approval)
+        ├─ reject → Prospect (rejected)
+        └─ approve + sign → Client (signed/active)  ← contract_code generated here
+                                  └─ end_date<today → Client (expired)
 ```
 
-- Default on create: `pending_approval` (never auto-active).
-- "Inactive" in the UI = anything not yet `signed` and not `expired` (covers `pending_approval`, `approved-awaiting-signature`, `rejected`).
-- `expired` is set only by the existing auto-expiry pass when `end_date` is in the past.
+Key rule: a contract is a **Prospect** until it is signed. Once signed it becomes a **Client** and gets a permanent `contract_code`. Rejected stays under Prospects. Expired stays under Clients.
 
-DB changes (single migration):
-- Add columns to `client_contracts`: `approval_status` (`pending`|`approved`|`rejected`, default `pending`), `approved_by`, `approved_at`, `rejected_by`, `rejected_at`, `rejection_reason`, `signed_at`, `company_signature_data`, `signed_pdf_url`.
-- Backfill existing rows: anything currently `active` → `approval_status='approved'`, `signed_at=now()` so they stay usable.
-- Loosen the `status` enum/check to allow `pending_approval` alongside existing values.
+## Data model
 
-## Contract page UI changes (`admin.contracts.client-contracts.tsx`)
+Add to `client_contracts`:
+- `record_type text not null default 'prospect'` — `'prospect' | 'client'`
+- `prospect_code text` — assigned on insert (e.g. `PROS-0001`), kept for audit even after promotion
+- `promoted_at timestamptz` — when it became a client
+- `contract_code` — already exists; **leave null on insert**, populate only on approval+sign
 
-Per-contract row + detail header:
-- Top of each contract shows an **Approval pill**: `Pending` (amber), `Approved` (blue), `Rejected` (red), `Signed` (green), `Expired` (muted).
-- For admins on a `pending` contract: show **Approve** and **Reject** buttons (same visual pattern as candidate→employee).
-  - **Approve** → opens existing signature dialog (reuse `SignDocumentDialog` pattern / `SignaturePad`) where the admin signs. On save: stores signature, sets `approval_status='approved'`, `signed_at=now()`, `status='active'`, and emits a notification to the contract creator.
-  - **Reject** → opens a small dialog asking for a `rejection_reason` (required, ≥10 chars). On save: sets `approval_status='rejected'`, `status='inactive'`, stores reason, emits a notification to the contract creator.
-- Dashboard counters at the top of the list update to: Pending / Approved / Signed / Rejected / Expired (replacing the current active/inactive/expired split). Cards turn amber when Pending > 0 and red when Rejected > 0, matching the employee dashboard convention.
+Backfill: existing rows with `approval_status='approved'` or non-empty `contract_code` → `record_type='client'`; everything else → `'prospect'`. Generate `prospect_code` for all existing prospects.
 
-Create/edit form:
-- Remove the manual `status` selector. New contracts are always created as `status='inactive'`, `approval_status='pending'`.
-- Editing a contract that has already been signed does NOT reset approval; editing one that is `pending` keeps it pending.
+Sequences:
+- `prospect_code_seq` for `PROS-0001…`
+- Existing contract code generator stays; only fires on promotion.
 
-All mutations call `logActivity` with module `"Client Contracts"`.
+## UI
 
-## Notification system (new)
+`admin.contracts.client-contracts.tsx`:
+- Top-level `Tabs`: **Clients** (default) | **Prospects**, with counts.
+- Page subtitle / "New Contract" button always creates a `prospect`.
+- Prospects tab columns: Prospect Code, Unit, Service Type, Created, Approval Status, Actions (Approve / Reject / Edit / Delete).
+- Clients tab columns: Contract Code, Unit, Service Type, Start/End, Status (Active/Expired), Actions (View / Download signed PDF / Delete).
+- Stat cards split per tab.
 
-DB (same migration):
-- `notifications` table: `id`, `user_id` (recipient), `actor_id`, `type` (`contract_approved`|`contract_rejected`|generic), `title`, `message`, `link` (route to open), `entity_type`, `entity_id`, `read_at`, `created_at`.
-- RLS: a user can read/update their own rows; inserts allowed for authenticated users (since approvals come from admin server fn).
+`ContractApprovalDialog`:
+- On Approve+Sign, in addition to existing updates, set `record_type='client'`, `promoted_at=now()`, generate `contract_code`, notify creator: *"Prospect PROS-0007 approved and promoted to client CON-0012."*
+- Reject: stays in Prospects tab with reason.
 
-Server fn (`src/lib/notifications.functions.ts`):
-- `listMyNotifications`, `markNotificationRead`, `markAllRead`, `createNotification` (used internally by contract approve/reject).
+## Notifications
 
-UI:
-- **Bell icon** in the global top header (in `__root.tsx` or the admin shell header). Shows unread count; click opens a popover with the latest 10 + "View all" link to `/admin/notifications`.
-- **Sidebar entry** "Notification Center" with bell icon → `/admin/notifications` route, showing the full list with filters (All / Unread) and per-row "Mark read" / open-link.
-- Polls via `useQuery` with a 30s `refetchInterval` (Realtime can be added later; keeping scope tight).
+Reuse existing `notifications` table + `NotificationBell`. New event types:
+- `contract_submitted` (creator → admins, future) — for now skipped, single-admin.
+- `contract_approved` — already wired; message updated to mention promotion.
+- `contract_rejected` — already wired.
 
-Since we currently have a single admin user, both the "creator" and "approver" will be the same person in practice — notifications still fire so the flow is verifiable end-to-end.
+## Out of scope
 
-## Files to touch / add
+- RBAC split between submitter and approver (still single admin user).
+- Editing a signed/client contract (locked, same as today).
+- Converting a Client back to Prospect.
 
-- `supabase/migrations/...` — new migration (schema only; data backfill via insert tool after).
-- `src/routes/admin.contracts.client-contracts.tsx` — status model, approve/reject buttons, dashboard, remove status select.
-- `src/components/ContractApprovalDialog.tsx` — new: signature-on-approve + reject-with-reason.
-- `src/lib/notifications.functions.ts` — new server fns.
-- `src/components/NotificationBell.tsx` — new: header popover.
-- `src/routes/admin.notifications.tsx` — new: Notification Center page.
-- `src/components/app-sidebar` (or wherever sidebar items live) — add "Notification Center" entry.
-- `src/routes/__root.tsx` or admin shell — mount `<NotificationBell />` in top bar.
+## Files touched
 
-## Out of scope (call out)
-
-- Real RBAC (role-based gating). For now every authenticated user is treated as admin, matching current project behavior. Approve/Reject buttons will be guarded by a single `isAdmin` flag we can later wire to real roles.
-- Realtime push for notifications (polling is sufficient for now).
-- Editing/versioning of an already-signed contract (would re-trigger approval — flagged for a later pass).
+- New migration: add `record_type`, `prospect_code`, `promoted_at`, `prospect_code_seq`, backfill.
+- `src/routes/admin.contracts.client-contracts.tsx` — add Tabs, split lists, default insert as prospect, no `contract_code` on create.
+- `src/components/ContractApprovalDialog.tsx` — on approve+sign, promote + generate contract code.
+- `src/lib/notifications.ts` — minor message tweak (optional).
