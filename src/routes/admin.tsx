@@ -15,13 +15,16 @@ import {
   LayoutDashboard,
   LogOut,
   Car,
+  CreditCard,
   MapPin,
   Menu,
   PanelLeftClose,
+  ShieldCheck,
   SlidersHorizontal,
   UserPlus,
   Users,
   Warehouse,
+  Wind,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
