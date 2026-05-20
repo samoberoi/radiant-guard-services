@@ -367,6 +367,32 @@ function normalizeSlot(v: any): NomineeEntry[] {
   return [];
 }
 
+function PercentInput({ value, disabled, onChange }: { value: number; disabled?: boolean; onChange: (n: number) => void }) {
+  const [raw, setRaw] = useState<string>(String(value ?? 0));
+  useEffect(() => {
+    setRaw((prev) => (Number(prev) === Number(value) ? prev : String(value ?? 0)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  return (
+    <Input
+      type="text"
+      inputMode="numeric"
+      className="w-20"
+      disabled={disabled}
+      value={raw}
+      onChange={(ev) => {
+        const v = ev.target.value.replace(/[^0-9]/g, "");
+        setRaw(v);
+        const n = v === "" ? 0 : Math.max(0, Math.min(100, Number(v)));
+        onChange(n);
+      }}
+      onBlur={() => {
+        if (raw === "") setRaw("0");
+      }}
+    />
+  );
+}
+
 export function NomineeSection({ form, setSection }: { form: any; setSection: SetSection }) {
   const compliance = form.compliance ?? {};
   const contacts: any[] = Array.isArray(form.contacts) ? form.contacts : [];
