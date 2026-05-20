@@ -362,7 +362,7 @@ function AddEntryDialog({
   const [quantity, setQuantity] = useState<string>("");
   const [rate, setRate] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
-  const [paymentMode, setPaymentMode] = useState<string>("Fuel Card");
+  const [paymentMode, setPaymentMode] = useState<string>("PetroCard");
   const [locationText, setLocationText] = useState("");
   const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
   const [notes, setNotes] = useState("");
