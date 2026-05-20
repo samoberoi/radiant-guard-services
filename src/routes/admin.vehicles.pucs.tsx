@@ -281,9 +281,6 @@ function PucFormDialog({ open, onOpenChange, title, initial, vehicles, onSubmit 
               <SelectContent>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.vehicle_number}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="grid gap-2"><Label>PUC Certificate Number</Label><Input value={pucNumber} onChange={(e) => setPucNumber(e.target.value)} /></div>
-          <div className="grid gap-2"><Label>Issuing Authority</Label><Input value={issuingAuthority} onChange={(e) => setIssuingAuthority(e.target.value)} placeholder="e.g. RTO authorised centre" /></div>
-          <div className="grid gap-2"><Label>Issued Date</Label><Input type="date" value={issuedDate} onChange={(e) => setIssuedDate(e.target.value)} /></div>
           <div className="grid gap-2"><Label>Expiry Date</Label><Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} /></div>
           <div className="grid gap-2 sm:col-span-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 sm:col-span-2">
