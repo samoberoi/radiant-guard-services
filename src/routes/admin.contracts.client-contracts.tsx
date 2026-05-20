@@ -1356,7 +1356,7 @@ function ClientContractsPage() {
                     </>
                   ) : (
                     <td className="px-5 py-3 text-muted-foreground">
-                      {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "—"}
+                      {c.startDate || "—"}
                     </td>
                   )}
                   <td className="px-5 py-3 text-xs uppercase tracking-wider text-foreground">
