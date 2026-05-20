@@ -1597,7 +1597,7 @@ function ClientContractsPage() {
   );
 }
 
-function ApprovalBadge({ status }: { status: ApprovalStatus }) {
+function ApprovalBadge({ status, reason }: { status: ApprovalStatus; reason?: string }) {
   const map: Record<ApprovalStatus, { cls: string; label: string }> = {
     pending: { cls: "bg-amber-500/15 text-amber-600 dark:text-amber-400", label: "Pending" },
     approved: { cls: "bg-accent/15 text-accent", label: "Approved" },
@@ -1605,14 +1605,31 @@ function ApprovalBadge({ status }: { status: ApprovalStatus }) {
   };
   const { cls, label } = map[status];
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider",
-        cls,
-      )}
-    >
+    <div className="flex flex-col gap-0.5">
+      <span
+        className={cn(
+          "inline-flex w-fit items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider",
+          cls,
+        )}
+        title={status === "rejected" && reason ? reason : undefined}
+      >
+        <span className="h-1.5 w-1.5 rounded-full bg-current" />
+        {label}
+      </span>
+      {status === "rejected" && reason ? (
+        <span className="max-w-[220px] truncate text-[11px] text-destructive/80" title={reason}>
+          {reason}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function LostBadge() {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
       <span className="h-1.5 w-1.5 rounded-full bg-current" />
-      {label}
+      Lost
     </span>
   );
 }
