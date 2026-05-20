@@ -174,9 +174,6 @@ function PucManagerPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Vehicle</th>
-                <th className="px-5 py-3">PUC No.</th>
-                <th className="px-5 py-3">Authority</th>
-                <th className="px-5 py-3">Issued</th>
                 <th className="px-5 py-3">Expires</th>
                 <th className="px-5 py-3">Enabled</th>
                 <th className="px-5 py-3 text-right">Actions</th>
@@ -189,9 +186,6 @@ function PucManagerPage() {
                 return (
                   <tr key={i.id} className="hover:bg-secondary/30">
                     <td className="px-5 py-3 font-mono font-semibold text-foreground">{v?.vehicle_number || "—"}</td>
-                    <td className="px-5 py-3 font-mono text-foreground/90">{i.puc_number || "—"}</td>
-                    <td className="px-5 py-3 text-foreground/90">{i.issuing_authority || "—"}</td>
-                    <td className="px-5 py-3 text-foreground/90">{fmtDate(i.issued_date)}</td>
                     <td className="px-5 py-3">
                       <span className={expired ? "rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-semibold text-destructive" : "text-foreground/90"}>
                         {fmtDate(i.expiry_date)}{expired ? " · Expired" : ""}
@@ -214,7 +208,7 @@ function PucManagerPage() {
                 );
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">No PUC records found.</td></tr>
+                <tr><td colSpan={4} className="px-5 py-12 text-center text-sm text-muted-foreground">No PUC records found.</td></tr>
               )}
             </tbody>
           </table>
