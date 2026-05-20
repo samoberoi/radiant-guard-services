@@ -40,6 +40,7 @@ import { Route as AdminVehiclesServiceManagerRouteImport } from './routes/admin.
 import { Route as AdminVehiclesPucsRouteImport } from './routes/admin.vehicles.pucs'
 import { Route as AdminVehiclesInventoryRouteImport } from './routes/admin.vehicles.inventory'
 import { Route as AdminVehiclesInsurancesRouteImport } from './routes/admin.vehicles.insurances'
+import { Route as AdminVehiclesInsightLabRouteImport } from './routes/admin.vehicles.insight-lab'
 import { Route as AdminVehiclesFuelManagerRouteImport } from './routes/admin.vehicles.fuel-manager'
 import { Route as AdminVehiclesFastagsRouteImport } from './routes/admin.vehicles.fastags'
 import { Route as AdminCustomersUnitManagerRouteImport } from './routes/admin.customers.unit-manager'
@@ -208,6 +209,11 @@ const AdminVehiclesInsurancesRoute = AdminVehiclesInsurancesRouteImport.update({
   path: '/insurances',
   getParentRoute: () => AdminVehiclesRoute,
 } as any)
+const AdminVehiclesInsightLabRoute = AdminVehiclesInsightLabRouteImport.update({
+  id: '/insight-lab',
+  path: '/insight-lab',
+  getParentRoute: () => AdminVehiclesRoute,
+} as any)
 const AdminVehiclesFuelManagerRoute =
   AdminVehiclesFuelManagerRouteImport.update({
     id: '/fuel-manager',
@@ -291,6 +297,7 @@ export interface FileRoutesByFullPath {
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
   '/admin/vehicles/fuel-manager': typeof AdminVehiclesFuelManagerRoute
+  '/admin/vehicles/insight-lab': typeof AdminVehiclesInsightLabRoute
   '/admin/vehicles/insurances': typeof AdminVehiclesInsurancesRoute
   '/admin/vehicles/inventory': typeof AdminVehiclesInventoryRoute
   '/admin/vehicles/pucs': typeof AdminVehiclesPucsRoute
@@ -332,6 +339,7 @@ export interface FileRoutesByTo {
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
   '/admin/vehicles/fuel-manager': typeof AdminVehiclesFuelManagerRoute
+  '/admin/vehicles/insight-lab': typeof AdminVehiclesInsightLabRoute
   '/admin/vehicles/insurances': typeof AdminVehiclesInsurancesRoute
   '/admin/vehicles/inventory': typeof AdminVehiclesInventoryRoute
   '/admin/vehicles/pucs': typeof AdminVehiclesPucsRoute
@@ -374,6 +382,7 @@ export interface FileRoutesById {
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
   '/admin/vehicles/fuel-manager': typeof AdminVehiclesFuelManagerRoute
+  '/admin/vehicles/insight-lab': typeof AdminVehiclesInsightLabRoute
   '/admin/vehicles/insurances': typeof AdminVehiclesInsurancesRoute
   '/admin/vehicles/inventory': typeof AdminVehiclesInventoryRoute
   '/admin/vehicles/pucs': typeof AdminVehiclesPucsRoute
@@ -417,6 +426,7 @@ export interface FileRouteTypes {
     | '/admin/customers/unit-manager'
     | '/admin/vehicles/fastags'
     | '/admin/vehicles/fuel-manager'
+    | '/admin/vehicles/insight-lab'
     | '/admin/vehicles/insurances'
     | '/admin/vehicles/inventory'
     | '/admin/vehicles/pucs'
@@ -458,6 +468,7 @@ export interface FileRouteTypes {
     | '/admin/customers/unit-manager'
     | '/admin/vehicles/fastags'
     | '/admin/vehicles/fuel-manager'
+    | '/admin/vehicles/insight-lab'
     | '/admin/vehicles/insurances'
     | '/admin/vehicles/inventory'
     | '/admin/vehicles/pucs'
@@ -499,6 +510,7 @@ export interface FileRouteTypes {
     | '/admin/customers/unit-manager'
     | '/admin/vehicles/fastags'
     | '/admin/vehicles/fuel-manager'
+    | '/admin/vehicles/insight-lab'
     | '/admin/vehicles/insurances'
     | '/admin/vehicles/inventory'
     | '/admin/vehicles/pucs'
@@ -732,6 +744,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminVehiclesInsurancesRouteImport
       parentRoute: typeof AdminVehiclesRoute
     }
+    '/admin/vehicles/insight-lab': {
+      id: '/admin/vehicles/insight-lab'
+      path: '/insight-lab'
+      fullPath: '/admin/vehicles/insight-lab'
+      preLoaderRoute: typeof AdminVehiclesInsightLabRouteImport
+      parentRoute: typeof AdminVehiclesRoute
+    }
     '/admin/vehicles/fuel-manager': {
       id: '/admin/vehicles/fuel-manager'
       path: '/fuel-manager'
@@ -812,6 +831,7 @@ const AdminCustomersRouteWithChildren = AdminCustomersRoute._addFileChildren(
 interface AdminVehiclesRouteChildren {
   AdminVehiclesFastagsRoute: typeof AdminVehiclesFastagsRoute
   AdminVehiclesFuelManagerRoute: typeof AdminVehiclesFuelManagerRoute
+  AdminVehiclesInsightLabRoute: typeof AdminVehiclesInsightLabRoute
   AdminVehiclesInsurancesRoute: typeof AdminVehiclesInsurancesRoute
   AdminVehiclesInventoryRoute: typeof AdminVehiclesInventoryRoute
   AdminVehiclesPucsRoute: typeof AdminVehiclesPucsRoute
@@ -821,6 +841,7 @@ interface AdminVehiclesRouteChildren {
 const AdminVehiclesRouteChildren: AdminVehiclesRouteChildren = {
   AdminVehiclesFastagsRoute: AdminVehiclesFastagsRoute,
   AdminVehiclesFuelManagerRoute: AdminVehiclesFuelManagerRoute,
+  AdminVehiclesInsightLabRoute: AdminVehiclesInsightLabRoute,
   AdminVehiclesInsurancesRoute: AdminVehiclesInsurancesRoute,
   AdminVehiclesInventoryRoute: AdminVehiclesInventoryRoute,
   AdminVehiclesPucsRoute: AdminVehiclesPucsRoute,

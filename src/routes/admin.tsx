@@ -21,6 +21,7 @@ import {
   Menu,
   PanelLeftClose,
   ShieldCheck,
+  Sparkles,
   SlidersHorizontal,
   UserPlus,
   Users,
@@ -63,6 +64,7 @@ const vehiclesChildren: NavItem[] = [
   { to: "/admin/vehicles/pucs", label: "PUC Manager", icon: Wind },
   { to: "/admin/vehicles/service-manager", label: "Service Manager", icon: Wrench },
   { to: "/admin/vehicles/fuel-manager", label: "Fuel Manager", icon: Fuel },
+  { to: "/admin/vehicles/insight-lab", label: "Insight Lab", icon: Sparkles },
 ];
 
 
