@@ -34,12 +34,20 @@ type FastTag = {
   status: string;
   notes: string;
   enabled: boolean;
+  login_type: string;
+  login_id: string;
+  login_password: string;
+  registered_email: string;
 };
 
 const QK = ["admin", "vehicle_fastags"] as const;
 const MODULE = "FastTag Manager";
 const ENTITY = "vehicle_fastags";
 const STATUS = ["active", "inactive", "blocked", "expired"];
+const LOGIN_TYPES = [
+  { value: "individual", label: "Individual" },
+  { value: "corporate", label: "Corporate" },
+];
 const BANKS = ["ICICI Bank", "HDFC Bank", "Axis Bank", "SBI", "Paytm Payments Bank", "IDFC FIRST Bank", "Kotak Mahindra Bank", "IndusInd Bank", "Bank of Baroda", "Federal Bank", "Other"];
 
 function rowTo(r: Record<string, unknown>): FastTag {
@@ -55,8 +63,13 @@ function rowTo(r: Record<string, unknown>): FastTag {
     status: String(r.status ?? "active"),
     notes: String(r.notes ?? ""),
     enabled: Boolean(r.enabled ?? true),
+    login_type: String(r.login_type ?? "individual"),
+    login_id: String(r.login_id ?? ""),
+    login_password: String(r.login_password ?? ""),
+    registered_email: String(r.registered_email ?? ""),
   };
 }
+
 
 function FastTagManagerPage() {
   const qc = useQueryClient();
@@ -68,37 +81,47 @@ function FastTagManagerPage() {
     queryFn: async (): Promise<FastTag[]> => {
       const { data, error } = await supabase
         .from("vehicle_fastags" as never)
-        .select("id,vehicle_id,fastag_number,bank_name,account_number,balance,issued_date,expiry_date,status,notes,enabled")
+        .select("id,vehicle_id,fastag_number,bank_name,account_number,balance,issued_date,expiry_date,status,notes,enabled,login_type,login_id,login_password,registered_email")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowTo);
     },
   });
 
+
   const invalidate = () => qc.invalidateQueries({ queryKey: QK });
   type Payload = Omit<FastTag, "id">;
-  const toRow = (p: Payload) => ({
-    vehicle_id: p.vehicle_id,
-    fastag_number: p.fastag_number.trim(),
-    bank_name: p.bank_name.trim(),
-    account_number: p.account_number.trim(),
-    balance: Number(p.balance) || 0,
-    issued_date: p.issued_date || null,
-    expiry_date: p.expiry_date || null,
-    status: p.status,
-    notes: p.notes.trim(),
-    enabled: p.enabled,
-  });
+  const toRow = (p: Payload) => {
+    const v = vMap.get(p.vehicle_id);
+    return {
+      vehicle_id: p.vehicle_id,
+      fastag_number: (v?.vehicle_number ?? p.fastag_number).trim(),
+      bank_name: p.bank_name.trim(),
+      account_number: p.account_number.trim(),
+      balance: Number(p.balance) || 0,
+      issued_date: p.issued_date || null,
+      expiry_date: p.expiry_date || null,
+      status: p.status,
+      notes: p.notes.trim(),
+      enabled: p.enabled,
+      login_type: p.login_type,
+      login_id: p.login_id.trim(),
+      login_password: p.login_password,
+      registered_email: p.registered_email.trim(),
+    };
+  };
 
   const addMut = useMutation({
     mutationFn: async (p: Payload) => {
       if (!p.vehicle_id) throw new Error("Vehicle is required");
-      const { error } = await supabase.from("vehicle_fastags" as never).insert(toRow(p) as never);
+      const row = toRow(p);
+      const { error } = await supabase.from("vehicle_fastags" as never).insert(row as never);
       if (error) throw error;
-      void logActivity({ module: MODULE, action: "create", entityType: ENTITY, entityLabel: p.fastag_number || vMap.get(p.vehicle_id)?.vehicle_number || "FastTag", details: p as Record<string, unknown> });
+      void logActivity({ module: MODULE, action: "create", entityType: ENTITY, entityLabel: row.fastag_number || "FastTag", details: row as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
+
   const updateMut = useMutation({
     mutationFn: async ({ id, p }: { id: string; p: Payload }) => {
       const { error } = await supabase.from("vehicle_fastags" as never).update(toRow(p) as never).eq("id", id);
@@ -286,7 +309,6 @@ function FastTagFormDialog({ open, onOpenChange, title, initial, vehicles, onSub
   onSubmit: (p: Omit<FastTag, "id">) => Promise<string | null>;
 }) {
   const [vehicleId, setVehicleId] = useState("");
-  const [fastagNumber, setFastagNumber] = useState("");
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [balance, setBalance] = useState("0");
@@ -295,11 +317,14 @@ function FastTagFormDialog({ open, onOpenChange, title, initial, vehicles, onSub
   const [status, setStatus] = useState("active");
   const [notes, setNotes] = useState("");
   const [enabled, setEnabled] = useState(true);
+  const [loginType, setLoginType] = useState("individual");
+  const [loginId, setLoginId] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [registeredEmail, setRegisteredEmail] = useState("");
   const [saving, setSaving] = useState(false);
 
   useResetOnOpen(open, () => {
     setVehicleId(initial?.vehicle_id ?? "");
-    setFastagNumber(initial?.fastag_number ?? "");
     setBankName(initial?.bank_name ?? "");
     setAccountNumber(initial?.account_number ?? "");
     setBalance(String(initial?.balance ?? 0));
@@ -308,14 +333,20 @@ function FastTagFormDialog({ open, onOpenChange, title, initial, vehicles, onSub
     setStatus(initial?.status || "active");
     setNotes(initial?.notes ?? "");
     setEnabled(initial?.enabled ?? true);
+    setLoginType(initial?.login_type || "individual");
+    setLoginId(initial?.login_id ?? "");
+    setLoginPassword(initial?.login_password ?? "");
+    setRegisteredEmail(initial?.registered_email ?? "");
   });
+
+  const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="sm:max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle><span className="inline-flex items-center gap-2"><Radio className="h-4 w-4" />{title}</span></DialogTitle>
-          <DialogDescription>FastTag account linked to a vehicle.</DialogDescription>
+          <DialogDescription>FastTag account linked to a vehicle. The FastTag number is the vehicle's registration number.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2 sm:grid-cols-2">
           <div className="grid gap-2 sm:col-span-2">
@@ -325,7 +356,10 @@ function FastTagFormDialog({ open, onOpenChange, title, initial, vehicles, onSub
               <SelectContent>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{vehicleLabel(v)}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="grid gap-2"><Label>FastTag Number</Label><Input value={fastagNumber} onChange={(e) => setFastagNumber(e.target.value)} placeholder="Tag ID / Serial" /></div>
+          <div className="grid gap-2 sm:col-span-2">
+            <Label>FastTag No. (auto = Vehicle Number)</Label>
+            <Input value={selectedVehicle?.vehicle_number ?? ""} readOnly disabled placeholder="Select a vehicle first" className="font-mono" />
+          </div>
           <div className="grid gap-2">
             <Label>Bank</Label>
             <Select value={bankName} onValueChange={setBankName}>
@@ -337,13 +371,26 @@ function FastTagFormDialog({ open, onOpenChange, title, initial, vehicles, onSub
           <div className="grid gap-2"><Label>Balance (₹)</Label><Input type="number" step="0.01" value={balance} onChange={(e) => setBalance(e.target.value)} /></div>
           <div className="grid gap-2"><Label>Issued Date</Label><Input type="date" value={issuedDate} onChange={(e) => setIssuedDate(e.target.value)} /></div>
           <div className="grid gap-2"><Label>Expiry Date</Label><Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} /></div>
-          <div className="grid gap-2 sm:col-span-2">
+          <div className="grid gap-2">
             <Label>Status</Label>
             <Select value={status} onValueChange={setStatus}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
             </Select>
           </div>
+
+          <div className="sm:col-span-2 mt-2 border-t border-border pt-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">FastTag Portal Login</div>
+          <div className="grid gap-2">
+            <Label>Login Type</Label>
+            <Select value={loginType} onValueChange={setLoginType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{LOGIN_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2"><Label>Registered Email</Label><Input type="email" value={registeredEmail} onChange={(e) => setRegisteredEmail(e.target.value)} placeholder="name@company.com" /></div>
+          <div className="grid gap-2"><Label>Login ID</Label><Input value={loginId} onChange={(e) => setLoginId(e.target.value)} placeholder="Username / Customer ID" /></div>
+          <div className="grid gap-2"><Label>Password</Label><Input type="password" value={loginPassword} onChange={(e) => setLoginPassword(e.target.value)} autoComplete="new-password" /></div>
+
           <div className="grid gap-2 sm:col-span-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 sm:col-span-2">
             <div><div className="text-sm font-medium">Enabled</div></div>
@@ -356,10 +403,18 @@ function FastTagFormDialog({ open, onOpenChange, title, initial, vehicles, onSub
             if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
             setSaving(true);
             const err = await onSubmit({
-              vehicle_id: vehicleId, fastag_number: fastagNumber, bank_name: bankName,
-              account_number: accountNumber, balance: Number(balance) || 0,
-              issued_date: issuedDate || null, expiry_date: expiryDate || null,
+              vehicle_id: vehicleId,
+              fastag_number: selectedVehicle?.vehicle_number ?? "",
+              bank_name: bankName,
+              account_number: accountNumber,
+              balance: Number(balance) || 0,
+              issued_date: issuedDate || null,
+              expiry_date: expiryDate || null,
               status, notes, enabled,
+              login_type: loginType,
+              login_id: loginId,
+              login_password: loginPassword,
+              registered_email: registeredEmail,
             });
             setSaving(false);
             if (err) toast.error(err); else onOpenChange(false);
@@ -369,3 +424,4 @@ function FastTagFormDialog({ open, onOpenChange, title, initial, vehicles, onSub
     </Dialog>
   );
 }
+
