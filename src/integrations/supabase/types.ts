@@ -1781,6 +1781,72 @@ export type Database = {
           },
         ]
       }
+      vehicle_fuel_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          entry_date: string
+          entry_time: string | null
+          fuel_type: string
+          geo_lat: number | null
+          geo_lng: number | null
+          id: string
+          location_text: string
+          notes: string
+          odometer_km: number
+          odometer_photo_url: string
+          payment_mode: string
+          pump_photo_url: string
+          quantity: number
+          rate: number
+          receipt_photo_url: string
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          entry_date?: string
+          entry_time?: string | null
+          fuel_type?: string
+          geo_lat?: number | null
+          geo_lng?: number | null
+          id?: string
+          location_text?: string
+          notes?: string
+          odometer_km?: number
+          odometer_photo_url?: string
+          payment_mode?: string
+          pump_photo_url?: string
+          quantity?: number
+          rate?: number
+          receipt_photo_url?: string
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          entry_date?: string
+          entry_time?: string | null
+          fuel_type?: string
+          geo_lat?: number | null
+          geo_lng?: number | null
+          id?: string
+          location_text?: string
+          notes?: string
+          odometer_km?: number
+          odometer_photo_url?: string
+          payment_mode?: string
+          pump_photo_url?: string
+          quantity?: number
+          rate?: number
+          receipt_photo_url?: string
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: []
+      }
       vehicle_insurances: {
         Row: {
           chassis_number: string

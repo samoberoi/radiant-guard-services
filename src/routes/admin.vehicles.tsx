@@ -111,7 +111,7 @@ function VehiclesDashboard() {
       />
 
       {/* Top stat cards — clickable, deep-link into managers with filter */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <StatCard
           label="Total Vehicles"
           value={totalVehicles}
@@ -151,6 +151,14 @@ function VehiclesDashboard() {
           subtle={pucExpired.length > 0 ? `${pucExpired.length} already expired` : undefined}
           to="/admin/vehicles/pucs"
           search={{ status: "due" }}
+        />
+        <StatCard
+          label="Fuel Manager"
+          value={totalVehicles}
+          icon={Fuel}
+          accent="accent"
+          subtle="Log top-ups & track spend"
+          to="/admin/vehicles/fuel-manager"
         />
       </div>
 
