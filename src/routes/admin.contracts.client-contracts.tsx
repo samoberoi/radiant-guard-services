@@ -359,7 +359,26 @@ function useContracts() {
     onSuccess: invalidate,
   });
 
-  return { items, addMut, updateMut, deleteMut };
+  const updateStageMut = useMutation({
+    mutationFn: async ({ id, stage, label }: { id: string; stage: ProspectStage; label: string }) => {
+      const { error } = await supabase
+        .from("client_contracts" as never)
+        .update({ prospect_stage: stage } as never)
+        .eq("id", id);
+      if (error) throw error;
+      void logActivity({
+        module: "Client Contracts",
+        action: "stage-change",
+        entityType: "client_contracts",
+        entityId: id,
+        entityLabel: label,
+        details: { stage },
+      });
+    },
+    onSuccess: invalidate,
+  });
+
+  return { items, addMut, updateMut, deleteMut, updateStageMut };
 }
 
 function useServiceTypes() {
