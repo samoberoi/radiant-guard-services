@@ -429,45 +429,75 @@ export type Database = {
       }
       client_contracts: {
         Row: {
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           billing_type_id: string | null
+          company_signature_data: string
           contract_code: string
           created_at: string
+          created_by: string | null
           description: string
           end_date: string | null
           gst_option: string
           id: string
           payroll_window_id: string | null
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string
           service_type_id: string | null
+          signed_at: string | null
+          signed_pdf_url: string
           start_date: string | null
           status: string
           unit_id: string
           updated_at: string
         }
         Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           billing_type_id?: string | null
+          company_signature_data?: string
           contract_code: string
           created_at?: string
+          created_by?: string | null
           description?: string
           end_date?: string | null
           gst_option?: string
           id?: string
           payroll_window_id?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string
           service_type_id?: string | null
+          signed_at?: string | null
+          signed_pdf_url?: string
           start_date?: string | null
           status?: string
           unit_id: string
           updated_at?: string
         }
         Update: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           billing_type_id?: string | null
+          company_signature_data?: string
           contract_code?: string
           created_at?: string
+          created_by?: string | null
           description?: string
           end_date?: string | null
           gst_option?: string
           id?: string
           payroll_window_id?: string | null
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string
           service_type_id?: string | null
+          signed_at?: string | null
+          signed_pdf_url?: string
           start_date?: string | null
           status?: string
           unit_id?: string
@@ -1096,6 +1126,48 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          link: string
+          message: string
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          link?: string
+          message?: string
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          link?: string
+          message?: string
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string
         }
         Relationships: []
       }

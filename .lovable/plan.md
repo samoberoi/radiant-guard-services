@@ -1,65 +1,70 @@
-# Block deleting parents that still have dependents
-
 ## Goal
 
-Wherever a record is referenced by other records, the delete button is **disabled** and shows a tooltip:
-> "Cannot delete — N {dependent} still linked to this {entity}. Remove them first."
+Add an approval + signature + notification workflow to client contracts, mirroring the candidate→employee approval pattern, plus a project-wide notification system (bell icon + Notification Center).
 
-Same treatment everywhere: list rows, detail screens, and any bulk-delete affordance.
+## Contract status model
 
-## Shared building block
-
-Create `src/lib/dependency-checks.ts` exporting:
-
-- `useDependencyCounts(entity, id)` — React Query hook that runs the right Supabase count queries for that entity and returns `{ total, breakdown: [{ label, count, route? }] }`.
-- `<DeleteGuardButton entity id onConfirmDelete />` — wraps the existing trash/delete button, disables it when `total > 0`, and renders a Tooltip with the breakdown. Falls back to the existing confirm dialog when `total === 0`.
-
-This keeps each page's diff to: swap `<Button …Trash2…>` → `<DeleteGuardButton …>`.
-
-## Relationship map (parent → blockers)
+New lifecycle (replaces current "active by default"):
 
 ```text
-customers           ← units, customer_gst_numbers
-units               ← client_contracts, candidates, candidate_units, employee_scope_assignments
-indian_states       ← branches.state_id, + string refs in lwf.state, pt_slabs.state,
-                       cost_components.state, customers.*_state, units.*_state, pincode_ranges.state
-branches            ← units (by branch fields, if any) — verify
-client_contracts    ← contract_resources
-designations        ← candidates, contract_resources
-service_types       ← client_contracts, contract_resources
-billing_types       ← client_contracts
-payroll_windows     ← client_contracts
-payroll_day_bases   ← contract_resources
-roles               ← candidates.role_key, role_permissions.role_key
-ex_services         ← candidates.ex_service_id
-offboarding_reasons ← candidates.offboarding_reason_id
-esic_branches       ← candidates / units (verify usage)
-languages           ← candidates.languages (jsonb)            ⚠ jsonb scan
-assets              ← candidates.assigned_asset_ids (uuid[])  ⚠ array scan
-allowance_types     ← contract_resources.components (jsonb)   ⚠ jsonb scan
-cost_components     ← contract_resources.* (jsonb)            ⚠ jsonb scan
-duties              ← (verify; likely standalone)
-company_document_templates ← employee_signed_documents.template_id
-candidates          ← employee_signed_documents, candidate_units, employee_scope_assignments
+draft → pending_approval → approved → signed (= effectively "active")
+                       ↘ rejected
+any signed contract whose end_date < today → expired (auto)
 ```
 
-The ⚠ jsonb/array ones need a Postgres function (e.g. `count_allowance_usage(allowance_id)`) to scan efficiently. I'll add those as `SECURITY DEFINER` SQL functions in a single migration.
+- Default on create: `pending_approval` (never auto-active).
+- "Inactive" in the UI = anything not yet `signed` and not `expired` (covers `pending_approval`, `approved-awaiting-signature`, `rejected`).
+- `expired` is set only by the existing auto-expiry pass when `end_date` is in the past.
 
-## Files touched (22 admin pages)
+DB changes (single migration):
+- Add columns to `client_contracts`: `approval_status` (`pending`|`approved`|`rejected`, default `pending`), `approved_by`, `approved_at`, `rejected_by`, `rejected_at`, `rejection_reason`, `signed_at`, `company_signature_data`, `signed_pdf_url`.
+- Backfill existing rows: anything currently `active` → `approval_status='approved'`, `signed_at=now()` so they stay usable.
+- Loosen the `status` enum/check to allow `pending_approval` alongside existing values.
 
-`admin.customers.customer-manager`, `admin.customers.unit-manager`, `admin.customers.branch-manager`, `admin.customers.state-manager`, `admin.contracts.client-contracts`, `admin.designation-manager`, `admin.service-type-manager`, `admin.billing-type-manager`, `admin.payroll-manager`, `admin.payroll-days-manager`, `admin.rbac` (roles), `admin.ex-service-manager`, `admin.offboarding-reason-manager`, `admin.esic-branch-manager`, `admin.language-manager`, `admin.asset-manager`, `admin.allowance-manager`, `admin.cost-component-manager`, `admin.lwf-manager`, `admin.professional-tax-manager`, `admin.duty-manager`, `admin.employees` (candidates).
+## Contract page UI changes (`admin.contracts.client-contracts.tsx`)
 
-## Out of scope (confirm)
+Per-contract row + detail header:
+- Top of each contract shows an **Approval pill**: `Pending` (amber), `Approved` (blue), `Rejected` (red), `Signed` (green), `Expired` (muted).
+- For admins on a `pending` contract: show **Approve** and **Reject** buttons (same visual pattern as candidate→employee).
+  - **Approve** → opens existing signature dialog (reuse `SignDocumentDialog` pattern / `SignaturePad`) where the admin signs. On save: stores signature, sets `approval_status='approved'`, `signed_at=now()`, `status='active'`, and emits a notification to the contract creator.
+  - **Reject** → opens a small dialog asking for a `rejection_reason` (required, ≥10 chars). On save: sets `approval_status='rejected'`, `status='inactive'`, stores reason, emits a notification to the contract creator.
+- Dashboard counters at the top of the list update to: Pending / Approved / Signed / Rejected / Expired (replacing the current active/inactive/expired split). Cards turn amber when Pending > 0 and red when Rejected > 0, matching the employee dashboard convention.
 
-- **Soft-delete / disable** stays untouched — only hard delete is guarded.
-- **System tables** with `is_system = true` (e.g. system roles) already block delete — I'll keep that behavior and stack the dependency tooltip on top.
-- **Cascading auto-delete** is not introduced — we only inform & block.
+Create/edit form:
+- Remove the manual `status` selector. New contracts are always created as `status='inactive'`, `approval_status='pending'`.
+- Editing a contract that has already been signed does NOT reset approval; editing one that is `pending` keeps it pending.
 
-## Rollout order
+All mutations call `logActivity` with module `"Client Contracts"`.
 
-1. Migration: jsonb/array count functions.
-2. Shared `DeleteGuardButton` + `useDependencyCounts`.
-3. Wire into the 4 most-used parents first: **customers, units, states, client_contracts**.
-4. Roll out to the remaining 18 pages in a follow-up batch.
+## Notification system (new)
 
-Shall I proceed with step 1+2+3 in this turn, and the rest in the next?
+DB (same migration):
+- `notifications` table: `id`, `user_id` (recipient), `actor_id`, `type` (`contract_approved`|`contract_rejected`|generic), `title`, `message`, `link` (route to open), `entity_type`, `entity_id`, `read_at`, `created_at`.
+- RLS: a user can read/update their own rows; inserts allowed for authenticated users (since approvals come from admin server fn).
+
+Server fn (`src/lib/notifications.functions.ts`):
+- `listMyNotifications`, `markNotificationRead`, `markAllRead`, `createNotification` (used internally by contract approve/reject).
+
+UI:
+- **Bell icon** in the global top header (in `__root.tsx` or the admin shell header). Shows unread count; click opens a popover with the latest 10 + "View all" link to `/admin/notifications`.
+- **Sidebar entry** "Notification Center" with bell icon → `/admin/notifications` route, showing the full list with filters (All / Unread) and per-row "Mark read" / open-link.
+- Polls via `useQuery` with a 30s `refetchInterval` (Realtime can be added later; keeping scope tight).
+
+Since we currently have a single admin user, both the "creator" and "approver" will be the same person in practice — notifications still fire so the flow is verifiable end-to-end.
+
+## Files to touch / add
+
+- `supabase/migrations/...` — new migration (schema only; data backfill via insert tool after).
+- `src/routes/admin.contracts.client-contracts.tsx` — status model, approve/reject buttons, dashboard, remove status select.
+- `src/components/ContractApprovalDialog.tsx` — new: signature-on-approve + reject-with-reason.
+- `src/lib/notifications.functions.ts` — new server fns.
+- `src/components/NotificationBell.tsx` — new: header popover.
+- `src/routes/admin.notifications.tsx` — new: Notification Center page.
+- `src/components/app-sidebar` (or wherever sidebar items live) — add "Notification Center" entry.
+- `src/routes/__root.tsx` or admin shell — mount `<NotificationBell />` in top bar.
+
+## Out of scope (call out)
+
+- Real RBAC (role-based gating). For now every authenticated user is treated as admin, matching current project behavior. Approve/Reject buttons will be guarded by a single `isAdmin` flag we can later wire to real roles.
+- Realtime push for notifications (polling is sufficient for now).
+- Editing/versioning of an already-signed contract (would re-trigger approval — flagged for a later pass).
