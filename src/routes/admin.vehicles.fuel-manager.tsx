@@ -510,6 +510,42 @@ function AddEntryDialog({
               </Select>
             </div>
             <div>
+              <Label>Vehicle *</Label>
+              <Popover open={vehOpen} onOpenChange={setVehOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    className="w-full justify-between font-normal"
+                  >
+                    {selectedVehicle ? selectedVehicle.vehicle_number : <span className="text-muted-foreground">Select vehicle</span>}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search vehicle number…" />
+                    <CommandList>
+                      <CommandEmpty>No vehicle found.</CommandEmpty>
+                      <CommandGroup>
+                        {vehicles.map((v) => (
+                          <CommandItem
+                            key={v.id}
+                            value={v.vehicle_number}
+                            onSelect={() => pickVehicle(v.id)}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", vehicleId === v.id ? "opacity-100" : "opacity-0")} />
+                            {v.vehicle_number}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div>
               <Label>Fuel Type</Label>
               <Select value={fuelType} onValueChange={setFuelType}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
