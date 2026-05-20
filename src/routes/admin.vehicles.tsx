@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, ArrowRight, Car, CheckCircle2, CreditCard, Fuel, Radio, ShieldAlert, ShieldCheck, Wind, Wrench } from "lucide-react";
+import { ArrowRight, Car, CheckCircle2, Fuel, Radio, ShieldAlert, ShieldCheck, Wind, Wrench } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtDate } from "@/lib/vehicle-helpers";
