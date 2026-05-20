@@ -444,7 +444,7 @@ function HierarchyTreeDialog({
   units: Unit[];
   customerById: Map<string, Customer>;
 }) {
-  const [mode, setMode] = useState<"state" | "org">("state");
+  const [mode, setMode] = useState<"state" | "org">("org");
 
   const tree = useMemo(() => {
     const branchUnits = new Map<string, Unit[]>();
