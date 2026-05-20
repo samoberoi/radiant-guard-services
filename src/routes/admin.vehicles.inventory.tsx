@@ -215,6 +215,7 @@ function VehicleInventoryPage() {
                   enabled: i.enabled ? "Yes" : "No",
                 })),
                 [
+                  { key: "vehicle_id", header: "Vehicle ID" },
                   { key: "vehicle_number", header: "Vehicle Number" },
                   { key: "name", header: "Name" },
                   { key: "owner", header: "Owner" },
