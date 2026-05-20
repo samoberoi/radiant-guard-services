@@ -183,18 +183,43 @@ function VehiclesDashboard() {
           search={{ status: "due" }}
         />
         <StatCard
-          label="Fuel Manager"
-          value={totalVehicles}
+          label="Fuel Spend (30d)"
+          value={Math.round(fuelSpend.total)}
+          prefix="₹"
           icon={Fuel}
           accent="accent"
-          subtle="Log top-ups & track spend"
+          subtle={`${fuelSpend.count} top-ups`}
           to="/admin/vehicles/fuel-manager"
+        />
+      </div>
+
+      {/* Fuel spend breakdown — last 30 days */}
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <BreakdownCard
+          title="Fuel Spend by Fuel (30d)"
+          total={fuelSpend.total}
+          rows={[
+            { label: "Petrol", value: fuelSpend.byFuel.Petrol, color: "hsl(35 92% 55%)" },
+            { label: "Diesel", value: fuelSpend.byFuel.Diesel, color: "hsl(220 70% 55%)" },
+            { label: "CNG",    value: fuelSpend.byFuel.CNG,    color: "hsl(150 65% 45%)" },
+          ]}
+        />
+        <BreakdownCard
+          title="Fuel Spend by Payment (30d)"
+          total={fuelSpend.total}
+          rows={[
+            { label: "PetroCard", value: fuelSpend.byPay.PetroCard, color: "hsl(265 70% 60%)" },
+            { label: "Cash",      value: fuelSpend.byPay.Cash,      color: "hsl(150 65% 45%)" },
+            { label: "UPI",       value: fuelSpend.byPay.UPI,       color: "hsl(200 80% 55%)" },
+            { label: "Other",     value: fuelSpend.byPay.Other,     color: "hsl(0 0% 60%)" },
+          ]}
         />
       </div>
 
       {/* Fuel mix */}
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border border-border bg-card p-5 lg:col-span-1">
+
           <div className="flex items-center gap-2">
             <Fuel className="h-4 w-4 text-accent" />
             <div className="font-display text-sm font-bold tracking-tight">Fleet by Fuel Type</div>
