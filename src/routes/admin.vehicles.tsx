@@ -225,10 +225,11 @@ function VehiclesDashboard() {
 }
 
 function StatCard({
-  label, value, icon: Icon, accent, subtle,
+  label, value, icon: Icon, accent, subtle, to, search,
 }: {
   label: string; value: number; icon: React.ComponentType<{ className?: string }>;
   accent: "accent" | "destructive" | "warning"; subtle?: string;
+  to: string; search?: Record<string, string>;
 }) {
   const palette = accent === "destructive"
     ? "bg-destructive/15 text-destructive"
@@ -236,18 +237,22 @@ function StatCard({
       ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
       : "bg-accent/15 text-accent";
   return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+    <Link
+      to={to}
+      search={search as never}
+      className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:border-accent/50 hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+    >
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
           <div className="mt-2 font-display text-3xl font-bold tracking-tight">{value}</div>
           {subtle && <div className="mt-1 text-xs text-muted-foreground">{subtle}</div>}
         </div>
-        <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl", palette)}>
+        <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-105", palette)}>
           <Icon className="h-5 w-5" />
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
