@@ -14,6 +14,7 @@ import {
   Files,
   LayoutDashboard,
   LogOut,
+  Car,
   MapPin,
   Menu,
   PanelLeftClose,
@@ -329,6 +330,24 @@ function AdminLayout() {
             >
               <UserPlus className="h-4.5 w-4.5 shrink-0" />
               {!collapsed && <span>Employees</span>}
+            </Link>
+          </div>
+
+          {/* Vehicles link */}
+          <div className="mt-2">
+            <Link
+              to="/admin/vehicles"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+                isActive("/admin/vehicles")
+                  ? "bg-accent/20 text-accent"
+                  : "text-primary-foreground/85 hover:bg-white/5",
+                collapsed && "justify-center",
+              )}
+              title={collapsed ? "Vehicles" : undefined}
+            >
+              <Car className="h-4.5 w-4.5 shrink-0" />
+              {!collapsed && <span>Vehicles</span>}
             </Link>
           </div>
 

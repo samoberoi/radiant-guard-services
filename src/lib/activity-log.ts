@@ -27,6 +27,10 @@ const MODULE_LINKS: Record<string, string> = {
   "RBAC": "/admin/rbac",
   "Service Type Manager": "/admin/service-type-manager",
   "Candidate Details": "/admin/employees",
+  "Vehicle Inventory": "/admin/vehicles/inventory",
+  "FastTag Manager": "/admin/vehicles/fastags",
+  "Vehicle Insurance Manager": "/admin/vehicles/insurances",
+  "Vehicle PUC Manager": "/admin/vehicles/pucs",
 };
 
 // Actions that should NOT broadcast a notification (too noisy / internal).
