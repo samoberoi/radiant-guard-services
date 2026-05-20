@@ -10,6 +10,7 @@ import {
   Bell,
   Building2,
   ChevronDown,
+  ClipboardList,
   FileText,
   Files,
   Fuel,
@@ -439,6 +440,24 @@ function AdminLayout() {
             )}
           </div>
 
+
+          {/* Attendance link */}
+          <div className="mt-2">
+            <Link
+              to="/admin/attendance"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+                isActive("/admin/attendance")
+                  ? "bg-accent/20 text-accent"
+                  : "text-primary-foreground/85 hover:bg-white/5",
+                collapsed && "justify-center",
+              )}
+              title={collapsed ? "Attendance" : undefined}
+            >
+              <ClipboardList className="h-4.5 w-4.5 shrink-0" />
+              {!collapsed && <span>Attendance</span>}
+            </Link>
+          </div>
 
           {/* Control Center link */}
           <div className="mt-2">
