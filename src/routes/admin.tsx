@@ -433,6 +433,7 @@ function AdminLayout() {
                 {user ? maskPhone(user.phone) : "—"}
               </span>
             </div>
+            <NotificationBell />
             <Button
               onClick={handleLogout}
               variant="outline"
@@ -443,6 +444,7 @@ function AdminLayout() {
               Sign out
             </Button>
           </div>
+
         </header>
 
         <main className="relative z-10 flex-1 px-4 py-6 sm:px-6 lg:px-8">
