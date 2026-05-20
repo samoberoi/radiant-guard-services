@@ -1075,40 +1075,72 @@ function ClientContractsPage() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return enriched.filter((c) => {
-      if (statusFilter !== "all" && c.status !== statusFilter) return false;
+      if (c.recordType !== tab) return false;
+      if (tab === "client" && statusFilter !== "all" && c.status !== statusFilter) return false;
       if (orgFilter !== "all" && c.orgId !== orgFilter) return false;
       if (unitFilter !== "all" && c.unitId !== unitFilter) return false;
       if (!q) return true;
       return (
         c.contractCode.toLowerCase().includes(q) ||
+        c.prospectCode.toLowerCase().includes(q) ||
         c.unitName.toLowerCase().includes(q) ||
         c.unitCode.toLowerCase().includes(q) ||
         c.orgName.toLowerCase().includes(q) ||
         c.description.toLowerCase().includes(q)
       );
     });
-  }, [enriched, query, statusFilter, orgFilter, unitFilter]);
+  }, [enriched, query, statusFilter, orgFilter, unitFilter, tab]);
 
   const hasFilters =
     !!query || orgFilter !== "all" || unitFilter !== "all" || statusFilter !== "all";
 
-  const stats = useMemo(() => {
-    const s = { total: items.length, active: 0, inactive: 0, expired: 0 };
+  const tabCounts = useMemo(() => {
+    let prospects = 0;
+    let clients = 0;
     for (const c of items) {
+      if (c.recordType === "client") clients++;
+      else prospects++;
+    }
+    return { prospects, clients };
+  }, [items]);
+
+  const stats = useMemo(() => {
+    const scoped = items.filter((c) => c.recordType === tab);
+    if (tab === "prospect") {
+      const s = { total: scoped.length, pending: 0, rejected: 0 };
+      for (const c of scoped) {
+        if (c.approvalStatus === "rejected") s.rejected++;
+        else s.pending++;
+      }
+      return s;
+    }
+    const s = { total: scoped.length, active: 0, inactive: 0, expired: 0 };
+    for (const c of scoped) {
       if (c.status === "active") s.active++;
       else if (c.status === "inactive") s.inactive++;
       else if (c.status === "expired") s.expired++;
     }
     return s;
-  }, [items]);
+  }, [items, tab]);
 
   return (
     <div>
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Total" value={stats.total} tone="default" />
-        <StatCard label="Active" value={stats.active} tone="active" />
-        <StatCard label="Inactive" value={stats.inactive} tone="inactive" />
-        <StatCard label="Expired" value={stats.expired} tone="expired" />
+        {tab === "client" ? (
+          <>
+            <StatCard label="Total Clients" value={(stats as { total: number }).total} tone="default" />
+            <StatCard label="Active" value={(stats as { active: number }).active} tone="active" />
+            <StatCard label="Inactive" value={(stats as { inactive: number }).inactive} tone="inactive" />
+            <StatCard label="Expired" value={(stats as { expired: number }).expired} tone="expired" />
+          </>
+        ) : (
+          <>
+            <StatCard label="Total Prospects" value={(stats as { total: number }).total} tone="default" />
+            <StatCard label="Pending Approval" value={(stats as { pending: number }).pending} tone="inactive" />
+            <StatCard label="Rejected" value={(stats as { rejected: number }).rejected} tone="expired" />
+            <StatCard label="Promoted (Clients)" value={tabCounts.clients} tone="active" />
+          </>
+        )}
       </div>
       <PageHeader
         title="Client Contracts"
