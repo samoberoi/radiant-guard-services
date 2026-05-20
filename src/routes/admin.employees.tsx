@@ -1182,6 +1182,14 @@ function EmployeesPage() {
         entityLabel: c.full_name || c.aadhaar_number,
         after: data as unknown as Record<string, unknown>,
       });
+      await notifyAdmins({
+        type: "candidate_approved",
+        title: "Candidate approved",
+        message: `${c.full_name || c.aadhaar_number || "Candidate"} was approved${(data as { employee_code?: string })?.employee_code ? ` (${(data as { employee_code?: string }).employee_code})` : ""}.`,
+        link: "/admin/employees",
+        entityType: "candidate",
+        entityId: c.id,
+      }).catch((e) => console.error("notifyAdmins approve failed", e));
       return data as { employee_code: string };
     },
     onSuccess: (data) => {
@@ -1206,6 +1214,14 @@ function EmployeesPage() {
         entityLabel: c.full_name || c.aadhaar_number,
         after: { rejection_reason: reason },
       });
+      await notifyAdmins({
+        type: "candidate_rejected",
+        title: "Candidate rejected",
+        message: `${c.full_name || c.aadhaar_number || "Candidate"} was rejected. Reason: ${reason}`,
+        link: "/admin/employees",
+        entityType: "candidate",
+        entityId: c.id,
+      }).catch((e) => console.error("notifyAdmins reject failed", e));
     },
     onSuccess: () => {
       toast.success("Candidate rejected");
