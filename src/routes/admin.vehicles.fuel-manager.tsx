@@ -321,6 +321,14 @@ function FuelManagerPage() {
         open={open}
         onOpenChange={setOpen}
         vehicles={vehicles}
+        lastOdoByVehicle={useMemo(() => {
+          const m = new Map<string, number>();
+          for (const e of entries) {
+            const prev = m.get(e.vehicle_id);
+            if (prev == null || (e.odometer_km ?? 0) > prev) m.set(e.vehicle_id, e.odometer_km ?? 0);
+          }
+          return m;
+        }, [entries])}
         onSaved={() => qc.invalidateQueries({ queryKey: QK })}
       />
     </div>
