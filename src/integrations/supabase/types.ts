@@ -1713,6 +1713,213 @@ export type Database = {
           },
         ]
       }
+      vehicle_fastags: {
+        Row: {
+          account_number: string
+          balance: number
+          bank_name: string
+          created_at: string
+          enabled: boolean
+          expiry_date: string | null
+          fastag_number: string
+          id: string
+          issued_date: string | null
+          notes: string
+          status: string
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          account_number?: string
+          balance?: number
+          bank_name?: string
+          created_at?: string
+          enabled?: boolean
+          expiry_date?: string | null
+          fastag_number?: string
+          id?: string
+          issued_date?: string | null
+          notes?: string
+          status?: string
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          account_number?: string
+          balance?: number
+          bank_name?: string
+          created_at?: string
+          enabled?: boolean
+          expiry_date?: string | null
+          fastag_number?: string
+          id?: string
+          issued_date?: string | null
+          notes?: string
+          status?: string
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_fastags_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_insurances: {
+        Row: {
+          chassis_number: string
+          created_at: string
+          enabled: boolean
+          end_date: string | null
+          engine_number: string
+          id: string
+          insurance_company: string
+          notes: string
+          policy_number: string
+          premium_amount: number
+          start_date: string | null
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          chassis_number?: string
+          created_at?: string
+          enabled?: boolean
+          end_date?: string | null
+          engine_number?: string
+          id?: string
+          insurance_company?: string
+          notes?: string
+          policy_number?: string
+          premium_amount?: number
+          start_date?: string | null
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          chassis_number?: string
+          created_at?: string
+          enabled?: boolean
+          end_date?: string | null
+          engine_number?: string
+          id?: string
+          insurance_company?: string
+          notes?: string
+          policy_number?: string
+          premium_amount?: number
+          start_date?: string | null
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_insurances_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_pucs: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          expiry_date: string | null
+          id: string
+          issued_date: string | null
+          issuing_authority: string
+          notes: string
+          puc_number: string
+          updated_at: string
+          vehicle_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          expiry_date?: string | null
+          id?: string
+          issued_date?: string | null
+          issuing_authority?: string
+          notes?: string
+          puc_number?: string
+          updated_at?: string
+          vehicle_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          expiry_date?: string | null
+          id?: string
+          issued_date?: string | null
+          issuing_authority?: string
+          notes?: string
+          puc_number?: string
+          updated_at?: string
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_pucs_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicles: {
+        Row: {
+          brand: string
+          color: string
+          created_at: string
+          enabled: boolean
+          id: string
+          make: string
+          name: string
+          notes: string
+          registration_date: string | null
+          type: string
+          updated_at: string
+          vehicle_number: string
+          year: number | null
+        }
+        Insert: {
+          brand?: string
+          color?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          make?: string
+          name?: string
+          notes?: string
+          registration_date?: string | null
+          type?: string
+          updated_at?: string
+          vehicle_number: string
+          year?: number | null
+        }
+        Update: {
+          brand?: string
+          color?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          make?: string
+          name?: string
+          notes?: string
+          registration_date?: string | null
+          type?: string
+          updated_at?: string
+          vehicle_number?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
