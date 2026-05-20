@@ -337,11 +337,11 @@ function StatCard({
   );
 }
 
-function BreakdownCard({ title, total, rows }: {
-  title: string; total: number; rows: { label: string; value: number; color: string }[];
+function BreakdownCard({ title, total, rows, to }: {
+  title: string; total: number; rows: { label: string; value: number; color: string }[]; to?: string;
 }) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+  const body = (
+    <div className={cn("rounded-2xl border border-border bg-card p-5", to && "transition-colors hover:border-accent/60 hover:bg-card/80")}>
       <div className="flex items-baseline justify-between">
         <div className="font-display text-sm font-bold tracking-tight">{title}</div>
         <div className="text-xs tabular-nums text-muted-foreground">
@@ -368,10 +368,12 @@ function BreakdownCard({ title, total, rows }: {
             </li>
           );
         })}
-        {total === 0 && <p className="text-sm text-muted-foreground">No spend in the last 30 days.</p>}
+        {total === 0 && <p className="text-sm text-muted-foreground">No spend this month yet.</p>}
       </ul>
     </div>
   );
+  if (to) return <Link to={to} className="block">{body}</Link>;
+  return body;
 }
 
 
