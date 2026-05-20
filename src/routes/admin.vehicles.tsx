@@ -1,10 +1,11 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Car, CheckCircle2, Fuel, ShieldAlert, ShieldCheck, Wind } from "lucide-react";
+import { Car, CheckCircle2, Fuel, ShieldAlert, ShieldCheck, Wind, Wrench } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtDate } from "@/lib/vehicle-helpers";
+import { serviceStatusFor } from "@/lib/vehicle-service";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/vehicles")({
