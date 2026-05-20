@@ -296,6 +296,7 @@ function useContracts() {
       base.prospect_code = p.prospectCode;
       base.status = "inactive";
       base.approval_status = "pending";
+      base.prospect_stage = "new";
       // contract_code is intentionally null until promoted.
     }
     return base;
