@@ -53,10 +53,40 @@ function VehiclesDashboard() {
       return (data as unknown as DashRow[]) ?? [];
     },
   });
+  const fuelQ = useQuery({
+    queryKey: ["dashboard", "fuel-entries-30d"],
+    queryFn: async () => {
+      const since = new Date(); since.setDate(since.getDate() - 30);
+      const sinceIso = since.toISOString().slice(0, 10);
+      const { data, error } = await supabase
+        .from("vehicle_fuel_entries" as never)
+        .select("id,fuel_type,amount,payment_mode,entry_date")
+        .gte("entry_date", sinceIso);
+      if (error) throw error;
+      return (data as unknown as DashRow[]) ?? [];
+    },
+  });
 
   const vehicles = vehiclesQ.data ?? [];
   const insurances = insurancesQ.data ?? [];
   const pucs = pucsQ.data ?? [];
+  const fuelEntries = fuelQ.data ?? [];
+
+  const fuelSpend = useMemo(() => {
+    let total = 0;
+    const byFuel: Record<string, number> = { Petrol: 0, Diesel: 0, CNG: 0 };
+    const byPay: Record<string, number> = { PetroCard: 0, Cash: 0, UPI: 0, Other: 0 };
+    for (const e of fuelEntries) {
+      const amt = Number(e.amount ?? 0);
+      total += amt;
+      const ft = String(e.fuel_type ?? "");
+      if (ft in byFuel) byFuel[ft] += amt;
+      const pm = String(e.payment_mode ?? "");
+      if (pm in byPay) byPay[pm] += amt; else byPay.Other += amt;
+    }
+    return { total, byFuel, byPay, count: fuelEntries.length };
+  }, [fuelEntries]);
+
 
   const fuelStats = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -153,18 +183,43 @@ function VehiclesDashboard() {
           search={{ status: "due" }}
         />
         <StatCard
-          label="Fuel Manager"
-          value={totalVehicles}
+          label="Fuel Spend (30d)"
+          value={Math.round(fuelSpend.total)}
+          valuePrefix="₹"
           icon={Fuel}
           accent="accent"
-          subtle="Log top-ups & track spend"
+          subtle={`${fuelSpend.count} top-ups`}
           to="/admin/vehicles/fuel-manager"
+        />
+      </div>
+
+      {/* Fuel spend breakdown — last 30 days */}
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
+        <BreakdownCard
+          title="Fuel Spend by Fuel (30d)"
+          total={fuelSpend.total}
+          rows={[
+            { label: "Petrol", value: fuelSpend.byFuel.Petrol, color: "hsl(35 92% 55%)" },
+            { label: "Diesel", value: fuelSpend.byFuel.Diesel, color: "hsl(220 70% 55%)" },
+            { label: "CNG",    value: fuelSpend.byFuel.CNG,    color: "hsl(150 65% 45%)" },
+          ]}
+        />
+        <BreakdownCard
+          title="Fuel Spend by Payment (30d)"
+          total={fuelSpend.total}
+          rows={[
+            { label: "PetroCard", value: fuelSpend.byPay.PetroCard, color: "hsl(265 70% 60%)" },
+            { label: "Cash",      value: fuelSpend.byPay.Cash,      color: "hsl(150 65% 45%)" },
+            { label: "UPI",       value: fuelSpend.byPay.UPI,       color: "hsl(200 80% 55%)" },
+            { label: "Other",     value: fuelSpend.byPay.Other,     color: "hsl(0 0% 60%)" },
+          ]}
         />
       </div>
 
       {/* Fuel mix */}
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         <div className="rounded-2xl border border-border bg-card p-5 lg:col-span-1">
+
           <div className="flex items-center gap-2">
             <Fuel className="h-4 w-4 text-accent" />
             <div className="font-display text-sm font-bold tracking-tight">Fleet by Fuel Type</div>
@@ -246,11 +301,11 @@ function VehiclesDashboard() {
 }
 
 function StatCard({
-  label, value, icon: Icon, accent, subtle, to, search,
+  label, value, icon: Icon, accent, subtle, to, search, valuePrefix,
 }: {
   label: string; value: number; icon: React.ComponentType<{ className?: string }>;
   accent: "accent" | "destructive" | "warning"; subtle?: string;
-  to: string; search?: Record<string, string>;
+  to: string; search?: Record<string, string>; valuePrefix?: string;
 }) {
   const palette = accent === "destructive"
     ? "bg-destructive/15 text-destructive"
@@ -266,7 +321,9 @@ function StatCard({
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
-          <div className="mt-2 font-display text-3xl font-bold tracking-tight">{value}</div>
+          <div className="mt-2 font-display text-3xl font-bold tracking-tight tabular-nums">
+            {valuePrefix}{value.toLocaleString("en-IN")}
+          </div>
           {subtle && <div className="mt-1 text-xs text-muted-foreground">{subtle}</div>}
         </div>
         <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl transition-transform group-hover:scale-105", palette)}>
@@ -276,6 +333,44 @@ function StatCard({
     </Link>
   );
 }
+
+function BreakdownCard({ title, total, rows }: {
+  title: string; total: number; rows: { label: string; value: number; color: string }[];
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex items-baseline justify-between">
+        <div className="font-display text-sm font-bold tracking-tight">{title}</div>
+        <div className="text-xs tabular-nums text-muted-foreground">
+          ₹{Math.round(total).toLocaleString("en-IN")}
+        </div>
+      </div>
+      <ul className="mt-4 space-y-3">
+        {rows.map((r) => {
+          const pct = total > 0 ? Math.round((r.value / total) * 100) : 0;
+          return (
+            <li key={r.label}>
+              <div className="flex items-center justify-between text-xs">
+                <span className="flex items-center gap-2 font-medium text-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: r.color }} />
+                  {r.label}
+                </span>
+                <span className="tabular-nums text-muted-foreground">
+                  ₹{Math.round(r.value).toLocaleString("en-IN")} · {pct}%
+                </span>
+              </div>
+              <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
+                <div className="h-full rounded-full" style={{ width: `${pct}%`, background: r.color }} />
+              </div>
+            </li>
+          );
+        })}
+        {total === 0 && <p className="text-sm text-muted-foreground">No spend in the last 30 days.</p>}
+      </ul>
+    </div>
+  );
+}
+
 
 type DueRow = { id: string; vehicle: string; date: string; meta: string; status: "expired" | "due"; days: number };
 
