@@ -77,10 +77,10 @@ function AdminLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-  const [customersOpen, setCustomersOpen] = useState(true);
-  const [contractsOpen, setContractsOpen] = useState(true);
-  const [vehiclesOpen, setVehiclesOpen] = useState(true);
+  const [collapsed, setCollapsed] = useState(true);
+  const [customersOpen, setCustomersOpen] = useState(false);
+  const [contractsOpen, setContractsOpen] = useState(false);
+  const [vehiclesOpen, setVehiclesOpen] = useState(false);
   
   
 
