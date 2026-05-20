@@ -143,7 +143,7 @@ function PucManagerPage() {
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by vehicle, PUC no., authority…" className="h-10 rounded-lg pl-9" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by vehicle…" className="h-10 rounded-lg pl-9" />
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setAddOpen(true)} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="mr-1.5 h-4 w-4" />Add PUC</Button>
@@ -151,15 +151,11 @@ function PucManagerPage() {
             const v = vMap.get(i.vehicle_id);
             return {
               vehicle: v?.vehicle_number ?? "",
-              puc_number: i.puc_number, issuing_authority: i.issuing_authority,
-              issued_date: i.issued_date ?? "", expiry_date: i.expiry_date ?? "",
+              expiry_date: i.expiry_date ?? "",
               enabled: i.enabled ? "Yes" : "No",
             };
           }), [
             { key: "vehicle", header: "Vehicle" },
-            { key: "puc_number", header: "PUC No." },
-            { key: "issuing_authority", header: "Authority" },
-            { key: "issued_date", header: "Issued" },
             { key: "expiry_date", header: "Expires" },
             { key: "enabled", header: "Enabled" },
           ])} className="h-10 rounded-lg"><Download className="mr-1.5 h-4 w-4" />Export</Button>
@@ -178,9 +174,6 @@ function PucManagerPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Vehicle</th>
-                <th className="px-5 py-3">PUC No.</th>
-                <th className="px-5 py-3">Authority</th>
-                <th className="px-5 py-3">Issued</th>
                 <th className="px-5 py-3">Expires</th>
                 <th className="px-5 py-3">Enabled</th>
                 <th className="px-5 py-3 text-right">Actions</th>
@@ -193,9 +186,6 @@ function PucManagerPage() {
                 return (
                   <tr key={i.id} className="hover:bg-secondary/30">
                     <td className="px-5 py-3 font-mono font-semibold text-foreground">{v?.vehicle_number || "—"}</td>
-                    <td className="px-5 py-3 font-mono text-foreground/90">{i.puc_number || "—"}</td>
-                    <td className="px-5 py-3 text-foreground/90">{i.issuing_authority || "—"}</td>
-                    <td className="px-5 py-3 text-foreground/90">{fmtDate(i.issued_date)}</td>
                     <td className="px-5 py-3">
                       <span className={expired ? "rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-semibold text-destructive" : "text-foreground/90"}>
                         {fmtDate(i.expiry_date)}{expired ? " · Expired" : ""}
@@ -218,7 +208,7 @@ function PucManagerPage() {
                 );
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">No PUC records found.</td></tr>
+                <tr><td colSpan={4} className="px-5 py-12 text-center text-sm text-muted-foreground">No PUC records found.</td></tr>
               )}
             </tbody>
           </table>
@@ -291,9 +281,6 @@ function PucFormDialog({ open, onOpenChange, title, initial, vehicles, onSubmit 
               <SelectContent>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.vehicle_number}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="grid gap-2"><Label>PUC Certificate Number</Label><Input value={pucNumber} onChange={(e) => setPucNumber(e.target.value)} /></div>
-          <div className="grid gap-2"><Label>Issuing Authority</Label><Input value={issuingAuthority} onChange={(e) => setIssuingAuthority(e.target.value)} placeholder="e.g. RTO authorised centre" /></div>
-          <div className="grid gap-2"><Label>Issued Date</Label><Input type="date" value={issuedDate} onChange={(e) => setIssuedDate(e.target.value)} /></div>
           <div className="grid gap-2"><Label>Expiry Date</Label><Input type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} /></div>
           <div className="grid gap-2 sm:col-span-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 sm:col-span-2">
