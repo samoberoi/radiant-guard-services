@@ -1361,7 +1361,7 @@ function ClientContractsPage() {
           if (!o) setEditing(null);
         }}
         editing={editing}
-        existingCodes={items.map((i) => i.contractCode)}
+        existingProspectCodes={items.map((i) => i.prospectCode).filter((c): c is string => !!c)}
         onSubmit={async (p, resources) => {
           try {
             let contractId: string;
