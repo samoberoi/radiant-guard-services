@@ -196,7 +196,7 @@ function VehiclesDashboard() {
       {/* Fuel spend breakdown — last 30 days */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <BreakdownCard
-          title="Fuel Spend by Fuel (30d)"
+          title="Fuel Spend by Fuel Type (30d)"
           total={fuelSpend.total}
           rows={[
             { label: "Petrol", value: fuelSpend.byFuel.Petrol, color: "hsl(35 92% 55%)" },
