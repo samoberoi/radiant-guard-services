@@ -1,10 +1,11 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Car, CheckCircle2, Fuel, ShieldAlert, ShieldCheck, Wind } from "lucide-react";
+import { Car, CheckCircle2, Fuel, ShieldAlert, ShieldCheck, Wind, Wrench } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtDate } from "@/lib/vehicle-helpers";
+import { serviceStatusFor } from "@/lib/vehicle-service";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/vehicles")({
@@ -96,6 +97,10 @@ function VehiclesDashboard() {
   });
 
   const totalVehicles = vehicles.length;
+  const serviceDueSoon = useMemo(
+    () => vehicles.filter((v) => v.enabled !== false && serviceStatusFor(String(v.vehicle_number ?? "")).dueSoon).length,
+    [vehicles],
+  );
 
   return (
     <div>
@@ -106,13 +111,21 @@ function VehiclesDashboard() {
       />
 
       {/* Top stat cards — clickable, deep-link into managers with filter */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
           label="Total Vehicles"
           value={totalVehicles}
           icon={Car}
           accent="accent"
           to="/admin/vehicles/inventory"
+        />
+        <StatCard
+          label="Service Due Soon"
+          value={serviceDueSoon}
+          icon={Wrench}
+          accent="warning"
+          subtle="Within 2,500 km of next service"
+          to="/admin/vehicles/service-manager"
         />
         <StatCard
           label="Insurance Expired"

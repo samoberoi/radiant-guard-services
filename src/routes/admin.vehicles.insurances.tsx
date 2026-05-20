@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useResetOnOpen, useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
+import { MiniStat } from "@/components/MiniStat";
 
 type StatusFilter = "all" | "expired" | "renewal" | "due" | "active";
 const STATUS_VALUES: StatusFilter[] = ["all", "expired", "renewal", "due", "active"];
@@ -168,6 +169,22 @@ function InsuranceManagerPage() {
     });
   }, [items, query, vMap, status, today, in60]);
 
+  const stats = useMemo(() => {
+    let expired = 0, renewal = 0, active = 0;
+    const insurers: Record<string, number> = {};
+    for (const i of items) {
+      const end = i.end_date;
+      const isExpired = !!end && end < today;
+      const isRenewal = !!end && end >= today && end <= in60;
+      if (isExpired) expired++;
+      else if (isRenewal) renewal++;
+      else if (end) active++;
+      const co = (i.insurance_company || "").trim();
+      if (co) insurers[co] = (insurers[co] ?? 0) + 1;
+    }
+    return { total: items.length, expired, renewal, active, insurerCount: Object.keys(insurers).length };
+  }, [items, today, in60]);
+
   return (
     <div>
       <PageHeader
@@ -175,6 +192,15 @@ function InsuranceManagerPage() {
         description="Track insurance policies and validity."
         crumbs={[{ label: "Vehicles", to: "/admin/vehicles" }, { label: "Insurance" }]}
       />
+
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <MiniStat label="Total Policies" value={stats.total} />
+        <MiniStat label="Insurers" value={stats.insurerCount} tone="accent" />
+        <MiniStat label="Expired" value={stats.expired} tone="destructive" />
+        <MiniStat label="Renewal (≤60d)" value={stats.renewal} tone="warning" />
+        <MiniStat label="Active" value={stats.active} />
+      </div>
+
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:max-w-xl">

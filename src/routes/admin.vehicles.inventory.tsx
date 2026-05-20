@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { fmtDate } from "@/lib/vehicle-helpers";
+import { MiniStat } from "@/components/MiniStat";
 
 export const Route = createFileRoute("/admin/vehicles/inventory")({
   component: VehicleInventoryPage,
@@ -167,6 +168,17 @@ function VehicleInventoryPage() {
     });
   }, [items, query, typeFilter]);
 
+  const stats = useMemo(() => {
+    const byFuel: Record<string, number> = {};
+    let enabled = 0;
+    for (const v of items) {
+      if (v.enabled) enabled++;
+      const k = (v.fuel_type || "Unspecified").trim() || "Unspecified";
+      byFuel[k] = (byFuel[k] ?? 0) + 1;
+    }
+    return { total: items.length, enabled, byFuel };
+  }, [items]);
+
   return (
     <div>
       <PageHeader
@@ -174,6 +186,15 @@ function VehicleInventoryPage() {
         description="Master list of company vehicles."
         crumbs={[{ label: "Vehicles", to: "/admin/vehicles" }, { label: "Inventory" }]}
       />
+
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MiniStat label="Total Vehicles" value={stats.total} />
+        <MiniStat label="Enabled" value={stats.enabled} tone="accent" />
+        {FUEL_TYPES.filter((f) => stats.byFuel[f]).slice(0, 6).map((f) => (
+          <MiniStat key={f} label={f} value={stats.byFuel[f] ?? 0} />
+        ))}
+      </div>
+
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
