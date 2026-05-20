@@ -1724,7 +1724,11 @@ export type Database = {
           fastag_number: string
           id: string
           issued_date: string | null
+          login_id: string
+          login_password: string
+          login_type: string
           notes: string
+          registered_email: string
           status: string
           updated_at: string
           vehicle_id: string
@@ -1739,7 +1743,11 @@ export type Database = {
           fastag_number?: string
           id?: string
           issued_date?: string | null
+          login_id?: string
+          login_password?: string
+          login_type?: string
           notes?: string
+          registered_email?: string
           status?: string
           updated_at?: string
           vehicle_id: string
@@ -1754,7 +1762,11 @@ export type Database = {
           fastag_number?: string
           id?: string
           issued_date?: string | null
+          login_id?: string
+          login_password?: string
+          login_type?: string
           notes?: string
+          registered_email?: string
           status?: string
           updated_at?: string
           vehicle_id?: string
