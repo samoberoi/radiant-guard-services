@@ -15,13 +15,16 @@ import {
   LayoutDashboard,
   LogOut,
   Car,
+  CreditCard,
   MapPin,
   Menu,
   PanelLeftClose,
+  ShieldCheck,
   SlidersHorizontal,
   UserPlus,
   Users,
   Warehouse,
+  Wind,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,6 +54,13 @@ const contractsChildren: NavItem[] = [
   { to: "/admin/contracts/client-contracts", label: "Client Contracts", icon: FileText },
 ];
 
+const vehiclesChildren: NavItem[] = [
+  { to: "/admin/vehicles/inventory", label: "Vehicle Inventory", icon: Car },
+  { to: "/admin/vehicles/fastags", label: "FastTag Manager", icon: CreditCard },
+  { to: "/admin/vehicles/insurances", label: "Insurance Manager", icon: ShieldCheck },
+  { to: "/admin/vehicles/pucs", label: "PUC Manager", icon: Wind },
+];
+
 
 function maskPhone(phone: string) {
   const d = phone.replace(/\D/g, "");
@@ -66,6 +76,8 @@ function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [customersOpen, setCustomersOpen] = useState(true);
   const [contractsOpen, setContractsOpen] = useState(true);
+  const [vehiclesOpen, setVehiclesOpen] = useState(true);
+  
   
 
   // Auth guard — wait for hydration; if no token in storage, kick to login.
@@ -333,23 +345,94 @@ function AdminLayout() {
             </Link>
           </div>
 
-          {/* Vehicles link */}
+          {/* Vehicles group */}
           <div className="mt-2">
-            <Link
-              to="/admin/vehicles"
+            <div
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+                "group flex w-full items-center gap-1 rounded-lg pr-1 text-sm font-semibold transition-colors",
                 isActive("/admin/vehicles")
                   ? "bg-accent/20 text-accent"
                   : "text-primary-foreground/85 hover:bg-white/5",
-                collapsed && "justify-center",
               )}
-              title={collapsed ? "Vehicles" : undefined}
             >
-              <Car className="h-4.5 w-4.5 shrink-0" />
-              {!collapsed && <span>Vehicles</span>}
-            </Link>
+              <Link
+                to="/admin/vehicles"
+                onClick={() => setVehiclesOpen(true)}
+                className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5"
+              >
+                <Car className="h-4.5 w-4.5 shrink-0" />
+                {!collapsed && <span className="flex-1 text-left">Vehicles</span>}
+              </Link>
+              {!collapsed && (
+                <button
+                  type="button"
+                  onClick={() => setVehiclesOpen((v) => !v)}
+                  aria-label={vehiclesOpen ? "Collapse" : "Expand"}
+                  className="rounded-md p-1.5 text-primary-foreground/70 hover:bg-white/10"
+                >
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 transition-transform",
+                      vehiclesOpen ? "rotate-0" : "-rotate-90",
+                    )}
+                  />
+                </button>
+              )}
+            </div>
+
+            {vehiclesOpen && !collapsed && (
+              <div className="mt-1 space-y-0.5 pl-3">
+                {vehiclesChildren.map((item) => {
+                  const active = isActive(item.to);
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
+                        active
+                          ? "bg-white/10 text-primary-foreground"
+                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "absolute left-0 h-5 w-0.5 rounded-r bg-accent transition-opacity",
+                          active ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+
+            {collapsed && (
+              <div className="mt-1 space-y-1">
+                {vehiclesChildren.map((item) => {
+                  const active = isActive(item.to);
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      title={item.label}
+                      className={cn(
+                        "flex items-center justify-center rounded-lg p-2.5 transition-colors",
+                        active
+                          ? "bg-accent/20 text-accent"
+                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
+                      )}
+                    >
+                      <item.icon className="h-4.5 w-4.5" />
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
+
 
           {/* Control Center link */}
           <div className="mt-2">
