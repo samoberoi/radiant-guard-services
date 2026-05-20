@@ -147,7 +147,7 @@ function InsuranceManagerPage() {
     <div>
       <PageHeader
         title="Vehicle Insurance Manager"
-        description="Track insurance policies, engine and chassis details."
+        description="Track insurance policies and validity."
         crumbs={[{ label: "Vehicles", to: "/admin/vehicles" }, { label: "Insurance" }]}
       />
 
