@@ -8,13 +8,11 @@ import { PageHeader } from "@/components/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { ADVANCE_ALERT_KM, SERVICE_INTERVAL, serviceStatusFor } from "@/lib/vehicle-service";
 
 export const Route = createFileRoute("/admin/vehicles/service-manager")({
   component: ServiceManagerPage,
 });
-
-const SERVICE_INTERVAL = 5000; // km between services
-const ADVANCE_ALERT_KM = 2500; // start nagging this many km before due
 
 type VehicleRow = {
   id: string;
@@ -23,26 +21,6 @@ type VehicleRow = {
   fuel_type: string;
   enabled: boolean;
 };
-
-// Deterministic dummy kilometer reading per vehicle. Stable across reloads.
-function hashStr(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h;
-}
-
-function dummyCurrentKm(vehicleNumber: string): number {
-  // Range: 8,000 .. 89,500 in 500-km steps
-  const buckets = (89500 - 8000) / 500;
-  const idx = hashStr(vehicleNumber) % (buckets + 1);
-  return 8000 + idx * 500;
-}
-
-function nextServiceDueKm(currentKm: number): number {
-  // Next multiple of SERVICE_INTERVAL above currentKm
-  const n = Math.floor(currentKm / SERVICE_INTERVAL) + 1;
-  return n * SERVICE_INTERVAL;
-}
 
 function ServiceManagerPage() {
   const [search, setSearch] = useState("");
