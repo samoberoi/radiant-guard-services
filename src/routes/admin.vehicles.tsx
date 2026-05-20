@@ -54,9 +54,10 @@ function VehiclesDashboard() {
     },
   });
   const fuelQ = useQuery({
-    queryKey: ["dashboard", "fuel-entries-30d"],
+    queryKey: ["dashboard", "fuel-entries-mtd"],
     queryFn: async () => {
-      const since = new Date(); since.setDate(since.getDate() - 30);
+      const now = new Date();
+      const since = new Date(now.getFullYear(), now.getMonth(), 1);
       const sinceIso = since.toISOString().slice(0, 10);
       const { data, error } = await supabase
         .from("vehicle_fuel_entries" as never)
@@ -183,7 +184,7 @@ function VehiclesDashboard() {
           search={{ status: "due" }}
         />
         <StatCard
-          label="Fuel Spend (30d)"
+          label="Fuel Spend (This Month)"
           value={Math.round(fuelSpend.total)}
           valuePrefix="₹"
           icon={Fuel}
@@ -193,11 +194,12 @@ function VehiclesDashboard() {
         />
       </div>
 
-      {/* Fuel spend breakdown — last 30 days */}
+      {/* Fuel spend breakdown — this month */}
       <div className="mt-6 grid gap-4 sm:grid-cols-2">
         <BreakdownCard
-          title="Fuel Spend by Fuel Type (30d)"
+          title="Fuel Spend by Fuel Type (This Month)"
           total={fuelSpend.total}
+          to="/admin/vehicles/fuel-manager"
           rows={[
             { label: "Petrol", value: fuelSpend.byFuel.Petrol, color: "hsl(35 92% 55%)" },
             { label: "Diesel", value: fuelSpend.byFuel.Diesel, color: "hsl(220 70% 55%)" },
@@ -205,8 +207,9 @@ function VehiclesDashboard() {
           ]}
         />
         <BreakdownCard
-          title="Fuel Spend by Payment (30d)"
+          title="Fuel Spend by Payment (This Month)"
           total={fuelSpend.total}
+          to="/admin/vehicles/fuel-manager"
           rows={[
             { label: "PetroCard", value: fuelSpend.byPay.PetroCard, color: "hsl(265 70% 60%)" },
             { label: "Cash",      value: fuelSpend.byPay.Cash,      color: "hsl(150 65% 45%)" },
@@ -334,11 +337,11 @@ function StatCard({
   );
 }
 
-function BreakdownCard({ title, total, rows }: {
-  title: string; total: number; rows: { label: string; value: number; color: string }[];
+function BreakdownCard({ title, total, rows, to }: {
+  title: string; total: number; rows: { label: string; value: number; color: string }[]; to?: string;
 }) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-5">
+  const body = (
+    <div className={cn("rounded-2xl border border-border bg-card p-5", to && "transition-colors hover:border-accent/60 hover:bg-card/80")}>
       <div className="flex items-baseline justify-between">
         <div className="font-display text-sm font-bold tracking-tight">{title}</div>
         <div className="text-xs tabular-nums text-muted-foreground">
@@ -365,10 +368,12 @@ function BreakdownCard({ title, total, rows }: {
             </li>
           );
         })}
-        {total === 0 && <p className="text-sm text-muted-foreground">No spend in the last 30 days.</p>}
+        {total === 0 && <p className="text-sm text-muted-foreground">No spend this month yet.</p>}
       </ul>
     </div>
   );
+  if (to) return <Link to={to} className="block">{body}</Link>;
+  return body;
 }
 
 
