@@ -604,7 +604,7 @@ export function ListSection({
 
 export function IdentificationSection({ form, set, setSection }: { form: any; set: SetField; setSection: SetSection }) {
   const proofs: any[] = Array.isArray(form.identification_proofs) ? form.identification_proofs : [];
-  const weapon = form.other_info?.weapon_license ?? { has_weapon: false, number: "", valid_until: "", valid_area: "" };
+  const weapon = form.other_info?.weapon_license ?? { has_weapon: false, uan: "", number: "", valid_until: "", valid_area: "" };
   const uploaded = [
     { label: "Photo", url: form.photo_url },
     { label: "Aadhaar Card", url: form.aadhaar_image_url, number: form.aadhaar_number },
