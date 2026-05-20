@@ -143,7 +143,7 @@ function PucManagerPage() {
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by vehicle, PUC no., authority…" className="h-10 rounded-lg pl-9" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by vehicle…" className="h-10 rounded-lg pl-9" />
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setAddOpen(true)} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="mr-1.5 h-4 w-4" />Add PUC</Button>
@@ -151,15 +151,11 @@ function PucManagerPage() {
             const v = vMap.get(i.vehicle_id);
             return {
               vehicle: v?.vehicle_number ?? "",
-              puc_number: i.puc_number, issuing_authority: i.issuing_authority,
-              issued_date: i.issued_date ?? "", expiry_date: i.expiry_date ?? "",
+              expiry_date: i.expiry_date ?? "",
               enabled: i.enabled ? "Yes" : "No",
             };
           }), [
             { key: "vehicle", header: "Vehicle" },
-            { key: "puc_number", header: "PUC No." },
-            { key: "issuing_authority", header: "Authority" },
-            { key: "issued_date", header: "Issued" },
             { key: "expiry_date", header: "Expires" },
             { key: "enabled", header: "Enabled" },
           ])} className="h-10 rounded-lg"><Download className="mr-1.5 h-4 w-4" />Export</Button>
