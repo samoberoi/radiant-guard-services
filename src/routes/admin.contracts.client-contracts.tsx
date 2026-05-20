@@ -1322,13 +1322,19 @@ function ClientContractsPage() {
           <table className="w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
-                <th className="px-5 py-3">Contract ID</th>
+                <th className="px-5 py-3">{tab === "client" ? "Contract ID" : "Prospect ID"}</th>
                 <th className="px-5 py-3">Organization</th>
                 <th className="px-5 py-3">Unit</th>
-                <th className="px-5 py-3">Start</th>
-                <th className="px-5 py-3">End</th>
+                {tab === "client" ? (
+                  <>
+                    <th className="px-5 py-3">Start</th>
+                    <th className="px-5 py-3">End</th>
+                  </>
+                ) : (
+                  <th className="px-5 py-3">Created</th>
+                )}
                 <th className="px-5 py-3">GST</th>
-                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">{tab === "client" ? "Status" : "Approval"}</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -1336,23 +1342,57 @@ function ClientContractsPage() {
               {filtered.map((c) => (
                 <tr key={c.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs font-semibold text-accent">
-                    {c.contractCode}
+                    {tab === "client" ? c.contractCode : c.prospectCode}
                   </td>
                   <td className="px-5 py-3 font-medium text-foreground">{c.orgName}</td>
                   <td className="px-5 py-3 text-foreground">
                     <div className="font-mono text-[11px] text-muted-foreground">{c.unitCode}</div>
                     <div>{c.unitName}</div>
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground">{c.startDate || "—"}</td>
-                  <td className="px-5 py-3 text-muted-foreground">{c.endDate || "—"}</td>
+                  {tab === "client" ? (
+                    <>
+                      <td className="px-5 py-3 text-muted-foreground">{c.startDate || "—"}</td>
+                      <td className="px-5 py-3 text-muted-foreground">{c.endDate || "—"}</td>
+                    </>
+                  ) : (
+                    <td className="px-5 py-3 text-muted-foreground">
+                      {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "—"}
+                    </td>
+                  )}
                   <td className="px-5 py-3 text-xs uppercase tracking-wider text-foreground">
                     {c.gstOption === "none" ? "No GST" : c.gstOption}
                   </td>
                   <td className="px-5 py-3">
-                    <StatusBadge status={c.status} />
+                    {tab === "client" ? (
+                      <StatusBadge status={c.status} />
+                    ) : (
+                      <ApprovalBadge status={c.approvalStatus} />
+                    )}
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
+                      {tab === "prospect" && c.approvalStatus === "pending" && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-accent hover:bg-accent/10"
+                            onClick={() => setApprovalTarget({ contract: c, mode: "approve" })}
+                            title="Approve & sign"
+                          >
+                            <CheckCircle2 className="mr-1 h-4 w-4" /> Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-destructive hover:bg-destructive/10"
+                            onClick={() => setApprovalTarget({ contract: c, mode: "reject" })}
+                            title="Reject"
+                          >
+                            <XCircle className="mr-1 h-4 w-4" /> Reject
+                          </Button>
+                        </>
+                      )}
                       <Button
                         size="sm"
                         variant="ghost"
@@ -1360,7 +1400,7 @@ function ClientContractsPage() {
                         onClick={async () => {
                           try {
                             await exportContractToXlsx(c);
-                            toast.success(`Exported ${c.contractCode}.xlsx`);
+                            toast.success(`Exported ${c.contractCode || c.prospectCode}.xlsx`);
                           } catch (err) {
                             toast.error(err instanceof Error ? err.message : "Export failed");
                           }
@@ -1401,7 +1441,9 @@ function ClientContractsPage() {
                     <FileText className="mx-auto mb-2 h-6 w-6 opacity-50" />
                     {items.length === 0
                       ? "No contracts yet. Create your first contract to get started."
-                      : "No contracts match your filters."}
+                      : tab === "prospect"
+                        ? "No prospects match your filters."
+                        : "No clients match your filters."}
                   </td>
                 </tr>
               )}
