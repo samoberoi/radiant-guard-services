@@ -1,4 +1,5 @@
 import { Plus, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -366,6 +367,32 @@ function normalizeSlot(v: any): NomineeEntry[] {
   return [];
 }
 
+function PercentInput({ value, disabled, onChange }: { value: number; disabled?: boolean; onChange: (n: number) => void }) {
+  const [raw, setRaw] = useState<string>(String(value ?? 0));
+  useEffect(() => {
+    setRaw((prev) => (Number(prev) === Number(value) ? prev : String(value ?? 0)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+  return (
+    <Input
+      type="text"
+      inputMode="numeric"
+      className="w-20"
+      disabled={disabled}
+      value={raw}
+      onChange={(ev) => {
+        const v = ev.target.value.replace(/[^0-9]/g, "");
+        setRaw(v);
+        const n = v === "" ? 0 : Math.max(0, Math.min(100, Number(v)));
+        onChange(n);
+      }}
+      onBlur={() => {
+        if (raw === "") setRaw("0");
+      }}
+    />
+  );
+}
+
 export function NomineeSection({ form, setSection }: { form: any; setSection: SetSection }) {
   const compliance = form.compliance ?? {};
   const contacts: any[] = Array.isArray(form.contacts) ? form.contacts : [];
@@ -446,17 +473,10 @@ export function NomineeSection({ form, setSection }: { form: any; setSection: Se
                             )}
                           </div>
                           <div className="flex items-center gap-1">
-                            <Input
-                              type="number"
-                              min={0}
-                              max={100}
-                              className="w-20"
+                            <PercentInput
                               value={e.percent}
                               disabled={!enabled}
-                              onChange={(ev) => {
-                                const n = Math.max(0, Math.min(100, Number(ev.target.value) || 0));
-                                update({ percent: n });
-                              }}
+                              onChange={(n) => update({ percent: n })}
                             />
                             <span className="text-xs text-muted-foreground">%</span>
                           </div>
@@ -584,7 +604,7 @@ export function ListSection({
 
 export function IdentificationSection({ form, set, setSection }: { form: any; set: SetField; setSection: SetSection }) {
   const proofs: any[] = Array.isArray(form.identification_proofs) ? form.identification_proofs : [];
-  const weapon = form.other_info?.weapon_license ?? { has_weapon: false, number: "", valid_until: "", valid_area: "" };
+  const weapon = form.other_info?.weapon_license ?? { has_weapon: false, uan: "", number: "", valid_until: "", valid_area: "" };
   const uploaded = [
     { label: "Photo", url: form.photo_url },
     { label: "Aadhaar Card", url: form.aadhaar_image_url, number: form.aadhaar_number },
@@ -668,6 +688,7 @@ export function IdentificationSection({ form, set, setSection }: { form: any; se
         </div>
         {weapon.has_weapon && (
           <div className="grid grid-cols-1 gap-3 rounded-md border p-3 md:grid-cols-3">
+            <Field label="UAN Number"><Input value={weapon.uan ?? ""} placeholder="Unique Arms Number" onChange={(e) => setSection("other_info", { weapon_license: { ...weapon, uan: e.target.value } })} /></Field>
             <Field label="License Number"><Input value={weapon.number ?? ""} onChange={(e) => setSection("other_info", { weapon_license: { ...weapon, number: e.target.value } })} /></Field>
             <Field label="Valid Until"><Input type="date" value={weapon.valid_until ?? ""} onChange={(e) => setSection("other_info", { weapon_license: { ...weapon, valid_until: e.target.value } })} /></Field>
             <Field label="Valid Area"><Input placeholder="e.g. Delhi NCR" value={weapon.valid_area ?? ""} onChange={(e) => setSection("other_info", { weapon_license: { ...weapon, valid_area: e.target.value } })} /></Field>
