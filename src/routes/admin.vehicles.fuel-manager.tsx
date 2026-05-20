@@ -434,6 +434,10 @@ function AddEntryDialog({
   async function handleSave() {
     if (!vehicleId) { toast.error("Select a vehicle"); return; }
     if (!odometer) { toast.error("Enter odometer reading"); return; }
+    if (minOdo > 0 && Number(odometer) < minOdo) {
+      toast.error(`Odometer must be at least ${minOdo.toLocaleString()} km (last recorded reading)`);
+      return;
+    }
     if (!amount) { toast.error("Enter amount"); return; }
     if (!odoFile || !pumpFile || !receiptFile) { toast.error("Upload all 3 proof photos (odometer, pump, receipt)"); return; }
     setBusy(true);
