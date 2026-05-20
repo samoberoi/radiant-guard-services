@@ -3,18 +3,23 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import {
   Check,
+  CheckCircle2,
   ChevronsUpDown,
   Copy,
   Download,
   Edit2,
+  FileSignature,
   FileSpreadsheet,
   FileText,
   Plus,
   Search,
+  ShieldAlert,
   Upload,
   Users,
   X,
+  XCircle,
 } from "lucide-react";
+import { ContractApprovalDialog, type ApprovalMode } from "@/components/ContractApprovalDialog";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
