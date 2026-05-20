@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
+  Bell,
   Building2,
   ChevronDown,
   FileText,
@@ -24,6 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/NotificationBell";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
