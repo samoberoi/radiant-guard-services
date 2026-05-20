@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Download, Edit2, Plus, Search, ShieldCheck, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,7 +18,14 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useResetOnOpen, useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
 
+type StatusFilter = "all" | "expired" | "renewal" | "due" | "active";
+const STATUS_VALUES: StatusFilter[] = ["all", "expired", "renewal", "due", "active"];
+
 export const Route = createFileRoute("/admin/vehicles/insurances")({
+  validateSearch: (search: Record<string, unknown>): { status: StatusFilter } => {
+    const s = String(search.status ?? "all") as StatusFilter;
+    return { status: STATUS_VALUES.includes(s) ? s : "all" };
+  },
   component: InsuranceManagerPage,
 });
 
