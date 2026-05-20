@@ -149,7 +149,7 @@ function FuelManagerPage() {
       title: "Delete fuel entry?",
       description: `${vehMap.get(e.vehicle_id) ?? "Vehicle"} • ${fmtDate(e.entry_date)} • ${inr(e.amount)}`,
       confirmText: "Delete",
-      variant: "destructive",
+      destructive: true,
     });
     if (ok) delMut.mutate(e);
   }
