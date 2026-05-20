@@ -241,11 +241,11 @@ function FastTagManagerPage() {
                 const v = vMap.get(i.vehicle_id);
                 return (
                   <tr key={i.id} className="hover:bg-secondary/30">
-                    <td className="px-5 py-3 font-mono font-semibold text-foreground">{v ? vehicleLabel(v) : "—"}</td>
+                    <td className="px-5 py-3 font-mono font-semibold text-foreground">{v?.vehicle_number || "—"}</td>
                     <td className="px-5 py-3 font-mono text-foreground/90">{i.fastag_number || "—"}</td>
                     <td className="px-5 py-3 text-foreground/90">{i.bank_name || "—"}</td>
                     <td className="px-5 py-3 text-foreground/90">₹ {i.balance.toLocaleString("en-IN")}</td>
-                    <td className="px-5 py-3 text-foreground/90">{i.expiry_date ?? "—"}</td>
+                    <td className="px-5 py-3 text-foreground/90">{fmtDate(i.expiry_date)}</td>
                     <td className="px-5 py-3">
                       <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{i.status}</span>
                     </td>
