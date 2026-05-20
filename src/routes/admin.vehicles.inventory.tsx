@@ -23,6 +23,7 @@ export const Route = createFileRoute("/admin/vehicles/inventory")({
 
 type Vehicle = {
   id: string;
+  vehicle_id: string;
   vehicle_number: string;
   name: string;
   brand: string;
@@ -48,6 +49,7 @@ const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid", "LPG"];
 function rowToItem(r: Record<string, unknown>): Vehicle {
   return {
     id: String(r.id),
+    vehicle_id: String(r.vehicle_id ?? ""),
     vehicle_number: String(r.vehicle_number ?? ""),
     name: String(r.name ?? ""),
     brand: String(r.brand ?? ""),
@@ -72,15 +74,15 @@ function useVehicles() {
     queryFn: async (): Promise<Vehicle[]> => {
       const { data, error } = await supabase
         .from("vehicles" as never)
-        .select("id,vehicle_number,name,brand,make,type,year,color,registration_date,engine_number,chassis_number,fuel_type,owner,notes,enabled")
-        .order("vehicle_number", { ascending: true });
+        .select("id,vehicle_id,vehicle_number,name,brand,make,type,year,color,registration_date,engine_number,chassis_number,fuel_type,owner,notes,enabled")
+        .order("vehicle_id", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
     },
   });
 
   const invalidate = () => qc.invalidateQueries({ queryKey: QK });
-  type Payload = Omit<Vehicle, "id">;
+  type Payload = Omit<Vehicle, "id" | "vehicle_id">;
   const toRow = (p: Payload) => ({
     vehicle_number: p.vehicle_number.trim().toUpperCase(),
     name: p.name.trim(),
