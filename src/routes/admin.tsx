@@ -59,6 +59,7 @@ const vehiclesChildren: NavItem[] = [
   { to: "/admin/vehicles/fastags", label: "FastTag Manager", icon: CreditCard },
   { to: "/admin/vehicles/insurances", label: "Insurance Manager", icon: ShieldCheck },
   { to: "/admin/vehicles/pucs", label: "PUC Manager", icon: Wind },
+  { to: "/admin/vehicles/service-manager", label: "Service Manager", icon: Wrench },
 ];
 
 
