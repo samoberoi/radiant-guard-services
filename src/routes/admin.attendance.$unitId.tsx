@@ -131,6 +131,22 @@ function MusterRollPage() {
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
+      <style>{`
+        @media print {
+          @page { size: A4 landscape; margin: 8mm; }
+          body * { visibility: hidden !important; }
+          #form-xvi-print, #form-xvi-print * { visibility: visible !important; }
+          #form-xvi-print {
+            position: absolute !important;
+            left: 0; top: 0;
+            width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+            border: 0 !important;
+          }
+        }
+      `}</style>
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <Link
           to="/admin/attendance"
@@ -174,7 +190,8 @@ function MusterRollPage() {
       </div>
 
       {/* Muster Roll Sheet */}
-      <div className="rounded-xl border border-border/60 bg-white p-5 text-[11px] text-slate-900 shadow-sm print:rounded-none print:border-0 print:shadow-none sm:p-6">
+      <div id="form-xvi-print" className="rounded-xl border border-border/60 bg-white p-5 text-[11px] text-slate-900 shadow-sm print:rounded-none print:border-0 print:shadow-none sm:p-6">
+
         {/* Header */}
         <div className="text-center">
           <div className="text-base font-bold">Form XVI</div>
