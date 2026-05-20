@@ -79,6 +79,7 @@ export const Route = createFileRoute("/admin/contracts/client-contracts")({
 
 type GstOption = "csgst" | "igst" | "none";
 type ContractStatus = "active" | "inactive" | "expired";
+type ApprovalStatus = "pending" | "approved" | "rejected";
 
 type ClientContract = {
   id: string;
@@ -92,6 +93,9 @@ type ClientContract = {
   billingTypeId: string | null;
   gstOption: GstOption;
   status: ContractStatus;
+  approvalStatus: ApprovalStatus;
+  rejectionReason: string;
+  createdBy: string | null;
 };
 
 type ServiceType = { id: string; name: string };
