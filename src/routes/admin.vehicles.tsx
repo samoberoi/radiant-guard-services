@@ -152,6 +152,14 @@ function VehiclesDashboard() {
           to="/admin/vehicles/pucs"
           search={{ status: "due" }}
         />
+        <StatCard
+          label="Fuel Manager"
+          value={totalVehicles}
+          icon={Fuel}
+          accent="accent"
+          subtle="Log top-ups & track spend"
+          to="/admin/vehicles/fuel-manager"
+        />
       </div>
 
       {/* Fuel mix */}
