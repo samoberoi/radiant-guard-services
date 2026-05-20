@@ -473,17 +473,10 @@ export function NomineeSection({ form, setSection }: { form: any; setSection: Se
                             )}
                           </div>
                           <div className="flex items-center gap-1">
-                            <Input
-                              type="number"
-                              min={0}
-                              max={100}
-                              className="w-20"
+                            <PercentInput
                               value={e.percent}
                               disabled={!enabled}
-                              onChange={(ev) => {
-                                const n = Math.max(0, Math.min(100, Number(ev.target.value) || 0));
-                                update({ percent: n });
-                              }}
+                              onChange={(n) => update({ percent: n })}
                             />
                             <span className="text-xs text-muted-foreground">%</span>
                           </div>
