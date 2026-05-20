@@ -21,6 +21,7 @@ import {
   Menu,
   PanelLeftClose,
   ShieldCheck,
+  Sparkles,
   SlidersHorizontal,
   UserPlus,
   Users,
