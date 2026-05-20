@@ -53,10 +53,40 @@ function VehiclesDashboard() {
       return (data as unknown as DashRow[]) ?? [];
     },
   });
+  const fuelQ = useQuery({
+    queryKey: ["dashboard", "fuel-entries-30d"],
+    queryFn: async () => {
+      const since = new Date(); since.setDate(since.getDate() - 30);
+      const sinceIso = since.toISOString().slice(0, 10);
+      const { data, error } = await supabase
+        .from("vehicle_fuel_entries" as never)
+        .select("id,fuel_type,amount,payment_mode,entry_date")
+        .gte("entry_date", sinceIso);
+      if (error) throw error;
+      return (data as unknown as DashRow[]) ?? [];
+    },
+  });
 
   const vehicles = vehiclesQ.data ?? [];
   const insurances = insurancesQ.data ?? [];
   const pucs = pucsQ.data ?? [];
+  const fuelEntries = fuelQ.data ?? [];
+
+  const fuelSpend = useMemo(() => {
+    let total = 0;
+    const byFuel: Record<string, number> = { Petrol: 0, Diesel: 0, CNG: 0 };
+    const byPay: Record<string, number> = { PetroCard: 0, Cash: 0, UPI: 0, Other: 0 };
+    for (const e of fuelEntries) {
+      const amt = Number(e.amount ?? 0);
+      total += amt;
+      const ft = String(e.fuel_type ?? "");
+      if (ft in byFuel) byFuel[ft] += amt;
+      const pm = String(e.payment_mode ?? "");
+      if (pm in byPay) byPay[pm] += amt; else byPay.Other += amt;
+    }
+    return { total, byFuel, byPay, count: fuelEntries.length };
+  }, [fuelEntries]);
+
 
   const fuelStats = useMemo(() => {
     const counts: Record<string, number> = {};
