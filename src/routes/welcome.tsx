@@ -77,7 +77,7 @@ function WelcomePage() {
             <Button
               onClick={handleLogout}
               variant="outline"
-              className="h-11 rounded-xl border-border bg-background px-6 font-semibold hover:border-accent hover:text-accent"
+              className="h-11 rounded-xl border-border bg-background px-6 font-semibold hover:bg-background hover:border-accent hover:text-accent"
             >
               <LogOut className="mr-2 h-4 w-4" />
               Sign out
