@@ -275,13 +275,14 @@ function VehicleInventoryPage() {
                   <td className="px-5 py-3 text-foreground/90">{[i.brand, i.make].filter(Boolean).join(" / ") || "—"}{i.year && <div className="text-[11px] text-muted-foreground">{i.year}</div>}</td>
                   <td className="px-5 py-3">
                     <div className="flex flex-col gap-1">
-                      {i.type ? <span className="w-fit rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{i.type}</span> : "—"}
+                      {i.type && <span className="w-fit rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{i.type}</span>}
                       {i.fuel_type && <span className="w-fit rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">{i.fuel_type}</span>}
+                      {!i.type && !i.fuel_type && "—"}
                     </div>
                   </td>
                   <td className="px-5 py-3 font-mono text-[12px] text-foreground/80">{i.engine_number || "—"}</td>
                   <td className="px-5 py-3 font-mono text-[12px] text-foreground/80">{i.chassis_number || "—"}</td>
-                  <td className="px-5 py-3 text-foreground/90">{i.registration_date ?? "—"}</td>
+                  <td className="px-5 py-3 text-foreground/90">{fmtDate(i.registration_date)}</td>
                   <td className="px-5 py-3">
                     <Switch
                       checked={i.enabled}
