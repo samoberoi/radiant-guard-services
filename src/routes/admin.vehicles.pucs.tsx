@@ -192,13 +192,13 @@ function PucManagerPage() {
                 const expired = i.expiry_date && i.expiry_date < today;
                 return (
                   <tr key={i.id} className="hover:bg-secondary/30">
-                    <td className="px-5 py-3 font-mono font-semibold text-foreground">{v ? vehicleLabel(v) : "—"}</td>
+                    <td className="px-5 py-3 font-mono font-semibold text-foreground">{v?.vehicle_number || "—"}</td>
                     <td className="px-5 py-3 font-mono text-foreground/90">{i.puc_number || "—"}</td>
                     <td className="px-5 py-3 text-foreground/90">{i.issuing_authority || "—"}</td>
-                    <td className="px-5 py-3 text-foreground/90">{i.issued_date ?? "—"}</td>
+                    <td className="px-5 py-3 text-foreground/90">{fmtDate(i.issued_date)}</td>
                     <td className="px-5 py-3">
                       <span className={expired ? "rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-semibold text-destructive" : "text-foreground/90"}>
-                        {i.expiry_date ?? "—"}{expired ? " · Expired" : ""}
+                        {fmtDate(i.expiry_date)}{expired ? " · Expired" : ""}
                       </span>
                     </td>
                     <td className="px-5 py-3">
