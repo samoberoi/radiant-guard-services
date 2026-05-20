@@ -10,6 +10,7 @@ import {
   Bell,
   Building2,
   ChevronDown,
+  ClipboardList,
   FileText,
   Files,
   Fuel,
