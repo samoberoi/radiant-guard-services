@@ -82,6 +82,17 @@ type GstOption = "csgst" | "igst" | "none";
 type ContractStatus = "active" | "inactive" | "expired";
 type ApprovalStatus = "pending" | "approved" | "rejected";
 type RecordType = "prospect" | "client";
+type ProspectStage = "new" | "qualified" | "contract_sent" | "negotiation" | "completed";
+const PROSPECT_STAGES: { value: ProspectStage; label: string }[] = [
+  { value: "new", label: "New" },
+  { value: "qualified", label: "Qualified" },
+  { value: "contract_sent", label: "Contract Sent" },
+  { value: "negotiation", label: "Negotiation" },
+  { value: "completed", label: "Completed" },
+];
+const PROSPECT_STAGE_LABEL: Record<ProspectStage, string> = Object.fromEntries(
+  PROSPECT_STAGES.map((s) => [s.value, s.label]),
+) as Record<ProspectStage, string>;
 
 type ClientContract = {
   id: string;
@@ -98,6 +109,7 @@ type ClientContract = {
   gstOption: GstOption;
   status: ContractStatus;
   approvalStatus: ApprovalStatus;
+  prospectStage: ProspectStage;
   rejectionReason: string;
   createdBy: string | null;
   promotedAt: string | null;
@@ -195,6 +207,7 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
     gstOption: (r.gst_option as GstOption) ?? "csgst",
     status: (r.status as ContractStatus) ?? "inactive",
     approvalStatus: (r.approval_status as ApprovalStatus) ?? "pending",
+    prospectStage: (r.prospect_stage as ProspectStage) ?? "new",
     rejectionReason: String(r.rejection_reason ?? ""),
     createdBy: r.created_by ? String(r.created_by) : null,
     promotedAt: r.promoted_at ? String(r.promoted_at) : null,
@@ -227,7 +240,7 @@ function useContracts() {
       const { data, error } = await supabase
         .from("client_contracts" as never)
         .select(
-          "id,contract_code,prospect_code,record_type,promoted_at,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,gst_option,status,approval_status,rejection_reason,created_by",
+          "id,contract_code,prospect_code,record_type,prospect_stage,promoted_at,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,gst_option,status,approval_status,rejection_reason,created_by",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -283,6 +296,7 @@ function useContracts() {
       base.prospect_code = p.prospectCode;
       base.status = "inactive";
       base.approval_status = "pending";
+      base.prospect_stage = "new";
       // contract_code is intentionally null until promoted.
     }
     return base;
@@ -345,7 +359,26 @@ function useContracts() {
     onSuccess: invalidate,
   });
 
-  return { items, addMut, updateMut, deleteMut };
+  const updateStageMut = useMutation({
+    mutationFn: async ({ id, stage, label }: { id: string; stage: ProspectStage; label: string }) => {
+      const { error } = await supabase
+        .from("client_contracts" as never)
+        .update({ prospect_stage: stage } as never)
+        .eq("id", id);
+      if (error) throw error;
+      void logActivity({
+        module: "Client Contracts",
+        action: "stage-change",
+        entityType: "client_contracts",
+        entityId: id,
+        entityLabel: label,
+        details: { stage },
+      });
+    },
+    onSuccess: invalidate,
+  });
+
+  return { items, addMut, updateMut, deleteMut, updateStageMut };
 }
 
 function useServiceTypes() {
@@ -1033,7 +1066,7 @@ async function importContractFromXlsx(buf: ArrayBuffer): Promise<{
 
 function ClientContractsPage() {
   const qc = useQueryClient();
-  const { items, addMut, updateMut, deleteMut } = useContracts();
+  const { items, addMut, updateMut, deleteMut, updateStageMut } = useContracts();
   const { units } = useUnits();
   const { customers } = useCustomers();
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -1365,23 +1398,54 @@ function ClientContractsPage() {
                   <td className="px-5 py-3">
                     {tab === "client" ? (
                       <StatusBadge status={c.status} />
-                    ) : (
+                    ) : c.approvalStatus === "rejected" || c.approvalStatus === "approved" ? (
                       <ApprovalBadge status={c.approvalStatus} />
+                    ) : (
+                      <Select
+                        value={c.prospectStage}
+                        onValueChange={(v) =>
+                          updateStageMut.mutate({
+                            id: c.id,
+                            stage: v as ProspectStage,
+                            label: c.prospectCode,
+                          })
+                        }
+                      >
+                        <SelectTrigger className="h-8 w-[160px] rounded-full border-accent/30 bg-accent/10 text-[11px] font-semibold uppercase tracking-wider text-accent">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {PROSPECT_STAGES.map((s) => (
+                            <SelectItem key={s.value} value={s.value}>
+                              {s.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
                       {tab === "prospect" && c.approvalStatus === "pending" && (
                         <>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 px-2 text-accent hover:bg-accent/10"
-                            onClick={() => setApprovalTarget({ contract: c, mode: "approve" })}
-                            title="Approve & sign"
-                          >
-                            <CheckCircle2 className="mr-1 h-4 w-4" /> Approve
-                          </Button>
+                          {c.prospectStage === "completed" ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-accent hover:bg-accent/10"
+                              onClick={() => setApprovalTarget({ contract: c, mode: "approve" })}
+                              title="Approve & sign — promote to client"
+                            >
+                              <CheckCircle2 className="mr-1 h-4 w-4" /> Approve
+                            </Button>
+                          ) : (
+                            <span
+                              className="hidden items-center px-2 text-[11px] text-muted-foreground sm:inline-flex"
+                              title={`Complete ${PROSPECT_STAGE_LABEL[c.prospectStage]} stage to enable approval`}
+                            >
+                              → {PROSPECT_STAGE_LABEL[c.prospectStage]}
+                            </span>
+                          )}
                           <Button
                             size="sm"
                             variant="ghost"
@@ -2000,6 +2064,7 @@ function ContractFormDialog({
                 gstOption,
                 status: editing?.status ?? "inactive",
                 approvalStatus: editing?.approvalStatus ?? "pending",
+                prospectStage: editing?.prospectStage ?? "new",
                 rejectionReason: editing?.rejectionReason ?? "",
                 createdBy: editing?.createdBy ?? null,
                 promotedAt: editing?.promotedAt ?? null,
