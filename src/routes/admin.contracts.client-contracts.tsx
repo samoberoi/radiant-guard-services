@@ -1703,17 +1703,15 @@ function ContractFormDialog({
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Status">
-                <Select value={status} onValueChange={(v) => setStatus(v as ContractStatus)}>
-                  <SelectTrigger className="h-10 rounded-lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="expired">Expired</SelectItem>
-                  </SelectContent>
-                </Select>
+              <Field label="Approval Status">
+                <Input
+                  value={
+                    editing
+                      ? `${editing.recordType === "client" ? "Client" : "Prospect"} · ${editing.approvalStatus}`
+                      : "Prospect · pending"
+                  }
+                  readOnly
+                />
               </Field>
               <div className="sm:col-span-2">
                 <Field label="Description">
