@@ -500,17 +500,6 @@ function AddEntryDialog({
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label>Vehicle *</Label>
-              <Select value={vehicleId} onValueChange={setVehicleId}>
-                <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
-                <SelectContent>
-                  {vehicles.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>{v.vehicle_number}{v.name ? ` — ${v.name}` : ""}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <Label>Vehicle *</Label>
               <Popover open={vehOpen} onOpenChange={setVehOpen}>
                 <PopoverTrigger asChild>
                   <Button
