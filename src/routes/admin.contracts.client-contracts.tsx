@@ -1331,7 +1331,7 @@ function ClientContractsPage() {
                     <th className="px-5 py-3">End</th>
                   </>
                 ) : (
-                  <th className="px-5 py-3">Created</th>
+                  <th className="px-5 py-3">Start</th>
                 )}
                 <th className="px-5 py-3">GST</th>
                 <th className="px-5 py-3">{tab === "client" ? "Status" : "Approval"}</th>
