@@ -134,21 +134,39 @@ function InsuranceManagerPage() {
   const [editing, setEditing] = useState<Insurance | null>(null);
   const [deleting, setDeleting] = useState<Insurance | null>(null);
 
+  const { status } = Route.useSearch();
+  const navigate = useNavigate({ from: Route.fullPath });
+
   const today = new Date().toISOString().slice(0, 10);
+  const in60Date = new Date(); in60Date.setDate(in60Date.getDate() + 60);
+  const in60 = in60Date.toISOString().slice(0, 10);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return items;
     return items.filter((i) => {
-      const v = vMap.get(i.vehicle_id);
-      return (
-        i.policy_number.toLowerCase().includes(q) ||
-        i.insurance_company.toLowerCase().includes(q) ||
-        i.engine_number.toLowerCase().includes(q) ||
-        i.chassis_number.toLowerCase().includes(q) ||
-        (v?.vehicle_number.toLowerCase().includes(q) ?? false)
-      );
+      // text search
+      if (q) {
+        const v = vMap.get(i.vehicle_id);
+        const hit =
+          i.policy_number.toLowerCase().includes(q) ||
+          i.insurance_company.toLowerCase().includes(q) ||
+          i.engine_number.toLowerCase().includes(q) ||
+          i.chassis_number.toLowerCase().includes(q) ||
+          (v?.vehicle_number.toLowerCase().includes(q) ?? false);
+        if (!hit) return false;
+      }
+      // status filter
+      if (status === "all") return true;
+      const end = i.end_date;
+      const isExpired = !!end && end < today;
+      const isRenewal = !!end && end >= today && end <= in60;
+      if (status === "expired") return isExpired;
+      if (status === "renewal") return isRenewal;
+      if (status === "due") return isExpired || isRenewal;
+      if (status === "active") return !isExpired;
+      return true;
     });
-  }, [items, query, vMap]);
+  }, [items, query, vMap, status, today, in60]);
 
   return (
     <div>
@@ -159,9 +177,26 @@ function InsuranceManagerPage() {
       />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by vehicle, policy, insurer…" className="h-10 rounded-lg pl-9" />
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:max-w-xl">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by vehicle, policy, insurer…" className="h-10 rounded-lg pl-9" />
+          </div>
+          <Select
+            value={status}
+            onValueChange={(v) => navigate({ search: { status: v as StatusFilter }, replace: true })}
+          >
+            <SelectTrigger className="h-10 w-full sm:w-56 rounded-lg">
+              <SelectValue placeholder="Filter status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All policies</SelectItem>
+              <SelectItem value="expired">Expired</SelectItem>
+              <SelectItem value="renewal">Coming up soon (≤60d)</SelectItem>
+              <SelectItem value="due">Expired + Coming up soon</SelectItem>
+              <SelectItem value="active">Active (not expired)</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setAddOpen(true)} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="mr-1.5 h-4 w-4" />Add Insurance</Button>
