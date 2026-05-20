@@ -105,12 +105,40 @@ function VehiclesDashboard() {
         crumbs={[{ label: "Vehicles" }]}
       />
 
-      {/* Top stat cards */}
+      {/* Top stat cards — clickable, deep-link into managers with filter */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Total Vehicles" value={totalVehicles} icon={Car} accent="accent" />
-        <StatCard label="Insurance Expired" value={insExpired.length} icon={ShieldAlert} accent="destructive" />
-        <StatCard label="Insurance Renewal (≤60d)" value={insRenewal.length} icon={ShieldCheck} accent="warning" />
-        <StatCard label="PUC Expiring (≤60d)" value={pucExpiring.length + pucExpired.length} icon={Wind} accent="warning" subtle={pucExpired.length > 0 ? `${pucExpired.length} already expired` : undefined} />
+        <StatCard
+          label="Total Vehicles"
+          value={totalVehicles}
+          icon={Car}
+          accent="accent"
+          to="/admin/vehicles/inventory"
+        />
+        <StatCard
+          label="Insurance Expired"
+          value={insExpired.length}
+          icon={ShieldAlert}
+          accent="destructive"
+          to="/admin/vehicles/insurances"
+          search={{ status: "expired" }}
+        />
+        <StatCard
+          label="Insurance Renewal (≤60d)"
+          value={insRenewal.length}
+          icon={ShieldCheck}
+          accent="warning"
+          to="/admin/vehicles/insurances"
+          search={{ status: "renewal" }}
+        />
+        <StatCard
+          label="PUC Expiring (≤60d)"
+          value={pucExpiring.length + pucExpired.length}
+          icon={Wind}
+          accent="warning"
+          subtle={pucExpired.length > 0 ? `${pucExpired.length} already expired` : undefined}
+          to="/admin/vehicles/pucs"
+          search={{ status: "due" }}
+        />
       </div>
 
       {/* Fuel mix */}
@@ -192,25 +220,6 @@ function VehiclesDashboard() {
         />
       </div>
 
-      {/* Quick nav */}
-      <div className="mt-6">
-        <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Manage</div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {tiles.map((tile) => (
-            <Link
-              key={tile.to}
-              to={tile.to}
-              className="group flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 transition-colors hover:border-accent/40 hover:bg-accent/5"
-            >
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/15 text-accent">
-                <tile.icon className="h-4 w-4" />
-              </div>
-              <span className="flex-1 text-sm font-semibold">{tile.label}</span>
-              <ArrowRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-            </Link>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
