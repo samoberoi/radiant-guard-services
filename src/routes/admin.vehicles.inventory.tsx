@@ -155,7 +155,10 @@ function VehicleInventoryPage() {
         i.vehicle_number.toLowerCase().includes(q) ||
         i.name.toLowerCase().includes(q) ||
         i.brand.toLowerCase().includes(q) ||
-        i.make.toLowerCase().includes(q)
+        i.make.toLowerCase().includes(q) ||
+        i.engine_number.toLowerCase().includes(q) ||
+        i.chassis_number.toLowerCase().includes(q) ||
+        i.owner.toLowerCase().includes(q)
       );
     });
   }, [items, query, typeFilter]);
