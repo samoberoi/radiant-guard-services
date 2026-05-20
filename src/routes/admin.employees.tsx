@@ -3567,6 +3567,8 @@ function CandidateWizard({
                         assets={assets}
                         value={form.assigned_asset_ids}
                         onChange={(ids) => setForm((f) => ({ ...f, assigned_asset_ids: ids }))}
+                        sizes={(form.other_info?.uniform_sizes ?? {}) as Record<string, string>}
+                        onSizesChange={(next) => setForm((f) => ({ ...f, other_info: { ...(f.other_info ?? {}), uniform_sizes: next } }))}
                       />
                     </Field>
                   </div>
