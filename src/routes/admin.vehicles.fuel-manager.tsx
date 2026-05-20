@@ -28,7 +28,7 @@ const QK = ["admin", "vehicle-fuel-entries"] as const;
 const BUCKET = "vehicle-fuel-proofs";
 
 const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric"] as const;
-const PAYMENT_MODES = ["Fuel Card", "Cash", "UPI", "Other"] as const;
+const PAYMENT_MODES = ["PetroCard", "Cash", "UPI", "Other"] as const;
 
 type FuelEntry = {
   id: string;
