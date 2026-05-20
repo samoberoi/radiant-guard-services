@@ -154,6 +154,7 @@ function VehicleInventoryPage() {
       if (typeFilter !== "all" && i.type !== typeFilter) return false;
       if (!q) return true;
       return (
+        i.vehicle_id.toLowerCase().includes(q) ||
         i.vehicle_number.toLowerCase().includes(q) ||
         i.name.toLowerCase().includes(q) ||
         i.brand.toLowerCase().includes(q) ||
