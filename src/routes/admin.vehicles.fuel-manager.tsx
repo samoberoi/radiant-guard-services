@@ -8,7 +8,7 @@ import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { confirmAction } from "@/components/ConfirmProvider";
 import { PageHeader } from "@/components/PageHeader";
-import { MiniStat } from "@/components/MiniStat";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -119,10 +119,13 @@ function FuelManagerPage() {
 
   const stats = useMemo(() => {
     const totalSpend = filtered.reduce((s, e) => s + (e.amount || 0), 0);
-    const totalQty = filtered.reduce((s, e) => s + (e.quantity || 0), 0);
-    const byFuel: Record<string, number> = {};
-    for (const e of filtered) byFuel[e.fuel_type] = (byFuel[e.fuel_type] ?? 0) + (e.amount || 0);
-    return { totalSpend, totalQty, entries: filtered.length, byFuel };
+    const byFuel: Record<string, number> = { Petrol: 0, Diesel: 0, CNG: 0 };
+    const byPayment: Record<string, number> = {};
+    for (const e of filtered) {
+      if (e.fuel_type in byFuel) byFuel[e.fuel_type] += e.amount || 0;
+      byPayment[e.payment_mode] = (byPayment[e.payment_mode] ?? 0) + (e.amount || 0);
+    }
+    return { totalSpend, entries: filtered.length, byFuel, byPayment };
   }, [filtered]);
 
   const [open, setOpen] = useState(false);
@@ -162,12 +165,34 @@ function FuelManagerPage() {
         crumbs={[{ label: "Vehicles", to: "/admin/vehicles" }, { label: "Fuel Manager" }]}
       />
 
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MiniStat label="Entries" value={stats.entries} tone="accent" />
-        <MiniStat label="Total Spend" value={inr(stats.totalSpend)} />
-        <MiniStat label="Total Qty (L/kg)" value={stats.totalQty.toLocaleString("en-IN", { maximumFractionDigits: 2 })} />
-        <MiniStat label="Fuel Mix" value={Object.entries(stats.byFuel).map(([k, v]) => `${k}: ${inr(v)}`).join("  ·  ") || "—"} subtle="Spend by fuel type" />
+      {/* Payment mode breakdown chips */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Payment mix</span>
+        {(["Fuel Card", "Cash", "UPI", "Other"] as const).map((pm) => {
+          const v = stats.byPayment[pm] ?? 0;
+          const pct = stats.totalSpend > 0 ? Math.round((v / stats.totalSpend) * 100) : 0;
+          return (
+            <div key={pm} className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs">
+              <span className="font-medium">{pm}</span>
+              <span className="tabular-nums text-muted-foreground">{inr(v)}</span>
+              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums">{pct}%</span>
+            </div>
+          );
+        })}
+        <div className="ml-auto rounded-full border border-accent/30 bg-accent/10 px-3 py-1.5 text-xs">
+          <span className="font-medium text-accent">Total Spend</span>
+          <span className="ml-2 tabular-nums font-semibold">{inr(stats.totalSpend)}</span>
+          <span className="ml-2 text-muted-foreground">· {stats.entries} entries</span>
+        </div>
       </div>
+
+      {/* Fuel-type circular meters */}
+      <div className="mb-4 grid gap-3 sm:grid-cols-3">
+        <FuelMeter label="Petrol" amount={stats.byFuel.Petrol} total={stats.totalSpend} color="hsl(35 92% 55%)" />
+        <FuelMeter label="Diesel" amount={stats.byFuel.Diesel} total={stats.totalSpend} color="hsl(220 70% 55%)" />
+        <FuelMeter label="CNG"    amount={stats.byFuel.CNG}    total={stats.totalSpend} color="hsl(150 65% 45%)" />
+      </div>
+
 
       <div className="mb-3 flex flex-wrap items-end gap-2">
         <div>
@@ -389,6 +414,7 @@ function AddEntryDialog({
     if (!vehicleId) { toast.error("Select a vehicle"); return; }
     if (!odometer) { toast.error("Enter odometer reading"); return; }
     if (!amount) { toast.error("Enter amount"); return; }
+    if (!odoFile || !pumpFile || !receiptFile) { toast.error("Upload all 3 proof photos (odometer, pump, receipt)"); return; }
     setBusy(true);
     try {
       const [odoUrl, pumpUrl, receiptUrl] = await Promise.all([
@@ -525,10 +551,11 @@ function AddEntryDialog({
           </div>
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <FileTile label="Odometer photo" file={odoFile} onChange={setOdoFile} />
-            <FileTile label="Pump / units photo" file={pumpFile} onChange={setPumpFile} />
-            <FileTile label="Receipt photo" file={receiptFile} onChange={setReceiptFile} />
+            <FileTile label="Odometer photo *" file={odoFile} onChange={setOdoFile} />
+            <FileTile label="Pump / units photo *" file={pumpFile} onChange={setPumpFile} />
+            <FileTile label="Receipt photo *" file={receiptFile} onChange={setReceiptFile} />
           </div>
+
 
           <div>
             <Label>Notes</Label>
@@ -582,6 +609,34 @@ function FileTile({
           <Upload className="h-4 w-4" /> Upload / Capture
         </button>
       )}
+    </div>
+  );
+}
+
+function FuelMeter({ label, amount, total, color }: { label: string; amount: number; total: number; color: string }) {
+  const pct = total > 0 ? Math.min(100, (amount / total) * 100) : 0;
+  const r = 38;
+  const c = 2 * Math.PI * r;
+  const dash = (pct / 100) * c;
+  return (
+    <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-4">
+      <svg width={96} height={96} viewBox="0 0 96 96">
+        <circle cx={48} cy={48} r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth={8} />
+        <circle
+          cx={48} cy={48} r={r} fill="none"
+          stroke={color} strokeWidth={8} strokeLinecap="round"
+          strokeDasharray={`${dash} ${c - dash}`}
+          transform="rotate(-90 48 48)"
+        />
+        <text x={48} y={53} textAnchor="middle" className="fill-foreground text-[14px] font-semibold">
+          {Math.round(pct)}%
+        </text>
+      </svg>
+      <div className="min-w-0">
+        <div className="text-xs uppercase tracking-wide text-muted-foreground">{label}</div>
+        <div className="mt-0.5 text-xl font-bold tabular-nums">₹{amount.toLocaleString("en-IN", { maximumFractionDigits: 0 })}</div>
+        <div className="text-xs text-muted-foreground">of total spend</div>
+      </div>
     </div>
   );
 }
