@@ -299,58 +299,32 @@ export function KnowledgeSection({ form, set }: { form: any; set: SetField }) {
 
 export function CriminalSection({ form, set }: { form: any; set: SetField }) {
   const ch = form.criminal_history ?? { has_history: false, incidents: [] };
-  const incidents = Array.isArray(ch.incidents) ? ch.incidents : [];
+  const hasHistory = !!ch.has_history;
   return (
     <div>
-      <SectionHeader title="Criminal History" desc="Declarations and incidents" />
+      <SectionHeader title="Criminal History" desc="Declaration of past criminal record" />
       <div className="mb-4 flex items-center gap-3 rounded-md border p-3">
-        <Switch checked={!!ch.has_history} onCheckedChange={(v) => set("criminal_history", { ...ch, has_history: v })} />
+        <Switch
+          checked={hasHistory}
+          onCheckedChange={(v) => {
+            set("criminal_history", { ...ch, has_history: v, incidents: [] });
+            if (v) set("no_hire", true);
+          }}
+        />
         <div>
           <p className="text-sm font-medium">Candidate has criminal history</p>
-          <p className="text-xs text-muted-foreground">Toggle on to record incident details below</p>
+          <p className="text-xs text-muted-foreground">
+            If turned on, the candidate is automatically marked Do-Not-Hire and cannot be onboarded.
+          </p>
         </div>
       </div>
-      {ch.has_history && (
-        <div>
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-medium">Criminal History Records</h3>
-            <Button size="sm" variant="outline" onClick={() => set("criminal_history", { ...ch, incidents: [...incidents, emptyIncident()] })}>
-              <Plus className="mr-1 h-3 w-3" /> Add Criminal History
-            </Button>
-          </div>
-          {incidents.length === 0 ? (
-            <p className="rounded-md border border-dashed py-8 text-center text-xs text-muted-foreground">No records yet. Click Add to create one.</p>
-          ) : (
-            <div className="space-y-3">
-              {incidents.map((inc: any, i: number) => {
-                const update = (patch: any) => {
-                  const copy = [...incidents];
-                  copy[i] = { ...copy[i], ...patch };
-                  set("criminal_history", { ...ch, incidents: copy });
-                };
-                return (
-                  <div key={inc.id ?? i} className="rounded-md border p-3">
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                      <Field label="FIR No."><Input value={inc.fir_no ?? ""} onChange={(e) => update({ fir_no: e.target.value })} /></Field>
-                      <Field label="IPC Section"><Input value={inc.ipc_section ?? ""} onChange={(e) => update({ ipc_section: e.target.value })} /></Field>
-                      <Field label="Police Station"><Input value={inc.police_station ?? ""} onChange={(e) => update({ police_station: e.target.value })} /></Field>
-                      <Field label="Case No."><Input value={inc.case_no ?? ""} onChange={(e) => update({ case_no: e.target.value })} /></Field>
-                      <Field label="Name of Court"><Input value={inc.court ?? ""} onChange={(e) => update({ court: e.target.value })} /></Field>
-                      <Field label="Judgement Date"><Input type="date" value={inc.judgement_date ?? ""} onChange={(e) => update({ judgement_date: e.target.value })} /></Field>
-                    </div>
-                    <div className="mt-3">
-                      <Field label="Remarks"><Textarea rows={2} value={inc.remarks ?? ""} onChange={(e) => update({ remarks: e.target.value })} /></Field>
-                    </div>
-                    <div className="mt-2 text-right">
-                      <Button variant="ghost" size="sm" className="text-rose-500" onClick={() => set("criminal_history", { ...ch, incidents: incidents.filter((_: any, j: number) => j !== i) })}>
-                        <Trash2 className="mr-1 h-3 w-3" /> Remove
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+      {hasHistory && (
+        <div className="rounded-md border border-rose-300 bg-rose-50 p-4 text-sm text-rose-800 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-200">
+          <p className="font-semibold">Marked as Do-Not-Hire</p>
+          <p className="mt-1 text-xs">
+            This candidate has declared a criminal history and will not be processed further.
+            Approval, onboarding and asset assignment are blocked.
+          </p>
         </div>
       )}
     </div>
