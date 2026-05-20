@@ -27,6 +27,8 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+const ATTENDANCE_EMPLOYEE_STATUSES = ["approved", "active", "inactive"] as const;
+
 function daysInMonth(year: number, monthIdx0: number) {
   return new Date(year, monthIdx0 + 1, 0).getDate();
 }
@@ -56,33 +58,37 @@ function MusterRollPage() {
     },
   });
 
-  const { data: employees, isLoading } = useQuery({
-    queryKey: ["attendance-roster", unitId],
+  const { data: employees, isLoading, error: rosterError } = useQuery({
+    queryKey: ["attendance-roster-v2", unitId],
     queryFn: async () => {
       const rosterSelect = "id, employee_code, full_name, designation_id, preferred_joining_date, date_of_birth, is_enabled, status, role_key";
 
       // Primary unit assignment on candidates
-      const { data: prim } = await supabase
+      const { data: prim, error: primError } = await supabase
         .from("candidates")
         .select(rosterSelect)
         .eq("unit_id", unitId)
         .eq("is_enabled", true)
-        .in("status", ["approved", "active"]);
+        .in("status", [...ATTENDANCE_EMPLOYEE_STATUSES]);
+      if (primError) throw primError;
 
       // Multi-unit assignments
-      const { data: links } = await supabase
+      const { data: links, error: linksError } = await supabase
         .from("candidate_units")
         .select("candidate_id")
         .eq("unit_id", unitId);
+      if (linksError) throw linksError;
+
       const linkIds = (links ?? []).map((l) => l.candidate_id);
       let extra: typeof prim = [];
       if (linkIds.length) {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("candidates")
           .select(rosterSelect)
           .in("id", linkIds)
           .eq("is_enabled", true)
-          .in("status", ["approved", "active"]);
+          .in("status", [...ATTENDANCE_EMPLOYEE_STATUSES]);
+        if (error) throw error;
         extra = data ?? [];
       }
       const all = [...(prim ?? []), ...(extra ?? [])];
@@ -242,10 +248,16 @@ function MusterRollPage() {
                     Loading roster…
                   </td>
                 </tr>
+              ) : rosterError ? (
+                <tr>
+                  <td colSpan={9 + dayCount} className="p-6 text-red-600">
+                    Failed to load mapped employees for this unit.
+                  </td>
+                </tr>
               ) : (employees ?? []).length === 0 ? (
                 <tr>
                   <td colSpan={9 + dayCount} className="p-6 text-slate-500">
-                    No active employees mapped to this unit.
+                    No enabled employees are mapped to this unit.
                   </td>
                 </tr>
               ) : (
