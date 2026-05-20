@@ -414,6 +414,7 @@ function AddEntryDialog({
     if (!vehicleId) { toast.error("Select a vehicle"); return; }
     if (!odometer) { toast.error("Enter odometer reading"); return; }
     if (!amount) { toast.error("Enter amount"); return; }
+    if (!odoFile || !pumpFile || !receiptFile) { toast.error("Upload all 3 proof photos (odometer, pump, receipt)"); return; }
     setBusy(true);
     try {
       const [odoUrl, pumpUrl, receiptUrl] = await Promise.all([
