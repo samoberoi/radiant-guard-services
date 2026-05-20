@@ -1406,37 +1406,21 @@ function ClientContractsPage() {
                   <td className="px-5 py-3">
                     {tab === "client" ? (
                       <StatusBadge status={c.status} />
-                    ) : c.approvalStatus === "rejected" || c.approvalStatus === "approved" ? (
-                      <ApprovalBadge status={c.approvalStatus} />
+                    ) : c.prospectStage === "lost" ? (
+                      <LostBadge />
                     ) : (
-                      <Select
-                        value={c.prospectStage}
-                        onValueChange={(v) =>
-                          updateStageMut.mutate({
-                            id: c.id,
-                            stage: v as ProspectStage,
-                            label: c.prospectCode,
-                          })
-                        }
-                      >
-                        <SelectTrigger className="h-8 w-[160px] rounded-full border-accent/30 bg-accent/10 text-[11px] font-semibold uppercase tracking-wider text-accent">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {PROSPECT_STAGES.map((s) => (
-                            <SelectItem key={s.value} value={s.value}>
-                              {s.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <ApprovalBadge
+                        status={c.approvalStatus}
+                        reason={c.rejectionReason}
+                      />
                     )}
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
-                      {tab === "prospect" && c.approvalStatus === "pending" && (
-                        <>
-                          {c.prospectStage === "completed" ? (
+                      {tab === "prospect" &&
+                        c.approvalStatus === "pending" &&
+                        c.prospectStage !== "lost" && (
+                          <>
                             <Button
                               size="sm"
                               variant="ghost"
@@ -1446,25 +1430,32 @@ function ClientContractsPage() {
                             >
                               <CheckCircle2 className="mr-1 h-4 w-4" /> Approve
                             </Button>
-                          ) : (
-                            <span
-                              className="hidden items-center px-2 text-[11px] text-muted-foreground sm:inline-flex"
-                              title={`Complete ${PROSPECT_STAGE_LABEL[c.prospectStage]} stage to enable approval`}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-destructive hover:bg-destructive/10"
+                              onClick={() => setApprovalTarget({ contract: c, mode: "reject" })}
+                              title="Reject"
                             >
-                              → {PROSPECT_STAGE_LABEL[c.prospectStage]}
-                            </span>
-                          )}
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-8 px-2 text-destructive hover:bg-destructive/10"
-                            onClick={() => setApprovalTarget({ contract: c, mode: "reject" })}
-                            title="Reject"
-                          >
-                            <XCircle className="mr-1 h-4 w-4" /> Reject
-                          </Button>
-                        </>
-                      )}
+                              <XCircle className="mr-1 h-4 w-4" /> Reject
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 px-2 text-muted-foreground hover:bg-muted"
+                              onClick={() =>
+                                updateStageMut.mutate({
+                                  id: c.id,
+                                  stage: "lost",
+                                  label: c.prospectCode,
+                                })
+                              }
+                              title="Mark prospect as lost (stays in prospects)"
+                            >
+                              Mark Lost
+                            </Button>
+                          </>
+                        )}
                       <Button
                         size="sm"
                         variant="ghost"
