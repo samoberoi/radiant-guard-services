@@ -182,6 +182,8 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
   return {
     id: String(r.id),
     contractCode: String(r.contract_code ?? ""),
+    prospectCode: String(r.prospect_code ?? ""),
+    recordType: (r.record_type as RecordType) ?? "prospect",
     unitId: String(r.unit_id ?? ""),
     startDate: r.start_date ? String(r.start_date) : "",
     endDate: r.end_date ? String(r.end_date) : "",
@@ -194,6 +196,7 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
     approvalStatus: (r.approval_status as ApprovalStatus) ?? "pending",
     rejectionReason: String(r.rejection_reason ?? ""),
     createdBy: r.created_by ? String(r.created_by) : null,
+    promotedAt: r.promoted_at ? String(r.promoted_at) : null,
   };
 }
 
@@ -204,6 +207,15 @@ function nextContractCode(existing: string[]): string {
     if (m) max = Math.max(max, parseInt(m[1], 10));
   }
   return `CON${String(max + 1).padStart(5, "0")}`;
+}
+
+function nextProspectCode(existing: string[]): string {
+  let max = 0;
+  for (const code of existing) {
+    const m = code?.match(/PROS-(\d+)/i);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `PROS-${String(max + 1).padStart(4, "0")}`;
 }
 
 function useContracts() {
