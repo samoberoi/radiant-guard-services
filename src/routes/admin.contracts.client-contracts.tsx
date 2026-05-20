@@ -1585,8 +1585,12 @@ function ContractFormDialog({
           {/* Client Information */}
           <Section title="Client Information">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Contract ID">
-                <Input value={contractCode} readOnly className="font-mono" />
+              <Field label={editing && editing.recordType === "client" ? "Contract ID" : "Prospect ID"}>
+                <Input
+                  value={editing && editing.recordType === "client" ? contractCode : prospectCode}
+                  readOnly
+                  className="font-mono"
+                />
               </Field>
               <Field label="Unit ID *">
                 <Popover open={unitPickerOpen} onOpenChange={setUnitPickerOpen}>
