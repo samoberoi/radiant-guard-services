@@ -85,6 +85,7 @@ export const RBAC_MODULES: ModuleDef[] = [
       { key: "insurance_manager",  label: "Insurance Manager",   path: "/admin/vehicles/insurances", icon: ShieldCheck },
       { key: "puc_manager",        label: "PUC Manager",         path: "/admin/vehicles/pucs",       icon: Briefcase },
       { key: "service_manager",    label: "Service Manager",     path: "/admin/vehicles/service-manager", icon: Briefcase },
+      { key: "fuel_manager",       label: "Fuel Manager",        path: "/admin/vehicles/fuel-manager",    icon: Briefcase },
     ],
   },
   {
