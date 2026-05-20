@@ -22,6 +22,22 @@ import {
 
 export type ApprovalMode = "approve" | "reject";
 
+export type ApprovalContract = {
+  id: string;
+  prospectCode: string;
+  contractCode: string;
+  createdBy: string | null;
+};
+
+function nextContractCode(existing: string[]): string {
+  let max = 0;
+  for (const code of existing) {
+    const m = code?.match(/CON(\d+)/i);
+    if (m) max = Math.max(max, parseInt(m[1], 10));
+  }
+  return `CON${String(max + 1).padStart(5, "0")}`;
+}
+
 export function ContractApprovalDialog({
   open,
   onOpenChange,
@@ -32,7 +48,7 @@ export function ContractApprovalDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   mode: ApprovalMode;
-  contract: { id: string; contractCode: string; createdBy: string | null } | null;
+  contract: ApprovalContract | null;
   onDone: () => void;
 }) {
   const [signature, setSignature] = useState("");
@@ -48,6 +64,8 @@ export function ContractApprovalDialog({
   }, [open, contract?.id]);
 
   if (!contract) return null;
+
+  const label = contract.contractCode || contract.prospectCode;
 
   async function notifyCreator(
     type: "contract_approved" | "contract_rejected",
@@ -80,6 +98,18 @@ export function ContractApprovalDialog({
     try {
       const uid = await currentUserId();
       const nowIso = new Date().toISOString();
+
+      // Generate next contract code by inspecting existing CONxxxxx values.
+      const { data: codeRows, error: codeErr } = await supabase
+        .from("client_contracts" as never)
+        .select("contract_code")
+        .not("contract_code", "is", null);
+      if (codeErr) throw codeErr;
+      const existing = ((codeRows as unknown as Record<string, unknown>[]) ?? [])
+        .map((r) => String(r.contract_code ?? ""))
+        .filter(Boolean);
+      const newContractCode = nextContractCode(existing);
+
       const { error } = await supabase
         .from("client_contracts" as never)
         .update({
@@ -90,6 +120,9 @@ export function ContractApprovalDialog({
           company_signature_data: signature,
           status: "active",
           rejection_reason: "",
+          record_type: "client",
+          promoted_at: nowIso,
+          contract_code: newContractCode,
         } as never)
         .eq("id", contract!.id);
       if (error) throw error;
@@ -98,14 +131,17 @@ export function ContractApprovalDialog({
         action: "approve",
         entityType: "client_contracts",
         entityId: contract!.id,
-        entityLabel: contract!.contractCode,
+        entityLabel: newContractCode,
+        details: { prospectCode: contract!.prospectCode, contractCode: newContractCode },
       });
       await notifyCreator(
         "contract_approved",
-        `Contract ${contract!.contractCode} approved`,
-        "The contract has been approved and signed.",
+        `Prospect ${contract!.prospectCode} approved`,
+        `Promoted to client contract ${newContractCode} and signed.`,
       );
-      toast.success(`Contract ${contract!.contractCode} approved & signed`);
+      toast.success(
+        `Prospect ${contract!.prospectCode} approved → Client ${newContractCode}`,
+      );
       onDone();
       onOpenChange(false);
     } catch (e) {
@@ -139,15 +175,15 @@ export function ContractApprovalDialog({
         action: "reject",
         entityType: "client_contracts",
         entityId: contract!.id,
-        entityLabel: contract!.contractCode,
+        entityLabel: label,
         details: { reason: reason.trim() },
       });
       await notifyCreator(
         "contract_rejected",
-        `Contract ${contract!.contractCode} rejected`,
+        `Prospect ${label} rejected`,
         reason.trim(),
       );
-      toast.success(`Contract ${contract!.contractCode} rejected`);
+      toast.success(`Prospect ${label} rejected`);
       onDone();
       onOpenChange(false);
     } catch (e) {
@@ -164,15 +200,15 @@ export function ContractApprovalDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {isApprove ? "Approve & sign contract" : "Reject contract"}
+            {isApprove ? "Approve & sign prospect" : "Reject prospect"}
           </DialogTitle>
           <DialogDescription>
-            Contract{" "}
+            Prospect{" "}
             <span className="font-mono font-semibold text-foreground">
-              {contract.contractCode}
+              {label}
             </span>
             {isApprove
-              ? " — sign below to mark it approved and active."
+              ? " — sign below to approve, promote it to a client and issue a contract ID."
               : " — capture a clear reason; the creator will be notified."}
           </DialogDescription>
         </DialogHeader>
@@ -193,7 +229,7 @@ export function ContractApprovalDialog({
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={4}
-              placeholder="Explain why this contract is being rejected…"
+              placeholder="Explain why this prospect is being rejected…"
             />
           </div>
         )}
@@ -223,10 +259,10 @@ export function ContractApprovalDialog({
             ) : isApprove ? (
               <>
                 <FileSignature className="mr-1.5 h-4 w-4" />
-                Approve & Sign
+                Approve, Promote & Sign
               </>
             ) : (
-              "Reject Contract"
+              "Reject Prospect"
             )}
           </Button>
         </DialogFooter>
