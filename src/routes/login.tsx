@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ArrowRight, Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,19 +109,7 @@ function LoginPage() {
             }}
           />
 
-          <div className="relative flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-accent-foreground shadow-lg">
-              <ShieldCheck className="h-6 w-6" strokeWidth={2.4} />
-            </div>
-            <div className="leading-tight">
-              <div className="font-display text-lg font-bold tracking-tight">
-                Radiant Guard
-              </div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.25em] text-primary-foreground/70">
-                Services Pvt. Ltd.
-              </div>
-            </div>
-          </div>
+          <BrandMark variant="inverse" />
 
           <div className="relative max-w-md">
             <span className="inline-flex items-center gap-2 rounded-full border border-accent/40 bg-accent/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
