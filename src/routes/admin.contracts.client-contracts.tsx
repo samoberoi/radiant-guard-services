@@ -908,6 +908,7 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
     service_type_id: contract.serviceTypeId ?? "",
     payroll_window_id: contract.payrollWindowId ?? "",
     billing_type_id: contract.billingTypeId ?? "",
+    esic_branch_id: contract.esicBranchId ?? "",
     gst_option: contract.gstOption,
     status: contract.status,
   };
