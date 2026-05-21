@@ -272,24 +272,46 @@ function MusterRollPage() {
   const [pickerCandidateId, setPickerCandidateId] = useState<string | null>(null);
   const [pickerDates, setPickerDates] = useState<string[]>([]);
 
+  // Track whether the current mousedown turned into an actual drag across
+  // multiple cells. A plain click (no drag, no modifier) should open the
+  // picker immediately for that single cell. Ctrl/Cmd+click toggles cells
+  // into a persistent selection without opening the picker.
+  const [dragMoved, setDragMoved] = useState(false);
+
   useEffect(() => {
     if (!isDragging) return;
     const onUp = () => {
       setIsDragging(false);
-      setSelectedDates((current) => {
-        if (current.size > 0 && dragCandidateId) {
-          const sorted = Array.from(current).sort();
-          setPickerCandidateId(dragCandidateId);
-          setPickerDates(sorted);
-          setPickerOpen(true);
-        }
-        return new Set();
-      });
-      setDragCandidateId(null);
+      if (dragMoved) {
+        setSelectedDates((current) => {
+          if (current.size > 0 && dragCandidateId) {
+            const sorted = Array.from(current).sort();
+            setPickerCandidateId(dragCandidateId);
+            setPickerDates(sorted);
+            setPickerOpen(true);
+            return new Set();
+          }
+          return current;
+        });
+        setDragCandidateId(null);
+      }
+      setDragMoved(false);
     };
     window.addEventListener("mouseup", onUp);
     return () => window.removeEventListener("mouseup", onUp);
-  }, [isDragging, dragCandidateId]);
+  }, [isDragging, dragCandidateId, dragMoved]);
+
+  const openPickerForSelection = () => {
+    if (!dragCandidateId || selectedDates.size === 0) return;
+    setPickerCandidateId(dragCandidateId);
+    setPickerDates(Array.from(selectedDates).sort());
+    setPickerOpen(true);
+  };
+
+  const clearSelection = () => {
+    setSelectedDates(new Set());
+    setDragCandidateId(null);
+  };
 
   const applyCodeToSelection = async (code: string) => {
     if (!pickerCandidateId) return;
