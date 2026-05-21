@@ -370,38 +370,178 @@ function PayrollUnitPage() {
         </div>
       </div>
 
-      <details className="rounded-xl border border-border/60 bg-muted/30 p-4 text-sm">
-        <summary className="cursor-pointer font-medium">Per-employee breakdown (components & deductions)</summary>
-        <div className="mt-3 space-y-4">
-          {rows.filter((r) => r.wages).map((r) => (
-            <div key={r.id} className="rounded-lg border border-border/50 bg-background p-3">
-              <div className="font-semibold">{r.name} <span className="ml-2 text-xs text-muted-foreground">{r.employeeCode}</span></div>
-              <div className="mt-2 grid grid-cols-1 gap-3 md:grid-cols-3 text-xs">
-                <Block title="Components">
-                  {r.wages!.components.map((c) => (
-                    <Row key={c.name} l={c.name} v={fmtINR(c.amount)} />
-                  ))}
-                </Block>
-                <Block title="Deductions">
-                  {r.wages!.deductions.length === 0 && <div className="text-muted-foreground">None</div>}
-                  {r.wages!.deductions.map((c) => (
-                    <Row key={c.name} l={c.name} v={fmtINR(c.amount)} />
-                  ))}
-                </Block>
-                <Block title="Employer contributions">
-                  {r.wages!.employerContributions.length === 0 && <div className="text-muted-foreground">None</div>}
-                  {r.wages!.employerContributions.map((c) => (
-                    <Row key={c.name} l={c.name} v={fmtINR(c.amount)} />
-                  ))}
-                </Block>
-              </div>
-            </div>
-          ))}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Salary breakdown · contract vs earned
+          </h2>
+          <span className="text-xs text-muted-foreground">
+            Contract column = supposed payout · Earned column = actual based on T Days
+          </span>
         </div>
-      </details>
+        {rows.filter((r) => r.wages && r.resource).map((r) => (
+          <SalaryBreakdownPreview
+            key={r.id}
+            employeeName={r.name}
+            employeeCode={r.employeeCode}
+            designationName={r.designation}
+            tDays={r.totals.tDays}
+            baseDays={r.wages!.baseDays}
+            components={r.resource!.components.map((c) => ({ name: c.name, amount: Number(c.amount) || 0 }))}
+            benefits={(r.resource!.benefits ?? []).map((b) => ({ name: b.name, amount: Number(b.amount) || 0 }))}
+            deductions={(r.resource!.deductions ?? []).map((b) => ({ name: b.name, amount: Number(b.amount) || 0 }))}
+          />
+        ))}
+        {rows.filter((r) => !r.wages).length > 0 && (
+          <div className="rounded-xl border border-amber-300/60 bg-amber-50 p-3 text-xs text-amber-900">
+            {rows.filter((r) => !r.wages).length} employee(s) have no contract mapped for their designation and were excluded from the breakdown.
+          </div>
+        )}
+      </div>
     </div>
   );
 }
+
+function SalaryBreakdownPreview({
+  employeeName,
+  employeeCode,
+  designationName,
+  tDays,
+  baseDays,
+  components,
+  benefits,
+  deductions,
+}: {
+  employeeName: string;
+  employeeCode: string;
+  designationName: string;
+  tDays: number;
+  baseDays: number;
+  components: { name: string; amount: number }[];
+  benefits: { name: string; amount: number }[];
+  deductions: { name: string; amount: number }[];
+}) {
+  const componentsTotal = components.reduce((s, c) => s + c.amount, 0);
+  const benefitsTotal = benefits.reduce((s, b) => s + b.amount, 0);
+  const gross = componentsTotal + benefitsTotal;
+  const deductionsTotal = deductions.reduce((s, b) => s + b.amount, 0);
+  const netPayable = gross - deductionsTotal;
+
+  const ratio = baseDays > 0 ? tDays / baseDays : 0;
+  const earnedFor = (amount: number) => Math.round(amount * ratio * 100) / 100;
+  const earnedGross = earnedFor(gross);
+  const earnedDeductions = earnedFor(deductionsTotal);
+  const earnedNetPayable = earnedFor(netPayable);
+
+  const visibleComponents = components.filter((c) => c.amount > 0);
+  const visibleBenefits = benefits.filter((b) => b.amount > 0);
+  const visibleDeductions = deductions.filter((b) => b.amount > 0);
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-secondary/40 px-4 py-2.5">
+        <div>
+          <h4 className="text-sm font-semibold text-foreground">
+            {employeeName}
+            {employeeCode && <span className="ml-2 text-xs font-mono text-muted-foreground">{employeeCode}</span>}
+          </h4>
+          <p className="mt-0.5 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            Salary Breakdown Preview
+          </p>
+        </div>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <tbody className="[&_tr]:border-b [&_tr]:border-border/60 [&_td]:px-3 [&_td]:py-2">
+            <tr className="bg-secondary/20">
+              <td className="font-medium text-muted-foreground">Designation</td>
+              <td className="text-center font-semibold">{designationName || "—"}</td>
+              <td className="text-right text-muted-foreground">Total Payable Days</td>
+              <td className="text-right">
+                <span className="inline-block rounded bg-amber-200/70 px-2 py-0.5 font-bold text-amber-900 dark:bg-amber-300/30 dark:text-amber-100">
+                  {tDays}
+                </span>
+              </td>
+            </tr>
+            <tr className="bg-muted/40">
+              <td className="font-bold uppercase text-foreground">Salary Particulars</td>
+              <td className="text-center font-bold">{baseDays} Days (contract)</td>
+              <td />
+              <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
+            </tr>
+            {visibleComponents.length === 0 && visibleBenefits.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
+                  No salary particulars configured.
+                </td>
+              </tr>
+            ) : (
+              <>
+                {visibleComponents.map((c) => (
+                  <tr key={`c-${c.name}`}>
+                    <td>{c.name}</td>
+                    <td className="text-center tabular-nums">{c.amount.toFixed(2)}</td>
+                    <td />
+                    <td className="text-right tabular-nums">{earnedFor(c.amount).toFixed(2)}</td>
+                  </tr>
+                ))}
+                {visibleBenefits.map((b) => (
+                  <tr key={`b-${b.name}`}>
+                    <td>{b.name}</td>
+                    <td className="text-center tabular-nums">{b.amount.toFixed(2)}</td>
+                    <td />
+                    <td className="text-right tabular-nums">{earnedFor(b.amount).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </>
+            )}
+            <tr className="bg-sky-100 font-bold dark:bg-sky-500/20">
+              <td className="uppercase">TOTAL Gross Rs.</td>
+              <td className="text-center tabular-nums">{gross.toFixed(2)}</td>
+              <td />
+              <td className="text-right text-base tabular-nums">{earnedGross.toFixed(2)}</td>
+            </tr>
+            <tr className="bg-muted/40">
+              <td className="font-bold uppercase text-foreground">Deductions</td>
+              <td />
+              <td />
+              <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
+            </tr>
+            {visibleDeductions.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
+                  No deductions configured.
+                </td>
+              </tr>
+            ) : (
+              visibleDeductions.map((b) => (
+                <tr key={`d-${b.name}`}>
+                  <td>{b.name}</td>
+                  <td className="text-center tabular-nums">{b.amount.toFixed(2)}</td>
+                  <td />
+                  <td className="text-right tabular-nums">{earnedFor(b.amount).toFixed(2)}</td>
+                </tr>
+              ))
+            )}
+            <tr className="bg-rose-100 font-semibold dark:bg-rose-500/20">
+              <td className="uppercase">Total Deductions Rs.</td>
+              <td className="text-center tabular-nums">{deductionsTotal.toFixed(2)}</td>
+              <td />
+              <td className="text-right tabular-nums">{earnedDeductions.toFixed(2)}</td>
+            </tr>
+            <tr className="bg-cyan-100 font-bold dark:bg-cyan-500/20">
+              <td className="uppercase">Total Amount (Payable) Rs.</td>
+              <td className="text-center tabular-nums">{netPayable.toFixed(2)}</td>
+              <td />
+              <td className="text-right text-base tabular-nums">{earnedNetPayable.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "emerald" | "amber" }) {
   const cls = tone === "emerald" ? "text-emerald-700" : tone === "amber" ? "text-amber-700" : "text-foreground";
