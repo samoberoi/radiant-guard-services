@@ -454,6 +454,17 @@ function MusterRollPage() {
     : "";
 
   const monthLabel = `${MONTH_NAMES[monthIdx]} ${year}`;
+  const formatPretty = (iso: string) => {
+    const [yy, mm, dd] = iso.split("-").map(Number);
+    return `${String(dd).padStart(2, "0")} ${MONTH_NAMES[mm - 1].slice(0, 3)} ${yy}`;
+  };
+  const periodLabel =
+    periodCells.length > 0
+      ? `${formatPretty(periodStart)} – ${formatPretty(periodEnd)}`
+      : monthLabel;
+  const windowLabel = payrollWindow?.label
+    ? `Payroll window: ${payrollWindow.label}`
+    : "Payroll window: full calendar month";
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
