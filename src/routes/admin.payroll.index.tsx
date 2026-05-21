@@ -223,7 +223,7 @@ function PayrollUnitsPage() {
               <Input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search organization, unit, code, location"
+                placeholder="Search organization, unit, code, location, employee name"
                 className="h-11 rounded-xl border-border/60 bg-background pl-10"
               />
             </div>
