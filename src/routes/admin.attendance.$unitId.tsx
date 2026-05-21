@@ -240,21 +240,7 @@ function MusterRollPage() {
     enabled: Boolean(unit),
   });
 
-  const dayCount = daysInMonth(year, monthIdx);
-  const dayList = useMemo(
-    () => Array.from({ length: dayCount }, (_, i) => i + 1),
-    [dayCount],
-  );
-
-  const monthStart = useMemo(() => {
-    const m = String(monthIdx + 1).padStart(2, "0");
-    return `${year}-${m}-01`;
-  }, [year, monthIdx]);
-  const monthEnd = useMemo(() => {
-    const m = String(monthIdx + 1).padStart(2, "0");
-    const d = String(dayCount).padStart(2, "0");
-    return `${year}-${m}-${d}`;
-  }, [year, monthIdx, dayCount]);
+  // dayCount/periodStart/periodEnd are derived below from the payroll window.
 
   // Resolve the payroll window for this unit via its active contract.
   const { data: payrollWindow } = useQuery({
