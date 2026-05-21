@@ -190,7 +190,7 @@ function VehiclesDashboard() {
           icon={Fuel}
           accent="accent"
           subtle={`${fuelSpend.count} top-ups`}
-          to="/admin/vehicles/fuel-manager"
+          to="/admin/vehicles/expense-manager"
         />
       </div>
 
@@ -199,7 +199,7 @@ function VehiclesDashboard() {
         <BreakdownCard
           title="Fuel Spend by Fuel Type (This Month)"
           total={fuelSpend.total}
-          to="/admin/vehicles/fuel-manager"
+          to="/admin/vehicles/expense-manager"
           rows={[
             { label: "Petrol", value: fuelSpend.byFuel.Petrol, color: "hsl(35 92% 55%)" },
             { label: "Diesel", value: fuelSpend.byFuel.Diesel, color: "hsl(220 70% 55%)" },
@@ -209,7 +209,7 @@ function VehiclesDashboard() {
         <BreakdownCard
           title="Fuel Spend by Payment (This Month)"
           total={fuelSpend.total}
-          to="/admin/vehicles/fuel-manager"
+          to="/admin/vehicles/expense-manager"
           rows={[
             { label: "PetroCard", value: fuelSpend.byPay.PetroCard, color: "hsl(265 70% 60%)" },
             { label: "Cash",      value: fuelSpend.byPay.Cash,      color: "hsl(150 65% 45%)" },
