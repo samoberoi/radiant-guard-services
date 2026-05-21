@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
 import { extractFuelFromPhotos } from "@/lib/fuel-extraction.functions";
+import { extractFuelFromPhotosLocally } from "@/lib/fuel-ocr.client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download,
@@ -613,24 +614,35 @@ function AddEntryDialog({
     }
     setExtracting(true);
     try {
+      const applyExtraction = (res: Awaited<ReturnType<typeof extractFuelFromPhotosLocally>>) => {
+        if (res.fuel_type) setFuelType(res.fuel_type);
+        if (res.odometer_km != null) setOdometer(String(res.odometer_km));
+        if (res.quantity != null) setQuantity(String(res.quantity));
+        if (res.rate != null) setRate(String(res.rate));
+        if (res.amount != null) setAmount(String(res.amount));
+        else if (res.quantity != null && res.rate != null) {
+          setAmount((res.quantity * res.rate).toFixed(2));
+        }
+        if (res.location_text) setLocationText(res.location_text);
+        if (res.entry_date) setEntryDate(res.entry_date);
+        if (res.entry_time) setEntryTime(res.entry_time);
+        if (res.payment_mode) setPaymentMode(res.payment_mode);
+        if (res.notes && !notes) setNotes(res.notes);
+      };
+
       const photos = await Promise.all(
         items.map(async (it) => ({ label: it.label, dataUrl: await fileToDataUrl(it.file) })),
       );
-      const res = await extractFn({ data: { photos } });
-      if (res.fuel_type) setFuelType(res.fuel_type);
-      if (res.odometer_km != null) setOdometer(String(res.odometer_km));
-      if (res.quantity != null) setQuantity(String(res.quantity));
-      if (res.rate != null) setRate(String(res.rate));
-      if (res.amount != null) setAmount(String(res.amount));
-      else if (res.quantity != null && res.rate != null) {
-        setAmount((res.quantity * res.rate).toFixed(2));
+      try {
+        const res = await extractFn({ data: { photos } });
+        applyExtraction(res);
+        toast.success("Auto-filled from photos — please verify");
+      } catch (serverError) {
+        console.error("[expense-manager] server auto-fill failed, using local OCR fallback", serverError);
+        const local = await extractFuelFromPhotosLocally(items);
+        applyExtraction(local);
+        toast.success("Auto-filled from photos — please verify");
       }
-      if (res.location_text) setLocationText(res.location_text);
-      if (res.entry_date) setEntryDate(res.entry_date);
-      if (res.entry_time) setEntryTime(res.entry_time);
-      if (res.payment_mode) setPaymentMode(res.payment_mode);
-      if (res.notes && !notes) setNotes(res.notes);
-      toast.success("Auto-filled from photos — please verify");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Auto-fill failed");
     } finally {
