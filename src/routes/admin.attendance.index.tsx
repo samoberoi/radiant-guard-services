@@ -317,7 +317,7 @@ function AttendanceUnitsPage() {
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader
         title="Attendance"
-        description="Browse units with active contracts and drill into the monthly muster roll. Filter by organization, unit, field officer, or security guard."
+        description="Browse units with active contracts and drill into the monthly muster roll. Only billable security guards appear — field officers are on Radiant's own payroll. Filter by organization, unit, or guard."
         crumbs={[{ label: "Attendance" }]}
       />
 
