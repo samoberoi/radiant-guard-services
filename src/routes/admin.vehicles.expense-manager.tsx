@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createClientOnlyFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -66,6 +67,7 @@ const MODULE = "Expense Manager";
 const ENTITY = "vehicle_fuel_entries";
 const QK = ["admin", "vehicle-expense-entries"] as const;
 const BUCKET = "vehicle-fuel-proofs";
+const getFuelOcrClient = createClientOnlyFn(() => import("@/lib/fuel-ocr.client"));
 
 const EXPENSE_TYPES = [
   { value: "fuel", label: "Fuel", icon: Fuel },
@@ -609,7 +611,7 @@ function AddEntryDialog({
     }
     setExtracting(true);
     try {
-      const { extractFuelFromPhotosLocally } = await import("@/lib/fuel-ocr.client");
+      const { extractFuelFromPhotosLocally } = await getFuelOcrClient();
       const res = await extractFuelFromPhotosLocally(items);
       if (res.fuel_type) setFuelType(res.fuel_type);
       if (res.odometer_km != null) setOdometer(String(res.odometer_km));
