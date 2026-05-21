@@ -514,6 +514,7 @@ function AddEntryDialog({
       const photos = await Promise.all(
         items.map(async (i) => ({ label: i.label, dataUrl: await fileToDataUrl(i.file) })),
       );
+      let usedLocalFallback = false;
       let res;
       try {
         res = await extractFn({ data: { photos } });
@@ -523,7 +524,7 @@ function AddEntryDialog({
           throw error;
         }
         res = await extractFuelFromPhotosLocally(items);
-        toast.success("Auto-filled from photos using on-device OCR — please verify");
+        usedLocalFallback = true;
       }
       if (res.fuel_type) setFuelType(res.fuel_type);
       if (res.odometer_km != null) setOdometer(String(res.odometer_km));
@@ -538,9 +539,11 @@ function AddEntryDialog({
       if (res.entry_time) setEntryTime(res.entry_time);
       if (res.payment_mode) setPaymentMode(res.payment_mode);
       if (res.notes && !notes) setNotes(res.notes);
-      if (!res.notes) {
-        toast.success("Auto-filled from photos — please verify");
-      }
+      toast.success(
+        usedLocalFallback
+          ? "Auto-filled from photos using on-device OCR — please verify"
+          : "Auto-filled from photos — please verify",
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Auto-fill failed");
     } finally {
