@@ -154,6 +154,14 @@ function PayrollUnitsPage() {
     return employees.filter((e) => allowedUnitIds.has(e.unit_id));
   }, [employees, orgFilter, units]);
 
+  const employeesByUnit = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const e of employees) {
+      m.set(e.unit_id, `${m.get(e.unit_id) ?? ""} ${e.label}`);
+    }
+    return m;
+  }, [employees]);
+
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
     const selectedEmployee = employeeFilter !== "all" ? employees.find((e) => e.id === employeeFilter) : null;
@@ -167,12 +175,18 @@ function PayrollUnitsPage() {
         }
       }
       if (term) {
-        const hay = [u.customer_name, u.name, u.code, u.location].join(" ").toLowerCase();
+        const hay = [
+          u.customer_name,
+          u.name,
+          u.code,
+          u.location,
+          employeesByUnit.get(u.id) ?? "",
+        ].join(" ").toLowerCase();
         if (!hay.includes(term)) return false;
       }
       return true;
     });
-  }, [q, orgFilter, periodFilter, employeeFilter, employees, units]);
+  }, [q, orgFilter, periodFilter, employeeFilter, employees, employeesByUnit, units]);
 
   const summary = {
     organizations: organizations.length,
