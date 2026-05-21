@@ -1,0 +1,181 @@
+// Shared payroll computation helpers used by the Payroll section.
+//
+// Wage formulas mirror the attendance page derivations: a candidate's earned
+// gross for a period is `per-day × T Days`, where per-day is derived from the
+// contract resource's monthly gross divided by the configured payroll-day
+// base. All component / deduction / employer-contribution amounts in the
+// contract resource are scaled by the same ratio so the breakdown reconciles
+// to the earned gross.
+
+export type AttendanceEntryLike = {
+  candidate_id: string;
+  entry_date: string;
+  code: string;
+  ot_hours: number | string | null;
+};
+
+export type AttendanceCodeLike = {
+  code: string;
+  counts_as_present: boolean;
+  is_paid: boolean;
+};
+
+export type AttendanceTotals = {
+  pDays: number;
+  otHours: number;
+  otDays: number;
+  phDays: number;
+  otherPaidDays: number;
+  tDays: number;
+};
+
+export const UNIT_DUTY_HOURS = 8;
+
+export function computeAttendanceTotals(
+  candidateId: string,
+  periodDates: string[],
+  entries: AttendanceEntryLike[],
+  codes: AttendanceCodeLike[],
+): AttendanceTotals {
+  const codeMap = new Map(codes.map((c) => [c.code, c]));
+  const entryMap = new Map<string, AttendanceEntryLike>();
+  for (const e of entries) {
+    if (e.candidate_id === candidateId) entryMap.set(e.entry_date, e);
+  }
+
+  let pDays = 0;
+  let otHours = 0;
+  let phCount = 0;
+  let otherPaidDays = 0;
+
+  for (const date of periodDates) {
+    const e = entryMap.get(date);
+    if (!e) continue;
+    otHours += Number(e.ot_hours) || 0;
+    const c = codeMap.get(e.code);
+    if (!c) continue;
+    if (e.code === "PH") {
+      phCount += 1;
+      continue;
+    }
+    if (c.counts_as_present) pDays += 1;
+    else if (c.is_paid) otherPaidDays += 1;
+  }
+
+  const phDays = phCount * 2;
+  const otDays = Math.round((otHours / UNIT_DUTY_HOURS) * 100) / 100;
+  const tDays = pDays + phDays + otherPaidDays + otDays;
+  return { pDays, otHours, otDays, phDays, otherPaidDays, tDays };
+}
+
+export type WageComponent = { name: string; amount: number };
+export type BenefitLike = { name: string; amount: number | string | null };
+
+export type ContractResourceLike = {
+  designationId: string;
+  components: WageComponent[];
+  benefits: BenefitLike[];
+  deductions: BenefitLike[];
+  employerContributions: BenefitLike[];
+  payrollDayBase: {
+    method: "actual_days" | "fixed_days" | "actual_minus_weekly_off";
+    fixedDays: number | null;
+    weeklyOffDay: number | null;
+  } | null;
+};
+
+export type WageComputation = {
+  contractGross: number;
+  perDayRate: number;
+  baseDays: number;
+  earnedGross: number;
+  ratio: number;
+  components: WageComponent[];
+  benefits: WageComponent[];
+  deductions: WageComponent[];
+  employerContributions: WageComponent[];
+  totalDeductions: number;
+  totalEmployerContributions: number;
+  netPay: number;
+  employerCost: number;
+};
+
+function scaleItems(items: BenefitLike[], ratio: number): WageComponent[] {
+  return items.map((i) => ({
+    name: i.name,
+    amount: Math.round((Number(i.amount) || 0) * ratio * 100) / 100,
+  }));
+}
+
+export function computeWages(
+  totals: AttendanceTotals,
+  resource: ContractResourceLike,
+  periodDayCount: number,
+): WageComputation {
+  const contractGross = resource.components.reduce(
+    (s, c) => s + (Number(c.amount) || 0),
+    0,
+  );
+
+  // Resolve base days from payroll-day-base method.
+  let baseDays = periodDayCount;
+  const pdb = resource.payrollDayBase;
+  if (pdb) {
+    if (pdb.method === "fixed_days" && pdb.fixedDays && pdb.fixedDays > 0) {
+      baseDays = pdb.fixedDays;
+    } else if (pdb.method === "actual_minus_weekly_off") {
+      // Rough approximation: assume ~4 weekly offs in the period.
+      baseDays = Math.max(periodDayCount - 4, 1);
+    } else {
+      baseDays = periodDayCount;
+    }
+  }
+  if (baseDays <= 0) baseDays = 30;
+
+  const perDayRate = contractGross / baseDays;
+  const earnedGross = Math.round(perDayRate * totals.tDays * 100) / 100;
+  const ratio = contractGross > 0 ? earnedGross / contractGross : 0;
+
+  const components = resource.components.map((c) => ({
+    name: c.name,
+    amount: Math.round((Number(c.amount) || 0) * ratio * 100) / 100,
+  }));
+  const benefits = scaleItems(resource.benefits, ratio);
+  const deductions = scaleItems(resource.deductions, ratio);
+  const employerContributions = scaleItems(resource.employerContributions, ratio);
+
+  const totalDeductions = deductions.reduce((s, d) => s + d.amount, 0);
+  const totalEmployerContributions = employerContributions.reduce(
+    (s, d) => s + d.amount,
+    0,
+  );
+
+  const netPay = Math.round((earnedGross - totalDeductions) * 100) / 100;
+  const employerCost =
+    Math.round((earnedGross + totalEmployerContributions) * 100) / 100;
+
+  return {
+    contractGross,
+    perDayRate: Math.round(perDayRate * 100) / 100,
+    baseDays,
+    earnedGross,
+    ratio,
+    components,
+    benefits,
+    deductions,
+    employerContributions,
+    totalDeductions: Math.round(totalDeductions * 100) / 100,
+    totalEmployerContributions: Math.round(totalEmployerContributions * 100) / 100,
+    netPay,
+    employerCost,
+  };
+}
+
+export function fmtINR(n: number): string {
+  if (!Number.isFinite(n)) return "—";
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(n);
+}
