@@ -601,13 +601,12 @@ function MusterRollPage() {
                               }
                             }}
                             onClick={(e) => {
-                              // Plain single click (no drag, no modifier) → open picker for this one cell.
-                              if (e.ctrlKey || e.metaKey || dragMoved) return;
-                              setPickerCandidateId(emp.id);
-                              setPickerDates([date]);
-                              setSelectedDates(new Set());
-                              setDragCandidateId(null);
-                              setPickerOpen(true);
+                              // If user used Ctrl/Cmd+click, do not open the picker —
+                              // they're building a multi-cell selection. They'll trigger
+                              // the picker via the floating "Apply" bar.
+                              if (e.ctrlKey || e.metaKey) {
+                                e.preventDefault();
+                              }
                             }}
                           >
                             <div
