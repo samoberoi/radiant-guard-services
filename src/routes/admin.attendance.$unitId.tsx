@@ -311,7 +311,7 @@ function MusterRollPage() {
               ) : (employees ?? []).length === 0 ? (
                 <tr>
                   <td colSpan={9 + dayCount} className="p-6 text-slate-500">
-                    No enabled employees are mapped to this unit.
+                    No active security guards are mapped to this unit.
                   </td>
                 </tr>
               ) : (
