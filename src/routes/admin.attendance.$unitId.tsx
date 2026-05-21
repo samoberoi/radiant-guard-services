@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, Printer, Download } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -17,6 +20,24 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/admin/attendance/$unitId")({
   component: MusterRollPage,
 });
+
+type AttendanceCode = {
+  id: string;
+  code: string;
+  label: string;
+  color: string;
+  counts_as_present: boolean;
+  is_paid: boolean;
+  is_leave: boolean;
+  sort_order: number;
+};
+
+type EntryRow = {
+  candidate_id: string;
+  entry_date: string;
+  code: string;
+  ot_hours: number;
+};
 
 const SERVICE_PROVIDER = {
   name: "Radiant Guard Services Private Limited",
