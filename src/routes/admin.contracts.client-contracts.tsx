@@ -1793,6 +1793,7 @@ function ContractFormDialog({
       setServiceTypeId("");
       setPayrollWindowId("");
       setBillingTypeId("");
+      setEsicBranchId("");
       setGstOption("csgst");
     }
     setResources([]);
