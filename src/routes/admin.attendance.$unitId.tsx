@@ -438,6 +438,35 @@ function MusterRollPage() {
         </div>
       </div>
 
+      <div className="rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground print:hidden">
+        Tip: click a cell to mark one day, click & drag to mark a range, or hold{" "}
+        <kbd className="rounded border bg-background px-1 py-0.5 font-mono text-[10px]">Ctrl</kbd>
+        {" / "}
+        <kbd className="rounded border bg-background px-1 py-0.5 font-mono text-[10px]">⌘</kbd>
+        {" "}+ click to pick non-contiguous days within one row, then press <strong>Apply</strong>.
+      </div>
+
+      {selectedDates.size > 0 && !isDragging && dragCandidateId && (
+        <div className="sticky top-2 z-20 flex items-center justify-between gap-3 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm shadow-sm print:hidden">
+          <div>
+            <span className="font-semibold">{selectedDates.size}</span> day
+            {selectedDates.size > 1 ? "s" : ""} selected for{" "}
+            <span className="font-semibold">
+              {(employees ?? []).find((e) => e.id === dragCandidateId)?.full_name ?? ""}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={clearSelection}>
+              Clear
+            </Button>
+            <Button size="sm" onClick={openPickerForSelection}>
+              Apply attendance
+            </Button>
+          </div>
+        </div>
+      )}
+
+
       {/* Muster Roll Sheet */}
       <div id="form-xvi-print" className="rounded-xl border border-border/60 bg-white p-5 text-[11px] text-slate-900 shadow-sm print:rounded-none print:border-0 print:shadow-none sm:p-6">
 
