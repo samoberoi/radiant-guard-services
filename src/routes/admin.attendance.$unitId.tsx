@@ -282,24 +282,24 @@ function MusterRollPage() {
     if (!isDragging) return;
     const onUp = () => {
       setIsDragging(false);
-      if (dragMoved) {
-        setSelectedDates((current) => {
-          if (current.size > 0 && dragCandidateId) {
-            const sorted = Array.from(current).sort();
-            setPickerCandidateId(dragCandidateId);
-            setPickerDates(sorted);
-            setPickerOpen(true);
-            return new Set();
-          }
-          return current;
-        });
-        setDragCandidateId(null);
-      }
+      // On any non-modifier mouseup (drag OR single click), open the picker
+      // for the currently selected dates and clear the selection.
+      setSelectedDates((current) => {
+        if (current.size > 0 && dragCandidateId) {
+          const sorted = Array.from(current).sort();
+          setPickerCandidateId(dragCandidateId);
+          setPickerDates(sorted);
+          setPickerOpen(true);
+          setDragCandidateId(null);
+          return new Set();
+        }
+        return current;
+      });
       setDragMoved(false);
     };
     window.addEventListener("mouseup", onUp);
     return () => window.removeEventListener("mouseup", onUp);
-  }, [isDragging, dragCandidateId, dragMoved]);
+  }, [isDragging, dragCandidateId]);
 
   const openPickerForSelection = () => {
     if (!dragCandidateId || selectedDates.size === 0) return;
