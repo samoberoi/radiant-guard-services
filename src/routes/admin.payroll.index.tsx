@@ -258,6 +258,7 @@ function PayrollUnitsPage() {
                   setQ("");
                   setOrgFilter("all");
                   setPeriodFilter("all");
+                  setEmployeeFilter("all");
                 }}
               >
                 <X className="h-3.5 w-3.5" /> Clear filters
