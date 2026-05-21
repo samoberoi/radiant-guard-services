@@ -706,6 +706,7 @@ const CONTRACT_FIELDS = [
   "service_type_id",
   "payroll_window_id",
   "billing_type_id",
+  "esic_branch_id",
   "gst_option",
   "status",
 ] as const;
