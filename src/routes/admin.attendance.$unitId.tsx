@@ -420,8 +420,8 @@ function MusterRollPage() {
     let pDays = 0;
     let otHours = 0;
     let paidDays = 0;
-    for (const day of dayList) {
-      const e = entryMap.get(`${candidateId}|${dateFor(day)}`);
+    for (const cell of periodCells) {
+      const e = entryMap.get(`${candidateId}|${cell.date}`);
       if (!e) continue;
       otHours += Number(e.ot_hours) || 0;
       const c = codeMap.get(e.code);
