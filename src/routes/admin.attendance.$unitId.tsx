@@ -753,13 +753,39 @@ function MusterRollPage() {
                       <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.tDays}</td>
                     </tr>,
                     <tr key={emp.id + "-ot"}>
-                      {periodCells.map((cell) => (
-                        <td
-                          key={`o-${cell.date}`}
-                          className={cn(rowBase, "p-0")}
-                          style={{ height: 22, minWidth: 18 }}
-                        />
-                      ))}
+                      {periodCells.map((cell) => {
+                        const date = cell.date;
+                        const entry = entryMap.get(`${emp.id}|${date}`);
+                        const hrs = Number(entry?.ot_hours) || 0;
+                        return (
+                          <td
+                            key={`o-${cell.date}`}
+                            className={cn(rowBase, "p-0")}
+                            style={{ height: 22, minWidth: 18 }}
+                          >
+                            <select
+                              value={hrs}
+                              onChange={(e) => {
+                                const next = Number(e.target.value) || 0;
+                                upsertEntry.mutate({
+                                  candidate_id: emp.id,
+                                  entry_date: date,
+                                  ot_hours: next,
+                                });
+                              }}
+                              className="h-full w-full appearance-none border-0 bg-transparent text-center text-[10px] font-semibold leading-none focus:outline-none focus:ring-1 focus:ring-primary print:appearance-none"
+                              title={`OT hours for ${date}`}
+                            >
+                              <option value={0}></option>
+                              {Array.from({ length: 16 }, (_, i) => i + 1).map((n) => (
+                                <option key={n} value={n}>
+                                  {n}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        );
+                      })}
                       <td className={cn(rowBase, "p-1 font-semibold")}>{totals.otDays}</td>
                     </tr>,
                   ];
