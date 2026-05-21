@@ -329,6 +329,8 @@ function MusterRollPage() {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, monthStart, monthEnd] });
       setPickerOpen(false);
+      setSelectedDates(new Set());
+      setDragCandidateId(null);
       toast.success(`Applied ${code || "Clear"} to ${pickerDates.length} day${pickerDates.length > 1 ? "s" : ""}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
