@@ -553,7 +553,7 @@ function MusterRollPage() {
                         const entry = entryMap.get(`${emp.id}|${date}`);
                         const codeMeta = entry?.code ? codeMap.get(entry.code) : undefined;
                         const isSelected =
-                          isDragging && dragCandidateId === emp.id && selectedDates.has(date);
+                          dragCandidateId === emp.id && selectedDates.has(date);
                         return (
                           <td
                             key={`a-${d}`}
@@ -569,8 +569,24 @@ function MusterRollPage() {
                             }}
                             onMouseDown={(e) => {
                               e.preventDefault();
+                              const additive = e.ctrlKey || e.metaKey;
+                              if (additive) {
+                                // Ctrl/Cmd+click: toggle this cell into the
+                                // persistent selection (scoped to one row).
+                                setSelectedDates((prev) => {
+                                  const sameRow = dragCandidateId === emp.id;
+                                  const next = sameRow ? new Set(prev) : new Set<string>();
+                                  if (sameRow && next.has(date)) next.delete(date);
+                                  else next.add(date);
+                                  return next;
+                                });
+                                setDragCandidateId(emp.id);
+                                return;
+                              }
+                              // Plain click: start a fresh drag selection.
                               setDragCandidateId(emp.id);
                               setIsDragging(true);
+                              setDragMoved(false);
                               setSelectedDates(new Set([date]));
                             }}
                             onMouseEnter={() => {
@@ -579,9 +595,19 @@ function MusterRollPage() {
                                   if (prev.has(date)) return prev;
                                   const next = new Set(prev);
                                   next.add(date);
+                                  setDragMoved(true);
                                   return next;
                                 });
                               }
+                            }}
+                            onClick={(e) => {
+                              // Plain single click (no drag, no modifier) → open picker for this one cell.
+                              if (e.ctrlKey || e.metaKey || dragMoved) return;
+                              setPickerCandidateId(emp.id);
+                              setPickerDates([date]);
+                              setSelectedDates(new Set());
+                              setDragCandidateId(null);
+                              setPickerOpen(true);
                             }}
                           >
                             <div
