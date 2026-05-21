@@ -429,6 +429,7 @@ function MusterRollPage() {
               ) : (
                 (employees ?? []).flatMap((emp, idx) => {
                   const rowBase = "border border-slate-400 align-middle";
+                  const totals = computeTotals(emp.id);
                   return [
                     <tr key={emp.id + "-att"}>
                       <td className={cn(rowBase, "p-1 font-medium")} rowSpan={2}>
@@ -446,26 +447,96 @@ function MusterRollPage() {
                       <td className={cn(rowBase, "p-1")} rowSpan={2}>
                         {emp.doj ? new Date(emp.doj).toLocaleDateString("en-GB") : "—"}
                       </td>
-                      {dayList.map((d) => (
-                        <td
-                          key={`a-${d}`}
-                          className={cn(rowBase, "p-0")}
-                          style={{ height: 22, minWidth: 18 }}
-                        ></td>
-                      ))}
-                      <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
-                      <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
-                      <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
+                      {dayList.map((d) => {
+                        const date = dateFor(d);
+                        const entry = entryMap.get(`${emp.id}|${date}`);
+                        const codeMeta = entry?.code ? codeMap.get(entry.code) : undefined;
+                        return (
+                          <td
+                            key={`a-${d}`}
+                            className={cn(rowBase, "p-0 print:bg-transparent")}
+                            style={{
+                              height: 22,
+                              minWidth: 18,
+                              backgroundColor: codeMeta?.color ? `${codeMeta.color}22` : undefined,
+                            }}
+                          >
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="h-full w-full px-0 text-[10px] font-semibold leading-none hover:bg-slate-100/60 focus:outline-none"
+                                  style={{ color: codeMeta?.color }}
+                                >
+                                  {entry?.code || ""}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-48 p-1 print:hidden" align="start">
+                                <div className="grid grid-cols-3 gap-1">
+                                  {codes.map((c) => (
+                                    <button
+                                      key={c.id}
+                                      type="button"
+                                      onClick={() => {
+                                        upsertEntry.mutate({ candidate_id: emp.id, entry_date: date, code: c.code });
+                                        (document.activeElement as HTMLElement | null)?.blur();
+                                      }}
+                                      className={cn(
+                                        "rounded border px-1 py-1 text-[10px] font-semibold transition",
+                                        entry?.code === c.code ? "border-foreground" : "border-border hover:bg-muted",
+                                      )}
+                                      style={{ color: c.color }}
+                                      title={c.label}
+                                    >
+                                      {c.code}
+                                    </button>
+                                  ))}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => upsertEntry.mutate({ candidate_id: emp.id, entry_date: date, code: "" })}
+                                  className="mt-1 w-full rounded border border-border px-1 py-1 text-[10px] text-muted-foreground hover:bg-muted"
+                                >
+                                  Clear
+                                </button>
+                              </PopoverContent>
+                            </Popover>
+                          </td>
+                        );
+                      })}
+                      <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.pDays}</td>
+                      <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.otHours}</td>
+                      <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.tDays}</td>
                       <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
                     </tr>,
                     <tr key={emp.id + "-ot"}>
-                      {dayList.map((d) => (
-                        <td
-                          key={`o-${d}`}
-                          className={cn(rowBase, "p-0")}
-                          style={{ height: 22, minWidth: 18 }}
-                        ></td>
-                      ))}
+                      {dayList.map((d) => {
+                        const date = dateFor(d);
+                        const entry = entryMap.get(`${emp.id}|${date}`);
+                        const ot = entry?.ot_hours ?? 0;
+                        return (
+                          <td
+                            key={`o-${d}`}
+                            className={cn(rowBase, "p-0")}
+                            style={{ height: 22, minWidth: 18 }}
+                          >
+                            <Input
+                              type="number"
+                              min={0}
+                              step={0.5}
+                              defaultValue={ot || ""}
+                              key={`${date}-${ot}`}
+                              onBlur={(e) => {
+                                const val = Number(e.currentTarget.value) || 0;
+                                if (val === ot) return;
+                                upsertEntry.mutate({ candidate_id: emp.id, entry_date: date, ot_hours: val });
+                              }}
+                              className="h-[22px] w-full rounded-none border-0 bg-transparent px-0 text-center text-[10px] focus-visible:ring-1 print:hidden"
+                            />
+                            <span className="hidden text-[10px] print:inline">{ot || ""}</span>
+                          </td>
+                        );
+                      })}
                     </tr>,
                   ];
                 })
