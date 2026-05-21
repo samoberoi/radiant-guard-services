@@ -245,6 +245,15 @@ function PayrollUnitsPage() {
         <Tile icon={Users} label="Active employees" value={summary.activeEmployees} tone="emerald" />
       </div>
 
+      {selectedEmployee && (
+        <EmployeeSpotlight
+          employee={selectedEmployee}
+          units={units.filter((u) => selectedEmployee.unit_ids.includes(u.id))}
+          onClear={() => setEmployeeFilter("all")}
+        />
+      )}
+
+
       <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
         <div className="space-y-4 border-b border-border/60 px-5 py-5">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
