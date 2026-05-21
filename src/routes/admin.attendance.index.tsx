@@ -366,13 +366,6 @@ function AttendanceUnitsPage() {
               allLabel={`All units (${units.length})`}
             />
             <FilterSelect
-              label="Field officer"
-              value={foFilter}
-              onChange={setFoFilter}
-              options={fieldOfficers.map((f) => ({ value: f.id, label: f.name }))}
-              allLabel={`All field officers (${fieldOfficers.length})`}
-            />
-            <FilterSelect
               label="Security guard"
               value={sgFilter}
               onChange={setSgFilter}
