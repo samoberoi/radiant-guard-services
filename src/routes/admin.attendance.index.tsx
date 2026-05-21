@@ -98,7 +98,7 @@ function AttendanceUnitsPage() {
         { data: candidateLinks, error: linksError },
         { data: scopeAssignments, error: scopeAssignmentsError },
       ] = await Promise.all([
-        supabase.from("units").select("id, code, name, location, branch_id, customer_id, billing_state").in("id", unitIds),
+        supabase.from("units").select("id, code, name, location, branch_id, customer_id, billing_state, reporting_officers").in("id", unitIds),
         supabase
           .from("candidates")
           .select("id, full_name, designation_id, role_key, unit_id")
