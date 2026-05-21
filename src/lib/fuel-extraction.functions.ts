@@ -23,22 +23,28 @@ export type FuelExtraction = {
   notes: string;
 };
 
-const SYSTEM_PROMPT = `You are an expert at reading Indian fuel station receipts, fuel pump displays, and vehicle odometer photos.
+const SYSTEM_PROMPT = `You are an expert at reading Indian fuel station receipts (HPCL, IOCL, BPCL, Shell, Reliance), fuel pump displays, and vehicle odometer photos.
 You will be given 1-4 photos labeled odometer, pump, receipt, or filling. Extract structured fuel entry data.
 
-Rules:
-- vehicle odometer photo -> odometer_km (integer kilometers, ignore trip meter)
-- fuel pump display -> quantity (liters/kg), rate (per unit), amount (total)
-- receipt -> date, time, location/station name, payment mode, fuel type, and any of quantity/rate/amount
-- fuel_type: one of "Petrol", "Diesel", "CNG", "Electric" or ""
-- payment_mode: one of "Cash", "UPI", "PetroCard", "Other" or ""
-- entry_date: YYYY-MM-DD or ""
-- entry_time: HH:MM (24h) or ""
-- Numbers must be plain numbers (no commas, no currency symbols). Use null if not visible.
-- location_text: short station name + city if visible, else ""
-- notes: any extra useful info (invoice no, attendant), keep short
+CRITICAL field mapping — labels and right-aligned values on thermal receipts are often visually offset. Read the LABEL on each line, not just position:
+- AMOUNT / TOTAL / NET AMOUNT / SALE AMT  -> "amount"   (total rupees, usually the LARGEST number, e.g. 4578.48)
+- RSP / RATE / UNIT PRICE / PRICE/LTR     -> "rate"     (per litre/kg, typically 80-110 in India, e.g. 94.13)
+- VOLUME / QTY / QUANTITY / LITRES / VOL  -> "quantity" (litres or kg, e.g. 48.640)
+- BALANCE / PREV BAL                       -> IGNORE (never put in any field)
+- ODOMETER                                 -> "odometer_km" (integer km, ignore trip meter)
 
-Respond ONLY with a single JSON object matching the schema. No prose, no markdown fences.`;
+SANITY CHECK before responding: quantity × rate must ≈ amount (within ~2 rupees). If it doesn't, you have swapped fields — re-read carefully. On an HPCL DriveTrack receipt the printed order is AMOUNT, RSP, VOLUME, BALANCE.
+
+Other rules:
+- fuel_type from PRODUCT line: "Petrol", "Diesel", "CNG", "Electric", or ""
+- payment_mode: "PetroCard" if a fleet card name (DriveTrack/SmartFleet/XtraPower) is shown, else "UPI"/"Cash"/"Other"/""
+- entry_date YYYY-MM-DD. Indian receipts use DD/MM/YY — convert correctly (21/05/26 -> 2026-05-21)
+- entry_time HH:MM 24h
+- location_text: station name + city (e.g. "Krishna Shiv Petroleum, Dombivali")
+- Numbers must be plain — no commas, no ₹/Rs. Use null only if truly not visible.
+- notes: brief extras (batch no, txn id)
+
+Use the record_fuel_entry tool to return the data.`;
 
 export const extractFuelFromPhotos = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
@@ -168,12 +174,53 @@ export const extractFuelFromPhotos = createServerFn({ method: "POST" })
       if (m) parsed = JSON.parse(m[0]);
     }
 
-    return {
-      fuel_type: parsed.fuel_type ?? "",
-      odometer_km: parsed.odometer_km ?? null,
+    let { quantity, rate, amount } = {
       quantity: parsed.quantity ?? null,
       rate: parsed.rate ?? null,
       amount: parsed.amount ?? null,
+    };
+
+    // Sanity-correct field swaps. In India: rate ~80-110, quantity usually < rate,
+    // amount is usually the largest of the three.
+    const nums = [quantity, rate, amount].filter(
+      (n): n is number => typeof n === "number" && isFinite(n) && n > 0,
+    );
+    if (nums.length === 3 && quantity && rate && amount) {
+      const expected = quantity * rate;
+      const ok = Math.abs(expected - amount) <= Math.max(2, amount * 0.02);
+      if (!ok) {
+        // Try every permutation; pick one where q*r ≈ a and rate is in [50, 150]
+        const perms: Array<[number, number, number]> = [
+          [quantity, rate, amount],
+          [quantity, amount, rate],
+          [rate, quantity, amount],
+          [rate, amount, quantity],
+          [amount, quantity, rate],
+          [amount, rate, quantity],
+        ];
+        let best: { q: number; r: number; a: number; err: number } | null = null;
+        for (const [q, r, a] of perms) {
+          if (r < 50 || r > 150) continue;
+          const err = Math.abs(q * r - a);
+          if (err <= Math.max(2, a * 0.02) && (!best || err < best.err)) {
+            best = { q, r, a, err };
+          }
+        }
+        if (best) {
+          quantity = best.q;
+          rate = best.r;
+          amount = best.a;
+          console.log("[fuel-extract] corrected swapped fields", best);
+        }
+      }
+    }
+
+    return {
+      fuel_type: parsed.fuel_type ?? "",
+      odometer_km: parsed.odometer_km ?? null,
+      quantity,
+      rate,
+      amount,
       location_text: parsed.location_text ?? "",
       entry_date: parsed.entry_date ?? "",
       entry_time: parsed.entry_time ?? "",
