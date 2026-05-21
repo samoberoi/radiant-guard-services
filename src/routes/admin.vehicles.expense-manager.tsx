@@ -68,7 +68,7 @@ const MODULE = "Expense Manager";
 const ENTITY = "vehicle_fuel_entries";
 const QK = ["admin", "vehicle-expense-entries"] as const;
 const BUCKET = "vehicle-fuel-proofs";
-const getFuelOcrClient = createClientOnlyFn(() => import("@/lib/fuel-ocr.client"));
+
 
 const EXPENSE_TYPES = [
   { value: "fuel", label: "Fuel", icon: Fuel },
