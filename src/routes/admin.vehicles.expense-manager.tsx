@@ -2,9 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
 import { extractFuelFromPhotos } from "@/lib/fuel-extraction.functions";
-// Note: fuel-ocr.client is imported dynamically inside the handler to avoid
-// pulling a browser-only module into the SSR bundle.
-import type { extractFuelFromPhotosLocally as ExtractFuelFromPhotosLocallyType } from "@/lib/fuel-ocr.client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download,
@@ -107,6 +104,19 @@ type ExpenseEntry = {
   tags: string[];
   notes: string;
   created_at: string;
+};
+
+type FuelExtractionResult = {
+  fuel_type: string;
+  odometer_km: number | null;
+  quantity: number | null;
+  rate: number | null;
+  amount: number | null;
+  location_text: string;
+  entry_date: string;
+  entry_time: string;
+  payment_mode: string;
+  notes: string;
 };
 
 function rowToEntry(r: Record<string, unknown>): ExpenseEntry {
@@ -616,7 +626,7 @@ function AddEntryDialog({
     }
     setExtracting(true);
     try {
-      const applyExtraction = (res: Awaited<ReturnType<typeof ExtractFuelFromPhotosLocallyType>>) => {
+      const applyExtraction = (res: FuelExtractionResult) => {
         if (res.fuel_type) setFuelType(res.fuel_type);
         if (res.odometer_km != null) setOdometer(String(res.odometer_km));
         if (res.quantity != null) setQuantity(String(res.quantity));
