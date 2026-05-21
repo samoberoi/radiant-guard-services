@@ -18,6 +18,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { fmtDate } from "@/lib/vehicle-helpers";
 import { MiniStat } from "@/components/MiniStat";
+import { AdvancedFilters } from "@/components/AdvancedFilters";
+import { applyFilters, type FilterCondition, type FilterField } from "@/lib/advanced-filters";
 
 export const Route = createFileRoute("/admin/vehicles/inventory")({
   component: VehicleInventoryPage,
