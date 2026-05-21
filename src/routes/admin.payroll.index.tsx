@@ -72,7 +72,7 @@ function PayrollUnitsPage() {
 
       const unitIds = Array.from(new Set(sheets.map((s) => s.unit_id)));
       if (unitIds.length === 0) {
-        return { units: [] as UnitRow[], organizations: [] as { id: string; name: string }[], periods: [] as string[] };
+        return { units: [] as UnitRow[], organizations: [] as { id: string; name: string }[], periods: [] as string[], employees: [] as EmployeeOption[] };
       }
 
       const [{ data: units }, { data: candidates }, { data: customers }] = await Promise.all([
@@ -82,7 +82,7 @@ function PayrollUnitsPage() {
           .in("id", unitIds),
         supabase
           .from("candidates")
-          .select("id, unit_id")
+          .select("id, unit_id, full_name, employee_code")
           .in("unit_id", unitIds)
           .eq("is_enabled", true)
           .eq("status", "active"),
@@ -91,10 +91,19 @@ function PayrollUnitsPage() {
 
       const custMap = new Map((customers ?? []).map((c) => [c.id, c.name as string]));
       const employeeCountByUnit = new Map<string, number>();
-      for (const c of candidates ?? []) {
+      const employeeIdsByUnit = new Map<string, string[]>();
+      const employees: EmployeeOption[] = [];
+      for (const c of (candidates ?? []) as Array<{ id: string; unit_id: string | null; full_name: string | null; employee_code: string | null }>) {
         if (!c.unit_id) continue;
         employeeCountByUnit.set(c.unit_id, (employeeCountByUnit.get(c.unit_id) ?? 0) + 1);
+        const ids = employeeIdsByUnit.get(c.unit_id) ?? [];
+        ids.push(c.id);
+        employeeIdsByUnit.set(c.unit_id, ids);
+        const name = (c.full_name || "").trim() || "Unnamed";
+        const code = (c.employee_code || "").trim();
+        employees.push({ id: c.id, unit_id: c.unit_id, label: code ? `${name} (${code})` : name });
       }
+      employees.sort((a, b) => a.label.localeCompare(b.label));
 
       const periodsByUnit = new Map<string, { period_start: string; period_end: string }[]>();
       for (const s of sheets) {
@@ -111,6 +120,7 @@ function PayrollUnitsPage() {
         customer_id: u.customer_id || "",
         customer_name: (u.customer_id && custMap.get(u.customer_id)) || "—",
         active_employee_count: employeeCountByUnit.get(u.id) ?? 0,
+        employee_ids: employeeIdsByUnit.get(u.id) ?? [],
         approved_periods: (periodsByUnit.get(u.id) ?? []).sort((a, b) =>
           b.period_start.localeCompare(a.period_start),
         ),
@@ -129,13 +139,20 @@ function PayrollUnitsPage() {
         new Set(sheets.map((s) => `${s.period_start}|${s.period_end}`)),
       ).sort((a, b) => b.localeCompare(a));
 
-      return { units: rows, organizations: orgs, periods: allPeriods };
+      return { units: rows, organizations: orgs, periods: allPeriods, employees };
     },
   });
 
   const units = data?.units ?? [];
   const organizations = data?.organizations ?? [];
   const periods = data?.periods ?? [];
+  const employees = data?.employees ?? [];
+
+  const employeeOptions = useMemo(() => {
+    if (orgFilter === "all") return employees;
+    const allowedUnitIds = new Set(units.filter((u) => (u.customer_id || u.customer_name) === orgFilter).map((u) => u.id));
+    return employees.filter((e) => allowedUnitIds.has(e.unit_id));
+  }, [employees, orgFilter, units]);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
