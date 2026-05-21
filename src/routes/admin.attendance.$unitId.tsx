@@ -745,9 +745,9 @@ function MusterRollPage() {
                       })}
 
                       <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.pDays}</td>
-                      <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.otHours}</td>
+                      <td className={cn(rowBase, "p-1 font-semibold")}>{totals.otHours}</td>
+                      <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.phDays}</td>
                       <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.tDays}</td>
-                      <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
                     </tr>,
                     <tr key={emp.id + "-ot"}>
                       {periodCells.map((cell) => (
@@ -757,6 +757,7 @@ function MusterRollPage() {
                           style={{ height: 22, minWidth: 18 }}
                         />
                       ))}
+                      <td className={cn(rowBase, "p-1 font-semibold")}>{totals.otDays}</td>
                     </tr>,
                   ];
                 })
