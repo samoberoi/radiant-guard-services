@@ -1027,6 +1027,7 @@ async function importContractFromXlsx(buf: ArrayBuffer): Promise<{
     service_type_id: contractRow.service_type_id ? String(contractRow.service_type_id) : null,
     payroll_window_id: contractRow.payroll_window_id ? String(contractRow.payroll_window_id) : null,
     billing_type_id: contractRow.billing_type_id ? String(contractRow.billing_type_id) : null,
+    esic_branch_id: contractRow.esic_branch_id ? String(contractRow.esic_branch_id) : null,
     gst_option: String(contractRow.gst_option ?? "csgst"),
     status: String(contractRow.status ?? "active"),
   };
