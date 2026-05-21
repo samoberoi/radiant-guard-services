@@ -250,7 +250,7 @@ function MusterRollPage() {
         .from("client_contracts")
         .select("id, payroll_window_id, start_date, status, record_type")
         .eq("unit_id", unitId)
-        .eq("record_type", "contract")
+        .eq("record_type", "client")
         .eq("status", "active")
         .order("start_date", { ascending: false })
         .limit(1);
