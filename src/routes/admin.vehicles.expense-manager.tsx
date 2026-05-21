@@ -599,6 +599,8 @@ function AddEntryDialog({
     );
   }
 
+  const extractFn = useServerFn(extractFuelFromPhotos);
+
   async function handleAutoFill() {
     const items: Array<{ label: "odometer" | "pump" | "receipt" | "filling"; file: File }> = [];
     if (odoFile) items.push({ label: "odometer", file: odoFile });
@@ -611,8 +613,10 @@ function AddEntryDialog({
     }
     setExtracting(true);
     try {
-      const { extractFuelFromPhotosLocally } = await getFuelOcrClient();
-      const res = await extractFuelFromPhotosLocally(items);
+      const photos = await Promise.all(
+        items.map(async (it) => ({ label: it.label, dataUrl: await fileToDataUrl(it.file) })),
+      );
+      const res = await extractFn({ data: { photos } });
       if (res.fuel_type) setFuelType(res.fuel_type);
       if (res.odometer_km != null) setOdometer(String(res.odometer_km));
       if (res.quantity != null) setQuantity(String(res.quantity));
@@ -626,7 +630,7 @@ function AddEntryDialog({
       if (res.entry_time) setEntryTime(res.entry_time);
       if (res.payment_mode) setPaymentMode(res.payment_mode);
       if (res.notes && !notes) setNotes(res.notes);
-      toast.success("Auto-filled from photos using on-device OCR — please verify");
+      toast.success("Auto-filled from photos — please verify");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Auto-fill failed");
     } finally {
