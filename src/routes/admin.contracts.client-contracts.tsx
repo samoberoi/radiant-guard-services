@@ -1781,6 +1781,7 @@ function ContractFormDialog({
       setServiceTypeId(editing.serviceTypeId ?? "");
       setPayrollWindowId(editing.payrollWindowId ?? "");
       setBillingTypeId(editing.billingTypeId ?? "");
+      setEsicBranchId(editing.esicBranchId ?? "");
       setGstOption(editing.gstOption);
     } else {
       setContractCode("");
