@@ -181,6 +181,97 @@ function MusterRollPage() {
     [dayCount],
   );
 
+  const monthStart = useMemo(() => {
+    const m = String(monthIdx + 1).padStart(2, "0");
+    return `${year}-${m}-01`;
+  }, [year, monthIdx]);
+  const monthEnd = useMemo(() => {
+    const m = String(monthIdx + 1).padStart(2, "0");
+    const d = String(dayCount).padStart(2, "0");
+    return `${year}-${m}-${d}`;
+  }, [year, monthIdx, dayCount]);
+
+  const queryClient = useQueryClient();
+
+  const { data: codes = [] } = useQuery({
+    queryKey: ["attendance-codes-enabled"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("attendance_codes")
+        .select("id, code, label, color, counts_as_present, is_paid, is_leave, sort_order")
+        .eq("enabled", true)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as AttendanceCode[];
+    },
+  });
+
+  const codeMap = useMemo(() => new Map(codes.map((c) => [c.code, c])), [codes]);
+
+  const { data: entries = [] } = useQuery({
+    queryKey: ["attendance-entries", unitId, monthStart, monthEnd],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("attendance_entries")
+        .select("candidate_id, entry_date, code, ot_hours")
+        .eq("unit_id", unitId)
+        .gte("entry_date", monthStart)
+        .lte("entry_date", monthEnd);
+      if (error) throw error;
+      return (data ?? []) as EntryRow[];
+    },
+    enabled: Boolean(unitId),
+  });
+
+  const entryMap = useMemo(() => {
+    const m = new Map<string, EntryRow>();
+    for (const e of entries) m.set(`${e.candidate_id}|${e.entry_date}`, e);
+    return m;
+  }, [entries]);
+
+  const upsertEntry = useMutation({
+    mutationFn: async (payload: { candidate_id: string; entry_date: string; code?: string; ot_hours?: number }) => {
+      const existing = entryMap.get(`${payload.candidate_id}|${payload.entry_date}`);
+      const next = {
+        unit_id: unitId,
+        candidate_id: payload.candidate_id,
+        entry_date: payload.entry_date,
+        code: payload.code ?? existing?.code ?? "",
+        ot_hours: payload.ot_hours ?? existing?.ot_hours ?? 0,
+      };
+      const { error } = await supabase
+        .from("attendance_entries")
+        .upsert(next, { onConflict: "unit_id,candidate_id,entry_date" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, monthStart, monthEnd] });
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to save"),
+  });
+
+  const dateFor = (day: number) => {
+    const m = String(monthIdx + 1).padStart(2, "0");
+    const d = String(day).padStart(2, "0");
+    return `${year}-${m}-${d}`;
+  };
+
+  const computeTotals = (candidateId: string) => {
+    let pDays = 0;
+    let otHours = 0;
+    let paidDays = 0;
+    for (const day of dayList) {
+      const e = entryMap.get(`${candidateId}|${dateFor(day)}`);
+      if (!e) continue;
+      otHours += Number(e.ot_hours) || 0;
+      const c = codeMap.get(e.code);
+      if (!c) continue;
+      if (c.counts_as_present) pDays += 1;
+      if (c.is_paid) paidDays += 1;
+    }
+    return { pDays, otHours, tDays: pDays + paidDays };
+  };
+
   const principalEmployer = unit
     ? `${unit.customer_name || ""}${unit.code ? ` - ${unit.code}` : ""}`.trim()
     : "—";
