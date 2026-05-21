@@ -85,7 +85,6 @@ function AttendanceUnitsPage() {
         return {
           units: [],
           organizations: [],
-          fieldOfficers: [],
           securityGuards: [],
           summary: { organizations: 0, units: 0, activeEmployees: 0 },
         };
