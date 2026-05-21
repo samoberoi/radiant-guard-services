@@ -616,7 +616,7 @@ function AddEntryDialog({
     }
     setExtracting(true);
     try {
-      const applyExtraction = (res: Awaited<ReturnType<ExtractFuelFromPhotosLocallyType>>) => {
+      const applyExtraction = (res: Awaited<ReturnType<typeof ExtractFuelFromPhotosLocallyType>>) => {
         if (res.fuel_type) setFuelType(res.fuel_type);
         if (res.odometer_km != null) setOdometer(String(res.odometer_km));
         if (res.quantity != null) setQuantity(String(res.quantity));
