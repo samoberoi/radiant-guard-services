@@ -276,6 +276,23 @@ function MusterRollPage() {
     ? `${unit.customer_name || ""}${unit.code ? ` - ${unit.code}` : ""}`.trim()
     : "—";
 
+  const principalAddress = unit
+    ? [
+        unit.shipping_address1 || unit.billing_address1 || unit.location,
+        unit.shipping_address2 || unit.billing_address2,
+        [
+          unit.shipping_city || unit.billing_city,
+          unit.shipping_district || unit.billing_district,
+          unit.shipping_state || unit.billing_state,
+          unit.shipping_pincode || unit.billing_pincode,
+        ]
+          .filter(Boolean)
+          .join(", "),
+      ]
+        .filter((v) => v && String(v).trim())
+        .join(", ")
+    : "";
+
   const monthLabel = `${MONTH_NAMES[monthIdx]} ${year}`;
 
   return (
