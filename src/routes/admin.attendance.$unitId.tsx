@@ -601,10 +601,10 @@ function MusterRollPage() {
                 >
                   Days
                 </th>
-                <th className="border border-slate-400 p-1 align-middle">P<br />Days</th>
-                <th className="border border-slate-400 p-1 align-middle">OT</th>
-                <th className="border border-slate-400 p-1 align-middle">T<br />Days</th>
-                <th className="border border-slate-400 p-1 align-middle">Remarks</th>
+                <th className="border border-slate-400 p-1 align-middle" rowSpan={2}>P<br />Days</th>
+                <th className="border border-slate-400 p-1 align-middle">OT<br />Hrs</th>
+                <th className="border border-slate-400 p-1 align-middle" rowSpan={2}>PH<br />Days</th>
+                <th className="border border-slate-400 p-1 align-middle" rowSpan={2}>T<br />Days</th>
               </tr>
               <tr className="bg-slate-50">
                 <th className="border border-slate-400 p-1"></th>
@@ -629,10 +629,7 @@ function MusterRollPage() {
                     </th>
                   );
                 })}
-                <th className="border border-slate-400 p-1"></th>
-                <th className="border border-slate-400 p-1"></th>
-                <th className="border border-slate-400 p-1"></th>
-                <th className="border border-slate-400 p-1"></th>
+                <th className="border border-slate-400 p-1 text-[9px] font-medium">OT<br />Days</th>
               </tr>
             </thead>
             <tbody>
