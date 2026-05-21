@@ -414,17 +414,22 @@ function MusterRollPage() {
   const computeTotals = (candidateId: string) => {
     let pDays = 0;
     let otHours = 0;
+    let otDays = 0;
+    let phDays = 0;
     let paidDays = 0;
     for (const cell of periodCells) {
       const e = entryMap.get(`${candidateId}|${cell.date}`);
       if (!e) continue;
-      otHours += Number(e.ot_hours) || 0;
+      const hrs = Number(e.ot_hours) || 0;
+      otHours += hrs;
+      if (hrs > 0) otDays += 1;
       const c = codeMap.get(e.code);
       if (!c) continue;
       if (c.counts_as_present) pDays += 1;
       if (c.is_paid) paidDays += 1;
+      if (e.code === "PH") phDays += 1;
     }
-    return { pDays, otHours, tDays: pDays + paidDays };
+    return { pDays, otHours, otDays, phDays, tDays: pDays + paidDays };
   };
 
   const principalEmployer = unit
@@ -596,10 +601,10 @@ function MusterRollPage() {
                 >
                   Days
                 </th>
-                <th className="border border-slate-400 p-1 align-middle">P<br />Days</th>
-                <th className="border border-slate-400 p-1 align-middle">OT</th>
-                <th className="border border-slate-400 p-1 align-middle">T<br />Days</th>
-                <th className="border border-slate-400 p-1 align-middle">Remarks</th>
+                <th className="border border-slate-400 p-1 align-middle" rowSpan={2}>P<br />Days</th>
+                <th className="border border-slate-400 p-1 align-middle">OT<br />Hrs</th>
+                <th className="border border-slate-400 p-1 align-middle" rowSpan={2}>PH<br />Days</th>
+                <th className="border border-slate-400 p-1 align-middle" rowSpan={2}>T<br />Days</th>
               </tr>
               <tr className="bg-slate-50">
                 <th className="border border-slate-400 p-1"></th>
@@ -624,10 +629,7 @@ function MusterRollPage() {
                     </th>
                   );
                 })}
-                <th className="border border-slate-400 p-1"></th>
-                <th className="border border-slate-400 p-1"></th>
-                <th className="border border-slate-400 p-1"></th>
-                <th className="border border-slate-400 p-1"></th>
+                <th className="border border-slate-400 p-1 text-[9px] font-medium">OT<br />Days</th>
               </tr>
             </thead>
             <tbody>
@@ -743,9 +745,9 @@ function MusterRollPage() {
                       })}
 
                       <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.pDays}</td>
-                      <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.otHours}</td>
+                      <td className={cn(rowBase, "p-1 font-semibold")}>{totals.otHours}</td>
+                      <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.phDays}</td>
                       <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.tDays}</td>
-                      <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
                     </tr>,
                     <tr key={emp.id + "-ot"}>
                       {periodCells.map((cell) => (
@@ -755,6 +757,7 @@ function MusterRollPage() {
                           style={{ height: 22, minWidth: 18 }}
                         />
                       ))}
+                      <td className={cn(rowBase, "p-1 font-semibold")}>{totals.otDays}</td>
                     </tr>,
                   ];
                 })
