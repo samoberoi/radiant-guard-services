@@ -595,6 +595,42 @@ function MusterRollPage() {
           Att = Attendance · OT = Overtime hours
         </div>
       </div>
+
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Mark attendance</DialogTitle>
+            <DialogDescription>
+              {pickerDates.length} day{pickerDates.length > 1 ? "s" : ""} selected
+              {pickerCandidateId
+                ? ` for ${(employees ?? []).find((e) => e.id === pickerCandidateId)?.full_name ?? ""}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-4 gap-2">
+            {codes.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => applyCodeToSelection(c.code)}
+                className="rounded-md border border-border px-2 py-3 text-sm font-bold transition hover:bg-muted"
+                style={{ color: c.color }}
+                title={c.label}
+              >
+                {c.code}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => applyCodeToSelection("")}
+            className="mt-2 w-full rounded-md border border-border px-2 py-2 text-sm text-muted-foreground hover:bg-muted"
+          >
+            Clear selection
+          </button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
