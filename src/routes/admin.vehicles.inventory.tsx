@@ -18,6 +18,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { fmtDate } from "@/lib/vehicle-helpers";
 import { MiniStat } from "@/components/MiniStat";
+import { AdvancedFilters } from "@/components/AdvancedFilters";
+import { applyFilters, type FilterCondition, type FilterField } from "@/lib/advanced-filters";
 
 export const Route = createFileRoute("/admin/vehicles/inventory")({
   component: VehicleInventoryPage,
@@ -142,17 +144,36 @@ function useVehicles() {
   return { items, addMut, updateMut, toggleMut, deleteMut };
 }
 
+const FILTER_FIELDS: FilterField[] = [
+  { key: "vehicle_id", label: "Vehicle ID", type: "text" },
+  { key: "vehicle_number", label: "Vehicle Number", type: "text" },
+  { key: "name", label: "Name", type: "text" },
+  { key: "owner", label: "Owner", type: "text" },
+  { key: "brand", label: "Brand", type: "text" },
+  { key: "make", label: "Make", type: "text" },
+  { key: "type", label: "Type", type: "enum", options: TYPES },
+  { key: "fuel_type", label: "Fuel Type", type: "enum", options: FUEL_TYPES },
+  { key: "year", label: "Year", type: "number" },
+  { key: "color", label: "Color", type: "text" },
+  { key: "engine_number", label: "Engine No.", type: "text" },
+  { key: "chassis_number", label: "Chassis No.", type: "text" },
+  { key: "registration_date", label: "Registration Date", type: "date" },
+  { key: "enabled", label: "Enabled", type: "boolean" },
+  { key: "notes", label: "Notes", type: "text" },
+];
+
 function VehicleInventoryPage() {
   const { items, addMut, updateMut, toggleMut, deleteMut } = useVehicles();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [conditions, setConditions] = useState<FilterCondition[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Vehicle | null>(null);
   const [deleting, setDeleting] = useState<Vehicle | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((i) => {
+    const base = items.filter((i) => {
       if (typeFilter !== "all" && i.type !== typeFilter) return false;
       if (!q) return true;
       return (
@@ -166,7 +187,8 @@ function VehicleInventoryPage() {
         i.owner.toLowerCase().includes(q)
       );
     });
-  }, [items, query, typeFilter]);
+    return applyFilters(base as unknown as Record<string, unknown>[], FILTER_FIELDS, conditions) as unknown as typeof items;
+  }, [items, query, typeFilter, conditions]);
 
   const stats = useMemo(() => {
     const byFuel: Record<string, number> = {};
@@ -260,6 +282,12 @@ function VehicleInventoryPage() {
           </Button>
         </div>
       </div>
+
+      <div className="mb-4">
+        <AdvancedFilters fields={FILTER_FIELDS} value={conditions} onChange={setConditions} />
+      </div>
+
+
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border bg-accent/10 px-5 py-2.5 text-xs font-medium text-foreground">

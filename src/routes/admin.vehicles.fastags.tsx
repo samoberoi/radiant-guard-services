@@ -17,6 +17,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useResetOnOpen, useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
+import { AdvancedFilters } from "@/components/AdvancedFilters";
+import { applyFilters, type FilterCondition, type FilterField } from "@/lib/advanced-filters";
 
 export const Route = createFileRoute("/admin/vehicles/fastags")({
   component: FastTagManagerPage,
@@ -148,14 +150,28 @@ function FastTagManagerPage() {
   });
 
   const [query, setQuery] = useState("");
+  const [conditions, setConditions] = useState<FilterCondition[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<FastTag | null>(null);
   const [deleting, setDeleting] = useState<FastTag | null>(null);
 
+  const filterFields: FilterField[] = useMemo(() => [
+    { key: "vehicle_number", label: "Vehicle", type: "text", accessor: (r) => vMap.get(String(r.vehicle_id))?.vehicle_number ?? "" },
+    { key: "fastag_number", label: "FastTag No.", type: "text" },
+    { key: "bank_name", label: "Bank", type: "text" },
+    { key: "account_number", label: "Account", type: "text" },
+    { key: "balance", label: "Balance", type: "number" },
+    { key: "issued_date", label: "Issued Date", type: "date" },
+    { key: "expiry_date", label: "Expiry Date", type: "date" },
+    { key: "status", label: "Status", type: "enum", options: STATUS },
+    { key: "login_type", label: "Login Type", type: "enum", options: LOGIN_TYPES.map((l) => l.value) },
+    { key: "registered_email", label: "Registered Email", type: "text" },
+    { key: "enabled", label: "Enabled", type: "boolean" },
+  ], [vMap]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((i) => {
+    const base = !q ? items : items.filter((i) => {
       const v = vMap.get(i.vehicle_id);
       return (
         i.fastag_number.toLowerCase().includes(q) ||
@@ -164,7 +180,8 @@ function FastTagManagerPage() {
         (v?.vehicle_number.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [items, query, vMap]);
+    return applyFilters(base as unknown as Record<string, unknown>[], filterFields, conditions) as unknown as typeof items;
+  }, [items, query, vMap, conditions, filterFields]);
 
   return (
     <div>
@@ -214,6 +231,12 @@ function FastTagManagerPage() {
           ><Download className="mr-1.5 h-4 w-4" />Export</Button>
         </div>
       </div>
+
+      <div className="mb-4">
+        <AdvancedFilters fields={filterFields} value={conditions} onChange={setConditions} />
+      </div>
+
+
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border bg-accent/10 px-5 py-2.5 text-xs font-medium text-foreground">

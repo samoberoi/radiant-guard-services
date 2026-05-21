@@ -18,6 +18,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useResetOnOpen, useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
 import { MiniStat } from "@/components/MiniStat";
+import { AdvancedFilters } from "@/components/AdvancedFilters";
+import { applyFilters, type FilterCondition, type FilterField } from "@/lib/advanced-filters";
 
 type StatusFilter = "all" | "expired" | "renewal" | "due" | "active";
 const STATUS_VALUES: StatusFilter[] = ["all", "expired", "renewal", "due", "active"];
@@ -122,6 +124,7 @@ function PucManagerPage() {
   });
 
   const [query, setQuery] = useState("");
+  const [conditions, setConditions] = useState<FilterCondition[]>([]);
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Puc | null>(null);
   const [deleting, setDeleting] = useState<Puc | null>(null);
@@ -133,9 +136,18 @@ function PucManagerPage() {
   const in60Date = new Date(); in60Date.setDate(in60Date.getDate() + 60);
   const in60 = in60Date.toISOString().slice(0, 10);
 
+  const filterFields: FilterField[] = useMemo(() => [
+    { key: "vehicle_number", label: "Vehicle", type: "text", accessor: (r) => vMap.get(String(r.vehicle_id))?.vehicle_number ?? "" },
+    { key: "puc_number", label: "PUC No.", type: "text" },
+    { key: "issuing_authority", label: "Issuing Authority", type: "text" },
+    { key: "issued_date", label: "Issued Date", type: "date" },
+    { key: "expiry_date", label: "Expiry Date", type: "date" },
+    { key: "enabled", label: "Enabled", type: "boolean" },
+  ], [vMap]);
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((i) => {
+    const base = items.filter((i) => {
       if (q) {
         const v = vMap.get(i.vehicle_id);
         const hit =
@@ -154,7 +166,8 @@ function PucManagerPage() {
       if (status === "active") return !isExpired;
       return true;
     });
-  }, [items, query, vMap, status, today, in60]);
+    return applyFilters(base as unknown as Record<string, unknown>[], filterFields, conditions) as unknown as typeof items;
+  }, [items, query, vMap, status, today, in60, conditions, filterFields]);
 
   const stats = useMemo(() => {
     let expired = 0, renewal = 0, active = 0;
