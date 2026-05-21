@@ -294,14 +294,14 @@ function MusterRollPage() {
   const codeMap = useMemo(() => new Map(codes.map((c) => [c.code, c])), [codes]);
 
   const { data: entries = [] } = useQuery({
-    queryKey: ["attendance-entries", unitId, monthStart, monthEnd],
+    queryKey: ["attendance-entries", unitId, periodStart, periodEnd],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance_entries")
         .select("candidate_id, entry_date, code, ot_hours")
         .eq("unit_id", unitId)
-        .gte("entry_date", monthStart)
-        .lte("entry_date", monthEnd);
+        .gte("entry_date", periodStart)
+        .lte("entry_date", periodEnd);
       if (error) throw error;
       return (data ?? []) as EntryRow[];
     },
@@ -330,7 +330,7 @@ function MusterRollPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, monthStart, monthEnd] });
+      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, periodStart, periodEnd] });
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to save"),
   });
@@ -404,7 +404,7 @@ function MusterRollPage() {
         .from("attendance_entries")
         .upsert(rows, { onConflict: "unit_id,candidate_id,entry_date" });
       if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, monthStart, monthEnd] });
+      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, periodStart, periodEnd] });
       setPickerOpen(false);
       setSelectedDates(new Set());
       setDragCandidateId(null);
