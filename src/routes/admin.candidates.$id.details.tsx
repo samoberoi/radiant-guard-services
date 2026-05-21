@@ -458,3 +458,231 @@ function BasicSection({ form }: { form: any }) {
   );
 }
 
+/* ---------- Unit Mapping ---------- */
+
+type UnitRow = { id: string; code: string; name: string; location: string; customer_id: string | null };
+type CandidateUnitRow = { id: string; unit_id: string; is_primary: boolean; sort_order: number };
+
+function UnitMappingSection({ candidateId, primaryUnitId }: { candidateId: string; primaryUnitId: string | null }) {
+  const [busy, setBusy] = useState(false);
+  const [addUnitId, setAddUnitId] = useState<string>("");
+
+  const unitsQ = useQuery({
+    queryKey: ["units-for-mapping"],
+    staleTime: 60_000,
+    queryFn: async (): Promise<UnitRow[]> => {
+      const { data, error } = await supabase
+        .from("units" as never)
+        .select("id,code,name,location,customer_id")
+        .order("code", { ascending: true });
+      if (error) throw error;
+      return ((data as unknown) as UnitRow[]) ?? [];
+    },
+  });
+
+  const mappingsQ = useQuery({
+    queryKey: ["candidate-units", candidateId],
+    queryFn: async (): Promise<CandidateUnitRow[]> => {
+      const { data, error } = await supabase
+        .from("candidate_units" as never)
+        .select("id,unit_id,is_primary,sort_order")
+        .eq("candidate_id", candidateId)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return ((data as unknown) as CandidateUnitRow[]) ?? [];
+    },
+  });
+
+  const units = unitsQ.data ?? [];
+  const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
+  const mappings = mappingsQ.data ?? [];
+  const mappedIds = new Set(mappings.map((m) => m.unit_id));
+  const available = units.filter((u) => !mappedIds.has(u.id));
+
+  const refresh = () => mappingsQ.refetch();
+
+  const addMapping = async () => {
+    if (!addUnitId) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase
+        .from("candidate_units" as never)
+        .insert({
+          candidate_id: candidateId,
+          unit_id: addUnitId,
+          is_primary: mappings.length === 0,
+          sort_order: mappings.length,
+        } as never);
+      if (error) throw error;
+      await logActivity({
+        module: MODULE,
+        action: "add_unit_mapping",
+        entityType: "candidate",
+        entityId: candidateId,
+        details: { unit_id: addUnitId },
+      });
+      toast.success("Unit mapped");
+      setAddUnitId("");
+      refresh();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to map unit");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const removeMapping = async (row: CandidateUnitRow) => {
+    if (!(await confirmAction({ title: "Remove unit mapping?", description: "This will unmap the employee from this unit.", confirmText: "Remove" }))) return;
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("candidate_units" as never).delete().eq("id", row.id);
+      if (error) throw error;
+      await logActivity({
+        module: MODULE,
+        action: "remove_unit_mapping",
+        entityType: "candidate",
+        entityId: candidateId,
+        details: { unit_id: row.unit_id },
+      });
+      toast.success("Mapping removed");
+      refresh();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to remove");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const setPrimary = async (row: CandidateUnitRow) => {
+    setBusy(true);
+    try {
+      // Unset previous primary
+      const { error: e1 } = await supabase
+        .from("candidate_units" as never)
+        .update({ is_primary: false } as never)
+        .eq("candidate_id", candidateId);
+      if (e1) throw e1;
+      const { error: e2 } = await supabase
+        .from("candidate_units" as never)
+        .update({ is_primary: true } as never)
+        .eq("id", row.id);
+      if (e2) throw e2;
+      // Mirror into candidates.unit_id for compatibility
+      await supabase.from("candidates").update({ unit_id: row.unit_id }).eq("id", candidateId);
+      await logActivity({
+        module: MODULE,
+        action: "set_primary_unit",
+        entityType: "candidate",
+        entityId: candidateId,
+        details: { unit_id: row.unit_id },
+      });
+      toast.success("Primary unit updated");
+      refresh();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update primary");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const loading = unitsQ.isLoading || mappingsQ.isLoading;
+
+  return (
+    <div>
+      <SectionHeader
+        title="Unit Mapping"
+        desc="Map this employee to one or more units. Mark one as primary — it mirrors to the employee's main unit."
+      />
+
+      {primaryUnitId && !mappings.some((m) => m.unit_id === primaryUnitId) && (
+        <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900/40 dark:bg-amber-950/30">
+          <AlertTriangle className="mt-0.5 h-4 w-4 text-amber-600" />
+          <div>
+            <div className="font-medium text-amber-700 dark:text-amber-300">
+              Current primary unit: {unitMap.get(primaryUnitId)?.code ?? "—"} {unitMap.get(primaryUnitId)?.name ?? ""}
+            </div>
+            <div className="text-amber-700/80 dark:text-amber-200/80">
+              Not present in mappings yet. Add it below to manage from here.
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="mb-4 flex flex-wrap items-end gap-2">
+        <div className="flex-1 min-w-[260px]">
+          <label className="mb-1 block text-xs font-medium text-muted-foreground">Add unit</label>
+          <select
+            value={addUnitId}
+            onChange={(e) => setAddUnitId(e.target.value)}
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+            disabled={busy || loading}
+          >
+            <option value="">Select a unit…</option>
+            {available.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.code} — {u.name} {u.location ? `(${u.location})` : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Button size="sm" onClick={addMapping} disabled={!addUnitId || busy}>
+          <Plus className="mr-2 h-4 w-4" /> Add mapping
+        </Button>
+      </div>
+
+      {loading ? (
+        <div className="flex h-32 items-center justify-center">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : mappings.length === 0 ? (
+        <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">
+          No units mapped yet.
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-md border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2 text-left">Code</th>
+                <th className="px-3 py-2 text-left">Unit</th>
+                <th className="px-3 py-2 text-left">Location</th>
+                <th className="px-3 py-2 text-left">Primary</th>
+                <th className="px-3 py-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {mappings.map((m) => {
+                const u = unitMap.get(m.unit_id);
+                return (
+                  <tr key={m.id} className="border-t">
+                    <td className="px-3 py-2 font-mono text-xs">{u?.code ?? "—"}</td>
+                    <td className="px-3 py-2">{u?.name ?? "—"}</td>
+                    <td className="px-3 py-2 text-muted-foreground">{u?.location ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      {m.is_primary ? (
+                        <Badge className="border-0 bg-amber-500/15 font-semibold text-amber-600">
+                          <Star className="mr-1 h-3 w-3 fill-current" /> Primary
+                        </Badge>
+                      ) : (
+                        <Button size="sm" variant="ghost" onClick={() => setPrimary(m)} disabled={busy}>
+                          <Star className="mr-1 h-3 w-3" /> Set primary
+                        </Button>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <Button size="sm" variant="ghost" onClick={() => removeMapping(m)} disabled={busy}>
+                        <Trash2 className="h-4 w-4 text-rose-600" />
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
