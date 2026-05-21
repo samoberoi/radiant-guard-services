@@ -510,33 +510,13 @@ function MusterRollPage() {
                       <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
                     </tr>,
                     <tr key={emp.id + "-ot"}>
-                      {dayList.map((d) => {
-                        const date = dateFor(d);
-                        const entry = entryMap.get(`${emp.id}|${date}`);
-                        const ot = entry?.ot_hours ?? 0;
-                        return (
-                          <td
-                            key={`o-${d}`}
-                            className={cn(rowBase, "p-0")}
-                            style={{ height: 22, minWidth: 18 }}
-                          >
-                            <Input
-                              type="number"
-                              min={0}
-                              step={0.5}
-                              defaultValue={ot || ""}
-                              key={`${date}-${ot}`}
-                              onBlur={(e) => {
-                                const val = Number(e.currentTarget.value) || 0;
-                                if (val === ot) return;
-                                upsertEntry.mutate({ candidate_id: emp.id, entry_date: date, ot_hours: val });
-                              }}
-                              className="h-[22px] w-full rounded-none border-0 bg-transparent px-0 text-center text-[10px] focus-visible:ring-1 print:hidden"
-                            />
-                            <span className="hidden text-[10px] print:inline">{ot || ""}</span>
-                          </td>
-                        );
-                      })}
+                      {dayList.map((d) => (
+                        <td
+                          key={`o-${d}`}
+                          className={cn(rowBase, "p-0")}
+                          style={{ height: 22, minWidth: 18 }}
+                        />
+                      ))}
                     </tr>,
                   ];
                 })
