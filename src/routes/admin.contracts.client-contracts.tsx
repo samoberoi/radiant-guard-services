@@ -451,6 +451,28 @@ function useBillingTypes() {
   return data;
 }
 
+function useEsicBranches() {
+  const { data = [] } = useQuery({
+    queryKey: QK_ESIC,
+    queryFn: async (): Promise<EsicBranch[]> => {
+      const { data, error } = await supabase
+        .from("esic_branches" as never)
+        .select("id,esic_code,location,enabled")
+        .order("esic_code");
+      if (error) throw error;
+      return (data as unknown as Record<string, unknown>[])
+        .filter((r) => r.enabled !== false)
+        .map((r) => ({
+          id: String(r.id),
+          esicCode: String(r.esic_code ?? ""),
+          location: String(r.location ?? ""),
+        }));
+    },
+  });
+  return data;
+}
+
+
 function useDesignations() {
   const { data = [] } = useQuery({
     queryKey: QK_DSG,
