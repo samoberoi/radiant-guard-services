@@ -64,7 +64,7 @@ const vehiclesChildren: NavItem[] = [
   { to: "/admin/vehicles/insurances", label: "Insurance Manager", icon: ShieldCheck },
   { to: "/admin/vehicles/pucs", label: "PUC Manager", icon: Wind },
   { to: "/admin/vehicles/service-manager", label: "Service Manager", icon: Wrench },
-  { to: "/admin/vehicles/fuel-manager", label: "Fuel Manager", icon: Fuel },
+  { to: "/admin/vehicles/expense-manager", label: "Expense Manager", icon: Fuel },
   { to: "/admin/vehicles/insight-lab", label: "Insight Lab", icon: Sparkles },
 ];
 

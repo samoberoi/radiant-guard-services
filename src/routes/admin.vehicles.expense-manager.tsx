@@ -1,13 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, Fuel, MapPin, Plus, Trash2, Upload, Image as ImageIcon, X, Check, ChevronsUpDown } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import {
+  Download, Fuel, MapPin, Plus, Trash2, Upload, Image as ImageIcon, X,
+  Check, ChevronsUpDown, Sparkles, Wrench, Droplets, Receipt, ParkingCircle, Tag,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { confirmAction } from "@/components/ConfirmProvider";
 import { PageHeader } from "@/components/PageHeader";
+import { extractFuelFromPhotos } from "@/lib/expense.functions";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,24 +22,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
 import { useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/admin/vehicles/fuel-manager")({
-  component: FuelManagerPage,
+export const Route = createFileRoute("/admin/vehicles/expense-manager")({
+  component: ExpenseManagerPage,
 });
 
-const MODULE = "Fuel Manager";
+const MODULE = "Expense Manager";
 const ENTITY = "vehicle_fuel_entries";
-const QK = ["admin", "vehicle-fuel-entries"] as const;
+const QK = ["admin", "vehicle-expense-entries"] as const;
 const BUCKET = "vehicle-fuel-proofs";
 
+const EXPENSE_TYPES = [
+  { value: "fuel", label: "Fuel", icon: Fuel },
+  { value: "maintenance", label: "Maintenance", icon: Wrench },
+  { value: "washing", label: "Washing", icon: Droplets },
+  { value: "repair", label: "Repair", icon: Wrench },
+  { value: "parking", label: "Parking", icon: ParkingCircle },
+  { value: "toll", label: "Toll", icon: Receipt },
+  { value: "other", label: "Other", icon: Tag },
+] as const;
 const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric"] as const;
 const PAYMENT_MODES = ["PetroCard", "Cash", "UPI", "Other"] as const;
 
-type FuelEntry = {
+type ExpenseEntry = {
   id: string;
   vehicle_id: string;
+  expense_type: string;
   entry_date: string;
   entry_time: string | null;
   fuel_type: string;
@@ -49,14 +65,18 @@ type FuelEntry = {
   odometer_photo_url: string;
   pump_photo_url: string;
   receipt_photo_url: string;
+  filling_photo_url: string;
+  description: string;
+  tags: string[];
   notes: string;
   created_at: string;
 };
 
-function rowToEntry(r: Record<string, unknown>): FuelEntry {
+function rowToEntry(r: Record<string, unknown>): ExpenseEntry {
   return {
     id: String(r.id),
     vehicle_id: String(r.vehicle_id ?? ""),
+    expense_type: String(r.expense_type ?? "fuel"),
     entry_date: String(r.entry_date ?? ""),
     entry_time: (r.entry_time as string | null) ?? null,
     fuel_type: String(r.fuel_type ?? ""),
@@ -71,6 +91,9 @@ function rowToEntry(r: Record<string, unknown>): FuelEntry {
     odometer_photo_url: String(r.odometer_photo_url ?? ""),
     pump_photo_url: String(r.pump_photo_url ?? ""),
     receipt_photo_url: String(r.receipt_photo_url ?? ""),
+    filling_photo_url: String(r.filling_photo_url ?? ""),
+    description: String(r.description ?? ""),
+    tags: Array.isArray(r.tags) ? (r.tags as string[]) : [],
     notes: String(r.notes ?? ""),
     created_at: String(r.created_at ?? ""),
   };
@@ -80,7 +103,11 @@ function inr(n: number) {
   return `₹${n.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 }
 
-function FuelManagerPage() {
+function expenseLabel(value: string) {
+  return EXPENSE_TYPES.find((e) => e.value === value)?.label ?? value;
+}
+
+function ExpenseManagerPage() {
   const qc = useQueryClient();
   const vehOptsQ = useVehicleOptions();
   const vehicles = vehOptsQ.data ?? [];
@@ -92,7 +119,7 @@ function FuelManagerPage() {
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: QK,
-    queryFn: async (): Promise<FuelEntry[]> => {
+    queryFn: async (): Promise<ExpenseEntry[]> => {
       const { data, error } = await supabase
         .from(ENTITY as never)
         .select("*")
@@ -104,6 +131,7 @@ function FuelManagerPage() {
   });
 
   const [vehicleFilter, setVehicleFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [from, setFrom] = useState<string>(() => {
     const d = new Date(); d.setDate(1);
     return d.toISOString().slice(0, 10);
@@ -113,61 +141,67 @@ function FuelManagerPage() {
   const filtered = useMemo(() => {
     return entries.filter((e) => {
       if (vehicleFilter !== "all" && e.vehicle_id !== vehicleFilter) return false;
+      if (typeFilter !== "all" && e.expense_type !== typeFilter) return false;
       if (from && e.entry_date < from) return false;
       if (to && e.entry_date > to) return false;
       return true;
     });
-  }, [entries, vehicleFilter, from, to]);
+  }, [entries, vehicleFilter, typeFilter, from, to]);
 
   const stats = useMemo(() => {
     const totalSpend = filtered.reduce((s, e) => s + (e.amount || 0), 0);
-    const byFuel: Record<string, number> = { Petrol: 0, Diesel: 0, CNG: 0 };
+    const byType: Record<string, number> = {};
     const byPayment: Record<string, number> = {};
     for (const e of filtered) {
-      if (e.fuel_type in byFuel) byFuel[e.fuel_type] += e.amount || 0;
+      byType[e.expense_type] = (byType[e.expense_type] ?? 0) + (e.amount || 0);
       byPayment[e.payment_mode] = (byPayment[e.payment_mode] ?? 0) + (e.amount || 0);
     }
-    return { totalSpend, entries: filtered.length, byFuel, byPayment };
+    return { totalSpend, entries: filtered.length, byType, byPayment };
   }, [filtered]);
 
   const [open, setOpen] = useState(false);
 
   const delMut = useMutation({
-    mutationFn: async (e: FuelEntry) => {
+    mutationFn: async (e: ExpenseEntry) => {
       const { error } = await supabase.from(ENTITY as never).delete().eq("id", e.id);
       if (error) throw error;
       await logActivity({
         module: MODULE, action: "delete", entityType: ENTITY, entityId: e.id,
-        entityLabel: `${vehMap.get(e.vehicle_id) ?? "Vehicle"} • ${fmtDate(e.entry_date)} • ${inr(e.amount)}`,
+        entityLabel: `${vehMap.get(e.vehicle_id) ?? "Vehicle"} • ${expenseLabel(e.expense_type)} • ${fmtDate(e.entry_date)} • ${inr(e.amount)}`,
         before: e as unknown as Record<string, unknown>,
       });
     },
     onSuccess: () => {
-      toast.success("Fuel entry deleted");
+      toast.success("Expense entry deleted");
       qc.invalidateQueries({ queryKey: QK });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Delete failed"),
   });
 
-  async function handleDelete(e: FuelEntry) {
+  async function handleDelete(e: ExpenseEntry) {
     const ok = await confirmAction({
-      title: "Delete fuel entry?",
-      description: `${vehMap.get(e.vehicle_id) ?? "Vehicle"} • ${fmtDate(e.entry_date)} • ${inr(e.amount)}`,
+      title: "Delete expense entry?",
+      description: `${vehMap.get(e.vehicle_id) ?? "Vehicle"} • ${expenseLabel(e.expense_type)} • ${fmtDate(e.entry_date)} • ${inr(e.amount)}`,
       confirmText: "Delete",
       destructive: true,
     });
     if (ok) delMut.mutate(e);
   }
 
+  const typeSegments = EXPENSE_TYPES.map((t, i) => ({
+    label: t.label,
+    value: stats.byType[t.value] ?? 0,
+    color: `hsl(${(i * 47) % 360} 70% 55%)`,
+  }));
+
   return (
     <div>
       <PageHeader
-        title="Fuel Manager"
-        description="Log every fuel top-up with proof photos. Track spend and mileage per vehicle."
-        crumbs={[{ label: "Vehicles", to: "/admin/vehicles" }, { label: "Fuel Manager" }]}
+        title="Expense Manager"
+        description="Log vehicle expenses — fuel, maintenance, washing, repairs, parking, tolls. For fuel, auto-fill from photos."
+        crumbs={[{ label: "Vehicles", to: "/admin/vehicles" }, { label: "Expense Manager" }]}
       />
 
-      {/* Filters on top */}
       <div className="mb-4 flex flex-wrap items-end gap-2">
         <div>
           <Label className="text-xs text-muted-foreground">Vehicle</Label>
@@ -177,6 +211,18 @@ function FuelManagerPage() {
               <SelectItem value="all">All vehicles</SelectItem>
               {vehicles.map((v) => (
                 <SelectItem key={v.id} value={v.id}>{v.vehicle_number}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label className="text-xs text-muted-foreground">Type</Label>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              {EXPENSE_TYPES.map((t) => (
+                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -195,12 +241,14 @@ function FuelManagerPage() {
             size="sm"
             onClick={() =>
               downloadCsv(
-                "fuel-entries.csv",
+                "vehicle-expenses.csv",
                 filtered.map((e) => ({
                   date: fmtDate(e.entry_date),
                   time: e.entry_time ?? "",
                   vehicle: vehMap.get(e.vehicle_id) ?? "",
+                  expense_type: expenseLabel(e.expense_type),
                   fuel_type: e.fuel_type,
+                  description: e.description,
                   odometer_km: e.odometer_km,
                   quantity: e.quantity,
                   rate: e.rate,
@@ -208,9 +256,11 @@ function FuelManagerPage() {
                   payment_mode: e.payment_mode,
                   location: e.location_text,
                   geo: e.geo_lat && e.geo_lng ? `${e.geo_lat},${e.geo_lng}` : "",
+                  tags: e.tags.join("|"),
                   odometer_photo: e.odometer_photo_url,
                   pump_photo: e.pump_photo_url,
                   receipt_photo: e.receipt_photo_url,
+                  filling_photo: e.filling_photo_url,
                   notes: e.notes,
                 })),
               )
@@ -224,17 +274,12 @@ function FuelManagerPage() {
         </div>
       </div>
 
-      {/* Two donut breakdowns of total spend */}
       <div className="mb-4 grid gap-3 sm:grid-cols-2">
         <DonutBreakdown
-          title="Spend by Fuel"
+          title="Spend by Expense Type"
           total={stats.totalSpend}
           entries={stats.entries}
-          segments={[
-            { label: "Petrol", value: stats.byFuel.Petrol, color: "hsl(35 92% 55%)" },
-            { label: "Diesel", value: stats.byFuel.Diesel, color: "hsl(220 70% 55%)" },
-            { label: "CNG",    value: stats.byFuel.CNG,    color: "hsl(150 65% 45%)" },
-          ]}
+          segments={typeSegments}
         />
         <DonutBreakdown
           title="Spend by Payment"
@@ -256,7 +301,8 @@ function FuelManagerPage() {
               <tr>
                 <th className="px-3 py-3 text-left">Date</th>
                 <th className="px-3 py-3 text-left">Vehicle</th>
-                <th className="px-3 py-3 text-left">Fuel</th>
+                <th className="px-3 py-3 text-left">Type</th>
+                <th className="px-3 py-3 text-left">Description</th>
                 <th className="px-3 py-3 text-right">Odometer</th>
                 <th className="px-3 py-3 text-right">Qty</th>
                 <th className="px-3 py-3 text-right">Amount</th>
@@ -268,12 +314,12 @@ function FuelManagerPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && (
-                <tr><td colSpan={10} className="px-3 py-8 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={11} className="px-3 py-8 text-center text-muted-foreground">Loading…</td></tr>
               )}
               {!isLoading && filtered.length === 0 && (
-                <tr><td colSpan={10} className="px-3 py-10 text-center text-muted-foreground">
+                <tr><td colSpan={11} className="px-3 py-10 text-center text-muted-foreground">
                   <Fuel className="mx-auto mb-2 h-6 w-6 opacity-50" />
-                  No fuel entries in this range. Click <strong>Add Entry</strong> to log one.
+                  No expense entries in this range. Click <strong>Add Entry</strong> to log one.
                 </td></tr>
               )}
               {filtered.map((e) => (
@@ -283,11 +329,26 @@ function FuelManagerPage() {
                     {e.entry_time && <div className="text-xs text-muted-foreground">{e.entry_time.slice(0, 5)}</div>}
                   </td>
                   <td className="px-3 py-2.5 font-medium">{vehMap.get(e.vehicle_id) ?? "—"}</td>
-                  <td className="px-3 py-2.5">{e.fuel_type}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">{e.odometer_km.toLocaleString()}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">{e.quantity}</td>
+                  <td className="px-3 py-2.5">
+                    <Badge variant="secondary" className="font-normal">
+                      {expenseLabel(e.expense_type)}
+                      {e.expense_type === "fuel" && e.fuel_type ? ` · ${e.fuel_type}` : ""}
+                    </Badge>
+                  </td>
+                  <td className="px-3 py-2.5 max-w-[200px]">
+                    <div className="truncate text-xs">{e.description || "—"}</div>
+                    {e.tags.length > 0 && (
+                      <div className="mt-0.5 flex flex-wrap gap-1">
+                        {e.tags.slice(0, 3).map((t) => (
+                          <span key={t} className="rounded-full bg-muted px-1.5 py-0.5 text-[10px]">{t}</span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">{e.odometer_km > 0 ? e.odometer_km.toLocaleString() : "—"}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">{e.quantity > 0 ? e.quantity : "—"}</td>
                   <td className="px-3 py-2.5 text-right tabular-nums font-semibold">{inr(e.amount)}</td>
-                  <td className="px-3 py-2.5 text-xs">{e.payment_mode}</td>
+                  <td className="px-3 py-2.5 text-xs">{e.payment_mode || "—"}</td>
                   <td className="px-3 py-2.5 text-xs">
                     {e.geo_lat && e.geo_lng ? (
                       <a
@@ -305,6 +366,7 @@ function FuelManagerPage() {
                       <ProofThumb url={e.odometer_photo_url} label="Odometer" />
                       <ProofThumb url={e.pump_photo_url} label="Pump" />
                       <ProofThumb url={e.receipt_photo_url} label="Receipt" />
+                      <ProofThumb url={e.filling_photo_url} label="Filling" />
                     </div>
                   </td>
                   <td className="px-3 py-2.5 text-right">
@@ -356,6 +418,15 @@ function ProofThumb({ url, label }: { url: string; label: string }) {
 
 type Vehicle = { id: string; vehicle_number: string; name: string };
 
+async function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(new Error("Failed to read file"));
+    r.readAsDataURL(file);
+  });
+}
+
 function AddEntryDialog({
   open, onOpenChange, vehicles, lastOdoByVehicle, onSaved,
 }: {
@@ -365,6 +436,7 @@ function AddEntryDialog({
   lastOdoByVehicle: Map<string, number>;
   onSaved: () => void;
 }) {
+  const [expenseType, setExpenseType] = useState<string>("fuel");
   const [vehicleId, setVehicleId] = useState("");
   const [entryDate, setEntryDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [entryTime, setEntryTime] = useState(() => new Date().toTimeString().slice(0, 5));
@@ -376,13 +448,19 @@ function AddEntryDialog({
   const [paymentMode, setPaymentMode] = useState<string>("PetroCard");
   const [locationText, setLocationText] = useState("");
   const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
+  const [description, setDescription] = useState("");
+  const [tagsInput, setTagsInput] = useState("");
   const [notes, setNotes] = useState("");
   const [odoFile, setOdoFile] = useState<File | null>(null);
   const [pumpFile, setPumpFile] = useState<File | null>(null);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [fillingFile, setFillingFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [extracting, setExtracting] = useState(false);
   const [vehOpen, setVehOpen] = useState(false);
 
+  const extractFn = useServerFn(extractFuelFromPhotos);
+  const isFuel = expenseType === "fuel";
   const minOdo = vehicleId ? (lastOdoByVehicle.get(vehicleId) ?? 0) : 0;
   const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
 
@@ -390,12 +468,10 @@ function AddEntryDialog({
     setVehicleId(id);
     setVehOpen(false);
     const last = lastOdoByVehicle.get(id) ?? 0;
-    // Prefill odometer with last reading so user types upwards from there
     if (last > 0) setOdometer(String(last));
     else setOdometer("");
   }
 
-  // Auto-amount when qty + rate set
   function recalcAmount(q: string, r: string) {
     const qn = Number(q); const rn = Number(r);
     if (!Number.isNaN(qn) && !Number.isNaN(rn) && qn > 0 && rn > 0) {
@@ -404,9 +480,10 @@ function AddEntryDialog({
   }
 
   function reset() {
+    setExpenseType("fuel");
     setVehicleId(""); setOdometer(""); setQuantity(""); setRate(""); setAmount("");
-    setLocationText(""); setGeo(null); setNotes("");
-    setOdoFile(null); setPumpFile(null); setReceiptFile(null);
+    setLocationText(""); setGeo(null); setNotes(""); setDescription(""); setTagsInput("");
+    setOdoFile(null); setPumpFile(null); setReceiptFile(null); setFillingFile(null);
   }
 
   function captureLocation() {
@@ -421,6 +498,43 @@ function AddEntryDialog({
     );
   }
 
+  async function handleAutoFill() {
+    const items: Array<{ label: "odometer" | "pump" | "receipt" | "filling"; file: File }> = [];
+    if (odoFile) items.push({ label: "odometer", file: odoFile });
+    if (pumpFile) items.push({ label: "pump", file: pumpFile });
+    if (receiptFile) items.push({ label: "receipt", file: receiptFile });
+    if (fillingFile) items.push({ label: "filling", file: fillingFile });
+    if (items.length === 0) {
+      toast.error("Upload at least one photo (receipt or pump works best)");
+      return;
+    }
+    setExtracting(true);
+    try {
+      const photos = await Promise.all(
+        items.map(async (i) => ({ label: i.label, dataUrl: await fileToDataUrl(i.file) })),
+      );
+      const res = await extractFn({ data: { photos } });
+      if (res.fuel_type) setFuelType(res.fuel_type);
+      if (res.odometer_km != null) setOdometer(String(res.odometer_km));
+      if (res.quantity != null) setQuantity(String(res.quantity));
+      if (res.rate != null) setRate(String(res.rate));
+      if (res.amount != null) setAmount(String(res.amount));
+      else if (res.quantity != null && res.rate != null) {
+        setAmount((res.quantity * res.rate).toFixed(2));
+      }
+      if (res.location_text) setLocationText(res.location_text);
+      if (res.entry_date) setEntryDate(res.entry_date);
+      if (res.entry_time) setEntryTime(res.entry_time);
+      if (res.payment_mode) setPaymentMode(res.payment_mode);
+      if (res.notes && !notes) setNotes(res.notes);
+      toast.success("Auto-filled from photos — please verify");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Auto-fill failed");
+    } finally {
+      setExtracting(false);
+    }
+  }
+
   async function uploadProof(file: File | null, label: string): Promise<string> {
     if (!file) return "";
     const ext = file.name.split(".").pop() || "jpg";
@@ -433,25 +547,36 @@ function AddEntryDialog({
 
   async function handleSave() {
     if (!vehicleId) { toast.error("Select a vehicle"); return; }
-    if (!odometer) { toast.error("Enter odometer reading"); return; }
-    if (minOdo > 0 && Number(odometer) < minOdo) {
-      toast.error(`Odometer must be at least ${minOdo.toLocaleString()} km (last recorded reading)`);
+    if (!amount) { toast.error("Enter amount"); return; }
+    if (isFuel) {
+      if (!odometer) { toast.error("Enter odometer reading"); return; }
+      if (minOdo > 0 && Number(odometer) < minOdo) {
+        toast.error(`Odometer must be at least ${minOdo.toLocaleString()} km (last recorded reading)`);
+        return;
+      }
+      if (!odoFile || !pumpFile || !receiptFile) {
+        toast.error("Upload odometer, pump and receipt photos (filling photo optional)");
+        return;
+      }
+    } else if (!description.trim()) {
+      toast.error("Add a short description for this expense");
       return;
     }
-    if (!amount) { toast.error("Enter amount"); return; }
-    if (!odoFile || !pumpFile || !receiptFile) { toast.error("Upload all 3 proof photos (odometer, pump, receipt)"); return; }
     setBusy(true);
     try {
-      const [odoUrl, pumpUrl, receiptUrl] = await Promise.all([
+      const [odoUrl, pumpUrl, receiptUrl, fillingUrl] = await Promise.all([
         uploadProof(odoFile, "odometer"),
         uploadProof(pumpFile, "pump"),
         uploadProof(receiptFile, "receipt"),
+        uploadProof(fillingFile, "filling"),
       ]);
+      const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
       const payload = {
         vehicle_id: vehicleId,
+        expense_type: expenseType,
         entry_date: entryDate,
         entry_time: entryTime || null,
-        fuel_type: fuelType,
+        fuel_type: isFuel ? fuelType : "",
         odometer_km: Number(odometer) || 0,
         quantity: Number(quantity) || 0,
         rate: Number(rate) || 0,
@@ -463,6 +588,9 @@ function AddEntryDialog({
         odometer_photo_url: odoUrl,
         pump_photo_url: pumpUrl,
         receipt_photo_url: receiptUrl,
+        filling_photo_url: fillingUrl,
+        description,
+        tags,
         notes,
       };
       const { data, error } = await supabase
@@ -475,10 +603,10 @@ function AddEntryDialog({
       await logActivity({
         module: MODULE, action: "create", entityType: ENTITY,
         entityId: String((data as { id: string }).id),
-        entityLabel: `${veh?.vehicle_number ?? "Vehicle"} • ${fmtDate(entryDate)} • ${inr(Number(amount))}`,
+        entityLabel: `${veh?.vehicle_number ?? "Vehicle"} • ${expenseLabel(expenseType)} • ${fmtDate(entryDate)} • ${inr(Number(amount))}`,
         after: payload as unknown as Record<string, unknown>,
       });
-      toast.success("Fuel entry added");
+      toast.success("Expense entry added");
       onSaved();
       reset();
       onOpenChange(false);
@@ -493,10 +621,37 @@ function AddEntryDialog({
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Fuel Entry</DialogTitle>
+          <DialogTitle>Add Expense Entry</DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
+          {/* Expense type quick-select */}
+          <div>
+            <Label className="text-xs text-muted-foreground">Expense Type</Label>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {EXPENSE_TYPES.map((t) => {
+                const Icon = t.icon;
+                const active = expenseType === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => setExpenseType(t.value)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition",
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card hover:bg-muted",
+                    )}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <Label>Vehicle *</Label>
@@ -534,15 +689,17 @@ function AddEntryDialog({
                 </PopoverContent>
               </Popover>
             </div>
-            <div>
-              <Label>Fuel Type</Label>
-              <Select value={fuelType} onValueChange={setFuelType}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {FUEL_TYPES.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
+            {isFuel && (
+              <div>
+                <Label>Fuel Type</Label>
+                <Select value={fuelType} onValueChange={setFuelType}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {FUEL_TYPES.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div>
               <Label>Date</Label>
               <Input type="date" value={entryDate} onChange={(e) => setEntryDate(e.target.value)} />
@@ -552,7 +709,7 @@ function AddEntryDialog({
               <Input type="time" value={entryTime} onChange={(e) => setEntryTime(e.target.value)} />
             </div>
             <div>
-              <Label>Odometer (km) *</Label>
+              <Label>Odometer (km){isFuel ? " *" : ""}</Label>
               <Input
                 type="number"
                 inputMode="numeric"
@@ -563,7 +720,7 @@ function AddEntryDialog({
               />
               {minOdo > 0 && (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Last recorded: {minOdo.toLocaleString()} km — new reading must be equal or higher.
+                  Last recorded: {minOdo.toLocaleString()} km
                 </p>
               )}
             </div>
@@ -576,28 +733,44 @@ function AddEntryDialog({
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <Label>Quantity ({fuelType === "CNG" ? "kg" : "L"})</Label>
-              <Input type="number" inputMode="decimal" value={quantity}
-                onChange={(e) => { setQuantity(e.target.value); recalcAmount(e.target.value, rate); }}
-                placeholder="0.00" />
-            </div>
-            <div>
-              <Label>Rate (₹ per unit)</Label>
-              <Input type="number" inputMode="decimal" value={rate}
-                onChange={(e) => { setRate(e.target.value); recalcAmount(quantity, e.target.value); }}
-                placeholder="0.00" />
-            </div>
-            <div className="sm:col-span-2">
+            {isFuel && (
+              <>
+                <div>
+                  <Label>Quantity ({fuelType === "CNG" ? "kg" : "L"})</Label>
+                  <Input type="number" inputMode="decimal" value={quantity}
+                    onChange={(e) => { setQuantity(e.target.value); recalcAmount(e.target.value, rate); }}
+                    placeholder="0.00" />
+                </div>
+                <div>
+                  <Label>Rate (₹ per unit)</Label>
+                  <Input type="number" inputMode="decimal" value={rate}
+                    onChange={(e) => { setRate(e.target.value); recalcAmount(quantity, e.target.value); }}
+                    placeholder="0.00" />
+                </div>
+              </>
+            )}
+            <div className={isFuel ? "sm:col-span-2" : ""}>
               <Label>Amount (₹) *</Label>
               <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
             </div>
           </div>
 
+          {!isFuel && (
+            <div>
+              <Label>Description *</Label>
+              <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Brake pad replacement, exterior wash" />
+            </div>
+          )}
+
+          <div>
+            <Label>Tags <span className="text-xs text-muted-foreground">(comma-separated)</span></Label>
+            <Input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="urgent, warranty, vendor-xyz" />
+          </div>
+
           <div>
             <Label>Location</Label>
             <div className="flex gap-2">
-              <Input value={locationText} onChange={(e) => setLocationText(e.target.value)} placeholder="Pump name / area" />
+              <Input value={locationText} onChange={(e) => setLocationText(e.target.value)} placeholder="Place / area" />
               <Button type="button" variant="outline" onClick={captureLocation}>
                 <MapPin className="mr-2 h-4 w-4" /> Geo-tag
               </Button>
@@ -612,12 +785,36 @@ function AddEntryDialog({
             )}
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <FileTile label="Odometer photo *" file={odoFile} onChange={setOdoFile} />
-            <FileTile label="Pump / units photo *" file={pumpFile} onChange={setPumpFile} />
-            <FileTile label="Receipt photo *" file={receiptFile} onChange={setReceiptFile} />
-          </div>
-
+          {isFuel ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>Photos <span className="text-xs text-muted-foreground">(odometer, pump, receipt required · filling optional)</span></Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleAutoFill}
+                  disabled={extracting || (!odoFile && !pumpFile && !receiptFile && !fillingFile)}
+                >
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  {extracting ? "Extracting…" : "Auto-fill from photos"}
+                </Button>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-4">
+                <FileTile label="Odometer *" file={odoFile} onChange={setOdoFile} />
+                <FileTile label="Pump / units *" file={pumpFile} onChange={setPumpFile} />
+                <FileTile label="Receipt *" file={receiptFile} onChange={setReceiptFile} />
+                <FileTile label="Filling (optional)" file={fillingFile} onChange={setFillingFile} />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <Label>Receipt photo (optional)</Label>
+              <div className="mt-1">
+                <FileTile label="Receipt / proof" file={receiptFile} onChange={setReceiptFile} />
+              </div>
+            </div>
+          )}
 
           <div>
             <Label>Notes</Label>
@@ -734,4 +931,3 @@ function DonutBreakdown({
     </div>
   );
 }
-

@@ -1863,8 +1863,11 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          description: string
           entry_date: string
           entry_time: string | null
+          expense_type: string
+          filling_photo_url: string
           fuel_type: string
           geo_lat: number | null
           geo_lng: number | null
@@ -1878,14 +1881,18 @@ export type Database = {
           quantity: number
           rate: number
           receipt_photo_url: string
+          tags: string[]
           updated_at: string
           vehicle_id: string
         }
         Insert: {
           amount?: number
           created_at?: string
+          description?: string
           entry_date?: string
           entry_time?: string | null
+          expense_type?: string
+          filling_photo_url?: string
           fuel_type?: string
           geo_lat?: number | null
           geo_lng?: number | null
@@ -1899,14 +1906,18 @@ export type Database = {
           quantity?: number
           rate?: number
           receipt_photo_url?: string
+          tags?: string[]
           updated_at?: string
           vehicle_id: string
         }
         Update: {
           amount?: number
           created_at?: string
+          description?: string
           entry_date?: string
           entry_time?: string | null
+          expense_type?: string
+          filling_photo_url?: string
           fuel_type?: string
           geo_lat?: number | null
           geo_lng?: number | null
@@ -1920,6 +1931,7 @@ export type Database = {
           quantity?: number
           rate?: number
           receipt_photo_url?: string
+          tags?: string[]
           updated_at?: string
           vehicle_id?: string
         }
