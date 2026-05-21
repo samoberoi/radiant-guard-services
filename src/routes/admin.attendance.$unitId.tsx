@@ -74,7 +74,7 @@ function MusterRollPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("units")
-        .select("id, code, name, branch_id, customer_id, billing_state, reporting_officers")
+        .select("id, code, name, location, branch_id, customer_id, billing_state, reporting_officers, shipping_address1, shipping_address2, shipping_city, shipping_district, shipping_state, shipping_pincode, billing_address1, billing_address2, billing_city, billing_district, billing_pincode")
         .eq("id", unitId)
         .maybeSingle();
       if (error) throw error;
@@ -276,6 +276,23 @@ function MusterRollPage() {
     ? `${unit.customer_name || ""}${unit.code ? ` - ${unit.code}` : ""}`.trim()
     : "—";
 
+  const principalAddress = unit
+    ? [
+        unit.shipping_address1 || unit.billing_address1 || unit.location,
+        unit.shipping_address2 || unit.billing_address2,
+        [
+          unit.shipping_city || unit.billing_city,
+          unit.shipping_district || unit.billing_district,
+          unit.shipping_state || unit.billing_state,
+          unit.shipping_pincode || unit.billing_pincode,
+        ]
+          .filter(Boolean)
+          .join(", "),
+      ]
+        .filter((v) => v && String(v).trim())
+        .join(", ")
+    : "";
+
   const monthLabel = `${MONTH_NAMES[monthIdx]} ${year}`;
 
   return (
@@ -359,6 +376,7 @@ function MusterRollPage() {
               <td className="w-1/2 border border-slate-400 p-2 align-top">
                 <div className="font-semibold">Name and Address of Principal Employer :</div>
                 <div className="mt-1 font-bold">{principalEmployer || "—"}</div>
+                {principalAddress && <div className="text-slate-700">{principalAddress}</div>}
                 <div className="mt-3 font-semibold">For the month of {monthLabel}</div>
               </td>
             </tr>
