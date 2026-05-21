@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Building2, MapPinned, Search, Users, Wallet, X } from "lucide-react";
+import { ArrowRight, Building2, MapPinned, Search, Sparkles, UserCircle2, Users, Wallet, X } from "lucide-react";
 
 import { PageHeader } from "@/components/PageHeader";
 import { Input } from "@/components/ui/input";
@@ -39,7 +39,7 @@ type UnitRow = {
   approved_periods: { period_start: string; period_end: string }[];
 };
 
-type EmployeeOption = { id: string; label: string; unit_id: string };
+type EmployeeOption = { id: string; label: string; name: string; code: string; unit_ids: string[] };
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -75,7 +75,7 @@ function PayrollUnitsPage() {
         return { units: [] as UnitRow[], organizations: [] as { id: string; name: string }[], periods: [] as string[], employees: [] as EmployeeOption[] };
       }
 
-      const [{ data: units }, { data: candidates }, { data: customers }] = await Promise.all([
+      const [{ data: units }, { data: candidates }, { data: customers }, { data: links }] = await Promise.all([
         supabase
           .from("units")
           .select("id, code, name, location, customer_id")
@@ -83,25 +83,54 @@ function PayrollUnitsPage() {
         supabase
           .from("candidates")
           .select("id, unit_id, full_name, employee_code")
-          .in("unit_id", unitIds)
           .eq("is_enabled", true)
           .eq("status", "active"),
         supabase.from("customers").select("id, name"),
+        supabase.from("candidate_units").select("candidate_id, unit_id").in("unit_id", unitIds),
       ]);
 
       const custMap = new Map((customers ?? []).map((c) => [c.id, c.name as string]));
+      const unitIdSet = new Set(unitIds);
+
+      // candidate -> set of unit_ids they're mapped to (primary + link table)
+      const unitsByCandidate = new Map<string, Set<string>>();
+      const candById = new Map<string, { id: string; unit_id: string | null; full_name: string | null; employee_code: string | null }>();
+      for (const c of (candidates ?? []) as Array<{ id: string; unit_id: string | null; full_name: string | null; employee_code: string | null }>) {
+        candById.set(c.id, c);
+        if (c.unit_id && unitIdSet.has(c.unit_id)) {
+          const s = unitsByCandidate.get(c.id) ?? new Set<string>();
+          s.add(c.unit_id);
+          unitsByCandidate.set(c.id, s);
+        }
+      }
+      for (const l of (links ?? []) as Array<{ candidate_id: string; unit_id: string }>) {
+        if (!unitIdSet.has(l.unit_id)) continue;
+        const s = unitsByCandidate.get(l.candidate_id) ?? new Set<string>();
+        s.add(l.unit_id);
+        unitsByCandidate.set(l.candidate_id, s);
+      }
+
       const employeeCountByUnit = new Map<string, number>();
       const employeeIdsByUnit = new Map<string, string[]>();
       const employees: EmployeeOption[] = [];
-      for (const c of (candidates ?? []) as Array<{ id: string; unit_id: string | null; full_name: string | null; employee_code: string | null }>) {
-        if (!c.unit_id) continue;
-        employeeCountByUnit.set(c.unit_id, (employeeCountByUnit.get(c.unit_id) ?? 0) + 1);
-        const ids = employeeIdsByUnit.get(c.unit_id) ?? [];
-        ids.push(c.id);
-        employeeIdsByUnit.set(c.unit_id, ids);
+      for (const [candId, unitSet] of unitsByCandidate) {
+        const c = candById.get(candId);
+        if (!c) continue;
+        for (const uid of unitSet) {
+          employeeCountByUnit.set(uid, (employeeCountByUnit.get(uid) ?? 0) + 1);
+          const ids = employeeIdsByUnit.get(uid) ?? [];
+          ids.push(candId);
+          employeeIdsByUnit.set(uid, ids);
+        }
         const name = (c.full_name || "").trim() || "Unnamed";
         const code = (c.employee_code || "").trim();
-        employees.push({ id: c.id, unit_id: c.unit_id, label: code ? `${name} (${code})` : name });
+        employees.push({
+          id: candId,
+          name,
+          code,
+          unit_ids: Array.from(unitSet),
+          label: code ? `${name} (${code})` : name,
+        });
       }
       employees.sort((a, b) => a.label.localeCompare(b.label));
 
