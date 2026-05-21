@@ -465,9 +465,6 @@ function AttendanceUnitsPage() {
                     <td className="px-5 py-4 align-top text-sm text-foreground">{unit.customer_name}</td>
                     <td className="px-5 py-4 align-top text-sm text-muted-foreground">{unit.location || "—"}</td>
                     <td className="px-5 py-4 align-top">
-                      <EmployeeChips list={unit.field_officers} empty="—" tone="amber" />
-                    </td>
-                    <td className="px-5 py-4 align-top">
                       <EmployeeChips list={unit.security_guards} empty="—" tone="emerald" />
                     </td>
                     <td className="px-5 py-4 text-right align-top">
