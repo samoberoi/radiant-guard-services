@@ -662,8 +662,9 @@ function MusterRollPage() {
                       <td className={cn(rowBase, "p-1")} rowSpan={2}>
                         {emp.doj ? new Date(emp.doj).toLocaleDateString("en-GB") : "—"}
                       </td>
-                      {dayList.map((d) => {
-                        const date = dateFor(d);
+                      {periodCells.map((cell) => {
+                        const date = cell.date;
+                        const d = cell.dayNum;
                         const entry = entryMap.get(`${emp.id}|${date}`);
                         const codeMeta = entry?.code ? codeMap.get(entry.code) : undefined;
                         const isSelected =
