@@ -11,6 +11,7 @@ import {
   Building2,
   ChevronDown,
   ClipboardList,
+  Wallet,
   FileText,
   Files,
   Fuel,
