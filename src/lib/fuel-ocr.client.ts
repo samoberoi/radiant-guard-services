@@ -108,14 +108,13 @@ function inferTime(text: string) {
 }
 
 function inferLocation(text: string) {
-  const lines = text
-    .split(/\n+/)
-    .map(cleanLine)
-    .filter(Boolean);
+  const lines = text.split(/\n+/).map(cleanLine).filter(Boolean);
 
-  const stationLine = lines.find((line) =>
-    /(petrol|pump|station|service|servo|fuel|iocl|indian oil|bharat|bpcl|hp|shell|nayara|essar)/i.test(line) &&
-    !/^invoice|receipt|cash memo|tax invoice/i.test(line),
+  const stationLine = lines.find(
+    (line) =>
+      /(petrol|pump|station|service|servo|fuel|iocl|indian oil|bharat|bpcl|hp|shell|nayara|essar)/i.test(
+        line,
+      ) && !/^invoice|receipt|cash memo|tax invoice/i.test(line),
   );
 
   return stationLine ?? "";
@@ -146,7 +145,9 @@ function inferFuelNumbers(text: string) {
   ]);
 
   const allNumbers = extractAllNumbers(text);
-  const quantityCandidates = allNumbers.filter((value) => value >= 1 && value <= 150 && !Number.isInteger(value));
+  const quantityCandidates = allNumbers.filter(
+    (value) => value >= 1 && value <= 150 && !Number.isInteger(value),
+  );
   const rateCandidates = allNumbers.filter((value) => value >= 40 && value <= 200);
   const amountCandidates = allNumbers.filter((value) => value >= 50 && value <= 50000);
 
@@ -154,9 +155,12 @@ function inferFuelNumbers(text: string) {
   rate ??= rateCandidates.find((value) => value >= 40 && value <= 200) ?? null;
   amount ??= [...amountCandidates].sort((a, b) => b - a)[0] ?? null;
 
-  if (quantity != null && rate != null && amount == null) amount = Number((quantity * rate).toFixed(2));
-  if (quantity == null && rate != null && amount != null && rate > 0) quantity = Number((amount / rate).toFixed(2));
-  if (rate == null && quantity != null && amount != null && quantity > 0) rate = Number((amount / quantity).toFixed(2));
+  if (quantity != null && rate != null && amount == null)
+    amount = Number((quantity * rate).toFixed(2));
+  if (quantity == null && rate != null && amount != null && rate > 0)
+    quantity = Number((amount / rate).toFixed(2));
+  if (rate == null && quantity != null && amount != null && quantity > 0)
+    rate = Number((amount / quantity).toFixed(2));
 
   if (quantity != null && (quantity <= 0 || quantity > 150)) quantity = null;
   if (rate != null && (rate < 40 || rate > 200)) rate = null;
@@ -180,7 +184,9 @@ export async function extractFuelFromPhotosLocally(photos: PhotoInput[]): Promis
     }),
   );
 
-  const byLabel = Object.fromEntries(recognized.map((item) => [item.label, item.text])) as Partial<Record<PhotoLabel, string>>;
+  const byLabel = Object.fromEntries(recognized.map((item) => [item.label, item.text])) as Partial<
+    Record<PhotoLabel, string>
+  >;
   const fuelText = [byLabel.receipt, byLabel.pump, byLabel.filling].filter(Boolean).join("\n");
   const receiptOrPumpText = [byLabel.receipt, byLabel.pump].filter(Boolean).join("\n");
   const { quantity, rate, amount } = inferFuelNumbers(receiptOrPumpText || fuelText);

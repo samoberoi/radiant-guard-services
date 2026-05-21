@@ -3,8 +3,22 @@ import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Download, Fuel, MapPin, Plus, Trash2, Upload, Image as ImageIcon, X,
-  Check, ChevronsUpDown, Sparkles, Wrench, Droplets, Receipt, ParkingCircle, Tag,
+  Download,
+  Fuel,
+  MapPin,
+  Plus,
+  Trash2,
+  Upload,
+  Image as ImageIcon,
+  X,
+  Check,
+  ChevronsUpDown,
+  Sparkles,
+  Wrench,
+  Droplets,
+  Receipt,
+  ParkingCircle,
+  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,10 +33,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Badge } from "@/components/ui/badge";
 import { useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
 import { cn } from "@/lib/utils";
@@ -127,14 +160,15 @@ function ExpenseManagerPage() {
         .order("entry_date", { ascending: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return ((data as unknown) as Record<string, unknown>[]).map(rowToEntry);
+      return (data as unknown as Record<string, unknown>[]).map(rowToEntry);
     },
   });
 
   const [vehicleFilter, setVehicleFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [from, setFrom] = useState<string>(() => {
-    const d = new Date(); d.setDate(1);
+    const d = new Date();
+    d.setDate(1);
     return d.toISOString().slice(0, 10);
   });
   const [to, setTo] = useState<string>(() => new Date().toISOString().slice(0, 10));
@@ -164,10 +198,16 @@ function ExpenseManagerPage() {
 
   const delMut = useMutation({
     mutationFn: async (e: ExpenseEntry) => {
-      const { error } = await supabase.from(ENTITY as never).delete().eq("id", e.id);
+      const { error } = await supabase
+        .from(ENTITY as never)
+        .delete()
+        .eq("id", e.id);
       if (error) throw error;
       await logActivity({
-        module: MODULE, action: "delete", entityType: ENTITY, entityId: e.id,
+        module: MODULE,
+        action: "delete",
+        entityType: ENTITY,
+        entityId: e.id,
         entityLabel: `${vehMap.get(e.vehicle_id) ?? "Vehicle"} • ${expenseLabel(e.expense_type)} • ${fmtDate(e.entry_date)} • ${inr(e.amount)}`,
         before: e as unknown as Record<string, unknown>,
       });
@@ -207,11 +247,15 @@ function ExpenseManagerPage() {
         <div>
           <Label className="text-xs text-muted-foreground">Vehicle</Label>
           <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
-            <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-56">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All vehicles</SelectItem>
               {vehicles.map((v) => (
-                <SelectItem key={v.id} value={v.id}>{v.vehicle_number}</SelectItem>
+                <SelectItem key={v.id} value={v.id}>
+                  {v.vehicle_number}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -219,18 +263,27 @@ function ExpenseManagerPage() {
         <div>
           <Label className="text-xs text-muted-foreground">Type</Label>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="w-44">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All types</SelectItem>
               {EXPENSE_TYPES.map((t) => (
-                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                <SelectItem key={t.value} value={t.value}>
+                  {t.label}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">From</Label>
-          <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-40" />
+          <Input
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            className="w-40"
+          />
         </div>
         <div>
           <Label className="text-xs text-muted-foreground">To</Label>
@@ -287,10 +340,14 @@ function ExpenseManagerPage() {
           total={stats.totalSpend}
           entries={stats.entries}
           segments={[
-            { label: "PetroCard", value: stats.byPayment["PetroCard"] ?? 0, color: "hsl(265 70% 60%)" },
-            { label: "Cash",      value: stats.byPayment["Cash"] ?? 0,      color: "hsl(150 65% 45%)" },
-            { label: "UPI",       value: stats.byPayment["UPI"] ?? 0,       color: "hsl(200 80% 55%)" },
-            { label: "Other",     value: stats.byPayment["Other"] ?? 0,     color: "hsl(0 0% 60%)" },
+            {
+              label: "PetroCard",
+              value: stats.byPayment["PetroCard"] ?? 0,
+              color: "hsl(265 70% 60%)",
+            },
+            { label: "Cash", value: stats.byPayment["Cash"] ?? 0, color: "hsl(150 65% 45%)" },
+            { label: "UPI", value: stats.byPayment["UPI"] ?? 0, color: "hsl(200 80% 55%)" },
+            { label: "Other", value: stats.byPayment["Other"] ?? 0, color: "hsl(0 0% 60%)" },
           ]}
         />
       </div>
@@ -315,19 +372,29 @@ function ExpenseManagerPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && (
-                <tr><td colSpan={11} className="px-3 py-8 text-center text-muted-foreground">Loading…</td></tr>
+                <tr>
+                  <td colSpan={11} className="px-3 py-8 text-center text-muted-foreground">
+                    Loading…
+                  </td>
+                </tr>
               )}
               {!isLoading && filtered.length === 0 && (
-                <tr><td colSpan={11} className="px-3 py-10 text-center text-muted-foreground">
-                  <Fuel className="mx-auto mb-2 h-6 w-6 opacity-50" />
-                  No expense entries in this range. Click <strong>Add Entry</strong> to log one.
-                </td></tr>
+                <tr>
+                  <td colSpan={11} className="px-3 py-10 text-center text-muted-foreground">
+                    <Fuel className="mx-auto mb-2 h-6 w-6 opacity-50" />
+                    No expense entries in this range. Click <strong>Add Entry</strong> to log one.
+                  </td>
+                </tr>
               )}
               {filtered.map((e) => (
                 <tr key={e.id} className="hover:bg-muted/20">
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     <div className="font-medium">{fmtDate(e.entry_date)}</div>
-                    {e.entry_time && <div className="text-xs text-muted-foreground">{e.entry_time.slice(0, 5)}</div>}
+                    {e.entry_time && (
+                      <div className="text-xs text-muted-foreground">
+                        {e.entry_time.slice(0, 5)}
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-2.5 font-medium">{vehMap.get(e.vehicle_id) ?? "—"}</td>
                   <td className="px-3 py-2.5">
@@ -341,26 +408,37 @@ function ExpenseManagerPage() {
                     {e.tags.length > 0 && (
                       <div className="mt-0.5 flex flex-wrap gap-1">
                         {e.tags.slice(0, 3).map((t) => (
-                          <span key={t} className="rounded-full bg-muted px-1.5 py-0.5 text-[10px]">{t}</span>
+                          <span key={t} className="rounded-full bg-muted px-1.5 py-0.5 text-[10px]">
+                            {t}
+                          </span>
                         ))}
                       </div>
                     )}
                   </td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">{e.odometer_km > 0 ? e.odometer_km.toLocaleString() : "—"}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums">{e.quantity > 0 ? e.quantity : "—"}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums font-semibold">{inr(e.amount)}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">
+                    {e.odometer_km > 0 ? e.odometer_km.toLocaleString() : "—"}
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">
+                    {e.quantity > 0 ? e.quantity : "—"}
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums font-semibold">
+                    {inr(e.amount)}
+                  </td>
                   <td className="px-3 py-2.5 text-xs">{e.payment_mode || "—"}</td>
                   <td className="px-3 py-2.5 text-xs">
                     {e.geo_lat && e.geo_lng ? (
                       <a
                         className="inline-flex items-center gap-1 text-accent hover:underline"
                         href={`https://www.google.com/maps?q=${e.geo_lat},${e.geo_lng}`}
-                        target="_blank" rel="noreferrer"
+                        target="_blank"
+                        rel="noreferrer"
                       >
                         <MapPin className="h-3 w-3" />
                         {e.location_text || "View map"}
                       </a>
-                    ) : (e.location_text || "—")}
+                    ) : (
+                      e.location_text || "—"
+                    )}
                   </td>
                   <td className="px-3 py-2.5">
                     <div className="flex items-center justify-center gap-1">
@@ -390,7 +468,8 @@ function ExpenseManagerPage() {
           const m = new Map<string, number>();
           for (const e of entries) {
             const prev = m.get(e.vehicle_id);
-            if (prev == null || (e.odometer_km ?? 0) > prev) m.set(e.vehicle_id, e.odometer_km ?? 0);
+            if (prev == null || (e.odometer_km ?? 0) > prev)
+              m.set(e.vehicle_id, e.odometer_km ?? 0);
           }
           return m;
         }, [entries])}
@@ -403,7 +482,10 @@ function ExpenseManagerPage() {
 function ProofThumb({ url, label }: { url: string; label: string }) {
   if (!url) {
     return (
-      <div className="flex h-9 w-9 items-center justify-center rounded border border-dashed border-border text-muted-foreground" title={`No ${label}`}>
+      <div
+        className="flex h-9 w-9 items-center justify-center rounded border border-dashed border-border text-muted-foreground"
+        title={`No ${label}`}
+      >
         <ImageIcon className="h-3.5 w-3.5 opacity-40" />
       </div>
     );
@@ -429,7 +511,11 @@ async function fileToDataUrl(file: File): Promise<string> {
 }
 
 function AddEntryDialog({
-  open, onOpenChange, vehicles, lastOdoByVehicle, onSaved,
+  open,
+  onOpenChange,
+  vehicles,
+  lastOdoByVehicle,
+  onSaved,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -474,7 +560,8 @@ function AddEntryDialog({
   }
 
   function recalcAmount(q: string, r: string) {
-    const qn = Number(q); const rn = Number(r);
+    const qn = Number(q);
+    const rn = Number(r);
     if (!Number.isNaN(qn) && !Number.isNaN(rn) && qn > 0 && rn > 0) {
       setAmount((qn * rn).toFixed(2));
     }
@@ -482,13 +569,27 @@ function AddEntryDialog({
 
   function reset() {
     setExpenseType("fuel");
-    setVehicleId(""); setOdometer(""); setQuantity(""); setRate(""); setAmount("");
-    setLocationText(""); setGeo(null); setNotes(""); setDescription(""); setTagsInput("");
-    setOdoFile(null); setPumpFile(null); setReceiptFile(null); setFillingFile(null);
+    setVehicleId("");
+    setOdometer("");
+    setQuantity("");
+    setRate("");
+    setAmount("");
+    setLocationText("");
+    setGeo(null);
+    setNotes("");
+    setDescription("");
+    setTagsInput("");
+    setOdoFile(null);
+    setPumpFile(null);
+    setReceiptFile(null);
+    setFillingFile(null);
   }
 
   function captureLocation() {
-    if (!navigator.geolocation) { toast.error("Geolocation not available"); return; }
+    if (!navigator.geolocation) {
+      toast.error("Geolocation not available");
+      return;
+    }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setGeo({ lat: +pos.coords.latitude.toFixed(6), lng: +pos.coords.longitude.toFixed(6) });
@@ -555,19 +656,32 @@ function AddEntryDialog({
     if (!file) return "";
     const ext = file.name.split(".").pop() || "jpg";
     const path = `${vehicleId || "unknown"}/${entryDate}/${label}-${Date.now()}.${ext}`;
-    const { error } = await supabase.storage.from(BUCKET).upload(path, file, { upsert: false, contentType: file.type });
+    const { error } = await supabase.storage
+      .from(BUCKET)
+      .upload(path, file, { upsert: false, contentType: file.type });
     if (error) throw error;
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
     return data.publicUrl;
   }
 
   async function handleSave() {
-    if (!vehicleId) { toast.error("Select a vehicle"); return; }
-    if (!amount) { toast.error("Enter amount"); return; }
+    if (!vehicleId) {
+      toast.error("Select a vehicle");
+      return;
+    }
+    if (!amount) {
+      toast.error("Enter amount");
+      return;
+    }
     if (isFuel) {
-      if (!odometer) { toast.error("Enter odometer reading"); return; }
+      if (!odometer) {
+        toast.error("Enter odometer reading");
+        return;
+      }
       if (minOdo > 0 && Number(odometer) < minOdo) {
-        toast.error(`Odometer must be at least ${minOdo.toLocaleString()} km (last recorded reading)`);
+        toast.error(
+          `Odometer must be at least ${minOdo.toLocaleString()} km (last recorded reading)`,
+        );
         return;
       }
       if (!odoFile || !pumpFile || !receiptFile) {
@@ -586,7 +700,10 @@ function AddEntryDialog({
         uploadProof(receiptFile, "receipt"),
         uploadProof(fillingFile, "filling"),
       ]);
-      const tags = tagsInput.split(",").map((t) => t.trim()).filter(Boolean);
+      const tags = tagsInput
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean);
       const payload = {
         vehicle_id: vehicleId,
         expense_type: expenseType,
@@ -617,7 +734,9 @@ function AddEntryDialog({
       if (error) throw error;
       const veh = vehicles.find((v) => v.id === vehicleId);
       await logActivity({
-        module: MODULE, action: "create", entityType: ENTITY,
+        module: MODULE,
+        action: "create",
+        entityType: ENTITY,
         entityId: String((data as { id: string }).id),
         entityLabel: `${veh?.vehicle_number ?? "Vehicle"} • ${expenseLabel(expenseType)} • ${fmtDate(entryDate)} • ${inr(Number(amount))}`,
         after: payload as unknown as Record<string, unknown>,
@@ -634,7 +753,13 @@ function AddEntryDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) reset();
+        onOpenChange(v);
+      }}
+    >
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add Expense Entry</DialogTitle>
@@ -679,7 +804,11 @@ function AddEntryDialog({
                     role="combobox"
                     className="w-full justify-between font-normal"
                   >
-                    {selectedVehicle ? selectedVehicle.vehicle_number : <span className="text-muted-foreground">Select vehicle</span>}
+                    {selectedVehicle ? (
+                      selectedVehicle.vehicle_number
+                    ) : (
+                      <span className="text-muted-foreground">Select vehicle</span>
+                    )}
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
@@ -695,7 +824,12 @@ function AddEntryDialog({
                             value={v.vehicle_number}
                             onSelect={() => pickVehicle(v.id)}
                           >
-                            <Check className={cn("mr-2 h-4 w-4", vehicleId === v.id ? "opacity-100" : "opacity-0")} />
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                vehicleId === v.id ? "opacity-100" : "opacity-0",
+                              )}
+                            />
                             {v.vehicle_number}
                           </CommandItem>
                         ))}
@@ -709,9 +843,15 @@ function AddEntryDialog({
               <div>
                 <Label>Fuel Type</Label>
                 <Select value={fuelType} onValueChange={setFuelType}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
-                    {FUEL_TYPES.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                    {FUEL_TYPES.map((f) => (
+                      <SelectItem key={f} value={f}>
+                        {f}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -743,9 +883,15 @@ function AddEntryDialog({
             <div>
               <Label>Payment Mode</Label>
               <Select value={paymentMode} onValueChange={setPaymentMode}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
-                  {PAYMENT_MODES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  {PAYMENT_MODES.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -753,40 +899,74 @@ function AddEntryDialog({
               <>
                 <div>
                   <Label>Quantity ({fuelType === "CNG" ? "kg" : "L"})</Label>
-                  <Input type="number" inputMode="decimal" value={quantity}
-                    onChange={(e) => { setQuantity(e.target.value); recalcAmount(e.target.value, rate); }}
-                    placeholder="0.00" />
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    value={quantity}
+                    onChange={(e) => {
+                      setQuantity(e.target.value);
+                      recalcAmount(e.target.value, rate);
+                    }}
+                    placeholder="0.00"
+                  />
                 </div>
                 <div>
                   <Label>Rate (₹ per unit)</Label>
-                  <Input type="number" inputMode="decimal" value={rate}
-                    onChange={(e) => { setRate(e.target.value); recalcAmount(quantity, e.target.value); }}
-                    placeholder="0.00" />
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    value={rate}
+                    onChange={(e) => {
+                      setRate(e.target.value);
+                      recalcAmount(quantity, e.target.value);
+                    }}
+                    placeholder="0.00"
+                  />
                 </div>
               </>
             )}
             <div className={isFuel ? "sm:col-span-2" : ""}>
               <Label>Amount (₹) *</Label>
-              <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" />
+              <Input
+                type="number"
+                inputMode="decimal"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+              />
             </div>
           </div>
 
           {!isFuel && (
             <div>
               <Label>Description *</Label>
-              <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Brake pad replacement, exterior wash" />
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="e.g. Brake pad replacement, exterior wash"
+              />
             </div>
           )}
 
           <div>
-            <Label>Tags <span className="text-xs text-muted-foreground">(comma-separated)</span></Label>
-            <Input value={tagsInput} onChange={(e) => setTagsInput(e.target.value)} placeholder="urgent, warranty, vendor-xyz" />
+            <Label>
+              Tags <span className="text-xs text-muted-foreground">(comma-separated)</span>
+            </Label>
+            <Input
+              value={tagsInput}
+              onChange={(e) => setTagsInput(e.target.value)}
+              placeholder="urgent, warranty, vendor-xyz"
+            />
           </div>
 
           <div>
             <Label>Location</Label>
             <div className="flex gap-2">
-              <Input value={locationText} onChange={(e) => setLocationText(e.target.value)} placeholder="Place / area" />
+              <Input
+                value={locationText}
+                onChange={(e) => setLocationText(e.target.value)}
+                placeholder="Place / area"
+              />
               <Button type="button" variant="outline" onClick={captureLocation}>
                 <MapPin className="mr-2 h-4 w-4" /> Geo-tag
               </Button>
@@ -794,7 +974,11 @@ function AddEntryDialog({
             {geo && (
               <div className="mt-1 text-xs text-muted-foreground flex items-center gap-1">
                 <MapPin className="h-3 w-3" /> {geo.lat}, {geo.lng}
-                <button type="button" className="ml-1 text-destructive" onClick={() => setGeo(null)}>
+                <button
+                  type="button"
+                  className="ml-1 text-destructive"
+                  onClick={() => setGeo(null)}
+                >
                   <X className="h-3 w-3" />
                 </button>
               </div>
@@ -804,7 +988,12 @@ function AddEntryDialog({
           {isFuel ? (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Photos <span className="text-xs text-muted-foreground">(odometer, pump, receipt required · filling optional)</span></Label>
+                <Label>
+                  Photos{" "}
+                  <span className="text-xs text-muted-foreground">
+                    (odometer, pump, receipt required · filling optional)
+                  </span>
+                </Label>
                 <Button
                   type="button"
                   size="sm"
@@ -834,13 +1023,22 @@ function AddEntryDialog({
 
           <div>
             <Label>Notes</Label>
-            <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional remarks" rows={2} />
+            <Textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Optional remarks"
+              rows={2}
+            />
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
-          <Button onClick={handleSave} disabled={busy}>{busy ? "Saving…" : "Save Entry"}</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={busy}>
+            {busy ? "Saving…" : "Save Entry"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -848,8 +1046,14 @@ function AddEntryDialog({
 }
 
 function FileTile({
-  label, file, onChange,
-}: { label: string; file: File | null; onChange: (f: File | null) => void }) {
+  label,
+  file,
+  onChange,
+}: {
+  label: string;
+  file: File | null;
+  onChange: (f: File | null) => void;
+}) {
   const ref = useRef<HTMLInputElement>(null);
   const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : ""), [file]);
   return (
@@ -865,10 +1069,18 @@ function FileTile({
       />
       {file ? (
         <div className="mt-2 flex items-center gap-2">
-          <img src={previewUrl} alt={label} className="h-14 w-14 rounded object-cover border border-border" />
+          <img
+            src={previewUrl}
+            alt={label}
+            className="h-14 w-14 rounded object-cover border border-border"
+          />
           <div className="min-w-0 flex-1">
             <div className="truncate text-xs">{file.name}</div>
-            <button type="button" className="text-xs text-destructive hover:underline" onClick={() => onChange(null)}>
+            <button
+              type="button"
+              className="text-xs text-destructive hover:underline"
+              onClick={() => onChange(null)}
+            >
               Remove
             </button>
           </div>
@@ -891,8 +1103,16 @@ function FileTile({
 type DonutSeg = { label: string; value: number; color: string };
 
 function DonutBreakdown({
-  title, total, entries, segments,
-}: { title: string; total: number; entries: number; segments: DonutSeg[] }) {
+  title,
+  total,
+  entries,
+  segments,
+}: {
+  title: string;
+  total: number;
+  entries: number;
+  segments: DonutSeg[];
+}) {
   const size = 140;
   const stroke = 16;
   const r = (size - stroke) / 2;
@@ -902,12 +1122,21 @@ function DonutBreakdown({
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
       <div className="mb-3 flex items-baseline justify-between">
-        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</div>
+        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          {title}
+        </div>
         <div className="text-xs text-muted-foreground">{entries} entries</div>
       </div>
       <div className="flex items-center gap-5">
         <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="shrink-0">
-          <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="hsl(var(--muted))" strokeWidth={stroke} />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={r}
+            fill="none"
+            stroke="hsl(var(--muted))"
+            strokeWidth={stroke}
+          />
           {segments.map((s) => {
             const frac = (s.value || 0) / denom;
             const len = frac * c;
@@ -918,15 +1147,32 @@ function DonutBreakdown({
             return (
               <circle
                 key={s.label}
-                cx={size / 2} cy={size / 2} r={r}
-                fill="none" stroke={s.color} strokeWidth={stroke}
-                strokeDasharray={dash} strokeDashoffset={dashOffset}
+                cx={size / 2}
+                cy={size / 2}
+                r={r}
+                fill="none"
+                stroke={s.color}
+                strokeWidth={stroke}
+                strokeDasharray={dash}
+                strokeDashoffset={dashOffset}
                 transform={`rotate(-90 ${size / 2} ${size / 2})`}
               />
             );
           })}
-          <text x={size / 2} y={size / 2 - 4} textAnchor="middle" className="fill-muted-foreground text-[10px] uppercase tracking-wide">Total</text>
-          <text x={size / 2} y={size / 2 + 14} textAnchor="middle" className="fill-foreground text-[15px] font-bold">
+          <text
+            x={size / 2}
+            y={size / 2 - 4}
+            textAnchor="middle"
+            className="fill-muted-foreground text-[10px] uppercase tracking-wide"
+          >
+            Total
+          </text>
+          <text
+            x={size / 2}
+            y={size / 2 + 14}
+            textAnchor="middle"
+            className="fill-foreground text-[15px] font-bold"
+          >
             ₹{Math.round(total).toLocaleString("en-IN")}
           </text>
         </svg>
@@ -935,10 +1181,17 @@ function DonutBreakdown({
             const pct = total > 0 ? Math.round((s.value / total) * 100) : 0;
             return (
               <li key={s.label} className="flex items-center gap-2 text-sm">
-                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: s.color }} />
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ background: s.color }}
+                />
                 <span className="min-w-0 flex-1 truncate">{s.label}</span>
-                <span className="tabular-nums text-muted-foreground">₹{Math.round(s.value).toLocaleString("en-IN")}</span>
-                <span className="w-10 rounded-full bg-muted px-1.5 py-0.5 text-center text-[10px] tabular-nums">{pct}%</span>
+                <span className="tabular-nums text-muted-foreground">
+                  ₹{Math.round(s.value).toLocaleString("en-IN")}
+                </span>
+                <span className="w-10 rounded-full bg-muted px-1.5 py-0.5 text-center text-[10px] tabular-nums">
+                  {pct}%
+                </span>
               </li>
             );
           })}
