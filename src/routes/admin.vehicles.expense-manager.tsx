@@ -144,7 +144,7 @@ function expenseLabel(value: string) {
 function ExpenseManagerPage() {
   const qc = useQueryClient();
   const vehOptsQ = useVehicleOptions();
-  const vehicles = vehOptsQ.data ?? [];
+  const vehicles = useMemo(() => vehOptsQ.data ?? [], [vehOptsQ.data]);
   const vehMap = useMemo(() => {
     const m = new Map<string, string>();
     for (const v of vehicles) m.set(v.id, v.vehicle_number);
