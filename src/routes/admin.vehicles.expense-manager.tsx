@@ -2,7 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
 import { extractFuelFromPhotos } from "@/lib/fuel-extraction.functions";
-import { extractFuelFromPhotosLocally } from "@/lib/fuel-ocr.client";
+// Note: fuel-ocr.client is imported dynamically inside the handler to avoid
+// pulling a browser-only module into the SSR bundle.
+import type { extractFuelFromPhotosLocally as ExtractFuelFromPhotosLocallyType } from "@/lib/fuel-ocr.client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download,
