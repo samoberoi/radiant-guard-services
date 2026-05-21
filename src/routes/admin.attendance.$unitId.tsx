@@ -336,13 +336,21 @@ function MusterRollPage() {
   });
 
 
-  // Drag-to-select state
+  // Drag-to-select state (attendance row)
   const [dragCandidateId, setDragCandidateId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerCandidateId, setPickerCandidateId] = useState<string | null>(null);
   const [pickerDates, setPickerDates] = useState<string[]>([]);
+
+  // Drag-to-select state (OT row) — mirrors attendance pattern.
+  const [otDragCandidateId, setOtDragCandidateId] = useState<string | null>(null);
+  const [isOtDragging, setIsOtDragging] = useState(false);
+  const [otSelectedDates, setOtSelectedDates] = useState<Set<string>>(new Set());
+  const [otPickerOpen, setOtPickerOpen] = useState(false);
+  const [otPickerCandidateId, setOtPickerCandidateId] = useState<string | null>(null);
+  const [otPickerDates, setOtPickerDates] = useState<string[]>([]);
 
   // Track whether the current mousedown turned into an actual drag across
   // multiple cells. A plain click (no drag, no modifier) should open the
@@ -354,8 +362,6 @@ function MusterRollPage() {
     if (!isDragging) return;
     const onUp = () => {
       setIsDragging(false);
-      // On any non-modifier mouseup (drag OR single click), open the picker
-      // for the currently selected dates and clear the selection.
       setSelectedDates((current) => {
         if (current.size > 0 && dragCandidateId) {
           const sorted = Array.from(current).sort();
@@ -373,6 +379,26 @@ function MusterRollPage() {
     return () => window.removeEventListener("mouseup", onUp);
   }, [isDragging, dragCandidateId]);
 
+  useEffect(() => {
+    if (!isOtDragging) return;
+    const onUp = () => {
+      setIsOtDragging(false);
+      setOtSelectedDates((current) => {
+        if (current.size > 0 && otDragCandidateId) {
+          const sorted = Array.from(current).sort();
+          setOtPickerCandidateId(otDragCandidateId);
+          setOtPickerDates(sorted);
+          setOtPickerOpen(true);
+          setOtDragCandidateId(null);
+          return new Set();
+        }
+        return current;
+      });
+    };
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+  }, [isOtDragging, otDragCandidateId]);
+
   const openPickerForSelection = () => {
     if (!dragCandidateId || selectedDates.size === 0) return;
     setPickerCandidateId(dragCandidateId);
@@ -380,9 +406,21 @@ function MusterRollPage() {
     setPickerOpen(true);
   };
 
+  const openOtPickerForSelection = () => {
+    if (!otDragCandidateId || otSelectedDates.size === 0) return;
+    setOtPickerCandidateId(otDragCandidateId);
+    setOtPickerDates(Array.from(otSelectedDates).sort());
+    setOtPickerOpen(true);
+  };
+
   const clearSelection = () => {
     setSelectedDates(new Set());
     setDragCandidateId(null);
+  };
+
+  const clearOtSelection = () => {
+    setOtSelectedDates(new Set());
+    setOtDragCandidateId(null);
   };
 
   const applyCodeToSelection = async (code: string) => {
@@ -404,6 +442,34 @@ function MusterRollPage() {
       setSelectedDates(new Set());
       setDragCandidateId(null);
       toast.success(`Applied ${code || "Clear"} to ${pickerDates.length} day${pickerDates.length > 1 ? "s" : ""}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
+    }
+  };
+
+  const applyOtToSelection = async (hours: number) => {
+    if (!otPickerCandidateId) return;
+    try {
+      const rows = otPickerDates.map((d) => ({
+        unit_id: unitId,
+        candidate_id: otPickerCandidateId,
+        entry_date: d,
+        code: entryMap.get(`${otPickerCandidateId}|${d}`)?.code ?? "",
+        ot_hours: hours,
+      }));
+      const { error } = await supabase
+        .from("attendance_entries")
+        .upsert(rows, { onConflict: "unit_id,candidate_id,entry_date" });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, periodStart, periodEnd] });
+      setOtPickerOpen(false);
+      setOtSelectedDates(new Set());
+      setOtDragCandidateId(null);
+      toast.success(
+        hours > 0
+          ? `Set ${hours}h OT on ${otPickerDates.length} day${otPickerDates.length > 1 ? "s" : ""}`
+          : `Cleared OT on ${otPickerDates.length} day${otPickerDates.length > 1 ? "s" : ""}`,
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
     }
