@@ -528,59 +528,48 @@ function MusterRollPage() {
                         const date = dateFor(d);
                         const entry = entryMap.get(`${emp.id}|${date}`);
                         const codeMeta = entry?.code ? codeMap.get(entry.code) : undefined;
+                        const isSelected =
+                          isDragging && dragCandidateId === emp.id && selectedDates.has(date);
                         return (
                           <td
                             key={`a-${d}`}
-                            className={cn(rowBase, "p-0 print:bg-transparent")}
+                            className={cn(
+                              rowBase,
+                              "p-0 print:bg-transparent select-none cursor-pointer",
+                              isSelected && "ring-2 ring-primary ring-inset",
+                            )}
                             style={{
                               height: 22,
                               minWidth: 18,
                               backgroundColor: codeMeta?.color ? `${codeMeta.color}22` : undefined,
                             }}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setDragCandidateId(emp.id);
+                              setIsDragging(true);
+                              setSelectedDates(new Set([date]));
+                            }}
+                            onMouseEnter={() => {
+                              if (isDragging && dragCandidateId === emp.id) {
+                                setSelectedDates((prev) => {
+                                  if (prev.has(date)) return prev;
+                                  const next = new Set(prev);
+                                  next.add(date);
+                                  return next;
+                                });
+                              }
+                            }}
                           >
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="h-full w-full px-0 text-[10px] font-semibold leading-none hover:bg-slate-100/60 focus:outline-none"
-                                  style={{ color: codeMeta?.color }}
-                                >
-                                  {entry?.code || ""}
-                                </button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-48 p-1 print:hidden" align="start">
-                                <div className="grid grid-cols-3 gap-1">
-                                  {codes.map((c) => (
-                                    <button
-                                      key={c.id}
-                                      type="button"
-                                      onClick={() => {
-                                        upsertEntry.mutate({ candidate_id: emp.id, entry_date: date, code: c.code });
-                                        (document.activeElement as HTMLElement | null)?.blur();
-                                      }}
-                                      className={cn(
-                                        "rounded border px-1 py-1 text-[10px] font-semibold transition",
-                                        entry?.code === c.code ? "border-foreground" : "border-border hover:bg-muted",
-                                      )}
-                                      style={{ color: c.color }}
-                                      title={c.label}
-                                    >
-                                      {c.code}
-                                    </button>
-                                  ))}
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => upsertEntry.mutate({ candidate_id: emp.id, entry_date: date, code: "" })}
-                                  className="mt-1 w-full rounded border border-border px-1 py-1 text-[10px] text-muted-foreground hover:bg-muted"
-                                >
-                                  Clear
-                                </button>
-                              </PopoverContent>
-                            </Popover>
+                            <div
+                              className="h-full w-full px-0 text-[10px] font-semibold leading-none flex items-center justify-center"
+                              style={{ color: codeMeta?.color }}
+                            >
+                              {entry?.code || ""}
+                            </div>
                           </td>
                         );
                       })}
+
                       <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.pDays}</td>
                       <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.otHours}</td>
                       <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.tDays}</td>
