@@ -297,6 +297,7 @@ function useContracts() {
       service_type_id: p.serviceTypeId,
       payroll_window_id: p.payrollWindowId,
       billing_type_id: p.billingTypeId,
+      esic_branch_id: p.esicBranchId,
       gst_option: p.gstOption,
     };
     if (opts.isNew) {
