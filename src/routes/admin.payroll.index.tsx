@@ -219,9 +219,19 @@ function PayrollUnitsPage() {
             <Filter
               label="Organization"
               value={orgFilter}
-              onChange={setOrgFilter}
+              onChange={(v) => {
+                setOrgFilter(v);
+                setEmployeeFilter("all");
+              }}
               options={organizations.map((o) => ({ value: o.id, label: o.name }))}
               allLabel={`All organizations (${organizations.length})`}
+            />
+            <Filter
+              label="Employee"
+              value={employeeFilter}
+              onChange={setEmployeeFilter}
+              options={employeeOptions.map((e) => ({ value: e.id, label: e.label }))}
+              allLabel={`All employees (${employeeOptions.length})`}
             />
             <Filter
               label="Approved period"
