@@ -1,62 +1,62 @@
-## Goal
+# Attendance approval workflow + Payroll section
 
-Add a Prospects vs Clients workflow to the Client Contracts page, mirroring the Employees module pattern. Prospect contracts go through the same approval + signature flow already built; on sign, they "promote" to Client and a contract code is issued.
+## 1. Attendance approval workflow
 
-## Lifecycle
+Add a status lifecycle per (unit, payroll period) attendance sheet:
+`draft → submitted → approved | rejected`. While in `draft` or `rejected`, users can edit cells; once `submitted`, cells lock; once `approved`, the sheet is read-only and unlocks Payroll for that unit/period.
 
-```
-Prospect (draft)
-   └─ submit → Prospect (pending_approval)
-        ├─ reject → Prospect (rejected)
-        └─ approve + sign → Client (signed/active)  ← contract_code generated here
-                                  └─ end_date<today → Client (expired)
-```
+**DB change** — new table `attendance_sheets`:
+- unit_id (uuid)
+- period_start, period_end (date)
+- status (text: draft/submitted/approved/rejected)
+- submitted_at/by, approved_at/by, rejected_at/by, rejection_reason
+- unique(unit_id, period_start, period_end)
+- standard RLS (authenticated full access, matching other tables)
 
-Key rule: a contract is a **Prospect** until it is signed. Once signed it becomes a **Client** and gets a permanent `contract_code`. Rejected stays under Prospects. Expired stays under Clients.
+**UI in `admin.attendance.$unitId.tsx`**:
+- Header status pill (Draft / Submitted / Approved / Rejected).
+- Action buttons (right side of header):
+  - Draft/Rejected → `Submit for Approval`
+  - Submitted → `Approve` (green) + `Reject` (red, opens reason dialog)
+  - Approved → `Reopen` (admin only, optional)
+- When status ≠ draft/rejected, all attendance/OT cells become read-only.
+- Log every transition via `logActivity` (module: "Attendance").
 
-## Data model
+## 2. New Payroll section
 
-Add to `client_contracts`:
-- `record_type text not null default 'prospect'` — `'prospect' | 'client'`
-- `prospect_code text` — assigned on insert (e.g. `PROS-0001`), kept for audit even after promotion
-- `promoted_at timestamptz` — when it became a client
-- `contract_code` — already exists; **leave null on insert**, populate only on approval+sign
+**Sidebar**: add `Payroll` link below `Attendance` in `src/routes/admin.tsx` (Wallet icon), route `/admin/payroll`.
 
-Backfill: existing rows with `approval_status='approved'` or non-empty `contract_code` → `record_type='client'`; everything else → `'prospect'`. Generate `prospect_code` for all existing prospects.
+**Routes**:
+- `src/routes/admin.payroll.tsx` — `<Outlet />`
+- `src/routes/admin.payroll.index.tsx` — filter UI (organization, payroll cycle/window, period) → grid of approved units (same look as attendance index, but only units whose `attendance_sheets.status = 'approved'` for the selected period).
+- `src/routes/admin.payroll.$unitId.tsx` — wage computation table for that unit's deployed people.
 
-Sequences:
-- `prospect_code_seq` for `PROS-0001…`
-- Existing contract code generator stays; only fires on promotion.
+**Computation page** (per unit / per period):
+For each candidate mapped to the unit (via `candidate_units`) whose attendance row exists:
+1. Pull attendance entries → derive P Days, PH Days, OT hours, OT Days, Other Paid Leaves, T Days (same formulas already in attendance page; extract into `src/lib/payroll-calc.ts`).
+2. Pull contract resource for the candidate's designation from `contract_resources` (gross, components, deductions, benefits, employer contributions, payroll_day_base).
+3. Compute:
+   - Per-day rate = gross / payroll_day_base (fixed_days or month days)
+   - Earned gross = per-day rate × T Days
+   - Allocate earned gross across components proportionally to contract components
+   - Apply statutory deductions (PF, ESIC via esic_branch, PT via state slabs, LWF) using existing `pt-lookup` / `lwf-lookup` helpers
+   - Net pay = earned gross − employee deductions
+   - Employer cost = earned gross + employer contributions
+4. Display in a table: Name | Designation | T Days | OT Hrs | Gross Earned | Components breakdown (expandable) | Deductions | Net Pay | Employer Cost.
+5. Totals row at bottom + CSV export.
 
-## UI
+This page is read-only — it just reflects what attendance + contract config define.
 
-`admin.contracts.client-contracts.tsx`:
-- Top-level `Tabs`: **Clients** (default) | **Prospects**, with counts.
-- Page subtitle / "New Contract" button always creates a `prospect`.
-- Prospects tab columns: Prospect Code, Unit, Service Type, Created, Approval Status, Actions (Approve / Reject / Edit / Delete).
-- Clients tab columns: Contract Code, Unit, Service Type, Start/End, Status (Active/Expired), Actions (View / Download signed PDF / Delete).
-- Stat cards split per tab.
+## 3. Files touched
 
-`ContractApprovalDialog`:
-- On Approve+Sign, in addition to existing updates, set `record_type='client'`, `promoted_at=now()`, generate `contract_code`, notify creator: *"Prospect PROS-0007 approved and promoted to client CON-0012."*
-- Reject: stays in Prospects tab with reason.
+- New: `supabase/migrations/<ts>_attendance_sheets.sql`
+- New: `src/lib/payroll-calc.ts` (shared computation)
+- New: `src/routes/admin.payroll.tsx`, `admin.payroll.index.tsx`, `admin.payroll.$unitId.tsx`
+- Edited: `src/routes/admin.attendance.$unitId.tsx` (status bar + submit/approve/reject + lock cells)
+- Edited: `src/routes/admin.tsx` (sidebar Payroll link)
 
-## Notifications
+## 4. Notes / scope
 
-Reuse existing `notifications` table + `NotificationBell`. New event types:
-- `contract_submitted` (creator → admins, future) — for now skipped, single-admin.
-- `contract_approved` — already wired; message updated to mention promotion.
-- `contract_rejected` — already wired.
-
-## Out of scope
-
-- RBAC split between submitter and approver (still single admin user).
-- Editing a signed/client contract (locked, same as today).
-- Converting a Client back to Prospect.
-
-## Files touched
-
-- New migration: add `record_type`, `prospect_code`, `promoted_at`, `prospect_code_seq`, backfill.
-- `src/routes/admin.contracts.client-contracts.tsx` — add Tabs, split lists, default insert as prospect, no `contract_code` on create.
-- `src/components/ContractApprovalDialog.tsx` — on approve+sign, promote + generate contract code.
-- `src/lib/notifications.ts` — minor message tweak (optional).
+- "Approved" gate is per (unit, period). If the user later changes a payroll period in Payroll filters, only units approved for that exact period appear.
+- Rejection requires a reason; it's surfaced back to the attendance page.
+- This delivers the end-to-end skeleton — formulas use the components/deductions already on each `contract_resources` row. If you want different statutory rules later (PF cap, ESIC cutoff, bonus, etc.), we tune `payroll-calc.ts` without touching UI.
