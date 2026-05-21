@@ -132,6 +132,7 @@ type PayrollWindow = {
   processingDay: number;
 };
 type BillingType = { id: string; name: string };
+type EsicBranch = { id: string; esicCode: string; location: string };
 type Designation = { id: string; name: string; code: string };
 type AllowanceType = {
   id: string;
