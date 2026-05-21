@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { classifyAttendanceEmployee, matchesAttendanceScope, type AttendanceScopeAssignment, type AttendanceUnitContext } from "@/lib/attendance";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/admin/attendance/")({
@@ -34,8 +35,10 @@ type UnitRow = {
   code: string;
   name: string;
   location: string;
+  branch_id: string | null;
   customer_id: string;
   customer_name: string;
+  billing_state: string | null;
   contract_codes: string[];
   contract_end: string | null;
   active_employee_count: number;
@@ -53,15 +56,6 @@ type AttendancePageData = {
 
 const ACTIVE_EMPLOYEE_STATUSES = ["active"] as const;
 
-const FIELD_OFFICER_KEYWORDS = ["field officer", "field-officer", "fieldofficer", "fo "];
-const SECURITY_GUARD_KEYWORDS = ["security guard", "guard", "security-guard", "sg ", "security_guard"];
-
-function matchDesignation(name: string, keywords: string[]) {
-  const n = (name || "").toLowerCase().trim();
-  if (!n) return false;
-  return keywords.some((k) => n.includes(k.trim()));
-}
-
 function AttendanceUnitsPage() {
   const [q, setQ] = useState("");
   const [orgFilter, setOrgFilter] = useState<string>("all");
@@ -70,7 +64,7 @@ function AttendanceUnitsPage() {
   const [sgFilter, setSgFilter] = useState<string>("all");
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["attendance-dashboard-v4"],
+    queryKey: ["attendance-dashboard-v5"],
     queryFn: async (): Promise<AttendancePageData> => {
       const { data: contracts, error: contractsError } = await supabase
         .from("client_contracts")
@@ -102,39 +96,72 @@ function AttendanceUnitsPage() {
         { data: units, error: unitsError },
         { data: primaryCandidates, error: primaryError },
         { data: candidateLinks, error: linksError },
+        { data: scopeAssignments, error: scopeAssignmentsError },
       ] = await Promise.all([
-        supabase.from("units").select("id, code, name, location, customer_id").in("id", unitIds),
+        supabase.from("units").select("id, code, name, location, branch_id, customer_id, billing_state").in("id", unitIds),
         supabase
           .from("candidates")
-          .select("id, full_name, designation_id, unit_id")
+          .select("id, full_name, designation_id, role_key, unit_id")
           .in("unit_id", unitIds)
           .eq("is_enabled", true)
           .in("status", [...ACTIVE_EMPLOYEE_STATUSES]),
         supabase.from("candidate_units").select("candidate_id, unit_id").in("unit_id", unitIds),
+        supabase.from("employee_scope_assignments").select("candidate_id, scope_type, scope_id").limit(5000),
       ]);
       if (unitsError) throw unitsError;
       if (primaryError) throw primaryError;
       if (linksError) throw linksError;
+      if (scopeAssignmentsError) throw scopeAssignmentsError;
 
       const linkCandidateIds = Array.from(new Set((candidateLinks ?? []).map((l) => l.candidate_id)));
-      let linkedCandidates: Array<{ id: string; full_name: string; designation_id: string | null }> = [];
-      if (linkCandidateIds.length > 0) {
+      const scopeAssignmentRows = (scopeAssignments ?? []) as AttendanceScopeAssignment[];
+      const unitsById = new Map(
+        ((units ?? []) as Array<{
+          id: string;
+          code: string;
+          name: string;
+          location: string | null;
+          branch_id: string | null;
+          customer_id: string | null;
+          billing_state: string | null;
+        }>).map((unit) => [unit.id, unit]),
+      );
+
+      const scopedCandidateIds = new Set<string>();
+      for (const assignment of scopeAssignmentRows) {
+        const matchesAnyUnit = unitIds.some((unitId) => {
+          const unit = unitsById.get(unitId);
+          if (!unit) return false;
+          const context: AttendanceUnitContext = {
+            id: unit.id,
+            branch_id: unit.branch_id,
+            customer_id: unit.customer_id,
+            billing_state: unit.billing_state,
+          };
+          return matchesAttendanceScope(context, assignment);
+        });
+        if (matchesAnyUnit) scopedCandidateIds.add(assignment.candidate_id);
+      }
+
+      const secondaryCandidateIds = Array.from(new Set([...linkCandidateIds, ...scopedCandidateIds]));
+      let secondaryCandidates: Array<{ id: string; full_name: string; designation_id: string | null; role_key: string | null }> = [];
+      if (secondaryCandidateIds.length > 0) {
         const { data: linkedRows, error: linkedError } = await supabase
           .from("candidates")
-          .select("id, full_name, designation_id")
-          .in("id", linkCandidateIds)
+          .select("id, full_name, designation_id, role_key")
+          .in("id", secondaryCandidateIds)
           .eq("is_enabled", true)
           .in("status", [...ACTIVE_EMPLOYEE_STATUSES]);
         if (linkedError) throw linkedError;
-        linkedCandidates = linkedRows ?? [];
+        secondaryCandidates = linkedRows ?? [];
       }
-      const linkedMap = new Map(linkedCandidates.map((c) => [c.id, c]));
+      const secondaryMap = new Map(secondaryCandidates.map((c) => [c.id, c]));
 
       const designationIds = Array.from(
         new Set(
           [
             ...(primaryCandidates ?? []).map((c) => c.designation_id),
-            ...linkedCandidates.map((c) => c.designation_id),
+            ...secondaryCandidates.map((c) => c.designation_id),
           ].filter(Boolean) as string[],
         ),
       );
@@ -156,7 +183,7 @@ function AttendanceUnitsPage() {
       const customerMap = new Map((customers ?? []).map((c) => [c.id, c.name as string]));
 
       type UnitAcc = {
-        employees: Map<string, { name: string; designation: string }>;
+        employees: Map<string, { name: string; designation: string; roleKey: string | null }>;
       };
       const acc = new Map<string, UnitAcc>();
       const ensure = (unitId: string) => {
@@ -169,15 +196,37 @@ function AttendanceUnitsPage() {
         ensure(c.unit_id).employees.set(c.id, {
           name: c.full_name || "—",
           designation: (c.designation_id && dMap.get(c.designation_id)) || "",
+          roleKey: c.role_key || null,
         });
       }
       for (const link of candidateLinks ?? []) {
-        const cand = linkedMap.get(link.candidate_id);
+        const cand = secondaryMap.get(link.candidate_id);
         if (!cand) continue;
         ensure(link.unit_id).employees.set(cand.id, {
           name: cand.full_name || "—",
           designation: (cand.designation_id && dMap.get(cand.designation_id)) || "",
+          roleKey: cand.role_key || null,
         });
+      }
+      for (const assignment of scopeAssignmentRows) {
+        const cand = secondaryMap.get(assignment.candidate_id);
+        if (!cand) continue;
+        for (const unitId of unitIds) {
+          const unit = unitsById.get(unitId);
+          if (!unit) continue;
+          const context: AttendanceUnitContext = {
+            id: unit.id,
+            branch_id: unit.branch_id,
+            customer_id: unit.customer_id,
+            billing_state: unit.billing_state,
+          };
+          if (!matchesAttendanceScope(context, assignment)) continue;
+          ensure(unitId).employees.set(cand.id, {
+            name: cand.full_name || "—",
+            designation: (cand.designation_id && dMap.get(cand.designation_id)) || "",
+            roleKey: cand.role_key || null,
+          });
+        }
       }
 
       const rows: UnitRow[] = (units ?? [])
@@ -187,9 +236,10 @@ function AttendanceUnitsPage() {
           const fos: EmployeeRef[] = [];
           const sgs: EmployeeRef[] = [];
           for (const [id, info] of employees) {
-            if (matchDesignation(info.designation, FIELD_OFFICER_KEYWORDS)) {
+            const employeeType = classifyAttendanceEmployee(info.roleKey, info.designation);
+            if (employeeType === "field_officer") {
               fos.push({ id, name: info.name });
-            } else if (matchDesignation(info.designation, SECURITY_GUARD_KEYWORDS)) {
+            } else if (employeeType === "security_guard") {
               sgs.push({ id, name: info.name });
             }
           }
@@ -198,8 +248,10 @@ function AttendanceUnitsPage() {
             code: u.code,
             name: u.name,
             location: u.location || "",
+            branch_id: u.branch_id || null,
             customer_id: u.customer_id || "",
             customer_name: (u.customer_id && customerMap.get(u.customer_id)) || "—",
+            billing_state: u.billing_state || null,
             contract_codes: contractsByUnit.get(u.id)?.codes ?? [],
             contract_end: contractsByUnit.get(u.id)?.end ?? null,
             active_employee_count: employees.length,

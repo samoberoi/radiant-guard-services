@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { classifyAttendanceEmployee, matchesAttendanceScope, type AttendanceScopeAssignment, type AttendanceUnitContext } from "@/lib/attendance";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin/attendance/$unitId")({
@@ -44,7 +45,7 @@ function MusterRollPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("units")
-        .select("id, code, name, customer_id")
+        .select("id, code, name, branch_id, customer_id, billing_state")
         .eq("id", unitId)
         .maybeSingle();
       if (error) throw error;
@@ -73,19 +74,40 @@ function MusterRollPage() {
       if (primError) throw primError;
 
       // Multi-unit assignments
-      const { data: links, error: linksError } = await supabase
-        .from("candidate_units")
-        .select("candidate_id")
-        .eq("unit_id", unitId);
+      const [
+        { data: links, error: linksError },
+        { data: rawUnit, error: rawUnitError },
+        { data: scopeAssignments, error: scopeAssignmentsError },
+      ] = await Promise.all([
+        supabase.from("candidate_units").select("candidate_id").eq("unit_id", unitId),
+        supabase.from("units").select("id, branch_id, customer_id, billing_state").eq("id", unitId).maybeSingle(),
+        supabase.from("employee_scope_assignments").select("candidate_id, scope_type, scope_id").limit(5000),
+      ]);
       if (linksError) throw linksError;
+      if (rawUnitError) throw rawUnitError;
+      if (scopeAssignmentsError) throw scopeAssignmentsError;
 
-      const linkIds = (links ?? []).map((l) => l.candidate_id);
+      const context: AttendanceUnitContext | null = rawUnit
+        ? {
+            id: rawUnit.id,
+            branch_id: rawUnit.branch_id,
+            customer_id: rawUnit.customer_id,
+            billing_state: rawUnit.billing_state,
+          }
+        : null;
+
+      const scopeIds = new Set<string>();
+      for (const assignment of ((scopeAssignments ?? []) as AttendanceScopeAssignment[])) {
+        if (context && matchesAttendanceScope(context, assignment)) scopeIds.add(assignment.candidate_id);
+      }
+
+      const secondaryIds = Array.from(new Set([...(links ?? []).map((l) => l.candidate_id), ...scopeIds]));
       let extra: typeof prim = [];
-      if (linkIds.length) {
+      if (secondaryIds.length) {
         const { data, error } = await supabase
           .from("candidates")
           .select(rosterSelect)
-          .in("id", linkIds)
+          .in("id", secondaryIds)
           .eq("is_enabled", true)
           .in("status", [...ATTENDANCE_EMPLOYEE_STATUSES]);
         if (error) throw error;
@@ -109,6 +131,7 @@ function MusterRollPage() {
           employee_code: c.employee_code || "",
           full_name: c.full_name || "",
           designation: (c.designation_id && dMap.get(c.designation_id)) || "",
+          employee_type: classifyAttendanceEmployee(c.role_key, (c.designation_id && dMap.get(c.designation_id)) || ""),
           doj: c.preferred_joining_date || "",
         }))
         .sort((a, b) =>
