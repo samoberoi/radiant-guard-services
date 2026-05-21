@@ -283,6 +283,12 @@ function VehicleInventoryPage() {
         </div>
       </div>
 
+      <div className="mb-4">
+        <AdvancedFilters fields={FILTER_FIELDS} value={conditions} onChange={setConditions} />
+      </div>
+
+
+
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border bg-accent/10 px-5 py-2.5 text-xs font-medium text-foreground">
           <span className="inline-flex items-center gap-2">
