@@ -212,6 +212,7 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
     serviceTypeId: r.service_type_id ? String(r.service_type_id) : null,
     payrollWindowId: r.payroll_window_id ? String(r.payroll_window_id) : null,
     billingTypeId: r.billing_type_id ? String(r.billing_type_id) : null,
+    esicBranchId: r.esic_branch_id ? String(r.esic_branch_id) : null,
     gstOption: (r.gst_option as GstOption) ?? "csgst",
     status: (r.status as ContractStatus) ?? "inactive",
     approvalStatus: (r.approval_status as ApprovalStatus) ?? "pending",
