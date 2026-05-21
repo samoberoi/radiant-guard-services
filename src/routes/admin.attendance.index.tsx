@@ -387,7 +387,6 @@ function AttendanceUnitsPage() {
                   setQ("");
                   setOrgFilter("all");
                   setUnitFilter("all");
-                  setFoFilter("all");
                   setSgFilter("all");
                 }}
               >
