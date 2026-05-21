@@ -641,6 +641,7 @@ function AddEntryDialog({
         toast.success("Auto-filled from photos — please verify");
       } catch (serverError) {
         console.error("[expense-manager] server auto-fill failed, using local OCR fallback", serverError);
+        const { extractFuelFromPhotosLocally } = await import("@/lib/fuel-ocr.client");
         const local = await extractFuelFromPhotosLocally(items);
         applyExtraction(local);
         toast.success("Auto-filled from photos — please verify");
