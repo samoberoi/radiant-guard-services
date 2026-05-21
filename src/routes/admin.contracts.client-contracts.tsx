@@ -199,6 +199,8 @@ const QK_DSG = ["admin", "designations", "enabled"] as const;
 const QK_ALW = ["admin", "allowance-types", "enabled"] as const;
 const QK_PDB = ["admin", "payroll-day-bases", "enabled"] as const;
 const QK_CC = ["admin", "cost-components", "enabled"] as const;
+const QK_ESIC = ["admin", "esic-branches", "enabled"] as const;
+
 
 function rowToContract(r: Record<string, unknown>): ClientContract {
   return {
