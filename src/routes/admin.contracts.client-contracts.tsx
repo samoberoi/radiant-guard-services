@@ -745,6 +745,10 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
   const pwMap = nameMap(pwRes.data, "label");
   const btMap = nameMap(btRes.data);
   const pdbMap = nameMap(pdbRes.data);
+  const esicMap = new Map<string, string>();
+  ((esicRes.data as Record<string, unknown>[]) ?? []).forEach((r) =>
+    esicMap.set(String(r.id), `${String(r.esic_code ?? "")} — ${String(r.location ?? "")}`),
+  );
 
   const sumArr = (arr: unknown): number =>
     Array.isArray(arr)
