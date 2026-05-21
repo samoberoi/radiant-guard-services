@@ -34,6 +34,7 @@ import { Route as AdminCostComponentManagerRouteImport } from './routes/admin.co
 import { Route as AdminControlCenterRouteImport } from './routes/admin.control-center'
 import { Route as AdminCompanyDocumentsRouteImport } from './routes/admin.company-documents'
 import { Route as AdminBillingTypeManagerRouteImport } from './routes/admin.billing-type-manager'
+import { Route as AdminAttendanceCodeManagerRouteImport } from './routes/admin.attendance-code-manager'
 import { Route as AdminAttendanceRouteImport } from './routes/admin.attendance'
 import { Route as AdminAssetManagerRouteImport } from './routes/admin.asset-manager'
 import { Route as AdminAllowanceManagerRouteImport } from './routes/admin.allowance-manager'
@@ -181,6 +182,12 @@ const AdminBillingTypeManagerRoute = AdminBillingTypeManagerRouteImport.update({
   path: '/billing-type-manager',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAttendanceCodeManagerRoute =
+  AdminAttendanceCodeManagerRouteImport.update({
+    id: '/attendance-code-manager',
+    path: '/attendance-code-manager',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminAttendanceRoute = AdminAttendanceRouteImport.update({
   id: '/attendance',
   path: '/attendance',
@@ -288,6 +295,7 @@ export interface FileRoutesByFullPath {
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
   '/admin/asset-manager': typeof AdminAssetManagerRoute
   '/admin/attendance': typeof AdminAttendanceRouteWithChildren
+  '/admin/attendance-code-manager': typeof AdminAttendanceCodeManagerRoute
   '/admin/billing-type-manager': typeof AdminBillingTypeManagerRoute
   '/admin/company-documents': typeof AdminCompanyDocumentsRoute
   '/admin/control-center': typeof AdminControlCenterRoute
@@ -332,6 +340,7 @@ export interface FileRoutesByTo {
   '/welcome': typeof WelcomeRoute
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
   '/admin/asset-manager': typeof AdminAssetManagerRoute
+  '/admin/attendance-code-manager': typeof AdminAttendanceCodeManagerRoute
   '/admin/billing-type-manager': typeof AdminBillingTypeManagerRoute
   '/admin/company-documents': typeof AdminCompanyDocumentsRoute
   '/admin/control-center': typeof AdminControlCenterRoute
@@ -378,6 +387,7 @@ export interface FileRoutesById {
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
   '/admin/asset-manager': typeof AdminAssetManagerRoute
   '/admin/attendance': typeof AdminAttendanceRouteWithChildren
+  '/admin/attendance-code-manager': typeof AdminAttendanceCodeManagerRoute
   '/admin/billing-type-manager': typeof AdminBillingTypeManagerRoute
   '/admin/company-documents': typeof AdminCompanyDocumentsRoute
   '/admin/control-center': typeof AdminControlCenterRoute
@@ -425,6 +435,7 @@ export interface FileRouteTypes {
     | '/admin/allowance-manager'
     | '/admin/asset-manager'
     | '/admin/attendance'
+    | '/admin/attendance-code-manager'
     | '/admin/billing-type-manager'
     | '/admin/company-documents'
     | '/admin/control-center'
@@ -469,6 +480,7 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/admin/allowance-manager'
     | '/admin/asset-manager'
+    | '/admin/attendance-code-manager'
     | '/admin/billing-type-manager'
     | '/admin/company-documents'
     | '/admin/control-center'
@@ -514,6 +526,7 @@ export interface FileRouteTypes {
     | '/admin/allowance-manager'
     | '/admin/asset-manager'
     | '/admin/attendance'
+    | '/admin/attendance-code-manager'
     | '/admin/billing-type-manager'
     | '/admin/company-documents'
     | '/admin/control-center'
@@ -736,6 +749,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminBillingTypeManagerRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/attendance-code-manager': {
+      id: '/admin/attendance-code-manager'
+      path: '/attendance-code-manager'
+      fullPath: '/admin/attendance-code-manager'
+      preLoaderRoute: typeof AdminAttendanceCodeManagerRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/attendance': {
       id: '/admin/attendance'
       path: '/attendance'
@@ -925,6 +945,7 @@ interface AdminRouteChildren {
   AdminAllowanceManagerRoute: typeof AdminAllowanceManagerRoute
   AdminAssetManagerRoute: typeof AdminAssetManagerRoute
   AdminAttendanceRoute: typeof AdminAttendanceRouteWithChildren
+  AdminAttendanceCodeManagerRoute: typeof AdminAttendanceCodeManagerRoute
   AdminBillingTypeManagerRoute: typeof AdminBillingTypeManagerRoute
   AdminCompanyDocumentsRoute: typeof AdminCompanyDocumentsRoute
   AdminControlCenterRoute: typeof AdminControlCenterRoute
@@ -954,6 +975,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAllowanceManagerRoute: AdminAllowanceManagerRoute,
   AdminAssetManagerRoute: AdminAssetManagerRoute,
   AdminAttendanceRoute: AdminAttendanceRouteWithChildren,
+  AdminAttendanceCodeManagerRoute: AdminAttendanceCodeManagerRoute,
   AdminBillingTypeManagerRoute: AdminBillingTypeManagerRoute,
   AdminCompanyDocumentsRoute: AdminCompanyDocumentsRoute,
   AdminControlCenterRoute: AdminControlCenterRoute,

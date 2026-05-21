@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BadgeCheck, Briefcase, Building2, Calculator, CalendarDays, CalendarRange, ClipboardList, Clock, Coins, FileSignature, HandCoins, Languages, LogOut, Package, Receipt, ReceiptText, Settings, Shield, ShieldCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, Briefcase, Building2, Calculator, CalendarCheck, CalendarDays, CalendarRange, ClipboardList, Clock, Coins, FileSignature, HandCoins, Languages, LogOut, Package, Receipt, ReceiptText, Settings, Shield, ShieldCheck } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/admin/control-center")({
@@ -31,6 +31,12 @@ const tiles: Tile[] = [
     label: "Duty Manager",
     description: "Define duty types like 8 hrs and 12 hrs used in rosters.",
     icon: Clock,
+  },
+  {
+    to: "/admin/attendance-code-manager",
+    label: "Attendance Code Manager",
+    description: "Manage attendance codes (P, A, L, HD, WO, CL, SL…) used in daily attendance and payroll.",
+    icon: CalendarCheck,
   },
   {
     to: "/admin/service-type-manager",

@@ -80,6 +80,51 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_codes: {
+        Row: {
+          code: string
+          color: string
+          counts_as_present: boolean
+          created_at: string
+          description: string
+          enabled: boolean
+          id: string
+          is_leave: boolean
+          is_paid: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          color?: string
+          counts_as_present?: boolean
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          id?: string
+          is_leave?: boolean
+          is_paid?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          color?: string
+          counts_as_present?: boolean
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          id?: string
+          is_leave?: boolean
+          is_paid?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       billing_types: {
         Row: {
           created_at: string
