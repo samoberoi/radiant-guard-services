@@ -623,6 +623,28 @@ function MusterRollPage() {
         </div>
       )}
 
+      {otSelectedDates.size > 0 && !isOtDragging && otDragCandidateId && (
+        <div className="sticky top-2 z-20 flex items-center justify-between gap-3 rounded-md border border-amber-500/50 bg-amber-50 px-3 py-2 text-sm shadow-sm print:hidden">
+          <div>
+            <span className="font-semibold">{otSelectedDates.size}</span> OT day
+            {otSelectedDates.size > 1 ? "s" : ""} selected for{" "}
+            <span className="font-semibold">
+              {(employees ?? []).find((e) => e.id === otDragCandidateId)?.full_name ?? ""}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={clearOtSelection}>
+              Clear
+            </Button>
+            <Button size="sm" onClick={openOtPickerForSelection}>
+              Set OT hours
+            </Button>
+          </div>
+        </div>
+      )}
+
+
+
 
       {/* Muster Roll Sheet */}
       <div id="form-xvi-print" className="rounded-xl border border-border/60 bg-white p-5 text-[11px] text-slate-900 shadow-sm print:rounded-none print:border-0 print:shadow-none sm:p-6">
