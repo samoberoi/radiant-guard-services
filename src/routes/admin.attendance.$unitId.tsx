@@ -845,32 +845,59 @@ function MusterRollPage() {
                         const date = cell.date;
                         const entry = entryMap.get(`${emp.id}|${date}`);
                         const hrs = Number(entry?.ot_hours) || 0;
+                        const isSelected =
+                          otDragCandidateId === emp.id && otSelectedDates.has(date);
                         return (
                           <td
                             key={`o-${cell.date}`}
-                            className={cn(rowBase, "p-0")}
+                            className={cn(
+                              rowBase,
+                              "p-0 select-none cursor-pointer transition-colors",
+                              hrs > 0 && "bg-amber-50",
+                              isSelected && "ring-2 ring-amber-500 ring-inset bg-amber-100",
+                            )}
                             style={{ height: 22, minWidth: 18 }}
-                          >
-                            <select
-                              value={hrs}
-                              onChange={(e) => {
-                                const next = Number(e.target.value) || 0;
-                                upsertEntry.mutate({
-                                  candidate_id: emp.id,
-                                  entry_date: date,
-                                  ot_hours: next,
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              const additive = e.ctrlKey || e.metaKey;
+                              if (additive) {
+                                setOtSelectedDates((prev) => {
+                                  const sameRow = otDragCandidateId === emp.id;
+                                  const next = sameRow ? new Set(prev) : new Set<string>();
+                                  if (sameRow && next.has(date)) next.delete(date);
+                                  else next.add(date);
+                                  return next;
                                 });
-                              }}
-                              className="h-full w-full appearance-none border-0 bg-transparent text-center text-[10px] font-semibold leading-none focus:outline-none focus:ring-1 focus:ring-primary print:appearance-none"
-                              title={`OT hours for ${date}`}
+                                setOtDragCandidateId(emp.id);
+                                return;
+                              }
+                              setOtDragCandidateId(emp.id);
+                              setIsOtDragging(true);
+                              setOtSelectedDates(new Set([date]));
+                            }}
+                            onMouseEnter={() => {
+                              if (isOtDragging && otDragCandidateId === emp.id) {
+                                setOtSelectedDates((prev) => {
+                                  if (prev.has(date)) return prev;
+                                  const next = new Set(prev);
+                                  next.add(date);
+                                  return next;
+                                });
+                              }
+                            }}
+                            onClick={(e) => {
+                              if (e.ctrlKey || e.metaKey) e.preventDefault();
+                            }}
+                            title={`OT for ${date}${hrs > 0 ? ` · ${hrs}h` : ""}`}
+                          >
+                            <div
+                              className={cn(
+                                "h-full w-full flex items-center justify-center text-[10px] font-semibold leading-none",
+                                hrs > 0 ? "text-amber-700" : "text-slate-300",
+                              )}
                             >
-                              <option value={0}></option>
-                              {Array.from({ length: 16 }, (_, i) => i + 1).map((n) => (
-                                <option key={n} value={n}>
-                                  {n}
-                                </option>
-                              ))}
-                            </select>
+                              {hrs > 0 ? hrs : ""}
+                            </div>
                           </td>
                         );
                       })}
