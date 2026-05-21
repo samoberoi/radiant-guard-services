@@ -113,6 +113,7 @@ type ClientContract = {
   serviceTypeId: string | null;
   payrollWindowId: string | null;
   billingTypeId: string | null;
+  esicBranchId: string | null;
   gstOption: GstOption;
   status: ContractStatus;
   approvalStatus: ApprovalStatus;
@@ -131,6 +132,7 @@ type PayrollWindow = {
   processingDay: number;
 };
 type BillingType = { id: string; name: string };
+type EsicBranch = { id: string; esicCode: string; location: string };
 type Designation = { id: string; name: string; code: string };
 type AllowanceType = {
   id: string;
@@ -197,6 +199,8 @@ const QK_DSG = ["admin", "designations", "enabled"] as const;
 const QK_ALW = ["admin", "allowance-types", "enabled"] as const;
 const QK_PDB = ["admin", "payroll-day-bases", "enabled"] as const;
 const QK_CC = ["admin", "cost-components", "enabled"] as const;
+const QK_ESIC = ["admin", "esic-branches", "enabled"] as const;
+
 
 function rowToContract(r: Record<string, unknown>): ClientContract {
   return {
@@ -211,6 +215,7 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
     serviceTypeId: r.service_type_id ? String(r.service_type_id) : null,
     payrollWindowId: r.payroll_window_id ? String(r.payroll_window_id) : null,
     billingTypeId: r.billing_type_id ? String(r.billing_type_id) : null,
+    esicBranchId: r.esic_branch_id ? String(r.esic_branch_id) : null,
     gstOption: (r.gst_option as GstOption) ?? "csgst",
     status: (r.status as ContractStatus) ?? "inactive",
     approvalStatus: (r.approval_status as ApprovalStatus) ?? "pending",
@@ -247,7 +252,7 @@ function useContracts() {
       const { data, error } = await supabase
         .from("client_contracts" as never)
         .select(
-          "id,contract_code,prospect_code,record_type,prospect_stage,promoted_at,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,gst_option,status,approval_status,rejection_reason,created_by",
+          "id,contract_code,prospect_code,record_type,prospect_stage,promoted_at,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status,approval_status,rejection_reason,created_by",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -295,6 +300,7 @@ function useContracts() {
       service_type_id: p.serviceTypeId,
       payroll_window_id: p.payrollWindowId,
       billing_type_id: p.billingTypeId,
+      esic_branch_id: p.esicBranchId,
       gst_option: p.gstOption,
     };
     if (opts.isNew) {
@@ -331,7 +337,7 @@ function useContracts() {
     mutationFn: async ({ id, p }: { id: string; p: Payload }) => {
       const beforeRes = await supabase
         .from("client_contracts" as never)
-        .select("contract_code,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,gst_option,status")
+        .select("contract_code,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status")
         .eq("id", id)
         .single();
       const before = (beforeRes.data ?? null) as Record<string, unknown> | null;
@@ -444,6 +450,28 @@ function useBillingTypes() {
   });
   return data;
 }
+
+function useEsicBranches() {
+  const { data = [] } = useQuery({
+    queryKey: QK_ESIC,
+    queryFn: async (): Promise<EsicBranch[]> => {
+      const { data, error } = await supabase
+        .from("esic_branches" as never)
+        .select("id,esic_code,location,enabled")
+        .order("esic_code");
+      if (error) throw error;
+      return (data as unknown as Record<string, unknown>[])
+        .filter((r) => r.enabled !== false)
+        .map((r) => ({
+          id: String(r.id),
+          esicCode: String(r.esic_code ?? ""),
+          location: String(r.location ?? ""),
+        }));
+    },
+  });
+  return data;
+}
+
 
 function useDesignations() {
   const { data = [] } = useQuery({
@@ -703,6 +731,7 @@ const CONTRACT_FIELDS = [
   "service_type_id",
   "payroll_window_id",
   "billing_type_id",
+  "esic_branch_id",
   "gst_option",
   "status",
 ] as const;
@@ -719,13 +748,14 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
   const resources = (resData as unknown as Record<string, unknown>[]) ?? [];
 
   // Resolve lookup labels in parallel
-  const [unitsRes, desigRes, svcRes, pwRes, btRes, pdbRes] = await Promise.all([
+  const [unitsRes, desigRes, svcRes, pwRes, btRes, pdbRes, esicRes] = await Promise.all([
     supabase.from("units" as never).select("id,code,name").eq("id", contract.unitId).maybeSingle(),
     supabase.from("designations" as never).select("id,name,code"),
     supabase.from("service_types" as never).select("id,name"),
     supabase.from("payroll_windows" as never).select("id,label"),
     supabase.from("billing_types" as never).select("id,name"),
     supabase.from("payroll_day_bases" as never).select("id,name,code"),
+    supabase.from("esic_branches" as never).select("id,esic_code,location"),
   ]);
   const unitRow = unitsRes.data as Record<string, unknown> | null;
   const nameMap = (rows: unknown, key = "name"): Map<string, string> => {
@@ -740,6 +770,10 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
   const pwMap = nameMap(pwRes.data, "label");
   const btMap = nameMap(btRes.data);
   const pdbMap = nameMap(pdbRes.data);
+  const esicMap = new Map<string, string>();
+  ((esicRes.data as Record<string, unknown>[]) ?? []).forEach((r) =>
+    esicMap.set(String(r.id), `${String(r.esic_code ?? "")} — ${String(r.location ?? "")}`),
+  );
 
   const sumArr = (arr: unknown): number =>
     Array.isArray(arr)
@@ -760,6 +794,7 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
   summaryRows.push(["Service Type", svcMap.get(contract.serviceTypeId ?? "") ?? ""]);
   summaryRows.push(["Payroll Window", pwMap.get(contract.payrollWindowId ?? "") ?? ""]);
   summaryRows.push(["Billing Type", btMap.get(contract.billingTypeId ?? "") ?? ""]);
+  summaryRows.push(["ESIC Subcode", esicMap.get(contract.esicBranchId ?? "") ?? ""]);
   summaryRows.push(["GST Option", contract.gstOption]);
 
   let totalHeadcount = 0;
@@ -898,6 +933,7 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
     service_type_id: contract.serviceTypeId ?? "",
     payroll_window_id: contract.payrollWindowId ?? "",
     billing_type_id: contract.billingTypeId ?? "",
+    esic_branch_id: contract.esicBranchId ?? "",
     gst_option: contract.gstOption,
     status: contract.status,
   };
@@ -1016,6 +1052,7 @@ async function importContractFromXlsx(buf: ArrayBuffer): Promise<{
     service_type_id: contractRow.service_type_id ? String(contractRow.service_type_id) : null,
     payroll_window_id: contractRow.payroll_window_id ? String(contractRow.payroll_window_id) : null,
     billing_type_id: contractRow.billing_type_id ? String(contractRow.billing_type_id) : null,
+    esic_branch_id: contractRow.esic_branch_id ? String(contractRow.esic_branch_id) : null,
     gst_option: String(contractRow.gst_option ?? "csgst"),
     status: String(contractRow.status ?? "active"),
   };
@@ -1701,6 +1738,7 @@ function ContractFormDialog({
   const serviceTypes = useServiceTypes();
   const payrollWindows = usePayrollWindows();
   const billingTypes = useBillingTypes();
+  const esicBranches = useEsicBranches();
 
   const customerById = useMemo(
     () => new Map(customers.map((c) => [c.id, c])),
@@ -1716,6 +1754,7 @@ function ContractFormDialog({
   const [serviceTypeId, setServiceTypeId] = useState<string>("");
   const [payrollWindowId, setPayrollWindowId] = useState<string>("");
   const [billingTypeId, setBillingTypeId] = useState<string>("");
+  const [esicBranchId, setEsicBranchId] = useState<string>("");
   const [gstOption, setGstOption] = useState<GstOption>("csgst");
   const [unitPickerOpen, setUnitPickerOpen] = useState(false);
   const [unitQuery, setUnitQuery] = useState("");
@@ -1742,6 +1781,7 @@ function ContractFormDialog({
       setServiceTypeId(editing.serviceTypeId ?? "");
       setPayrollWindowId(editing.payrollWindowId ?? "");
       setBillingTypeId(editing.billingTypeId ?? "");
+      setEsicBranchId(editing.esicBranchId ?? "");
       setGstOption(editing.gstOption);
     } else {
       setContractCode("");
@@ -1753,6 +1793,7 @@ function ContractFormDialog({
       setServiceTypeId("");
       setPayrollWindowId("");
       setBillingTypeId("");
+      setEsicBranchId("");
       setGstOption("csgst");
     }
     setResources([]);
@@ -1991,6 +2032,27 @@ function ContractFormDialog({
                   </Select>
                 </Field>
               </div>
+              <div className="sm:col-span-3">
+                <Field label="ESIC Subcode">
+                  <Select
+                    value={esicBranchId || "none"}
+                    onValueChange={(v) => setEsicBranchId(v === "none" ? "" : v)}
+                  >
+                    <SelectTrigger className="h-10 rounded-lg">
+                      <SelectValue placeholder="Select ESIC subcode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— None —</SelectItem>
+                      {esicBranches.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          <span className="font-mono text-xs">{b.esicCode}</span>
+                          {b.location ? ` — ${b.location}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
             </div>
           </Section>
 
@@ -2077,6 +2139,7 @@ function ContractFormDialog({
                 serviceTypeId: serviceTypeId || null,
                 payrollWindowId: payrollWindowId || null,
                 billingTypeId: billingTypeId || null,
+                esicBranchId: esicBranchId || null,
                 gstOption,
                 status: editing?.status ?? "inactive",
                 approvalStatus: editing?.approvalStatus ?? "pending",

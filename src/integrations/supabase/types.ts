@@ -517,6 +517,7 @@ export type Database = {
           created_by: string | null
           description: string
           end_date: string | null
+          esic_branch_id: string | null
           gst_option: string
           id: string
           payroll_window_id: string | null
@@ -546,6 +547,7 @@ export type Database = {
           created_by?: string | null
           description?: string
           end_date?: string | null
+          esic_branch_id?: string | null
           gst_option?: string
           id?: string
           payroll_window_id?: string | null
@@ -575,6 +577,7 @@ export type Database = {
           created_by?: string | null
           description?: string
           end_date?: string | null
+          esic_branch_id?: string | null
           gst_option?: string
           id?: string
           payroll_window_id?: string | null
