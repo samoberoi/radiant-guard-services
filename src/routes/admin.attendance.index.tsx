@@ -64,7 +64,7 @@ function AttendanceUnitsPage() {
   const [sgFilter, setSgFilter] = useState<string>("all");
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["attendance-dashboard-v5"],
+    queryKey: ["attendance-dashboard-v6"],
     queryFn: async (): Promise<AttendancePageData> => {
       const { data: contracts, error: contractsError } = await supabase
         .from("client_contracts")
@@ -98,7 +98,7 @@ function AttendanceUnitsPage() {
         { data: candidateLinks, error: linksError },
         { data: scopeAssignments, error: scopeAssignmentsError },
       ] = await Promise.all([
-        supabase.from("units").select("id, code, name, location, branch_id, customer_id, billing_state").in("id", unitIds),
+        supabase.from("units").select("id, code, name, location, branch_id, customer_id, billing_state, reporting_officers").in("id", unitIds),
         supabase
           .from("candidates")
           .select("id, full_name, designation_id, role_key, unit_id")
@@ -243,6 +243,16 @@ function AttendanceUnitsPage() {
               sgs.push({ id, name: info.name });
             }
           }
+          // Include reporting officers (client-side contacts) configured on the unit.
+          const reportingOfficers = Array.isArray((u as { reporting_officers?: unknown }).reporting_officers)
+            ? ((u as { reporting_officers: Array<{ name?: string; is_active?: boolean }> }).reporting_officers)
+            : [];
+          reportingOfficers.forEach((ro, idx) => {
+            if (ro?.is_active === false) return;
+            const name = (ro?.name || "").trim();
+            if (!name) return;
+            fos.push({ id: `ro:${u.id}:${idx}`, name });
+          });
           return {
             id: u.id,
             code: u.code,
