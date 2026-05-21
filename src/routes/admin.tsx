@@ -559,10 +559,8 @@ function AdminLayout() {
             <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
               Admin Console
             </span>
-            <span className="font-display text-sm font-bold tracking-tight text-foreground">
-              Radiant Guard Services
-            </span>
           </div>
+
 
           <div className="ml-auto flex items-center gap-3">
             <div className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground sm:flex">
