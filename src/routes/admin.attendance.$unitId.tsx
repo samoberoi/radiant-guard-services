@@ -70,6 +70,63 @@ function previousMonth(now: Date) {
   return { year: prev.getFullYear(), monthIdx: prev.getMonth() };
 }
 
+function ymd(year: number, monthIdx0: number, day: number) {
+  const m = String(monthIdx0 + 1).padStart(2, "0");
+  const d = String(day).padStart(2, "0");
+  return `${year}-${m}-${d}`;
+}
+
+// Build the attendance period for a given (year, monthIdx) using the
+// contract's payroll window. The selected month is treated as the month
+// the period ENDS in. e.g. selecting April with window 21–20 gives
+// 21 Mar → 20 Apr.
+function buildPeriodCells(
+  year: number,
+  monthIdx: number,
+  window: { window_start_day: number; window_end_day: number } | null,
+): Array<{ date: string; dayNum: number; monthIdx: number; year: number }> {
+  const startDay = window?.window_start_day ?? 1;
+  const endDay = window?.window_end_day ?? 31;
+  const endsInSelected = startDay > endDay || (startDay === 1 && endDay >= 28);
+
+  let startY: number, startM: number, startD: number;
+  let endY: number, endM: number, endD: number;
+
+  if (endsInSelected && startDay > endDay) {
+    // Cross-month window (e.g. 21 → 20): starts in previous month.
+    const prev = new Date(year, monthIdx - 1, 1);
+    startY = prev.getFullYear();
+    startM = prev.getMonth();
+    const prevLast = daysInMonth(startY, startM);
+    startD = Math.min(startDay, prevLast);
+    endY = year;
+    endM = monthIdx;
+    endD = Math.min(endDay, daysInMonth(year, monthIdx));
+  } else {
+    // Full calendar month (1 → 30/31) or in-month window.
+    startY = year;
+    startM = monthIdx;
+    startD = startDay;
+    endY = year;
+    endM = monthIdx;
+    endD = Math.min(endDay, daysInMonth(year, monthIdx));
+  }
+
+  const cells: Array<{ date: string; dayNum: number; monthIdx: number; year: number }> = [];
+  const cursor = new Date(startY, startM, startD);
+  const stop = new Date(endY, endM, endD);
+  while (cursor <= stop) {
+    cells.push({
+      date: ymd(cursor.getFullYear(), cursor.getMonth(), cursor.getDate()),
+      dayNum: cursor.getDate(),
+      monthIdx: cursor.getMonth(),
+      year: cursor.getFullYear(),
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return cells;
+}
+
 function MusterRollPage() {
   const { unitId } = Route.useParams();
   const now = new Date();
@@ -183,21 +240,41 @@ function MusterRollPage() {
     enabled: Boolean(unit),
   });
 
-  const dayCount = daysInMonth(year, monthIdx);
-  const dayList = useMemo(
-    () => Array.from({ length: dayCount }, (_, i) => i + 1),
-    [dayCount],
-  );
+  // dayCount/periodStart/periodEnd are derived below from the payroll window.
 
-  const monthStart = useMemo(() => {
-    const m = String(monthIdx + 1).padStart(2, "0");
-    return `${year}-${m}-01`;
-  }, [year, monthIdx]);
-  const monthEnd = useMemo(() => {
-    const m = String(monthIdx + 1).padStart(2, "0");
-    const d = String(dayCount).padStart(2, "0");
-    return `${year}-${m}-${d}`;
-  }, [year, monthIdx, dayCount]);
+  // Resolve the payroll window for this unit via its active contract.
+  const { data: payrollWindow } = useQuery({
+    queryKey: ["attendance-payroll-window", unitId],
+    queryFn: async () => {
+      const { data: contracts, error } = await supabase
+        .from("client_contracts")
+        .select("id, payroll_window_id, start_date, status, record_type")
+        .eq("unit_id", unitId)
+        .eq("record_type", "contract")
+        .eq("status", "active")
+        .order("start_date", { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      const winId = contracts?.[0]?.payroll_window_id;
+      if (!winId) return null;
+      const { data: win, error: winErr } = await supabase
+        .from("payroll_windows")
+        .select("id, label, window_start_day, window_end_day")
+        .eq("id", winId)
+        .maybeSingle();
+      if (winErr) throw winErr;
+      return win;
+    },
+    enabled: Boolean(unitId),
+  });
+
+  const periodCells = useMemo(
+    () => buildPeriodCells(year, monthIdx, payrollWindow ?? null),
+    [year, monthIdx, payrollWindow],
+  );
+  const dayCount = periodCells.length;
+  const periodStart = periodCells[0]?.date ?? ymd(year, monthIdx, 1);
+  const periodEnd = periodCells[periodCells.length - 1]?.date ?? ymd(year, monthIdx, daysInMonth(year, monthIdx));
 
   const queryClient = useQueryClient();
 
@@ -217,14 +294,14 @@ function MusterRollPage() {
   const codeMap = useMemo(() => new Map(codes.map((c) => [c.code, c])), [codes]);
 
   const { data: entries = [] } = useQuery({
-    queryKey: ["attendance-entries", unitId, monthStart, monthEnd],
+    queryKey: ["attendance-entries", unitId, periodStart, periodEnd],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance_entries")
         .select("candidate_id, entry_date, code, ot_hours")
         .eq("unit_id", unitId)
-        .gte("entry_date", monthStart)
-        .lte("entry_date", monthEnd);
+        .gte("entry_date", periodStart)
+        .lte("entry_date", periodEnd);
       if (error) throw error;
       return (data ?? []) as EntryRow[];
     },
@@ -253,16 +330,11 @@ function MusterRollPage() {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, monthStart, monthEnd] });
+      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, periodStart, periodEnd] });
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to save"),
   });
 
-  const dateFor = (day: number) => {
-    const m = String(monthIdx + 1).padStart(2, "0");
-    const d = String(day).padStart(2, "0");
-    return `${year}-${m}-${d}`;
-  };
 
   // Drag-to-select state
   const [dragCandidateId, setDragCandidateId] = useState<string | null>(null);
@@ -327,7 +399,7 @@ function MusterRollPage() {
         .from("attendance_entries")
         .upsert(rows, { onConflict: "unit_id,candidate_id,entry_date" });
       if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, monthStart, monthEnd] });
+      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, periodStart, periodEnd] });
       setPickerOpen(false);
       setSelectedDates(new Set());
       setDragCandidateId(null);
@@ -343,8 +415,8 @@ function MusterRollPage() {
     let pDays = 0;
     let otHours = 0;
     let paidDays = 0;
-    for (const day of dayList) {
-      const e = entryMap.get(`${candidateId}|${dateFor(day)}`);
+    for (const cell of periodCells) {
+      const e = entryMap.get(`${candidateId}|${cell.date}`);
       if (!e) continue;
       otHours += Number(e.ot_hours) || 0;
       const c = codeMap.get(e.code);
@@ -377,6 +449,17 @@ function MusterRollPage() {
     : "";
 
   const monthLabel = `${MONTH_NAMES[monthIdx]} ${year}`;
+  const formatPretty = (iso: string) => {
+    const [yy, mm, dd] = iso.split("-").map(Number);
+    return `${String(dd).padStart(2, "0")} ${MONTH_NAMES[mm - 1].slice(0, 3)} ${yy}`;
+  };
+  const periodLabel =
+    periodCells.length > 0
+      ? `${formatPretty(periodStart)} – ${formatPretty(periodEnd)}`
+      : monthLabel;
+  const windowLabel = payrollWindow?.label
+    ? `Payroll window: ${payrollWindow.label}`
+    : "Payroll window: full calendar month";
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
@@ -490,6 +573,8 @@ function MusterRollPage() {
                 <div className="mt-1 font-bold">{principalEmployer || "—"}</div>
                 {principalAddress && <div className="text-slate-700">{principalAddress}</div>}
                 <div className="mt-3 font-semibold">For the month of {monthLabel}</div>
+                <div className="text-slate-700">Period: {periodLabel}</div>
+                <div className="text-[10px] text-slate-500">{windowLabel}</div>
               </td>
             </tr>
           </tbody>
@@ -522,15 +607,23 @@ function MusterRollPage() {
                 <th className="border border-slate-400 p-1"></th>
                 <th className="border border-slate-400 p-1"></th>
                 <th className="border border-slate-400 p-1"></th>
-                {dayList.map((d) => (
-                  <th
-                    key={d}
-                    className="border border-slate-400 p-0.5 text-[9px] font-medium"
-                    style={{ minWidth: 18 }}
-                  >
-                    {d}
-                  </th>
-                ))}
+                {periodCells.map((cell) => {
+                  const isMonthBoundary =
+                    cell.dayNum === 1 || cell === periodCells[0];
+                  return (
+                    <th
+                      key={cell.date}
+                      className={cn(
+                        "border border-slate-400 p-0.5 text-[9px] font-medium",
+                        isMonthBoundary && "border-l-2 border-l-slate-600",
+                      )}
+                      style={{ minWidth: 18 }}
+                      title={cell.date}
+                    >
+                      {cell.dayNum}
+                    </th>
+                  );
+                })}
                 <th className="border border-slate-400 p-1"></th>
                 <th className="border border-slate-400 p-1"></th>
                 <th className="border border-slate-400 p-1"></th>
@@ -577,8 +670,9 @@ function MusterRollPage() {
                       <td className={cn(rowBase, "p-1")} rowSpan={2}>
                         {emp.doj ? new Date(emp.doj).toLocaleDateString("en-GB") : "—"}
                       </td>
-                      {dayList.map((d) => {
-                        const date = dateFor(d);
+                      {periodCells.map((cell) => {
+                        const date = cell.date;
+                        const d = cell.dayNum;
                         const entry = entryMap.get(`${emp.id}|${date}`);
                         const codeMeta = entry?.code ? codeMap.get(entry.code) : undefined;
                         const isSelected =
@@ -654,9 +748,9 @@ function MusterRollPage() {
                       <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
                     </tr>,
                     <tr key={emp.id + "-ot"}>
-                      {dayList.map((d) => (
+                      {periodCells.map((cell) => (
                         <td
-                          key={`o-${d}`}
+                          key={`o-${cell.date}`}
                           className={cn(rowBase, "p-0")}
                           style={{ height: 22, minWidth: 18 }}
                         />
