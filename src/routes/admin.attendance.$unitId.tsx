@@ -28,17 +28,25 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-const ATTENDANCE_EMPLOYEE_STATUSES = ["approved", "active", "inactive"] as const;
+// Attendance is always for the previous month (May shows April's roll).
+// Only active employees appear on the roll.
+const ATTENDANCE_EMPLOYEE_STATUSES = ["active"] as const;
 
 function daysInMonth(year: number, monthIdx0: number) {
   return new Date(year, monthIdx0 + 1, 0).getDate();
 }
 
+function previousMonth(now: Date) {
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return { year: prev.getFullYear(), monthIdx: prev.getMonth() };
+}
+
 function MusterRollPage() {
   const { unitId } = Route.useParams();
   const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [monthIdx, setMonthIdx] = useState(now.getMonth()); // 0-based
+  const initial = previousMonth(now);
+  const [year, setYear] = useState(initial.year);
+  const [monthIdx, setMonthIdx] = useState(initial.monthIdx); // 0-based, defaults to previous month
 
   const { data: unit } = useQuery({
     queryKey: ["attendance-unit", unitId],
