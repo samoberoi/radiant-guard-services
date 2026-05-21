@@ -13,6 +13,7 @@ import { downloadCsv } from "@/lib/csv-export";
 import { confirmAction } from "@/components/ConfirmProvider";
 import { PageHeader } from "@/components/PageHeader";
 import { extractFuelFromPhotos } from "@/lib/expense.functions";
+import { extractFuelFromPhotosLocally } from "@/lib/fuel-ocr.client";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -513,7 +514,17 @@ function AddEntryDialog({
       const photos = await Promise.all(
         items.map(async (i) => ({ label: i.label, dataUrl: await fileToDataUrl(i.file) })),
       );
-      const res = await extractFn({ data: { photos } });
+      let res;
+      try {
+        res = await extractFn({ data: { photos } });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "";
+        if (!/GEMINI_API_KEY|Gemini API error|Failed to fetch|500/i.test(message)) {
+          throw error;
+        }
+        res = await extractFuelFromPhotosLocally(items);
+        toast.success("Auto-filled from photos using on-device OCR — please verify");
+      }
       if (res.fuel_type) setFuelType(res.fuel_type);
       if (res.odometer_km != null) setOdometer(String(res.odometer_km));
       if (res.quantity != null) setQuantity(String(res.quantity));
@@ -527,7 +538,9 @@ function AddEntryDialog({
       if (res.entry_time) setEntryTime(res.entry_time);
       if (res.payment_mode) setPaymentMode(res.payment_mode);
       if (res.notes && !notes) setNotes(res.notes);
-      toast.success("Auto-filled from photos — please verify");
+      if (!res.notes) {
+        toast.success("Auto-filled from photos — please verify");
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Auto-fill failed");
     } finally {
