@@ -56,6 +56,7 @@ const MODULE = "Candidate Details";
 
 const SECTIONS = [
   { id: "basic", label: "Basic Info", icon: Activity },
+  { id: "units", label: "Unit Mapping", icon: Building2 },
   { id: "compliance", label: "Compliance", icon: ShieldCheck },
   { id: "knowledge", label: "Knowledge & Experience", icon: GraduationCap },
   { id: "physical", label: "Physical & Health", icon: Heart },
