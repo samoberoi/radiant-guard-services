@@ -2032,6 +2032,27 @@ function ContractFormDialog({
                   </Select>
                 </Field>
               </div>
+              <div className="sm:col-span-3">
+                <Field label="ESIC Subcode">
+                  <Select
+                    value={esicBranchId || "none"}
+                    onValueChange={(v) => setEsicBranchId(v === "none" ? "" : v)}
+                  >
+                    <SelectTrigger className="h-10 rounded-lg">
+                      <SelectValue placeholder="Select ESIC subcode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">— None —</SelectItem>
+                      {esicBranches.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          <span className="font-mono text-xs">{b.esicCode}</span>
+                          {b.location ? ` — ${b.location}` : ""}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </div>
             </div>
           </Section>
 
