@@ -35,8 +35,11 @@ type UnitRow = {
   customer_id: string;
   customer_name: string;
   active_employee_count: number;
+  employee_ids: string[];
   approved_periods: { period_start: string; period_end: string }[];
 };
+
+type EmployeeOption = { id: string; label: string; unit_id: string };
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
