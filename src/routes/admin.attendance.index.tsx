@@ -245,7 +245,7 @@ function AttendanceUnitsPage() {
           }
           // Include reporting officers (client-side contacts) configured on the unit.
           const reportingOfficers = Array.isArray((u as { reporting_officers?: unknown }).reporting_officers)
-            ? ((u as { reporting_officers: Array<{ name?: string; is_active?: boolean }> }).reporting_officers)
+            ? ((u as { reporting_officers: Array<{ name?: string; is_active?: boolean; is_primary?: boolean }> }).reporting_officers)
             : [];
           const activeReportingOfficers = reportingOfficers
             .map((ro, idx) => ({
