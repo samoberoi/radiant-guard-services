@@ -326,13 +326,13 @@ function MusterRollPage() {
       if (sheet?.id) {
         const { error } = await supabase
           .from("attendance_sheets" as never)
-          .update(base)
+          .update(base as never)
           .eq("id", sheet.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("attendance_sheets" as never)
-          .insert(base);
+          .insert(base as never);
         if (error) throw error;
       }
       void logActivity({
