@@ -45,7 +45,7 @@ function MusterRollPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("units")
-        .select("id, code, name, branch_id, customer_id, billing_state")
+        .select("id, code, name, branch_id, customer_id, billing_state, reporting_officers")
         .eq("id", unitId)
         .maybeSingle();
       if (error) throw error;
@@ -60,7 +60,7 @@ function MusterRollPage() {
   });
 
   const { data: employees, isLoading, error: rosterError } = useQuery({
-    queryKey: ["attendance-roster-v2", unitId],
+    queryKey: ["attendance-roster-v3", unitId],
     queryFn: async () => {
       const rosterSelect = "id, employee_code, full_name, designation_id, preferred_joining_date, date_of_birth, is_enabled, status, role_key";
 
@@ -125,7 +125,7 @@ function MusterRollPage() {
         .in("id", desigIds.length ? desigIds : ["00000000-0000-0000-0000-000000000000"]);
       const dMap = new Map((desigs ?? []).map((d) => [d.id, d.name]));
 
-      return dedup
+      const mappedEmployees = dedup
         .map((c) => ({
           id: c.id,
           employee_code: c.employee_code || "",
@@ -137,7 +137,34 @@ function MusterRollPage() {
         .sort((a, b) =>
           (a.employee_code || a.full_name).localeCompare(b.employee_code || b.full_name),
         );
+
+      const reportingOfficers = Array.isArray((unit as { reporting_officers?: unknown } | null)?.reporting_officers)
+        ? ((unit as { reporting_officers: Array<{ name?: string; is_active?: boolean; is_primary?: boolean }> }).reporting_officers)
+        : [];
+
+      const activeReportingOfficers = reportingOfficers
+        .map((officer, idx) => ({
+          id: `ro:${unitId}:${idx}`,
+          employee_code: "—",
+          full_name: (officer?.name || "").trim(),
+          designation: "Field Officer",
+          employee_type: "field_officer" as const,
+          doj: "",
+          isActive: officer?.is_active !== false,
+          isPrimary: officer?.is_primary === true,
+        }))
+        .filter((officer) => officer.isActive && officer.full_name)
+        .map(({ isActive: _isActive, ...officer }) => officer);
+
+      const reportingOfficersForAttendance = activeReportingOfficers.some((officer) => officer.isPrimary)
+        ? activeReportingOfficers.filter((officer) => officer.isPrimary)
+        : activeReportingOfficers;
+
+      return [...mappedEmployees, ...reportingOfficersForAttendance].sort((a, b) =>
+        (a.employee_code || a.full_name).localeCompare(b.employee_code || b.full_name),
+      );
     },
+    enabled: Boolean(unit),
   });
 
   const dayCount = daysInMonth(year, monthIdx);

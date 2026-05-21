@@ -64,7 +64,7 @@ function AttendanceUnitsPage() {
   const [sgFilter, setSgFilter] = useState<string>("all");
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["attendance-dashboard-v6"],
+    queryKey: ["attendance-dashboard-v7"],
     queryFn: async (): Promise<AttendancePageData> => {
       const { data: contracts, error: contractsError } = await supabase
         .from("client_contracts")
@@ -245,13 +245,23 @@ function AttendanceUnitsPage() {
           }
           // Include reporting officers (client-side contacts) configured on the unit.
           const reportingOfficers = Array.isArray((u as { reporting_officers?: unknown }).reporting_officers)
-            ? ((u as { reporting_officers: Array<{ name?: string; is_active?: boolean }> }).reporting_officers)
+            ? ((u as { reporting_officers: Array<{ name?: string; is_active?: boolean; is_primary?: boolean }> }).reporting_officers)
             : [];
-          reportingOfficers.forEach((ro, idx) => {
-            if (ro?.is_active === false) return;
-            const name = (ro?.name || "").trim();
-            if (!name) return;
-            fos.push({ id: `ro:${u.id}:${idx}`, name });
+          const activeReportingOfficers = reportingOfficers
+            .map((ro, idx) => ({
+              id: `ro:${u.id}:${idx}`,
+              name: (ro?.name || "").trim(),
+              isActive: ro?.is_active !== false,
+              isPrimary: ro?.is_primary === true,
+            }))
+            .filter((ro) => ro.isActive && ro.name);
+
+          const reportingOfficersForAttendance = activeReportingOfficers.some((ro) => ro.isPrimary)
+            ? activeReportingOfficers.filter((ro) => ro.isPrimary)
+            : activeReportingOfficers;
+
+          reportingOfficersForAttendance.forEach((ro) => {
+            fos.push({ id: ro.id, name: ro.name });
           });
           return {
             id: u.id,
@@ -264,7 +274,7 @@ function AttendanceUnitsPage() {
             billing_state: u.billing_state || null,
             contract_codes: contractsByUnit.get(u.id)?.codes ?? [],
             contract_end: contractsByUnit.get(u.id)?.end ?? null,
-            active_employee_count: employees.length,
+            active_employee_count: employees.length + reportingOfficersForAttendance.length,
             field_officers: fos.sort((a, b) => a.name.localeCompare(b.name)),
             security_guards: sgs.sort((a, b) => a.name.localeCompare(b.name)),
           };
