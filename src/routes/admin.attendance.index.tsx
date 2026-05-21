@@ -243,6 +243,16 @@ function AttendanceUnitsPage() {
               sgs.push({ id, name: info.name });
             }
           }
+          // Include reporting officers (client-side contacts) configured on the unit.
+          const reportingOfficers = Array.isArray((u as { reporting_officers?: unknown }).reporting_officers)
+            ? ((u as { reporting_officers: Array<{ name?: string; is_active?: boolean }> }).reporting_officers)
+            : [];
+          reportingOfficers.forEach((ro, idx) => {
+            if (ro?.is_active === false) return;
+            const name = (ro?.name || "").trim();
+            if (!name) return;
+            fos.push({ id: `ro:${u.id}:${idx}`, name });
+          });
           return {
             id: u.id,
             code: u.code,
