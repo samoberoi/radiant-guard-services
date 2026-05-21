@@ -701,7 +701,7 @@ function MusterRollPage() {
         <div className="flex items-center gap-2">
           {(status === "draft" || status === "rejected") && (
             <Button size="sm" onClick={() => transitionSheet.mutate({ status: "submitted" })} disabled={transitionSheet.isPending}>
-              <Send className="mr-1.5 h-4 w-4" /> Submit for approval
+              <Send className="mr-1.5 h-4 w-4" /> Submit for Payroll
             </Button>
           )}
           {status === "submitted" && (
