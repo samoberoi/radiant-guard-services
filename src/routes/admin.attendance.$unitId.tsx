@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, Printer, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -7,6 +7,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -16,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { classifyAttendanceEmployee, matchesAttendanceScope, type AttendanceScopeAssignment, type AttendanceUnitContext } from "@/lib/attendance";
 import { cn } from "@/lib/utils";
+
 
 export const Route = createFileRoute("/admin/attendance/$unitId")({
   component: MusterRollPage,
@@ -256,6 +264,57 @@ function MusterRollPage() {
     return `${year}-${m}-${d}`;
   };
 
+  // Drag-to-select state
+  const [dragCandidateId, setDragCandidateId] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerCandidateId, setPickerCandidateId] = useState<string | null>(null);
+  const [pickerDates, setPickerDates] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const onUp = () => {
+      setIsDragging(false);
+      setSelectedDates((current) => {
+        if (current.size > 0 && dragCandidateId) {
+          const sorted = Array.from(current).sort();
+          setPickerCandidateId(dragCandidateId);
+          setPickerDates(sorted);
+          setPickerOpen(true);
+        }
+        return new Set();
+      });
+      setDragCandidateId(null);
+    };
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+  }, [isDragging, dragCandidateId]);
+
+  const applyCodeToSelection = async (code: string) => {
+    if (!pickerCandidateId) return;
+    try {
+      const rows = pickerDates.map((d) => ({
+        unit_id: unitId,
+        candidate_id: pickerCandidateId,
+        entry_date: d,
+        code,
+        ot_hours: entryMap.get(`${pickerCandidateId}|${d}`)?.ot_hours ?? 0,
+      }));
+      const { error } = await supabase
+        .from("attendance_entries")
+        .upsert(rows, { onConflict: "unit_id,candidate_id,entry_date" });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, monthStart, monthEnd] });
+      setPickerOpen(false);
+      toast.success(`Applied ${code || "Clear"} to ${pickerDates.length} day${pickerDates.length > 1 ? "s" : ""}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
+    }
+  };
+
+
+
   const computeTotals = (candidateId: string) => {
     let pDays = 0;
     let otHours = 0;
@@ -469,59 +528,48 @@ function MusterRollPage() {
                         const date = dateFor(d);
                         const entry = entryMap.get(`${emp.id}|${date}`);
                         const codeMeta = entry?.code ? codeMap.get(entry.code) : undefined;
+                        const isSelected =
+                          isDragging && dragCandidateId === emp.id && selectedDates.has(date);
                         return (
                           <td
                             key={`a-${d}`}
-                            className={cn(rowBase, "p-0 print:bg-transparent")}
+                            className={cn(
+                              rowBase,
+                              "p-0 print:bg-transparent select-none cursor-pointer",
+                              isSelected && "ring-2 ring-primary ring-inset",
+                            )}
                             style={{
                               height: 22,
                               minWidth: 18,
                               backgroundColor: codeMeta?.color ? `${codeMeta.color}22` : undefined,
                             }}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              setDragCandidateId(emp.id);
+                              setIsDragging(true);
+                              setSelectedDates(new Set([date]));
+                            }}
+                            onMouseEnter={() => {
+                              if (isDragging && dragCandidateId === emp.id) {
+                                setSelectedDates((prev) => {
+                                  if (prev.has(date)) return prev;
+                                  const next = new Set(prev);
+                                  next.add(date);
+                                  return next;
+                                });
+                              }
+                            }}
                           >
-                            <Popover>
-                              <PopoverTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="h-full w-full px-0 text-[10px] font-semibold leading-none hover:bg-slate-100/60 focus:outline-none"
-                                  style={{ color: codeMeta?.color }}
-                                >
-                                  {entry?.code || ""}
-                                </button>
-                              </PopoverTrigger>
-                              <PopoverContent className="w-48 p-1 print:hidden" align="start">
-                                <div className="grid grid-cols-3 gap-1">
-                                  {codes.map((c) => (
-                                    <button
-                                      key={c.id}
-                                      type="button"
-                                      onClick={() => {
-                                        upsertEntry.mutate({ candidate_id: emp.id, entry_date: date, code: c.code });
-                                        (document.activeElement as HTMLElement | null)?.blur();
-                                      }}
-                                      className={cn(
-                                        "rounded border px-1 py-1 text-[10px] font-semibold transition",
-                                        entry?.code === c.code ? "border-foreground" : "border-border hover:bg-muted",
-                                      )}
-                                      style={{ color: c.color }}
-                                      title={c.label}
-                                    >
-                                      {c.code}
-                                    </button>
-                                  ))}
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={() => upsertEntry.mutate({ candidate_id: emp.id, entry_date: date, code: "" })}
-                                  className="mt-1 w-full rounded border border-border px-1 py-1 text-[10px] text-muted-foreground hover:bg-muted"
-                                >
-                                  Clear
-                                </button>
-                              </PopoverContent>
-                            </Popover>
+                            <div
+                              className="h-full w-full px-0 text-[10px] font-semibold leading-none flex items-center justify-center"
+                              style={{ color: codeMeta?.color }}
+                            >
+                              {entry?.code || ""}
+                            </div>
                           </td>
                         );
                       })}
+
                       <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.pDays}</td>
                       <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.otHours}</td>
                       <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.tDays}</td>
@@ -547,6 +595,42 @@ function MusterRollPage() {
           Att = Attendance · OT = Overtime hours
         </div>
       </div>
+
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Mark attendance</DialogTitle>
+            <DialogDescription>
+              {pickerDates.length} day{pickerDates.length > 1 ? "s" : ""} selected
+              {pickerCandidateId
+                ? ` for ${(employees ?? []).find((e) => e.id === pickerCandidateId)?.full_name ?? ""}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-4 gap-2">
+            {codes.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => applyCodeToSelection(c.code)}
+                className="rounded-md border border-border px-2 py-3 text-sm font-bold transition hover:bg-muted"
+                style={{ color: c.color }}
+                title={c.label}
+              >
+                {c.code}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => applyCodeToSelection("")}
+            className="mt-2 w-full rounded-md border border-border px-2 py-2 text-sm text-muted-foreground hover:bg-muted"
+          >
+            Clear selection
+          </button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
