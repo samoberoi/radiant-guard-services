@@ -578,6 +578,8 @@ function MusterRollPage() {
                 <div className="mt-1 font-bold">{principalEmployer || "—"}</div>
                 {principalAddress && <div className="text-slate-700">{principalAddress}</div>}
                 <div className="mt-3 font-semibold">For the month of {monthLabel}</div>
+                <div className="text-slate-700">Period: {periodLabel}</div>
+                <div className="text-[10px] text-slate-500">{windowLabel}</div>
               </td>
             </tr>
           </tbody>
