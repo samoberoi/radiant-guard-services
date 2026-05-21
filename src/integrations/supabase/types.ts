@@ -125,6 +125,39 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_entries: {
+        Row: {
+          candidate_id: string
+          code: string
+          created_at: string
+          entry_date: string
+          id: string
+          ot_hours: number
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          candidate_id: string
+          code?: string
+          created_at?: string
+          entry_date: string
+          id?: string
+          ot_hours?: number
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string
+          code?: string
+          created_at?: string
+          entry_date?: string
+          id?: string
+          ot_hours?: number
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       billing_types: {
         Row: {
           created_at: string

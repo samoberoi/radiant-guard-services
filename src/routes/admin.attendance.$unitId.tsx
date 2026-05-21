@@ -1,9 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, Printer, Download } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -17,6 +20,24 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/admin/attendance/$unitId")({
   component: MusterRollPage,
 });
+
+type AttendanceCode = {
+  id: string;
+  code: string;
+  label: string;
+  color: string;
+  counts_as_present: boolean;
+  is_paid: boolean;
+  is_leave: boolean;
+  sort_order: number;
+};
+
+type EntryRow = {
+  candidate_id: string;
+  entry_date: string;
+  code: string;
+  ot_hours: number;
+};
 
 const SERVICE_PROVIDER = {
   name: "Radiant Guard Services Private Limited",
@@ -159,6 +180,97 @@ function MusterRollPage() {
     () => Array.from({ length: dayCount }, (_, i) => i + 1),
     [dayCount],
   );
+
+  const monthStart = useMemo(() => {
+    const m = String(monthIdx + 1).padStart(2, "0");
+    return `${year}-${m}-01`;
+  }, [year, monthIdx]);
+  const monthEnd = useMemo(() => {
+    const m = String(monthIdx + 1).padStart(2, "0");
+    const d = String(dayCount).padStart(2, "0");
+    return `${year}-${m}-${d}`;
+  }, [year, monthIdx, dayCount]);
+
+  const queryClient = useQueryClient();
+
+  const { data: codes = [] } = useQuery({
+    queryKey: ["attendance-codes-enabled"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("attendance_codes")
+        .select("id, code, label, color, counts_as_present, is_paid, is_leave, sort_order")
+        .eq("enabled", true)
+        .order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as AttendanceCode[];
+    },
+  });
+
+  const codeMap = useMemo(() => new Map(codes.map((c) => [c.code, c])), [codes]);
+
+  const { data: entries = [] } = useQuery({
+    queryKey: ["attendance-entries", unitId, monthStart, monthEnd],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("attendance_entries")
+        .select("candidate_id, entry_date, code, ot_hours")
+        .eq("unit_id", unitId)
+        .gte("entry_date", monthStart)
+        .lte("entry_date", monthEnd);
+      if (error) throw error;
+      return (data ?? []) as EntryRow[];
+    },
+    enabled: Boolean(unitId),
+  });
+
+  const entryMap = useMemo(() => {
+    const m = new Map<string, EntryRow>();
+    for (const e of entries) m.set(`${e.candidate_id}|${e.entry_date}`, e);
+    return m;
+  }, [entries]);
+
+  const upsertEntry = useMutation({
+    mutationFn: async (payload: { candidate_id: string; entry_date: string; code?: string; ot_hours?: number }) => {
+      const existing = entryMap.get(`${payload.candidate_id}|${payload.entry_date}`);
+      const next = {
+        unit_id: unitId,
+        candidate_id: payload.candidate_id,
+        entry_date: payload.entry_date,
+        code: payload.code ?? existing?.code ?? "",
+        ot_hours: payload.ot_hours ?? existing?.ot_hours ?? 0,
+      };
+      const { error } = await supabase
+        .from("attendance_entries")
+        .upsert(next, { onConflict: "unit_id,candidate_id,entry_date" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, monthStart, monthEnd] });
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to save"),
+  });
+
+  const dateFor = (day: number) => {
+    const m = String(monthIdx + 1).padStart(2, "0");
+    const d = String(day).padStart(2, "0");
+    return `${year}-${m}-${d}`;
+  };
+
+  const computeTotals = (candidateId: string) => {
+    let pDays = 0;
+    let otHours = 0;
+    let paidDays = 0;
+    for (const day of dayList) {
+      const e = entryMap.get(`${candidateId}|${dateFor(day)}`);
+      if (!e) continue;
+      otHours += Number(e.ot_hours) || 0;
+      const c = codeMap.get(e.code);
+      if (!c) continue;
+      if (c.counts_as_present) pDays += 1;
+      if (c.is_paid) paidDays += 1;
+    }
+    return { pDays, otHours, tDays: pDays + paidDays };
+  };
 
   const principalEmployer = unit
     ? `${unit.customer_name || ""}${unit.code ? ` - ${unit.code}` : ""}`.trim()
@@ -317,6 +429,7 @@ function MusterRollPage() {
               ) : (
                 (employees ?? []).flatMap((emp, idx) => {
                   const rowBase = "border border-slate-400 align-middle";
+                  const totals = computeTotals(emp.id);
                   return [
                     <tr key={emp.id + "-att"}>
                       <td className={cn(rowBase, "p-1 font-medium")} rowSpan={2}>
@@ -334,26 +447,96 @@ function MusterRollPage() {
                       <td className={cn(rowBase, "p-1")} rowSpan={2}>
                         {emp.doj ? new Date(emp.doj).toLocaleDateString("en-GB") : "—"}
                       </td>
-                      {dayList.map((d) => (
-                        <td
-                          key={`a-${d}`}
-                          className={cn(rowBase, "p-0")}
-                          style={{ height: 22, minWidth: 18 }}
-                        ></td>
-                      ))}
-                      <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
-                      <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
-                      <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
+                      {dayList.map((d) => {
+                        const date = dateFor(d);
+                        const entry = entryMap.get(`${emp.id}|${date}`);
+                        const codeMeta = entry?.code ? codeMap.get(entry.code) : undefined;
+                        return (
+                          <td
+                            key={`a-${d}`}
+                            className={cn(rowBase, "p-0 print:bg-transparent")}
+                            style={{
+                              height: 22,
+                              minWidth: 18,
+                              backgroundColor: codeMeta?.color ? `${codeMeta.color}22` : undefined,
+                            }}
+                          >
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button
+                                  type="button"
+                                  className="h-full w-full px-0 text-[10px] font-semibold leading-none hover:bg-slate-100/60 focus:outline-none"
+                                  style={{ color: codeMeta?.color }}
+                                >
+                                  {entry?.code || ""}
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-48 p-1 print:hidden" align="start">
+                                <div className="grid grid-cols-3 gap-1">
+                                  {codes.map((c) => (
+                                    <button
+                                      key={c.id}
+                                      type="button"
+                                      onClick={() => {
+                                        upsertEntry.mutate({ candidate_id: emp.id, entry_date: date, code: c.code });
+                                        (document.activeElement as HTMLElement | null)?.blur();
+                                      }}
+                                      className={cn(
+                                        "rounded border px-1 py-1 text-[10px] font-semibold transition",
+                                        entry?.code === c.code ? "border-foreground" : "border-border hover:bg-muted",
+                                      )}
+                                      style={{ color: c.color }}
+                                      title={c.label}
+                                    >
+                                      {c.code}
+                                    </button>
+                                  ))}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => upsertEntry.mutate({ candidate_id: emp.id, entry_date: date, code: "" })}
+                                  className="mt-1 w-full rounded border border-border px-1 py-1 text-[10px] text-muted-foreground hover:bg-muted"
+                                >
+                                  Clear
+                                </button>
+                              </PopoverContent>
+                            </Popover>
+                          </td>
+                        );
+                      })}
+                      <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.pDays}</td>
+                      <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.otHours}</td>
+                      <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.tDays}</td>
                       <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
                     </tr>,
                     <tr key={emp.id + "-ot"}>
-                      {dayList.map((d) => (
-                        <td
-                          key={`o-${d}`}
-                          className={cn(rowBase, "p-0")}
-                          style={{ height: 22, minWidth: 18 }}
-                        ></td>
-                      ))}
+                      {dayList.map((d) => {
+                        const date = dateFor(d);
+                        const entry = entryMap.get(`${emp.id}|${date}`);
+                        const ot = entry?.ot_hours ?? 0;
+                        return (
+                          <td
+                            key={`o-${d}`}
+                            className={cn(rowBase, "p-0")}
+                            style={{ height: 22, minWidth: 18 }}
+                          >
+                            <Input
+                              type="number"
+                              min={0}
+                              step={0.5}
+                              defaultValue={ot || ""}
+                              key={`${date}-${ot}`}
+                              onBlur={(e) => {
+                                const val = Number(e.currentTarget.value) || 0;
+                                if (val === ot) return;
+                                upsertEntry.mutate({ candidate_id: emp.id, entry_date: date, ot_hours: val });
+                              }}
+                              className="h-[22px] w-full rounded-none border-0 bg-transparent px-0 text-center text-[10px] focus-visible:ring-1 print:hidden"
+                            />
+                            <span className="hidden text-[10px] print:inline">{ot || ""}</span>
+                          </td>
+                        );
+                      })}
                     </tr>,
                   ];
                 })
