@@ -460,6 +460,24 @@ function AdminLayout() {
             </Link>
           </div>
 
+          {/* Payroll link */}
+          <div className="mt-2">
+            <Link
+              to="/admin/payroll"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+                isActive("/admin/payroll")
+                  ? "bg-accent/20 text-accent"
+                  : "text-primary-foreground/85 hover:bg-white/5",
+                collapsed && "justify-center",
+              )}
+              title={collapsed ? "Payroll" : undefined}
+            >
+              <Wallet className="h-4.5 w-4.5 shrink-0" />
+              {!collapsed && <span>Payroll</span>}
+            </Link>
+          </div>
+
           {/* Control Center link */}
           <div className="mt-2">
             <Link
