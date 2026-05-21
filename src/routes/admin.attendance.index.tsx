@@ -403,7 +403,6 @@ function AttendanceUnitsPage() {
                 <th className="px-5 py-4 font-medium">Unit</th>
                 <th className="px-5 py-4 font-medium">Organization</th>
                 <th className="px-5 py-4 font-medium">Location</th>
-                <th className="px-5 py-4 font-medium">Field officers</th>
                 <th className="px-5 py-4 font-medium">Security guards</th>
                 <th className="px-5 py-4 text-right font-medium">Active</th>
                 <th className="px-5 py-4 text-right font-medium">Action</th>
@@ -412,19 +411,19 @@ function AttendanceUnitsPage() {
             <tbody className="divide-y divide-border/50">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     Loading attendance units…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-destructive">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-destructive">
                     {error instanceof Error ? error.message : "Could not load attendance units right now."}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     {units.length === 0 ? "No units with active contracts yet." : "No units match the current filters."}
                   </td>
                 </tr>
