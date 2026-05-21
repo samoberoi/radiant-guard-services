@@ -646,17 +646,9 @@ function AddEntryDialog({
       const photos = await Promise.all(
         items.map(async (it) => ({ label: it.label, dataUrl: await fileToDataUrl(it.file) })),
       );
-      try {
-        const res = await extractFn({ data: { photos } });
-        applyExtraction(res);
-        toast.success("Auto-filled from photos — please verify");
-      } catch (serverError) {
-        console.error("[expense-manager] server auto-fill failed, using local OCR fallback", serverError);
-        const { extractFuelFromPhotosLocally } = await getFuelOcrClient();
-        const local = await extractFuelFromPhotosLocally(items);
-        applyExtraction(local);
-        toast.success("Auto-filled from photos — please verify");
-      }
+      const res = await extractFn({ data: { photos } });
+      applyExtraction(res);
+      toast.success("Auto-filled from photos — please verify");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Auto-fill failed");
     } finally {
