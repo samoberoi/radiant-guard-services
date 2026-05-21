@@ -42,29 +42,28 @@ type UnitRow = {
   contract_codes: string[];
   contract_end: string | null;
   active_employee_count: number;
-  field_officers: EmployeeRef[];
   security_guards: EmployeeRef[];
 };
 
 type AttendancePageData = {
   units: UnitRow[];
   organizations: { id: string; name: string }[];
-  fieldOfficers: EmployeeRef[];
   securityGuards: EmployeeRef[];
   summary: { organizations: number; units: number; activeEmployees: number };
 };
 
+// Only active employees appear on attendance. Field officers are on Radiant's own
+// payroll (non-billable) and are intentionally excluded from the muster roll.
 const ACTIVE_EMPLOYEE_STATUSES = ["active"] as const;
 
 function AttendanceUnitsPage() {
   const [q, setQ] = useState("");
   const [orgFilter, setOrgFilter] = useState<string>("all");
   const [unitFilter, setUnitFilter] = useState<string>("all");
-  const [foFilter, setFoFilter] = useState<string>("all");
   const [sgFilter, setSgFilter] = useState<string>("all");
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["attendance-dashboard-v7"],
+    queryKey: ["attendance-dashboard-v8"],
     queryFn: async (): Promise<AttendancePageData> => {
       const { data: contracts, error: contractsError } = await supabase
         .from("client_contracts")
@@ -86,7 +85,6 @@ function AttendanceUnitsPage() {
         return {
           units: [],
           organizations: [],
-          fieldOfficers: [],
           securityGuards: [],
           summary: { organizations: 0, units: 0, activeEmployees: 0 },
         };
@@ -233,36 +231,14 @@ function AttendanceUnitsPage() {
         .map((u) => {
           const a = acc.get(u.id);
           const employees = a ? Array.from(a.employees.entries()) : [];
-          const fos: EmployeeRef[] = [];
           const sgs: EmployeeRef[] = [];
           for (const [id, info] of employees) {
-            const employeeType = classifyAttendanceEmployee(info.roleKey, info.designation);
-            if (employeeType === "field_officer") {
-              fos.push({ id, name: info.name });
-            } else if (employeeType === "security_guard") {
+            // Only billable security guards are payable per unit. Field officers are on
+            // Radiant's own payroll (non-billable) and are intentionally excluded.
+            if (classifyAttendanceEmployee(info.roleKey, info.designation) === "security_guard") {
               sgs.push({ id, name: info.name });
             }
           }
-          // Include reporting officers (client-side contacts) configured on the unit.
-          const reportingOfficers = Array.isArray((u as { reporting_officers?: unknown }).reporting_officers)
-            ? ((u as { reporting_officers: Array<{ name?: string; is_active?: boolean; is_primary?: boolean }> }).reporting_officers)
-            : [];
-          const activeReportingOfficers = reportingOfficers
-            .map((ro, idx) => ({
-              id: `ro:${u.id}:${idx}`,
-              name: (ro?.name || "").trim(),
-              isActive: ro?.is_active !== false,
-              isPrimary: ro?.is_primary === true,
-            }))
-            .filter((ro) => ro.isActive && ro.name);
-
-          const reportingOfficersForAttendance = activeReportingOfficers.some((ro) => ro.isPrimary)
-            ? activeReportingOfficers.filter((ro) => ro.isPrimary)
-            : activeReportingOfficers;
-
-          reportingOfficersForAttendance.forEach((ro) => {
-            fos.push({ id: ro.id, name: ro.name });
-          });
           return {
             id: u.id,
             code: u.code,
@@ -274,8 +250,7 @@ function AttendanceUnitsPage() {
             billing_state: u.billing_state || null,
             contract_codes: contractsByUnit.get(u.id)?.codes ?? [],
             contract_end: contractsByUnit.get(u.id)?.end ?? null,
-            active_employee_count: employees.length + reportingOfficersForAttendance.length,
-            field_officers: fos.sort((a, b) => a.name.localeCompare(b.name)),
+            active_employee_count: sgs.length,
             security_guards: sgs.sort((a, b) => a.name.localeCompare(b.name)),
           };
         })
@@ -289,17 +264,14 @@ function AttendanceUnitsPage() {
         new Map(rows.map((r) => [r.customer_id || r.customer_name, { id: r.customer_id || r.customer_name, name: r.customer_name }])).values(),
       ).sort((a, b) => a.name.localeCompare(b.name));
 
-      const foMap = new Map<string, EmployeeRef>();
       const sgMap = new Map<string, EmployeeRef>();
       for (const r of rows) {
-        for (const fo of r.field_officers) foMap.set(fo.id, fo);
         for (const sg of r.security_guards) sgMap.set(sg.id, sg);
       }
 
       return {
         units: rows,
         organizations: orgs,
-        fieldOfficers: Array.from(foMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
         securityGuards: Array.from(sgMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
         summary: {
           organizations: orgs.length,
@@ -312,7 +284,6 @@ function AttendanceUnitsPage() {
 
   const units = data?.units ?? [];
   const organizations = data?.organizations ?? [];
-  const fieldOfficers = data?.fieldOfficers ?? [];
   const securityGuards = data?.securityGuards ?? [];
   const summary = data?.summary ?? { organizations: 0, units: 0, activeEmployees: 0 };
 
@@ -321,7 +292,6 @@ function AttendanceUnitsPage() {
     return units.filter((u) => {
       if (orgFilter !== "all" && (u.customer_id || u.customer_name) !== orgFilter) return false;
       if (unitFilter !== "all" && u.id !== unitFilter) return false;
-      if (foFilter !== "all" && !u.field_officers.some((f) => f.id === foFilter)) return false;
       if (sgFilter !== "all" && !u.security_guards.some((g) => g.id === sgFilter)) return false;
       if (term) {
         const hay = [
@@ -330,7 +300,6 @@ function AttendanceUnitsPage() {
           u.code,
           u.location,
           ...u.contract_codes,
-          ...u.field_officers.map((f) => f.name),
           ...u.security_guards.map((g) => g.name),
         ]
           .join(" ")
@@ -339,15 +308,16 @@ function AttendanceUnitsPage() {
       }
       return true;
     });
-  }, [q, orgFilter, unitFilter, foFilter, sgFilter, units]);
+  }, [q, orgFilter, unitFilter, sgFilter, units]);
 
-  const anyFilter = orgFilter !== "all" || unitFilter !== "all" || foFilter !== "all" || sgFilter !== "all" || q.trim().length > 0;
+  const anyFilter = orgFilter !== "all" || unitFilter !== "all" || sgFilter !== "all" || q.trim().length > 0;
+
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader
         title="Attendance"
-        description="Browse units with active contracts and drill into the monthly muster roll. Filter by organization, unit, field officer, or security guard."
+        description="Browse units with active contracts and drill into the monthly muster roll. Only billable security guards appear — field officers are on Radiant's own payroll. Filter by organization, unit, or guard."
         crumbs={[{ label: "Attendance" }]}
       />
 
@@ -396,13 +366,6 @@ function AttendanceUnitsPage() {
               allLabel={`All units (${units.length})`}
             />
             <FilterSelect
-              label="Field officer"
-              value={foFilter}
-              onChange={setFoFilter}
-              options={fieldOfficers.map((f) => ({ value: f.id, label: f.name }))}
-              allLabel={`All field officers (${fieldOfficers.length})`}
-            />
-            <FilterSelect
               label="Security guard"
               value={sgFilter}
               onChange={setSgFilter}
@@ -424,7 +387,6 @@ function AttendanceUnitsPage() {
                   setQ("");
                   setOrgFilter("all");
                   setUnitFilter("all");
-                  setFoFilter("all");
                   setSgFilter("all");
                 }}
               >
@@ -441,7 +403,6 @@ function AttendanceUnitsPage() {
                 <th className="px-5 py-4 font-medium">Unit</th>
                 <th className="px-5 py-4 font-medium">Organization</th>
                 <th className="px-5 py-4 font-medium">Location</th>
-                <th className="px-5 py-4 font-medium">Field officers</th>
                 <th className="px-5 py-4 font-medium">Security guards</th>
                 <th className="px-5 py-4 text-right font-medium">Active</th>
                 <th className="px-5 py-4 text-right font-medium">Action</th>
@@ -450,19 +411,19 @@ function AttendanceUnitsPage() {
             <tbody className="divide-y divide-border/50">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     Loading attendance units…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-destructive">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-destructive">
                     {error instanceof Error ? error.message : "Could not load attendance units right now."}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     {units.length === 0 ? "No units with active contracts yet." : "No units match the current filters."}
                   </td>
                 </tr>
@@ -502,9 +463,6 @@ function AttendanceUnitsPage() {
                     </td>
                     <td className="px-5 py-4 align-top text-sm text-foreground">{unit.customer_name}</td>
                     <td className="px-5 py-4 align-top text-sm text-muted-foreground">{unit.location || "—"}</td>
-                    <td className="px-5 py-4 align-top">
-                      <EmployeeChips list={unit.field_officers} empty="—" tone="amber" />
-                    </td>
                     <td className="px-5 py-4 align-top">
                       <EmployeeChips list={unit.security_guards} empty="—" tone="emerald" />
                     </td>

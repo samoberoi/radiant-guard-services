@@ -28,17 +28,25 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-const ATTENDANCE_EMPLOYEE_STATUSES = ["approved", "active", "inactive"] as const;
+// Attendance is always for the previous month (May shows April's roll).
+// Only active employees appear on the roll.
+const ATTENDANCE_EMPLOYEE_STATUSES = ["active"] as const;
 
 function daysInMonth(year: number, monthIdx0: number) {
   return new Date(year, monthIdx0 + 1, 0).getDate();
 }
 
+function previousMonth(now: Date) {
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return { year: prev.getFullYear(), monthIdx: prev.getMonth() };
+}
+
 function MusterRollPage() {
   const { unitId } = Route.useParams();
   const now = new Date();
-  const [year, setYear] = useState(now.getFullYear());
-  const [monthIdx, setMonthIdx] = useState(now.getMonth()); // 0-based
+  const initial = previousMonth(now);
+  const [year, setYear] = useState(initial.year);
+  const [monthIdx, setMonthIdx] = useState(initial.monthIdx); // 0-based, defaults to previous month
 
   const { data: unit } = useQuery({
     queryKey: ["attendance-unit", unitId],
@@ -60,7 +68,7 @@ function MusterRollPage() {
   });
 
   const { data: employees, isLoading, error: rosterError } = useQuery({
-    queryKey: ["attendance-roster-v3", unitId],
+    queryKey: ["attendance-roster-v4", unitId],
     queryFn: async () => {
       const rosterSelect = "id, employee_code, full_name, designation_id, preferred_joining_date, date_of_birth, is_enabled, status, role_key";
 
@@ -125,6 +133,8 @@ function MusterRollPage() {
         .in("id", desigIds.length ? desigIds : ["00000000-0000-0000-0000-000000000000"]);
       const dMap = new Map((desigs ?? []).map((d) => [d.id, d.name]));
 
+      // Only billable security guards are payable per-unit; field officers (reporting officers)
+      // are on Radiant's own payroll and are excluded from the muster roll.
       const mappedEmployees = dedup
         .map((c) => ({
           id: c.id,
@@ -134,35 +144,12 @@ function MusterRollPage() {
           employee_type: classifyAttendanceEmployee(c.role_key, (c.designation_id && dMap.get(c.designation_id)) || ""),
           doj: c.preferred_joining_date || "",
         }))
+        .filter((e) => e.employee_type === "security_guard")
         .sort((a, b) =>
           (a.employee_code || a.full_name).localeCompare(b.employee_code || b.full_name),
         );
 
-      const reportingOfficers = Array.isArray((unit as { reporting_officers?: unknown } | null)?.reporting_officers)
-        ? ((unit as { reporting_officers: Array<{ name?: string; is_active?: boolean; is_primary?: boolean }> }).reporting_officers)
-        : [];
-
-      const activeReportingOfficers = reportingOfficers
-        .map((officer, idx) => ({
-          id: `ro:${unitId}:${idx}`,
-          employee_code: "—",
-          full_name: (officer?.name || "").trim(),
-          designation: "Field Officer",
-          employee_type: "field_officer" as const,
-          doj: "",
-          isActive: officer?.is_active !== false,
-          isPrimary: officer?.is_primary === true,
-        }))
-        .filter((officer) => officer.isActive && officer.full_name)
-        .map(({ isActive: _isActive, ...officer }) => officer);
-
-      const reportingOfficersForAttendance = activeReportingOfficers.some((officer) => officer.isPrimary)
-        ? activeReportingOfficers.filter((officer) => officer.isPrimary)
-        : activeReportingOfficers;
-
-      return [...mappedEmployees, ...reportingOfficersForAttendance].sort((a, b) =>
-        (a.employee_code || a.full_name).localeCompare(b.employee_code || b.full_name),
-      );
+      return mappedEmployees;
     },
     enabled: Boolean(unit),
   });
@@ -324,7 +311,7 @@ function MusterRollPage() {
               ) : (employees ?? []).length === 0 ? (
                 <tr>
                   <td colSpan={9 + dayCount} className="p-6 text-slate-500">
-                    No enabled employees are mapped to this unit.
+                    No active security guards are mapped to this unit.
                   </td>
                 </tr>
               ) : (
