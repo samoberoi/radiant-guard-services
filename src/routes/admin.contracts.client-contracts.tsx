@@ -723,13 +723,14 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
   const resources = (resData as unknown as Record<string, unknown>[]) ?? [];
 
   // Resolve lookup labels in parallel
-  const [unitsRes, desigRes, svcRes, pwRes, btRes, pdbRes] = await Promise.all([
+  const [unitsRes, desigRes, svcRes, pwRes, btRes, pdbRes, esicRes] = await Promise.all([
     supabase.from("units" as never).select("id,code,name").eq("id", contract.unitId).maybeSingle(),
     supabase.from("designations" as never).select("id,name,code"),
     supabase.from("service_types" as never).select("id,name"),
     supabase.from("payroll_windows" as never).select("id,label"),
     supabase.from("billing_types" as never).select("id,name"),
     supabase.from("payroll_day_bases" as never).select("id,name,code"),
+    supabase.from("esic_branches" as never).select("id,esic_code,location"),
   ]);
   const unitRow = unitsRes.data as Record<string, unknown> | null;
   const nameMap = (rows: unknown, key = "name"): Map<string, string> => {
