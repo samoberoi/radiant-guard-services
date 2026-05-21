@@ -359,6 +359,7 @@ function CandidateDetailsPage() {
         {/* Content */}
         <section className="rounded-lg border bg-card p-6">
           {active === "basic" && <BasicSection form={form} />}
+          {active === "units" && <UnitMappingSection candidateId={id} primaryUnitId={form.unit_id ?? null} />}
           {active === "physical" && (
             <PhysicalSection form={form} setSection={setSection} />
           )}
