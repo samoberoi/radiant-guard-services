@@ -599,15 +599,23 @@ function MusterRollPage() {
                 <th className="border border-slate-400 p-1"></th>
                 <th className="border border-slate-400 p-1"></th>
                 <th className="border border-slate-400 p-1"></th>
-                {dayList.map((d) => (
-                  <th
-                    key={d}
-                    className="border border-slate-400 p-0.5 text-[9px] font-medium"
-                    style={{ minWidth: 18 }}
-                  >
-                    {d}
-                  </th>
-                ))}
+                {periodCells.map((cell) => {
+                  const isMonthBoundary =
+                    cell.dayNum === 1 || cell === periodCells[0];
+                  return (
+                    <th
+                      key={cell.date}
+                      className={cn(
+                        "border border-slate-400 p-0.5 text-[9px] font-medium",
+                        isMonthBoundary && "border-l-2 border-l-slate-600",
+                      )}
+                      style={{ minWidth: 18 }}
+                      title={cell.date}
+                    >
+                      {cell.dayNum}
+                    </th>
+                  );
+                })}
                 <th className="border border-slate-400 p-1"></th>
                 <th className="border border-slate-400 p-1"></th>
                 <th className="border border-slate-400 p-1"></th>
