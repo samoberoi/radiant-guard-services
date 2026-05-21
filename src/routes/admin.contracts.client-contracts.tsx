@@ -1754,6 +1754,7 @@ function ContractFormDialog({
   const [serviceTypeId, setServiceTypeId] = useState<string>("");
   const [payrollWindowId, setPayrollWindowId] = useState<string>("");
   const [billingTypeId, setBillingTypeId] = useState<string>("");
+  const [esicBranchId, setEsicBranchId] = useState<string>("");
   const [gstOption, setGstOption] = useState<GstOption>("csgst");
   const [unitPickerOpen, setUnitPickerOpen] = useState(false);
   const [unitQuery, setUnitQuery] = useState("");
