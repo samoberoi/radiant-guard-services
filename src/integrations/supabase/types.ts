@@ -158,6 +158,57 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_sheets: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          period_end: string
+          period_start: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          period_end: string
+          period_start: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       billing_types: {
         Row: {
           created_at: string
