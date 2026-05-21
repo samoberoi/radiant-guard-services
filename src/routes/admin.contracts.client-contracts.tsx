@@ -249,7 +249,7 @@ function useContracts() {
       const { data, error } = await supabase
         .from("client_contracts" as never)
         .select(
-          "id,contract_code,prospect_code,record_type,prospect_stage,promoted_at,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,gst_option,status,approval_status,rejection_reason,created_by",
+          "id,contract_code,prospect_code,record_type,prospect_stage,promoted_at,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status,approval_status,rejection_reason,created_by",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
