@@ -2,7 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
 import { extractFuelFromPhotos } from "@/lib/fuel-extraction.functions";
-import { extractFuelFromPhotosLocally } from "@/lib/fuel-ocr.client";
+// Note: fuel-ocr.client is imported dynamically inside the handler to avoid
+// pulling a browser-only module into the SSR bundle.
+import type { extractFuelFromPhotosLocally as ExtractFuelFromPhotosLocallyType } from "@/lib/fuel-ocr.client";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download,
@@ -614,7 +616,7 @@ function AddEntryDialog({
     }
     setExtracting(true);
     try {
-      const applyExtraction = (res: Awaited<ReturnType<typeof extractFuelFromPhotosLocally>>) => {
+      const applyExtraction = (res: Awaited<ReturnType<typeof ExtractFuelFromPhotosLocallyType>>) => {
         if (res.fuel_type) setFuelType(res.fuel_type);
         if (res.odometer_km != null) setOdometer(String(res.odometer_km));
         if (res.quantity != null) setQuantity(String(res.quantity));
@@ -639,6 +641,7 @@ function AddEntryDialog({
         toast.success("Auto-filled from photos — please verify");
       } catch (serverError) {
         console.error("[expense-manager] server auto-fill failed, using local OCR fallback", serverError);
+        const { extractFuelFromPhotosLocally } = await import("@/lib/fuel-ocr.client");
         const local = await extractFuelFromPhotosLocally(items);
         applyExtraction(local);
         toast.success("Auto-filled from photos — please verify");
