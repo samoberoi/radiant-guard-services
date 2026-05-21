@@ -20,6 +20,7 @@ import { Route as AdminRbacRouteImport } from './routes/admin.rbac'
 import { Route as AdminProfessionalTaxManagerRouteImport } from './routes/admin.professional-tax-manager'
 import { Route as AdminPayrollManagerRouteImport } from './routes/admin.payroll-manager'
 import { Route as AdminPayrollDaysManagerRouteImport } from './routes/admin.payroll-days-manager'
+import { Route as AdminPayrollRouteImport } from './routes/admin.payroll'
 import { Route as AdminOffboardingReasonManagerRouteImport } from './routes/admin.offboarding-reason-manager'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminLwfManagerRouteImport } from './routes/admin.lwf-manager'
@@ -38,6 +39,7 @@ import { Route as AdminAttendanceCodeManagerRouteImport } from './routes/admin.a
 import { Route as AdminAttendanceRouteImport } from './routes/admin.attendance'
 import { Route as AdminAssetManagerRouteImport } from './routes/admin.asset-manager'
 import { Route as AdminAllowanceManagerRouteImport } from './routes/admin.allowance-manager'
+import { Route as AdminPayrollIndexRouteImport } from './routes/admin.payroll.index'
 import { Route as AdminAttendanceIndexRouteImport } from './routes/admin.attendance.index'
 import { Route as AdminVehiclesServiceManagerRouteImport } from './routes/admin.vehicles.service-manager'
 import { Route as AdminVehiclesPucsRouteImport } from './routes/admin.vehicles.pucs'
@@ -46,6 +48,7 @@ import { Route as AdminVehiclesInsurancesRouteImport } from './routes/admin.vehi
 import { Route as AdminVehiclesInsightLabRouteImport } from './routes/admin.vehicles.insight-lab'
 import { Route as AdminVehiclesFastagsRouteImport } from './routes/admin.vehicles.fastags'
 import { Route as AdminVehiclesExpenseManagerRouteImport } from './routes/admin.vehicles.expense-manager'
+import { Route as AdminPayrollUnitIdRouteImport } from './routes/admin.payroll.$unitId'
 import { Route as AdminCustomersUnitManagerRouteImport } from './routes/admin.customers.unit-manager'
 import { Route as AdminCustomersStateManagerRouteImport } from './routes/admin.customers.state-manager'
 import { Route as AdminCustomersCustomerManagerRouteImport } from './routes/admin.customers.customer-manager'
@@ -108,6 +111,11 @@ const AdminPayrollManagerRoute = AdminPayrollManagerRouteImport.update({
 const AdminPayrollDaysManagerRoute = AdminPayrollDaysManagerRouteImport.update({
   id: '/payroll-days-manager',
   path: '/payroll-days-manager',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPayrollRoute = AdminPayrollRouteImport.update({
+  id: '/payroll',
+  path: '/payroll',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminOffboardingReasonManagerRoute =
@@ -203,6 +211,11 @@ const AdminAllowanceManagerRoute = AdminAllowanceManagerRouteImport.update({
   path: '/allowance-manager',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPayrollIndexRoute = AdminPayrollIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminPayrollRoute,
+} as any)
 const AdminAttendanceIndexRoute = AdminAttendanceIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -245,6 +258,11 @@ const AdminVehiclesExpenseManagerRoute =
     path: '/expense-manager',
     getParentRoute: () => AdminVehiclesRoute,
   } as any)
+const AdminPayrollUnitIdRoute = AdminPayrollUnitIdRouteImport.update({
+  id: '/$unitId',
+  path: '/$unitId',
+  getParentRoute: () => AdminPayrollRoute,
+} as any)
 const AdminCustomersUnitManagerRoute =
   AdminCustomersUnitManagerRouteImport.update({
     id: '/unit-manager',
@@ -310,6 +328,7 @@ export interface FileRoutesByFullPath {
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offboarding-reason-manager': typeof AdminOffboardingReasonManagerRoute
+  '/admin/payroll': typeof AdminPayrollRouteWithChildren
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
@@ -323,6 +342,7 @@ export interface FileRoutesByFullPath {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
   '/admin/vehicles/insight-lab': typeof AdminVehiclesInsightLabRoute
@@ -331,6 +351,7 @@ export interface FileRoutesByFullPath {
   '/admin/vehicles/pucs': typeof AdminVehiclesPucsRoute
   '/admin/vehicles/service-manager': typeof AdminVehiclesServiceManagerRoute
   '/admin/attendance/': typeof AdminAttendanceIndexRoute
+  '/admin/payroll/': typeof AdminPayrollIndexRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
 export interface FileRoutesByTo {
@@ -368,6 +389,7 @@ export interface FileRoutesByTo {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
   '/admin/vehicles/insight-lab': typeof AdminVehiclesInsightLabRoute
@@ -376,6 +398,7 @@ export interface FileRoutesByTo {
   '/admin/vehicles/pucs': typeof AdminVehiclesPucsRoute
   '/admin/vehicles/service-manager': typeof AdminVehiclesServiceManagerRoute
   '/admin/attendance': typeof AdminAttendanceIndexRoute
+  '/admin/payroll': typeof AdminPayrollIndexRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
 export interface FileRoutesById {
@@ -402,6 +425,7 @@ export interface FileRoutesById {
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offboarding-reason-manager': typeof AdminOffboardingReasonManagerRoute
+  '/admin/payroll': typeof AdminPayrollRouteWithChildren
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
@@ -415,6 +439,7 @@ export interface FileRoutesById {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
   '/admin/vehicles/insight-lab': typeof AdminVehiclesInsightLabRoute
@@ -423,6 +448,7 @@ export interface FileRoutesById {
   '/admin/vehicles/pucs': typeof AdminVehiclesPucsRoute
   '/admin/vehicles/service-manager': typeof AdminVehiclesServiceManagerRoute
   '/admin/attendance/': typeof AdminAttendanceIndexRoute
+  '/admin/payroll/': typeof AdminPayrollIndexRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
 export interface FileRouteTypes {
@@ -450,6 +476,7 @@ export interface FileRouteTypes {
     | '/admin/lwf-manager'
     | '/admin/notifications'
     | '/admin/offboarding-reason-manager'
+    | '/admin/payroll'
     | '/admin/payroll-days-manager'
     | '/admin/payroll-manager'
     | '/admin/professional-tax-manager'
@@ -463,6 +490,7 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
     | '/admin/vehicles/insight-lab'
@@ -471,6 +499,7 @@ export interface FileRouteTypes {
     | '/admin/vehicles/pucs'
     | '/admin/vehicles/service-manager'
     | '/admin/attendance/'
+    | '/admin/payroll/'
     | '/admin/candidates/$id/details'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -508,6 +537,7 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
     | '/admin/vehicles/insight-lab'
@@ -516,6 +546,7 @@ export interface FileRouteTypes {
     | '/admin/vehicles/pucs'
     | '/admin/vehicles/service-manager'
     | '/admin/attendance'
+    | '/admin/payroll'
     | '/admin/candidates/$id/details'
   id:
     | '__root__'
@@ -541,6 +572,7 @@ export interface FileRouteTypes {
     | '/admin/lwf-manager'
     | '/admin/notifications'
     | '/admin/offboarding-reason-manager'
+    | '/admin/payroll'
     | '/admin/payroll-days-manager'
     | '/admin/payroll-manager'
     | '/admin/professional-tax-manager'
@@ -554,6 +586,7 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
     | '/admin/vehicles/insight-lab'
@@ -562,6 +595,7 @@ export interface FileRouteTypes {
     | '/admin/vehicles/pucs'
     | '/admin/vehicles/service-manager'
     | '/admin/attendance/'
+    | '/admin/payroll/'
     | '/admin/candidates/$id/details'
   fileRoutesById: FileRoutesById
 }
@@ -649,6 +683,13 @@ declare module '@tanstack/react-router' {
       path: '/payroll-days-manager'
       fullPath: '/admin/payroll-days-manager'
       preLoaderRoute: typeof AdminPayrollDaysManagerRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/payroll': {
+      id: '/admin/payroll'
+      path: '/payroll'
+      fullPath: '/admin/payroll'
+      preLoaderRoute: typeof AdminPayrollRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/offboarding-reason-manager': {
@@ -777,6 +818,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAllowanceManagerRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/payroll/': {
+      id: '/admin/payroll/'
+      path: '/'
+      fullPath: '/admin/payroll/'
+      preLoaderRoute: typeof AdminPayrollIndexRouteImport
+      parentRoute: typeof AdminPayrollRoute
+    }
     '/admin/attendance/': {
       id: '/admin/attendance/'
       path: '/'
@@ -832,6 +880,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/vehicles/expense-manager'
       preLoaderRoute: typeof AdminVehiclesExpenseManagerRouteImport
       parentRoute: typeof AdminVehiclesRoute
+    }
+    '/admin/payroll/$unitId': {
+      id: '/admin/payroll/$unitId'
+      path: '/$unitId'
+      fullPath: '/admin/payroll/$unitId'
+      preLoaderRoute: typeof AdminPayrollUnitIdRouteImport
+      parentRoute: typeof AdminPayrollRoute
     }
     '/admin/customers/unit-manager': {
       id: '/admin/customers/unit-manager'
@@ -917,6 +972,20 @@ const AdminCustomersRouteWithChildren = AdminCustomersRoute._addFileChildren(
   AdminCustomersRouteChildren,
 )
 
+interface AdminPayrollRouteChildren {
+  AdminPayrollUnitIdRoute: typeof AdminPayrollUnitIdRoute
+  AdminPayrollIndexRoute: typeof AdminPayrollIndexRoute
+}
+
+const AdminPayrollRouteChildren: AdminPayrollRouteChildren = {
+  AdminPayrollUnitIdRoute: AdminPayrollUnitIdRoute,
+  AdminPayrollIndexRoute: AdminPayrollIndexRoute,
+}
+
+const AdminPayrollRouteWithChildren = AdminPayrollRoute._addFileChildren(
+  AdminPayrollRouteChildren,
+)
+
 interface AdminVehiclesRouteChildren {
   AdminVehiclesExpenseManagerRoute: typeof AdminVehiclesExpenseManagerRoute
   AdminVehiclesFastagsRoute: typeof AdminVehiclesFastagsRoute
@@ -960,6 +1029,7 @@ interface AdminRouteChildren {
   AdminLwfManagerRoute: typeof AdminLwfManagerRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminOffboardingReasonManagerRoute: typeof AdminOffboardingReasonManagerRoute
+  AdminPayrollRoute: typeof AdminPayrollRouteWithChildren
   AdminPayrollDaysManagerRoute: typeof AdminPayrollDaysManagerRoute
   AdminPayrollManagerRoute: typeof AdminPayrollManagerRoute
   AdminProfessionalTaxManagerRoute: typeof AdminProfessionalTaxManagerRoute
@@ -990,6 +1060,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminLwfManagerRoute: AdminLwfManagerRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminOffboardingReasonManagerRoute: AdminOffboardingReasonManagerRoute,
+  AdminPayrollRoute: AdminPayrollRouteWithChildren,
   AdminPayrollDaysManagerRoute: AdminPayrollDaysManagerRoute,
   AdminPayrollManagerRoute: AdminPayrollManagerRoute,
   AdminProfessionalTaxManagerRoute: AdminProfessionalTaxManagerRoute,
