@@ -264,6 +264,57 @@ function MusterRollPage() {
     return `${year}-${m}-${d}`;
   };
 
+  // Drag-to-select state
+  const [dragCandidateId, setDragCandidateId] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerCandidateId, setPickerCandidateId] = useState<string | null>(null);
+  const [pickerDates, setPickerDates] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const onUp = () => {
+      setIsDragging(false);
+      setSelectedDates((current) => {
+        if (current.size > 0 && dragCandidateId) {
+          const sorted = Array.from(current).sort();
+          setPickerCandidateId(dragCandidateId);
+          setPickerDates(sorted);
+          setPickerOpen(true);
+        }
+        return new Set();
+      });
+      setDragCandidateId(null);
+    };
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+  }, [isDragging, dragCandidateId]);
+
+  const applyCodeToSelection = async (code: string) => {
+    if (!pickerCandidateId) return;
+    try {
+      const rows = pickerDates.map((d) => ({
+        unit_id: unitId,
+        candidate_id: pickerCandidateId,
+        entry_date: d,
+        code,
+        ot_hours: entryMap.get(`${pickerCandidateId}|${d}`)?.ot_hours ?? 0,
+      }));
+      const { error } = await supabase
+        .from("attendance_entries")
+        .upsert(rows, { onConflict: "unit_id,candidate_id,entry_date" });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, monthStart, monthEnd] });
+      setPickerOpen(false);
+      toast.success(`Applied ${code || "Clear"} to ${pickerDates.length} day${pickerDates.length > 1 ? "s" : ""}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
+    }
+  };
+
+
+
   const computeTotals = (candidateId: string) => {
     let pDays = 0;
     let otHours = 0;
