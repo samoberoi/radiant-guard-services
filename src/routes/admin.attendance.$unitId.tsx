@@ -484,21 +484,26 @@ function MusterRollPage() {
   const computeTotals = (candidateId: string) => {
     let pDays = 0;
     let otHours = 0;
-    let phDays = 0;
-    let paidDays = 0;
+    let phCount = 0;
+    let otherPaidDays = 0; // paid leaves that are neither PH nor counts_as_present
     for (const cell of periodCells) {
       const e = entryMap.get(`${candidateId}|${cell.date}`);
       if (!e) continue;
-      const hrs = Number(e.ot_hours) || 0;
-      otHours += hrs;
+      otHours += Number(e.ot_hours) || 0;
       const c = codeMap.get(e.code);
       if (!c) continue;
+      if (e.code === "PH") {
+        phCount += 1;
+        continue; // PH handled separately below (counts as 2 days)
+      }
       if (c.counts_as_present) pDays += 1;
-      if (c.is_paid) paidDays += 1;
-      if (e.code === "PH") phDays += 1;
+      else if (c.is_paid) otherPaidDays += 1;
     }
+    // Each PH (paid holiday) counts as 2 paid days.
+    const phDays = phCount * 2;
     const otDays = Math.round((otHours / UNIT_DUTY_HOURS) * 100) / 100;
-    return { pDays, otHours, otDays, phDays, tDays: pDays + paidDays };
+    const tDays = pDays + phDays + otherPaidDays;
+    return { pDays, otHours, otDays, phDays, tDays };
   };
 
   const principalEmployer = unit
