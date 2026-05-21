@@ -224,6 +224,7 @@ function PayrollUnitPage() {
           designation: designationName,
           totals,
           wages,
+          resource: resource ?? null,
           hasContract: !!resource,
         };
       });
@@ -233,6 +234,7 @@ function PayrollUnitPage() {
       return rows;
     },
   });
+
 
   const rows = data ?? [];
 
