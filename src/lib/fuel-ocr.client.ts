@@ -86,9 +86,10 @@ function inferPaymentMode(text: string) {
 }
 
 function inferDate(text: string) {
-  const match = text.match(/\b(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})\b/);
+  const match = text.match(/\b(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})\b/);
   if (!match) return "";
-  let [, dd, mm, yyyy] = match;
+  const [, dd, mm, rawYear] = match;
+  let yyyy = rawYear;
   if (yyyy.length === 2) yyyy = `20${yyyy}`;
   const day = dd.padStart(2, "0");
   const month = mm.padStart(2, "0");
@@ -130,17 +131,17 @@ function inferOdometer(text: string) {
 
 function inferFuelNumbers(text: string) {
   let quantity = extractMatch(text, [
-    /(?:qty|quantity|volume|vol|litre|litres|liter|liters|units?)\s*[:\-]?\s*(\d{1,3}(?:\.\d{1,3})?)/i,
+    /(?:qty|quantity|volume|vol|litre|litres|liter|liters|units?)\s*[:-]?\s*(\d{1,3}(?:\.\d{1,3})?)/i,
     /(\d{1,3}(?:\.\d{1,3})?)\s*(?:ltr|litre|litres|liter|liters|kg|units?)\b/i,
   ]);
 
   let rate = extractMatch(text, [
-    /(?:rate|price|unit\s*price|sale\s*price)\s*[:\-]?\s*(\d{1,3}(?:\.\d{1,3})?)/i,
+    /(?:rate|price|unit\s*price|sale\s*price)\s*[:-]?\s*(\d{1,3}(?:\.\d{1,3})?)/i,
     /rs\.?\s*(\d{1,3}(?:\.\d{1,3})?)\s*(?:\/|per)\s*(?:l|ltr|litre|kg|unit)/i,
   ]);
 
   let amount = extractMatch(text, [
-    /(?:amount|total|sale|net\s*amount)\s*[:\-]?\s*(\d{2,6}(?:\.\d{1,2})?)/i,
+    /(?:amount|total|sale|net\s*amount)\s*[:-]?\s*(\d{2,6}(?:\.\d{1,2})?)/i,
     /rs\.?\s*(\d{2,6}(?:\.\d{1,2})?)\b/i,
   ]);
 
