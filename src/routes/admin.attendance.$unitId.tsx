@@ -139,7 +139,7 @@ function MusterRollPage() {
         );
 
       const reportingOfficers = Array.isArray((unit as { reporting_officers?: unknown } | null)?.reporting_officers)
-        ? ((unit as { reporting_officers: Array<{ name?: string; is_active?: boolean }> }).reporting_officers)
+        ? ((unit as { reporting_officers: Array<{ name?: string; is_active?: boolean; is_primary?: boolean }> }).reporting_officers)
         : [];
 
       const activeReportingOfficers = reportingOfficers
@@ -151,11 +151,16 @@ function MusterRollPage() {
           employee_type: "field_officer" as const,
           doj: "",
           isActive: officer?.is_active !== false,
+          isPrimary: officer?.is_primary === true,
         }))
         .filter((officer) => officer.isActive && officer.full_name)
         .map(({ isActive: _isActive, ...officer }) => officer);
 
-      return [...mappedEmployees, ...activeReportingOfficers].sort((a, b) =>
+      const reportingOfficersForAttendance = activeReportingOfficers.some((officer) => officer.isPrimary)
+        ? activeReportingOfficers.filter((officer) => officer.isPrimary)
+        : activeReportingOfficers;
+
+      return [...mappedEmployees, ...reportingOfficersForAttendance].sort((a, b) =>
         (a.employee_code || a.full_name).localeCompare(b.employee_code || b.full_name),
       );
     },
