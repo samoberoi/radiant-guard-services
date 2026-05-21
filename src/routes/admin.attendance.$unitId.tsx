@@ -740,9 +740,9 @@ function MusterRollPage() {
                       <td className={cn(rowBase, "p-1")} rowSpan={2}></td>
                     </tr>,
                     <tr key={emp.id + "-ot"}>
-                      {dayList.map((d) => (
+                      {periodCells.map((cell) => (
                         <td
-                          key={`o-${d}`}
+                          key={`o-${cell.date}`}
                           className={cn(rowBase, "p-0")}
                           style={{ height: 22, minWidth: 18 }}
                         />
