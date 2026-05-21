@@ -552,21 +552,3 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "em
     </div>
   );
 }
-
-function Block({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{title}</div>
-      <div className="space-y-1">{children}</div>
-    </div>
-  );
-}
-
-function Row({ l, v }: { l: string; v: string }) {
-  return (
-    <div className="flex justify-between gap-2">
-      <span className="truncate text-muted-foreground">{l}</span>
-      <span className="font-medium">{v}</span>
-    </div>
-  );
-}
