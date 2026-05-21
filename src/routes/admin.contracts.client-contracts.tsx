@@ -113,6 +113,7 @@ type ClientContract = {
   serviceTypeId: string | null;
   payrollWindowId: string | null;
   billingTypeId: string | null;
+  esicBranchId: string | null;
   gstOption: GstOption;
   status: ContractStatus;
   approvalStatus: ApprovalStatus;
