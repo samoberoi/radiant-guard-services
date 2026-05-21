@@ -1738,6 +1738,7 @@ function ContractFormDialog({
   const serviceTypes = useServiceTypes();
   const payrollWindows = usePayrollWindows();
   const billingTypes = useBillingTypes();
+  const esicBranches = useEsicBranches();
 
   const customerById = useMemo(
     () => new Map(customers.map((c) => [c.id, c])),
