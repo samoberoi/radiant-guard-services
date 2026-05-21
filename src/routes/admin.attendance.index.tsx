@@ -252,10 +252,15 @@ function AttendanceUnitsPage() {
               id: `ro:${u.id}:${idx}`,
               name: (ro?.name || "").trim(),
               isActive: ro?.is_active !== false,
+              isPrimary: ro?.is_primary === true,
             }))
             .filter((ro) => ro.isActive && ro.name);
 
-          activeReportingOfficers.forEach((ro) => {
+          const reportingOfficersForAttendance = activeReportingOfficers.some((ro) => ro.isPrimary)
+            ? activeReportingOfficers.filter((ro) => ro.isPrimary)
+            : activeReportingOfficers;
+
+          reportingOfficersForAttendance.forEach((ro) => {
             fos.push({ id: ro.id, name: ro.name });
           });
           return {
@@ -269,7 +274,7 @@ function AttendanceUnitsPage() {
             billing_state: u.billing_state || null,
             contract_codes: contractsByUnit.get(u.id)?.codes ?? [],
             contract_end: contractsByUnit.get(u.id)?.end ?? null,
-            active_employee_count: employees.length + activeReportingOfficers.length,
+            active_employee_count: employees.length + reportingOfficersForAttendance.length,
             field_officers: fos.sort((a, b) => a.name.localeCompare(b.name)),
             security_guards: sgs.sort((a, b) => a.name.localeCompare(b.name)),
           };
