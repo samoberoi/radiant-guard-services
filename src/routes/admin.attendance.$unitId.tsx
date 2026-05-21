@@ -949,6 +949,39 @@ function MusterRollPage() {
           </button>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={otPickerOpen} onOpenChange={setOtPickerOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Set OT hours</DialogTitle>
+            <DialogDescription>
+              {otPickerDates.length} day{otPickerDates.length > 1 ? "s" : ""} selected
+              {otPickerCandidateId
+                ? ` for ${(employees ?? []).find((e) => e.id === otPickerCandidateId)?.full_name ?? ""}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-4 gap-2">
+            {Array.from({ length: 16 }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => applyOtToSelection(n)}
+                className="rounded-md border border-amber-200 bg-amber-50 px-2 py-3 text-base font-bold text-amber-800 transition hover:border-amber-400 hover:bg-amber-100"
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => applyOtToSelection(0)}
+            className="mt-2 w-full rounded-md border border-border px-2 py-2 text-sm text-muted-foreground hover:bg-muted"
+          >
+            Clear OT
+          </button>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
