@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { createClientOnlyFn } from "@tanstack/react-start";
+import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
+import { extractFuelFromPhotos } from "@/lib/fuel-extraction.functions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download,
@@ -67,7 +68,14 @@ const MODULE = "Expense Manager";
 const ENTITY = "vehicle_fuel_entries";
 const QK = ["admin", "vehicle-expense-entries"] as const;
 const BUCKET = "vehicle-fuel-proofs";
-const getFuelOcrClient = createClientOnlyFn(() => import("@/lib/fuel-ocr.client"));
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(String(r.result));
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
 
 const EXPENSE_TYPES = [
   { value: "fuel", label: "Fuel", icon: Fuel },
