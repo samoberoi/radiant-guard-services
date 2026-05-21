@@ -502,7 +502,7 @@ function MusterRollPage() {
     // Each PH (paid holiday) counts as 2 paid days.
     const phDays = phCount * 2;
     const otDays = Math.round((otHours / UNIT_DUTY_HOURS) * 100) / 100;
-    const tDays = pDays + phDays + otherPaidDays;
+    const tDays = pDays + phDays + otherPaidDays + otDays;
     return { pDays, otHours, otDays, phDays, tDays };
   };
 
