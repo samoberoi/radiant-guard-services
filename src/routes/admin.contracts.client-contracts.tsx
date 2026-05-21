@@ -2139,6 +2139,7 @@ function ContractFormDialog({
                 serviceTypeId: serviceTypeId || null,
                 payrollWindowId: payrollWindowId || null,
                 billingTypeId: billingTypeId || null,
+                esicBranchId: esicBranchId || null,
                 gstOption,
                 status: editing?.status ?? "inactive",
                 approvalStatus: editing?.approvalStatus ?? "pending",
