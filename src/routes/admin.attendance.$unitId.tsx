@@ -256,6 +256,40 @@ function MusterRollPage() {
     return `${year}-${m}-${d}`;
   }, [year, monthIdx, dayCount]);
 
+  // Resolve the payroll window for this unit via its active contract.
+  const { data: payrollWindow } = useQuery({
+    queryKey: ["attendance-payroll-window", unitId],
+    queryFn: async () => {
+      const { data: contracts, error } = await supabase
+        .from("client_contracts")
+        .select("id, payroll_window_id, start_date, status, record_type")
+        .eq("unit_id", unitId)
+        .eq("record_type", "contract")
+        .eq("status", "active")
+        .order("start_date", { ascending: false })
+        .limit(1);
+      if (error) throw error;
+      const winId = contracts?.[0]?.payroll_window_id;
+      if (!winId) return null;
+      const { data: win, error: winErr } = await supabase
+        .from("payroll_windows")
+        .select("id, label, window_start_day, window_end_day")
+        .eq("id", winId)
+        .maybeSingle();
+      if (winErr) throw winErr;
+      return win;
+    },
+    enabled: Boolean(unitId),
+  });
+
+  const periodCells = useMemo(
+    () => buildPeriodCells(year, monthIdx, payrollWindow ?? null),
+    [year, monthIdx, payrollWindow],
+  );
+  const dayCount = periodCells.length;
+  const periodStart = periodCells[0]?.date ?? ymd(year, monthIdx, 1);
+  const periodEnd = periodCells[periodCells.length - 1]?.date ?? ymd(year, monthIdx, daysInMonth(year, monthIdx));
+
   const queryClient = useQueryClient();
 
   const { data: codes = [] } = useQuery({
