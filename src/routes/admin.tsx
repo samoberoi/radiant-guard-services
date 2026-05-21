@@ -578,7 +578,7 @@ function AdminLayout() {
               onClick={handleLogout}
               variant="outline"
               size="sm"
-              className="h-9 rounded-lg border-border bg-background font-semibold hover:border-accent hover:text-accent"
+              className="h-9 rounded-lg border-border bg-card text-foreground font-semibold hover:bg-accent hover:text-accent-foreground hover:border-accent"
             >
               <LogOut className="mr-1.5 h-4 w-4" />
               Sign out
