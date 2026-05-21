@@ -180,23 +180,30 @@ function PayrollUnitsPage() {
   const employeeOptions = useMemo(() => {
     if (orgFilter === "all") return employees;
     const allowedUnitIds = new Set(units.filter((u) => (u.customer_id || u.customer_name) === orgFilter).map((u) => u.id));
-    return employees.filter((e) => allowedUnitIds.has(e.unit_id));
+    return employees.filter((e) => e.unit_ids.some((uid) => allowedUnitIds.has(uid)));
   }, [employees, orgFilter, units]);
 
   const employeesByUnit = useMemo(() => {
     const m = new Map<string, string>();
     for (const e of employees) {
-      m.set(e.unit_id, `${m.get(e.unit_id) ?? ""} ${e.label}`);
+      for (const uid of e.unit_ids) {
+        m.set(uid, `${m.get(uid) ?? ""} ${e.label}`);
+      }
     }
     return m;
   }, [employees]);
 
+  const selectedEmployee = useMemo(
+    () => (employeeFilter !== "all" ? employees.find((e) => e.id === employeeFilter) ?? null : null),
+    [employeeFilter, employees],
+  );
+
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
-    const selectedEmployee = employeeFilter !== "all" ? employees.find((e) => e.id === employeeFilter) : null;
+    const selectedUnitIds = selectedEmployee ? new Set(selectedEmployee.unit_ids) : null;
     return units.filter((u) => {
       if (orgFilter !== "all" && (u.customer_id || u.customer_name) !== orgFilter) return false;
-      if (selectedEmployee && selectedEmployee.unit_id !== u.id) return false;
+      if (selectedUnitIds && !selectedUnitIds.has(u.id)) return false;
       if (periodFilter !== "all") {
         const [ps, pe] = periodFilter.split("|");
         if (!u.approved_periods.some((p) => p.period_start === ps && p.period_end === pe)) {
@@ -215,7 +222,7 @@ function PayrollUnitsPage() {
       }
       return true;
     });
-  }, [q, orgFilter, periodFilter, employeeFilter, employees, employeesByUnit, units]);
+  }, [q, orgFilter, periodFilter, selectedEmployee, employeesByUnit, units]);
 
   const summary = {
     organizations: organizations.length,
