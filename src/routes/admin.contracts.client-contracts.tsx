@@ -769,6 +769,7 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
   summaryRows.push(["Service Type", svcMap.get(contract.serviceTypeId ?? "") ?? ""]);
   summaryRows.push(["Payroll Window", pwMap.get(contract.payrollWindowId ?? "") ?? ""]);
   summaryRows.push(["Billing Type", btMap.get(contract.billingTypeId ?? "") ?? ""]);
+  summaryRows.push(["ESIC Subcode", esicMap.get(contract.esicBranchId ?? "") ?? ""]);
   summaryRows.push(["GST Option", contract.gstOption]);
 
   let totalHeadcount = 0;
