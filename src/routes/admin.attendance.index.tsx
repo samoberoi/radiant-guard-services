@@ -64,7 +64,7 @@ function AttendanceUnitsPage() {
   const [sgFilter, setSgFilter] = useState<string>("all");
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["attendance-dashboard-v4"],
+    queryKey: ["attendance-dashboard-v5"],
     queryFn: async (): Promise<AttendancePageData> => {
       const { data: contracts, error: contractsError } = await supabase
         .from("client_contracts")
