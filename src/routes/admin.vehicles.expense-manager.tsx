@@ -25,7 +25,7 @@ import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { confirmAction } from "@/components/ConfirmProvider";
 import { PageHeader } from "@/components/PageHeader";
-import { extractFuelFromPhotosLocally } from "@/lib/fuel-ocr.client";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -609,6 +609,7 @@ function AddEntryDialog({
     }
     setExtracting(true);
     try {
+      const { extractFuelFromPhotosLocally } = await import("@/lib/fuel-ocr.client");
       const res = await extractFuelFromPhotosLocally(items);
       if (res.fuel_type) setFuelType(res.fuel_type);
       if (res.odometer_km != null) setOdometer(String(res.odometer_km));
