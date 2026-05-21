@@ -609,6 +609,7 @@ function AddEntryDialog({
     }
     setExtracting(true);
     try {
+      const { extractFuelFromPhotosLocally } = await import("@/lib/fuel-ocr.client");
       const res = await extractFuelFromPhotosLocally(items);
       if (res.fuel_type) setFuelType(res.fuel_type);
       if (res.odometer_km != null) setOdometer(String(res.odometer_km));
