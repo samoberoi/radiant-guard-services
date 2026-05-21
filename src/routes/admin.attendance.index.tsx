@@ -42,25 +42,24 @@ type UnitRow = {
   contract_codes: string[];
   contract_end: string | null;
   active_employee_count: number;
-  field_officers: EmployeeRef[];
   security_guards: EmployeeRef[];
 };
 
 type AttendancePageData = {
   units: UnitRow[];
   organizations: { id: string; name: string }[];
-  fieldOfficers: EmployeeRef[];
   securityGuards: EmployeeRef[];
   summary: { organizations: number; units: number; activeEmployees: number };
 };
 
+// Only active employees appear on attendance. Field officers are on Radiant's own
+// payroll (non-billable) and are intentionally excluded from the muster roll.
 const ACTIVE_EMPLOYEE_STATUSES = ["active"] as const;
 
 function AttendanceUnitsPage() {
   const [q, setQ] = useState("");
   const [orgFilter, setOrgFilter] = useState<string>("all");
   const [unitFilter, setUnitFilter] = useState<string>("all");
-  const [foFilter, setFoFilter] = useState<string>("all");
   const [sgFilter, setSgFilter] = useState<string>("all");
 
   const { data, isLoading, error } = useQuery({
