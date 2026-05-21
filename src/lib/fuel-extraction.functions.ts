@@ -174,12 +174,53 @@ export const extractFuelFromPhotos = createServerFn({ method: "POST" })
       if (m) parsed = JSON.parse(m[0]);
     }
 
-    return {
-      fuel_type: parsed.fuel_type ?? "",
-      odometer_km: parsed.odometer_km ?? null,
+    let { quantity, rate, amount } = {
       quantity: parsed.quantity ?? null,
       rate: parsed.rate ?? null,
       amount: parsed.amount ?? null,
+    };
+
+    // Sanity-correct field swaps. In India: rate ~80-110, quantity usually < rate,
+    // amount is usually the largest of the three.
+    const nums = [quantity, rate, amount].filter(
+      (n): n is number => typeof n === "number" && isFinite(n) && n > 0,
+    );
+    if (nums.length === 3 && quantity && rate && amount) {
+      const expected = quantity * rate;
+      const ok = Math.abs(expected - amount) <= Math.max(2, amount * 0.02);
+      if (!ok) {
+        // Try every permutation; pick one where q*r ≈ a and rate is in [50, 150]
+        const perms: Array<[number, number, number]> = [
+          [quantity, rate, amount],
+          [quantity, amount, rate],
+          [rate, quantity, amount],
+          [rate, amount, quantity],
+          [amount, quantity, rate],
+          [amount, rate, quantity],
+        ];
+        let best: { q: number; r: number; a: number; err: number } | null = null;
+        for (const [q, r, a] of perms) {
+          if (r < 50 || r > 150) continue;
+          const err = Math.abs(q * r - a);
+          if (err <= Math.max(2, a * 0.02) && (!best || err < best.err)) {
+            best = { q, r, a, err };
+          }
+        }
+        if (best) {
+          quantity = best.q;
+          rate = best.r;
+          amount = best.a;
+          console.log("[fuel-extract] corrected swapped fields", best);
+        }
+      }
+    }
+
+    return {
+      fuel_type: parsed.fuel_type ?? "",
+      odometer_km: parsed.odometer_km ?? null,
+      quantity,
+      rate,
+      amount,
       location_text: parsed.location_text ?? "",
       entry_date: parsed.entry_date ?? "",
       entry_time: parsed.entry_time ?? "",
