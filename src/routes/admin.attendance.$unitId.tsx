@@ -335,11 +335,6 @@ function MusterRollPage() {
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to save"),
   });
 
-  const dateFor = (day: number) => {
-    const m = String(monthIdx + 1).padStart(2, "0");
-    const d = String(day).padStart(2, "0");
-    return `${year}-${m}-${d}`;
-  };
 
   // Drag-to-select state
   const [dragCandidateId, setDragCandidateId] = useState<string | null>(null);
