@@ -280,6 +280,82 @@ function MusterRollPage() {
 
   const queryClient = useQueryClient();
 
+  // Attendance sheet lifecycle: draft → submitted → approved | rejected
+  type SheetStatus = "draft" | "submitted" | "approved" | "rejected";
+  type SheetRow = { id: string; status: SheetStatus; rejection_reason: string };
+  const sheetQK = ["attendance-sheet", unitId, periodStart, periodEnd];
+  const { data: sheet } = useQuery({
+    queryKey: sheetQK,
+    queryFn: async (): Promise<SheetRow | null> => {
+      const { data, error } = await supabase
+        .from("attendance_sheets" as never)
+        .select("id, status, rejection_reason")
+        .eq("unit_id", unitId)
+        .eq("period_start", periodStart)
+        .eq("period_end", periodEnd)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as unknown as SheetRow | null);
+    },
+    enabled: Boolean(unitId && periodStart && periodEnd),
+  });
+  const status: SheetStatus = sheet?.status ?? "draft";
+  const editable = status === "draft" || status === "rejected";
+
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const transitionSheet = useMutation({
+    mutationFn: async (next: { status: SheetStatus; reason?: string }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth?.user?.id ?? null;
+      const ts = new Date().toISOString();
+      const base: Record<string, unknown> = {
+        unit_id: unitId,
+        period_start: periodStart,
+        period_end: periodEnd,
+        status: next.status,
+      };
+      if (next.status === "submitted") { base.submitted_at = ts; base.submitted_by = uid; }
+      if (next.status === "approved") { base.approved_at = ts; base.approved_by = uid; }
+      if (next.status === "rejected") {
+        base.rejected_at = ts; base.rejected_by = uid;
+        base.rejection_reason = next.reason ?? "";
+      }
+      if (next.status === "draft") { base.rejection_reason = ""; }
+      if (sheet?.id) {
+        const { error } = await supabase
+          .from("attendance_sheets" as never)
+          .update(base)
+          .eq("id", sheet.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("attendance_sheets" as never)
+          .insert(base);
+        if (error) throw error;
+      }
+      void logActivity({
+        module: "Attendance",
+        action: next.status === "submitted" ? "submit" : next.status === "approved" ? "approve" : next.status === "rejected" ? "reject" : "reopen",
+        entityType: "attendance_sheets",
+        entityLabel: `${unitId} ${periodStart} → ${periodEnd}`,
+        details: { unit_id: unitId, period_start: periodStart, period_end: periodEnd, status: next.status, reason: next.reason ?? "" },
+      });
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: sheetQK });
+      toast.success(
+        vars.status === "submitted" ? "Submitted for approval" :
+        vars.status === "approved" ? "Attendance approved — payroll unlocked" :
+        vars.status === "rejected" ? "Attendance rejected" : "Reopened for editing",
+      );
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+
+
   const { data: codes = [] } = useQuery({
     queryKey: ["attendance-codes-enabled"],
     queryFn: async () => {
