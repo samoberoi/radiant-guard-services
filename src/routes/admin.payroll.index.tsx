@@ -35,8 +35,11 @@ type UnitRow = {
   customer_id: string;
   customer_name: string;
   active_employee_count: number;
+  employee_ids: string[];
   approved_periods: { period_start: string; period_end: string }[];
 };
+
+type EmployeeOption = { id: string; label: string; unit_id: string };
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -55,6 +58,7 @@ function PayrollUnitsPage() {
   const [q, setQ] = useState("");
   const [orgFilter, setOrgFilter] = useState("all");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
+  const [employeeFilter, setEmployeeFilter] = useState<string>("all");
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["payroll-dashboard-v1"],
@@ -68,7 +72,7 @@ function PayrollUnitsPage() {
 
       const unitIds = Array.from(new Set(sheets.map((s) => s.unit_id)));
       if (unitIds.length === 0) {
-        return { units: [] as UnitRow[], organizations: [] as { id: string; name: string }[], periods: [] as string[] };
+        return { units: [] as UnitRow[], organizations: [] as { id: string; name: string }[], periods: [] as string[], employees: [] as EmployeeOption[] };
       }
 
       const [{ data: units }, { data: candidates }, { data: customers }] = await Promise.all([
@@ -78,7 +82,7 @@ function PayrollUnitsPage() {
           .in("id", unitIds),
         supabase
           .from("candidates")
-          .select("id, unit_id")
+          .select("id, unit_id, full_name, employee_code")
           .in("unit_id", unitIds)
           .eq("is_enabled", true)
           .eq("status", "active"),
@@ -87,10 +91,19 @@ function PayrollUnitsPage() {
 
       const custMap = new Map((customers ?? []).map((c) => [c.id, c.name as string]));
       const employeeCountByUnit = new Map<string, number>();
-      for (const c of candidates ?? []) {
+      const employeeIdsByUnit = new Map<string, string[]>();
+      const employees: EmployeeOption[] = [];
+      for (const c of (candidates ?? []) as Array<{ id: string; unit_id: string | null; full_name: string | null; employee_code: string | null }>) {
         if (!c.unit_id) continue;
         employeeCountByUnit.set(c.unit_id, (employeeCountByUnit.get(c.unit_id) ?? 0) + 1);
+        const ids = employeeIdsByUnit.get(c.unit_id) ?? [];
+        ids.push(c.id);
+        employeeIdsByUnit.set(c.unit_id, ids);
+        const name = (c.full_name || "").trim() || "Unnamed";
+        const code = (c.employee_code || "").trim();
+        employees.push({ id: c.id, unit_id: c.unit_id, label: code ? `${name} (${code})` : name });
       }
+      employees.sort((a, b) => a.label.localeCompare(b.label));
 
       const periodsByUnit = new Map<string, { period_start: string; period_end: string }[]>();
       for (const s of sheets) {
@@ -107,6 +120,7 @@ function PayrollUnitsPage() {
         customer_id: u.customer_id || "",
         customer_name: (u.customer_id && custMap.get(u.customer_id)) || "—",
         active_employee_count: employeeCountByUnit.get(u.id) ?? 0,
+        employee_ids: employeeIdsByUnit.get(u.id) ?? [],
         approved_periods: (periodsByUnit.get(u.id) ?? []).sort((a, b) =>
           b.period_start.localeCompare(a.period_start),
         ),
@@ -125,18 +139,27 @@ function PayrollUnitsPage() {
         new Set(sheets.map((s) => `${s.period_start}|${s.period_end}`)),
       ).sort((a, b) => b.localeCompare(a));
 
-      return { units: rows, organizations: orgs, periods: allPeriods };
+      return { units: rows, organizations: orgs, periods: allPeriods, employees };
     },
   });
 
   const units = data?.units ?? [];
   const organizations = data?.organizations ?? [];
   const periods = data?.periods ?? [];
+  const employees = data?.employees ?? [];
+
+  const employeeOptions = useMemo(() => {
+    if (orgFilter === "all") return employees;
+    const allowedUnitIds = new Set(units.filter((u) => (u.customer_id || u.customer_name) === orgFilter).map((u) => u.id));
+    return employees.filter((e) => allowedUnitIds.has(e.unit_id));
+  }, [employees, orgFilter, units]);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
+    const selectedEmployee = employeeFilter !== "all" ? employees.find((e) => e.id === employeeFilter) : null;
     return units.filter((u) => {
       if (orgFilter !== "all" && (u.customer_id || u.customer_name) !== orgFilter) return false;
+      if (selectedEmployee && selectedEmployee.unit_id !== u.id) return false;
       if (periodFilter !== "all") {
         const [ps, pe] = periodFilter.split("|");
         if (!u.approved_periods.some((p) => p.period_start === ps && p.period_end === pe)) {
@@ -149,14 +172,14 @@ function PayrollUnitsPage() {
       }
       return true;
     });
-  }, [q, orgFilter, periodFilter, units]);
+  }, [q, orgFilter, periodFilter, employeeFilter, employees, units]);
 
   const summary = {
     organizations: organizations.length,
     units: units.length,
     activeEmployees: units.reduce((s, r) => s + r.active_employee_count, 0),
   };
-  const anyFilter = orgFilter !== "all" || periodFilter !== "all" || q.trim().length > 0;
+  const anyFilter = orgFilter !== "all" || periodFilter !== "all" || employeeFilter !== "all" || q.trim().length > 0;
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -196,9 +219,19 @@ function PayrollUnitsPage() {
             <Filter
               label="Organization"
               value={orgFilter}
-              onChange={setOrgFilter}
+              onChange={(v) => {
+                setOrgFilter(v);
+                setEmployeeFilter("all");
+              }}
               options={organizations.map((o) => ({ value: o.id, label: o.name }))}
               allLabel={`All organizations (${organizations.length})`}
+            />
+            <Filter
+              label="Employee"
+              value={employeeFilter}
+              onChange={setEmployeeFilter}
+              options={employeeOptions.map((e) => ({ value: e.id, label: e.label }))}
+              allLabel={`All employees (${employeeOptions.length})`}
             />
             <Filter
               label="Approved period"
@@ -225,6 +258,7 @@ function PayrollUnitsPage() {
                   setQ("");
                   setOrgFilter("all");
                   setPeriodFilter("all");
+                  setEmployeeFilter("all");
                 }}
               >
                 <X className="h-3.5 w-3.5" /> Clear filters
