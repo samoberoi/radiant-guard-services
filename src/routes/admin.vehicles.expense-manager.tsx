@@ -68,14 +68,6 @@ const MODULE = "Expense Manager";
 const ENTITY = "vehicle_fuel_entries";
 const QK = ["admin", "vehicle-expense-entries"] as const;
 const BUCKET = "vehicle-fuel-proofs";
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(r.error);
-    r.readAsDataURL(file);
-  });
-}
 
 const EXPENSE_TYPES = [
   { value: "fuel", label: "Fuel", icon: Fuel },
