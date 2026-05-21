@@ -70,6 +70,63 @@ function previousMonth(now: Date) {
   return { year: prev.getFullYear(), monthIdx: prev.getMonth() };
 }
 
+function ymd(year: number, monthIdx0: number, day: number) {
+  const m = String(monthIdx0 + 1).padStart(2, "0");
+  const d = String(day).padStart(2, "0");
+  return `${year}-${m}-${d}`;
+}
+
+// Build the attendance period for a given (year, monthIdx) using the
+// contract's payroll window. The selected month is treated as the month
+// the period ENDS in. e.g. selecting April with window 21–20 gives
+// 21 Mar → 20 Apr.
+function buildPeriodCells(
+  year: number,
+  monthIdx: number,
+  window: { window_start_day: number; window_end_day: number } | null,
+): Array<{ date: string; dayNum: number; monthIdx: number; year: number }> {
+  const startDay = window?.window_start_day ?? 1;
+  const endDay = window?.window_end_day ?? 31;
+  const endsInSelected = startDay > endDay || (startDay === 1 && endDay >= 28);
+
+  let startY: number, startM: number, startD: number;
+  let endY: number, endM: number, endD: number;
+
+  if (endsInSelected && startDay > endDay) {
+    // Cross-month window (e.g. 21 → 20): starts in previous month.
+    const prev = new Date(year, monthIdx - 1, 1);
+    startY = prev.getFullYear();
+    startM = prev.getMonth();
+    const prevLast = daysInMonth(startY, startM);
+    startD = Math.min(startDay, prevLast);
+    endY = year;
+    endM = monthIdx;
+    endD = Math.min(endDay, daysInMonth(year, monthIdx));
+  } else {
+    // Full calendar month (1 → 30/31) or in-month window.
+    startY = year;
+    startM = monthIdx;
+    startD = startDay;
+    endY = year;
+    endM = monthIdx;
+    endD = Math.min(endDay, daysInMonth(year, monthIdx));
+  }
+
+  const cells: Array<{ date: string; dayNum: number; monthIdx: number; year: number }> = [];
+  const cursor = new Date(startY, startM, startD);
+  const stop = new Date(endY, endM, endD);
+  while (cursor <= stop) {
+    cells.push({
+      date: ymd(cursor.getFullYear(), cursor.getMonth(), cursor.getDate()),
+      dayNum: cursor.getDate(),
+      monthIdx: cursor.getMonth(),
+      year: cursor.getFullYear(),
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return cells;
+}
+
 function MusterRollPage() {
   const { unitId } = Route.useParams();
   const now = new Date();
