@@ -156,8 +156,10 @@ function PayrollUnitsPage() {
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
+    const selectedEmployee = employeeFilter !== "all" ? employees.find((e) => e.id === employeeFilter) : null;
     return units.filter((u) => {
       if (orgFilter !== "all" && (u.customer_id || u.customer_name) !== orgFilter) return false;
+      if (selectedEmployee && selectedEmployee.unit_id !== u.id) return false;
       if (periodFilter !== "all") {
         const [ps, pe] = periodFilter.split("|");
         if (!u.approved_periods.some((p) => p.period_start === ps && p.period_end === pe)) {
@@ -170,14 +172,14 @@ function PayrollUnitsPage() {
       }
       return true;
     });
-  }, [q, orgFilter, periodFilter, units]);
+  }, [q, orgFilter, periodFilter, employeeFilter, employees, units]);
 
   const summary = {
     organizations: organizations.length,
     units: units.length,
     activeEmployees: units.reduce((s, r) => s + r.active_employee_count, 0),
   };
-  const anyFilter = orgFilter !== "all" || periodFilter !== "all" || q.trim().length > 0;
+  const anyFilter = orgFilter !== "all" || periodFilter !== "all" || employeeFilter !== "all" || q.trim().length > 0;
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
