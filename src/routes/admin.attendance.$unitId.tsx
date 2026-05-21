@@ -678,6 +678,76 @@ function MusterRollPage() {
         </div>
       </div>
 
+      {/* Approval workflow bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-3 print:hidden">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Status</span>
+          <span className={cn(
+            "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
+            status === "draft" && "bg-slate-100 text-slate-700",
+            status === "submitted" && "bg-amber-100 text-amber-800",
+            status === "approved" && "bg-emerald-100 text-emerald-800",
+            status === "rejected" && "bg-rose-100 text-rose-800",
+          )}>
+            {status === "draft" && "Draft"}
+            {status === "submitted" && "Submitted — awaiting approval"}
+            {status === "approved" && <><CheckCircle2 className="h-3.5 w-3.5" /> Approved</>}
+            {status === "rejected" && <><XCircle className="h-3.5 w-3.5" /> Rejected</>}
+          </span>
+          {status === "rejected" && sheet?.rejection_reason && (
+            <span className="text-xs text-rose-700">Reason: {sheet.rejection_reason}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {(status === "draft" || status === "rejected") && (
+            <Button size="sm" onClick={() => transitionSheet.mutate({ status: "submitted" })} disabled={transitionSheet.isPending}>
+              <Send className="mr-1.5 h-4 w-4" /> Submit for approval
+            </Button>
+          )}
+          {status === "submitted" && (
+            <>
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => transitionSheet.mutate({ status: "approved" })} disabled={transitionSheet.isPending}>
+                <CheckCircle2 className="mr-1.5 h-4 w-4" /> Approve
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => setRejectOpen(true)} disabled={transitionSheet.isPending}>
+                <XCircle className="mr-1.5 h-4 w-4" /> Reject
+              </Button>
+            </>
+          )}
+          {status === "approved" && (
+            <Button size="sm" variant="outline" onClick={() => transitionSheet.mutate({ status: "draft" })} disabled={transitionSheet.isPending}>
+              <RotateCcw className="mr-1.5 h-4 w-4" /> Reopen
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {!editable && (
+        <div className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-800 print:hidden">
+          This attendance sheet is {status === "approved" ? "approved" : "submitted"} and locked for editing. {status === "submitted" ? "Reject it to allow further edits." : "Reopen it to make changes."}
+        </div>
+      )}
+
+      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Reject attendance</DialogTitle>
+            <DialogDescription>Provide a reason so the submitter knows what to fix.</DialogDescription>
+          </DialogHeader>
+          <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Reason for rejection…" rows={4} />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setRejectOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => {
+              if (!rejectReason.trim()) { toast.error("Reason required"); return; }
+              transitionSheet.mutate({ status: "rejected", reason: rejectReason.trim() }, {
+                onSuccess: () => { setRejectOpen(false); setRejectReason(""); },
+              });
+            }}>Reject</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
       <div className="rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground print:hidden">
         Tip: click a cell to mark one day, click & drag to mark a range, or hold{" "}
         <kbd className="rounded border bg-background px-1 py-0.5 font-mono text-[10px]">Ctrl</kbd>
