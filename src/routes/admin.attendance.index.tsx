@@ -63,7 +63,7 @@ function AttendanceUnitsPage() {
   const [sgFilter, setSgFilter] = useState<string>("all");
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["attendance-dashboard-v8"],
+    queryKey: ["attendance-dashboard-v9"],
     queryFn: async (): Promise<AttendancePageData> => {
       const { data: contracts, error: contractsError } = await supabase
         .from("client_contracts")
@@ -80,7 +80,22 @@ function AttendanceUnitsPage() {
         contractsByUnit.set(c.unit_id, cur);
       }
 
-      const unitIds = Array.from(contractsByUnit.keys());
+      // Also include units that have at least one active employee mapped, even
+      // when no active contract exists yet — so the unit shows up on attendance.
+      const { data: activeMapped, error: activeMappedError } = await supabase
+        .from("candidates")
+        .select("unit_id")
+        .eq("is_enabled", true)
+        .in("status", [...ACTIVE_EMPLOYEE_STATUSES])
+        .not("unit_id", "is", null);
+      if (activeMappedError) throw activeMappedError;
+
+      const unitIdSet = new Set<string>(contractsByUnit.keys());
+      for (const row of activeMapped ?? []) {
+        if (row.unit_id) unitIdSet.add(row.unit_id);
+      }
+
+      const unitIds = Array.from(unitIdSet);
       if (unitIds.length === 0) {
         return {
           units: [],
