@@ -168,12 +168,12 @@ function PayrollUnitPage() {
         .from("payroll_day_bases")
         .select("id, method, fixed_days, weekly_off_day")
         .in("id", pdbIds.length ? pdbIds : ["00000000-0000-0000-0000-000000000000"]);
-      const pdbMap = new Map(
+      type PdbMethod = "actual_days" | "fixed_days" | "actual_minus_weekly_off";
+      const pdbMap = new Map<string, NonNullable<ContractResourceLike["payrollDayBase"]>>(
         (pdbs ?? []).map((p) => [
           p.id,
           {
-            method: p.method as ContractResourceLike["payrollDayBase"] extends infer X
-              ? X extends null ? never : NonNullable<X>["method"] : never,
+            method: p.method as PdbMethod,
             fixedDays: p.fixed_days,
             weeklyOffDay: p.weekly_off_day,
           },
