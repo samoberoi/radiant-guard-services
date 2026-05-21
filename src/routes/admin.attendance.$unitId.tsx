@@ -411,10 +411,13 @@ function MusterRollPage() {
 
 
 
+  // Standard duty length in hours used to convert OT hours → OT days.
+  // Most guard postings are 8-hour shifts; 12-hour postings divide by 12.
+  const UNIT_DUTY_HOURS = 8;
+
   const computeTotals = (candidateId: string) => {
     let pDays = 0;
     let otHours = 0;
-    let otDays = 0;
     let phDays = 0;
     let paidDays = 0;
     for (const cell of periodCells) {
@@ -422,13 +425,13 @@ function MusterRollPage() {
       if (!e) continue;
       const hrs = Number(e.ot_hours) || 0;
       otHours += hrs;
-      if (hrs > 0) otDays += 1;
       const c = codeMap.get(e.code);
       if (!c) continue;
       if (c.counts_as_present) pDays += 1;
       if (c.is_paid) paidDays += 1;
       if (e.code === "PH") phDays += 1;
     }
+    const otDays = Math.round((otHours / UNIT_DUTY_HOURS) * 100) / 100;
     return { pDays, otHours, otDays, phDays, tDays: pDays + paidDays };
   };
 
@@ -750,13 +753,39 @@ function MusterRollPage() {
                       <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.tDays}</td>
                     </tr>,
                     <tr key={emp.id + "-ot"}>
-                      {periodCells.map((cell) => (
-                        <td
-                          key={`o-${cell.date}`}
-                          className={cn(rowBase, "p-0")}
-                          style={{ height: 22, minWidth: 18 }}
-                        />
-                      ))}
+                      {periodCells.map((cell) => {
+                        const date = cell.date;
+                        const entry = entryMap.get(`${emp.id}|${date}`);
+                        const hrs = Number(entry?.ot_hours) || 0;
+                        return (
+                          <td
+                            key={`o-${cell.date}`}
+                            className={cn(rowBase, "p-0")}
+                            style={{ height: 22, minWidth: 18 }}
+                          >
+                            <select
+                              value={hrs}
+                              onChange={(e) => {
+                                const next = Number(e.target.value) || 0;
+                                upsertEntry.mutate({
+                                  candidate_id: emp.id,
+                                  entry_date: date,
+                                  ot_hours: next,
+                                });
+                              }}
+                              className="h-full w-full appearance-none border-0 bg-transparent text-center text-[10px] font-semibold leading-none focus:outline-none focus:ring-1 focus:ring-primary print:appearance-none"
+                              title={`OT hours for ${date}`}
+                            >
+                              <option value={0}></option>
+                              {Array.from({ length: 16 }, (_, i) => i + 1).map((n) => (
+                                <option key={n} value={n}>
+                                  {n}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        );
+                      })}
                       <td className={cn(rowBase, "p-1 font-semibold")}>{totals.otDays}</td>
                     </tr>,
                   ];
