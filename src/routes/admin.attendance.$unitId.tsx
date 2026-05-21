@@ -272,24 +272,46 @@ function MusterRollPage() {
   const [pickerCandidateId, setPickerCandidateId] = useState<string | null>(null);
   const [pickerDates, setPickerDates] = useState<string[]>([]);
 
+  // Track whether the current mousedown turned into an actual drag across
+  // multiple cells. A plain click (no drag, no modifier) should open the
+  // picker immediately for that single cell. Ctrl/Cmd+click toggles cells
+  // into a persistent selection without opening the picker.
+  const [dragMoved, setDragMoved] = useState(false);
+
   useEffect(() => {
     if (!isDragging) return;
     const onUp = () => {
       setIsDragging(false);
+      // On any non-modifier mouseup (drag OR single click), open the picker
+      // for the currently selected dates and clear the selection.
       setSelectedDates((current) => {
         if (current.size > 0 && dragCandidateId) {
           const sorted = Array.from(current).sort();
           setPickerCandidateId(dragCandidateId);
           setPickerDates(sorted);
           setPickerOpen(true);
+          setDragCandidateId(null);
+          return new Set();
         }
-        return new Set();
+        return current;
       });
-      setDragCandidateId(null);
+      setDragMoved(false);
     };
     window.addEventListener("mouseup", onUp);
     return () => window.removeEventListener("mouseup", onUp);
   }, [isDragging, dragCandidateId]);
+
+  const openPickerForSelection = () => {
+    if (!dragCandidateId || selectedDates.size === 0) return;
+    setPickerCandidateId(dragCandidateId);
+    setPickerDates(Array.from(selectedDates).sort());
+    setPickerOpen(true);
+  };
+
+  const clearSelection = () => {
+    setSelectedDates(new Set());
+    setDragCandidateId(null);
+  };
 
   const applyCodeToSelection = async (code: string) => {
     if (!pickerCandidateId) return;
@@ -307,6 +329,8 @@ function MusterRollPage() {
       if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, monthStart, monthEnd] });
       setPickerOpen(false);
+      setSelectedDates(new Set());
+      setDragCandidateId(null);
       toast.success(`Applied ${code || "Clear"} to ${pickerDates.length} day${pickerDates.length > 1 ? "s" : ""}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
@@ -413,6 +437,35 @@ function MusterRollPage() {
           </Button>
         </div>
       </div>
+
+      <div className="rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground print:hidden">
+        Tip: click a cell to mark one day, click & drag to mark a range, or hold{" "}
+        <kbd className="rounded border bg-background px-1 py-0.5 font-mono text-[10px]">Ctrl</kbd>
+        {" / "}
+        <kbd className="rounded border bg-background px-1 py-0.5 font-mono text-[10px]">⌘</kbd>
+        {" "}+ click to pick non-contiguous days within one row, then press <strong>Apply</strong>.
+      </div>
+
+      {selectedDates.size > 0 && !isDragging && dragCandidateId && (
+        <div className="sticky top-2 z-20 flex items-center justify-between gap-3 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm shadow-sm print:hidden">
+          <div>
+            <span className="font-semibold">{selectedDates.size}</span> day
+            {selectedDates.size > 1 ? "s" : ""} selected for{" "}
+            <span className="font-semibold">
+              {(employees ?? []).find((e) => e.id === dragCandidateId)?.full_name ?? ""}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={clearSelection}>
+              Clear
+            </Button>
+            <Button size="sm" onClick={openPickerForSelection}>
+              Apply attendance
+            </Button>
+          </div>
+        </div>
+      )}
+
 
       {/* Muster Roll Sheet */}
       <div id="form-xvi-print" className="rounded-xl border border-border/60 bg-white p-5 text-[11px] text-slate-900 shadow-sm print:rounded-none print:border-0 print:shadow-none sm:p-6">
@@ -529,7 +582,7 @@ function MusterRollPage() {
                         const entry = entryMap.get(`${emp.id}|${date}`);
                         const codeMeta = entry?.code ? codeMap.get(entry.code) : undefined;
                         const isSelected =
-                          isDragging && dragCandidateId === emp.id && selectedDates.has(date);
+                          dragCandidateId === emp.id && selectedDates.has(date);
                         return (
                           <td
                             key={`a-${d}`}
@@ -545,8 +598,24 @@ function MusterRollPage() {
                             }}
                             onMouseDown={(e) => {
                               e.preventDefault();
+                              const additive = e.ctrlKey || e.metaKey;
+                              if (additive) {
+                                // Ctrl/Cmd+click: toggle this cell into the
+                                // persistent selection (scoped to one row).
+                                setSelectedDates((prev) => {
+                                  const sameRow = dragCandidateId === emp.id;
+                                  const next = sameRow ? new Set(prev) : new Set<string>();
+                                  if (sameRow && next.has(date)) next.delete(date);
+                                  else next.add(date);
+                                  return next;
+                                });
+                                setDragCandidateId(emp.id);
+                                return;
+                              }
+                              // Plain click: start a fresh drag selection.
                               setDragCandidateId(emp.id);
                               setIsDragging(true);
+                              setDragMoved(false);
                               setSelectedDates(new Set([date]));
                             }}
                             onMouseEnter={() => {
@@ -555,8 +624,17 @@ function MusterRollPage() {
                                   if (prev.has(date)) return prev;
                                   const next = new Set(prev);
                                   next.add(date);
+                                  setDragMoved(true);
                                   return next;
                                 });
+                              }
+                            }}
+                            onClick={(e) => {
+                              // If user used Ctrl/Cmd+click, do not open the picker —
+                              // they're building a multi-cell selection. They'll trigger
+                              // the picker via the floating "Apply" bar.
+                              if (e.ctrlKey || e.metaKey) {
+                                e.preventDefault();
                               }
                             }}
                           >
