@@ -33,6 +33,12 @@ const tiles: Tile[] = [
     icon: Clock,
   },
   {
+    to: "/admin/attendance-code-manager",
+    label: "Attendance Code Manager",
+    description: "Manage attendance codes (P, A, L, HD, WO, CL, SL…) used in daily attendance and payroll.",
+    icon: CalendarCheck,
+  },
+  {
     to: "/admin/service-type-manager",
     label: "Service Type Manager",
     description: "Define service types like Security, Manpower, Facility, Staff.",
