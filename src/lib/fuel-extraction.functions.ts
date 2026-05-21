@@ -66,41 +66,7 @@ export const extractFuelFromPhotos = createServerFn({ method: "POST" })
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content },
         ],
-        response_format: {
-          type: "json_schema",
-          json_schema: {
-            name: "fuel_extraction",
-            strict: true,
-            schema: {
-              type: "object",
-              additionalProperties: false,
-              properties: {
-                fuel_type: { type: "string" },
-                odometer_km: { type: ["number", "null"] },
-                quantity: { type: ["number", "null"] },
-                rate: { type: ["number", "null"] },
-                amount: { type: ["number", "null"] },
-                location_text: { type: "string" },
-                entry_date: { type: "string" },
-                entry_time: { type: "string" },
-                payment_mode: { type: "string" },
-                notes: { type: "string" },
-              },
-              required: [
-                "fuel_type",
-                "odometer_km",
-                "quantity",
-                "rate",
-                "amount",
-                "location_text",
-                "entry_date",
-                "entry_time",
-                "payment_mode",
-                "notes",
-              ],
-            },
-          },
-        },
+        response_format: { type: "json_object" },
       }),
     });
 
