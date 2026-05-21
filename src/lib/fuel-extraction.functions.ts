@@ -57,15 +57,40 @@ export const extractFuelFromPhotos = createServerFn({ method: "POST" })
 
     let text = "{}";
 
-    // Prefer Lovable AI Gateway (managed key, always provisioned on Lovable Cloud)
+    // Use OpenAI GPT-5 via Lovable AI Gateway (better vision accuracy for receipts)
     if (lovableKey) {
       const content: Array<Record<string, unknown>> = [
-        { type: "text", text: "Extract fuel entry fields from these photos. Return JSON only." },
+        { type: "text", text: "Extract fuel entry fields from these photos. Be precise — read every digit carefully and double-check numbers. Use the provided tool to return the data." },
       ];
       for (const p of data.photos) {
         content.push({ type: "text", text: `Photo label: ${p.label}` });
         content.push({ type: "image_url", image_url: { url: p.dataUrl } });
       }
+
+      const extractionTool = {
+        type: "function",
+        function: {
+          name: "record_fuel_entry",
+          description: "Record the extracted fuel entry data from the provided photos.",
+          parameters: {
+            type: "object",
+            properties: {
+              fuel_type: { type: "string", enum: ["Petrol", "Diesel", "CNG", "Electric", ""] },
+              odometer_km: { type: ["number", "null"], description: "Integer km from vehicle odometer (not trip meter)" },
+              quantity: { type: ["number", "null"], description: "Liters or kg dispensed" },
+              rate: { type: ["number", "null"], description: "Price per unit" },
+              amount: { type: ["number", "null"], description: "Total amount paid" },
+              location_text: { type: "string", description: "Station name + city" },
+              entry_date: { type: "string", description: "YYYY-MM-DD or empty" },
+              entry_time: { type: "string", description: "HH:MM 24h or empty" },
+              payment_mode: { type: "string", enum: ["Cash", "UPI", "PetroCard", "Other", ""] },
+              notes: { type: "string" },
+            },
+            required: ["fuel_type", "odometer_km", "quantity", "rate", "amount", "location_text", "entry_date", "entry_time", "payment_mode", "notes"],
+            additionalProperties: false,
+          },
+        },
+      };
 
       const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -74,12 +99,13 @@ export const extractFuelFromPhotos = createServerFn({ method: "POST" })
           Authorization: `Bearer ${lovableKey}`,
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
+          model: "openai/gpt-5",
           messages: [
             { role: "system", content: SYSTEM_PROMPT },
             { role: "user", content },
           ],
-          response_format: { type: "json_object" },
+          tools: [extractionTool],
+          tool_choice: { type: "function", function: { name: "record_fuel_entry" } },
         }),
       });
 
@@ -88,13 +114,13 @@ export const extractFuelFromPhotos = createServerFn({ method: "POST" })
         console.error("[fuel-extract] lovable gateway error", res.status, txt.slice(0, 300));
         if (res.status === 429) throw new Error("AI rate limit reached, try again in a minute");
         if (res.status === 402) throw new Error("AI credits exhausted — top up Lovable AI credits");
-        // fall through to gemini if available
         if (!geminiKey) {
           throw new Error(`AI extraction failed (${res.status}): ${txt.slice(0, 200)}`);
         }
       } else {
         const json = await res.json();
-        text = json?.choices?.[0]?.message?.content ?? "{}";
+        const toolCall = json?.choices?.[0]?.message?.tool_calls?.[0];
+        text = toolCall?.function?.arguments ?? json?.choices?.[0]?.message?.content ?? "{}";
       }
     }
 
