@@ -43,45 +43,22 @@ Respond ONLY with a single JSON object matching the schema. No prose, no markdow
 export const extractFuelFromPhotos = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<FuelExtraction> => {
-    const geminiKey = process.env.GEMINI_API_KEY;
     const lovableKey = process.env.LOVABLE_API_KEY;
-    if (!geminiKey && !lovableKey) throw new Error("AI service not configured");
+    const geminiKey = process.env.GEMINI_API_KEY;
+    console.log("[fuel-extract] keys present:", {
+      lovable: !!lovableKey,
+      gemini: !!geminiKey,
+    });
+    if (!lovableKey && !geminiKey) {
+      throw new Error(
+        "AI service not configured — LOVABLE_API_KEY and GEMINI_API_KEY both missing on server",
+      );
+    }
 
     let text = "{}";
 
-    if (geminiKey) {
-      const parts: Array<Record<string, unknown>> = [
-        { text: `${SYSTEM_PROMPT}\n\nExtract fuel entry fields from these photos. Return JSON only.` },
-      ];
-      for (const p of data.photos) {
-        const m = p.dataUrl.match(/^data:(.+?);base64,(.+)$/);
-        if (!m) continue;
-        parts.push({ text: `Photo label: ${p.label}` });
-        parts.push({ inline_data: { mime_type: m[1], data: m[2] } });
-      }
-
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ role: "user", parts }],
-            generationConfig: { responseMimeType: "application/json" },
-          }),
-        },
-      );
-      if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        if (res.status === 429) throw new Error("AI rate limit reached, try again in a minute");
-        throw new Error(`AI extraction failed (${res.status}): ${txt.slice(0, 200)}`);
-      }
-      const json = await res.json();
-      text =
-        json?.candidates?.[0]?.content?.parts
-          ?.map((x: { text?: string }) => x?.text ?? "")
-          .join("") ?? "{}";
-    } else {
+    // Prefer Lovable AI Gateway (managed key, always provisioned on Lovable Cloud)
+    if (lovableKey) {
       const content: Array<Record<string, unknown>> = [
         { type: "text", text: "Extract fuel entry fields from these photos. Return JSON only." },
       ];
@@ -108,13 +85,54 @@ export const extractFuelFromPhotos = createServerFn({ method: "POST" })
 
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
+        console.error("[fuel-extract] lovable gateway error", res.status, txt.slice(0, 300));
         if (res.status === 429) throw new Error("AI rate limit reached, try again in a minute");
         if (res.status === 402) throw new Error("AI credits exhausted — top up Lovable AI credits");
+        // fall through to gemini if available
+        if (!geminiKey) {
+          throw new Error(`AI extraction failed (${res.status}): ${txt.slice(0, 200)}`);
+        }
+      } else {
+        const json = await res.json();
+        text = json?.choices?.[0]?.message?.content ?? "{}";
+      }
+    }
+
+    if (text === "{}" && geminiKey) {
+      const parts: Array<Record<string, unknown>> = [
+        { text: `${SYSTEM_PROMPT}\n\nExtract fuel entry fields from these photos. Return JSON only.` },
+      ];
+      for (const p of data.photos) {
+        const m = p.dataUrl.match(/^data:(.+?);base64,(.+)$/);
+        if (!m) continue;
+        parts.push({ text: `Photo label: ${p.label}` });
+        parts.push({ inline_data: { mime_type: m[1], data: m[2] } });
+      }
+
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts }],
+            generationConfig: { responseMimeType: "application/json" },
+          }),
+        },
+      );
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        console.error("[fuel-extract] gemini error", res.status, txt.slice(0, 300));
+        if (res.status === 429) throw new Error("AI rate limit reached, try again in a minute");
         throw new Error(`AI extraction failed (${res.status}): ${txt.slice(0, 200)}`);
       }
       const json = await res.json();
-      text = json?.choices?.[0]?.message?.content ?? "{}";
+      text =
+        json?.candidates?.[0]?.content?.parts
+          ?.map((x: { text?: string }) => x?.text ?? "")
+          .join("") ?? "{}";
     }
+
 
     let parsed: Partial<FuelExtraction> = {};
     try {
