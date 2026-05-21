@@ -336,13 +336,21 @@ function MusterRollPage() {
   });
 
 
-  // Drag-to-select state
+  // Drag-to-select state (attendance row)
   const [dragCandidateId, setDragCandidateId] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerCandidateId, setPickerCandidateId] = useState<string | null>(null);
   const [pickerDates, setPickerDates] = useState<string[]>([]);
+
+  // Drag-to-select state (OT row) — mirrors attendance pattern.
+  const [otDragCandidateId, setOtDragCandidateId] = useState<string | null>(null);
+  const [isOtDragging, setIsOtDragging] = useState(false);
+  const [otSelectedDates, setOtSelectedDates] = useState<Set<string>>(new Set());
+  const [otPickerOpen, setOtPickerOpen] = useState(false);
+  const [otPickerCandidateId, setOtPickerCandidateId] = useState<string | null>(null);
+  const [otPickerDates, setOtPickerDates] = useState<string[]>([]);
 
   // Track whether the current mousedown turned into an actual drag across
   // multiple cells. A plain click (no drag, no modifier) should open the
@@ -354,8 +362,6 @@ function MusterRollPage() {
     if (!isDragging) return;
     const onUp = () => {
       setIsDragging(false);
-      // On any non-modifier mouseup (drag OR single click), open the picker
-      // for the currently selected dates and clear the selection.
       setSelectedDates((current) => {
         if (current.size > 0 && dragCandidateId) {
           const sorted = Array.from(current).sort();
@@ -373,6 +379,26 @@ function MusterRollPage() {
     return () => window.removeEventListener("mouseup", onUp);
   }, [isDragging, dragCandidateId]);
 
+  useEffect(() => {
+    if (!isOtDragging) return;
+    const onUp = () => {
+      setIsOtDragging(false);
+      setOtSelectedDates((current) => {
+        if (current.size > 0 && otDragCandidateId) {
+          const sorted = Array.from(current).sort();
+          setOtPickerCandidateId(otDragCandidateId);
+          setOtPickerDates(sorted);
+          setOtPickerOpen(true);
+          setOtDragCandidateId(null);
+          return new Set();
+        }
+        return current;
+      });
+    };
+    window.addEventListener("mouseup", onUp);
+    return () => window.removeEventListener("mouseup", onUp);
+  }, [isOtDragging, otDragCandidateId]);
+
   const openPickerForSelection = () => {
     if (!dragCandidateId || selectedDates.size === 0) return;
     setPickerCandidateId(dragCandidateId);
@@ -380,9 +406,21 @@ function MusterRollPage() {
     setPickerOpen(true);
   };
 
+  const openOtPickerForSelection = () => {
+    if (!otDragCandidateId || otSelectedDates.size === 0) return;
+    setOtPickerCandidateId(otDragCandidateId);
+    setOtPickerDates(Array.from(otSelectedDates).sort());
+    setOtPickerOpen(true);
+  };
+
   const clearSelection = () => {
     setSelectedDates(new Set());
     setDragCandidateId(null);
+  };
+
+  const clearOtSelection = () => {
+    setOtSelectedDates(new Set());
+    setOtDragCandidateId(null);
   };
 
   const applyCodeToSelection = async (code: string) => {
@@ -404,6 +442,34 @@ function MusterRollPage() {
       setSelectedDates(new Set());
       setDragCandidateId(null);
       toast.success(`Applied ${code || "Clear"} to ${pickerDates.length} day${pickerDates.length > 1 ? "s" : ""}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
+    }
+  };
+
+  const applyOtToSelection = async (hours: number) => {
+    if (!otPickerCandidateId) return;
+    try {
+      const rows = otPickerDates.map((d) => ({
+        unit_id: unitId,
+        candidate_id: otPickerCandidateId,
+        entry_date: d,
+        code: entryMap.get(`${otPickerCandidateId}|${d}`)?.code ?? "",
+        ot_hours: hours,
+      }));
+      const { error } = await supabase
+        .from("attendance_entries")
+        .upsert(rows, { onConflict: "unit_id,candidate_id,entry_date" });
+      if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, periodStart, periodEnd] });
+      setOtPickerOpen(false);
+      setOtSelectedDates(new Set());
+      setOtDragCandidateId(null);
+      toast.success(
+        hours > 0
+          ? `Set ${hours}h OT on ${otPickerDates.length} day${otPickerDates.length > 1 ? "s" : ""}`
+          : `Cleared OT on ${otPickerDates.length} day${otPickerDates.length > 1 ? "s" : ""}`,
+      );
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
     }
@@ -556,6 +622,28 @@ function MusterRollPage() {
           </div>
         </div>
       )}
+
+      {otSelectedDates.size > 0 && !isOtDragging && otDragCandidateId && (
+        <div className="sticky top-2 z-20 flex items-center justify-between gap-3 rounded-md border border-amber-500/50 bg-amber-50 px-3 py-2 text-sm shadow-sm print:hidden">
+          <div>
+            <span className="font-semibold">{otSelectedDates.size}</span> OT day
+            {otSelectedDates.size > 1 ? "s" : ""} selected for{" "}
+            <span className="font-semibold">
+              {(employees ?? []).find((e) => e.id === otDragCandidateId)?.full_name ?? ""}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="ghost" onClick={clearOtSelection}>
+              Clear
+            </Button>
+            <Button size="sm" onClick={openOtPickerForSelection}>
+              Set OT hours
+            </Button>
+          </div>
+        </div>
+      )}
+
+
 
 
       {/* Muster Roll Sheet */}
@@ -757,32 +845,59 @@ function MusterRollPage() {
                         const date = cell.date;
                         const entry = entryMap.get(`${emp.id}|${date}`);
                         const hrs = Number(entry?.ot_hours) || 0;
+                        const isSelected =
+                          otDragCandidateId === emp.id && otSelectedDates.has(date);
                         return (
                           <td
                             key={`o-${cell.date}`}
-                            className={cn(rowBase, "p-0")}
+                            className={cn(
+                              rowBase,
+                              "p-0 select-none cursor-pointer transition-colors",
+                              hrs > 0 && "bg-amber-50",
+                              isSelected && "ring-2 ring-amber-500 ring-inset bg-amber-100",
+                            )}
                             style={{ height: 22, minWidth: 18 }}
-                          >
-                            <select
-                              value={hrs}
-                              onChange={(e) => {
-                                const next = Number(e.target.value) || 0;
-                                upsertEntry.mutate({
-                                  candidate_id: emp.id,
-                                  entry_date: date,
-                                  ot_hours: next,
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              const additive = e.ctrlKey || e.metaKey;
+                              if (additive) {
+                                setOtSelectedDates((prev) => {
+                                  const sameRow = otDragCandidateId === emp.id;
+                                  const next = sameRow ? new Set(prev) : new Set<string>();
+                                  if (sameRow && next.has(date)) next.delete(date);
+                                  else next.add(date);
+                                  return next;
                                 });
-                              }}
-                              className="h-full w-full appearance-none border-0 bg-transparent text-center text-[10px] font-semibold leading-none focus:outline-none focus:ring-1 focus:ring-primary print:appearance-none"
-                              title={`OT hours for ${date}`}
+                                setOtDragCandidateId(emp.id);
+                                return;
+                              }
+                              setOtDragCandidateId(emp.id);
+                              setIsOtDragging(true);
+                              setOtSelectedDates(new Set([date]));
+                            }}
+                            onMouseEnter={() => {
+                              if (isOtDragging && otDragCandidateId === emp.id) {
+                                setOtSelectedDates((prev) => {
+                                  if (prev.has(date)) return prev;
+                                  const next = new Set(prev);
+                                  next.add(date);
+                                  return next;
+                                });
+                              }
+                            }}
+                            onClick={(e) => {
+                              if (e.ctrlKey || e.metaKey) e.preventDefault();
+                            }}
+                            title={`OT for ${date}${hrs > 0 ? ` · ${hrs}h` : ""}`}
+                          >
+                            <div
+                              className={cn(
+                                "h-full w-full flex items-center justify-center text-[10px] font-semibold leading-none",
+                                hrs > 0 ? "text-amber-700" : "text-slate-300",
+                              )}
                             >
-                              <option value={0}></option>
-                              {Array.from({ length: 16 }, (_, i) => i + 1).map((n) => (
-                                <option key={n} value={n}>
-                                  {n}
-                                </option>
-                              ))}
-                            </select>
+                              {hrs > 0 ? hrs : ""}
+                            </div>
                           </td>
                         );
                       })}
@@ -831,6 +946,39 @@ function MusterRollPage() {
             className="mt-2 w-full rounded-md border border-border px-2 py-2 text-sm text-muted-foreground hover:bg-muted"
           >
             Clear selection
+          </button>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={otPickerOpen} onOpenChange={setOtPickerOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Set OT hours</DialogTitle>
+            <DialogDescription>
+              {otPickerDates.length} day{otPickerDates.length > 1 ? "s" : ""} selected
+              {otPickerCandidateId
+                ? ` for ${(employees ?? []).find((e) => e.id === otPickerCandidateId)?.full_name ?? ""}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-4 gap-2">
+            {Array.from({ length: 16 }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => applyOtToSelection(n)}
+                className="rounded-md border border-amber-200 bg-amber-50 px-2 py-3 text-base font-bold text-amber-800 transition hover:border-amber-400 hover:bg-amber-100"
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => applyOtToSelection(0)}
+            className="mt-2 w-full rounded-md border border-border px-2 py-2 text-sm text-muted-foreground hover:bg-muted"
+          >
+            Clear OT
           </button>
         </DialogContent>
       </Dialog>
