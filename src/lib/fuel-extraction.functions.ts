@@ -43,42 +43,79 @@ Respond ONLY with a single JSON object matching the schema. No prose, no markdow
 export const extractFuelFromPhotos = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<FuelExtraction> => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("AI service not configured");
+    const geminiKey = process.env.GEMINI_API_KEY;
+    const lovableKey = process.env.LOVABLE_API_KEY;
+    if (!geminiKey && !lovableKey) throw new Error("AI service not configured");
 
-    const content: Array<Record<string, unknown>> = [
-      { type: "text", text: "Extract fuel entry fields from these photos. Return JSON only." },
-    ];
-    for (const p of data.photos) {
-      content.push({ type: "text", text: `Photo label: ${p.label}` });
-      content.push({ type: "image_url", image_url: { url: p.dataUrl } });
+    let text = "{}";
+
+    if (geminiKey) {
+      const parts: Array<Record<string, unknown>> = [
+        { text: `${SYSTEM_PROMPT}\n\nExtract fuel entry fields from these photos. Return JSON only.` },
+      ];
+      for (const p of data.photos) {
+        const m = p.dataUrl.match(/^data:(.+?);base64,(.+)$/);
+        if (!m) continue;
+        parts.push({ text: `Photo label: ${p.label}` });
+        parts.push({ inline_data: { mime_type: m[1], data: m[2] } });
+      }
+
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ role: "user", parts }],
+            generationConfig: { responseMimeType: "application/json" },
+          }),
+        },
+      );
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        if (res.status === 429) throw new Error("AI rate limit reached, try again in a minute");
+        throw new Error(`AI extraction failed (${res.status}): ${txt.slice(0, 200)}`);
+      }
+      const json = await res.json();
+      text =
+        json?.candidates?.[0]?.content?.parts
+          ?.map((x: { text?: string }) => x?.text ?? "")
+          .join("") ?? "{}";
+    } else {
+      const content: Array<Record<string, unknown>> = [
+        { type: "text", text: "Extract fuel entry fields from these photos. Return JSON only." },
+      ];
+      for (const p of data.photos) {
+        content.push({ type: "text", text: `Photo label: ${p.label}` });
+        content.push({ type: "image_url", image_url: { url: p.dataUrl } });
+      }
+
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${lovableKey}`,
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: SYSTEM_PROMPT },
+            { role: "user", content },
+          ],
+          response_format: { type: "json_object" },
+        }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        if (res.status === 429) throw new Error("AI rate limit reached, try again in a minute");
+        if (res.status === 402) throw new Error("AI credits exhausted — top up Lovable AI credits");
+        throw new Error(`AI extraction failed (${res.status}): ${txt.slice(0, 200)}`);
+      }
+      const json = await res.json();
+      text = json?.choices?.[0]?.message?.content ?? "{}";
     }
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    });
-
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      if (res.status === 429) throw new Error("AI rate limit reached, try again in a minute");
-      if (res.status === 402) throw new Error("AI credits exhausted — top up Lovable AI credits");
-      throw new Error(`AI extraction failed (${res.status}): ${txt.slice(0, 200)}`);
-    }
-
-    const json = await res.json();
-    const text: string = json?.choices?.[0]?.message?.content ?? "{}";
     let parsed: Partial<FuelExtraction> = {};
     try {
       parsed = JSON.parse(text);
