@@ -159,8 +159,7 @@ function InsuranceManagerPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return items.filter((i) => {
-      // text search
+    const base = items.filter((i) => {
       if (q) {
         const v = vMap.get(i.vehicle_id);
         const hit =
@@ -171,7 +170,6 @@ function InsuranceManagerPage() {
           (v?.vehicle_number.toLowerCase().includes(q) ?? false);
         if (!hit) return false;
       }
-      // status filter
       if (status === "all") return true;
       const end = i.end_date;
       const isExpired = !!end && end < today;
@@ -182,7 +180,8 @@ function InsuranceManagerPage() {
       if (status === "active") return !isExpired;
       return true;
     });
-  }, [items, query, vMap, status, today, in60]);
+    return applyFilters(base as unknown as Record<string, unknown>[], filterFields, conditions) as unknown as typeof items;
+  }, [items, query, vMap, status, today, in60, conditions, filterFields]);
 
   const stats = useMemo(() => {
     let expired = 0, renewal = 0, active = 0;
