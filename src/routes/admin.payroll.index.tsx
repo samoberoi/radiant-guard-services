@@ -479,3 +479,127 @@ function Tile({
     </div>
   );
 }
+
+function EmployeeSpotlight({
+  employee,
+  units,
+  onClear,
+}: {
+  employee: EmployeeOption;
+  units: UnitRow[];
+  onClear: () => void;
+}) {
+  const totalPeriods = units.reduce((s, u) => s + u.approved_periods.length, 0);
+  const initials = employee.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("") || "E";
+
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-amber-200/70 bg-gradient-to-br from-amber-50 via-rose-50 to-sky-50 shadow-sm">
+      <div className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-200/40 blur-3xl" />
+      <div className="pointer-events-none absolute -left-10 -bottom-20 h-56 w-56 rounded-full bg-sky-200/40 blur-3xl" />
+
+      <div className="relative flex flex-col gap-5 p-6 sm:p-7">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 text-xl font-semibold text-white shadow-lg shadow-amber-500/20 ring-4 ring-white/60">
+              {initials}
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">
+                <Sparkles className="h-3.5 w-3.5" /> Employee payroll spotlight
+              </div>
+              <div className="text-xl font-semibold text-foreground sm:text-2xl">{employee.name}</div>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                {employee.code && (
+                  <span className="inline-flex rounded-md bg-white/80 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-foreground shadow-sm">
+                    {employee.code}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1">
+                  <UserCircle2 className="h-3.5 w-3.5" />
+                  Mapped to {units.length} unit{units.length === 1 ? "" : "s"} · {totalPeriods} approved period
+                  {totalPeriods === 1 ? "" : "s"}
+                </span>
+              </div>
+            </div>
+          </div>
+          <Button variant="ghost" size="sm" className="self-start text-xs sm:self-auto" onClick={onClear}>
+            <X className="mr-1 h-3.5 w-3.5" /> Clear employee
+          </Button>
+        </div>
+
+        {units.length === 0 ? (
+          <div className="rounded-2xl bg-white/60 px-4 py-6 text-center text-sm text-muted-foreground">
+            This employee is mapped to units, but none have approved attendance yet.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {units.map((u) => {
+              const latest = u.approved_periods[0];
+              return (
+                <div
+                  key={u.id}
+                  className="group relative flex flex-col gap-3 rounded-2xl border border-white/80 bg-white/85 p-4 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        {u.customer_name}
+                      </div>
+                      <div className="mt-0.5 truncate text-sm font-semibold text-foreground">
+                        {u.name || u.code}
+                      </div>
+                      <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                        <span className="inline-flex rounded-md bg-secondary px-1.5 py-0.5 font-mono font-semibold uppercase tracking-wide text-foreground">
+                          {u.code || "—"}
+                        </span>
+                        {u.location && <span className="truncate">· {u.location}</span>}
+                      </div>
+                    </div>
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                      <Wallet className="h-4 w-4" />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1.5">
+                    {u.approved_periods.slice(0, 2).map((p) => (
+                      <span
+                        key={`${p.period_start}-${p.period_end}`}
+                        className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800"
+                      >
+                        {fmtPeriod(p.period_start, p.period_end)}
+                      </span>
+                    ))}
+                    {u.approved_periods.length > 2 && (
+                      <span className="text-[11px] text-muted-foreground">
+                        +{u.approved_periods.length - 2} more
+                      </span>
+                    )}
+                  </div>
+
+                  {latest ? (
+                    <Link
+                      to="/admin/payroll/$unitId"
+                      params={{ unitId: u.id }}
+                      search={{ start: latest.period_start, end: latest.period_end }}
+                      className="mt-auto inline-flex items-center justify-between gap-2 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background transition hover:bg-foreground/90"
+                    >
+                      View wages for {employee.name.split(/\s+/)[0]}
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  ) : (
+                    <div className="mt-auto text-[11px] text-muted-foreground">No approved period</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
