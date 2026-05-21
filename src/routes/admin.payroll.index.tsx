@@ -58,6 +58,7 @@ function PayrollUnitsPage() {
   const [q, setQ] = useState("");
   const [orgFilter, setOrgFilter] = useState("all");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
+  const [employeeFilter, setEmployeeFilter] = useState<string>("all");
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["payroll-dashboard-v1"],
