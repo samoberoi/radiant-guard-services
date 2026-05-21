@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
+import { createClientOnlyFn, useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
 import { extractFuelFromPhotos } from "@/lib/fuel-extraction.functions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -68,6 +68,7 @@ const MODULE = "Expense Manager";
 const ENTITY = "vehicle_fuel_entries";
 const QK = ["admin", "vehicle-expense-entries"] as const;
 const BUCKET = "vehicle-fuel-proofs";
+const getFuelOcrClient = createClientOnlyFn(() => import("@/lib/fuel-ocr.client"));
 
 const EXPENSE_TYPES = [
   { value: "fuel", label: "Fuel", icon: Fuel },
@@ -651,7 +652,7 @@ function AddEntryDialog({
         toast.success("Auto-filled from photos — please verify");
       } catch (serverError) {
         console.error("[expense-manager] server auto-fill failed, using local OCR fallback", serverError);
-        const { extractFuelFromPhotosLocally } = await import("@/lib/fuel-ocr.client");
+        const { extractFuelFromPhotosLocally } = await getFuelOcrClient();
         const local = await extractFuelFromPhotosLocally(items);
         applyExtraction(local);
         toast.success("Auto-filled from photos — please verify");
