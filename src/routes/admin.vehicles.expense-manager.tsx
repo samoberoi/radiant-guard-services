@@ -25,7 +25,7 @@ import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { confirmAction } from "@/components/ConfirmProvider";
 import { PageHeader } from "@/components/PageHeader";
-import { extractFuelFromPhotosLocally } from "@/lib/fuel-ocr.client";
+
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
