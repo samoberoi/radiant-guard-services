@@ -25,6 +25,7 @@ import { Route as AdminOffboardingReasonManagerRouteImport } from './routes/admi
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminLwfManagerRouteImport } from './routes/admin.lwf-manager'
 import { Route as AdminLanguageManagerRouteImport } from './routes/admin.language-manager'
+import { Route as AdminInventoryRouteImport } from './routes/admin.inventory'
 import { Route as AdminExServiceManagerRouteImport } from './routes/admin.ex-service-manager'
 import { Route as AdminEsicBranchManagerRouteImport } from './routes/admin.esic-branch-manager'
 import { Route as AdminEmployeesRouteImport } from './routes/admin.employees'
@@ -49,6 +50,9 @@ import { Route as AdminVehiclesInsightLabRouteImport } from './routes/admin.vehi
 import { Route as AdminVehiclesFastagsRouteImport } from './routes/admin.vehicles.fastags'
 import { Route as AdminVehiclesExpenseManagerRouteImport } from './routes/admin.vehicles.expense-manager'
 import { Route as AdminPayrollUnitIdRouteImport } from './routes/admin.payroll.$unitId'
+import { Route as AdminInventoryWarehousesRouteImport } from './routes/admin.inventory.warehouses'
+import { Route as AdminInventoryVendorsRouteImport } from './routes/admin.inventory.vendors'
+import { Route as AdminInventoryItemsRouteImport } from './routes/admin.inventory.items'
 import { Route as AdminCustomersUnitManagerRouteImport } from './routes/admin.customers.unit-manager'
 import { Route as AdminCustomersStateManagerRouteImport } from './routes/admin.customers.state-manager'
 import { Route as AdminCustomersCustomerManagerRouteImport } from './routes/admin.customers.customer-manager'
@@ -137,6 +141,11 @@ const AdminLwfManagerRoute = AdminLwfManagerRouteImport.update({
 const AdminLanguageManagerRoute = AdminLanguageManagerRouteImport.update({
   id: '/language-manager',
   path: '/language-manager',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminInventoryRoute = AdminInventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminExServiceManagerRoute = AdminExServiceManagerRouteImport.update({
@@ -263,6 +272,22 @@ const AdminPayrollUnitIdRoute = AdminPayrollUnitIdRouteImport.update({
   path: '/$unitId',
   getParentRoute: () => AdminPayrollRoute,
 } as any)
+const AdminInventoryWarehousesRoute =
+  AdminInventoryWarehousesRouteImport.update({
+    id: '/warehouses',
+    path: '/warehouses',
+    getParentRoute: () => AdminInventoryRoute,
+  } as any)
+const AdminInventoryVendorsRoute = AdminInventoryVendorsRouteImport.update({
+  id: '/vendors',
+  path: '/vendors',
+  getParentRoute: () => AdminInventoryRoute,
+} as any)
+const AdminInventoryItemsRoute = AdminInventoryItemsRouteImport.update({
+  id: '/items',
+  path: '/items',
+  getParentRoute: () => AdminInventoryRoute,
+} as any)
 const AdminCustomersUnitManagerRoute =
   AdminCustomersUnitManagerRouteImport.update({
     id: '/unit-manager',
@@ -324,6 +349,7 @@ export interface FileRoutesByFullPath {
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/esic-branch-manager': typeof AdminEsicBranchManagerRoute
   '/admin/ex-service-manager': typeof AdminExServiceManagerRoute
+  '/admin/inventory': typeof AdminInventoryRouteWithChildren
   '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/notifications': typeof AdminNotificationsRoute
@@ -342,6 +368,9 @@ export interface FileRoutesByFullPath {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/inventory/items': typeof AdminInventoryItemsRoute
+  '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
+  '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
@@ -372,6 +401,7 @@ export interface FileRoutesByTo {
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/esic-branch-manager': typeof AdminEsicBranchManagerRoute
   '/admin/ex-service-manager': typeof AdminExServiceManagerRoute
+  '/admin/inventory': typeof AdminInventoryRouteWithChildren
   '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/notifications': typeof AdminNotificationsRoute
@@ -389,6 +419,9 @@ export interface FileRoutesByTo {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/inventory/items': typeof AdminInventoryItemsRoute
+  '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
+  '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
@@ -421,6 +454,7 @@ export interface FileRoutesById {
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/esic-branch-manager': typeof AdminEsicBranchManagerRoute
   '/admin/ex-service-manager': typeof AdminExServiceManagerRoute
+  '/admin/inventory': typeof AdminInventoryRouteWithChildren
   '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/notifications': typeof AdminNotificationsRoute
@@ -439,6 +473,9 @@ export interface FileRoutesById {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/inventory/items': typeof AdminInventoryItemsRoute
+  '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
+  '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
@@ -472,6 +509,7 @@ export interface FileRouteTypes {
     | '/admin/employees'
     | '/admin/esic-branch-manager'
     | '/admin/ex-service-manager'
+    | '/admin/inventory'
     | '/admin/language-manager'
     | '/admin/lwf-manager'
     | '/admin/notifications'
@@ -490,6 +528,9 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/inventory/items'
+    | '/admin/inventory/vendors'
+    | '/admin/inventory/warehouses'
     | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
@@ -520,6 +561,7 @@ export interface FileRouteTypes {
     | '/admin/employees'
     | '/admin/esic-branch-manager'
     | '/admin/ex-service-manager'
+    | '/admin/inventory'
     | '/admin/language-manager'
     | '/admin/lwf-manager'
     | '/admin/notifications'
@@ -537,6 +579,9 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/inventory/items'
+    | '/admin/inventory/vendors'
+    | '/admin/inventory/warehouses'
     | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
@@ -568,6 +613,7 @@ export interface FileRouteTypes {
     | '/admin/employees'
     | '/admin/esic-branch-manager'
     | '/admin/ex-service-manager'
+    | '/admin/inventory'
     | '/admin/language-manager'
     | '/admin/lwf-manager'
     | '/admin/notifications'
@@ -586,6 +632,9 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/inventory/items'
+    | '/admin/inventory/vendors'
+    | '/admin/inventory/warehouses'
     | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
@@ -718,6 +767,13 @@ declare module '@tanstack/react-router' {
       path: '/language-manager'
       fullPath: '/admin/language-manager'
       preLoaderRoute: typeof AdminLanguageManagerRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/inventory': {
+      id: '/admin/inventory'
+      path: '/inventory'
+      fullPath: '/admin/inventory'
+      preLoaderRoute: typeof AdminInventoryRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/ex-service-manager': {
@@ -888,6 +944,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPayrollUnitIdRouteImport
       parentRoute: typeof AdminPayrollRoute
     }
+    '/admin/inventory/warehouses': {
+      id: '/admin/inventory/warehouses'
+      path: '/warehouses'
+      fullPath: '/admin/inventory/warehouses'
+      preLoaderRoute: typeof AdminInventoryWarehousesRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
+    '/admin/inventory/vendors': {
+      id: '/admin/inventory/vendors'
+      path: '/vendors'
+      fullPath: '/admin/inventory/vendors'
+      preLoaderRoute: typeof AdminInventoryVendorsRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
+    '/admin/inventory/items': {
+      id: '/admin/inventory/items'
+      path: '/items'
+      fullPath: '/admin/inventory/items'
+      preLoaderRoute: typeof AdminInventoryItemsRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
     '/admin/customers/unit-manager': {
       id: '/admin/customers/unit-manager'
       path: '/unit-manager'
@@ -972,6 +1049,22 @@ const AdminCustomersRouteWithChildren = AdminCustomersRoute._addFileChildren(
   AdminCustomersRouteChildren,
 )
 
+interface AdminInventoryRouteChildren {
+  AdminInventoryItemsRoute: typeof AdminInventoryItemsRoute
+  AdminInventoryVendorsRoute: typeof AdminInventoryVendorsRoute
+  AdminInventoryWarehousesRoute: typeof AdminInventoryWarehousesRoute
+}
+
+const AdminInventoryRouteChildren: AdminInventoryRouteChildren = {
+  AdminInventoryItemsRoute: AdminInventoryItemsRoute,
+  AdminInventoryVendorsRoute: AdminInventoryVendorsRoute,
+  AdminInventoryWarehousesRoute: AdminInventoryWarehousesRoute,
+}
+
+const AdminInventoryRouteWithChildren = AdminInventoryRoute._addFileChildren(
+  AdminInventoryRouteChildren,
+)
+
 interface AdminPayrollRouteChildren {
   AdminPayrollUnitIdRoute: typeof AdminPayrollUnitIdRoute
   AdminPayrollIndexRoute: typeof AdminPayrollIndexRoute
@@ -1025,6 +1118,7 @@ interface AdminRouteChildren {
   AdminEmployeesRoute: typeof AdminEmployeesRoute
   AdminEsicBranchManagerRoute: typeof AdminEsicBranchManagerRoute
   AdminExServiceManagerRoute: typeof AdminExServiceManagerRoute
+  AdminInventoryRoute: typeof AdminInventoryRouteWithChildren
   AdminLanguageManagerRoute: typeof AdminLanguageManagerRoute
   AdminLwfManagerRoute: typeof AdminLwfManagerRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
@@ -1056,6 +1150,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminEmployeesRoute: AdminEmployeesRoute,
   AdminEsicBranchManagerRoute: AdminEsicBranchManagerRoute,
   AdminExServiceManagerRoute: AdminExServiceManagerRoute,
+  AdminInventoryRoute: AdminInventoryRouteWithChildren,
   AdminLanguageManagerRoute: AdminLanguageManagerRoute,
   AdminLwfManagerRoute: AdminLwfManagerRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
