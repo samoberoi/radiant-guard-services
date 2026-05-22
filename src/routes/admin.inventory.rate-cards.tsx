@@ -261,3 +261,73 @@ function RateCardDialog({
     </Dialog>
   );
 }
+
+function CompareView({ rows, vendorMap, itemMap }: { rows: RateCard[]; vendorMap: Map<string, Vendor>; itemMap: Map<string, Item> }) {
+  const grouped = new Map<string, RateCard[]>();
+  for (const r of rows) {
+    const key = `${r.item_id}__${r.size_value}`;
+    const arr = grouped.get(key) ?? [];
+    arr.push(r);
+    grouped.set(key, arr);
+  }
+  const groups = Array.from(grouped.entries())
+    .map(([key, list]) => ({ key, list: [...list].sort((a, b) => a.unit_price - b.unit_price) }))
+    .sort((a, b) => {
+      const ia = itemMap.get(a.list[0].item_id)?.name ?? "";
+      const ib = itemMap.get(b.list[0].item_id)?.name ?? "";
+      return ia.localeCompare(ib);
+    });
+
+  if (!groups.length) {
+    return <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">No active rate cards to compare.</div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {groups.map((g) => {
+        const first = g.list[0];
+        const item = itemMap.get(first.item_id);
+        const min = g.list[0].unit_price;
+        const max = g.list[g.list.length - 1].unit_price;
+        return (
+          <div key={g.key} className="overflow-hidden rounded-2xl border border-border bg-card">
+            <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-4 py-2.5">
+              <div>
+                <div className="text-sm font-semibold">{item ? `${item.item_code} — ${item.name}` : "—"}{first.size_value && <span className="ml-2 rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider">Size {first.size_value}</span>}</div>
+                <div className="text-xs text-muted-foreground">{g.list.length} vendor{g.list.length === 1 ? "" : "s"} · spread ₹{min.toFixed(2)} – ₹{max.toFixed(2)}{min !== max && <> · {(((max - min) / min) * 100).toFixed(0)}% gap</>}</div>
+              </div>
+            </div>
+            <table className="w-full text-sm">
+              <thead className="bg-secondary/10 text-[10px] uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium">Vendor</th>
+                  <th className="px-4 py-2 text-right font-medium">Unit Price</th>
+                  <th className="px-4 py-2 text-right font-medium">Tax %</th>
+                  <th className="px-4 py-2 text-right font-medium">MOQ</th>
+                  <th className="px-4 py-2 text-right font-medium">Lead (days)</th>
+                  <th className="px-4 py-2 text-right font-medium">vs Cheapest</th>
+                </tr>
+              </thead>
+              <tbody>
+                {g.list.map((r, idx) => {
+                  const v = vendorMap.get(r.vendor_id);
+                  const diff = idx === 0 ? 0 : ((r.unit_price - min) / min) * 100;
+                  return (
+                    <tr key={r.id} className="border-t border-border/60">
+                      <td className="px-4 py-2">{idx === 0 && <span className="mr-2 rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">Cheapest</span>}{v ? `${v.vendor_code} — ${v.name}` : "—"}</td>
+                      <td className={`px-4 py-2 text-right tabular-nums font-semibold ${idx === 0 ? "text-emerald-600" : ""}`}>₹{r.unit_price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{r.tax_percent}%</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{r.min_order_qty}</td>
+                      <td className="px-4 py-2 text-right tabular-nums">{r.lead_time_days}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-xs text-muted-foreground">{idx === 0 ? "—" : `+${diff.toFixed(1)}%`}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
