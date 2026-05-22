@@ -91,9 +91,9 @@ function RateCardsPage() {
       qc.invalidateQueries({ queryKey: ["rc"] });
       setOpen(false);
       setEditing(null);
-      toast({ title: "Rate card saved" });
+      toast.success("Rate card saved");
     },
-    onError: (e) => toast({ title: "Save failed", description: String(e), variant: "destructive" }),
+    onError: (e) => toast.error("Save failed: " + String(e)),
   });
 
   const delMut = useMutation({
@@ -107,7 +107,7 @@ function RateCardsPage() {
       const i = itemMap.get(rc.item_id)?.name ?? "";
       logInv("Vendor Rate Cards", "delete", "inv_vendor_rate_cards", rc.id, `${v} → ${i}`);
       qc.invalidateQueries({ queryKey: ["rc"] });
-      toast({ title: "Rate card deleted" });
+      toast.success("Rate card deleted");
     },
   });
 
@@ -117,8 +117,10 @@ function RateCardsPage() {
         title="Vendor Rate Cards"
         description="Per-item unit prices, tax, min order qty, and lead time per vendor."
         crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Rate Cards" }]}
-        actions={<Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="mr-1 h-4 w-4" />New Rate Card</Button>}
       />
+      <div className="mb-4 flex justify-end">
+        <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="mr-1 h-4 w-4" />New Rate Card</Button>
+      </div>
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div>
