@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Plus, Search, Trash2, FileText, Edit2, Eye } from "lucide-react";
+import { Plus, Search, Trash2, FileText, Edit2, Eye, AlertTriangle } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -24,6 +24,7 @@ type Vendor = { id: string; name: string; vendor_code: string };
 type Warehouse = { id: string; name: string; warehouse_code: string };
 type Item = { id: string; name: string; item_code: string; unit: string; is_sized: boolean };
 type POLine = { id?: string; item_id: string; size_value: string; ordered_qty: number; unit_price: number; tax_percent: number; notes: string };
+type RateCard = { vendor_id: string; item_id: string; size_value: string; unit_price: number; tax_percent: number };
 type PO = {
   id: string;
   po_number: string;
@@ -74,6 +75,14 @@ function POPage() {
       const { data, error } = await supabase.from("inv_items" as never).select("id,name,item_code,unit,is_sized").eq("enabled", true).order("name");
       if (error) throw error;
       return (data as unknown as Item[]) ?? [];
+    },
+  });
+  const { data: rateCards = [] } = useQuery({
+    queryKey: ["inv", "rate-cards-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_vendor_rate_cards" as never).select("vendor_id,item_id,size_value,unit_price,tax_percent").eq("enabled", true);
+      if (error) throw error;
+      return (data as unknown as RateCard[]) ?? [];
     },
   });
 
