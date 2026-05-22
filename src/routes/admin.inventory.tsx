@@ -117,6 +117,8 @@ function InventoryDashboard() {
           { to: "/admin/inventory/adjustments", label: "Adjustments", hint: "Cycle counts" },
           { to: "/admin/inventory/stock", label: "Stock Report", hint: "Live balances" },
           { to: "/admin/inventory/items", label: "Item Master", hint: "SKUs & sizes" },
+          { to: "/admin/inventory/rate-cards", label: "Vendor Capability Matrix", hint: "Who supplies what · prices" },
+          { to: "/admin/inventory/vendors", label: "Vendors", hint: "Supplier directory" },
         ].map((c) => (
           <Link key={c.to} to={c.to} className={cn("rounded-2xl border border-border bg-card p-4 transition-colors hover:border-accent/50 hover:bg-accent/5")}>
             <div className="font-display text-sm font-bold">{c.label}</div>
