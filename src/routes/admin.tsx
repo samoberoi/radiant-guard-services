@@ -85,6 +85,9 @@ const inventoryChildren: NavItem[] = [
   { to: "/admin/inventory/write-offs", label: "Write-offs", icon: ShieldCheck },
   { to: "/admin/inventory/adjustments", label: "Adjustments", icon: SlidersHorizontal },
   { to: "/admin/inventory/stock", label: "Stock Report", icon: Wallet },
+  { to: "/admin/inventory/rate-cards", label: "Vendor Rate Cards", icon: FileText },
+  { to: "/admin/inventory/payroll-recoveries", label: "Payroll Recoveries", icon: Wallet },
+  { to: "/admin/inventory/settings", label: "Inventory Settings", icon: SlidersHorizontal },
 ];
 
 
