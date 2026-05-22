@@ -1,4 +1,24 @@
 import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activity-log";
+
+/** Log an inventory module activity. Use module-name label e.g. "Purchase Orders". */
+export function logInv(
+  module: string,
+  action: "create" | "update" | "delete" | "enable" | "disable" | "approve" | "reject" | "acknowledge" | "post" | "void" | "receive" | "issue" | "dispatch" | "adjust" | "writeoff",
+  entityType: string,
+  entityId: string,
+  entityLabel: string,
+  details?: Record<string, unknown>,
+) {
+  void logActivity({
+    module,
+    action,
+    entityType,
+    entityId,
+    entityLabel,
+    details: details ?? {},
+  });
+}
 
 export type LocationType = "warehouse" | "branch" | "field_officer" | "guard" | "scrap";
 
