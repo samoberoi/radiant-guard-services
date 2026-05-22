@@ -150,6 +150,7 @@ function RateCardsPage() {
         </div>
       </div>
 
+      {view === "list" ? (
       <div className="overflow-auto rounded-2xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-secondary/30 text-xs uppercase tracking-wider text-muted-foreground">
@@ -191,6 +192,9 @@ function RateCardsPage() {
           </tbody>
         </table>
       </div>
+      ) : (
+        <CompareView rows={rows.filter((r) => r.enabled)} vendorMap={vendorMap} itemMap={itemMap} />
+      )}
 
       <RateCardDialog
         open={open}
