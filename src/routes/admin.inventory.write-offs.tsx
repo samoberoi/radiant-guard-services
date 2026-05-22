@@ -250,7 +250,15 @@ function WODialog({ open, onOpenChange, initial, warehouses, branches, candidate
       }
 
       if (target === "approve" && id) {
-        if (!(await confirmAction({ title: "Approve write-off?", description: "Stock will be deducted from the holder.", confirmText: "Approve" }))) { setSaving(false); return; }
+        // Check approval threshold
+        const { data: setting } = await supabase.from("inv_settings" as never).select("value").eq("key", "approval_thresholds").maybeSingle();
+        const thr = ((setting as unknown as { value?: { writeoff_amount?: number } } | null)?.value?.writeoff_amount) ?? 5000;
+        const total = lines.reduce((s, l) => s + l.qty * l.unit_value, 0);
+        const above = total >= thr;
+        const msg = above
+          ? `Total ₹${total.toLocaleString("en-IN")} is at/above the ₹${thr.toLocaleString("en-IN")} threshold — owner approval required. Continue?`
+          : "Stock will be deducted from the holder.";
+        if (!(await confirmAction({ title: above ? "Owner approval required" : "Approve write-off?", description: msg, confirmText: "Approve" }))) { setSaving(false); return; }
         const { data: { user } } = await supabase.auth.getUser();
         await supabase.from("inv_write_offs" as never).update({
           status: "approved", approved_by: user?.id ?? null, approved_at: new Date().toISOString(),
@@ -261,6 +269,13 @@ function WODialog({ open, onOpenChange, initial, warehouses, branches, candidate
           { movement_type: "WRITE_OFF_IN", location_type: "scrap" as LocationType, location_id: id!, item_id: l.item_id, size_value: l.size_value, qty_change: l.qty, reference_type: "writeoff", reference_id: id! },
         ]);
         await postMovements(movs);
+        // Queue payroll recovery
+        if (viaPayroll && respId && recovery > 0) {
+          await supabase.from("inv_payroll_recoveries" as never).insert({
+            writeoff_id: id, candidate_id: respId, amount: recovery, status: "pending",
+            notes: `Auto-queued from write-off ${initial?.writeoff_number ?? ""}`,
+          } as never);
+        }
       }
 
       void logActivity({ module: MODULE, action: target === "approve" ? "approve" : (initial ? "update" : "create"), entityType: ENTITY, entityId: id, entityLabel: initial?.writeoff_number ?? "Write-off" });
