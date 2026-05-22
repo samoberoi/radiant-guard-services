@@ -73,6 +73,7 @@ const vehiclesChildren: NavItem[] = [
 ];
 
 const inventoryChildren: NavItem[] = [
+  { to: "/admin/inventory/dashboard", label: "Owner Dashboard", icon: AlertTriangle },
   { to: "/admin/inventory/items", label: "Item Master", icon: PackageOpen },
   { to: "/admin/inventory/vendors", label: "Vendors", icon: ShoppingBag },
   { to: "/admin/inventory/warehouses", label: "Warehouses", icon: Warehouse },
