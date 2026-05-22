@@ -55,7 +55,10 @@ import { Route as AdminInventoryWarehousesRouteImport } from './routes/admin.inv
 import { Route as AdminInventoryVendorsRouteImport } from './routes/admin.inventory.vendors'
 import { Route as AdminInventoryTransfersRouteImport } from './routes/admin.inventory.transfers'
 import { Route as AdminInventoryStockRouteImport } from './routes/admin.inventory.stock'
+import { Route as AdminInventorySettingsRouteImport } from './routes/admin.inventory.settings'
+import { Route as AdminInventoryRateCardsRouteImport } from './routes/admin.inventory.rate-cards'
 import { Route as AdminInventoryPurchaseOrdersRouteImport } from './routes/admin.inventory.purchase-orders'
+import { Route as AdminInventoryPayrollRecoveriesRouteImport } from './routes/admin.inventory.payroll-recoveries'
 import { Route as AdminInventoryItemsRouteImport } from './routes/admin.inventory.items'
 import { Route as AdminInventoryIssuancesRouteImport } from './routes/admin.inventory.issuances'
 import { Route as AdminInventoryGoodsReceiptsRouteImport } from './routes/admin.inventory.goods-receipts'
@@ -306,10 +309,26 @@ const AdminInventoryStockRoute = AdminInventoryStockRouteImport.update({
   path: '/stock',
   getParentRoute: () => AdminInventoryRoute,
 } as any)
+const AdminInventorySettingsRoute = AdminInventorySettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminInventoryRoute,
+} as any)
+const AdminInventoryRateCardsRoute = AdminInventoryRateCardsRouteImport.update({
+  id: '/rate-cards',
+  path: '/rate-cards',
+  getParentRoute: () => AdminInventoryRoute,
+} as any)
 const AdminInventoryPurchaseOrdersRoute =
   AdminInventoryPurchaseOrdersRouteImport.update({
     id: '/purchase-orders',
     path: '/purchase-orders',
+    getParentRoute: () => AdminInventoryRoute,
+  } as any)
+const AdminInventoryPayrollRecoveriesRoute =
+  AdminInventoryPayrollRecoveriesRouteImport.update({
+    id: '/payroll-recoveries',
+    path: '/payroll-recoveries',
     getParentRoute: () => AdminInventoryRoute,
   } as any)
 const AdminInventoryItemsRoute = AdminInventoryItemsRouteImport.update({
@@ -424,7 +443,10 @@ export interface FileRoutesByFullPath {
   '/admin/inventory/goods-receipts': typeof AdminInventoryGoodsReceiptsRoute
   '/admin/inventory/issuances': typeof AdminInventoryIssuancesRoute
   '/admin/inventory/items': typeof AdminInventoryItemsRoute
+  '/admin/inventory/payroll-recoveries': typeof AdminInventoryPayrollRecoveriesRoute
   '/admin/inventory/purchase-orders': typeof AdminInventoryPurchaseOrdersRoute
+  '/admin/inventory/rate-cards': typeof AdminInventoryRateCardsRoute
+  '/admin/inventory/settings': typeof AdminInventorySettingsRoute
   '/admin/inventory/stock': typeof AdminInventoryStockRoute
   '/admin/inventory/transfers': typeof AdminInventoryTransfersRoute
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
@@ -483,7 +505,10 @@ export interface FileRoutesByTo {
   '/admin/inventory/goods-receipts': typeof AdminInventoryGoodsReceiptsRoute
   '/admin/inventory/issuances': typeof AdminInventoryIssuancesRoute
   '/admin/inventory/items': typeof AdminInventoryItemsRoute
+  '/admin/inventory/payroll-recoveries': typeof AdminInventoryPayrollRecoveriesRoute
   '/admin/inventory/purchase-orders': typeof AdminInventoryPurchaseOrdersRoute
+  '/admin/inventory/rate-cards': typeof AdminInventoryRateCardsRoute
+  '/admin/inventory/settings': typeof AdminInventorySettingsRoute
   '/admin/inventory/stock': typeof AdminInventoryStockRoute
   '/admin/inventory/transfers': typeof AdminInventoryTransfersRoute
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
@@ -545,7 +570,10 @@ export interface FileRoutesById {
   '/admin/inventory/goods-receipts': typeof AdminInventoryGoodsReceiptsRoute
   '/admin/inventory/issuances': typeof AdminInventoryIssuancesRoute
   '/admin/inventory/items': typeof AdminInventoryItemsRoute
+  '/admin/inventory/payroll-recoveries': typeof AdminInventoryPayrollRecoveriesRoute
   '/admin/inventory/purchase-orders': typeof AdminInventoryPurchaseOrdersRoute
+  '/admin/inventory/rate-cards': typeof AdminInventoryRateCardsRoute
+  '/admin/inventory/settings': typeof AdminInventorySettingsRoute
   '/admin/inventory/stock': typeof AdminInventoryStockRoute
   '/admin/inventory/transfers': typeof AdminInventoryTransfersRoute
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
@@ -608,7 +636,10 @@ export interface FileRouteTypes {
     | '/admin/inventory/goods-receipts'
     | '/admin/inventory/issuances'
     | '/admin/inventory/items'
+    | '/admin/inventory/payroll-recoveries'
     | '/admin/inventory/purchase-orders'
+    | '/admin/inventory/rate-cards'
+    | '/admin/inventory/settings'
     | '/admin/inventory/stock'
     | '/admin/inventory/transfers'
     | '/admin/inventory/vendors'
@@ -667,7 +698,10 @@ export interface FileRouteTypes {
     | '/admin/inventory/goods-receipts'
     | '/admin/inventory/issuances'
     | '/admin/inventory/items'
+    | '/admin/inventory/payroll-recoveries'
     | '/admin/inventory/purchase-orders'
+    | '/admin/inventory/rate-cards'
+    | '/admin/inventory/settings'
     | '/admin/inventory/stock'
     | '/admin/inventory/transfers'
     | '/admin/inventory/vendors'
@@ -728,7 +762,10 @@ export interface FileRouteTypes {
     | '/admin/inventory/goods-receipts'
     | '/admin/inventory/issuances'
     | '/admin/inventory/items'
+    | '/admin/inventory/payroll-recoveries'
     | '/admin/inventory/purchase-orders'
+    | '/admin/inventory/rate-cards'
+    | '/admin/inventory/settings'
     | '/admin/inventory/stock'
     | '/admin/inventory/transfers'
     | '/admin/inventory/vendors'
@@ -1078,11 +1115,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInventoryStockRouteImport
       parentRoute: typeof AdminInventoryRoute
     }
+    '/admin/inventory/settings': {
+      id: '/admin/inventory/settings'
+      path: '/settings'
+      fullPath: '/admin/inventory/settings'
+      preLoaderRoute: typeof AdminInventorySettingsRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
+    '/admin/inventory/rate-cards': {
+      id: '/admin/inventory/rate-cards'
+      path: '/rate-cards'
+      fullPath: '/admin/inventory/rate-cards'
+      preLoaderRoute: typeof AdminInventoryRateCardsRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
     '/admin/inventory/purchase-orders': {
       id: '/admin/inventory/purchase-orders'
       path: '/purchase-orders'
       fullPath: '/admin/inventory/purchase-orders'
       preLoaderRoute: typeof AdminInventoryPurchaseOrdersRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
+    '/admin/inventory/payroll-recoveries': {
+      id: '/admin/inventory/payroll-recoveries'
+      path: '/payroll-recoveries'
+      fullPath: '/admin/inventory/payroll-recoveries'
+      preLoaderRoute: typeof AdminInventoryPayrollRecoveriesRouteImport
       parentRoute: typeof AdminInventoryRoute
     }
     '/admin/inventory/items': {
@@ -1210,7 +1268,10 @@ interface AdminInventoryRouteChildren {
   AdminInventoryGoodsReceiptsRoute: typeof AdminInventoryGoodsReceiptsRoute
   AdminInventoryIssuancesRoute: typeof AdminInventoryIssuancesRoute
   AdminInventoryItemsRoute: typeof AdminInventoryItemsRoute
+  AdminInventoryPayrollRecoveriesRoute: typeof AdminInventoryPayrollRecoveriesRoute
   AdminInventoryPurchaseOrdersRoute: typeof AdminInventoryPurchaseOrdersRoute
+  AdminInventoryRateCardsRoute: typeof AdminInventoryRateCardsRoute
+  AdminInventorySettingsRoute: typeof AdminInventorySettingsRoute
   AdminInventoryStockRoute: typeof AdminInventoryStockRoute
   AdminInventoryTransfersRoute: typeof AdminInventoryTransfersRoute
   AdminInventoryVendorsRoute: typeof AdminInventoryVendorsRoute
@@ -1224,7 +1285,10 @@ const AdminInventoryRouteChildren: AdminInventoryRouteChildren = {
   AdminInventoryGoodsReceiptsRoute: AdminInventoryGoodsReceiptsRoute,
   AdminInventoryIssuancesRoute: AdminInventoryIssuancesRoute,
   AdminInventoryItemsRoute: AdminInventoryItemsRoute,
+  AdminInventoryPayrollRecoveriesRoute: AdminInventoryPayrollRecoveriesRoute,
   AdminInventoryPurchaseOrdersRoute: AdminInventoryPurchaseOrdersRoute,
+  AdminInventoryRateCardsRoute: AdminInventoryRateCardsRoute,
+  AdminInventorySettingsRoute: AdminInventorySettingsRoute,
   AdminInventoryStockRoute: AdminInventoryStockRoute,
   AdminInventoryTransfersRoute: AdminInventoryTransfersRoute,
   AdminInventoryVendorsRoute: AdminInventoryVendorsRoute,

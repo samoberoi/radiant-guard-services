@@ -1712,6 +1712,63 @@ export type Database = {
           },
         ]
       }
+      inv_payroll_recoveries: {
+        Row: {
+          amount: number
+          candidate_id: string
+          created_at: string
+          id: string
+          notes: string
+          payroll_period: string
+          posted_at: string | null
+          posted_by: string | null
+          status: string
+          updated_at: string
+          writeoff_id: string | null
+        }
+        Insert: {
+          amount?: number
+          candidate_id: string
+          created_at?: string
+          id?: string
+          notes?: string
+          payroll_period?: string
+          posted_at?: string | null
+          posted_by?: string | null
+          status?: string
+          updated_at?: string
+          writeoff_id?: string | null
+        }
+        Update: {
+          amount?: number
+          candidate_id?: string
+          created_at?: string
+          id?: string
+          notes?: string
+          payroll_period?: string
+          posted_at?: string | null
+          posted_by?: string | null
+          status?: string
+          updated_at?: string
+          writeoff_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_payroll_recoveries_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_payroll_recoveries_writeoff_id_fkey"
+            columns: ["writeoff_id"]
+            isOneToOne: false
+            referencedRelation: "inv_write_offs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inv_po_lines: {
         Row: {
           accepted_qty: number
@@ -1887,6 +1944,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      inv_settings: {
+        Row: {
+          description: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          description?: string
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          description?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
       }
       inv_size_charts: {
         Row: {
