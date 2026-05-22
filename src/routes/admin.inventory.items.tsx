@@ -302,3 +302,106 @@ function useResetOnOpen(open: boolean, reset: () => void) {
   const [last, setLast] = useState(false);
   if (open !== last) { setLast(open); if (open) reset(); }
 }
+
+type HistoryRow = { po_number: string; po_date: string; vendor_name: string; size_value: string; ordered_qty: number; received_qty: number; unit_price: number; tax_percent: number };
+
+function PriceHistoryDialog({ item, open, onOpenChange }: { item: Item | null; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const { data: rows = [], isLoading } = useQuery({
+    queryKey: ["inv", "item-history", item?.id],
+    enabled: !!item,
+    queryFn: async (): Promise<HistoryRow[]> => {
+      if (!item) return [];
+      const { data: lines } = await supabase.from("inv_po_lines" as never).select("po_id,size_value,ordered_qty,received_qty,unit_price,tax_percent").eq("item_id", item.id);
+      const list = (lines as unknown as Record<string, unknown>[]) ?? [];
+      if (!list.length) return [];
+      const poIds = Array.from(new Set(list.map((l) => String(l.po_id))));
+      const { data: pos } = await supabase.from("inv_purchase_orders" as never).select("id,po_number,po_date,vendor_id").in("id", poIds);
+      const poMap = new Map(((pos as unknown as Record<string, unknown>[]) ?? []).map((p) => [String(p.id), p]));
+      const vendorIds = Array.from(new Set(((pos as unknown as Record<string, unknown>[]) ?? []).map((p) => String(p.vendor_id)).filter(Boolean)));
+      const { data: vens } = vendorIds.length ? await supabase.from("inv_vendors" as never).select("id,name").in("id", vendorIds) : { data: [] };
+      const venMap = new Map(((vens as unknown as Record<string, unknown>[]) ?? []).map((v) => [String(v.id), String(v.name)]));
+      return list.map((l) => {
+        const po = poMap.get(String(l.po_id));
+        return {
+          po_number: po ? String(po.po_number) : "—",
+          po_date: po ? String(po.po_date) : "",
+          vendor_name: po && po.vendor_id ? venMap.get(String(po.vendor_id)) ?? "—" : "—",
+          size_value: String(l.size_value ?? ""),
+          ordered_qty: Number(l.ordered_qty ?? 0),
+          received_qty: Number(l.received_qty ?? 0),
+          unit_price: Number(l.unit_price ?? 0),
+          tax_percent: Number(l.tax_percent ?? 0),
+        };
+      }).sort((a, b) => (b.po_date || "").localeCompare(a.po_date || ""));
+    },
+  });
+
+  const stats = useMemo(() => {
+    if (!rows.length) return null;
+    const prices = rows.map((r) => r.unit_price).filter((p) => p > 0);
+    if (!prices.length) return null;
+    return {
+      min: Math.min(...prices),
+      max: Math.max(...prices),
+      avg: prices.reduce((s, p) => s + p, 0) / prices.length,
+      count: prices.length,
+    };
+  }, [rows]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Price History — {item?.name}</DialogTitle>
+          <DialogDescription>All purchase order lines across all vendors for this item.</DialogDescription>
+        </DialogHeader>
+        {stats && (
+          <div className="mb-3 grid grid-cols-4 gap-3 rounded-xl border border-border bg-secondary/30 p-3 text-center text-xs">
+            <div><div className="text-muted-foreground">Min</div><div className="text-base font-semibold tabular-nums">₹{stats.min.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</div></div>
+            <div><div className="text-muted-foreground">Avg</div><div className="text-base font-semibold tabular-nums">₹{stats.avg.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</div></div>
+            <div><div className="text-muted-foreground">Max</div><div className="text-base font-semibold tabular-nums">₹{stats.max.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</div></div>
+            <div><div className="text-muted-foreground">PO Lines</div><div className="text-base font-semibold tabular-nums">{stats.count}</div></div>
+          </div>
+        )}
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/60 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="px-3 py-2">Date</th>
+                <th className="px-3 py-2">PO #</th>
+                <th className="px-3 py-2">Vendor</th>
+                <th className="px-3 py-2">Size</th>
+                <th className="px-3 py-2 text-right">Ordered</th>
+                <th className="px-3 py-2 text-right">Received</th>
+                <th className="px-3 py-2 text-right">Unit ₹</th>
+                <th className="px-3 py-2 text-right">Tax %</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {isLoading ? (
+                <tr><td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">Loading…</td></tr>
+              ) : rows.length === 0 ? (
+                <tr><td colSpan={8} className="px-3 py-6 text-center text-muted-foreground">No purchase history yet.</td></tr>
+              ) : rows.map((r, idx) => {
+                const isCheapest = stats && r.unit_price === stats.min;
+                const isExpensive = stats && r.unit_price === stats.max && stats.min !== stats.max;
+                return (
+                  <tr key={idx}>
+                    <td className="px-3 py-2 text-xs text-muted-foreground">{r.po_date}</td>
+                    <td className="px-3 py-2 font-mono text-xs">{r.po_number}</td>
+                    <td className="px-3 py-2 font-medium">{r.vendor_name}</td>
+                    <td className="px-3 py-2 text-xs">{r.size_value || "—"}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{r.ordered_qty}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-muted-foreground">{r.received_qty}</td>
+                    <td className={`px-3 py-2 text-right tabular-nums font-semibold ${isCheapest ? "text-emerald-600" : isExpensive ? "text-rose-600" : ""}`}>₹{r.unit_price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
+                    <td className="px-3 py-2 text-right tabular-nums text-xs text-muted-foreground">{r.tax_percent}%</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
