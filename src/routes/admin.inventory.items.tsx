@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Download, Edit2, Plus, Search, Trash2, PackageOpen } from "lucide-react";
+import { Download, Edit2, Plus, Search, Trash2, PackageOpen, History } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -31,8 +31,12 @@ type Item = {
   default_reorder_level: number;
   description: string;
   enabled: boolean;
+  standard_cost: number;
+  last_purchase_price: number | null;
+  last_purchase_vendor_id: string | null;
+  last_purchase_at: string | null;
 };
-type Payload = Omit<Item, "id" | "item_code">;
+type Payload = Omit<Item, "id" | "item_code" | "last_purchase_price" | "last_purchase_vendor_id" | "last_purchase_at">;
 
 const MODULE = "Inventory Items";
 const ENTITY = "inv_items";
@@ -52,6 +56,10 @@ function rowToItem(r: Record<string, unknown>): Item {
     default_reorder_level: Number(r.default_reorder_level ?? 0),
     description: String(r.description ?? ""),
     enabled: Boolean(r.enabled ?? true),
+    standard_cost: Number(r.standard_cost ?? 0),
+    last_purchase_price: r.last_purchase_price == null ? null : Number(r.last_purchase_price),
+    last_purchase_vendor_id: r.last_purchase_vendor_id ? String(r.last_purchase_vendor_id) : null,
+    last_purchase_at: r.last_purchase_at ? String(r.last_purchase_at) : null,
   };
 }
 
@@ -80,6 +88,7 @@ function ItemsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Item | null>(null);
   const [deleting, setDeleting] = useState<Item | null>(null);
+  const [historyFor, setHistoryFor] = useState<Item | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -175,8 +184,8 @@ function ItemsPage() {
                 <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Category</th>
                 <th className="px-5 py-3">Unit</th>
-                <th className="px-5 py-3">Sized</th>
-                <th className="px-5 py-3">HSN</th>
+                <th className="px-5 py-3 text-right">Std Cost</th>
+                <th className="px-5 py-3 text-right">Last Buy</th>
                 <th className="px-5 py-3 text-right">Reorder</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
@@ -186,15 +195,16 @@ function ItemsPage() {
               {filtered.map((i) => (
                 <tr key={i.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{i.item_code}</td>
-                  <td className="px-5 py-3 font-medium"><span className="inline-flex items-center gap-2"><PackageOpen className="h-4 w-4 text-muted-foreground" />{i.name}</span></td>
+                  <td className="px-5 py-3 font-medium"><span className="inline-flex items-center gap-2"><PackageOpen className="h-4 w-4 text-muted-foreground" />{i.name}</span>{i.hsn_code && <div className="text-[10px] text-muted-foreground">HSN {i.hsn_code}</div>}</td>
                   <td className="px-5 py-3"><span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{catMap.get(i.category_id ?? "") ?? "—"}</span></td>
-                  <td className="px-5 py-3">{i.unit}</td>
-                  <td className="px-5 py-3">{i.is_sized ? "Yes" : "No"}</td>
-                  <td className="px-5 py-3 text-xs">{i.hsn_code || "—"}</td>
+                  <td className="px-5 py-3">{i.unit}{i.is_sized && <span className="ml-1 text-[10px] text-muted-foreground">·sized</span>}</td>
+                  <td className="px-5 py-3 text-right tabular-nums">{i.standard_cost > 0 ? `₹${i.standard_cost.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</td>
+                  <td className="px-5 py-3 text-right tabular-nums">{i.last_purchase_price != null ? <><div>₹{i.last_purchase_price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</div><div className="text-[10px] text-muted-foreground">{i.last_purchase_at ? new Date(i.last_purchase_at).toLocaleDateString() : ""}</div></> : "—"}</td>
                   <td className="px-5 py-3 text-right tabular-nums">{i.default_reorder_level}</td>
                   <td className="px-5 py-3"><Switch checked={i.enabled} onCheckedChange={(v) => toggleMut.mutate({ id: i.id, enabled: v }, { onSuccess: () => toast.success(v ? "Enabled" : "Disabled") })} /></td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Price history" onClick={() => setHistoryFor(i)}><History className="h-4 w-4" /></Button>
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setEditing(i)}><Edit2 className="h-4 w-4" /></Button>
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => setDeleting(i)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
@@ -216,6 +226,8 @@ function ItemsPage() {
           <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={async () => { if (!deleting) return; try { await deleteMut.mutateAsync(deleting.id); toast.success("Deleted"); setDeleting(null); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); } }}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <PriceHistoryDialog item={historyFor} open={!!historyFor} onOpenChange={(o) => !o && setHistoryFor(null)} />
     </div>
   );
 }
