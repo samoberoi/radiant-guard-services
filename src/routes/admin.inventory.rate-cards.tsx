@@ -342,3 +342,84 @@ function CompareView({ rows, vendorMap, itemMap }: { rows: RateCard[]; vendorMap
     </div>
   );
 }
+
+function MatrixView({
+  rows, vendors, items, onCellClick,
+}: {
+  rows: RateCard[];
+  vendors: Vendor[];
+  items: Item[];
+  onCellClick: (vendor_id: string, item_id: string, existing: RateCard | null) => void;
+}) {
+  // index by item -> vendor -> cheapest active rate card (any size)
+  const idx = new Map<string, Map<string, RateCard>>();
+  for (const r of rows) {
+    if (!r.enabled) continue;
+    let m = idx.get(r.item_id);
+    if (!m) { m = new Map(); idx.set(r.item_id, m); }
+    const cur = m.get(r.vendor_id);
+    if (!cur || r.unit_price < cur.unit_price) m.set(r.vendor_id, r);
+  }
+  if (!vendors.length || !items.length) {
+    return <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">Add vendors and items first.</div>;
+  }
+  return (
+    <div className="overflow-auto rounded-2xl border border-border bg-card">
+      <table className="w-full text-sm">
+        <thead className="bg-secondary/30 text-[10px] uppercase tracking-wider text-muted-foreground">
+          <tr>
+            <th className="sticky left-0 z-10 bg-secondary/30 p-3 text-left font-medium">Item ↓ &nbsp;/&nbsp; Vendor →</th>
+            {vendors.map((v) => (
+              <th key={v.id} className="p-3 text-center font-medium" title={v.name}>
+                <div className="font-semibold text-foreground">{v.vendor_code}</div>
+                <div className="truncate text-[10px] font-normal normal-case text-muted-foreground" style={{ maxWidth: 110 }}>{v.name}</div>
+              </th>
+            ))}
+            <th className="p-3 text-center font-medium">Vendors</th>
+          </tr>
+        </thead>
+        <tbody>
+          {items.map((it) => {
+            const row = idx.get(it.id);
+            const prices = row ? Array.from(row.values()).map((r) => r.unit_price) : [];
+            const min = prices.length ? Math.min(...prices) : 0;
+            return (
+              <tr key={it.id} className="border-t border-border/60">
+                <td className="sticky left-0 z-10 bg-card p-3 font-medium">
+                  <div>{it.name}</div>
+                  <div className="text-[10px] font-normal text-muted-foreground">{it.item_code}</div>
+                </td>
+                {vendors.map((v) => {
+                  const rc = row?.get(v.id) ?? null;
+                  const cheapest = rc && rc.unit_price === min && prices.length > 1;
+                  return (
+                    <td key={v.id} className="p-1 text-center">
+                      <button
+                        onClick={() => onCellClick(v.id, it.id, rc)}
+                        className={`w-full rounded-md px-2 py-2 text-xs font-semibold tabular-nums transition-colors ${
+                          rc
+                            ? cheapest
+                              ? "bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25"
+                              : "bg-secondary/60 hover:bg-secondary"
+                            : "text-muted-foreground/40 hover:bg-secondary/30"
+                        }`}
+                        title={rc ? `₹${rc.unit_price} · MOQ ${rc.min_order_qty} · ${rc.lead_time_days}d lead` : "Not supplied — click to add capability"}
+                      >
+                        {rc ? `₹${rc.unit_price.toLocaleString("en-IN", { maximumFractionDigits: 0 })}` : "—"}
+                      </button>
+                    </td>
+                  );
+                })}
+                <td className="p-3 text-center text-xs font-semibold tabular-nums">{row?.size ?? 0}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+      <div className="border-t border-border bg-secondary/20 px-4 py-2 text-[11px] text-muted-foreground">
+        <span className="mr-3"><span className="inline-block h-2 w-2 rounded-sm bg-emerald-500/40" /> Cheapest vendor for that item</span>
+        <span>Click any cell to add or edit a vendor's capability for that item.</span>
+      </div>
+    </div>
+  );
+}
