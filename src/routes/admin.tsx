@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import {
   Bell,
   Building2,
+  Boxes,
   ChevronDown,
   ClipboardList,
   Wallet,
@@ -21,10 +22,13 @@ import {
   CreditCard,
   MapPin,
   Menu,
+  PackageOpen,
   PanelLeftClose,
   ShieldCheck,
+  ShoppingBag,
   Sparkles,
   SlidersHorizontal,
+  Truck,
   UserPlus,
   Users,
   Warehouse,
@@ -69,6 +73,19 @@ const vehiclesChildren: NavItem[] = [
   { to: "/admin/vehicles/insight-lab", label: "Insight Lab", icon: Sparkles },
 ];
 
+const inventoryChildren: NavItem[] = [
+  { to: "/admin/inventory/items", label: "Item Master", icon: PackageOpen },
+  { to: "/admin/inventory/vendors", label: "Vendors", icon: ShoppingBag },
+  { to: "/admin/inventory/warehouses", label: "Warehouses", icon: Warehouse },
+  { to: "/admin/inventory/purchase-orders", label: "Purchase Orders", icon: FileText },
+  { to: "/admin/inventory/goods-receipts", label: "Goods Receipts", icon: ClipboardList },
+  { to: "/admin/inventory/transfers", label: "Transfers", icon: Truck },
+  { to: "/admin/inventory/issuances", label: "Issuances", icon: PackageOpen },
+  { to: "/admin/inventory/branch-stock", label: "Branch Stock", icon: Building2 },
+  { to: "/admin/inventory/adjustments", label: "Adjustments", icon: SlidersHorizontal },
+  { to: "/admin/inventory/write-offs", label: "Write-offs", icon: PackageOpen },
+];
+
 
 function maskPhone(phone: string) {
   const d = phone.replace(/\D/g, "");
@@ -85,6 +102,7 @@ function AdminLayout() {
   const [customersOpen, setCustomersOpen] = useState(false);
   const [contractsOpen, setContractsOpen] = useState(false);
   const [vehiclesOpen, setVehiclesOpen] = useState(false);
+  const [inventoryOpen, setInventoryOpen] = useState(false);
   
   
 
