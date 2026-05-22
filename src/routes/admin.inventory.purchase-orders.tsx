@@ -200,6 +200,7 @@ function POPage() {
         vendors={vendors}
         warehouses={warehouses}
         items={items}
+        rateCards={rateCards}
         onSaved={invalidate}
       />
     </div>
@@ -207,10 +208,11 @@ function POPage() {
 }
 
 function POFormDialog({
-  open, onOpenChange, initial, vendors, warehouses, items, onSaved,
+  open, onOpenChange, initial, vendors, warehouses, items, rateCards, onSaved,
 }: {
   open: boolean; onOpenChange: (o: boolean) => void;
   initial: PO | null; vendors: Vendor[]; warehouses: Warehouse[]; items: Item[];
+  rateCards: RateCard[];
   onSaved: () => void;
 }) {
   const [vendorId, setVendorId] = useState<string>("");
