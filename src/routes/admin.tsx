@@ -34,6 +34,7 @@ import {
   Wind,
   Wrench,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/BrandMark";
