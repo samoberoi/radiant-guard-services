@@ -241,6 +241,7 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
   const [reorder, setReorder] = useState(0);
   const [description, setDescription] = useState("");
   const [enabled, setEnabled] = useState(true);
+  const [stdCost, setStdCost] = useState(0);
   const [saving, setSaving] = useState(false);
 
   useResetOnOpen(open, () => {
@@ -252,6 +253,7 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
     setReorder(initial?.default_reorder_level ?? 0);
     setDescription(initial?.description ?? "");
     setEnabled(initial?.enabled ?? true);
+    setStdCost(initial?.standard_cost ?? 0);
   });
 
   return (
@@ -271,9 +273,10 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
               <Select value={unit} onValueChange={setUnit}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select>
             </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <div className="grid gap-2"><Label>HSN Code</Label><Input value={hsn} onChange={(e) => setHsn(e.target.value)} placeholder="optional" /></div>
             <div className="grid gap-2"><Label>Reorder Level</Label><Input type="number" min={0} value={reorder} onChange={(e) => setReorder(Number(e.target.value) || 0)} /></div>
+            <div className="grid gap-2"><Label>Standard Cost ₹</Label><Input type="number" min={0} step="0.01" value={stdCost} onChange={(e) => setStdCost(Number(e.target.value) || 0)} /><div className="text-[10px] text-muted-foreground">Auto-updated on GRN as weighted avg.</div></div>
           </div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2"><div><div className="text-sm font-medium">Sized item</div><div className="text-xs text-muted-foreground">Has size variants (S/M/L, shoe numbers, etc.)</div></div><Switch checked={isSized} onCheckedChange={setIsSized} /></div>
           <div className="grid gap-2"><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} /></div>
@@ -284,7 +287,7 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
           <Button disabled={saving} onClick={async () => {
             if (!(await confirmAction({ title: "Save?", description: "Save these changes?", confirmText: "Save" }))) return;
             setSaving(true);
-            const err = await onSubmit({ name, category_id: categoryId || null, unit, is_sized: isSized, hsn_code: hsn, default_reorder_level: reorder, description, enabled });
+            const err = await onSubmit({ name, category_id: categoryId || null, unit, is_sized: isSized, hsn_code: hsn, default_reorder_level: reorder, description, enabled, standard_cost: stdCost });
             setSaving(false);
             if (err) toast.error(err); else onOpenChange(false);
           }}>{saving ? "Saving…" : "Save"}</Button>
