@@ -109,6 +109,7 @@ function ItemsPage() {
     default_reorder_level: p.default_reorder_level,
     description: p.description.trim(),
     enabled: p.enabled,
+    standard_cost: p.standard_cost,
   });
 
   const addMut = useMutation({
