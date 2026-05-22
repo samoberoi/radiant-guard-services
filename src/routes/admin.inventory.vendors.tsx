@@ -200,6 +200,61 @@ function VendorsPage() {
           <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={async () => { if (!deleting) return; try { await deleteMut.mutateAsync(deleting.id); toast.success("Deleted"); setDeleting(null); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); } }}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!capVendor} onOpenChange={(o) => !o && setCapVendor(null)}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Products supplied by {capVendor?.name}</DialogTitle>
+            <DialogDescription>Active rate cards define what this vendor can sell. Add or edit them in Rate Cards.</DialogDescription>
+          </DialogHeader>
+          {(() => {
+            const caps = capVendor ? (capsByVendor.get(capVendor.id) ?? []) : [];
+            if (!caps.length) {
+              return (
+                <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                  No products mapped yet. Open <Link to="/admin/inventory/rate-cards" className="font-semibold text-primary underline">Rate Cards</Link> to declare what this vendor can supply.
+                </div>
+              );
+            }
+            const byItem = new Map<string, typeof caps>();
+            for (const c of caps) {
+              const arr = byItem.get(c.item_id) ?? [];
+              arr.push(c);
+              byItem.set(c.item_id, arr);
+            }
+            return (
+              <div className="max-h-[60vh] overflow-auto rounded-xl border border-border">
+                <table className="w-full text-sm">
+                  <thead className="bg-secondary/40 text-[11px] uppercase tracking-wider text-muted-foreground">
+                    <tr><th className="p-3 text-left">Item</th><th className="p-3 text-left">Sizes</th><th className="p-3 text-right">Price range</th><th className="p-3 text-right">Lead</th></tr>
+                  </thead>
+                  <tbody>
+                    {Array.from(byItem.entries()).map(([itemId, list]) => {
+                      const item = itemMap.get(itemId);
+                      const prices = list.map((c) => c.unit_price);
+                      const min = Math.min(...prices), max = Math.max(...prices);
+                      const sizes = Array.from(new Set(list.map((c) => c.size_value).filter(Boolean)));
+                      const lead = Math.max(...list.map((c) => c.lead_time_days));
+                      return (
+                        <tr key={itemId} className="border-t border-border/60">
+                          <td className="p-3 font-medium">{item ? `${item.name}` : itemId}<div className="text-[10px] text-muted-foreground">{item?.item_code}</div></td>
+                          <td className="p-3 text-xs">{sizes.length ? sizes.join(", ") : "—"}</td>
+                          <td className="p-3 text-right tabular-nums font-semibold">{min === max ? `₹${min}` : `₹${min} – ₹${max}`}</td>
+                          <td className="p-3 text-right tabular-nums text-xs">{lead}d</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+          <DialogFooter>
+            <Link to="/admin/inventory/rate-cards"><Button variant="outline">Manage in Rate Cards</Button></Link>
+            <Button onClick={() => setCapVendor(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
