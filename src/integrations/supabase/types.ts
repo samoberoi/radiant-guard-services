@@ -1210,6 +1210,1255 @@ export type Database = {
         }
         Relationships: []
       }
+      inv_adjustment_lines: {
+        Row: {
+          adjustment_id: string
+          created_at: string
+          id: string
+          item_id: string
+          notes: string
+          qty_change: number
+          size_value: string
+        }
+        Insert: {
+          adjustment_id: string
+          created_at?: string
+          id?: string
+          item_id: string
+          notes?: string
+          qty_change?: number
+          size_value?: string
+        }
+        Update: {
+          adjustment_id?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          notes?: string
+          qty_change?: number
+          size_value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_adjustment_lines_adjustment_id_fkey"
+            columns: ["adjustment_id"]
+            isOneToOne: false
+            referencedRelation: "inv_adjustments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_adjustment_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inv_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_adjustments: {
+        Row: {
+          adjustment_date: string
+          adjustment_number: string
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          location_id: string
+          location_type: string
+          notes: string
+          reason: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          adjustment_date?: string
+          adjustment_number: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          location_id: string
+          location_type: string
+          notes?: string
+          reason?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          adjustment_date?: string
+          adjustment_number?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          location_id?: string
+          location_type?: string
+          notes?: string
+          reason?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      inv_goods_receipt_lines: {
+        Row: {
+          accepted_qty: number
+          created_at: string
+          grn_id: string
+          id: string
+          item_id: string
+          ordered_qty: number
+          po_line_id: string | null
+          received_qty: number
+          rejected_qty: number
+          rejection_reason: string
+          size_value: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          accepted_qty?: number
+          created_at?: string
+          grn_id: string
+          id?: string
+          item_id: string
+          ordered_qty?: number
+          po_line_id?: string | null
+          received_qty?: number
+          rejected_qty?: number
+          rejection_reason?: string
+          size_value?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          accepted_qty?: number
+          created_at?: string
+          grn_id?: string
+          id?: string
+          item_id?: string
+          ordered_qty?: number
+          po_line_id?: string | null
+          received_qty?: number
+          rejected_qty?: number
+          rejection_reason?: string
+          size_value?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_goods_receipt_lines_grn_id_fkey"
+            columns: ["grn_id"]
+            isOneToOne: false
+            referencedRelation: "inv_goods_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_goods_receipt_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inv_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_goods_receipt_lines_po_line_id_fkey"
+            columns: ["po_line_id"]
+            isOneToOne: false
+            referencedRelation: "inv_po_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_goods_receipts: {
+        Row: {
+          attachments: Json
+          created_at: string
+          grn_number: string
+          id: string
+          notes: string
+          po_id: string | null
+          receipt_date: string
+          received_at: string | null
+          received_by: string | null
+          status: string
+          updated_at: string
+          vehicle_number: string
+          vendor_challan_number: string
+          vendor_id: string | null
+          vendor_invoice_number: string
+          warehouse_id: string
+        }
+        Insert: {
+          attachments?: Json
+          created_at?: string
+          grn_number: string
+          id?: string
+          notes?: string
+          po_id?: string | null
+          receipt_date?: string
+          received_at?: string | null
+          received_by?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_number?: string
+          vendor_challan_number?: string
+          vendor_id?: string | null
+          vendor_invoice_number?: string
+          warehouse_id: string
+        }
+        Update: {
+          attachments?: Json
+          created_at?: string
+          grn_number?: string
+          id?: string
+          notes?: string
+          po_id?: string | null
+          receipt_date?: string
+          received_at?: string | null
+          received_by?: string | null
+          status?: string
+          updated_at?: string
+          vehicle_number?: string
+          vendor_challan_number?: string
+          vendor_id?: string | null
+          vendor_invoice_number?: string
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_goods_receipts_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "inv_purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_goods_receipts_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "inv_vendors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_goods_receipts_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "inv_warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_issuance_lines: {
+        Row: {
+          condition: string
+          created_at: string
+          id: string
+          issuance_id: string
+          item_id: string
+          notes: string
+          qty: number
+          size_value: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          condition?: string
+          created_at?: string
+          id?: string
+          issuance_id: string
+          item_id: string
+          notes?: string
+          qty?: number
+          size_value?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          condition?: string
+          created_at?: string
+          id?: string
+          issuance_id?: string
+          item_id?: string
+          notes?: string
+          qty?: number
+          size_value?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_issuance_lines_issuance_id_fkey"
+            columns: ["issuance_id"]
+            isOneToOne: false
+            referencedRelation: "inv_issuances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_issuance_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inv_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_issuances: {
+        Row: {
+          ack_method: string
+          ack_otp_verified: boolean
+          ack_photo_url: string
+          ack_signature_url: string
+          acknowledged_at: string | null
+          created_at: string
+          destination_id: string
+          destination_type: string
+          id: string
+          issuance_date: string
+          issuance_number: string
+          issuance_type: string
+          issued_at: string | null
+          issued_by: string | null
+          notes: string
+          source_id: string
+          source_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ack_method?: string
+          ack_otp_verified?: boolean
+          ack_photo_url?: string
+          ack_signature_url?: string
+          acknowledged_at?: string | null
+          created_at?: string
+          destination_id: string
+          destination_type: string
+          id?: string
+          issuance_date?: string
+          issuance_number: string
+          issuance_type: string
+          issued_at?: string | null
+          issued_by?: string | null
+          notes?: string
+          source_id: string
+          source_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ack_method?: string
+          ack_otp_verified?: boolean
+          ack_photo_url?: string
+          ack_signature_url?: string
+          acknowledged_at?: string | null
+          created_at?: string
+          destination_id?: string
+          destination_type?: string
+          id?: string
+          issuance_date?: string
+          issuance_number?: string
+          issuance_type?: string
+          issued_at?: string | null
+          issued_by?: string | null
+          notes?: string
+          source_id?: string
+          source_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      inv_item_categories: {
+        Row: {
+          created_at: string
+          description: string
+          enabled: boolean
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      inv_item_sizes: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          item_id: string
+          reorder_level: number
+          size_value: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          item_id: string
+          reorder_level?: number
+          size_value?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          item_id?: string
+          reorder_level?: number
+          size_value?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_item_sizes_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inv_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_items: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          default_reorder_level: number
+          description: string
+          enabled: boolean
+          hsn_code: string
+          id: string
+          image_url: string
+          is_serialized: boolean
+          is_sized: boolean
+          item_code: string
+          name: string
+          size_chart_id: string | null
+          unit: string
+          updated_at: string
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          default_reorder_level?: number
+          description?: string
+          enabled?: boolean
+          hsn_code?: string
+          id?: string
+          image_url?: string
+          is_serialized?: boolean
+          is_sized?: boolean
+          item_code: string
+          name: string
+          size_chart_id?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          default_reorder_level?: number
+          description?: string
+          enabled?: boolean
+          hsn_code?: string
+          id?: string
+          image_url?: string
+          is_serialized?: boolean
+          is_sized?: boolean
+          item_code?: string
+          name?: string
+          size_chart_id?: string | null
+          unit?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_items_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "inv_item_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_items_size_chart_id_fkey"
+            columns: ["size_chart_id"]
+            isOneToOne: false
+            referencedRelation: "inv_size_charts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_po_lines: {
+        Row: {
+          accepted_qty: number
+          created_at: string
+          id: string
+          item_id: string
+          line_total: number
+          notes: string
+          ordered_qty: number
+          po_id: string
+          received_qty: number
+          size_value: string
+          sort_order: number
+          tax_percent: number
+          unit_price: number
+          updated_at: string
+        }
+        Insert: {
+          accepted_qty?: number
+          created_at?: string
+          id?: string
+          item_id: string
+          line_total?: number
+          notes?: string
+          ordered_qty?: number
+          po_id: string
+          received_qty?: number
+          size_value?: string
+          sort_order?: number
+          tax_percent?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Update: {
+          accepted_qty?: number
+          created_at?: string
+          id?: string
+          item_id?: string
+          line_total?: number
+          notes?: string
+          ordered_qty?: number
+          po_id?: string
+          received_qty?: number
+          size_value?: string
+          sort_order?: number
+          tax_percent?: number
+          unit_price?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_po_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inv_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_po_lines_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "inv_purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_purchase_orders: {
+        Row: {
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          destination_warehouse_id: string | null
+          expected_date: string | null
+          grand_total: number
+          id: string
+          notes: string
+          po_date: string
+          po_number: string
+          po_type: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string
+          requesting_branch_id: string | null
+          requires_approval: boolean
+          source_warehouse_id: string | null
+          status: string
+          subtotal: number
+          tax_total: number
+          updated_at: string
+          vendor_id: string | null
+        }
+        Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          destination_warehouse_id?: string | null
+          expected_date?: string | null
+          grand_total?: number
+          id?: string
+          notes?: string
+          po_date?: string
+          po_number: string
+          po_type?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string
+          requesting_branch_id?: string | null
+          requires_approval?: boolean
+          source_warehouse_id?: string | null
+          status?: string
+          subtotal?: number
+          tax_total?: number
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Update: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          destination_warehouse_id?: string | null
+          expected_date?: string | null
+          grand_total?: number
+          id?: string
+          notes?: string
+          po_date?: string
+          po_number?: string
+          po_type?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string
+          requesting_branch_id?: string | null
+          requires_approval?: boolean
+          source_warehouse_id?: string | null
+          status?: string
+          subtotal?: number
+          tax_total?: number
+          updated_at?: string
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_purchase_orders_destination_warehouse_id_fkey"
+            columns: ["destination_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "inv_warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_purchase_orders_requesting_branch_id_fkey"
+            columns: ["requesting_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_purchase_orders_source_warehouse_id_fkey"
+            columns: ["source_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "inv_warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_purchase_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "inv_vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_size_charts: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          name: string
+          size_type: string
+          updated_at: string
+          values: Json
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name: string
+          size_type?: string
+          updated_at?: string
+          values?: Json
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          name?: string
+          size_type?: string
+          updated_at?: string
+          values?: Json
+        }
+        Relationships: []
+      }
+      inv_stock_balances: {
+        Row: {
+          id: string
+          item_id: string
+          location_id: string
+          location_type: string
+          qty: number
+          size_value: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          item_id: string
+          location_id: string
+          location_type: string
+          qty?: number
+          size_value?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          item_id?: string
+          location_id?: string
+          location_type?: string
+          qty?: number
+          size_value?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_stock_balances_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inv_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_stock_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          item_id: string
+          location_id: string
+          location_type: string
+          movement_date: string
+          movement_type: string
+          notes: string
+          qty_change: number
+          reference_id: string | null
+          reference_type: string
+          size_value: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_id: string
+          location_id: string
+          location_type: string
+          movement_date?: string
+          movement_type: string
+          notes?: string
+          qty_change: number
+          reference_id?: string | null
+          reference_type?: string
+          size_value?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_id?: string
+          location_id?: string
+          location_type?: string
+          movement_date?: string
+          movement_type?: string
+          notes?: string
+          qty_change?: number
+          reference_id?: string | null
+          reference_type?: string
+          size_value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_stock_movements_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inv_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_transfer_lines: {
+        Row: {
+          created_at: string
+          dispatched_qty: number
+          id: string
+          item_id: string
+          received_qty: number
+          size_value: string
+          sort_order: number
+          transfer_id: string
+          updated_at: string
+          variance_reason: string
+        }
+        Insert: {
+          created_at?: string
+          dispatched_qty?: number
+          id?: string
+          item_id: string
+          received_qty?: number
+          size_value?: string
+          sort_order?: number
+          transfer_id: string
+          updated_at?: string
+          variance_reason?: string
+        }
+        Update: {
+          created_at?: string
+          dispatched_qty?: number
+          id?: string
+          item_id?: string
+          received_qty?: number
+          size_value?: string
+          sort_order?: number
+          transfer_id?: string
+          updated_at?: string
+          variance_reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_transfer_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inv_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_transfer_lines_transfer_id_fkey"
+            columns: ["transfer_id"]
+            isOneToOne: false
+            referencedRelation: "inv_transfers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_transfers: {
+        Row: {
+          acknowledgement: Json
+          created_at: string
+          destination_id: string
+          destination_type: string
+          dispatched_at: string | null
+          dispatched_by: string | null
+          driver_name: string
+          driver_phone: string
+          id: string
+          linked_po_id: string | null
+          notes: string
+          received_at: string | null
+          received_by: string | null
+          source_id: string
+          source_type: string
+          status: string
+          transfer_date: string
+          transfer_number: string
+          updated_at: string
+          vehicle_number: string
+        }
+        Insert: {
+          acknowledgement?: Json
+          created_at?: string
+          destination_id: string
+          destination_type: string
+          dispatched_at?: string | null
+          dispatched_by?: string | null
+          driver_name?: string
+          driver_phone?: string
+          id?: string
+          linked_po_id?: string | null
+          notes?: string
+          received_at?: string | null
+          received_by?: string | null
+          source_id: string
+          source_type: string
+          status?: string
+          transfer_date?: string
+          transfer_number: string
+          updated_at?: string
+          vehicle_number?: string
+        }
+        Update: {
+          acknowledgement?: Json
+          created_at?: string
+          destination_id?: string
+          destination_type?: string
+          dispatched_at?: string | null
+          dispatched_by?: string | null
+          driver_name?: string
+          driver_phone?: string
+          id?: string
+          linked_po_id?: string | null
+          notes?: string
+          received_at?: string | null
+          received_by?: string | null
+          source_id?: string
+          source_type?: string
+          status?: string
+          transfer_date?: string
+          transfer_number?: string
+          updated_at?: string
+          vehicle_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_transfers_linked_po_id_fkey"
+            columns: ["linked_po_id"]
+            isOneToOne: false
+            referencedRelation: "inv_purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_vendor_rate_cards: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          item_id: string
+          lead_time_days: number
+          min_order_qty: number
+          notes: string
+          size_value: string
+          tax_percent: number
+          unit_price: number
+          updated_at: string
+          valid_from: string | null
+          valid_to: string | null
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          item_id: string
+          lead_time_days?: number
+          min_order_qty?: number
+          notes?: string
+          size_value?: string
+          tax_percent?: number
+          unit_price?: number
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          item_id?: string
+          lead_time_days?: number
+          min_order_qty?: number
+          notes?: string
+          size_value?: string
+          tax_percent?: number
+          unit_price?: number
+          updated_at?: string
+          valid_from?: string | null
+          valid_to?: string | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_vendor_rate_cards_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inv_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_vendor_rate_cards_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "inv_vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_vendors: {
+        Row: {
+          address1: string
+          address2: string
+          bank_details: Json
+          city: string
+          contact_person: string
+          country: string
+          created_at: string
+          email: string
+          enabled: boolean
+          gstin: string
+          id: string
+          name: string
+          notes: string
+          pan: string
+          payment_terms: string
+          phone: string
+          pincode: string
+          state: string
+          updated_at: string
+          vendor_code: string
+        }
+        Insert: {
+          address1?: string
+          address2?: string
+          bank_details?: Json
+          city?: string
+          contact_person?: string
+          country?: string
+          created_at?: string
+          email?: string
+          enabled?: boolean
+          gstin?: string
+          id?: string
+          name: string
+          notes?: string
+          pan?: string
+          payment_terms?: string
+          phone?: string
+          pincode?: string
+          state?: string
+          updated_at?: string
+          vendor_code: string
+        }
+        Update: {
+          address1?: string
+          address2?: string
+          bank_details?: Json
+          city?: string
+          contact_person?: string
+          country?: string
+          created_at?: string
+          email?: string
+          enabled?: boolean
+          gstin?: string
+          id?: string
+          name?: string
+          notes?: string
+          pan?: string
+          payment_terms?: string
+          phone?: string
+          pincode?: string
+          state?: string
+          updated_at?: string
+          vendor_code?: string
+        }
+        Relationships: []
+      }
+      inv_warehouses: {
+        Row: {
+          address1: string
+          address2: string
+          city: string
+          country: string
+          created_at: string
+          enabled: boolean
+          id: string
+          in_charge_candidate_id: string | null
+          is_default: boolean
+          name: string
+          notes: string
+          phone: string
+          pincode: string
+          state: string
+          updated_at: string
+          warehouse_code: string
+        }
+        Insert: {
+          address1?: string
+          address2?: string
+          city?: string
+          country?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          in_charge_candidate_id?: string | null
+          is_default?: boolean
+          name: string
+          notes?: string
+          phone?: string
+          pincode?: string
+          state?: string
+          updated_at?: string
+          warehouse_code: string
+        }
+        Update: {
+          address1?: string
+          address2?: string
+          city?: string
+          country?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          in_charge_candidate_id?: string | null
+          is_default?: boolean
+          name?: string
+          notes?: string
+          phone?: string
+          pincode?: string
+          state?: string
+          updated_at?: string
+          warehouse_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_warehouses_in_charge_candidate_id_fkey"
+            columns: ["in_charge_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_write_off_lines: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          line_total: number
+          notes: string
+          qty: number
+          size_value: string
+          unit_value: number
+          writeoff_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          line_total?: number
+          notes?: string
+          qty?: number
+          size_value?: string
+          unit_value?: number
+          writeoff_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          line_total?: number
+          notes?: string
+          qty?: number
+          size_value?: string
+          unit_value?: number
+          writeoff_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_write_off_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inv_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_write_off_lines_writeoff_id_fkey"
+            columns: ["writeoff_id"]
+            isOneToOne: false
+            referencedRelation: "inv_write_offs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_write_offs: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          location_id: string
+          location_type: string
+          notes: string
+          reason: string
+          recovery_amount: number
+          recovery_via_payroll: boolean
+          responsible_candidate_id: string | null
+          status: string
+          updated_at: string
+          writeoff_date: string
+          writeoff_number: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          location_id: string
+          location_type: string
+          notes?: string
+          reason?: string
+          recovery_amount?: number
+          recovery_via_payroll?: boolean
+          responsible_candidate_id?: string | null
+          status?: string
+          updated_at?: string
+          writeoff_date?: string
+          writeoff_number: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          location_id?: string
+          location_type?: string
+          notes?: string
+          reason?: string
+          recovery_amount?: number
+          recovery_via_payroll?: boolean
+          responsible_candidate_id?: string | null
+          status?: string
+          updated_at?: string
+          writeoff_date?: string
+          writeoff_number?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_write_offs_responsible_candidate_id_fkey"
+            columns: ["responsible_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       labour_welfare_funds: {
         Row: {
           created_at: string
