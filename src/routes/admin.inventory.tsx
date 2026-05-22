@@ -61,6 +61,27 @@ function InventoryDashboard() {
         crumbs={[{ label: "Inventory" }]}
       />
 
+      <div className="mb-6 rounded-2xl border border-border bg-gradient-to-br from-accent/10 via-card to-card p-5">
+        <div className="font-display text-sm font-bold tracking-tight">Procurement workflow</div>
+        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-5">
+          {[
+            { n: "1", t: "Purchase Order", d: "Warehouse needs stock → order from vendor", to: "/admin/inventory/purchase-orders" },
+            { n: "2", t: "Goods Receipt", d: "Verify delivery challan → stock into warehouse", to: "/admin/inventory/goods-receipts" },
+            { n: "3", t: "Transfer", d: "Warehouse → Branch", to: "/admin/inventory/transfers" },
+            { n: "4", t: "Issuance", d: "Branch → Field Officer → Guard", to: "/admin/inventory/issuances" },
+            { n: "5", t: "Write-off / Adjust", d: "Lost, damaged, or count fixes", to: "/admin/inventory/write-offs" },
+          ].map((s) => (
+            <Link key={s.to} to={s.to} className="rounded-xl border border-border/60 bg-card p-3 transition-colors hover:border-accent/50 hover:bg-accent/5">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 font-display text-xs font-bold text-accent">{s.n}</span>
+                <span className="font-display text-sm font-bold">{s.t}</span>
+              </div>
+              <div className="mt-1.5 text-[11px] leading-snug text-muted-foreground">{s.d}</div>
+            </Link>
+          ))}
+        </div>
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="SKUs" value={itemsQ.data ?? 0} icon={PackageOpen} to="/admin/inventory/items" />
         <StatCard label="Active Vendors" value={vendorsQ.data ?? 0} icon={ShoppingBag} to="/admin/inventory/vendors" />

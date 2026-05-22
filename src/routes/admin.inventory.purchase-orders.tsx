@@ -119,9 +119,19 @@ function POPage() {
     <div>
       <PageHeader
         title="Purchase Orders"
-        description="Order stock from vendors. Receive via Goods Receipt to add into warehouse balance."
+        description="Warehouse needs stock? Create a PO: pick the vendor, add items + qty + price, issue it. When goods arrive, receive against the PO in Goods Receipts to add stock into the warehouse."
         crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Purchase Orders" }]}
       />
+
+      <div className="mb-4 rounded-2xl border border-accent/30 bg-accent/5 p-4 text-xs text-muted-foreground">
+        <div className="font-display text-sm font-bold text-foreground">How procurement works</div>
+        <div className="mt-1 leading-relaxed">
+          <span className="font-semibold text-foreground">1. PO</span> (here) → order from vendor ·{" "}
+          <span className="font-semibold text-foreground">2. Goods Receipt</span> → verify challan &amp; add to warehouse ·{" "}
+          <span className="font-semibold text-foreground">3. Transfer</span> → warehouse to branch ·{" "}
+          <span className="font-semibold text-foreground">4. Issuance</span> → branch to FO / guard
+        </div>
+      </div>
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row">
@@ -143,7 +153,7 @@ function POPage() {
           </Select>
         </div>
         <Button onClick={() => { setEditing(null); setOpen(true); }} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
-          <Plus className="mr-1.5 h-4 w-4" />New PO
+          <Plus className="mr-1.5 h-4 w-4" />Order from Vendor
         </Button>
       </div>
 
@@ -154,7 +164,7 @@ function POPage() {
               <tr>
                 <th className="px-5 py-3">PO #</th>
                 <th className="px-5 py-3">Vendor</th>
-                <th className="px-5 py-3">Destination</th>
+                <th className="px-5 py-3">Deliver To</th>
                 <th className="px-5 py-3">Date</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right">Total</th>
@@ -187,7 +197,7 @@ function POPage() {
                   </td>
                 </tr>
               ))}
-              {!filtered.length && <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />No purchase orders yet.</td></tr>}
+              {!filtered.length && <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />No purchase orders yet. Click <span className="font-semibold text-foreground">Order from Vendor</span> to create your first PO.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -390,9 +400,9 @@ function POFormDialog({
                 <SelectContent>{vendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2"><Label>Destination Warehouse</Label>
+            <div className="grid gap-2"><Label>Deliver To Warehouse</Label>
               <Select value={warehouseId} onValueChange={setWarehouseId} disabled={readOnly}>
-                <SelectTrigger><SelectValue placeholder="Pick warehouse" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Which warehouse needs the stock?" /></SelectTrigger>
                 <SelectContent>{warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
