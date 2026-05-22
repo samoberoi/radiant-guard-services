@@ -255,6 +255,46 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
         reference_id: grnId,
       })));
 
+      // Moving-average cost + last-purchase tracking per accepted item
+      const acceptedLines = lines.filter((l) => l.accepted_qty > 0 && l.po_line_id);
+      if (acceptedLines.length) {
+        // Fetch po-line prices in one shot
+        const polIds = acceptedLines.map((l) => l.po_line_id!) as string[];
+        const { data: polRows } = await supabase.from("inv_po_lines" as never).select("id,item_id,unit_price").in("id", polIds);
+        const priceById = new Map(((polRows as unknown as { id: string; unit_price: number }[]) ?? []).map((r) => [String(r.id), Number(r.unit_price ?? 0)]));
+
+        // Aggregate accepted qty * price per item (in case multiple lines hit same item)
+        const perItem = new Map<string, { qty: number; cost: number; lastPrice: number }>();
+        for (const l of acceptedLines) {
+          const price = priceById.get(l.po_line_id!) ?? 0;
+          const cur = perItem.get(l.item_id) ?? { qty: 0, cost: 0, lastPrice: 0 };
+          cur.qty += l.accepted_qty;
+          cur.cost += l.accepted_qty * price;
+          cur.lastPrice = price;
+          perItem.set(l.item_id, cur);
+        }
+
+        for (const [itemId, agg] of perItem) {
+          // Fetch current item cost + on-hand qty across all locations
+          const { data: itemRow } = await supabase.from("inv_items" as never).select("standard_cost").eq("id", itemId).single();
+          const oldCost = Number((itemRow as unknown as { standard_cost?: number } | null)?.standard_cost ?? 0);
+          const { data: balRows } = await supabase.from("inv_stock_balances" as never).select("qty").eq("item_id", itemId);
+          const onHand = ((balRows as unknown as { qty: number }[]) ?? []).reduce((s, r) => s + Number(r.qty ?? 0), 0);
+          // onHand already includes our just-posted movement, so prior qty = onHand - agg.qty
+          const priorQty = Math.max(0, onHand - agg.qty);
+          const newAvg = (priorQty + agg.qty) > 0
+            ? (priorQty * oldCost + agg.cost) / (priorQty + agg.qty)
+            : oldCost;
+          await supabase.from("inv_items" as never).update({
+            standard_cost: Number(newAvg.toFixed(4)),
+            last_purchase_price: agg.lastPrice,
+            last_purchase_vendor_id: po.vendor_id,
+            last_purchase_at: new Date().toISOString(),
+          } as never).eq("id", itemId);
+        }
+      }
+
+
       // Update PO status
       const { data: allLines } = await supabase.from("inv_po_lines" as never).select("ordered_qty,received_qty").eq("po_id", po.id);
       const rows = (allLines as unknown as { ordered_qty: number; received_qty: number }[]) ?? [];

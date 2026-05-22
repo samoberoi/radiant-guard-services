@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Plus, Search, Trash2, FileText, Edit2, Eye } from "lucide-react";
+import { Plus, Search, Trash2, FileText, Edit2, Eye, AlertTriangle } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -24,6 +24,7 @@ type Vendor = { id: string; name: string; vendor_code: string };
 type Warehouse = { id: string; name: string; warehouse_code: string };
 type Item = { id: string; name: string; item_code: string; unit: string; is_sized: boolean };
 type POLine = { id?: string; item_id: string; size_value: string; ordered_qty: number; unit_price: number; tax_percent: number; notes: string };
+type RateCard = { vendor_id: string; item_id: string; size_value: string; unit_price: number; tax_percent: number };
 type PO = {
   id: string;
   po_number: string;
@@ -74,6 +75,14 @@ function POPage() {
       const { data, error } = await supabase.from("inv_items" as never).select("id,name,item_code,unit,is_sized").eq("enabled", true).order("name");
       if (error) throw error;
       return (data as unknown as Item[]) ?? [];
+    },
+  });
+  const { data: rateCards = [] } = useQuery({
+    queryKey: ["inv", "rate-cards-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_vendor_rate_cards" as never).select("vendor_id,item_id,size_value,unit_price,tax_percent").eq("enabled", true);
+      if (error) throw error;
+      return (data as unknown as RateCard[]) ?? [];
     },
   });
 
@@ -191,6 +200,7 @@ function POPage() {
         vendors={vendors}
         warehouses={warehouses}
         items={items}
+        rateCards={rateCards}
         onSaved={invalidate}
       />
     </div>
@@ -198,10 +208,11 @@ function POPage() {
 }
 
 function POFormDialog({
-  open, onOpenChange, initial, vendors, warehouses, items, onSaved,
+  open, onOpenChange, initial, vendors, warehouses, items, rateCards, onSaved,
 }: {
   open: boolean; onOpenChange: (o: boolean) => void;
   initial: PO | null; vendors: Vendor[]; warehouses: Warehouse[]; items: Item[];
+  rateCards: RateCard[];
   onSaved: () => void;
 }) {
   const [vendorId, setVendorId] = useState<string>("");
@@ -214,6 +225,47 @@ function POFormDialog({
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const readOnly = !!initial && initial.status !== "draft";
+
+  // Pick best matching rate card: prefer exact size match, then blank-size fallback.
+  const findRate = (vId: string, itemId: string, sizeValue: string): RateCard | undefined => {
+    if (!vId || !itemId) return undefined;
+    const matches = rateCards.filter((rc) => rc.vendor_id === vId && rc.item_id === itemId);
+    if (!matches.length) return undefined;
+    return matches.find((rc) => rc.size_value === sizeValue) ?? matches.find((rc) => !rc.size_value) ?? matches[0];
+  };
+  const cheapestRate = (itemId: string, sizeValue: string): RateCard | undefined => {
+    const matches = rateCards
+      .filter((rc) => rc.item_id === itemId)
+      .filter((rc) => rc.size_value === sizeValue || !rc.size_value);
+    if (!matches.length) return undefined;
+    return matches.reduce((min, rc) => (rc.unit_price < min.unit_price ? rc : min));
+  };
+  const vendorNameById = (id: string) => vendors.find((v) => v.id === id)?.name ?? "";
+
+  function applyVendorPriceToLines(newVendorId: string) {
+    setLines((ls) => ls.map((l) => {
+      if (!l.item_id) return l;
+      const rc = findRate(newVendorId, l.item_id, l.size_value);
+      if (!rc) return l;
+      // Only overwrite if line price is zero (user hasn't customized)
+      if (l.unit_price === 0) return { ...l, unit_price: rc.unit_price, tax_percent: rc.tax_percent };
+      return l;
+    }));
+  }
+
+  function applyRateToLine(idx: number, itemId: string, sizeValue: string) {
+    const rc = findRate(vendorId, itemId, sizeValue);
+    setLines((ls) => ls.map((x, i) => {
+      if (i !== idx) return x;
+      const next = { ...x, item_id: itemId, size_value: sizeValue };
+      if (rc) {
+        next.unit_price = rc.unit_price;
+        next.tax_percent = rc.tax_percent;
+      }
+      return next;
+    }));
+  }
+
 
   useResetOnOpen(open, async () => {
     if (initial) {
@@ -333,7 +385,7 @@ function POFormDialog({
         <div className="grid gap-4 py-2">
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2"><Label>Vendor</Label>
-              <Select value={vendorId} onValueChange={setVendorId} disabled={readOnly}>
+              <Select value={vendorId} onValueChange={(v) => { setVendorId(v); applyVendorPriceToLines(v); }} disabled={readOnly}>
                 <SelectTrigger><SelectValue placeholder="Pick vendor" /></SelectTrigger>
                 <SelectContent>{vendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
               </Select>
@@ -374,19 +426,31 @@ function POFormDialog({
                   {lines.map((l, idx) => {
                     const item = itemMap.get(l.item_id);
                     const lt = l.ordered_qty * l.unit_price * (1 + l.tax_percent / 100);
+                    const cheap = l.item_id ? cheapestRate(l.item_id, l.size_value) : undefined;
+                    const overpay = cheap && l.unit_price > 0 && l.unit_price > cheap.unit_price * 1.1;
+                    const overpayPct = cheap && cheap.unit_price > 0 ? ((l.unit_price - cheap.unit_price) / cheap.unit_price) * 100 : 0;
                     return (
                       <tr key={idx}>
                         <td className="px-2 py-1.5">
-                          <Select value={l.item_id} onValueChange={(v) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, item_id: v } : x))} disabled={readOnly}>
+                          <Select value={l.item_id} onValueChange={(v) => applyRateToLine(idx, v, l.size_value)} disabled={readOnly}>
                             <SelectTrigger className="h-9"><SelectValue placeholder="Pick item" /></SelectTrigger>
                             <SelectContent>{items.map((it) => <SelectItem key={it.id} value={it.id}>{it.name}</SelectItem>)}</SelectContent>
                           </Select>
                         </td>
                         <td className="px-2 py-1.5">
-                          <Input className="h-9" disabled={!item?.is_sized || readOnly} value={l.size_value} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, size_value: e.target.value } : x))} placeholder={item?.is_sized ? "M/L/40" : "—"} />
+                          <Input className="h-9" disabled={!item?.is_sized || readOnly} value={l.size_value} onChange={(e) => applyRateToLine(idx, l.item_id, e.target.value)} placeholder={item?.is_sized ? "M/L/40" : "—"} />
                         </td>
                         <td className="px-2 py-1.5"><Input type="number" min={0} step="0.01" className="h-9 text-right" value={l.ordered_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, ordered_qty: Number(e.target.value) || 0 } : x))} disabled={readOnly} /></td>
-                        <td className="px-2 py-1.5"><Input type="number" min={0} step="0.01" className="h-9 text-right" value={l.unit_price} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, unit_price: Number(e.target.value) || 0 } : x))} disabled={readOnly} /></td>
+                        <td className="px-2 py-1.5">
+                          <Input type="number" min={0} step="0.01" className={`h-9 text-right ${overpay ? "border-amber-500 text-amber-700" : ""}`} value={l.unit_price} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, unit_price: Number(e.target.value) || 0 } : x))} disabled={readOnly} />
+                          {cheap && (
+                            <div className={`mt-0.5 text-[10px] ${overpay ? "text-amber-600" : "text-muted-foreground"}`}>
+                              {overpay && <AlertTriangle className="mr-0.5 inline h-3 w-3" />}
+                              Cheapest: ₹{cheap.unit_price.toFixed(2)} ({vendorNameById(cheap.vendor_id)})
+                              {overpay && <> · +{overpayPct.toFixed(0)}%</>}
+                            </div>
+                          )}
+                        </td>
                         <td className="px-2 py-1.5"><Input type="number" min={0} step="0.01" className="h-9 text-right" value={l.tax_percent} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, tax_percent: Number(e.target.value) || 0 } : x))} disabled={readOnly} /></td>
                         <td className="px-3 py-2 text-right text-xs tabular-nums">₹{lt.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
                         <td className="px-2 py-1.5">

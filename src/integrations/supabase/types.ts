@@ -1656,8 +1656,12 @@ export type Database = {
           is_serialized: boolean
           is_sized: boolean
           item_code: string
+          last_purchase_at: string | null
+          last_purchase_price: number | null
+          last_purchase_vendor_id: string | null
           name: string
           size_chart_id: string | null
+          standard_cost: number
           unit: string
           updated_at: string
         }
@@ -1673,8 +1677,12 @@ export type Database = {
           is_serialized?: boolean
           is_sized?: boolean
           item_code: string
+          last_purchase_at?: string | null
+          last_purchase_price?: number | null
+          last_purchase_vendor_id?: string | null
           name: string
           size_chart_id?: string | null
+          standard_cost?: number
           unit?: string
           updated_at?: string
         }
@@ -1690,8 +1698,12 @@ export type Database = {
           is_serialized?: boolean
           is_sized?: boolean
           item_code?: string
+          last_purchase_at?: string | null
+          last_purchase_price?: number | null
+          last_purchase_vendor_id?: string | null
           name?: string
           size_chart_id?: string | null
+          standard_cost?: number
           unit?: string
           updated_at?: string
         }
