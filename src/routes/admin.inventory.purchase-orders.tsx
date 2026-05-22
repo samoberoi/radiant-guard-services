@@ -400,9 +400,9 @@ function POFormDialog({
                 <SelectContent>{vendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2"><Label>Destination Warehouse</Label>
+            <div className="grid gap-2"><Label>Deliver To Warehouse</Label>
               <Select value={warehouseId} onValueChange={setWarehouseId} disabled={readOnly}>
-                <SelectTrigger><SelectValue placeholder="Pick warehouse" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Which warehouse needs the stock?" /></SelectTrigger>
                 <SelectContent>{warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
