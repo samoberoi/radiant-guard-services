@@ -87,6 +87,7 @@ function InventoryDashboard() {
 
       <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {[
+          { to: "/admin/inventory/dashboard", label: "Owner Dashboard", hint: "Low stock, leaderboard, holdings" },
           { to: "/admin/inventory/purchase-orders", label: "Purchase Orders", hint: "Order from vendors" },
           { to: "/admin/inventory/goods-receipts", label: "Goods Receipts", hint: "Receive into warehouse" },
           { to: "/admin/inventory/transfers", label: "Transfers", hint: "Warehouse ↔ Branch" },
