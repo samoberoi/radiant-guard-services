@@ -58,7 +58,6 @@ import { Route as AdminInventoryStockRouteImport } from './routes/admin.inventor
 import { Route as AdminInventorySettingsRouteImport } from './routes/admin.inventory.settings'
 import { Route as AdminInventoryRateCardsRouteImport } from './routes/admin.inventory.rate-cards'
 import { Route as AdminInventoryPurchaseOrdersRouteImport } from './routes/admin.inventory.purchase-orders'
-import { Route as AdminInventoryPayrollRecoveriesRouteImport } from './routes/admin.inventory.payroll-recoveries'
 import { Route as AdminInventoryItemsRouteImport } from './routes/admin.inventory.items'
 import { Route as AdminInventoryIssuancesRouteImport } from './routes/admin.inventory.issuances'
 import { Route as AdminInventoryGoodsReceiptsRouteImport } from './routes/admin.inventory.goods-receipts'
@@ -325,12 +324,6 @@ const AdminInventoryPurchaseOrdersRoute =
     path: '/purchase-orders',
     getParentRoute: () => AdminInventoryRoute,
   } as any)
-const AdminInventoryPayrollRecoveriesRoute =
-  AdminInventoryPayrollRecoveriesRouteImport.update({
-    id: '/payroll-recoveries',
-    path: '/payroll-recoveries',
-    getParentRoute: () => AdminInventoryRoute,
-  } as any)
 const AdminInventoryItemsRoute = AdminInventoryItemsRouteImport.update({
   id: '/items',
   path: '/items',
@@ -443,7 +436,6 @@ export interface FileRoutesByFullPath {
   '/admin/inventory/goods-receipts': typeof AdminInventoryGoodsReceiptsRoute
   '/admin/inventory/issuances': typeof AdminInventoryIssuancesRoute
   '/admin/inventory/items': typeof AdminInventoryItemsRoute
-  '/admin/inventory/payroll-recoveries': typeof AdminInventoryPayrollRecoveriesRoute
   '/admin/inventory/purchase-orders': typeof AdminInventoryPurchaseOrdersRoute
   '/admin/inventory/rate-cards': typeof AdminInventoryRateCardsRoute
   '/admin/inventory/settings': typeof AdminInventorySettingsRoute
@@ -505,7 +497,6 @@ export interface FileRoutesByTo {
   '/admin/inventory/goods-receipts': typeof AdminInventoryGoodsReceiptsRoute
   '/admin/inventory/issuances': typeof AdminInventoryIssuancesRoute
   '/admin/inventory/items': typeof AdminInventoryItemsRoute
-  '/admin/inventory/payroll-recoveries': typeof AdminInventoryPayrollRecoveriesRoute
   '/admin/inventory/purchase-orders': typeof AdminInventoryPurchaseOrdersRoute
   '/admin/inventory/rate-cards': typeof AdminInventoryRateCardsRoute
   '/admin/inventory/settings': typeof AdminInventorySettingsRoute
@@ -570,7 +561,6 @@ export interface FileRoutesById {
   '/admin/inventory/goods-receipts': typeof AdminInventoryGoodsReceiptsRoute
   '/admin/inventory/issuances': typeof AdminInventoryIssuancesRoute
   '/admin/inventory/items': typeof AdminInventoryItemsRoute
-  '/admin/inventory/payroll-recoveries': typeof AdminInventoryPayrollRecoveriesRoute
   '/admin/inventory/purchase-orders': typeof AdminInventoryPurchaseOrdersRoute
   '/admin/inventory/rate-cards': typeof AdminInventoryRateCardsRoute
   '/admin/inventory/settings': typeof AdminInventorySettingsRoute
@@ -636,7 +626,6 @@ export interface FileRouteTypes {
     | '/admin/inventory/goods-receipts'
     | '/admin/inventory/issuances'
     | '/admin/inventory/items'
-    | '/admin/inventory/payroll-recoveries'
     | '/admin/inventory/purchase-orders'
     | '/admin/inventory/rate-cards'
     | '/admin/inventory/settings'
@@ -698,7 +687,6 @@ export interface FileRouteTypes {
     | '/admin/inventory/goods-receipts'
     | '/admin/inventory/issuances'
     | '/admin/inventory/items'
-    | '/admin/inventory/payroll-recoveries'
     | '/admin/inventory/purchase-orders'
     | '/admin/inventory/rate-cards'
     | '/admin/inventory/settings'
@@ -762,7 +750,6 @@ export interface FileRouteTypes {
     | '/admin/inventory/goods-receipts'
     | '/admin/inventory/issuances'
     | '/admin/inventory/items'
-    | '/admin/inventory/payroll-recoveries'
     | '/admin/inventory/purchase-orders'
     | '/admin/inventory/rate-cards'
     | '/admin/inventory/settings'
@@ -1136,13 +1123,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInventoryPurchaseOrdersRouteImport
       parentRoute: typeof AdminInventoryRoute
     }
-    '/admin/inventory/payroll-recoveries': {
-      id: '/admin/inventory/payroll-recoveries'
-      path: '/payroll-recoveries'
-      fullPath: '/admin/inventory/payroll-recoveries'
-      preLoaderRoute: typeof AdminInventoryPayrollRecoveriesRouteImport
-      parentRoute: typeof AdminInventoryRoute
-    }
     '/admin/inventory/items': {
       id: '/admin/inventory/items'
       path: '/items'
@@ -1268,7 +1248,6 @@ interface AdminInventoryRouteChildren {
   AdminInventoryGoodsReceiptsRoute: typeof AdminInventoryGoodsReceiptsRoute
   AdminInventoryIssuancesRoute: typeof AdminInventoryIssuancesRoute
   AdminInventoryItemsRoute: typeof AdminInventoryItemsRoute
-  AdminInventoryPayrollRecoveriesRoute: typeof AdminInventoryPayrollRecoveriesRoute
   AdminInventoryPurchaseOrdersRoute: typeof AdminInventoryPurchaseOrdersRoute
   AdminInventoryRateCardsRoute: typeof AdminInventoryRateCardsRoute
   AdminInventorySettingsRoute: typeof AdminInventorySettingsRoute
@@ -1285,7 +1264,6 @@ const AdminInventoryRouteChildren: AdminInventoryRouteChildren = {
   AdminInventoryGoodsReceiptsRoute: AdminInventoryGoodsReceiptsRoute,
   AdminInventoryIssuancesRoute: AdminInventoryIssuancesRoute,
   AdminInventoryItemsRoute: AdminInventoryItemsRoute,
-  AdminInventoryPayrollRecoveriesRoute: AdminInventoryPayrollRecoveriesRoute,
   AdminInventoryPurchaseOrdersRoute: AdminInventoryPurchaseOrdersRoute,
   AdminInventoryRateCardsRoute: AdminInventoryRateCardsRoute,
   AdminInventorySettingsRoute: AdminInventorySettingsRoute,
@@ -1413,3 +1391,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
