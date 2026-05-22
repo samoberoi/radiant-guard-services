@@ -116,11 +116,12 @@ function RateCardsPage() {
     <div>
       <PageHeader
         title="Vendor Rate Cards"
-        description="Per-item unit prices, tax, min order qty, and lead time per vendor."
+        description="Capability matrix: who can supply what, at what price, with what lead time."
         crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Rate Cards" }]}
       />
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className="inline-flex rounded-lg border border-border bg-card p-0.5 text-xs">
+          <button onClick={() => setView("matrix")} className={`rounded-md px-3 py-1.5 font-medium ${view === "matrix" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Capability Matrix</button>
           <button onClick={() => setView("list")} className={`rounded-md px-3 py-1.5 font-medium ${view === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>List</button>
           <button onClick={() => setView("compare")} className={`rounded-md px-3 py-1.5 font-medium ${view === "compare" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Compare by Item</button>
         </div>
