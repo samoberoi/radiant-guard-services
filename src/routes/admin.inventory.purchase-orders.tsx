@@ -226,6 +226,47 @@ function POFormDialog({
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const readOnly = !!initial && initial.status !== "draft";
 
+  // Pick best matching rate card: prefer exact size match, then blank-size fallback.
+  const findRate = (vId: string, itemId: string, sizeValue: string): RateCard | undefined => {
+    if (!vId || !itemId) return undefined;
+    const matches = rateCards.filter((rc) => rc.vendor_id === vId && rc.item_id === itemId);
+    if (!matches.length) return undefined;
+    return matches.find((rc) => rc.size_value === sizeValue) ?? matches.find((rc) => !rc.size_value) ?? matches[0];
+  };
+  const cheapestRate = (itemId: string, sizeValue: string): RateCard | undefined => {
+    const matches = rateCards
+      .filter((rc) => rc.item_id === itemId)
+      .filter((rc) => rc.size_value === sizeValue || !rc.size_value);
+    if (!matches.length) return undefined;
+    return matches.reduce((min, rc) => (rc.unit_price < min.unit_price ? rc : min));
+  };
+  const vendorNameById = (id: string) => vendors.find((v) => v.id === id)?.name ?? "";
+
+  function applyVendorPriceToLines(newVendorId: string) {
+    setLines((ls) => ls.map((l) => {
+      if (!l.item_id) return l;
+      const rc = findRate(newVendorId, l.item_id, l.size_value);
+      if (!rc) return l;
+      // Only overwrite if line price is zero (user hasn't customized)
+      if (l.unit_price === 0) return { ...l, unit_price: rc.unit_price, tax_percent: rc.tax_percent };
+      return l;
+    }));
+  }
+
+  function applyRateToLine(idx: number, itemId: string, sizeValue: string) {
+    const rc = findRate(vendorId, itemId, sizeValue);
+    setLines((ls) => ls.map((x, i) => {
+      if (i !== idx) return x;
+      const next = { ...x, item_id: itemId, size_value: sizeValue };
+      if (rc) {
+        next.unit_price = rc.unit_price;
+        next.tax_percent = rc.tax_percent;
+      }
+      return next;
+    }));
+  }
+
+
   useResetOnOpen(open, async () => {
     if (initial) {
       setVendorId(initial.vendor_id ?? "");
