@@ -161,13 +161,21 @@ function VendorsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              <tr><th className="px-5 py-3">Code</th><th className="px-5 py-3">Name</th><th className="px-5 py-3">Contact</th><th className="px-5 py-3">Phone</th><th className="px-5 py-3">GSTIN</th><th className="px-5 py-3">City</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr>
+              <tr><th className="px-5 py-3">Code</th><th className="px-5 py-3">Name</th><th className="px-5 py-3">Products</th><th className="px-5 py-3">Contact</th><th className="px-5 py-3">Phone</th><th className="px-5 py-3">GSTIN</th><th className="px-5 py-3">City</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((v) => (
+              {filtered.map((v) => {
+                const caps = capsByVendor.get(v.id) ?? [];
+                const distinctItems = new Set(caps.map((c) => c.item_id)).size;
+                return (
                 <tr key={v.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{v.vendor_code}</td>
                   <td className="px-5 py-3 font-medium"><span className="inline-flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-muted-foreground" />{v.name}</span></td>
+                  <td className="px-5 py-3">
+                    <button onClick={() => setCapVendor(v)} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${distinctItems ? "bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25" : "bg-secondary text-muted-foreground hover:bg-secondary/80"}`}>
+                      <Package className="h-3 w-3" />{distinctItems} item{distinctItems === 1 ? "" : "s"}
+                    </button>
+                  </td>
                   <td className="px-5 py-3">{v.contact_person || "—"}</td>
                   <td className="px-5 py-3 font-mono text-xs">{v.phone || "—"}</td>
                   <td className="px-5 py-3 font-mono text-xs">{v.gstin || "—"}</td>
@@ -175,8 +183,9 @@ function VendorsPage() {
                   <td className="px-5 py-3"><Switch checked={v.enabled} onCheckedChange={(val) => toggleMut.mutate({ id: v.id, enabled: val }, { onSuccess: () => toast.success(val ? "Enabled" : "Disabled") })} /></td>
                   <td className="px-5 py-3 text-right"><div className="inline-flex gap-1"><Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setEditing(v)}><Edit2 className="h-4 w-4" /></Button><Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => setDeleting(v)}><Trash2 className="h-4 w-4" /></Button></div></td>
                 </tr>
-              ))}
-              {!filtered.length && <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground">No vendors yet.</td></tr>}
+                );
+              })}
+              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground">No vendors yet.</td></tr>}
             </tbody>
           </table>
         </div>
