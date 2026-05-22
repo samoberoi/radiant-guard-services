@@ -37,6 +37,7 @@ function RateCardsPage() {
   const [editing, setEditing] = useState<RateCard | null>(null);
   const [vendorFilter, setVendorFilter] = useState("");
   const [itemFilter, setItemFilter] = useState("");
+  const [view, setView] = useState<"list" | "compare">("list");
 
   const vendorsQ = useQuery({
     queryKey: ["rc", "vendors"],
@@ -118,7 +119,11 @@ function RateCardsPage() {
         description="Per-item unit prices, tax, min order qty, and lead time per vendor."
         crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Rate Cards" }]}
       />
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="inline-flex rounded-lg border border-border bg-card p-0.5 text-xs">
+          <button onClick={() => setView("list")} className={`rounded-md px-3 py-1.5 font-medium ${view === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>List</button>
+          <button onClick={() => setView("compare")} className={`rounded-md px-3 py-1.5 font-medium ${view === "compare" ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Compare by Item</button>
+        </div>
         <Button onClick={() => { setEditing(null); setOpen(true); }}><Plus className="mr-1 h-4 w-4" />New Rate Card</Button>
       </div>
 
