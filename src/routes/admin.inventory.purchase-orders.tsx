@@ -164,7 +164,7 @@ function POPage() {
               <tr>
                 <th className="px-5 py-3">PO #</th>
                 <th className="px-5 py-3">Vendor</th>
-                <th className="px-5 py-3">Destination</th>
+                <th className="px-5 py-3">Deliver To</th>
                 <th className="px-5 py-3">Date</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right">Total</th>
