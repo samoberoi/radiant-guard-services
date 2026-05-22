@@ -65,6 +65,37 @@ function VendorsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Vendor | null>(null);
   const [deleting, setDeleting] = useState<Vendor | null>(null);
+  const [capVendor, setCapVendor] = useState<Vendor | null>(null);
+
+  const capsQ = useQuery({
+    queryKey: ["inv", "vendor-capabilities"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_vendor_rate_cards" as never)
+        .select("vendor_id,item_id,size_value,unit_price,lead_time_days,min_order_qty,enabled")
+        .eq("enabled", true);
+      if (error) throw error;
+      return (data as unknown as Array<{ vendor_id: string; item_id: string; size_value: string; unit_price: number; lead_time_days: number; min_order_qty: number; enabled: boolean }>) ?? [];
+    },
+  });
+  const itemsQ = useQuery({
+    queryKey: ["inv", "items-min"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_items" as never).select("id,item_code,name").order("name");
+      if (error) throw error;
+      return (data as unknown as Array<{ id: string; item_code: string; name: string }>) ?? [];
+    },
+  });
+  const itemMap = useMemo(() => new Map((itemsQ.data ?? []).map((i) => [i.id, i])), [itemsQ.data]);
+  const capsByVendor = useMemo(() => {
+    const m = new Map<string, typeof capsQ.data>();
+    for (const c of capsQ.data ?? []) {
+      const arr = m.get(c.vendor_id) ?? [];
+      arr.push(c);
+      m.set(c.vendor_id, arr);
+    }
+    return m;
+  }, [capsQ.data]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
