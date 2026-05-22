@@ -151,7 +151,17 @@ function RateCardsPage() {
         </div>
       </div>
 
-      {view === "list" ? (
+      {view === "matrix" ? (
+        <MatrixView
+          rows={cardsQ.data ?? []}
+          vendors={(vendorsQ.data ?? []).filter((v) => !vendorFilter || v.id === vendorFilter)}
+          items={(itemsQ.data ?? []).filter((i) => !itemFilter || i.id === itemFilter)}
+          onCellClick={(vendor_id, item_id, existing) => {
+            setEditing(existing ?? ({ vendor_id, item_id, size_value: "", unit_price: 0, tax_percent: 0, min_order_qty: 0, lead_time_days: 0, enabled: true } as RateCard));
+            setOpen(true);
+          }}
+        />
+      ) : view === "list" ? (
       <div className="overflow-auto rounded-2xl border border-border bg-card">
         <table className="w-full text-sm">
           <thead className="bg-secondary/30 text-xs uppercase tracking-wider text-muted-foreground">
