@@ -34,6 +34,7 @@ import {
   Wind,
   Wrench,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/BrandMark";
@@ -73,6 +74,7 @@ const vehiclesChildren: NavItem[] = [
 ];
 
 const inventoryChildren: NavItem[] = [
+  { to: "/admin/inventory/dashboard", label: "Owner Dashboard", icon: AlertTriangle },
   { to: "/admin/inventory/items", label: "Item Master", icon: PackageOpen },
   { to: "/admin/inventory/vendors", label: "Vendors", icon: ShoppingBag },
   { to: "/admin/inventory/warehouses", label: "Warehouses", icon: Warehouse },
