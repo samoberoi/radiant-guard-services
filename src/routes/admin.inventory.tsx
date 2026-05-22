@@ -85,17 +85,22 @@ function InventoryDashboard() {
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-5">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="mt-0.5 h-5 w-5 text-amber-600" />
-          <div className="text-sm">
-            <div className="font-semibold text-foreground">Phase 1 of 6 live</div>
-            <div className="mt-1 text-muted-foreground">
-              Item Master, Vendors and Warehouses are ready. Purchase Orders, Goods Receipts, Transfers,
-              Issuances, Returns/Write-offs and the full owner dashboard land in the next phases.
-            </div>
-          </div>
-        </div>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[
+          { to: "/admin/inventory/purchase-orders", label: "Purchase Orders", hint: "Order from vendors" },
+          { to: "/admin/inventory/goods-receipts", label: "Goods Receipts", hint: "Receive into warehouse" },
+          { to: "/admin/inventory/transfers", label: "Transfers", hint: "Warehouse ↔ Branch" },
+          { to: "/admin/inventory/issuances", label: "Issuances", hint: "Branch → FO → Guard" },
+          { to: "/admin/inventory/write-offs", label: "Write-offs", hint: "Lost / damaged" },
+          { to: "/admin/inventory/adjustments", label: "Adjustments", hint: "Cycle counts" },
+          { to: "/admin/inventory/stock", label: "Stock Report", hint: "Live balances" },
+          { to: "/admin/inventory/items", label: "Item Master", hint: "SKUs & sizes" },
+        ].map((c) => (
+          <Link key={c.to} to={c.to} className={cn("rounded-2xl border border-border bg-card p-4 transition-colors hover:border-accent/50 hover:bg-accent/5")}>
+            <div className="font-display text-sm font-bold">{c.label}</div>
+            <div className="mt-0.5 text-xs text-muted-foreground">{c.hint}</div>
+          </Link>
+        ))}
       </div>
     </div>
   );

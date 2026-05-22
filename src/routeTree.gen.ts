@@ -50,9 +50,16 @@ import { Route as AdminVehiclesInsightLabRouteImport } from './routes/admin.vehi
 import { Route as AdminVehiclesFastagsRouteImport } from './routes/admin.vehicles.fastags'
 import { Route as AdminVehiclesExpenseManagerRouteImport } from './routes/admin.vehicles.expense-manager'
 import { Route as AdminPayrollUnitIdRouteImport } from './routes/admin.payroll.$unitId'
+import { Route as AdminInventoryWriteOffsRouteImport } from './routes/admin.inventory.write-offs'
 import { Route as AdminInventoryWarehousesRouteImport } from './routes/admin.inventory.warehouses'
 import { Route as AdminInventoryVendorsRouteImport } from './routes/admin.inventory.vendors'
+import { Route as AdminInventoryTransfersRouteImport } from './routes/admin.inventory.transfers'
+import { Route as AdminInventoryStockRouteImport } from './routes/admin.inventory.stock'
+import { Route as AdminInventoryPurchaseOrdersRouteImport } from './routes/admin.inventory.purchase-orders'
 import { Route as AdminInventoryItemsRouteImport } from './routes/admin.inventory.items'
+import { Route as AdminInventoryIssuancesRouteImport } from './routes/admin.inventory.issuances'
+import { Route as AdminInventoryGoodsReceiptsRouteImport } from './routes/admin.inventory.goods-receipts'
+import { Route as AdminInventoryAdjustmentsRouteImport } from './routes/admin.inventory.adjustments'
 import { Route as AdminCustomersUnitManagerRouteImport } from './routes/admin.customers.unit-manager'
 import { Route as AdminCustomersStateManagerRouteImport } from './routes/admin.customers.state-manager'
 import { Route as AdminCustomersCustomerManagerRouteImport } from './routes/admin.customers.customer-manager'
@@ -272,6 +279,11 @@ const AdminPayrollUnitIdRoute = AdminPayrollUnitIdRouteImport.update({
   path: '/$unitId',
   getParentRoute: () => AdminPayrollRoute,
 } as any)
+const AdminInventoryWriteOffsRoute = AdminInventoryWriteOffsRouteImport.update({
+  id: '/write-offs',
+  path: '/write-offs',
+  getParentRoute: () => AdminInventoryRoute,
+} as any)
 const AdminInventoryWarehousesRoute =
   AdminInventoryWarehousesRouteImport.update({
     id: '/warehouses',
@@ -283,11 +295,44 @@ const AdminInventoryVendorsRoute = AdminInventoryVendorsRouteImport.update({
   path: '/vendors',
   getParentRoute: () => AdminInventoryRoute,
 } as any)
+const AdminInventoryTransfersRoute = AdminInventoryTransfersRouteImport.update({
+  id: '/transfers',
+  path: '/transfers',
+  getParentRoute: () => AdminInventoryRoute,
+} as any)
+const AdminInventoryStockRoute = AdminInventoryStockRouteImport.update({
+  id: '/stock',
+  path: '/stock',
+  getParentRoute: () => AdminInventoryRoute,
+} as any)
+const AdminInventoryPurchaseOrdersRoute =
+  AdminInventoryPurchaseOrdersRouteImport.update({
+    id: '/purchase-orders',
+    path: '/purchase-orders',
+    getParentRoute: () => AdminInventoryRoute,
+  } as any)
 const AdminInventoryItemsRoute = AdminInventoryItemsRouteImport.update({
   id: '/items',
   path: '/items',
   getParentRoute: () => AdminInventoryRoute,
 } as any)
+const AdminInventoryIssuancesRoute = AdminInventoryIssuancesRouteImport.update({
+  id: '/issuances',
+  path: '/issuances',
+  getParentRoute: () => AdminInventoryRoute,
+} as any)
+const AdminInventoryGoodsReceiptsRoute =
+  AdminInventoryGoodsReceiptsRouteImport.update({
+    id: '/goods-receipts',
+    path: '/goods-receipts',
+    getParentRoute: () => AdminInventoryRoute,
+  } as any)
+const AdminInventoryAdjustmentsRoute =
+  AdminInventoryAdjustmentsRouteImport.update({
+    id: '/adjustments',
+    path: '/adjustments',
+    getParentRoute: () => AdminInventoryRoute,
+  } as any)
 const AdminCustomersUnitManagerRoute =
   AdminCustomersUnitManagerRouteImport.update({
     id: '/unit-manager',
@@ -368,9 +413,16 @@ export interface FileRoutesByFullPath {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/inventory/adjustments': typeof AdminInventoryAdjustmentsRoute
+  '/admin/inventory/goods-receipts': typeof AdminInventoryGoodsReceiptsRoute
+  '/admin/inventory/issuances': typeof AdminInventoryIssuancesRoute
   '/admin/inventory/items': typeof AdminInventoryItemsRoute
+  '/admin/inventory/purchase-orders': typeof AdminInventoryPurchaseOrdersRoute
+  '/admin/inventory/stock': typeof AdminInventoryStockRoute
+  '/admin/inventory/transfers': typeof AdminInventoryTransfersRoute
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
+  '/admin/inventory/write-offs': typeof AdminInventoryWriteOffsRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
@@ -419,9 +471,16 @@ export interface FileRoutesByTo {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/inventory/adjustments': typeof AdminInventoryAdjustmentsRoute
+  '/admin/inventory/goods-receipts': typeof AdminInventoryGoodsReceiptsRoute
+  '/admin/inventory/issuances': typeof AdminInventoryIssuancesRoute
   '/admin/inventory/items': typeof AdminInventoryItemsRoute
+  '/admin/inventory/purchase-orders': typeof AdminInventoryPurchaseOrdersRoute
+  '/admin/inventory/stock': typeof AdminInventoryStockRoute
+  '/admin/inventory/transfers': typeof AdminInventoryTransfersRoute
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
+  '/admin/inventory/write-offs': typeof AdminInventoryWriteOffsRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
@@ -473,9 +532,16 @@ export interface FileRoutesById {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/inventory/adjustments': typeof AdminInventoryAdjustmentsRoute
+  '/admin/inventory/goods-receipts': typeof AdminInventoryGoodsReceiptsRoute
+  '/admin/inventory/issuances': typeof AdminInventoryIssuancesRoute
   '/admin/inventory/items': typeof AdminInventoryItemsRoute
+  '/admin/inventory/purchase-orders': typeof AdminInventoryPurchaseOrdersRoute
+  '/admin/inventory/stock': typeof AdminInventoryStockRoute
+  '/admin/inventory/transfers': typeof AdminInventoryTransfersRoute
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
+  '/admin/inventory/write-offs': typeof AdminInventoryWriteOffsRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
@@ -528,9 +594,16 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/inventory/adjustments'
+    | '/admin/inventory/goods-receipts'
+    | '/admin/inventory/issuances'
     | '/admin/inventory/items'
+    | '/admin/inventory/purchase-orders'
+    | '/admin/inventory/stock'
+    | '/admin/inventory/transfers'
     | '/admin/inventory/vendors'
     | '/admin/inventory/warehouses'
+    | '/admin/inventory/write-offs'
     | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
@@ -579,9 +652,16 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/inventory/adjustments'
+    | '/admin/inventory/goods-receipts'
+    | '/admin/inventory/issuances'
     | '/admin/inventory/items'
+    | '/admin/inventory/purchase-orders'
+    | '/admin/inventory/stock'
+    | '/admin/inventory/transfers'
     | '/admin/inventory/vendors'
     | '/admin/inventory/warehouses'
+    | '/admin/inventory/write-offs'
     | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
@@ -632,9 +712,16 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/inventory/adjustments'
+    | '/admin/inventory/goods-receipts'
+    | '/admin/inventory/issuances'
     | '/admin/inventory/items'
+    | '/admin/inventory/purchase-orders'
+    | '/admin/inventory/stock'
+    | '/admin/inventory/transfers'
     | '/admin/inventory/vendors'
     | '/admin/inventory/warehouses'
+    | '/admin/inventory/write-offs'
     | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
@@ -944,6 +1031,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPayrollUnitIdRouteImport
       parentRoute: typeof AdminPayrollRoute
     }
+    '/admin/inventory/write-offs': {
+      id: '/admin/inventory/write-offs'
+      path: '/write-offs'
+      fullPath: '/admin/inventory/write-offs'
+      preLoaderRoute: typeof AdminInventoryWriteOffsRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
     '/admin/inventory/warehouses': {
       id: '/admin/inventory/warehouses'
       path: '/warehouses'
@@ -958,11 +1052,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInventoryVendorsRouteImport
       parentRoute: typeof AdminInventoryRoute
     }
+    '/admin/inventory/transfers': {
+      id: '/admin/inventory/transfers'
+      path: '/transfers'
+      fullPath: '/admin/inventory/transfers'
+      preLoaderRoute: typeof AdminInventoryTransfersRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
+    '/admin/inventory/stock': {
+      id: '/admin/inventory/stock'
+      path: '/stock'
+      fullPath: '/admin/inventory/stock'
+      preLoaderRoute: typeof AdminInventoryStockRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
+    '/admin/inventory/purchase-orders': {
+      id: '/admin/inventory/purchase-orders'
+      path: '/purchase-orders'
+      fullPath: '/admin/inventory/purchase-orders'
+      preLoaderRoute: typeof AdminInventoryPurchaseOrdersRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
     '/admin/inventory/items': {
       id: '/admin/inventory/items'
       path: '/items'
       fullPath: '/admin/inventory/items'
       preLoaderRoute: typeof AdminInventoryItemsRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
+    '/admin/inventory/issuances': {
+      id: '/admin/inventory/issuances'
+      path: '/issuances'
+      fullPath: '/admin/inventory/issuances'
+      preLoaderRoute: typeof AdminInventoryIssuancesRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
+    '/admin/inventory/goods-receipts': {
+      id: '/admin/inventory/goods-receipts'
+      path: '/goods-receipts'
+      fullPath: '/admin/inventory/goods-receipts'
+      preLoaderRoute: typeof AdminInventoryGoodsReceiptsRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
+    '/admin/inventory/adjustments': {
+      id: '/admin/inventory/adjustments'
+      path: '/adjustments'
+      fullPath: '/admin/inventory/adjustments'
+      preLoaderRoute: typeof AdminInventoryAdjustmentsRouteImport
       parentRoute: typeof AdminInventoryRoute
     }
     '/admin/customers/unit-manager': {
@@ -1050,15 +1186,29 @@ const AdminCustomersRouteWithChildren = AdminCustomersRoute._addFileChildren(
 )
 
 interface AdminInventoryRouteChildren {
+  AdminInventoryAdjustmentsRoute: typeof AdminInventoryAdjustmentsRoute
+  AdminInventoryGoodsReceiptsRoute: typeof AdminInventoryGoodsReceiptsRoute
+  AdminInventoryIssuancesRoute: typeof AdminInventoryIssuancesRoute
   AdminInventoryItemsRoute: typeof AdminInventoryItemsRoute
+  AdminInventoryPurchaseOrdersRoute: typeof AdminInventoryPurchaseOrdersRoute
+  AdminInventoryStockRoute: typeof AdminInventoryStockRoute
+  AdminInventoryTransfersRoute: typeof AdminInventoryTransfersRoute
   AdminInventoryVendorsRoute: typeof AdminInventoryVendorsRoute
   AdminInventoryWarehousesRoute: typeof AdminInventoryWarehousesRoute
+  AdminInventoryWriteOffsRoute: typeof AdminInventoryWriteOffsRoute
 }
 
 const AdminInventoryRouteChildren: AdminInventoryRouteChildren = {
+  AdminInventoryAdjustmentsRoute: AdminInventoryAdjustmentsRoute,
+  AdminInventoryGoodsReceiptsRoute: AdminInventoryGoodsReceiptsRoute,
+  AdminInventoryIssuancesRoute: AdminInventoryIssuancesRoute,
   AdminInventoryItemsRoute: AdminInventoryItemsRoute,
+  AdminInventoryPurchaseOrdersRoute: AdminInventoryPurchaseOrdersRoute,
+  AdminInventoryStockRoute: AdminInventoryStockRoute,
+  AdminInventoryTransfersRoute: AdminInventoryTransfersRoute,
   AdminInventoryVendorsRoute: AdminInventoryVendorsRoute,
   AdminInventoryWarehousesRoute: AdminInventoryWarehousesRoute,
+  AdminInventoryWriteOffsRoute: AdminInventoryWriteOffsRoute,
 }
 
 const AdminInventoryRouteWithChildren = AdminInventoryRoute._addFileChildren(

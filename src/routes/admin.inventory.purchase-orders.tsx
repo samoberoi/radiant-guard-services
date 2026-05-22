@@ -1,0 +1,427 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { Plus, Search, Trash2, FileText, Edit2, Eye } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { logActivity } from "@/lib/activity-log";
+import { toast } from "sonner";
+import { confirmAction } from "@/components/ConfirmProvider";
+import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { nextSeq, fmtNumber, statusBadgeClass } from "@/lib/inv-helpers";
+
+export const Route = createFileRoute("/admin/inventory/purchase-orders")({ component: POPage });
+
+const MODULE = "Inventory Purchase Orders";
+const ENTITY = "inv_purchase_orders";
+
+type Vendor = { id: string; name: string; vendor_code: string };
+type Warehouse = { id: string; name: string; warehouse_code: string };
+type Item = { id: string; name: string; item_code: string; unit: string; is_sized: boolean };
+type POLine = { id?: string; item_id: string; size_value: string; ordered_qty: number; unit_price: number; tax_percent: number; notes: string };
+type PO = {
+  id: string;
+  po_number: string;
+  vendor_id: string | null;
+  destination_warehouse_id: string | null;
+  po_date: string;
+  expected_date: string | null;
+  status: string;
+  subtotal: number;
+  tax_total: number;
+  grand_total: number;
+  notes: string;
+};
+
+function POPage() {
+  const qc = useQueryClient();
+  const { data: pos = [] } = useQuery({
+    queryKey: ["inv", "pos"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_purchase_orders" as never)
+        .select("id,po_number,vendor_id,destination_warehouse_id,po_date,expected_date,status,subtotal,tax_total,grand_total,notes")
+        .eq("po_type", "vendor")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data as unknown as PO[]) ?? [];
+    },
+  });
+  const { data: vendors = [] } = useQuery({
+    queryKey: ["inv", "vendors-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_vendors" as never).select("id,name,vendor_code").eq("enabled", true).order("name");
+      if (error) throw error;
+      return (data as unknown as Vendor[]) ?? [];
+    },
+  });
+  const { data: warehouses = [] } = useQuery({
+    queryKey: ["inv", "warehouses-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_warehouses" as never).select("id,name,warehouse_code").eq("enabled", true).order("name");
+      if (error) throw error;
+      return (data as unknown as Warehouse[]) ?? [];
+    },
+  });
+  const { data: items = [] } = useQuery({
+    queryKey: ["inv", "items-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_items" as never).select("id,name,item_code,unit,is_sized").eq("enabled", true).order("name");
+      if (error) throw error;
+      return (data as unknown as Item[]) ?? [];
+    },
+  });
+
+  const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
+  const warehouseMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w])), [warehouses]);
+
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<PO | null>(null);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return pos.filter((p) => {
+      if (statusFilter !== "all" && p.status !== statusFilter) return false;
+      if (!q) return true;
+      const v = p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "" : "";
+      return p.po_number.toLowerCase().includes(q) || v.toLowerCase().includes(q);
+    });
+  }, [pos, query, statusFilter, vendorMap]);
+
+  const invalidate = () => qc.invalidateQueries({ queryKey: ["inv", "pos"] });
+
+  const deleteMut = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("inv_purchase_orders" as never).delete().eq("id", id);
+      if (error) throw error;
+      void logActivity({ module: MODULE, action: "delete", entityType: ENTITY, entityId: id });
+    },
+    onSuccess: invalidate,
+  });
+
+  return (
+    <div>
+      <PageHeader
+        title="Purchase Orders"
+        description="Order stock from vendors. Receive via Goods Receipt to add into warehouse balance."
+        crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Purchase Orders" }]}
+      />
+
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search PO #, vendor…" className="h-10 rounded-lg pl-9" />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-10 w-full rounded-lg sm:w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="draft">Draft</SelectItem>
+              <SelectItem value="open">Open</SelectItem>
+              <SelectItem value="partially_received">Partially Received</SelectItem>
+              <SelectItem value="received">Received</SelectItem>
+              <SelectItem value="closed">Closed</SelectItem>
+              <SelectItem value="cancelled">Cancelled</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button onClick={() => { setEditing(null); setOpen(true); }} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
+          <Plus className="mr-1.5 h-4 w-4" />New PO
+        </Button>
+      </div>
+
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <tr>
+                <th className="px-5 py-3">PO #</th>
+                <th className="px-5 py-3">Vendor</th>
+                <th className="px-5 py-3">Destination</th>
+                <th className="px-5 py-3">Date</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3 text-right">Total</th>
+                <th className="px-5 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((p) => (
+                <tr key={p.id} className="hover:bg-secondary/30">
+                  <td className="px-5 py-3 font-mono text-xs">{p.po_number}</td>
+                  <td className="px-5 py-3 font-medium">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</td>
+                  <td className="px-5 py-3">{p.destination_warehouse_id ? warehouseMap.get(p.destination_warehouse_id)?.name ?? "—" : "—"}</td>
+                  <td className="px-5 py-3 text-xs text-muted-foreground">{p.po_date}</td>
+                  <td className="px-5 py-3">
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(p.status)}`}>{p.status.replace("_", " ")}</span>
+                  </td>
+                  <td className="px-5 py-3 text-right tabular-nums">₹{Number(p.grand_total).toLocaleString("en-IN")}</td>
+                  <td className="px-5 py-3 text-right">
+                    <div className="inline-flex gap-1">
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setEditing(p); setOpen(true); }}>
+                        {p.status === "draft" ? <Edit2 className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </Button>
+                      {p.status === "draft" && (
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={async () => {
+                          if (!(await confirmAction({ title: "Delete PO?", description: `Delete ${p.po_number}?`, confirmText: "Delete" }))) return;
+                          try { await deleteMut.mutateAsync(p.id); toast.success("Deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                        }}><Trash2 className="h-4 w-4" /></Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!filtered.length && <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />No purchase orders yet.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <POFormDialog
+        open={open}
+        onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}
+        initial={editing}
+        vendors={vendors}
+        warehouses={warehouses}
+        items={items}
+        onSaved={invalidate}
+      />
+    </div>
+  );
+}
+
+function POFormDialog({
+  open, onOpenChange, initial, vendors, warehouses, items, onSaved,
+}: {
+  open: boolean; onOpenChange: (o: boolean) => void;
+  initial: PO | null; vendors: Vendor[]; warehouses: Warehouse[]; items: Item[];
+  onSaved: () => void;
+}) {
+  const [vendorId, setVendorId] = useState<string>("");
+  const [warehouseId, setWarehouseId] = useState<string>("");
+  const [poDate, setPoDate] = useState(new Date().toISOString().slice(0, 10));
+  const [expectedDate, setExpectedDate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [lines, setLines] = useState<POLine[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  const readOnly = !!initial && initial.status !== "draft";
+
+  useResetOnOpen(open, async () => {
+    if (initial) {
+      setVendorId(initial.vendor_id ?? "");
+      setWarehouseId(initial.destination_warehouse_id ?? "");
+      setPoDate(initial.po_date);
+      setExpectedDate(initial.expected_date ?? "");
+      setNotes(initial.notes);
+      const { data } = await supabase.from("inv_po_lines" as never).select("*").eq("po_id", initial.id).order("sort_order");
+      setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => ({
+        id: String(r.id),
+        item_id: String(r.item_id),
+        size_value: String(r.size_value ?? ""),
+        ordered_qty: Number(r.ordered_qty ?? 0),
+        unit_price: Number(r.unit_price ?? 0),
+        tax_percent: Number(r.tax_percent ?? 0),
+        notes: String(r.notes ?? ""),
+      })));
+    } else {
+      setVendorId(""); setWarehouseId(""); setPoDate(new Date().toISOString().slice(0, 10));
+      setExpectedDate(""); setNotes(""); setLines([]);
+    }
+  });
+
+  const totals = useMemo(() => {
+    let sub = 0, tax = 0;
+    for (const l of lines) {
+      const lt = l.ordered_qty * l.unit_price;
+      sub += lt;
+      tax += lt * (l.tax_percent / 100);
+    }
+    return { sub, tax, grand: sub + tax };
+  }, [lines]);
+
+  async function save(status: "draft" | "open") {
+    if (!vendorId) { toast.error("Vendor required"); return; }
+    if (!warehouseId) { toast.error("Destination warehouse required"); return; }
+    if (!lines.length) { toast.error("Add at least one line"); return; }
+    for (const l of lines) {
+      if (!l.item_id) { toast.error("Pick an item on every line"); return; }
+      if (l.ordered_qty <= 0) { toast.error("Quantity must be > 0"); return; }
+    }
+    setSaving(true);
+    try {
+      const linesPayload = lines.map((l, idx) => ({
+        item_id: l.item_id,
+        size_value: l.size_value,
+        ordered_qty: l.ordered_qty,
+        unit_price: l.unit_price,
+        tax_percent: l.tax_percent,
+        line_total: l.ordered_qty * l.unit_price * (1 + l.tax_percent / 100),
+        notes: l.notes,
+        sort_order: idx,
+      }));
+      let poId = initial?.id;
+      if (initial) {
+        const { error } = await supabase.from("inv_purchase_orders" as never).update({
+          vendor_id: vendorId,
+          destination_warehouse_id: warehouseId,
+          po_date: poDate,
+          expected_date: expectedDate || null,
+          notes,
+          subtotal: totals.sub,
+          tax_total: totals.tax,
+          grand_total: totals.grand,
+          status,
+        } as never).eq("id", initial.id);
+        if (error) throw error;
+        await supabase.from("inv_po_lines" as never).delete().eq("po_id", initial.id);
+        await supabase.from("inv_po_lines" as never).insert(linesPayload.map((l) => ({ ...l, po_id: initial.id })) as never);
+      } else {
+        const n = await nextSeq("inv_po_number_seq");
+        const po_number = fmtNumber("PO", n);
+        const { data: { user } } = await supabase.auth.getUser();
+        const { data: ins, error } = await supabase.from("inv_purchase_orders" as never).insert({
+          po_number, po_type: "vendor",
+          vendor_id: vendorId,
+          destination_warehouse_id: warehouseId,
+          po_date: poDate,
+          expected_date: expectedDate || null,
+          notes,
+          subtotal: totals.sub,
+          tax_total: totals.tax,
+          grand_total: totals.grand,
+          status,
+          created_by: user?.id ?? null,
+        } as never).select("id").single();
+        if (error) throw error;
+        poId = (ins as unknown as { id: string }).id;
+        await supabase.from("inv_po_lines" as never).insert(linesPayload.map((l) => ({ ...l, po_id: poId })) as never);
+      }
+      void logActivity({
+        module: MODULE,
+        action: initial ? "update" : "create",
+        entityType: ENTITY,
+        entityId: poId,
+        entityLabel: initial?.po_number ?? "PO",
+      });
+      toast.success(status === "draft" ? "Draft saved" : "PO issued");
+      onSaved();
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>{initial ? `Purchase Order ${initial.po_number}` : "New Purchase Order"}</DialogTitle>
+          <DialogDescription>{readOnly ? "Read-only view." : "Order items from a vendor."}</DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-2">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2"><Label>Vendor</Label>
+              <Select value={vendorId} onValueChange={setVendorId} disabled={readOnly}>
+                <SelectTrigger><SelectValue placeholder="Pick vendor" /></SelectTrigger>
+                <SelectContent>{vendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2"><Label>Destination Warehouse</Label>
+              <Select value={warehouseId} onValueChange={setWarehouseId} disabled={readOnly}>
+                <SelectTrigger><SelectValue placeholder="Pick warehouse" /></SelectTrigger>
+                <SelectContent>{warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2"><Label>PO Date</Label><Input type="date" value={poDate} onChange={(e) => setPoDate(e.target.value)} disabled={readOnly} /></div>
+            <div className="grid gap-2"><Label>Expected Delivery</Label><Input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} disabled={readOnly} /></div>
+          </div>
+
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <Label className="text-sm font-semibold">Line Items</Label>
+              {!readOnly && (
+                <Button size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { item_id: "", size_value: "", ordered_qty: 1, unit_price: 0, tax_percent: 0, notes: "" }])}>
+                  <Plus className="mr-1 h-3.5 w-3.5" />Add line
+                </Button>
+              )}
+            </div>
+            <div className="overflow-x-auto rounded-xl border border-border">
+              <table className="w-full text-sm">
+                <thead className="bg-secondary/60 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2">Item</th>
+                    <th className="px-3 py-2 w-20">Size</th>
+                    <th className="px-3 py-2 w-20 text-right">Qty</th>
+                    <th className="px-3 py-2 w-24 text-right">Unit ₹</th>
+                    <th className="px-3 py-2 w-20 text-right">Tax %</th>
+                    <th className="px-3 py-2 w-28 text-right">Total</th>
+                    <th className="px-3 py-2 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {lines.map((l, idx) => {
+                    const item = itemMap.get(l.item_id);
+                    const lt = l.ordered_qty * l.unit_price * (1 + l.tax_percent / 100);
+                    return (
+                      <tr key={idx}>
+                        <td className="px-2 py-1.5">
+                          <Select value={l.item_id} onValueChange={(v) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, item_id: v } : x))} disabled={readOnly}>
+                            <SelectTrigger className="h-9"><SelectValue placeholder="Pick item" /></SelectTrigger>
+                            <SelectContent>{items.map((it) => <SelectItem key={it.id} value={it.id}>{it.name}</SelectItem>)}</SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <Input className="h-9" disabled={!item?.is_sized || readOnly} value={l.size_value} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, size_value: e.target.value } : x))} placeholder={item?.is_sized ? "M/L/40" : "—"} />
+                        </td>
+                        <td className="px-2 py-1.5"><Input type="number" min={0} step="0.01" className="h-9 text-right" value={l.ordered_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, ordered_qty: Number(e.target.value) || 0 } : x))} disabled={readOnly} /></td>
+                        <td className="px-2 py-1.5"><Input type="number" min={0} step="0.01" className="h-9 text-right" value={l.unit_price} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, unit_price: Number(e.target.value) || 0 } : x))} disabled={readOnly} /></td>
+                        <td className="px-2 py-1.5"><Input type="number" min={0} step="0.01" className="h-9 text-right" value={l.tax_percent} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, tax_percent: Number(e.target.value) || 0 } : x))} disabled={readOnly} /></td>
+                        <td className="px-3 py-2 text-right text-xs tabular-nums">₹{lt.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
+                        <td className="px-2 py-1.5">
+                          {!readOnly && (
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => setLines((ls) => ls.filter((_, i) => i !== idx))}><Trash2 className="h-3.5 w-3.5" /></Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {!lines.length && <tr><td colSpan={7} className="px-3 py-6 text-center text-xs text-muted-foreground">No lines yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-3 flex justify-end gap-6 text-sm">
+              <div className="text-muted-foreground">Subtotal: <span className="font-medium tabular-nums text-foreground">₹{totals.sub.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</span></div>
+              <div className="text-muted-foreground">Tax: <span className="font-medium tabular-nums text-foreground">₹{totals.tax.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</span></div>
+              <div className="font-display text-base font-bold tabular-nums">Total ₹{totals.grand.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</div>
+            </div>
+          </div>
+
+          <div className="grid gap-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={readOnly} rows={2} /></div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
+          {!readOnly && <Button variant="outline" onClick={() => save("draft")} disabled={saving}>Save Draft</Button>}
+          {!readOnly && <Button onClick={() => save("open")} disabled={saving}>{saving ? "Saving…" : "Issue PO"}</Button>}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function useResetOnOpen(open: boolean, reset: () => void) {
+  const [last, setLast] = useState(false);
+  if (open !== last) { setLast(open); if (open) reset(); }
+}
