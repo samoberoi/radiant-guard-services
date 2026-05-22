@@ -37,7 +37,7 @@ function RateCardsPage() {
   const [editing, setEditing] = useState<RateCard | null>(null);
   const [vendorFilter, setVendorFilter] = useState("");
   const [itemFilter, setItemFilter] = useState("");
-  const [view, setView] = useState<"list" | "compare">("list");
+  const [view, setView] = useState<"matrix" | "list" | "compare">("matrix");
 
   const vendorsQ = useQuery({
     queryKey: ["rc", "vendors"],
