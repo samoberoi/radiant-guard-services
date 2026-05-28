@@ -766,17 +766,6 @@ function AdminLayout() {
 
 
           <div className="ml-auto flex items-center gap-3">
-            <Link
-              to="/admin/profile"
-              className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent hover:text-accent sm:flex"
-            >
-              <span className="inline-flex h-2 w-2 rounded-full bg-accent" />
-              {user?.role === "super_admin" ? "Super Admin" : "My Profile"}
-              <span className="text-muted-foreground">·</span>
-              <span className="font-mono text-muted-foreground">
-                {user ? maskPhone(user.phone) : "—"}
-              </span>
-            </Link>
             <NotificationBell />
             <Button
               onClick={handleLogout}

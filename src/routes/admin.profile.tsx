@@ -3,15 +3,24 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  Activity,
+  Briefcase,
   Camera,
   Download,
   FileSignature,
+  GraduationCap,
+  Heart,
   IdCard,
+  Languages as LanguagesIcon,
   Mail,
   MapPin,
   Phone as PhoneIcon,
+  ShieldAlert,
   ShieldCheck,
+  Sparkles,
   Upload,
+  Users,
+  UserCheck,
   Loader2,
   X,
 } from "lucide-react";
@@ -177,9 +186,23 @@ type ProfileData = {
   approved_at: string | null;
   unit_id: string | null;
   designation_id: string | null;
+  emergency_contact_name: string;
+  emergency_contact_relation: string;
+  emergency_contact_mobile: string;
+  bank_account_type: string;
   documents: Array<{ name?: string; url?: string; type?: string }>;
   identification_proofs: Array<{ type?: string; number?: string; url?: string }>;
   assigned_asset_ids: string[];
+  contacts: Array<{ name?: string; relation?: string; mobile?: string; occupation?: string; alive?: boolean }>;
+  nominations: Array<{ name?: string; relation?: string; share?: number; dob?: string; aadhaar?: string }>;
+  references: Array<{ name?: string; relation?: string; mobile?: string; email?: string; address?: string }>;
+  languages: Array<{ name?: string; read?: boolean; write?: boolean; speak?: boolean }>;
+  experiences: Array<{ company?: string; designation?: string; from?: string; to?: string; salary?: string; reason_for_leaving?: string }>;
+  educations: Array<{ qualification?: string; institution?: string; year?: string; percentage?: string }>;
+  extra_curricular: Array<{ activity?: string; level?: string; year?: string }>;
+  criminal_history: { has_history?: boolean; incidents?: Array<{ description?: string; year?: string }> };
+  physical_health_full: Record<string, string>;
+  other_info: Record<string, string>;
 };
 
 type LookupRow = { id: string; name: string };
@@ -245,7 +268,7 @@ function ProfilePage() {
       const { data, error } = await supabase
         .from("candidates")
         .select(
-          "id,full_name,employee_code,candidate_code,status,role_key,photo_url,aadhaar_image_url,pan_image_url,signature_url,aadhaar_number,pan_number,mobile,email,date_of_birth,gender,marital_status,present_address1,present_address2,present_city,present_state,present_pincode,permanent_address1,permanent_city,permanent_state,permanent_pincode,bank_account_holder,bank_account_number,bank_ifsc,bank_name,bank_branch,preferred_joining_date,approved_at,unit_id,designation_id,documents,identification_proofs,assigned_asset_ids,physical_health",
+          "id,full_name,employee_code,candidate_code,status,role_key,photo_url,aadhaar_image_url,pan_image_url,signature_url,aadhaar_number,pan_number,mobile,email,date_of_birth,gender,marital_status,present_address1,present_address2,present_city,present_state,present_pincode,permanent_address1,permanent_city,permanent_state,permanent_pincode,bank_account_holder,bank_account_number,bank_ifsc,bank_name,bank_branch,bank_account_type,emergency_contact_name,emergency_contact_relation,emergency_contact_mobile,preferred_joining_date,approved_at,unit_id,designation_id,documents,identification_proofs,assigned_asset_ids,physical_health,contacts,nominations,references,languages,experiences,educations,extra_curricular,criminal_history,other_info",
         )
         .eq("mobile", phone)
         .order("created_at", { ascending: false })
@@ -254,16 +277,23 @@ function ProfilePage() {
       if (error) throw error;
       if (!data) return null;
       const row = data as any;
+      const arr = (v: any) => (Array.isArray(v) ? v : []);
       return {
         ...row,
         blood_group: row.physical_health?.blood_group ?? "",
-        documents: Array.isArray(row.documents) ? row.documents : [],
-        identification_proofs: Array.isArray(row.identification_proofs)
-          ? row.identification_proofs
-          : [],
-        assigned_asset_ids: Array.isArray(row.assigned_asset_ids)
-          ? row.assigned_asset_ids
-          : [],
+        physical_health_full: row.physical_health ?? {},
+        other_info: row.other_info ?? {},
+        documents: arr(row.documents),
+        identification_proofs: arr(row.identification_proofs),
+        assigned_asset_ids: arr(row.assigned_asset_ids),
+        contacts: arr(row.contacts),
+        nominations: arr(row.nominations),
+        references: arr(row.references),
+        languages: arr(row.languages),
+        experiences: arr(row.experiences),
+        educations: arr(row.educations),
+        extra_curricular: arr(row.extra_curricular),
+        criminal_history: row.criminal_history ?? { has_history: false, incidents: [] },
       } as ProfileData;
     },
   });
@@ -614,7 +644,195 @@ function ProfilePage() {
             <InfoRow label="IFSC" value={profile.bank_ifsc} />
             <InfoRow label="Bank" value={profile.bank_name} />
             <InfoRow label="Branch" value={profile.bank_branch} />
+            <InfoRow label="Account Type" value={profile.bank_account_type} />
           </div>
+        </Section>
+
+        <Section title="Emergency Contact" icon={ShieldAlert}>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <InfoRow label="Name" value={profile.emergency_contact_name} />
+            <InfoRow label="Relation" value={profile.emergency_contact_relation} />
+            <InfoRow label="Mobile" value={profile.emergency_contact_mobile} />
+          </div>
+        </Section>
+
+        <Section title="Family & Contacts" icon={Users}>
+          {profile.contacts.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No family contacts on file.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {profile.contacts.map((c, i) => (
+                <li key={i} className="grid grid-cols-2 gap-3 py-2 text-sm sm:grid-cols-4">
+                  <span className="font-medium">{c.name || "—"}</span>
+                  <span className="text-muted-foreground">{c.relation || "—"}</span>
+                  <span className="font-mono text-xs">{c.mobile || "—"}</span>
+                  <span className="text-muted-foreground">{c.occupation || "—"}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        <Section title="Nominees" icon={UserCheck}>
+          {profile.nominations.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No nominees added.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {profile.nominations.map((n, i) => (
+                <li key={i} className="grid grid-cols-2 gap-3 py-2 text-sm sm:grid-cols-4">
+                  <span className="font-medium">{n.name || "—"}</span>
+                  <span className="text-muted-foreground">{n.relation || "—"}</span>
+                  <span className="text-muted-foreground">DOB: {n.dob || "—"}</span>
+                  <span className="font-semibold text-accent">{n.share ?? "—"}%</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        <Section title="References" icon={UserCheck}>
+          {profile.references.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No references provided.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {profile.references.map((r, i) => (
+                <li key={i} className="py-2 text-sm">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-medium">{r.name || "—"}</span>
+                    <span className="text-xs text-muted-foreground">· {r.relation || "—"}</span>
+                  </div>
+                  <div className="mt-0.5 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    {r.mobile && <span className="font-mono">{r.mobile}</span>}
+                    {r.email && <span>{r.email}</span>}
+                    {r.address && <span>{r.address}</span>}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        <Section title="Languages" icon={LanguagesIcon}>
+          {profile.languages.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No languages listed.</p>
+          ) : (
+            <ul className="space-y-2">
+              {profile.languages.map((l, i) => (
+                <li key={i} className="flex items-center justify-between text-sm">
+                  <span className="font-medium">{l.name || "—"}</span>
+                  <span className="flex gap-1.5 text-[10px] font-semibold uppercase tracking-wider">
+                    {l.read && <Badge variant="outline">Read</Badge>}
+                    {l.write && <Badge variant="outline">Write</Badge>}
+                    {l.speak && <Badge variant="outline">Speak</Badge>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        <Section title="Work Experience" icon={Briefcase}>
+          {profile.experiences.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No previous experience recorded.</p>
+          ) : (
+            <ul className="space-y-3">
+              {profile.experiences.map((e, i) => (
+                <li key={i} className="rounded-lg border border-border/70 p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-semibold">{e.company || "—"}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {e.from || "?"} → {e.to || "Present"}
+                    </span>
+                  </div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {e.designation || "—"}
+                    {e.salary ? ` · ₹${e.salary}` : ""}
+                  </div>
+                  {e.reason_for_leaving && (
+                    <div className="mt-1 text-xs italic text-muted-foreground">
+                      Left: {e.reason_for_leaving}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        <Section title="Education" icon={GraduationCap}>
+          {profile.educations.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No education records.</p>
+          ) : (
+            <ul className="divide-y divide-border">
+              {profile.educations.map((ed, i) => (
+                <li key={i} className="grid grid-cols-2 gap-3 py-2 text-sm sm:grid-cols-4">
+                  <span className="font-medium">{ed.qualification || "—"}</span>
+                  <span className="text-muted-foreground">{ed.institution || "—"}</span>
+                  <span className="text-muted-foreground">{ed.year || "—"}</span>
+                  <span className="font-semibold">{ed.percentage ? `${ed.percentage}%` : "—"}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        <Section title="Physical Health" icon={Heart}>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <InfoRow label="Height" value={profile.physical_health_full.height_cm ? `${profile.physical_health_full.height_cm} cm` : ""} />
+            <InfoRow label="Weight" value={profile.physical_health_full.weight_kg ? `${profile.physical_health_full.weight_kg} kg` : ""} />
+            <InfoRow label="Blood Group" value={profile.blood_group} />
+            <InfoRow label="Identification Marks" value={profile.physical_health_full.identification_marks} />
+            <InfoRow label="Disabilities" value={profile.physical_health_full.disabilities} />
+            <InfoRow label="Allergies" value={profile.physical_health_full.allergies} />
+          </div>
+        </Section>
+
+        <Section title="Extra Curricular" icon={Activity}>
+          {profile.extra_curricular.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nothing recorded.</p>
+          ) : (
+            <ul className="space-y-1.5 text-sm">
+              {profile.extra_curricular.map((x, i) => (
+                <li key={i} className="flex items-center justify-between">
+                  <span className="font-medium">{x.activity || "—"}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {x.level || "—"}{x.year ? ` · ${x.year}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
+
+        <Section title="Other Info" icon={Sparkles}>
+          {Object.keys(profile.other_info || {}).length === 0 ? (
+            <p className="text-sm text-muted-foreground">No additional info.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              {Object.entries(profile.other_info).map(([k, v]) => (
+                <InfoRow
+                  key={k}
+                  label={k.replace(/_/g, " ")}
+                  value={String(v ?? "")}
+                />
+              ))}
+            </div>
+          )}
+        </Section>
+
+        <Section title="Criminal History" icon={ShieldAlert}>
+          {profile.criminal_history?.has_history ? (
+            <ul className="space-y-2 text-sm">
+              {(profile.criminal_history.incidents ?? []).map((inc, i) => (
+                <li key={i} className="rounded-lg border border-destructive/40 bg-destructive/5 p-3">
+                  <div className="font-medium">{inc.description || "—"}</div>
+                  <div className="text-xs text-muted-foreground">{inc.year || ""}</div>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">No criminal history declared.</p>
+          )}
         </Section>
 
         <Section title="Assigned Assets" icon={Mail}>
