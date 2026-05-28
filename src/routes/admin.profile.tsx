@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -13,10 +13,24 @@ import {
   ShieldCheck,
   Upload,
   Loader2,
+  X,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {
@@ -30,6 +44,101 @@ import { logActivity } from "@/lib/activity-log";
 export const Route = createFileRoute("/admin/profile")({
   component: ProfilePage,
 });
+
+function CameraCaptureDialog({
+  open,
+  onOpenChange,
+  onCapture,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onCapture: (file: File) => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [error, setError] = useState<string>("");
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setError("");
+    setReady(false);
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+          audio: false,
+        });
+        if (cancelled) {
+          s.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = s;
+        if (videoRef.current) {
+          videoRef.current.srcObject = s;
+          await videoRef.current.play();
+          setReady(true);
+        }
+      } catch (e: any) {
+        setError(e?.message || "Camera not available");
+      }
+    })();
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+  }, [open]);
+
+  function snap() {
+    const v = videoRef.current;
+    if (!v) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = v.videoWidth;
+    canvas.height = v.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(v, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" });
+        onCapture(file);
+        onOpenChange(false);
+      },
+      "image/jpeg",
+      0.92,
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Take a photo</DialogTitle>
+        </DialogHeader>
+        <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
+          {error ? (
+            <div className="flex h-full items-center justify-center p-4 text-center text-sm text-destructive">
+              {error}
+            </div>
+          ) : (
+            <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <X className="mr-1.5 h-4 w-4" /> Cancel
+          </Button>
+          <Button onClick={snap} disabled={!ready || !!error}>
+            <Camera className="mr-1.5 h-4 w-4" /> Capture
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 type ProfileData = {
   id: string;
@@ -122,6 +231,7 @@ function ProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   const phone = useMemo(
     () => (user?.phone ?? "").replace(/\D/g, "").slice(-10),
@@ -316,7 +426,12 @@ function ProfilePage() {
       <div className="rounded-2xl border border-border bg-card p-6">
         <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
           <div className="relative">
-            <div className="h-28 w-28 overflow-hidden rounded-2xl border border-border bg-secondary">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              className="block h-28 w-28 overflow-hidden rounded-2xl border border-border bg-secondary"
+              title="Change photo"
+            >
               {profile.photo_url ? (
                 <img
                   src={profile.photo_url}
@@ -328,20 +443,31 @@ function ProfilePage() {
                   {(profile.full_name || "?").slice(0, 1).toUpperCase()}
                 </div>
               )}
-            </div>
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploadingPhoto}
-              className="absolute -bottom-2 -right-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-colors hover:border-accent hover:text-accent disabled:opacity-60"
-              title="Change photo"
-            >
-              {uploadingPhoto ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Camera className="h-4 w-4" />
-              )}
             </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  disabled={uploadingPhoto}
+                  className="absolute -bottom-2 -right-2 inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-sm transition-colors hover:border-accent hover:text-accent disabled:opacity-60"
+                  title="Change photo"
+                >
+                  {uploadingPhoto ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setCameraOpen(true)}>
+                  <Camera className="mr-2 h-4 w-4" /> Take photo
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => fileRef.current?.click()}>
+                  <Upload className="mr-2 h-4 w-4" /> Upload file
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <input
               ref={fileRef}
               type="file"
@@ -351,6 +477,11 @@ function ProfilePage() {
                 const f = e.target.files?.[0];
                 if (f) handlePhoto(f);
               }}
+            />
+            <CameraCaptureDialog
+              open={cameraOpen}
+              onOpenChange={setCameraOpen}
+              onCapture={handlePhoto}
             />
           </div>
 
@@ -371,11 +502,17 @@ function ProfilePage() {
               {lookups?.unit ? ` · ${lookups.unit.name}` : ""}
               {lookups?.unit?.city ? ` (${lookups.unit.city})` : ""}
             </p>
-            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
               <InfoRow label="Employee Code" value={profile.employee_code || "—"} />
-              <InfoRow label="Candidate Code" value={profile.candidate_code || "—"} />
-              <InfoRow label="Joined" value={profile.approved_at?.slice(0, 10) ?? "—"} />
-              <InfoRow label="Joining Date" value={profile.preferred_joining_date ?? "—"} />
+              <InfoRow
+                label="Date of Joining"
+                value={
+                  profile.approved_at?.slice(0, 10) ??
+                  profile.preferred_joining_date ??
+                  "—"
+                }
+              />
+              <InfoRow label="Status" value={profile.status} />
             </div>
           </div>
         </div>
