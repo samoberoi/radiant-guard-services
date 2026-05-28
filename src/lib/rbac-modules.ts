@@ -105,7 +105,7 @@ export const RBAC_MODULES: ModuleDef[] = [
     path: "/admin/inventory",
     icon: Boxes,
     subModules: [
-      { key: "owner_dashboard",   label: "Owner Dashboard",   path: "/admin/inventory/dashboard",       icon: LayoutDashboard },
+      
       { key: "item_master",       label: "Item Master",       path: "/admin/inventory/items",           icon: PackageOpen },
       { key: "vendors",           label: "Vendors",           path: "/admin/inventory/vendors",         icon: ShoppingBag },
       { key: "warehouses",        label: "Warehouses",        path: "/admin/inventory/warehouses",      icon: Warehouse },
