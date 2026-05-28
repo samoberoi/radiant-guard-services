@@ -86,6 +86,14 @@ function POPage() {
       return (data as unknown as RateCard[]) ?? [];
     },
   });
+  const { data: itemSizes = [] } = useQuery({
+    queryKey: ["inv", "item-sizes-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_item_sizes" as never).select("item_id,size_value,sort_order").eq("enabled", true).order("sort_order");
+      if (error) throw error;
+      return (data as unknown as ItemSize[]) ?? [];
+    },
+  });
 
   const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
   const warehouseMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w])), [warehouses]);
