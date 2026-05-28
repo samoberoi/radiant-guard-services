@@ -534,7 +534,7 @@ function AddEntryDialog({
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [fillingFile, setFillingFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
-  const [extracting, setExtracting] = useState(false);
+  
   const [vehOpen, setVehOpen] = useState(false);
 
   const isFuel = expenseType === "fuel";
