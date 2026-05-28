@@ -142,16 +142,17 @@ function GRNPage() {
 
   return (
     <div>
-      <PageHeader title="Goods Receipts (GRN)" description="Receive vendor deliveries against a PO. Posted GRNs increase warehouse stock." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Goods Receipts" }]} />
+      <PageHeader title="Delivery Challans" description="Receive supplier deliveries against a Purchase Order. Posted challans increase warehouse stock." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Delivery Challans" }]} />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search GRN, invoice…" className="h-10 rounded-lg pl-9" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search challan, invoice…" className="h-10 rounded-lg pl-9" />
         </div>
         <Button onClick={() => setOpen(true)} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
-          <Plus className="mr-1.5 h-4 w-4" />New GRN
+          <Plus className="mr-1.5 h-4 w-4" />New Delivery Challan
         </Button>
+      </div>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
@@ -159,41 +160,47 @@ function GRNPage() {
           <table className="w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
-                <th className="px-5 py-3">GRN #</th>
+                <th className="px-5 py-3">Challan #</th>
                 <th className="px-5 py-3">PO #</th>
-                <th className="px-5 py-3">Vendor</th>
+                <th className="px-5 py-3">Supplier</th>
                 <th className="px-5 py-3">Warehouse</th>
-                <th className="px-5 py-3">Date</th>
-                <th className="px-5 py-3">Invoice #</th>
+                <th className="px-5 py-3">Delivery Date</th>
+                <th className="px-5 py-3 text-right">Products</th>
+                <th className="px-5 py-3 text-right">Total Qty</th>
+                <th className="px-5 py-3 text-right">Total Value</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((g) => (
+              {filtered.map((g) => {
+                const agg = lineAgg.get(g.id) ?? { products: 0, qty: 0, value: 0 };
+                return (
                 <tr key={g.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs">{g.grn_number}</td>
                   <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{g.po_id ? poMap.get(g.po_id)?.po_number ?? "—" : "—"}</td>
                   <td className="px-5 py-3">{g.vendor_id ? vMap.get(g.vendor_id) ?? "—" : "—"}</td>
                   <td className="px-5 py-3">{wMap.get(g.warehouse_id) ?? "—"}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{g.receipt_date}</td>
-                  <td className="px-5 py-3 text-xs">{g.vendor_invoice_number || "—"}</td>
+                  <td className="px-5 py-3 text-right tabular-nums">{agg.products}</td>
+                  <td className="px-5 py-3 text-right tabular-nums">{agg.qty}</td>
+                  <td className="px-5 py-3 text-right tabular-nums">₹{agg.value.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
                   <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(g.status)}`}>{g.status}</span></td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setViewing(g)}><Eye className="h-4 w-4" /></Button>
                       {g.status !== "received" && (
                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={async () => {
-                          if (!(await confirmAction({ title: "Delete GRN?", description: `Delete ${g.grn_number}?`, confirmText: "Delete" }))) return;
+                          if (!(await confirmAction({ title: "Delete Delivery Challan?", description: `Delete ${g.grn_number}?`, confirmText: "Delete" }))) return;
                           try { await deleteMut.mutateAsync(g); toast.success("Deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
                         }}><Trash2 className="h-4 w-4" /></Button>
                       )}
                     </div>
                   </td>
                 </tr>
-              ))}
-              {!filtered.length && <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground"><PackageCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No goods receipts yet.</td></tr>}
-            </tbody>
+                );
+              })}
+              {!filtered.length && <tr><td colSpan={10} className="px-5 py-12 text-center text-sm text-muted-foreground"><PackageCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No delivery challans yet.</td></tr>}
           </table>
         </div>
       </div>
