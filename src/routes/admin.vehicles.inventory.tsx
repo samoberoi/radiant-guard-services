@@ -486,6 +486,18 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
           <div className="grid gap-2"><Label>Chassis Number</Label><Input value={chassisNumber} onChange={(e) => setChassisNumber(e.target.value.toUpperCase())} placeholder="Chassis / VIN" /></div>
           <div className="grid gap-2 sm:col-span-2"><Label>Registration Date</Label><Input type="date" value={registrationDate} onChange={(e) => setRegistrationDate(e.target.value)} /></div>
           <div className="grid gap-2 sm:col-span-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
+          <div className="grid gap-2 sm:col-span-2">
+            <Label>Service Interval (km)</Label>
+            <Input
+              type="number"
+              min={500}
+              step={500}
+              value={serviceIntervalKm}
+              onChange={(e) => setServiceIntervalKm(e.target.value)}
+              placeholder="e.g. 5000"
+            />
+            <p className="text-xs text-muted-foreground">Service Manager uses this to auto-calculate the next service due for this vehicle. Defaults to {DEFAULT_SERVICE_INTERVAL_KM.toLocaleString()} km.</p>
+          </div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 sm:col-span-2">
             <div><div className="text-sm font-medium">Enabled</div><div className="text-xs text-muted-foreground">Show in dropdowns</div></div>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
