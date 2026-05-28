@@ -456,7 +456,8 @@ function POFormDialog({
     return { sub, tax, grand: sub + tax };
   }, [lines]);
 
-  async function save(status: "draft" | "open") {
+  async function save(targetStatus: string) {
+
     if (!vendorId) { toast.error("Supplier required"); return; }
     if (!warehouseId) { toast.error("Destination warehouse required"); return; }
     if (!lines.length) { toast.error("Add at least one line"); return; }
