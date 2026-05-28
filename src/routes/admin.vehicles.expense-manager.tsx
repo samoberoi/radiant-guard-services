@@ -12,7 +12,6 @@ import {
   X,
   Check,
   ChevronsUpDown,
-  Sparkles,
   Wrench,
   Droplets,
   Receipt,
