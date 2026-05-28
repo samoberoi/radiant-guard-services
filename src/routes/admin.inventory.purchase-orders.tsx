@@ -147,7 +147,7 @@ function POPage() {
     qc.invalidateQueries({ queryKey: ["inv", "po-line-agg"] });
   };
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["inv", "pos"] });
+
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
