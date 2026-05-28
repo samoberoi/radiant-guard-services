@@ -478,9 +478,22 @@ function POFormDialog({
                           </Select>
                         </td>
                         <td className="px-2 py-1.5">
-                          <Input className="h-9" disabled={!item?.is_sized || readOnly} value={l.size_value} onChange={(e) => applyRateToLine(idx, l.item_id, e.target.value)} placeholder={item?.is_sized ? "M/L/40" : "—"} />
+                          {item?.is_sized ? (
+                            (sizesByItem.get(l.item_id)?.length ?? 0) > 0 ? (
+                              <Select value={l.size_value || undefined} onValueChange={(v) => applyRateToLine(idx, l.item_id, v)} disabled={readOnly}>
+                                <SelectTrigger className="h-9"><SelectValue placeholder="Size" /></SelectTrigger>
+                                <SelectContent>
+                                  {sizesByItem.get(l.item_id)!.map((sv) => <SelectItem key={sv} value={sv}>{sv}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Input className="h-9" value={l.size_value} onChange={(e) => applyRateToLine(idx, l.item_id, e.target.value)} placeholder="M/L/40" disabled={readOnly} />
+                            )
+                          ) : (
+                            <Input className="h-9" disabled value="" placeholder="—" />
+                          )}
                         </td>
-                        <td className="px-2 py-1.5"><Input type="number" min={0} step="0.01" className="h-9 text-right" value={l.ordered_qty === 0 ? "" : l.ordered_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, ordered_qty: e.target.value === "" ? 0 : Number(e.target.value) || 0 } : x))} disabled={readOnly} /></td>
+                        <td className="px-2 py-1.5"><Input type="number" min={1} step={1} className="h-9 text-right" value={l.ordered_qty === 0 ? "" : l.ordered_qty} onChange={(e) => { const v = e.target.value === "" ? 0 : Math.max(0, Math.floor(Number(e.target.value) || 0)); setLines((ls) => ls.map((x, i) => i === idx ? { ...x, ordered_qty: v } : x)); }} disabled={readOnly} /></td>
                         <td className="px-2 py-1.5">
                           <Input type="number" min={0} step="0.01" className={`h-9 text-right ${overpay ? "border-amber-500 text-amber-700" : ""}`} value={l.unit_price === 0 ? "" : l.unit_price} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, unit_price: e.target.value === "" ? 0 : Number(e.target.value) || 0 } : x))} disabled={readOnly} />
                           {cheap && (
