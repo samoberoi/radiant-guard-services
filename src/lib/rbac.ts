@@ -85,3 +85,68 @@ export function hasFromMap(
   if (action === "edit") return row.can_edit;
   return row.can_delete;
 }
+
+// ---------------- Runtime enforcement ----------------
+import { useQuery } from "@tanstack/react-query";
+import { useAuth, SUPER_ADMIN_PHONE } from "@/lib/auth";
+
+export type PermCheck = (moduleKey: string, action?: PermissionAction) => boolean;
+
+export function useCurrentPermissions(): {
+  isLoading: boolean;
+  isSuperAdmin: boolean;
+  roleKey: string | null;
+  can: PermCheck;
+} {
+  const { user } = useAuth();
+  const phone = user?.phone?.replace(/\D/g, "").slice(-10) ?? "";
+  const isSuperAdmin = phone === SUPER_ADMIN_PHONE;
+
+  const roleQ = useQuery({
+    queryKey: ["rbac", "current-role", phone],
+    enabled: !!phone && !isSuperAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("candidates")
+        .select("role_key")
+        .eq("mobile", phone)
+        .maybeSingle();
+      if (error) throw error;
+      return (data?.role_key as string | undefined) ?? null;
+    },
+  });
+
+  const roleKey = roleQ.data ?? null;
+
+  const permsQ = useQuery({
+    queryKey: ["rbac", "current-perms", roleKey],
+    enabled: !!roleKey && !isSuperAdmin,
+    queryFn: () => fetchRolePermissions(roleKey as string),
+  });
+
+  const map = new Map<string, PermissionRow>();
+  for (const r of permsQ.data ?? []) {
+    map.set(`${r.module_key}::${r.sub_module_key ?? ""}`, r);
+  }
+
+  const can: PermCheck = (moduleKey, action = "view") => {
+    if (isSuperAdmin) return true;
+    // Module-level grant
+    const m = map.get(`${moduleKey}::`);
+    const check = (r?: PermissionRow) =>
+      !!r && (action === "view" ? r.can_view : action === "edit" ? r.can_edit : r.can_delete);
+    if (check(m)) return true;
+    // Any sub-module granted counts as view-access to parent group
+    for (const [k, r] of map) {
+      if (k.startsWith(`${moduleKey}::`) && k !== `${moduleKey}::` && check(r)) return true;
+    }
+    return false;
+  };
+
+  return {
+    isLoading: (!isSuperAdmin && (roleQ.isLoading || permsQ.isLoading)),
+    isSuperAdmin,
+    roleKey,
+    can,
+  };
+}
