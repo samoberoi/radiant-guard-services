@@ -450,9 +450,9 @@ function POFormDialog({
                         <td className="px-2 py-1.5">
                           <Input className="h-9" disabled={!item?.is_sized || readOnly} value={l.size_value} onChange={(e) => applyRateToLine(idx, l.item_id, e.target.value)} placeholder={item?.is_sized ? "M/L/40" : "—"} />
                         </td>
-                        <td className="px-2 py-1.5"><Input type="number" min={0} step="0.01" className="h-9 text-right" value={l.ordered_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, ordered_qty: Number(e.target.value) || 0 } : x))} disabled={readOnly} /></td>
+                        <td className="px-2 py-1.5"><Input type="number" min={0} step="0.01" className="h-9 text-right" value={l.ordered_qty === 0 ? "" : l.ordered_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, ordered_qty: e.target.value === "" ? 0 : Number(e.target.value) || 0 } : x))} disabled={readOnly} /></td>
                         <td className="px-2 py-1.5">
-                          <Input type="number" min={0} step="0.01" className={`h-9 text-right ${overpay ? "border-amber-500 text-amber-700" : ""}`} value={l.unit_price} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, unit_price: Number(e.target.value) || 0 } : x))} disabled={readOnly} />
+                          <Input type="number" min={0} step="0.01" className={`h-9 text-right ${overpay ? "border-amber-500 text-amber-700" : ""}`} value={l.unit_price === 0 ? "" : l.unit_price} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, unit_price: e.target.value === "" ? 0 : Number(e.target.value) || 0 } : x))} disabled={readOnly} />
                           {cheap && (
                             <div className={`mt-0.5 text-[10px] ${overpay ? "text-amber-600" : "text-muted-foreground"}`}>
                               {overpay && <AlertTriangle className="mr-0.5 inline h-3 w-3" />}
@@ -461,7 +461,7 @@ function POFormDialog({
                             </div>
                           )}
                         </td>
-                        <td className="px-2 py-1.5"><Input type="number" min={0} step="0.01" className="h-9 text-right" value={l.tax_percent} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, tax_percent: Number(e.target.value) || 0 } : x))} disabled={readOnly} /></td>
+                        <td className="px-2 py-1.5"><Input type="number" min={0} step="0.01" className="h-9 text-right" value={l.tax_percent === 0 ? "" : l.tax_percent} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, tax_percent: e.target.value === "" ? 0 : Number(e.target.value) || 0 } : x))} disabled={readOnly} /></td>
                         <td className="px-3 py-2 text-right text-xs tabular-nums">₹{lt.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
                         <td className="px-2 py-1.5">
                           {!readOnly && (
