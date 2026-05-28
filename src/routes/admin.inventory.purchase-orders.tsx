@@ -373,12 +373,10 @@ function POFormDialog({
       m.set(s.item_id, arr);
     }
     return m;
+  }, [itemSizes]);
   // Line/header field edits lock once goods start arriving. Status toggle stays available unless cancelled.
-  const linesReadOnly = !!initial && !(initial.status === "draft" || initial.status === "open" || initial.status === "approved");
-  const fullyLocked = !!initial && initial.status === "cancelled";
-  const readOnly = linesReadOnly; // keep existing name for fields
+  const readOnly = !!initial && !(initial.status === "draft" || initial.status === "open" || initial.status === "approved");
 
-  const readOnly = !!initial && !(initial.status === "draft" || initial.status === "open");
 
 
   // Pick best matching rate card: prefer exact size match, then blank-size fallback.
