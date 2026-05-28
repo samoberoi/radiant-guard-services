@@ -519,7 +519,8 @@ function POFormDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{initial ? `Purchase Order ${initial.po_number}` : "New Purchase Order"}</DialogTitle>
-          <DialogDescription>{readOnly ? "Read-only view." : "Order items from a supplier."}</DialogDescription>
+          <DialogDescription>{readOnly ? "Read-only — goods have started arriving, edits are locked." : initial ? "Edit the PO. Available until the first Goods Receipt is posted." : "Order items from a supplier."}</DialogDescription>
+
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
