@@ -96,6 +96,21 @@ function ServiceManagerPage() {
             className="pl-9"
           />
         </div>
+        <Select value={fuelFilter} onValueChange={setFuelFilter}>
+          <SelectTrigger className="h-10 w-full sm:w-40"><SelectValue placeholder="All fuels" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All fuels</SelectItem>
+            {fuelOptions.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-10 w-full sm:w-40"><SelectValue placeholder="All status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All status</SelectItem>
+            <SelectItem value="due">Due soon</SelectItem>
+            <SelectItem value="ok">OK</SelectItem>
+          </SelectContent>
+        </Select>
         <Button
           variant="outline"
           size="sm"
