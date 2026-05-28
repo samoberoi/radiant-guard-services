@@ -245,6 +245,15 @@ function POFormDialog({
   const [saving, setSaving] = useState(false);
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  const sizesByItem = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const s of itemSizes) {
+      const arr = m.get(s.item_id) ?? [];
+      arr.push(s.size_value);
+      m.set(s.item_id, arr);
+    }
+    return m;
+  }, [itemSizes]);
   const readOnly = !!initial && initial.status !== "draft";
 
   // Pick best matching rate card: prefer exact size match, then blank-size fallback.
