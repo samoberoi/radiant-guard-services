@@ -73,26 +73,49 @@ function RateCardsPage() {
     return true;
   });
 
-  const saveMut = useMutation({
-    mutationFn: async (rc: Partial<RateCard>) => {
-      if (rc.id) {
-        const { error } = await supabase.from("inv_vendor_rate_cards" as never).update(rc as never).eq("id", rc.id);
-        if (error) throw error;
-        return { id: rc.id, mode: "update" as const };
-      } else {
-        const { data, error } = await supabase.from("inv_vendor_rate_cards" as never).insert(rc as never).select("id").single();
-        if (error) throw error;
-        return { id: (data as { id: string }).id, mode: "create" as const };
+  const saveBulkMut = useMutation({
+    mutationFn: async ({ vendor_id, item_id, rows: formRows, existing }: { vendor_id: string; item_id: string; rows: Partial<RateCard>[]; existing: RateCard[] }) => {
+      const existingBySize = new Map(existing.map((r) => [r.size_value || "", r]));
+      const seenSizes = new Set<string>();
+      let inserts = 0, updates = 0, deletes = 0;
+      for (const f of formRows) {
+        const sv = f.size_value || "";
+        seenSizes.add(sv);
+        const ex = existingBySize.get(sv);
+        const hasPrice = Number(f.unit_price ?? 0) > 0;
+        if (ex && !hasPrice) {
+          const { error } = await supabase.from("inv_vendor_rate_cards" as never).delete().eq("id", ex.id);
+          if (error) throw error;
+          deletes++;
+        } else if (ex) {
+          const payload = { unit_price: Number(f.unit_price ?? 0), tax_percent: Number(f.tax_percent ?? 0), min_order_qty: Number(f.min_order_qty ?? 0), lead_time_days: Number(f.lead_time_days ?? 0), enabled: f.enabled ?? true };
+          const { error } = await supabase.from("inv_vendor_rate_cards" as never).update(payload as never).eq("id", ex.id);
+          if (error) throw error;
+          updates++;
+        } else if (hasPrice) {
+          const payload = { vendor_id, item_id, size_value: sv, unit_price: Number(f.unit_price), tax_percent: Number(f.tax_percent ?? 0), min_order_qty: Number(f.min_order_qty ?? 0), lead_time_days: Number(f.lead_time_days ?? 0), enabled: f.enabled ?? true };
+          const { error } = await supabase.from("inv_vendor_rate_cards" as never).insert(payload as never);
+          if (error) throw error;
+          inserts++;
+        }
       }
+      for (const [sv, ex] of existingBySize) {
+        if (!seenSizes.has(sv)) {
+          const { error } = await supabase.from("inv_vendor_rate_cards" as never).delete().eq("id", ex.id);
+          if (error) throw error;
+          deletes++;
+        }
+      }
+      return { vendor_id, item_id, inserts, updates, deletes };
     },
-    onSuccess: (res, vars) => {
-      const v = vendorMap.get(vars.vendor_id!)?.name ?? "";
-      const i = itemMap.get(vars.item_id!)?.name ?? "";
-      logInv("Vendor Rate Cards", res.mode, "inv_vendor_rate_cards", res.id, `${v} → ${i}`, { unit_price: vars.unit_price });
+    onSuccess: (res) => {
+      const v = vendorMap.get(res.vendor_id)?.name ?? "";
+      const i = itemMap.get(res.item_id)?.name ?? "";
+      logInv("Vendor Rate Cards", "update", "inv_vendor_rate_cards", res.item_id, `${v} → ${i}`, { inserts: res.inserts, updates: res.updates, deletes: res.deletes });
       qc.invalidateQueries({ queryKey: ["rc"] });
       setOpen(false);
       setEditing(null);
-      toast.success("Rate card saved");
+      toast.success(`Saved (${res.inserts} added, ${res.updates} updated, ${res.deletes} removed)`);
     },
     onError: (e) => toast.error("Save failed: " + String(e)),
   });
@@ -213,60 +236,158 @@ function RateCardsPage() {
         editing={editing}
         vendors={vendorsQ.data ?? []}
         items={itemsQ.data ?? []}
-        onSave={(rc) => saveMut.mutate(rc)}
-        saving={saveMut.isPending}
+        allCards={cardsQ.data ?? []}
+        onSave={(p) => saveBulkMut.mutate(p)}
+        saving={saveBulkMut.isPending}
       />
     </div>
   );
 }
 
+type SizeRow = { size_value: string; unit_price: number; tax_percent: number; min_order_qty: number; lead_time_days: number; enabled: boolean };
+
 function RateCardDialog({
-  open, onOpenChange, editing, vendors, items, onSave, saving,
+  open, onOpenChange, editing, vendors, items, allCards, onSave, saving,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editing: RateCard | null;
   vendors: Vendor[];
   items: Item[];
-  onSave: (rc: Partial<RateCard>) => void;
+  allCards: RateCard[];
+  onSave: (p: { vendor_id: string; item_id: string; rows: Partial<RateCard>[]; existing: RateCard[] }) => void;
   saving: boolean;
 }) {
-  const [form, setForm] = useState<Partial<RateCard>>({});
+  const [vendorId, setVendorId] = useState("");
+  const [itemId, setItemId] = useState("");
+  const [rows, setRows] = useState<SizeRow[]>([]);
+
+  // reset when dialog opens
   useMemo(() => {
-    setForm(editing ?? { enabled: true, size_value: "", unit_price: 0, tax_percent: 0, min_order_qty: 0, lead_time_days: 0 });
+    setVendorId(editing?.vendor_id ?? "");
+    setItemId(editing?.item_id ?? "");
+    setRows([]);
   }, [editing, open]);
+
+  // load sizes defined for this item
+  const sizesQ = useQuery({
+    queryKey: ["rc", "sizes", itemId],
+    enabled: !!itemId && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_item_sizes" as never)
+        .select("size_value,sort_order")
+        .eq("item_id", itemId)
+        .eq("enabled", true)
+        .order("sort_order");
+      if (error) throw error;
+      return (data as unknown as { size_value: string; sort_order: number }[]) ?? [];
+    },
+  });
+
+  const existingForPair = useMemo(
+    () => (vendorId && itemId ? allCards.filter((c) => c.vendor_id === vendorId && c.item_id === itemId) : []),
+    [allCards, vendorId, itemId],
+  );
+
+  // build rows when sizes or existing change
+  useMemo(() => {
+    if (!vendorId || !itemId) { setRows([]); return; }
+    const sizeList = sizesQ.data ?? [];
+    const exBySize = new Map(existingForPair.map((r) => [r.size_value || "", r]));
+    const sizes: string[] = sizeList.length > 0
+      ? sizeList.map((s) => s.size_value || "")
+      : [""];
+    // include any existing rows whose size_value isn't in current size catalog
+    for (const ex of existingForPair) {
+      const sv = ex.size_value || "";
+      if (!sizes.includes(sv)) sizes.push(sv);
+    }
+    setRows(sizes.map((sv) => {
+      const ex = exBySize.get(sv);
+      return ex
+        ? { size_value: sv, unit_price: Number(ex.unit_price), tax_percent: Number(ex.tax_percent), min_order_qty: Number(ex.min_order_qty), lead_time_days: Number(ex.lead_time_days), enabled: ex.enabled }
+        : { size_value: sv, unit_price: 0, tax_percent: 0, min_order_qty: 0, lead_time_days: 0, enabled: true };
+    }));
+  }, [vendorId, itemId, sizesQ.data, existingForPair]);
+
+  const copyFromFirst = () => {
+    if (!rows.length) return;
+    const f = rows[0];
+    setRows(rows.map((r, i) => i === 0 ? r : { ...r, unit_price: f.unit_price, tax_percent: f.tax_percent, min_order_qty: f.min_order_qty, lead_time_days: f.lead_time_days, enabled: f.enabled }));
+  };
+
+  const updateRow = (idx: number, patch: Partial<SizeRow>) => {
+    setRows(rs => rs.map((r, i) => i === idx ? { ...r, ...patch } : r));
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>{editing ? "Edit" : "New"} Rate Card</DialogTitle></DialogHeader>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{editing ? "Edit" : "New"} Rate Card</DialogTitle>
+          <div className="mt-1 text-xs text-muted-foreground">One row per size. Set price to 0 to skip / remove that size.</div>
+        </DialogHeader>
         <div className="grid gap-3">
-          <div>
-            <Label>Vendor</Label>
-            <Select value={form.vendor_id ?? ""} onValueChange={(v) => setForm({ ...form, vendor_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
-              <SelectContent>{vendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.vendor_code} — {v.name}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Item</Label>
-            <Select value={form.item_id ?? ""} onValueChange={(v) => setForm({ ...form, item_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
-              <SelectContent>{items.map((i) => <SelectItem key={i.id} value={i.id}>{i.item_code} — {i.name}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>Size (optional)</Label><Input value={form.size_value ?? ""} onChange={(e) => setForm({ ...form, size_value: e.target.value })} placeholder="e.g. M, L, 40" /></div>
-            <div><Label>Unit Price (₹)</Label><Input type="number" step="0.01" value={form.unit_price ?? 0} onChange={(e) => setForm({ ...form, unit_price: Number(e.target.value) })} /></div>
-            <div><Label>Tax %</Label><Input type="number" step="0.01" value={form.tax_percent ?? 0} onChange={(e) => setForm({ ...form, tax_percent: Number(e.target.value) })} /></div>
-            <div><Label>Min Order Qty</Label><Input type="number" value={form.min_order_qty ?? 0} onChange={(e) => setForm({ ...form, min_order_qty: Number(e.target.value) })} /></div>
-            <div><Label>Lead Time (days)</Label><Input type="number" value={form.lead_time_days ?? 0} onChange={(e) => setForm({ ...form, lead_time_days: Number(e.target.value) })} /></div>
-            <div className="flex items-end gap-2"><Switch checked={form.enabled ?? true} onCheckedChange={(v) => setForm({ ...form, enabled: v })} /><Label>Active</Label></div>
+            <div>
+              <Label>Vendor</Label>
+              <Select value={vendorId} onValueChange={setVendorId}>
+                <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
+                <SelectContent>{vendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.vendor_code} — {v.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Item</Label>
+              <Select value={itemId} onValueChange={setItemId}>
+                <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
+                <SelectContent>{items.map((i) => <SelectItem key={i.id} value={i.id}>{i.item_code} — {i.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
           </div>
+
+          {vendorId && itemId ? (
+            <div className="overflow-hidden rounded-xl border border-border">
+              <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-3 py-2">
+                <div className="text-xs font-medium text-muted-foreground">
+                  {rows.length} size{rows.length === 1 ? "" : "s"} {(sizesQ.data?.length ?? 0) === 0 && "· no sizes defined on item — using a single base row"}
+                </div>
+                {rows.length > 1 && <Button size="sm" variant="ghost" onClick={copyFromFirst}>Copy first row to all</Button>}
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-secondary/10 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-2 py-2 text-left font-medium">Size</th>
+                    <th className="px-2 py-2 text-right font-medium">Unit Price (₹)</th>
+                    <th className="px-2 py-2 text-right font-medium">Tax %</th>
+                    <th className="px-2 py-2 text-right font-medium">MOQ</th>
+                    <th className="px-2 py-2 text-right font-medium">Lead (d)</th>
+                    <th className="px-2 py-2 text-center font-medium">Active</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r, idx) => (
+                    <tr key={idx} className="border-t border-border/60">
+                      <td className="px-2 py-1.5 font-medium">{r.size_value || <span className="text-muted-foreground">—</span>}</td>
+                      <td className="px-2 py-1.5"><Input type="number" step="0.01" className="h-9 text-right" value={r.unit_price} onChange={(e) => updateRow(idx, { unit_price: Number(e.target.value) || 0 })} /></td>
+                      <td className="px-2 py-1.5"><Input type="number" step="0.01" className="h-9 text-right" value={r.tax_percent} onChange={(e) => updateRow(idx, { tax_percent: Number(e.target.value) || 0 })} /></td>
+                      <td className="px-2 py-1.5"><Input type="number" className="h-9 text-right" value={r.min_order_qty} onChange={(e) => updateRow(idx, { min_order_qty: Number(e.target.value) || 0 })} /></td>
+                      <td className="px-2 py-1.5"><Input type="number" className="h-9 text-right" value={r.lead_time_days} onChange={(e) => updateRow(idx, { lead_time_days: Number(e.target.value) || 0 })} /></td>
+                      <td className="px-2 py-1.5 text-center"><Switch checked={r.enabled} onCheckedChange={(v) => updateRow(idx, { enabled: v })} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">Pick a vendor and item to load sizes.</div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}><X className="mr-1 h-4 w-4" />Cancel</Button>
-          <Button onClick={() => onSave(form)} disabled={saving || !form.vendor_id || !form.item_id}><Save className="mr-1 h-4 w-4" />Save</Button>
+          <Button onClick={() => onSave({ vendor_id: vendorId, item_id: itemId, rows, existing: existingForPair })} disabled={saving || !vendorId || !itemId || !rows.length}>
+            <Save className="mr-1 h-4 w-4" />Save
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -351,14 +472,15 @@ function MatrixView({
   items: Item[];
   onCellClick: (vendor_id: string, item_id: string, existing: RateCard | null) => void;
 }) {
-  // index by item -> vendor -> cheapest active rate card (any size)
-  const idx = new Map<string, Map<string, RateCard>>();
+  // index by item -> vendor -> all active rate cards (all sizes)
+  const idx = new Map<string, Map<string, RateCard[]>>();
   for (const r of rows) {
     if (!r.enabled) continue;
     let m = idx.get(r.item_id);
     if (!m) { m = new Map(); idx.set(r.item_id, m); }
-    const cur = m.get(r.vendor_id);
-    if (!cur || r.unit_price < cur.unit_price) m.set(r.vendor_id, r);
+    const arr = m.get(r.vendor_id) ?? [];
+    arr.push(r);
+    m.set(r.vendor_id, arr);
   }
   if (!vendors.length || !items.length) {
     return <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">Add vendors and items first.</div>;
@@ -381,8 +503,10 @@ function MatrixView({
         <tbody>
           {items.map((it) => {
             const row = idx.get(it.id);
-            const prices = row ? Array.from(row.values()).map((r) => r.unit_price) : [];
-            const min = prices.length ? Math.min(...prices) : 0;
+            // per-vendor cheapest for "Cheapest" highlight
+            const cheapestPerVendor = new Map<string, number>();
+            if (row) for (const [vid, arr] of row) cheapestPerVendor.set(vid, Math.min(...arr.map(r => r.unit_price)));
+            const allMin = cheapestPerVendor.size ? Math.min(...cheapestPerVendor.values()) : 0;
             return (
               <tr key={it.id} className="border-t border-border/60">
                 <td className="sticky left-0 z-10 bg-card p-3 font-medium">
@@ -390,22 +514,34 @@ function MatrixView({
                   <div className="text-[10px] font-normal text-muted-foreground">{it.item_code}</div>
                 </td>
                 {vendors.map((v) => {
-                  const rc = row?.get(v.id) ?? null;
-                  const cheapest = rc && rc.unit_price === min && prices.length > 1;
+                  const arr = row?.get(v.id) ?? [];
+                  const has = arr.length > 0;
+                  const min = has ? Math.min(...arr.map(r => r.unit_price)) : 0;
+                  const max = has ? Math.max(...arr.map(r => r.unit_price)) : 0;
+                  const cheapest = has && min === allMin && cheapestPerVendor.size > 1;
+                  const firstRc = has ? arr[0] : null;
+                  const tooltip = has
+                    ? arr.map(r => `${r.size_value || "—"}: ₹${r.unit_price}`).join("\n") + `\nMOQ ${firstRc!.min_order_qty} · ${firstRc!.lead_time_days}d lead`
+                    : "Not supplied — click to add capability";
                   return (
                     <td key={v.id} className="p-1 text-center">
                       <button
-                        onClick={() => onCellClick(v.id, it.id, rc)}
-                        className={`w-full rounded-md px-2 py-2 text-xs font-semibold tabular-nums transition-colors ${
-                          rc
+                        onClick={() => onCellClick(v.id, it.id, firstRc)}
+                        className={`w-full rounded-md px-2 py-1.5 text-xs font-semibold tabular-nums transition-colors ${
+                          has
                             ? cheapest
                               ? "bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25"
                               : "bg-secondary/60 hover:bg-secondary"
                             : "text-muted-foreground/40 hover:bg-secondary/30"
                         }`}
-                        title={rc ? `₹${rc.unit_price} · MOQ ${rc.min_order_qty} · ${rc.lead_time_days}d lead` : "Not supplied — click to add capability"}
+                        title={tooltip}
                       >
-                        {rc ? `₹${rc.unit_price.toLocaleString("en-IN", { maximumFractionDigits: 0 })}` : "—"}
+                        {has ? (
+                          <>
+                            <div>{min === max ? `₹${min.toLocaleString("en-IN", { maximumFractionDigits: 0 })}` : `₹${min.toLocaleString("en-IN")}–${max.toLocaleString("en-IN")}`}</div>
+                            {arr.length > 1 && <div className="text-[9px] font-normal opacity-70">{arr.length} sizes</div>}
+                          </>
+                        ) : "—"}
                       </button>
                     </td>
                   );
