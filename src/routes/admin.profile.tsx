@@ -349,6 +349,91 @@ function ProfilePage() {
     },
   });
 
+  const salaryQ = useQuery({
+    queryKey: ["my-salary-slip", profile?.id, profile?.unit_id, profile?.designation_id],
+    enabled: !!profile?.id && !!profile?.unit_id && !!profile?.designation_id,
+    queryFn: async () => {
+      // Find active client contract for this unit
+      const { data: contracts, error: cErr } = await supabase
+        .from("client_contracts")
+        .select("id, contract_code, start_date, end_date, status, unit_id, record_type")
+        .eq("unit_id", profile!.unit_id!)
+        .eq("record_type", "client")
+        .eq("status", "active")
+        .order("start_date", { ascending: false });
+      if (cErr) throw cErr;
+      const contract = (contracts ?? [])[0];
+      if (!contract) return null;
+
+      const { data: res, error: rErr } = await supabase
+        .from("contract_resources")
+        .select(
+          "id, gross, components, deductions, benefits, employer_contributions, designation_id, payroll_day_base_id",
+        )
+        .eq("contract_id", contract.id)
+        .eq("designation_id", profile!.designation_id!)
+        .limit(1)
+        .maybeSingle();
+      if (rErr) throw rErr;
+      if (!res) return { contract, resource: null as null, wages: null as null, pdb: null as null };
+
+      let pdb: any = null;
+      if (res.payroll_day_base_id) {
+        const { data } = await supabase
+          .from("payroll_day_bases")
+          .select("id, method, fixed_days, weekly_off_day")
+          .eq("id", res.payroll_day_base_id)
+          .maybeSingle();
+        pdb = data;
+      }
+
+      const now = new Date();
+      const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const periodDayCount = periodEnd.getDate();
+
+      const resourceLike: ContractResourceLike = {
+        designationId: res.designation_id!,
+        components: (res.components as any) ?? [],
+        benefits: (res.benefits as any) ?? [],
+        deductions: (res.deductions as any) ?? [],
+        employerContributions: (res.employer_contributions as any) ?? [],
+        payrollDayBase: pdb
+          ? {
+              method: pdb.method,
+              fixedDays: pdb.fixed_days,
+              weeklyOffDay: pdb.weekly_off_day,
+            }
+          : null,
+      };
+
+      // Default slip: assume full attendance (tDays = baseDays)
+      // First call with tDays=0 to resolve baseDays, then recompute.
+      const probe = computeWages(
+        { pDays: 0, otHours: 0, otDays: 0, phDays: 0, otherPaidDays: 0, tDays: 0 },
+        resourceLike,
+        periodDayCount,
+      );
+      const wages = computeWages(
+        { pDays: probe.baseDays, otHours: 0, otDays: 0, phDays: 0, otherPaidDays: 0, tDays: probe.baseDays },
+        resourceLike,
+        periodDayCount,
+      );
+
+      return {
+        contract,
+        resource: res,
+        wages,
+        period: {
+          start: periodStart.toISOString().slice(0, 10),
+          end: periodEnd.toISOString().slice(0, 10),
+          label: periodStart.toLocaleString("en-IN", { month: "long", year: "numeric" }),
+          days: periodDayCount,
+        },
+      };
+    },
+  });
+
   async function handlePhoto(file: File) {
     if (!profile) return;
     if (!file.type.startsWith("image/")) {
