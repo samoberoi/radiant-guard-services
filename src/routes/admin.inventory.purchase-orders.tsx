@@ -23,6 +23,7 @@ const ENTITY = "inv_purchase_orders";
 type Vendor = { id: string; name: string; vendor_code: string };
 type Warehouse = { id: string; name: string; warehouse_code: string };
 type Item = { id: string; name: string; item_code: string; unit: string; is_sized: boolean };
+type ItemSize = { item_id: string; size_value: string; sort_order: number };
 type POLine = { id?: string; item_id: string; size_value: string; ordered_qty: number; unit_price: number; tax_percent: number; notes: string };
 type RateCard = { vendor_id: string; item_id: string; size_value: string; unit_price: number; tax_percent: number };
 type PO = {
@@ -83,6 +84,14 @@ function POPage() {
       const { data, error } = await supabase.from("inv_vendor_rate_cards" as never).select("vendor_id,item_id,size_value,unit_price,tax_percent").eq("enabled", true);
       if (error) throw error;
       return (data as unknown as RateCard[]) ?? [];
+    },
+  });
+  const { data: itemSizes = [] } = useQuery({
+    queryKey: ["inv", "item-sizes-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_item_sizes" as never).select("item_id,size_value,sort_order").eq("enabled", true).order("sort_order");
+      if (error) throw error;
+      return (data as unknown as ItemSize[]) ?? [];
     },
   });
 
@@ -210,6 +219,7 @@ function POPage() {
         vendors={vendors}
         warehouses={warehouses}
         items={items}
+        itemSizes={itemSizes}
         rateCards={rateCards}
         onSaved={invalidate}
       />
@@ -218,10 +228,11 @@ function POPage() {
 }
 
 function POFormDialog({
-  open, onOpenChange, initial, vendors, warehouses, items, rateCards, onSaved,
+  open, onOpenChange, initial, vendors, warehouses, items, itemSizes, rateCards, onSaved,
 }: {
   open: boolean; onOpenChange: (o: boolean) => void;
   initial: PO | null; vendors: Vendor[]; warehouses: Warehouse[]; items: Item[];
+  itemSizes: ItemSize[];
   rateCards: RateCard[];
   onSaved: () => void;
 }) {
@@ -234,6 +245,15 @@ function POFormDialog({
   const [saving, setSaving] = useState(false);
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  const sizesByItem = useMemo(() => {
+    const m = new Map<string, string[]>();
+    for (const s of itemSizes) {
+      const arr = m.get(s.item_id) ?? [];
+      arr.push(s.size_value);
+      m.set(s.item_id, arr);
+    }
+    return m;
+  }, [itemSizes]);
   const readOnly = !!initial && initial.status !== "draft";
 
   // Pick best matching rate card: prefer exact size match, then blank-size fallback.
@@ -316,7 +336,9 @@ function POFormDialog({
     if (!lines.length) { toast.error("Add at least one line"); return; }
     for (const l of lines) {
       if (!l.item_id) { toast.error("Pick an item on every line"); return; }
-      if (l.ordered_qty <= 0) { toast.error("Quantity must be > 0"); return; }
+      if (!Number.isInteger(l.ordered_qty) || l.ordered_qty < 1) { toast.error("Quantity must be a whole number ≥ 1"); return; }
+      const item = itemMap.get(l.item_id);
+      if (item?.is_sized && !l.size_value) { toast.error(`Pick a size for ${item.name}`); return; }
     }
     setSaving(true);
     try {
@@ -344,8 +366,10 @@ function POFormDialog({
           status,
         } as never).eq("id", initial.id);
         if (error) throw error;
-        await supabase.from("inv_po_lines" as never).delete().eq("po_id", initial.id);
-        await supabase.from("inv_po_lines" as never).insert(linesPayload.map((l) => ({ ...l, po_id: initial.id })) as never);
+        const { error: delErr } = await supabase.from("inv_po_lines" as never).delete().eq("po_id", initial.id);
+        if (delErr) throw delErr;
+        const { error: insErr } = await supabase.from("inv_po_lines" as never).insert(linesPayload.map((l) => ({ ...l, po_id: initial.id })) as never);
+        if (insErr) throw insErr;
       } else {
         const n = await nextSeq("inv_po_number_seq");
         const po_number = fmtNumber("PO", n);
@@ -365,7 +389,8 @@ function POFormDialog({
         } as never).select("id").single();
         if (error) throw error;
         poId = (ins as unknown as { id: string }).id;
-        await supabase.from("inv_po_lines" as never).insert(linesPayload.map((l) => ({ ...l, po_id: poId })) as never);
+        const { error: insErr } = await supabase.from("inv_po_lines" as never).insert(linesPayload.map((l) => ({ ...l, po_id: poId })) as never);
+        if (insErr) throw insErr;
       }
       void logActivity({
         module: MODULE,
@@ -378,7 +403,12 @@ function POFormDialog({
       onSaved();
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
+      const msg = (e as { message?: string; details?: string; hint?: string } | null)?.message
+        || (e as { details?: string } | null)?.details
+        || (typeof e === "string" ? e : JSON.stringify(e));
+      // eslint-disable-next-line no-console
+      console.error("PO save failed", e);
+      toast.error(msg || "Failed to save PO");
     } finally {
       setSaving(false);
     }
@@ -448,9 +478,22 @@ function POFormDialog({
                           </Select>
                         </td>
                         <td className="px-2 py-1.5">
-                          <Input className="h-9" disabled={!item?.is_sized || readOnly} value={l.size_value} onChange={(e) => applyRateToLine(idx, l.item_id, e.target.value)} placeholder={item?.is_sized ? "M/L/40" : "—"} />
+                          {item?.is_sized ? (
+                            (sizesByItem.get(l.item_id)?.length ?? 0) > 0 ? (
+                              <Select value={l.size_value || undefined} onValueChange={(v) => applyRateToLine(idx, l.item_id, v)} disabled={readOnly}>
+                                <SelectTrigger className="h-9"><SelectValue placeholder="Size" /></SelectTrigger>
+                                <SelectContent>
+                                  {sizesByItem.get(l.item_id)!.map((sv) => <SelectItem key={sv} value={sv}>{sv}</SelectItem>)}
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Input className="h-9" value={l.size_value} onChange={(e) => applyRateToLine(idx, l.item_id, e.target.value)} placeholder="M/L/40" disabled={readOnly} />
+                            )
+                          ) : (
+                            <Input className="h-9" disabled value="" placeholder="—" />
+                          )}
                         </td>
-                        <td className="px-2 py-1.5"><Input type="number" min={0} step="0.01" className="h-9 text-right" value={l.ordered_qty === 0 ? "" : l.ordered_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, ordered_qty: e.target.value === "" ? 0 : Number(e.target.value) || 0 } : x))} disabled={readOnly} /></td>
+                        <td className="px-2 py-1.5"><Input type="number" min={1} step={1} className="h-9 text-right" value={l.ordered_qty === 0 ? "" : l.ordered_qty} onChange={(e) => { const v = e.target.value === "" ? 0 : Math.max(0, Math.floor(Number(e.target.value) || 0)); setLines((ls) => ls.map((x, i) => i === idx ? { ...x, ordered_qty: v } : x)); }} disabled={readOnly} /></td>
                         <td className="px-2 py-1.5">
                           <Input type="number" min={0} step="0.01" className={`h-9 text-right ${overpay ? "border-amber-500 text-amber-700" : ""}`} value={l.unit_price === 0 ? "" : l.unit_price} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, unit_price: e.target.value === "" ? 0 : Number(e.target.value) || 0 } : x))} disabled={readOnly} />
                           {cheap && (
