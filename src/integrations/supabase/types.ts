@@ -3448,6 +3448,7 @@ export type Database = {
           notes: string
           owner: string
           registration_date: string | null
+          service_interval_km: number
           type: string
           updated_at: string
           vehicle_id: string
@@ -3468,6 +3469,7 @@ export type Database = {
           notes?: string
           owner?: string
           registration_date?: string | null
+          service_interval_km?: number
           type?: string
           updated_at?: string
           vehicle_id?: string
@@ -3488,6 +3490,7 @@ export type Database = {
           notes?: string
           owner?: string
           registration_date?: string | null
+          service_interval_km?: number
           type?: string
           updated_at?: string
           vehicle_id?: string
