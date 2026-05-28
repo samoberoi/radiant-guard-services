@@ -41,7 +41,7 @@ function LoginPage() {
   const [resendIn, setResendIn] = useState(0);
 
   useEffect(() => {
-    if (user) navigate({ to: "/admin/customers", replace: true });
+    if (user) navigate({ to: "/", replace: true });
   }, [user, navigate]);
 
   useEffect(() => {
