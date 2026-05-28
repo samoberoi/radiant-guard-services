@@ -8,7 +8,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ADVANCE_ALERT_KM, SERVICE_INTERVAL, serviceStatusFor } from "@/lib/vehicle-service";
+import { ADVANCE_ALERT_KM, serviceStatusFor } from "@/lib/vehicle-service";
 
 export const Route = createFileRoute("/admin/vehicles/service-manager")({
   component: ServiceManagerPage,
@@ -20,6 +20,7 @@ type VehicleRow = {
   name: string;
   fuel_type: string;
   enabled: boolean;
+  service_interval_km: number | null;
 };
 
 function ServiceManagerPage() {
@@ -30,7 +31,7 @@ function ServiceManagerPage() {
     queryFn: async (): Promise<VehicleRow[]> => {
       const { data, error } = await supabase
         .from("vehicles" as never)
-        .select("id,vehicle_number,name,fuel_type,enabled")
+        .select("id,vehicle_number,name,fuel_type,enabled,service_interval_km")
         .order("vehicle_number", { ascending: true });
       if (error) throw error;
       return (data as unknown as VehicleRow[]) ?? [];
@@ -48,25 +49,26 @@ function ServiceManagerPage() {
         )
       : list;
     return filtered.map((v) => {
-      const { currentKm, dueKm, kmToService, dueSoon } = serviceStatusFor(v.vehicle_number);
-      return { v, currentKm, dueKm, kmToService, dueSoon };
+      const status = serviceStatusFor(v.vehicle_number, v.service_interval_km);
+      return { v, ...status };
     });
   }, [data, search]);
 
   const dueSoonCount = rows.filter((r) => r.dueSoon).length;
+  const totalVehicles = (data ?? []).length;
 
   return (
     <div>
       <PageHeader
         title="Service Manager"
-        description="Track current odometer reading and upcoming service-due kilometers for each vehicle."
+        description="Auto-tracked service schedule based on each vehicle's own service interval and current running."
         crumbs={[{ label: "Vehicles", to: "/admin/vehicles" }, { label: "Service Manager" }]}
       />
 
       <div className="mb-4 grid gap-4 sm:grid-cols-3">
-        <StatTile label="Vehicles tracked" value={rows.length} />
-        <StatTile label="Due within 2,500 km" value={dueSoonCount} tone="warning" />
-        <StatTile label="Service interval" value={`${SERVICE_INTERVAL.toLocaleString()} km`} />
+        <StatTile label="Total vehicles" value={totalVehicles} />
+        <StatTile label="Active in service tracking" value={rows.length} />
+        <StatTile label={`Due within ${ADVANCE_ALERT_KM.toLocaleString()} km`} value={dueSoonCount} tone="warning" />
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
@@ -88,6 +90,7 @@ function ServiceManagerPage() {
               rows.map((r) => ({
                 vehicle: r.v.vehicle_number,
                 fuel_type: r.v.fuel_type,
+                service_interval_km: r.interval,
                 current_km: r.currentKm,
                 service_due_km: r.dueKm,
                 km_to_service: r.kmToService,
@@ -108,6 +111,7 @@ function ServiceManagerPage() {
               <tr>
                 <th className="px-4 py-3 text-left">Vehicle</th>
                 <th className="px-4 py-3 text-left">Fuel</th>
+                <th className="px-4 py-3 text-right">Interval (km)</th>
                 <th className="px-4 py-3 text-right">Current KM</th>
                 <th className="px-4 py-3 text-right">Service Due At</th>
                 <th className="px-4 py-3 text-right">KM Remaining</th>
@@ -116,15 +120,16 @@ function ServiceManagerPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
               )}
               {!isLoading && rows.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No vehicles found.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No vehicles found.</td></tr>
               )}
               {rows.map((r) => (
                 <tr key={r.v.id} className="hover:bg-muted/20">
                   <td className="px-4 py-3 font-medium">{r.v.vehicle_number}</td>
                   <td className="px-4 py-3 text-muted-foreground">{r.v.fuel_type || "—"}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{r.interval.toLocaleString()}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{r.currentKm.toLocaleString()}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{r.dueKm.toLocaleString()}</td>
                   <td className={cn(
@@ -152,7 +157,7 @@ function ServiceManagerPage() {
       </div>
 
       <p className="mt-3 text-xs text-muted-foreground">
-        Note: Current KM values are placeholders pending odometer integration. Service due is calculated at every {SERVICE_INTERVAL.toLocaleString()} km; vehicles within {ADVANCE_ALERT_KM.toLocaleString()} km of the next service are flagged.
+        Service due is calculated automatically using each vehicle's configured service interval (set on Vehicle Inventory) and its current running. Vehicles within {ADVANCE_ALERT_KM.toLocaleString()} km of the next service are flagged.
       </p>
     </div>
   );
