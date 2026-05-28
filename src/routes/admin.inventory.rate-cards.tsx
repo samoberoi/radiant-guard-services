@@ -236,60 +236,158 @@ function RateCardsPage() {
         editing={editing}
         vendors={vendorsQ.data ?? []}
         items={itemsQ.data ?? []}
-        onSave={(rc) => saveMut.mutate(rc)}
-        saving={saveMut.isPending}
+        allCards={cardsQ.data ?? []}
+        onSave={(p) => saveBulkMut.mutate(p)}
+        saving={saveBulkMut.isPending}
       />
     </div>
   );
 }
 
+type SizeRow = { size_value: string; unit_price: number; tax_percent: number; min_order_qty: number; lead_time_days: number; enabled: boolean };
+
 function RateCardDialog({
-  open, onOpenChange, editing, vendors, items, onSave, saving,
+  open, onOpenChange, editing, vendors, items, allCards, onSave, saving,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   editing: RateCard | null;
   vendors: Vendor[];
   items: Item[];
-  onSave: (rc: Partial<RateCard>) => void;
+  allCards: RateCard[];
+  onSave: (p: { vendor_id: string; item_id: string; rows: Partial<RateCard>[]; existing: RateCard[] }) => void;
   saving: boolean;
 }) {
-  const [form, setForm] = useState<Partial<RateCard>>({});
+  const [vendorId, setVendorId] = useState("");
+  const [itemId, setItemId] = useState("");
+  const [rows, setRows] = useState<SizeRow[]>([]);
+
+  // reset when dialog opens
   useMemo(() => {
-    setForm(editing ?? { enabled: true, size_value: "", unit_price: 0, tax_percent: 0, min_order_qty: 0, lead_time_days: 0 });
+    setVendorId(editing?.vendor_id ?? "");
+    setItemId(editing?.item_id ?? "");
+    setRows([]);
   }, [editing, open]);
+
+  // load sizes defined for this item
+  const sizesQ = useQuery({
+    queryKey: ["rc", "sizes", itemId],
+    enabled: !!itemId && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_item_sizes" as never)
+        .select("size_value,sort_order")
+        .eq("item_id", itemId)
+        .eq("enabled", true)
+        .order("sort_order");
+      if (error) throw error;
+      return (data as unknown as { size_value: string; sort_order: number }[]) ?? [];
+    },
+  });
+
+  const existingForPair = useMemo(
+    () => (vendorId && itemId ? allCards.filter((c) => c.vendor_id === vendorId && c.item_id === itemId) : []),
+    [allCards, vendorId, itemId],
+  );
+
+  // build rows when sizes or existing change
+  useMemo(() => {
+    if (!vendorId || !itemId) { setRows([]); return; }
+    const sizeList = sizesQ.data ?? [];
+    const exBySize = new Map(existingForPair.map((r) => [r.size_value || "", r]));
+    const sizes: string[] = sizeList.length > 0
+      ? sizeList.map((s) => s.size_value || "")
+      : [""];
+    // include any existing rows whose size_value isn't in current size catalog
+    for (const ex of existingForPair) {
+      const sv = ex.size_value || "";
+      if (!sizes.includes(sv)) sizes.push(sv);
+    }
+    setRows(sizes.map((sv) => {
+      const ex = exBySize.get(sv);
+      return ex
+        ? { size_value: sv, unit_price: Number(ex.unit_price), tax_percent: Number(ex.tax_percent), min_order_qty: Number(ex.min_order_qty), lead_time_days: Number(ex.lead_time_days), enabled: ex.enabled }
+        : { size_value: sv, unit_price: 0, tax_percent: 0, min_order_qty: 0, lead_time_days: 0, enabled: true };
+    }));
+  }, [vendorId, itemId, sizesQ.data, existingForPair]);
+
+  const copyFromFirst = () => {
+    if (!rows.length) return;
+    const f = rows[0];
+    setRows(rows.map((r, i) => i === 0 ? r : { ...r, unit_price: f.unit_price, tax_percent: f.tax_percent, min_order_qty: f.min_order_qty, lead_time_days: f.lead_time_days, enabled: f.enabled }));
+  };
+
+  const updateRow = (idx: number, patch: Partial<SizeRow>) => {
+    setRows(rs => rs.map((r, i) => i === idx ? { ...r, ...patch } : r));
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader><DialogTitle>{editing ? "Edit" : "New"} Rate Card</DialogTitle></DialogHeader>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{editing ? "Edit" : "New"} Rate Card</DialogTitle>
+          <div className="mt-1 text-xs text-muted-foreground">One row per size. Set price to 0 to skip / remove that size.</div>
+        </DialogHeader>
         <div className="grid gap-3">
-          <div>
-            <Label>Vendor</Label>
-            <Select value={form.vendor_id ?? ""} onValueChange={(v) => setForm({ ...form, vendor_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
-              <SelectContent>{vendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.vendor_code} — {v.name}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label>Item</Label>
-            <Select value={form.item_id ?? ""} onValueChange={(v) => setForm({ ...form, item_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
-              <SelectContent>{items.map((i) => <SelectItem key={i.id} value={i.id}>{i.item_code} — {i.name}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
           <div className="grid grid-cols-2 gap-3">
-            <div><Label>Size (optional)</Label><Input value={form.size_value ?? ""} onChange={(e) => setForm({ ...form, size_value: e.target.value })} placeholder="e.g. M, L, 40" /></div>
-            <div><Label>Unit Price (₹)</Label><Input type="number" step="0.01" value={form.unit_price ?? 0} onChange={(e) => setForm({ ...form, unit_price: Number(e.target.value) })} /></div>
-            <div><Label>Tax %</Label><Input type="number" step="0.01" value={form.tax_percent ?? 0} onChange={(e) => setForm({ ...form, tax_percent: Number(e.target.value) })} /></div>
-            <div><Label>Min Order Qty</Label><Input type="number" value={form.min_order_qty ?? 0} onChange={(e) => setForm({ ...form, min_order_qty: Number(e.target.value) })} /></div>
-            <div><Label>Lead Time (days)</Label><Input type="number" value={form.lead_time_days ?? 0} onChange={(e) => setForm({ ...form, lead_time_days: Number(e.target.value) })} /></div>
-            <div className="flex items-end gap-2"><Switch checked={form.enabled ?? true} onCheckedChange={(v) => setForm({ ...form, enabled: v })} /><Label>Active</Label></div>
+            <div>
+              <Label>Vendor</Label>
+              <Select value={vendorId} onValueChange={setVendorId}>
+                <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
+                <SelectContent>{vendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.vendor_code} — {v.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Item</Label>
+              <Select value={itemId} onValueChange={setItemId}>
+                <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
+                <SelectContent>{items.map((i) => <SelectItem key={i.id} value={i.id}>{i.item_code} — {i.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
           </div>
+
+          {vendorId && itemId ? (
+            <div className="overflow-hidden rounded-xl border border-border">
+              <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-3 py-2">
+                <div className="text-xs font-medium text-muted-foreground">
+                  {rows.length} size{rows.length === 1 ? "" : "s"} {(sizesQ.data?.length ?? 0) === 0 && "· no sizes defined on item — using a single base row"}
+                </div>
+                {rows.length > 1 && <Button size="sm" variant="ghost" onClick={copyFromFirst}>Copy first row to all</Button>}
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-secondary/10 text-[10px] uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-2 py-2 text-left font-medium">Size</th>
+                    <th className="px-2 py-2 text-right font-medium">Unit Price (₹)</th>
+                    <th className="px-2 py-2 text-right font-medium">Tax %</th>
+                    <th className="px-2 py-2 text-right font-medium">MOQ</th>
+                    <th className="px-2 py-2 text-right font-medium">Lead (d)</th>
+                    <th className="px-2 py-2 text-center font-medium">Active</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((r, idx) => (
+                    <tr key={idx} className="border-t border-border/60">
+                      <td className="px-2 py-1.5 font-medium">{r.size_value || <span className="text-muted-foreground">—</span>}</td>
+                      <td className="px-2 py-1.5"><Input type="number" step="0.01" className="h-9 text-right" value={r.unit_price} onChange={(e) => updateRow(idx, { unit_price: Number(e.target.value) || 0 })} /></td>
+                      <td className="px-2 py-1.5"><Input type="number" step="0.01" className="h-9 text-right" value={r.tax_percent} onChange={(e) => updateRow(idx, { tax_percent: Number(e.target.value) || 0 })} /></td>
+                      <td className="px-2 py-1.5"><Input type="number" className="h-9 text-right" value={r.min_order_qty} onChange={(e) => updateRow(idx, { min_order_qty: Number(e.target.value) || 0 })} /></td>
+                      <td className="px-2 py-1.5"><Input type="number" className="h-9 text-right" value={r.lead_time_days} onChange={(e) => updateRow(idx, { lead_time_days: Number(e.target.value) || 0 })} /></td>
+                      <td className="px-2 py-1.5 text-center"><Switch checked={r.enabled} onCheckedChange={(v) => updateRow(idx, { enabled: v })} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">Pick a vendor and item to load sizes.</div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}><X className="mr-1 h-4 w-4" />Cancel</Button>
-          <Button onClick={() => onSave(form)} disabled={saving || !form.vendor_id || !form.item_id}><Save className="mr-1 h-4 w-4" />Save</Button>
+          <Button onClick={() => onSave({ vendor_id: vendorId, item_id: itemId, rows, existing: existingForPair })} disabled={saving || !vendorId || !itemId || !rows.length}>
+            <Save className="mr-1 h-4 w-4" />Save
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
