@@ -22,8 +22,10 @@ import {
   Users,
   UserCheck,
   Loader2,
+  Wallet,
   X,
 } from "lucide-react";
+import { computeWages, fmtINR, type ContractResourceLike } from "@/lib/payroll-calc";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
