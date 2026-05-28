@@ -41,7 +41,7 @@ function LoginPage() {
   const [resendIn, setResendIn] = useState(0);
 
   useEffect(() => {
-    if (user) navigate({ to: "/admin/customers", replace: true });
+    if (user) navigate({ to: "/", replace: true });
   }, [user, navigate]);
 
   useEffect(() => {
@@ -81,7 +81,7 @@ function LoginPage() {
     try {
       await login(`+91${phone}`);
       toast.success("Signed in");
-      navigate({ to: "/admin/customers", replace: true });
+      navigate({ to: "/", replace: true });
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not start session. Try again.",
