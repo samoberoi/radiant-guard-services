@@ -429,6 +429,7 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
   const [chassisNumber, setChassisNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [enabled, setEnabled] = useState(true);
+  const [serviceIntervalKm, setServiceIntervalKm] = useState<string>(String(DEFAULT_SERVICE_INTERVAL_KM));
   const [saving, setSaving] = useState(false);
 
   useResetOnOpen(open, () => {
