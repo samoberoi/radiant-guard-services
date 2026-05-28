@@ -518,6 +518,7 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
                 chassis_number: chassisNumber,
                 year: year ? Number(year) : null,
                 registration_date: registrationDate || null,
+                service_interval_km: serviceIntervalKm ? Number(serviceIntervalKm) : DEFAULT_SERVICE_INTERVAL_KM,
               });
               setSaving(false);
               if (err) toast.error(err); else onOpenChange(false);
