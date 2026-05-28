@@ -153,7 +153,6 @@ function GRNPage() {
           <Plus className="mr-1.5 h-4 w-4" />New Delivery Challan
         </Button>
       </div>
-      </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="overflow-x-auto">
