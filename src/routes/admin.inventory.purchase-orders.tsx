@@ -201,12 +201,16 @@ function POPage() {
                   <td className="px-5 py-3">
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(p.status)}`}>{poStatusLabel(p.status)}</span>
                   </td>
-                  <td className="px-5 py-3 text-right tabular-nums">₹{Number(p.grand_total).toLocaleString("en-IN")}</td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setEditing(p); setOpen(true); }}>
                         {p.status === "draft" ? <Edit2 className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
+                      {p.status !== "draft" && p.status !== "cancelled" && (
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Download PO PDF" onClick={async () => {
+                          try { await handleDownloadPO(p); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed to generate PDF"); }
+                        }}><Download className="h-4 w-4" /></Button>
+                      )}
                       {p.status === "draft" && (
                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={async () => {
                           if (!(await confirmAction({ title: "Delete PO?", description: `Delete ${p.po_number}?`, confirmText: "Delete" }))) return;
@@ -214,6 +218,7 @@ function POPage() {
                         }}><Trash2 className="h-4 w-4" /></Button>
                       )}
                     </div>
+                  </td>
                   </td>
                 </tr>
               ))}
