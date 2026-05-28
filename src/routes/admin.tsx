@@ -79,7 +79,7 @@ const inventoryChildren: NavItem[] = [
   { to: "/admin/inventory/vendors", label: "Vendors", icon: ShoppingBag },
   { to: "/admin/inventory/warehouses", label: "Warehouses", icon: Warehouse },
   { to: "/admin/inventory/purchase-orders", label: "Purchase Orders", icon: FileText },
-  { to: "/admin/inventory/goods-receipts", label: "Goods Receipts", icon: ClipboardList },
+  { to: "/admin/inventory/goods-receipts", label: "Delivery Challans", icon: ClipboardList },
   { to: "/admin/inventory/transfers", label: "Transfers", icon: Boxes },
   { to: "/admin/inventory/issuances", label: "Issuances", icon: UserPlus },
   { to: "/admin/inventory/write-offs", label: "Write-offs", icon: ShieldCheck },
