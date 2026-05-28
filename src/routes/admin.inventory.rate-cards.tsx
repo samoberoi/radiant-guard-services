@@ -73,26 +73,47 @@ function RateCardsPage() {
     return true;
   });
 
-  const saveMut = useMutation({
-    mutationFn: async (rc: Partial<RateCard>) => {
-      if (rc.id) {
-        const { error } = await supabase.from("inv_vendor_rate_cards" as never).update(rc as never).eq("id", rc.id);
-        if (error) throw error;
-        return { id: rc.id, mode: "update" as const };
-      } else {
-        const { data, error } = await supabase.from("inv_vendor_rate_cards" as never).insert(rc as never).select("id").single();
-        if (error) throw error;
-        return { id: (data as { id: string }).id, mode: "create" as const };
+  const saveBulkMut = useMutation({
+    mutationFn: async ({ vendor_id, item_id, rows: formRows, existing }: { vendor_id: string; item_id: string; rows: Partial<RateCard>[]; existing: RateCard[] }) => {
+      const existingBySize = new Map(existing.map((r) => [r.size_value || "", r]));
+      const seenSizes = new Set<string>();
+      const ops: Promise<unknown>[] = [];
+      let inserts = 0, updates = 0, deletes = 0;
+      for (const f of formRows) {
+        const sv = f.size_value || "";
+        seenSizes.add(sv);
+        const ex = existingBySize.get(sv);
+        const hasPrice = Number(f.unit_price ?? 0) > 0;
+        if (ex && !hasPrice) {
+          ops.push(supabase.from("inv_vendor_rate_cards" as never).delete().eq("id", ex.id).then(({ error }) => { if (error) throw error; }));
+          deletes++;
+        } else if (ex) {
+          const payload = { unit_price: Number(f.unit_price ?? 0), tax_percent: Number(f.tax_percent ?? 0), min_order_qty: Number(f.min_order_qty ?? 0), lead_time_days: Number(f.lead_time_days ?? 0), enabled: f.enabled ?? true };
+          ops.push(supabase.from("inv_vendor_rate_cards" as never).update(payload as never).eq("id", ex.id).then(({ error }) => { if (error) throw error; }));
+          updates++;
+        } else if (hasPrice) {
+          const payload = { vendor_id, item_id, size_value: sv, unit_price: Number(f.unit_price), tax_percent: Number(f.tax_percent ?? 0), min_order_qty: Number(f.min_order_qty ?? 0), lead_time_days: Number(f.lead_time_days ?? 0), enabled: f.enabled ?? true };
+          ops.push(supabase.from("inv_vendor_rate_cards" as never).insert(payload as never).then(({ error }) => { if (error) throw error; }));
+          inserts++;
+        }
       }
+      for (const [sv, ex] of existingBySize) {
+        if (!seenSizes.has(sv)) {
+          ops.push(supabase.from("inv_vendor_rate_cards" as never).delete().eq("id", ex.id).then(({ error }) => { if (error) throw error; }));
+          deletes++;
+        }
+      }
+      await Promise.all(ops);
+      return { vendor_id, item_id, inserts, updates, deletes };
     },
-    onSuccess: (res, vars) => {
-      const v = vendorMap.get(vars.vendor_id!)?.name ?? "";
-      const i = itemMap.get(vars.item_id!)?.name ?? "";
-      logInv("Vendor Rate Cards", res.mode, "inv_vendor_rate_cards", res.id, `${v} → ${i}`, { unit_price: vars.unit_price });
+    onSuccess: (res) => {
+      const v = vendorMap.get(res.vendor_id)?.name ?? "";
+      const i = itemMap.get(res.item_id)?.name ?? "";
+      logInv("Vendor Rate Cards", "update", "inv_vendor_rate_cards", res.item_id, `${v} → ${i}`, { inserts: res.inserts, updates: res.updates, deletes: res.deletes });
       qc.invalidateQueries({ queryKey: ["rc"] });
       setOpen(false);
       setEditing(null);
-      toast.success("Rate card saved");
+      toast.success(`Saved (${res.inserts} added, ${res.updates} updated, ${res.deletes} removed)`);
     },
     onError: (e) => toast.error("Save failed: " + String(e)),
   });
