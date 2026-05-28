@@ -77,7 +77,6 @@ function RateCardsPage() {
     mutationFn: async ({ vendor_id, item_id, rows: formRows, existing }: { vendor_id: string; item_id: string; rows: Partial<RateCard>[]; existing: RateCard[] }) => {
       const existingBySize = new Map(existing.map((r) => [r.size_value || "", r]));
       const seenSizes = new Set<string>();
-      const ops: Promise<unknown>[] = [];
       let inserts = 0, updates = 0, deletes = 0;
       for (const f of formRows) {
         const sv = f.size_value || "";
@@ -85,25 +84,28 @@ function RateCardsPage() {
         const ex = existingBySize.get(sv);
         const hasPrice = Number(f.unit_price ?? 0) > 0;
         if (ex && !hasPrice) {
-          ops.push(supabase.from("inv_vendor_rate_cards" as never).delete().eq("id", ex.id).then(({ error }) => { if (error) throw error; }));
+          const { error } = await supabase.from("inv_vendor_rate_cards" as never).delete().eq("id", ex.id);
+          if (error) throw error;
           deletes++;
         } else if (ex) {
           const payload = { unit_price: Number(f.unit_price ?? 0), tax_percent: Number(f.tax_percent ?? 0), min_order_qty: Number(f.min_order_qty ?? 0), lead_time_days: Number(f.lead_time_days ?? 0), enabled: f.enabled ?? true };
-          ops.push(supabase.from("inv_vendor_rate_cards" as never).update(payload as never).eq("id", ex.id).then(({ error }) => { if (error) throw error; }));
+          const { error } = await supabase.from("inv_vendor_rate_cards" as never).update(payload as never).eq("id", ex.id);
+          if (error) throw error;
           updates++;
         } else if (hasPrice) {
           const payload = { vendor_id, item_id, size_value: sv, unit_price: Number(f.unit_price), tax_percent: Number(f.tax_percent ?? 0), min_order_qty: Number(f.min_order_qty ?? 0), lead_time_days: Number(f.lead_time_days ?? 0), enabled: f.enabled ?? true };
-          ops.push(supabase.from("inv_vendor_rate_cards" as never).insert(payload as never).then(({ error }) => { if (error) throw error; }));
+          const { error } = await supabase.from("inv_vendor_rate_cards" as never).insert(payload as never);
+          if (error) throw error;
           inserts++;
         }
       }
       for (const [sv, ex] of existingBySize) {
         if (!seenSizes.has(sv)) {
-          ops.push(supabase.from("inv_vendor_rate_cards" as never).delete().eq("id", ex.id).then(({ error }) => { if (error) throw error; }));
+          const { error } = await supabase.from("inv_vendor_rate_cards" as never).delete().eq("id", ex.id);
+          if (error) throw error;
           deletes++;
         }
       }
-      await Promise.all(ops);
       return { vendor_id, item_id, inserts, updates, deletes };
     },
     onSuccess: (res) => {
