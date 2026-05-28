@@ -238,7 +238,7 @@ function ExpenseManagerPage() {
     <div>
       <PageHeader
         title="Expense Manager"
-        description="Log vehicle expenses — fuel, maintenance, washing, repairs, parking, tolls. For fuel, auto-fill from photos."
+        description="Log vehicle expenses — fuel, maintenance, washing, repairs, parking, tolls. Upload proof photos with each entry."
         crumbs={[{ label: "Vehicles", to: "/admin/vehicles" }, { label: "Expense Manager" }]}
       />
 
