@@ -159,6 +159,13 @@ export const RBAC_MODULES: ModuleDef[] = [
     ],
   },
   {
+    key: "notification_center",
+    label: "Notification Center",
+    path: "/admin/notifications",
+    icon: Bell,
+    subModules: [],
+  },
+  {
     key: "rbac",
     label: "Role-Based Access Control",
     path: "/admin/rbac",
