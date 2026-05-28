@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
@@ -10,14 +10,18 @@ import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { PageHeader } from "@/components/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
+// Owner Dashboard is now merged into the /admin/inventory hub.
+// This route redirects there so any old links / bookmarks keep working.
 export const Route = createFileRoute("/admin/inventory/dashboard")({
-  component: OwnerDashboard,
+  beforeLoad: () => {
+    throw redirect({ to: "/admin/inventory" });
+  },
+  component: () => null,
 });
 
 type Balance = { location_type: string; location_id: string; item_id: string; size_value: string; qty: number };
