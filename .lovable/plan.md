@@ -1,62 +1,44 @@
-# Attendance approval workflow + Payroll section
+## Goal
+Let an admin set **different prices per size** for the same vendor + item, directly from the Rate Cards page. No schema change needed — `inv_vendor_rate_cards` already has `size_value`, and the PO form already looks up rate by `(vendor, item, size)` with a no-size fallback.
 
-## 1. Attendance approval workflow
+## What changes
 
-Add a status lifecycle per (unit, payroll period) attendance sheet:
-`draft → submitted → approved | rejected`. While in `draft` or `rejected`, users can edit cells; once `submitted`, cells lock; once `approved`, the sheet is read-only and unlocks Payroll for that unit/period.
+### 1. Rate Cards dialog — multi-size grid (file: `src/routes/admin.inventory.rate-cards.tsx`)
+Replace the current single-row dialog with a **per-size pricing grid**:
 
-**DB change** — new table `attendance_sheets`:
-- unit_id (uuid)
-- period_start, period_end (date)
-- status (text: draft/submitted/approved/rejected)
-- submitted_at/by, approved_at/by, rejected_at/by, rejection_reason
-- unique(unit_id, period_start, period_end)
-- standard RLS (authenticated full access, matching other tables)
+- Pick **Vendor** and **Item** (as today).
+- On item select, fetch `inv_item_sizes` for that item.
+  - If item has sizes → render one editable row per size (size locked, columns: Unit Price, Tax %, MOQ, Lead days, Active).
+  - If item has no sizes → render a single row with size = "—".
+- Pre-fill each row from existing `inv_vendor_rate_cards` rows for that (vendor, item); empty otherwise.
+- "Copy from first row" button to fan out price/tax/MOQ/lead to all sizes in one click.
+- **Save** does an upsert per row in a single mutation:
+  - existing row → `UPDATE`
+  - new row with price > 0 → `INSERT`
+  - existing row that user cleared → `DELETE`
+- One `logInv` entry per (vendor, item) save summarising count of sizes saved.
 
-**UI in `admin.attendance.$unitId.tsx`**:
-- Header status pill (Draft / Submitted / Approved / Rejected).
-- Action buttons (right side of header):
-  - Draft/Rejected → `Submit for Approval`
-  - Submitted → `Approve` (green) + `Reject` (red, opens reason dialog)
-  - Approved → `Reopen` (admin only, optional)
-- When status ≠ draft/rejected, all attendance/OT cells become read-only.
-- Log every transition via `logActivity` (module: "Attendance").
+### 2. Matrix view — show size spread (same file)
+Each cell currently shows the cheapest price across sizes. Keep that, but:
+- Tooltip: list all size→price pairs.
+- Sub-label under the price when >1 size row exists: `N sizes · ₹min–max`.
 
-## 2. New Payroll section
+### 3. List view — unchanged
+Already shows one row per (vendor, item, size). Just keep it.
 
-**Sidebar**: add `Payroll` link below `Attendance` in `src/routes/admin.tsx` (Wallet icon), route `/admin/payroll`.
+### 4. Compare view — unchanged
+Already groups by `(item, size)` and ranks vendors per size.
 
-**Routes**:
-- `src/routes/admin.payroll.tsx` — `<Outlet />`
-- `src/routes/admin.payroll.index.tsx` — filter UI (organization, payroll cycle/window, period) → grid of approved units (same look as attendance index, but only units whose `attendance_sheets.status = 'approved'` for the selected period).
-- `src/routes/admin.payroll.$unitId.tsx` — wage computation table for that unit's deployed people.
+### 5. PO form — no changes needed
+Already does size-aware lookup with no-size fallback (`admin.inventory.purchase-orders.tsx:244`). It will start picking up the per-size prices automatically.
 
-**Computation page** (per unit / per period):
-For each candidate mapped to the unit (via `candidate_units`) whose attendance row exists:
-1. Pull attendance entries → derive P Days, PH Days, OT hours, OT Days, Other Paid Leaves, T Days (same formulas already in attendance page; extract into `src/lib/payroll-calc.ts`).
-2. Pull contract resource for the candidate's designation from `contract_resources` (gross, components, deductions, benefits, employer contributions, payroll_day_base).
-3. Compute:
-   - Per-day rate = gross / payroll_day_base (fixed_days or month days)
-   - Earned gross = per-day rate × T Days
-   - Allocate earned gross across components proportionally to contract components
-   - Apply statutory deductions (PF, ESIC via esic_branch, PT via state slabs, LWF) using existing `pt-lookup` / `lwf-lookup` helpers
-   - Net pay = earned gross − employee deductions
-   - Employer cost = earned gross + employer contributions
-4. Display in a table: Name | Designation | T Days | OT Hrs | Gross Earned | Components breakdown (expandable) | Deductions | Net Pay | Employer Cost.
-5. Totals row at bottom + CSV export.
+## Technical notes
+- New query in dialog: `supabase.from("inv_item_sizes").select("size_value,sort_order").eq("item_id", itemId).eq("enabled", true).order("sort_order")`.
+- Upsert strategy: load existing rows for `(vendor_id, item_id)` on dialog open, diff against form state on save, then issue parallel insert/update/delete via `Promise.all`.
+- Keep RLS/permissions as-is — table already has full authenticated CRUD policies.
+- Invalidate `["rc"]` query keys after save so matrix/list/compare all refresh.
 
-This page is read-only — it just reflects what attendance + contract config define.
-
-## 3. Files touched
-
-- New: `supabase/migrations/<ts>_attendance_sheets.sql`
-- New: `src/lib/payroll-calc.ts` (shared computation)
-- New: `src/routes/admin.payroll.tsx`, `admin.payroll.index.tsx`, `admin.payroll.$unitId.tsx`
-- Edited: `src/routes/admin.attendance.$unitId.tsx` (status bar + submit/approve/reject + lock cells)
-- Edited: `src/routes/admin.tsx` (sidebar Payroll link)
-
-## 4. Notes / scope
-
-- "Approved" gate is per (unit, period). If the user later changes a payroll period in Payroll filters, only units approved for that exact period appear.
-- Rejection requires a reason; it's surfaced back to the attendance page.
-- This delivers the end-to-end skeleton — formulas use the components/deductions already on each `contract_resources` row. If you want different statutory rules later (PF cap, ESIC cutoff, bonus, etc.), we tune `payroll-calc.ts` without touching UI.
+## Out of scope
+- No DB migration.
+- No change to PO, GRN, transfer, or issuance flows.
+- No bulk import/export changes.
