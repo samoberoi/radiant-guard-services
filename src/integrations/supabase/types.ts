@@ -3510,6 +3510,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      nextval: { Args: { sequence_name: string }; Returns: number }
     }
     Enums: {
       customer_status: "active" | "inactive"
