@@ -144,14 +144,14 @@ function VendorsPage() {
 
   return (
     <div>
-      <PageHeader title="Vendors" description="Suppliers that fulfil warehouse purchase orders." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Vendors" }]} />
+      <PageHeader title="Suppliers" description="Suppliers that fulfil warehouse purchase orders." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Suppliers" }]} />
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search vendors…" className="h-10 rounded-lg pl-9" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search suppliers…" className="h-10 rounded-lg pl-9" />
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => setAddOpen(true)} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="mr-1.5 h-4 w-4" />Add Vendor</Button>
+          <Button onClick={() => setAddOpen(true)} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="mr-1.5 h-4 w-4" />Add Supplier</Button>
           <Button variant="outline" disabled={!filtered.length} onClick={() => downloadCsv("inventory-vendors", filtered.map((v) => ({ code: v.vendor_code, name: v.name, contact: v.contact_person, phone: v.phone, email: v.email, gstin: v.gstin, city: v.city, state: v.state, enabled: v.enabled ? "Yes" : "No" })))} className="h-10 rounded-lg"><Download className="mr-1.5 h-4 w-4" />Export</Button>
         </div>
       </div>
@@ -185,18 +185,18 @@ function VendorsPage() {
                 </tr>
                 );
               })}
-              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground">No vendors yet.</td></tr>}
+              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground">No suppliers yet.</td></tr>}
             </tbody>
           </table>
         </div>
       </div>
 
-      <VendorFormDialog open={addOpen} onOpenChange={setAddOpen} title="Add Vendor" onSubmit={async (p) => { try { await addMut.mutateAsync(p); toast.success("Vendor added"); return null; } catch (e) { return e instanceof Error ? e.message : "Failed"; } }} />
-      <VendorFormDialog open={!!editing} initial={editing} onOpenChange={(o) => !o && setEditing(null)} title="Edit Vendor" onSubmit={async (p) => { if (!editing) return null; try { await updateMut.mutateAsync({ id: editing.id, p }); toast.success("Updated"); setEditing(null); return null; } catch (e) { return e instanceof Error ? e.message : "Failed"; } }} />
+      <VendorFormDialog open={addOpen} onOpenChange={setAddOpen} title="Add Supplier" onSubmit={async (p) => { try { await addMut.mutateAsync(p); toast.success("Supplier added"); return null; } catch (e) { return e instanceof Error ? e.message : "Failed"; } }} />
+      <VendorFormDialog open={!!editing} initial={editing} onOpenChange={(o) => !o && setEditing(null)} title="Edit Supplier" onSubmit={async (p) => { if (!editing) return null; try { await updateMut.mutateAsync({ id: editing.id, p }); toast.success("Updated"); setEditing(null); return null; } catch (e) { return e instanceof Error ? e.message : "Failed"; } }} />
 
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Delete this vendor?</AlertDialogTitle><AlertDialogDescription>{deleting && <span className="font-semibold">{deleting.name}</span>}</AlertDialogDescription></AlertDialogHeader>
+          <AlertDialogHeader><AlertDialogTitle>Delete this supplier?</AlertDialogTitle><AlertDialogDescription>{deleting && <span className="font-semibold">{deleting.name}</span>}</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={async () => { if (!deleting) return; try { await deleteMut.mutateAsync(deleting.id); toast.success("Deleted"); setDeleting(null); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); } }}>Delete</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -205,14 +205,14 @@ function VendorsPage() {
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Products supplied by {capVendor?.name}</DialogTitle>
-            <DialogDescription>Active rate cards define what this vendor can sell. Add or edit them in Rate Cards.</DialogDescription>
+            <DialogDescription>Active rate cards define what this supplier can sell. Add or edit them in Rate Cards.</DialogDescription>
           </DialogHeader>
           {(() => {
             const caps = capVendor ? (capsByVendor.get(capVendor.id) ?? []) : [];
             if (!caps.length) {
               return (
                 <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-                  No products mapped yet. Open <Link to="/admin/inventory/rate-cards" className="font-semibold text-primary underline">Rate Cards</Link> to declare what this vendor can supply.
+                  No products mapped yet. Open <Link to="/admin/inventory/rate-cards" className="font-semibold text-primary underline">Rate Cards</Link> to declare what this supplier can supply.
                 </div>
               );
             }
