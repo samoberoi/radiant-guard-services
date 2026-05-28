@@ -106,6 +106,24 @@ function POPage() {
       return (data as unknown as ItemSize[]) ?? [];
     },
   });
+  const { data: lineAgg = new Map<string, { products: number; qty: number }>() } = useQuery({
+    queryKey: ["inv", "po-line-agg"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_po_lines" as never)
+        .select("po_id,ordered_qty");
+      if (error) throw error;
+      const rows = (data as unknown as Array<{ po_id: string; ordered_qty: number }>) ?? [];
+      const m = new Map<string, { products: number; qty: number }>();
+      for (const r of rows) {
+        const cur = m.get(r.po_id) ?? { products: 0, qty: 0 };
+        cur.products += 1;
+        cur.qty += Number(r.ordered_qty) || 0;
+        m.set(r.po_id, cur);
+      }
+      return m;
+    },
+  });
 
   const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
   const warehouseMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w])), [warehouses]);
