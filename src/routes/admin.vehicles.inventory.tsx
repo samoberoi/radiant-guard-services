@@ -18,8 +18,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { fmtDate } from "@/lib/vehicle-helpers";
 import { MiniStat } from "@/components/MiniStat";
-import { AdvancedFilters } from "@/components/AdvancedFilters";
-import { applyFilters, type FilterCondition, type FilterField } from "@/lib/advanced-filters";
+
+
 
 export const Route = createFileRoute("/admin/vehicles/inventory")({
   component: VehicleInventoryPage,
@@ -144,37 +144,24 @@ function useVehicles() {
   return { items, addMut, updateMut, toggleMut, deleteMut };
 }
 
-const FILTER_FIELDS: FilterField[] = [
-  { key: "vehicle_id", label: "Vehicle ID", type: "text" },
-  { key: "vehicle_number", label: "Vehicle Number", type: "text" },
-  { key: "name", label: "Name", type: "text" },
-  { key: "owner", label: "Owner", type: "text" },
-  { key: "brand", label: "Brand", type: "text" },
-  { key: "make", label: "Make", type: "text" },
-  { key: "type", label: "Type", type: "enum", options: TYPES },
-  { key: "fuel_type", label: "Fuel Type", type: "enum", options: FUEL_TYPES },
-  { key: "year", label: "Year", type: "number" },
-  { key: "color", label: "Color", type: "text" },
-  { key: "engine_number", label: "Engine No.", type: "text" },
-  { key: "chassis_number", label: "Chassis No.", type: "text" },
-  { key: "registration_date", label: "Registration Date", type: "date" },
-  { key: "enabled", label: "Enabled", type: "boolean" },
-  { key: "notes", label: "Notes", type: "text" },
-];
 
 function VehicleInventoryPage() {
   const { items, addMut, updateMut, toggleMut, deleteMut } = useVehicles();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [conditions, setConditions] = useState<FilterCondition[]>([]);
+  const [fuelFilter, setFuelFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Vehicle | null>(null);
   const [deleting, setDeleting] = useState<Vehicle | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = items.filter((i) => {
+    return items.filter((i) => {
       if (typeFilter !== "all" && i.type !== typeFilter) return false;
+      if (fuelFilter !== "all" && i.fuel_type !== fuelFilter) return false;
+      if (statusFilter === "enabled" && !i.enabled) return false;
+      if (statusFilter === "disabled" && i.enabled) return false;
       if (!q) return true;
       return (
         i.vehicle_id.toLowerCase().includes(q) ||
@@ -187,8 +174,7 @@ function VehicleInventoryPage() {
         i.owner.toLowerCase().includes(q)
       );
     });
-    return applyFilters(base as unknown as Record<string, unknown>[], FILTER_FIELDS, conditions) as unknown as typeof items;
-  }, [items, query, typeFilter, conditions]);
+  }, [items, query, typeFilter, fuelFilter, statusFilter]);
 
   const stats = useMemo(() => {
     const byFuel: Record<string, number> = {};
@@ -225,10 +211,25 @@ function VehicleInventoryPage() {
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search vehicles…" className="h-10 rounded-lg pl-9" />
           </div>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="h-10 w-full rounded-lg sm:w-44"><SelectValue placeholder="All types" /></SelectTrigger>
+            <SelectTrigger className="h-10 w-full rounded-lg sm:w-40"><SelectValue placeholder="All types" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All types</SelectItem>
               {TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={fuelFilter} onValueChange={setFuelFilter}>
+            <SelectTrigger className="h-10 w-full rounded-lg sm:w-40"><SelectValue placeholder="All fuels" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All fuels</SelectItem>
+              {FUEL_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-10 w-full rounded-lg sm:w-36"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All status</SelectItem>
+              <SelectItem value="enabled">Enabled</SelectItem>
+              <SelectItem value="disabled">Disabled</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -283,9 +284,6 @@ function VehicleInventoryPage() {
         </div>
       </div>
 
-      <div className="mb-4">
-        <AdvancedFilters fields={FILTER_FIELDS} value={conditions} onChange={setConditions} />
-      </div>
 
 
 
