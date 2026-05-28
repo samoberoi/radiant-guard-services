@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Plus, Search, Trash2, FileText, Edit2, Eye, AlertTriangle } from "lucide-react";
+import { Plus, Search, Trash2, FileText, Edit2, Eye, AlertTriangle, Download } from "lucide-react";
+import { downloadPOPdf, type POPdfLine } from "@/lib/po-pdf";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -135,6 +136,40 @@ function POPage() {
     onSuccess: invalidate,
   });
 
+  const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+
+  const handleDownloadPO = async (p: PO) => {
+    const [vendorRes, linesRes] = await Promise.all([
+      p.vendor_id
+        ? supabase.from("inv_vendors" as never).select("vendor_code,name,phone,email,gstin,address1,address2,city,state,pincode,country").eq("id", p.vendor_id).maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      supabase.from("inv_po_lines" as never).select("item_id,size_value,ordered_qty,unit_price,tax_percent").eq("po_id", p.id).order("sort_order"),
+    ]);
+    if (vendorRes.error) throw vendorRes.error;
+    if (linesRes.error) throw linesRes.error;
+    const lineRows = ((linesRes.data ?? []) as unknown as Array<{ item_id: string; size_value: string; ordered_qty: number; unit_price: number; tax_percent: number }>);
+    const pdfLines: POPdfLine[] = lineRows.map((l) => {
+      const it = itemMap.get(l.item_id);
+      return {
+        item_code: it?.item_code ?? "",
+        item_name: it?.name ?? "",
+        unit: it?.unit ?? "",
+        size_value: l.size_value || undefined,
+        qty: Number(l.ordered_qty) || 0,
+        unit_price: Number(l.unit_price) || 0,
+        tax_percent: Number(l.tax_percent) || 0,
+      };
+    });
+    await downloadPOPdf({
+      po_number: p.po_number,
+      po_date: p.po_date,
+      remarks: p.notes,
+      vendor: vendorRes.data as never,
+      lines: pdfLines,
+    });
+    toast.success("PDF downloaded");
+  };
+
   return (
     <div>
       <PageHeader
@@ -200,12 +235,16 @@ function POPage() {
                   <td className="px-5 py-3">
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(p.status)}`}>{poStatusLabel(p.status)}</span>
                   </td>
-                  <td className="px-5 py-3 text-right tabular-nums">₹{Number(p.grand_total).toLocaleString("en-IN")}</td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setEditing(p); setOpen(true); }}>
                         {p.status === "draft" ? <Edit2 className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
+                      {p.status !== "draft" && p.status !== "cancelled" && (
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Download PO PDF" onClick={async () => {
+                          try { await handleDownloadPO(p); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed to generate PDF"); }
+                        }}><Download className="h-4 w-4" /></Button>
+                      )}
                       {p.status === "draft" && (
                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={async () => {
                           if (!(await confirmAction({ title: "Delete PO?", description: `Delete ${p.po_number}?`, confirmText: "Delete" }))) return;
