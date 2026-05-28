@@ -343,7 +343,9 @@ function POFormDialog({
     }
     return m;
   }, [itemSizes]);
-  const readOnly = !!initial && initial.status !== "draft";
+  // Editable while not delivered. Once goods are received (fully or partially) or cancelled, lock to view-only.
+  const readOnly = !!initial && !(initial.status === "draft" || initial.status === "open");
+
 
   // Pick best matching rate card: prefer exact size match, then blank-size fallback.
   const findRate = (vId: string, itemId: string, sizeValue: string): RateCard | undefined => {
