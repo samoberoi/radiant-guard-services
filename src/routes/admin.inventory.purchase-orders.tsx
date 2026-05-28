@@ -160,20 +160,19 @@ function POPage() {
             <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search PO #, vendor…" className="h-10 rounded-lg pl-9" />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-10 w-full rounded-lg sm:w-44"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-10 w-full rounded-lg sm:w-52"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All statuses</SelectItem>
+              <SelectItem value="all">All</SelectItem>
               <SelectItem value="draft">Draft</SelectItem>
-              <SelectItem value="open">Open</SelectItem>
-              <SelectItem value="partially_received">Partially Received</SelectItem>
-              <SelectItem value="received">Received</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
+              <SelectItem value="open">Delivery Open</SelectItem>
+              <SelectItem value="partially_received">Delivery Ongoing</SelectItem>
+              <SelectItem value="received">Delivery Completed</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <Button onClick={() => { setEditing(null); setOpen(true); }} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
-          <Plus className="mr-1.5 h-4 w-4" />Order from Vendor
+          <Plus className="mr-1.5 h-4 w-4" />Order from Supplier
         </Button>
       </div>
 
