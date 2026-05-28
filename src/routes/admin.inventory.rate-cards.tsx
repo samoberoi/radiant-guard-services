@@ -138,7 +138,7 @@ function RateCardsPage() {
   return (
     <div>
       <PageHeader
-        title="Vendor Rate Cards"
+        title="Supplier Rate Cards"
         description="Capability matrix: who can supply what, at what price, with what lead time."
         crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Rate Cards" }]}
       />
@@ -153,11 +153,11 @@ function RateCardsPage() {
 
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div>
-          <Label className="text-xs">Vendor</Label>
+          <Label className="text-xs">Supplier</Label>
           <Select value={vendorFilter || "all"} onValueChange={(v) => setVendorFilter(v === "all" ? "" : v)}>
-            <SelectTrigger className="w-64"><SelectValue placeholder="All vendors" /></SelectTrigger>
+            <SelectTrigger className="w-64"><SelectValue placeholder="All suppliers" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All vendors</SelectItem>
+              <SelectItem value="all">All suppliers</SelectItem>
               {(vendorsQ.data ?? []).map((v) => <SelectItem key={v.id} value={v.id}>{v.vendor_code} — {v.name}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -189,7 +189,7 @@ function RateCardsPage() {
         <table className="w-full text-sm">
           <thead className="bg-secondary/30 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
-              <th className="p-3 text-left font-medium">Vendor</th>
+              <th className="p-3 text-left font-medium">Supplier</th>
               <th className="p-3 text-left font-medium">Item</th>
               <th className="p-3 text-left font-medium">Size</th>
               <th className="p-3 text-right font-medium">Unit Price</th>
@@ -331,9 +331,9 @@ function RateCardDialog({
         <div className="grid gap-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Vendor</Label>
+              <Label>Supplier</Label>
               <Select value={vendorId} onValueChange={setVendorId}>
-                <SelectTrigger><SelectValue placeholder="Select vendor" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Select supplier" /></SelectTrigger>
                 <SelectContent>{vendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.vendor_code} — {v.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -380,7 +380,7 @@ function RateCardDialog({
               </table>
             </div>
           ) : (
-            <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">Pick a vendor and item to load sizes.</div>
+            <div className="rounded-xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">Pick a supplier and item to load sizes.</div>
           )}
         </div>
         <DialogFooter>
@@ -426,13 +426,13 @@ function CompareView({ rows, vendorMap, itemMap }: { rows: RateCard[]; vendorMap
             <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-4 py-2.5">
               <div>
                 <div className="text-sm font-semibold">{item ? `${item.item_code} — ${item.name}` : "—"}{first.size_value && <span className="ml-2 rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider">Size {first.size_value}</span>}</div>
-                <div className="text-xs text-muted-foreground">{g.list.length} vendor{g.list.length === 1 ? "" : "s"} · spread ₹{min.toFixed(2)} – ₹{max.toFixed(2)}{min !== max && <> · {(((max - min) / min) * 100).toFixed(0)}% gap</>}</div>
+                <div className="text-xs text-muted-foreground">{g.list.length} supplier{g.list.length === 1 ? "" : "s"} · spread ₹{min.toFixed(2)} – ₹{max.toFixed(2)}{min !== max && <> · {(((max - min) / min) * 100).toFixed(0)}% gap</>}</div>
               </div>
             </div>
             <table className="w-full text-sm">
               <thead className="bg-secondary/10 text-[10px] uppercase tracking-wider text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-2 text-left font-medium">Vendor</th>
+                  <th className="px-4 py-2 text-left font-medium">Supplier</th>
                   <th className="px-4 py-2 text-right font-medium">Unit Price</th>
                   <th className="px-4 py-2 text-right font-medium">Tax %</th>
                   <th className="px-4 py-2 text-right font-medium">MOQ</th>
@@ -483,21 +483,21 @@ function MatrixView({
     m.set(r.vendor_id, arr);
   }
   if (!vendors.length || !items.length) {
-    return <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">Add vendors and items first.</div>;
+    return <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">Add suppliers and items first.</div>;
   }
   return (
     <div className="overflow-auto rounded-2xl border border-border bg-card">
       <table className="w-full text-sm">
         <thead className="bg-secondary/30 text-[10px] uppercase tracking-wider text-muted-foreground">
           <tr>
-            <th className="sticky left-0 z-10 bg-secondary/30 p-3 text-left font-medium">Item ↓ &nbsp;/&nbsp; Vendor →</th>
+            <th className="sticky left-0 z-10 bg-secondary/30 p-3 text-left font-medium">Item ↓ &nbsp;/&nbsp; Supplier →</th>
             {vendors.map((v) => (
               <th key={v.id} className="p-3 text-center font-medium" title={v.name}>
                 <div className="font-semibold text-foreground">{v.vendor_code}</div>
                 <div className="truncate text-[10px] font-normal normal-case text-muted-foreground" style={{ maxWidth: 110 }}>{v.name}</div>
               </th>
             ))}
-            <th className="p-3 text-center font-medium">Vendors</th>
+            <th className="p-3 text-center font-medium">Suppliers</th>
           </tr>
         </thead>
         <tbody>
@@ -553,7 +553,7 @@ function MatrixView({
         </tbody>
       </table>
       <div className="border-t border-border bg-secondary/20 px-4 py-2 text-[11px] text-muted-foreground">
-        <span className="mr-3"><span className="inline-block h-2 w-2 rounded-sm bg-emerald-500/40" /> Cheapest vendor for that item</span>
+        <span className="mr-3"><span className="inline-block h-2 w-2 rounded-sm bg-emerald-500/40" /> Cheapest supplier for that item</span>
         <span>Click any cell to add or edit a vendor's capability for that item.</span>
       </div>
     </div>

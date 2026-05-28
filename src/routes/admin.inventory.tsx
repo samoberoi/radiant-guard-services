@@ -30,7 +30,7 @@ function InventoryLayout() {
 
 function InventoryDashboard() {
   const steps = [
-    { n: 1, t: "Purchase Order", d: "Order from vendor", to: "/admin/inventory/purchase-orders", icon: ClipboardList },
+    { n: 1, t: "Purchase Order", d: "Order from supplier", to: "/admin/inventory/purchase-orders", icon: ClipboardList },
     { n: 2, t: "Goods Receipt", d: "Verify challan, stock in", to: "/admin/inventory/goods-receipts", icon: PackageCheck },
     { n: 3, t: "Transfer", d: "Warehouse → Branch", to: "/admin/inventory/transfers", icon: Truck },
     { n: 4, t: "Issuance", d: "Branch → FO → Guard", to: "/admin/inventory/issuances", icon: UserCheck },
@@ -39,15 +39,15 @@ function InventoryDashboard() {
 
   const modules = [
     { to: "/admin/inventory/stock", label: "Stock Report", hint: "Live balances across the chain", icon: BarChart3, group: "Insights" },
-    { to: "/admin/inventory/purchase-orders", label: "Purchase Orders", hint: "Order from vendors", icon: ClipboardList, group: "Procurement" },
+    { to: "/admin/inventory/purchase-orders", label: "Purchase Orders", hint: "Order from suppliers", icon: ClipboardList, group: "Procurement" },
     { to: "/admin/inventory/goods-receipts", label: "Goods Receipts", hint: "Receive into warehouse", icon: PackageCheck, group: "Procurement" },
     { to: "/admin/inventory/transfers", label: "Transfers", hint: "Warehouse ↔ Branch", icon: Truck, group: "Movement" },
     { to: "/admin/inventory/issuances", label: "Issuances", hint: "Branch → FO → Guard", icon: UserCheck, group: "Movement" },
     { to: "/admin/inventory/write-offs", label: "Write-offs", hint: "Lost / damaged", icon: AlertOctagon, group: "Movement" },
     { to: "/admin/inventory/adjustments", label: "Adjustments", hint: "Cycle counts", icon: Sliders, group: "Movement" },
     { to: "/admin/inventory/items", label: "Item Master", hint: "SKUs and sizes", icon: PackageOpen, group: "Catalog" },
-    { to: "/admin/inventory/rate-cards", label: "Vendor Capability Matrix", hint: "Who supplies what · prices", icon: Tags, group: "Catalog" },
-    { to: "/admin/inventory/vendors", label: "Vendors", hint: "Supplier directory", icon: ShoppingBag, group: "Catalog" },
+    { to: "/admin/inventory/rate-cards", label: "Supplier Capability Matrix", hint: "Who supplies what · prices", icon: Tags, group: "Catalog" },
+    { to: "/admin/inventory/vendors", label: "Suppliers", hint: "Supplier directory", icon: ShoppingBag, group: "Catalog" },
     { to: "/admin/inventory/warehouses", label: "Warehouses", hint: "Storage locations", icon: Warehouse, group: "Catalog" },
   ];
 
@@ -57,7 +57,7 @@ function InventoryDashboard() {
     <div className="space-y-6">
       <PageHeader
         title="Inventory Command Center"
-        description="End-to-end chain of custody from vendor → warehouse → branch → field officer → guard. Live KPIs above, modules below."
+        description="End-to-end chain of custody from supplier → warehouse → branch → field officer → guard. Live KPIs above, modules below."
         crumbs={[{ label: "Inventory" }]}
       />
 
