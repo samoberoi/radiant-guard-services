@@ -352,7 +352,7 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
       const newStatus = allReceived ? "received" : anyReceived ? "partially_received" : "open";
       await supabase.from("inv_purchase_orders" as never).update({ status: newStatus } as never).eq("id", po.id);
 
-      void logActivity({ module: "Inventory Goods Receipts", action: "create", entityType: "inv_goods_receipts", entityId: grnId, entityLabel: grn_number });
+      void logActivity({ module: "Inventory Delivery Challans", action: "create", entityType: "inv_goods_receipts", entityId: grnId, entityLabel: grn_number });
       toast.success(`GRN ${grn_number} posted — stock updated`);
       onSaved();
       onOpenChange(false);
@@ -366,7 +366,7 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
-        <DialogHeader><DialogTitle>New Goods Receipt</DialogTitle><DialogDescription>Receive items against a Purchase Order.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>New Delivery Challan</DialogTitle><DialogDescription>Receive items against a Purchase Order.</DialogDescription></DialogHeader>
         <div className="grid gap-4 py-2">
           <div className="grid gap-2"><Label>Purchase Order</Label>
             <Select value={poId} onValueChange={loadPo}>
@@ -414,7 +414,7 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-          <Button onClick={save} disabled={saving || !poId}>{saving ? "Posting…" : "Post GRN"}</Button>
+          <Button onClick={save} disabled={saving || !poId}>{saving ? "Posting…" : "Post Challan"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -436,7 +436,7 @@ function GRNViewDialog({ open, onOpenChange, grn }: { open: boolean; onOpenChang
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
-        <DialogHeader><DialogTitle>GRN {grn?.grn_number}</DialogTitle><DialogDescription>Posted on {grn?.receipt_date}</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>Delivery Challan {grn?.grn_number}</DialogTitle><DialogDescription>Posted on {grn?.receipt_date}</DialogDescription></DialogHeader>
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
