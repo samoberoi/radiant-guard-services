@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/BrandMark";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useAuth } from "@/lib/auth";
+import { useCurrentPermissions } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin")({
@@ -99,6 +100,7 @@ function AdminLayout() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { can, isLoading: permsLoading, isSuperAdmin } = useCurrentPermissions();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -106,6 +108,62 @@ function AdminLayout() {
   const [contractsOpen, setContractsOpen] = useState(false);
   const [vehiclesOpen, setVehiclesOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
+
+  // Map current path → module key, then redirect if user lacks view perm.
+  const pathToModule: { prefix: string; module: string }[] = [
+    { prefix: "/admin/customers", module: "organizations" },
+    { prefix: "/admin/contracts", module: "contracts" },
+    { prefix: "/admin/employees", module: "employees" },
+    { prefix: "/admin/vehicles", module: "vehicles" },
+    { prefix: "/admin/inventory", module: "inventory" },
+    { prefix: "/admin/attendance", module: "attendance" },
+    { prefix: "/admin/payroll", module: "payroll" },
+    { prefix: "/admin/notifications", module: "notification_center" },
+    { prefix: "/admin/rbac", module: "rbac" },
+    { prefix: "/admin/control-center", module: "control_center" },
+    { prefix: "/admin/professional-tax-manager", module: "control_center" },
+    { prefix: "/admin/lwf-manager", module: "control_center" },
+    { prefix: "/admin/duty-manager", module: "control_center" },
+    { prefix: "/admin/service-type-manager", module: "control_center" },
+    { prefix: "/admin/payroll-manager", module: "control_center" },
+    { prefix: "/admin/payroll-days-manager", module: "control_center" },
+    { prefix: "/admin/allowance-manager", module: "control_center" },
+    { prefix: "/admin/billing-type-manager", module: "control_center" },
+    { prefix: "/admin/designation-manager", module: "control_center" },
+    { prefix: "/admin/cost-component-manager", module: "control_center" },
+    { prefix: "/admin/ex-service-manager", module: "control_center" },
+    { prefix: "/admin/offboarding-reason-manager", module: "control_center" },
+    { prefix: "/admin/language-manager", module: "control_center" },
+    { prefix: "/admin/company-documents", module: "control_center" },
+    { prefix: "/admin/system-logs", module: "control_center" },
+    { prefix: "/admin/asset-manager", module: "control_center" },
+    { prefix: "/admin/attendance-code-manager", module: "control_center" },
+    { prefix: "/admin/esic-branch-manager", module: "control_center" },
+  ];
+  const firstAllowedPath = () => {
+    const order = ["organizations","contracts","employees","vehicles","inventory","attendance","payroll","control_center","notification_center","rbac"];
+    const pathFor: Record<string,string> = {
+      organizations: "/admin/customers", contracts: "/admin/contracts/client-contracts",
+      employees: "/admin/employees", vehicles: "/admin/vehicles/inventory",
+      inventory: "/admin/inventory", attendance: "/admin/attendance",
+      payroll: "/admin/payroll", control_center: "/admin/control-center",
+      notification_center: "/admin/notifications", rbac: "/admin/rbac",
+    };
+    for (const m of order) if (can(m)) return pathFor[m];
+    return null;
+  };
+  useEffect(() => {
+    if (permsLoading || !user) return;
+    const hit = pathToModule.find((p) => pathname === p.prefix || pathname.startsWith(p.prefix + "/"));
+    if (!hit) return;
+    if (!can(hit.module)) {
+      const dest = firstAllowedPath();
+      if (dest) navigate({ to: dest, replace: true });
+      else logout();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname, permsLoading, isSuperAdmin]);
+
   
   
 
@@ -179,6 +237,7 @@ function AdminLayout() {
             )}
           </div>
 
+          {can("organizations") && (<>
           {/* Customers group */}
           <div>
             <div
@@ -268,6 +327,8 @@ function AdminLayout() {
             )}
           </div>
 
+          </>)}
+          {can("contracts") && (<>
           {/* Contracts group */}
           <div className="mt-2">
             <div
@@ -356,6 +417,8 @@ function AdminLayout() {
             )}
           </div>
 
+          </>)}
+          {can("employees") && (<>
           {/* Employees link */}
           <div className="mt-2">
             <Link
@@ -374,6 +437,8 @@ function AdminLayout() {
             </Link>
           </div>
 
+          </>)}
+          {can("vehicles") && (<>
           {/* Vehicles group */}
           <div className="mt-2">
             <div
@@ -462,6 +527,8 @@ function AdminLayout() {
             )}
           </div>
 
+          </>)}
+          {can("inventory") && (<>
           {/* Inventory group */}
           <div className="mt-2">
             <div
@@ -553,6 +620,8 @@ function AdminLayout() {
 
 
 
+          </>)}
+          {can("attendance") && (<>
           {/* Attendance link */}
           <div className="mt-2">
             <Link
@@ -571,6 +640,8 @@ function AdminLayout() {
             </Link>
           </div>
 
+          </>)}
+          {can("payroll") && (<>
           {/* Payroll link */}
           <div className="mt-2">
             <Link
@@ -589,6 +660,8 @@ function AdminLayout() {
             </Link>
           </div>
 
+          </>)}
+          {can("control_center") && (<>
           {/* Control Center link */}
           <div className="mt-2">
             <Link
@@ -609,6 +682,8 @@ function AdminLayout() {
             </Link>
           </div>
 
+          </>)}
+          {can("notification_center") && (<>
           {/* Notification Center link */}
           <div className="mt-2">
             <Link
@@ -626,6 +701,7 @@ function AdminLayout() {
               {!collapsed && <span>Notification Center</span>}
             </Link>
           </div>
+          </>)}
 
 
         </nav>
