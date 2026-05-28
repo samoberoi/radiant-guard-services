@@ -82,7 +82,7 @@ function useVehicles() {
     queryFn: async (): Promise<Vehicle[]> => {
       const { data, error } = await supabase
         .from("vehicles" as never)
-        .select("id,vehicle_id,vehicle_number,name,brand,make,type,year,color,registration_date,engine_number,chassis_number,fuel_type,owner,notes,enabled")
+        .select("id,vehicle_id,vehicle_number,name,brand,make,type,year,color,registration_date,engine_number,chassis_number,fuel_type,owner,notes,enabled,service_interval_km")
         .order("vehicle_id", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
