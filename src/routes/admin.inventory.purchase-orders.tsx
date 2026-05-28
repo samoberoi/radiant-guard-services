@@ -249,12 +249,12 @@ function POPage() {
             <SelectTrigger className="h-10 w-full rounded-lg sm:w-52"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="open">Delivery Open</SelectItem>
               <SelectItem value="partially_received">Delivery Ongoing</SelectItem>
               <SelectItem value="received">Delivery Completed</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
+
           </Select>
         </div>
         <Button onClick={() => { setEditing(null); setOpen(true); }} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
