@@ -1,7 +1,5 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import {
-  Boxes,
   PackageOpen,
   ShoppingBag,
   Warehouse,
@@ -13,15 +11,11 @@ import {
   AlertOctagon,
   Sliders,
   BarChart3,
-  LineChart,
   Tags,
-  Building2,
-  Users,
-  Shield,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { InventoryOwnerDashboard } from "./admin.inventory.dashboard";
 
 export const Route = createFileRoute("/admin/inventory")({
   component: InventoryLayout,
