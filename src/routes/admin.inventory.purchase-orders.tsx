@@ -142,6 +142,10 @@ function POPage() {
       return p.po_number.toLowerCase().includes(q) || v.toLowerCase().includes(q);
     });
   }, [pos, query, statusFilter, vendorMap]);
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["inv", "pos"] });
+    qc.invalidateQueries({ queryKey: ["inv", "po-line-agg"] });
+  };
 
   const invalidate = () => qc.invalidateQueries({ queryKey: ["inv", "pos"] });
 
