@@ -427,6 +427,8 @@ function POFormDialog({
       setPoDate(initial.po_date);
       setExpectedDate(initial.expected_date ?? "");
       setNotes(initial.notes);
+      // Legacy "approved" maps to "open" in the toggle.
+      setStatus(initial.status === "approved" ? "open" : initial.status);
       const { data } = await supabase.from("inv_po_lines" as never).select("*").eq("po_id", initial.id).order("sort_order");
       setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => ({
         id: String(r.id),
@@ -439,8 +441,9 @@ function POFormDialog({
       })));
     } else {
       setVendorId(""); setWarehouseId(""); setPoDate(new Date().toISOString().slice(0, 10));
-      setExpectedDate(""); setNotes(""); setLines([]);
+      setExpectedDate(""); setNotes(""); setLines([]); setStatus("open");
     }
+
   });
 
   const totals = useMemo(() => {
