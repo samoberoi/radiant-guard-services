@@ -42,7 +42,10 @@ type Vehicle = {
   owner: string;
   notes: string;
   enabled: boolean;
+  service_interval_km: number;
 };
+
+const DEFAULT_SERVICE_INTERVAL_KM = 5000;
 
 const QK = ["admin", "vehicles"] as const;
 const MODULE = "Vehicle Inventory";
