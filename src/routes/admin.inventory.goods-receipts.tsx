@@ -201,6 +201,7 @@ function GRNPage() {
                 );
               })}
               {!filtered.length && <tr><td colSpan={10} className="px-5 py-12 text-center text-sm text-muted-foreground"><PackageCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No delivery challans yet.</td></tr>}
+            </tbody>
           </table>
         </div>
       </div>
