@@ -65,6 +65,8 @@ function GRNPage() {
       if (error) throw error;
       return (data as unknown as Warehouse[]) ?? [];
     },
+  });
+
   // Aggregate line totals per GRN (products count + total value using PO unit_price)
   const { data: lineAgg = new Map<string, { products: number; qty: number; value: number }>() } = useQuery({
     queryKey: ["inv", "grn-line-agg"],
