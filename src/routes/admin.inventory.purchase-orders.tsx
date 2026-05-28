@@ -146,7 +146,7 @@ function POPage() {
       <div className="mb-4 rounded-2xl border border-accent/30 bg-accent/5 p-4 text-xs text-muted-foreground">
         <div className="font-display text-sm font-bold text-foreground">How procurement works</div>
         <div className="mt-1 leading-relaxed">
-          <span className="font-semibold text-foreground">1. PO</span> (here) → order from vendor ·{" "}
+          <span className="font-semibold text-foreground">1. PO</span> (here) → order from supplier ·{" "}
           <span className="font-semibold text-foreground">2. Goods Receipt</span> → verify challan &amp; add to warehouse ·{" "}
           <span className="font-semibold text-foreground">3. Transfer</span> → warehouse to branch ·{" "}
           <span className="font-semibold text-foreground">4. Issuance</span> → branch to FO / guard
@@ -216,7 +216,7 @@ function POPage() {
                   </td>
                 </tr>
               ))}
-              {!filtered.length && <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />No purchase orders yet. Click <span className="font-semibold text-foreground">Order from Vendor</span> to create your first PO.</td></tr>}
+              {!filtered.length && <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />No purchase orders yet. Click <span className="font-semibold text-foreground">Order from Supplier</span> to create your first PO.</td></tr>}
             </tbody>
           </table>
         </div>
