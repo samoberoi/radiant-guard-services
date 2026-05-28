@@ -1,7 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
-import { extractFuelFromPhotos } from "@/lib/fuel-extraction.functions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download,
