@@ -426,7 +426,7 @@ function CompareView({ rows, vendorMap, itemMap }: { rows: RateCard[]; vendorMap
             <div className="flex items-center justify-between border-b border-border bg-secondary/30 px-4 py-2.5">
               <div>
                 <div className="text-sm font-semibold">{item ? `${item.item_code} — ${item.name}` : "—"}{first.size_value && <span className="ml-2 rounded bg-secondary px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider">Size {first.size_value}</span>}</div>
-                <div className="text-xs text-muted-foreground">{g.list.length} vendor{g.list.length === 1 ? "" : "s"} · spread ₹{min.toFixed(2)} – ₹{max.toFixed(2)}{min !== max && <> · {(((max - min) / min) * 100).toFixed(0)}% gap</>}</div>
+                <div className="text-xs text-muted-foreground">{g.list.length} supplier{g.list.length === 1 ? "" : "s"} · spread ₹{min.toFixed(2)} – ₹{max.toFixed(2)}{min !== max && <> · {(((max - min) / min) * 100).toFixed(0)}% gap</>}</div>
               </div>
             </div>
             <table className="w-full text-sm">
@@ -553,7 +553,7 @@ function MatrixView({
         </tbody>
       </table>
       <div className="border-t border-border bg-secondary/20 px-4 py-2 text-[11px] text-muted-foreground">
-        <span className="mr-3"><span className="inline-block h-2 w-2 rounded-sm bg-emerald-500/40" /> Cheapest vendor for that item</span>
+        <span className="mr-3"><span className="inline-block h-2 w-2 rounded-sm bg-emerald-500/40" /> Cheapest supplier for that item</span>
         <span>Click any cell to add or edit a vendor's capability for that item.</span>
       </div>
     </div>
