@@ -511,9 +511,9 @@ function POFormDialog({
           notes,
           subtotal: totals.sub,
           tax_total: totals.tax,
+          grand_total: totals.grand,
           status: targetStatus,
 
-          status,
           created_by: user?.id ?? null,
         } as never).select("id").single();
         if (error) throw error;
