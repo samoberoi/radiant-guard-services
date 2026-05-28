@@ -988,24 +988,12 @@ function AddEntryDialog({
 
           {isFuel ? (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>
-                  Photos{" "}
-                  <span className="text-xs text-muted-foreground">
-                    (odometer, pump, receipt required · filling optional)
-                  </span>
-                </Label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={handleAutoFill}
-                  disabled={extracting || (!odoFile && !pumpFile && !receiptFile && !fillingFile)}
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  {extracting ? "Extracting…" : "Auto-fill from photos"}
-                </Button>
-              </div>
+              <Label>
+                Photos{" "}
+                <span className="text-xs text-muted-foreground">
+                  (odometer, pump, receipt required · filling optional)
+                </span>
+              </Label>
               <div className="grid gap-3 sm:grid-cols-4">
                 <FileTile label="Odometer *" file={odoFile} onChange={setOdoFile} />
                 <FileTile label="Pump / units *" file={pumpFile} onChange={setPumpFile} />
