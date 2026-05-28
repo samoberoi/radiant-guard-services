@@ -360,7 +360,9 @@ function POFormDialog({
   const [expectedDate, setExpectedDate] = useState("");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<POLine[]>([]);
+  const [status, setStatus] = useState<string>("open");
   const [saving, setSaving] = useState(false);
+
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const sizesByItem = useMemo(() => {
