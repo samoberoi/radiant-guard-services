@@ -16,16 +16,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, statusBadgeClass } from "@/lib/inv-helpers";
 
-// PO status → user-facing delivery label. Drafts stay as "Draft"; cancelled stays.
+// PO status → user-facing delivery label. Legacy "approved" maps to Delivery Open.
 const PO_STATUS_LABEL: Record<string, string> = {
   draft: "Draft",
   open: "Delivery Open",
+  approved: "Delivery Open",
   partially_received: "Delivery Ongoing",
   received: "Delivery Completed",
   closed: "Delivery Completed",
   cancelled: "Cancelled",
 };
 const poStatusLabel = (s: string) => PO_STATUS_LABEL[s] ?? s.replace(/_/g, " ");
+
+// Editable status options shown in the dialog toggle.
+const EDITABLE_STATUSES: Array<{ value: string; label: string }> = [
+  { value: "open", label: "Delivery Open" },
+  { value: "partially_received", label: "Delivery Ongoing" },
+  { value: "received", label: "Delivery Completed" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
 
 export const Route = createFileRoute("/admin/inventory/purchase-orders")({ component: POPage });
 
