@@ -253,7 +253,7 @@ function POPage() {
               {filtered.map((p) => {
                 const agg = lineAgg.get(p.id) ?? { products: 0, qty: 0 };
                 const canEdit = p.status === "draft" || p.status === "open";
-                const isDelivered = p.status === "received" || p.status === "closed";
+                
                 const canDownload = p.status !== "draft" && p.status !== "cancelled";
                 return (
                 <tr key={p.id} className="hover:bg-secondary/30">
