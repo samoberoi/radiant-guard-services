@@ -104,18 +104,6 @@ type ExpenseEntry = {
   created_at: string;
 };
 
-type FuelExtractionResult = {
-  fuel_type: string;
-  odometer_km: number | null;
-  quantity: number | null;
-  rate: number | null;
-  amount: number | null;
-  location_text: string;
-  entry_date: string;
-  entry_time: string;
-  payment_mode: string;
-  notes: string;
-};
 
 function rowToEntry(r: Record<string, unknown>): ExpenseEntry {
   return {
