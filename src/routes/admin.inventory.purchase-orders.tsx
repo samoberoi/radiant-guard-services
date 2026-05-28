@@ -281,7 +281,8 @@ function POPage() {
             <tbody className="divide-y divide-border">
               {filtered.map((p) => {
                 const agg = lineAgg.get(p.id) ?? { products: 0, qty: 0 };
-                const canEdit = p.status === "draft" || p.status === "open";
+                const canEdit = p.status !== "cancelled";
+
                 
                 const canDownload = p.status !== "draft" && p.status !== "cancelled";
                 return (
