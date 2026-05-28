@@ -42,7 +42,10 @@ type Vehicle = {
   owner: string;
   notes: string;
   enabled: boolean;
+  service_interval_km: number;
 };
+
+const DEFAULT_SERVICE_INTERVAL_KM = 5000;
 
 const QK = ["admin", "vehicles"] as const;
 const MODULE = "Vehicle Inventory";
@@ -68,6 +71,7 @@ function rowToItem(r: Record<string, unknown>): Vehicle {
     owner: String(r.owner ?? ""),
     notes: String(r.notes ?? ""),
     enabled: Boolean(r.enabled ?? true),
+    service_interval_km: r.service_interval_km == null ? DEFAULT_SERVICE_INTERVAL_KM : Number(r.service_interval_km),
   };
 }
 
@@ -78,7 +82,7 @@ function useVehicles() {
     queryFn: async (): Promise<Vehicle[]> => {
       const { data, error } = await supabase
         .from("vehicles" as never)
-        .select("id,vehicle_id,vehicle_number,name,brand,make,type,year,color,registration_date,engine_number,chassis_number,fuel_type,owner,notes,enabled")
+        .select("id,vehicle_id,vehicle_number,name,brand,make,type,year,color,registration_date,engine_number,chassis_number,fuel_type,owner,notes,enabled,service_interval_km")
         .order("vehicle_id", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
@@ -102,6 +106,7 @@ function useVehicles() {
     owner: p.owner.trim(),
     notes: p.notes.trim(),
     enabled: p.enabled,
+    service_interval_km: p.service_interval_km > 0 ? Math.round(p.service_interval_km) : DEFAULT_SERVICE_INTERVAL_KM,
   });
 
   const addMut = useMutation({
@@ -424,6 +429,7 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
   const [chassisNumber, setChassisNumber] = useState("");
   const [notes, setNotes] = useState("");
   const [enabled, setEnabled] = useState(true);
+  const [serviceIntervalKm, setServiceIntervalKm] = useState<string>(String(DEFAULT_SERVICE_INTERVAL_KM));
   const [saving, setSaving] = useState(false);
 
   useResetOnOpen(open, () => {
@@ -441,6 +447,7 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
     setChassisNumber(initial?.chassis_number ?? "");
     setNotes(initial?.notes ?? "");
     setEnabled(initial?.enabled ?? true);
+    setServiceIntervalKm(String(initial?.service_interval_km ?? DEFAULT_SERVICE_INTERVAL_KM));
   });
 
   return (
@@ -479,6 +486,18 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
           <div className="grid gap-2"><Label>Chassis Number</Label><Input value={chassisNumber} onChange={(e) => setChassisNumber(e.target.value.toUpperCase())} placeholder="Chassis / VIN" /></div>
           <div className="grid gap-2 sm:col-span-2"><Label>Registration Date</Label><Input type="date" value={registrationDate} onChange={(e) => setRegistrationDate(e.target.value)} /></div>
           <div className="grid gap-2 sm:col-span-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
+          <div className="grid gap-2 sm:col-span-2">
+            <Label>Service Interval (km)</Label>
+            <Input
+              type="number"
+              min={500}
+              step={500}
+              value={serviceIntervalKm}
+              onChange={(e) => setServiceIntervalKm(e.target.value)}
+              placeholder="e.g. 5000"
+            />
+            <p className="text-xs text-muted-foreground">Service Manager uses this to auto-calculate the next service due for this vehicle. Defaults to {DEFAULT_SERVICE_INTERVAL_KM.toLocaleString()} km.</p>
+          </div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2 sm:col-span-2">
             <div><div className="text-sm font-medium">Enabled</div><div className="text-xs text-muted-foreground">Show in dropdowns</div></div>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
@@ -499,6 +518,7 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
                 chassis_number: chassisNumber,
                 year: year ? Number(year) : null,
                 registration_date: registrationDate || null,
+                service_interval_km: serviceIntervalKm ? Number(serviceIntervalKm) : DEFAULT_SERVICE_INTERVAL_KM,
               });
               setSaving(false);
               if (err) toast.error(err); else onOpenChange(false);
