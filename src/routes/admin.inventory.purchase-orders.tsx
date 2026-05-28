@@ -489,10 +489,10 @@ function POFormDialog({
           notes,
           subtotal: totals.sub,
           tax_total: totals.tax,
+          grand_total: totals.grand,
           status: targetStatus,
-
-          status,
         } as never).eq("id", initial.id);
+
         if (error) throw error;
         const { error: delErr } = await supabase.from("inv_po_lines" as never).delete().eq("po_id", initial.id);
         if (delErr) throw delErr;
