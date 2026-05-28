@@ -262,9 +262,6 @@ function InsuranceManagerPage() {
         </div>
       </div>
 
-      <div className="mb-4">
-        <AdvancedFilters fields={filterFields} value={conditions} onChange={setConditions} />
-      </div>
 
 
 
