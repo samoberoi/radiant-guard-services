@@ -7,6 +7,7 @@ import { downloadCsv } from "@/lib/csv-export";
 import { PageHeader } from "@/components/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ADVANCE_ALERT_KM, serviceStatusFor } from "@/lib/vehicle-service";
 
@@ -25,6 +26,8 @@ type VehicleRow = {
 
 function ServiceManagerPage() {
   const [search, setSearch] = useState("");
+  const [fuelFilter, setFuelFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "vehicles", "service-manager"],
@@ -38,21 +41,33 @@ function ServiceManagerPage() {
     },
   });
 
+  const fuelOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const v of data ?? []) if (v.fuel_type) set.add(v.fuel_type);
+    return Array.from(set).sort();
+  }, [data]);
+
   const rows = useMemo(() => {
     const list = (data ?? []).filter((v) => v.enabled !== false);
     const q = search.trim().toLowerCase();
-    const filtered = q
-      ? list.filter((v) =>
-          [v.vehicle_number, v.name, v.fuel_type].some((x) =>
-            String(x ?? "").toLowerCase().includes(q),
-          ),
-        )
-      : list;
-    return filtered.map((v) => {
-      const status = serviceStatusFor(v.vehicle_number, v.service_interval_km);
-      return { v, ...status };
+    const filtered = list.filter((v) => {
+      if (fuelFilter !== "all" && (v.fuel_type || "") !== fuelFilter) return false;
+      if (!q) return true;
+      return [v.vehicle_number, v.name, v.fuel_type].some((x) =>
+        String(x ?? "").toLowerCase().includes(q),
+      );
     });
-  }, [data, search]);
+    return filtered
+      .map((v) => {
+        const status = serviceStatusFor(v.vehicle_number, v.service_interval_km);
+        return { v, ...status };
+      })
+      .filter((r) => {
+        if (statusFilter === "due") return r.dueSoon;
+        if (statusFilter === "ok") return !r.dueSoon;
+        return true;
+      });
+  }, [data, search, fuelFilter, statusFilter]);
 
   const dueSoonCount = rows.filter((r) => r.dueSoon).length;
   const totalVehicles = (data ?? []).length;
@@ -81,6 +96,21 @@ function ServiceManagerPage() {
             className="pl-9"
           />
         </div>
+        <Select value={fuelFilter} onValueChange={setFuelFilter}>
+          <SelectTrigger className="h-10 w-full sm:w-40"><SelectValue placeholder="All fuels" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All fuels</SelectItem>
+            {fuelOptions.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="h-10 w-full sm:w-40"><SelectValue placeholder="All status" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All status</SelectItem>
+            <SelectItem value="due">Due soon</SelectItem>
+            <SelectItem value="ok">OK</SelectItem>
+          </SelectContent>
+        </Select>
         <Button
           variant="outline"
           size="sm"

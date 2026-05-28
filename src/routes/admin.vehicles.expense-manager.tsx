@@ -1,7 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useMemo, useRef, useState } from "react";
-import { extractFuelFromPhotos } from "@/lib/fuel-extraction.functions";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download,
@@ -14,7 +12,6 @@ import {
   X,
   Check,
   ChevronsUpDown,
-  Sparkles,
   Wrench,
   Droplets,
   Receipt,
@@ -107,18 +104,6 @@ type ExpenseEntry = {
   created_at: string;
 };
 
-type FuelExtractionResult = {
-  fuel_type: string;
-  odometer_km: number | null;
-  quantity: number | null;
-  rate: number | null;
-  amount: number | null;
-  location_text: string;
-  entry_date: string;
-  entry_time: string;
-  payment_mode: string;
-  notes: string;
-};
 
 function rowToEntry(r: Record<string, unknown>): ExpenseEntry {
   return {
@@ -253,7 +238,7 @@ function ExpenseManagerPage() {
     <div>
       <PageHeader
         title="Expense Manager"
-        description="Log vehicle expenses — fuel, maintenance, washing, repairs, parking, tolls. For fuel, auto-fill from photos."
+        description="Log vehicle expenses — fuel, maintenance, washing, repairs, parking, tolls. Upload proof photos with each entry."
         crumbs={[{ label: "Vehicles", to: "/admin/vehicles" }, { label: "Expense Manager" }]}
       />
 
@@ -515,14 +500,6 @@ function ProofThumb({ url, label }: { url: string; label: string }) {
 
 type Vehicle = { id: string; vehicle_number: string; name: string };
 
-async function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(new Error("Failed to read file"));
-    r.readAsDataURL(file);
-  });
-}
 
 function AddEntryDialog({
   open,
@@ -557,7 +534,7 @@ function AddEntryDialog({
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [fillingFile, setFillingFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
-  const [extracting, setExtracting] = useState(false);
+  
   const [vehOpen, setVehOpen] = useState(false);
 
   const isFuel = expenseType === "fuel";
@@ -613,48 +590,7 @@ function AddEntryDialog({
     );
   }
 
-  const extractFn = useServerFn(extractFuelFromPhotos);
 
-  async function handleAutoFill() {
-    const items: Array<{ label: "odometer" | "pump" | "receipt" | "filling"; file: File }> = [];
-    if (odoFile) items.push({ label: "odometer", file: odoFile });
-    if (pumpFile) items.push({ label: "pump", file: pumpFile });
-    if (receiptFile) items.push({ label: "receipt", file: receiptFile });
-    if (fillingFile) items.push({ label: "filling", file: fillingFile });
-    if (items.length === 0) {
-      toast.error("Upload at least one photo (receipt or pump works best)");
-      return;
-    }
-    setExtracting(true);
-    try {
-      const applyExtraction = (res: FuelExtractionResult) => {
-        if (res.fuel_type) setFuelType(res.fuel_type);
-        if (res.odometer_km != null) setOdometer(String(res.odometer_km));
-        if (res.quantity != null) setQuantity(String(res.quantity));
-        if (res.rate != null) setRate(String(res.rate));
-        if (res.amount != null) setAmount(String(res.amount));
-        else if (res.quantity != null && res.rate != null) {
-          setAmount((res.quantity * res.rate).toFixed(2));
-        }
-        if (res.location_text) setLocationText(res.location_text);
-        if (res.entry_date) setEntryDate(res.entry_date);
-        if (res.entry_time) setEntryTime(res.entry_time);
-        if (res.payment_mode) setPaymentMode(res.payment_mode);
-        if (res.notes && !notes) setNotes(res.notes);
-      };
-
-      const photos = await Promise.all(
-        items.map(async (it) => ({ label: it.label, dataUrl: await fileToDataUrl(it.file) })),
-      );
-      const res = await extractFn({ data: { photos } });
-      applyExtraction(res);
-      toast.success("Auto-filled from photos — please verify");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Auto-fill failed");
-    } finally {
-      setExtracting(false);
-    }
-  }
 
   async function uploadProof(file: File | null, label: string): Promise<string> {
     if (!file) return "";
@@ -991,24 +927,12 @@ function AddEntryDialog({
 
           {isFuel ? (
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label>
-                  Photos{" "}
-                  <span className="text-xs text-muted-foreground">
-                    (odometer, pump, receipt required · filling optional)
-                  </span>
-                </Label>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  onClick={handleAutoFill}
-                  disabled={extracting || (!odoFile && !pumpFile && !receiptFile && !fillingFile)}
-                >
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  {extracting ? "Extracting…" : "Auto-fill from photos"}
-                </Button>
-              </div>
+              <Label>
+                Photos{" "}
+                <span className="text-xs text-muted-foreground">
+                  (odometer, pump, receipt required · filling optional)
+                </span>
+              </Label>
               <div className="grid gap-3 sm:grid-cols-4">
                 <FileTile label="Odometer *" file={odoFile} onChange={setOdoFile} />
                 <FileTile label="Pump / units *" file={pumpFile} onChange={setPumpFile} />
