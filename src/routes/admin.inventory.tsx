@@ -29,49 +29,6 @@ function InventoryLayout() {
 }
 
 function InventoryDashboard() {
-  const itemsQ = useQuery({
-    queryKey: ["inv", "items-count"],
-    queryFn: async () => {
-      const { count, error } = await supabase.from("inv_items" as never).select("*", { count: "exact", head: true });
-      if (error) throw error;
-      return count ?? 0;
-    },
-  });
-  const vendorsQ = useQuery({
-    queryKey: ["inv", "vendors-count"],
-    queryFn: async () => {
-      const { count, error } = await supabase.from("inv_vendors" as never).select("*", { count: "exact", head: true }).eq("enabled", true);
-      if (error) throw error;
-      return count ?? 0;
-    },
-  });
-  const warehousesQ = useQuery({
-    queryKey: ["inv", "warehouses-count"],
-    queryFn: async () => {
-      const { count, error } = await supabase.from("inv_warehouses" as never).select("*", { count: "exact", head: true }).eq("enabled", true);
-      if (error) throw error;
-      return count ?? 0;
-    },
-  });
-  const balancesQ = useQuery({
-    queryKey: ["inv", "balances-sum"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("inv_stock_balances" as never).select("location_type,qty");
-      if (error) throw error;
-      const rows = (data as unknown as { location_type: string; qty: number }[]) ?? [];
-      const tally: Record<string, number> = { warehouse: 0, branch: 0, field_officer: 0, guard: 0 };
-      for (const r of rows) tally[r.location_type] = (tally[r.location_type] ?? 0) + Number(r.qty ?? 0);
-      return tally;
-    },
-  });
-
-  const totalField = (balancesQ.data?.field_officer ?? 0) + (balancesQ.data?.guard ?? 0);
-  const totalAll =
-    (balancesQ.data?.warehouse ?? 0) +
-    (balancesQ.data?.branch ?? 0) +
-    (balancesQ.data?.field_officer ?? 0) +
-    (balancesQ.data?.guard ?? 0);
-
   const steps = [
     { n: 1, t: "Purchase Order", d: "Order from vendor", to: "/admin/inventory/purchase-orders", icon: ClipboardList },
     { n: 2, t: "Goods Receipt", d: "Verify challan, stock in", to: "/admin/inventory/goods-receipts", icon: PackageCheck },
@@ -80,15 +37,7 @@ function InventoryDashboard() {
     { n: 5, t: "Write-off", d: "Lost, damaged, fixes", to: "/admin/inventory/write-offs", icon: AlertOctagon },
   ] as const;
 
-  const locLabels: Record<string, { label: string; icon: React.ComponentType<{ className?: string }>; tint: string }> = {
-    warehouse: { label: "Warehouse", icon: Warehouse, tint: "from-sky-500/15 to-sky-500/5 text-sky-600 dark:text-sky-400" },
-    branch: { label: "Branch", icon: Building2, tint: "from-violet-500/15 to-violet-500/5 text-violet-600 dark:text-violet-400" },
-    field_officer: { label: "Field Officer", icon: Users, tint: "from-amber-500/15 to-amber-500/5 text-amber-600 dark:text-amber-400" },
-    guard: { label: "Guard", icon: Shield, tint: "from-emerald-500/15 to-emerald-500/5 text-emerald-600 dark:text-emerald-400" },
-  };
-
   const modules = [
-    { to: "/admin/inventory/dashboard", label: "Owner Dashboard", hint: "Low stock, leaderboards, holdings", icon: LineChart, group: "Insights" },
     { to: "/admin/inventory/stock", label: "Stock Report", hint: "Live balances across the chain", icon: BarChart3, group: "Insights" },
     { to: "/admin/inventory/purchase-orders", label: "Purchase Orders", hint: "Order from vendors", icon: ClipboardList, group: "Procurement" },
     { to: "/admin/inventory/goods-receipts", label: "Goods Receipts", hint: "Receive into warehouse", icon: PackageCheck, group: "Procurement" },
@@ -105,23 +54,18 @@ function InventoryDashboard() {
   const groups = ["Insights", "Procurement", "Movement", "Catalog"] as const;
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
-        title="Inventory"
-        description="End-to-end chain of custody from vendor → warehouse → branch → field officer → guard."
+        title="Inventory Command Center"
+        description="End-to-end chain of custody from vendor → warehouse → branch → field officer → guard. Live KPIs above, modules below."
         crumbs={[{ label: "Inventory" }]}
       />
 
-      {/* Hero stats */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="SKUs" value={itemsQ.data ?? 0} icon={PackageOpen} to="/admin/inventory/items" tint="from-sky-500/20 via-sky-500/5 to-transparent" accent="text-sky-600 dark:text-sky-400" />
-        <StatCard label="Active Vendors" value={vendorsQ.data ?? 0} icon={ShoppingBag} to="/admin/inventory/vendors" tint="from-violet-500/20 via-violet-500/5 to-transparent" accent="text-violet-600 dark:text-violet-400" />
-        <StatCard label="Warehouses" value={warehousesQ.data ?? 0} icon={Warehouse} to="/admin/inventory/warehouses" tint="from-amber-500/20 via-amber-500/5 to-transparent" accent="text-amber-600 dark:text-amber-400" />
-        <StatCard label="Items in Field" value={totalField} icon={Boxes} to="/admin/inventory/stock" tint="from-emerald-500/20 via-emerald-500/5 to-transparent" accent="text-emerald-600 dark:text-emerald-400" />
-      </div>
+      {/* Owner dashboard — KPIs, charts, holdings, activity */}
+      <InventoryOwnerDashboard />
 
       {/* Procurement workflow — visual rail */}
-      <div className="mt-6 overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-accent/10 via-card to-card">
+      <div className="overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-accent/10 via-card to-card">
         <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
           <div>
             <div className="font-display text-sm font-bold tracking-tight">Procurement workflow</div>
@@ -158,49 +102,8 @@ function InventoryDashboard() {
         </div>
       </div>
 
-      {/* Stock by location — gradient cards with bar */}
-      <div className="mt-6 rounded-2xl border border-border bg-card p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Boxes className="h-4 w-4 text-accent" />
-            <div className="font-display text-sm font-bold tracking-tight">Stock by location</div>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            Total <span className="font-display font-bold tabular-nums text-foreground">{totalAll.toLocaleString("en-IN")}</span> units
-          </div>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {(["warehouse", "branch", "field_officer", "guard"] as const).map((loc) => {
-            const meta = locLabels[loc];
-            const value = balancesQ.data?.[loc] ?? 0;
-            const pct = totalAll > 0 ? Math.round((value / totalAll) * 100) : 0;
-            const Icon = meta.icon;
-            return (
-              <div key={loc} className={cn("relative overflow-hidden rounded-xl border border-border/60 bg-gradient-to-br p-4", meta.tint)}>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{meta.label}</div>
-                    <div className="mt-1 font-display text-2xl font-bold tabular-nums text-foreground">
-                      {value.toLocaleString("en-IN")}
-                    </div>
-                  </div>
-                  <Icon className={cn("h-5 w-5", meta.tint.includes("text-") ? "" : "text-accent")} />
-                </div>
-                <div className="mt-3 flex items-center gap-2">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-background/60">
-                    <div className="h-full rounded-full bg-current opacity-80" style={{ width: `${pct}%` }} />
-                  </div>
-                  <span className="text-[10px] font-bold tabular-nums text-muted-foreground">{pct}%</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Modules grouped */}
-      <div className="mt-6 space-y-5">
+      <div className="space-y-5">
         {groups.map((g) => (
           <div key={g}>
             <div className="mb-2 flex items-center gap-2">
@@ -231,43 +134,5 @@ function InventoryDashboard() {
         ))}
       </div>
     </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  to,
-  tint,
-  accent,
-}: {
-  label: string;
-  value: number;
-  icon: React.ComponentType<{ className?: string }>;
-  to: string;
-  tint: string;
-  accent: string;
-}) {
-  return (
-    <Link
-      to={to}
-      className={cn(
-        "group relative overflow-hidden rounded-2xl border border-border bg-card p-5 transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-md",
-      )}
-    >
-      <div className={cn("pointer-events-none absolute inset-0 bg-gradient-to-br opacity-80", tint)} />
-      <div className="relative flex items-start justify-between">
-        <div>
-          <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
-          <div className="mt-2 font-display text-3xl font-bold tracking-tight tabular-nums">
-            {value.toLocaleString("en-IN")}
-          </div>
-        </div>
-        <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl bg-background/70 backdrop-blur-sm transition-transform group-hover:scale-105", accent)}>
-          <Icon className="h-5 w-5" />
-        </div>
-      </div>
-    </Link>
   );
 }
