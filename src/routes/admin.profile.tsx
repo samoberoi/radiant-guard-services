@@ -22,8 +22,10 @@ import {
   Users,
   UserCheck,
   Loader2,
+  Wallet,
   X,
 } from "lucide-react";
+import { computeWages, fmtINR, type ContractResourceLike } from "@/lib/payroll-calc";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -344,6 +346,91 @@ function ProfilePage() {
         .order("signed_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as SignedDocRow[];
+    },
+  });
+
+  const salaryQ = useQuery({
+    queryKey: ["my-salary-slip", profile?.id, profile?.unit_id, profile?.designation_id],
+    enabled: !!profile?.id && !!profile?.unit_id && !!profile?.designation_id,
+    queryFn: async () => {
+      // Find active client contract for this unit
+      const { data: contracts, error: cErr } = await supabase
+        .from("client_contracts")
+        .select("id, contract_code, start_date, end_date, status, unit_id, record_type")
+        .eq("unit_id", profile!.unit_id!)
+        .eq("record_type", "client")
+        .eq("status", "active")
+        .order("start_date", { ascending: false });
+      if (cErr) throw cErr;
+      const contract = (contracts ?? [])[0];
+      if (!contract) return null;
+
+      const { data: res, error: rErr } = await supabase
+        .from("contract_resources")
+        .select(
+          "id, gross, components, deductions, benefits, employer_contributions, designation_id, payroll_day_base_id",
+        )
+        .eq("contract_id", contract.id)
+        .eq("designation_id", profile!.designation_id!)
+        .limit(1)
+        .maybeSingle();
+      if (rErr) throw rErr;
+      if (!res) return { contract, resource: null as null, wages: null as null, pdb: null as null };
+
+      let pdb: any = null;
+      if (res.payroll_day_base_id) {
+        const { data } = await supabase
+          .from("payroll_day_bases")
+          .select("id, method, fixed_days, weekly_off_day")
+          .eq("id", res.payroll_day_base_id)
+          .maybeSingle();
+        pdb = data;
+      }
+
+      const now = new Date();
+      const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const periodEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      const periodDayCount = periodEnd.getDate();
+
+      const resourceLike: ContractResourceLike = {
+        designationId: res.designation_id!,
+        components: (res.components as any) ?? [],
+        benefits: (res.benefits as any) ?? [],
+        deductions: (res.deductions as any) ?? [],
+        employerContributions: (res.employer_contributions as any) ?? [],
+        payrollDayBase: pdb
+          ? {
+              method: pdb.method,
+              fixedDays: pdb.fixed_days,
+              weeklyOffDay: pdb.weekly_off_day,
+            }
+          : null,
+      };
+
+      // Default slip: assume full attendance (tDays = baseDays)
+      // First call with tDays=0 to resolve baseDays, then recompute.
+      const probe = computeWages(
+        { pDays: 0, otHours: 0, otDays: 0, phDays: 0, otherPaidDays: 0, tDays: 0 },
+        resourceLike,
+        periodDayCount,
+      );
+      const wages = computeWages(
+        { pDays: probe.baseDays, otHours: 0, otDays: 0, phDays: 0, otherPaidDays: 0, tDays: probe.baseDays },
+        resourceLike,
+        periodDayCount,
+      );
+
+      return {
+        contract,
+        resource: res,
+        wages,
+        period: {
+          start: periodStart.toISOString().slice(0, 10),
+          end: periodEnd.toISOString().slice(0, 10),
+          label: periodStart.toLocaleString("en-IN", { month: "long", year: "numeric" }),
+          days: periodDayCount,
+        },
+      };
     },
   });
 
@@ -881,6 +968,152 @@ function ProfilePage() {
           )}
         </Section>
       </div>
+
+      <Section title="Salary Slip" icon={Wallet}>
+        {salaryQ.isLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+          </div>
+        ) : !salaryQ.data ? (
+          <p className="text-sm text-muted-foreground">
+            No active contract or salary mapping found for your unit and designation. Ask your admin to map a resource for{" "}
+            <span className="font-semibold">{lookups?.designation?.name || "your designation"}</span>.
+          </p>
+        ) : !salaryQ.data.resource || !salaryQ.data.wages ? (
+          <p className="text-sm text-muted-foreground">
+            Contract <span className="font-mono">{salaryQ.data.contract.contract_code}</span> exists for your unit but no salary resource is mapped for your designation yet.
+          </p>
+        ) : (
+          (() => {
+            const w = salaryQ.data.wages;
+            const c = salaryQ.data.contract;
+            const p = salaryQ.data.period!;
+            return (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-secondary/40 p-4">
+                  <div>
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Pay Period
+                    </div>
+                    <div className="text-sm font-semibold">{p.label}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {p.start} → {p.end} · {p.days} days
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Contract
+                    </div>
+                    <div className="font-mono text-xs">{c.contract_code}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {lookups?.unit?.name || "—"}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                      Net Pay
+                    </div>
+                    <div className="text-xl font-bold text-accent">{fmtINR(w.netPay)}</div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-xl border border-border p-4">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Earnings
+                    </div>
+                    <ul className="space-y-1.5 text-sm">
+                      {w.components.map((c, i) => (
+                        <li key={i} className="flex justify-between">
+                          <span>{c.name}</span>
+                          <span className="font-mono">{fmtINR(c.amount)}</span>
+                        </li>
+                      ))}
+                      {w.benefits.length > 0 && (
+                        <>
+                          <li className="pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                            Benefits
+                          </li>
+                          {w.benefits.map((b, i) => (
+                            <li key={`b-${i}`} className="flex justify-between text-muted-foreground">
+                              <span>{b.name}</span>
+                              <span className="font-mono">{fmtINR(b.amount)}</span>
+                            </li>
+                          ))}
+                        </>
+                      )}
+                      <li className="flex justify-between border-t border-border pt-2 font-semibold">
+                        <span>Gross Earned</span>
+                        <span className="font-mono">{fmtINR(w.earnedGross)}</span>
+                      </li>
+                    </ul>
+                  </div>
+
+                  <div className="rounded-xl border border-border p-4">
+                    <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Deductions
+                    </div>
+                    {w.deductions.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No deductions configured.</p>
+                    ) : (
+                      <ul className="space-y-1.5 text-sm">
+                        {w.deductions.map((d, i) => (
+                          <li key={i} className="flex justify-between">
+                            <span>{d.name}</span>
+                            <span className="font-mono">{fmtINR(d.amount)}</span>
+                          </li>
+                        ))}
+                        <li className="flex justify-between border-t border-border pt-2 font-semibold">
+                          <span>Total Deductions</span>
+                          <span className="font-mono">{fmtINR(w.totalDeductions)}</span>
+                        </li>
+                      </ul>
+                    )}
+                    {w.employerContributions.length > 0 && (
+                      <div className="mt-4">
+                        <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          Employer Contributions
+                        </div>
+                        <ul className="space-y-1.5 text-sm text-muted-foreground">
+                          {w.employerContributions.map((e, i) => (
+                            <li key={i} className="flex justify-between">
+                              <span>{e.name}</span>
+                              <span className="font-mono">{fmtINR(e.amount)}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/40 bg-accent/5 p-4 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Per-day rate:</span>{" "}
+                    <span className="font-semibold">{fmtINR(w.perDayRate)}</span>{" "}
+                    <span className="text-xs text-muted-foreground">
+                      · base {w.baseDays} days
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Employer cost:</span>{" "}
+                    <span className="font-semibold">{fmtINR(w.employerCost)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Net Pay:</span>{" "}
+                    <span className="text-base font-bold text-accent">{fmtINR(w.netPay)}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Default slip based on contract mapping for a full month. Actual payroll uses attendance from the Payroll module.
+                </p>
+              </div>
+            );
+          })()
+        )}
+      </Section>
+
+
 
       <Section title="Signed Documents" icon={FileSignature}>
         {docsQ.isLoading ? (
