@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -13,10 +13,24 @@ import {
   ShieldCheck,
   Upload,
   Loader2,
+  X,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {
@@ -30,6 +44,101 @@ import { logActivity } from "@/lib/activity-log";
 export const Route = createFileRoute("/admin/profile")({
   component: ProfilePage,
 });
+
+function CameraCaptureDialog({
+  open,
+  onOpenChange,
+  onCapture,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onCapture: (file: File) => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [error, setError] = useState<string>("");
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setError("");
+    setReady(false);
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "user" },
+          audio: false,
+        });
+        if (cancelled) {
+          s.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = s;
+        if (videoRef.current) {
+          videoRef.current.srcObject = s;
+          await videoRef.current.play();
+          setReady(true);
+        }
+      } catch (e: any) {
+        setError(e?.message || "Camera not available");
+      }
+    })();
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+  }, [open]);
+
+  function snap() {
+    const v = videoRef.current;
+    if (!v) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = v.videoWidth;
+    canvas.height = v.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(v, 0, 0);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `photo-${Date.now()}.jpg`, { type: "image/jpeg" });
+        onCapture(file);
+        onOpenChange(false);
+      },
+      "image/jpeg",
+      0.92,
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Take a photo</DialogTitle>
+        </DialogHeader>
+        <div className="aspect-video w-full overflow-hidden rounded-lg bg-black">
+          {error ? (
+            <div className="flex h-full items-center justify-center p-4 text-center text-sm text-destructive">
+              {error}
+            </div>
+          ) : (
+            <video ref={videoRef} className="h-full w-full object-cover" muted playsInline />
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <X className="mr-1.5 h-4 w-4" /> Cancel
+          </Button>
+          <Button onClick={snap} disabled={!ready || !!error}>
+            <Camera className="mr-1.5 h-4 w-4" /> Capture
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 type ProfileData = {
   id: string;
