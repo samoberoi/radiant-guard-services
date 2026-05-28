@@ -447,6 +447,7 @@ function VehicleFormDialog({ open, onOpenChange, title, initial, onSubmit }: {
     setChassisNumber(initial?.chassis_number ?? "");
     setNotes(initial?.notes ?? "");
     setEnabled(initial?.enabled ?? true);
+    setServiceIntervalKm(String(initial?.service_interval_km ?? DEFAULT_SERVICE_INTERVAL_KM));
   });
 
   return (
