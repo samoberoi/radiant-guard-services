@@ -12,7 +12,7 @@ const PATH_FOR: Record<string,string> = {
   organizations: "/admin/customers",
   contracts: "/admin/contracts/client-contracts",
   employees: "/admin/employees",
-  vehicles: "/admin/vehicles/inventory",
+  vehicles: "/admin/vehicles",
   inventory: "/admin/inventory",
   attendance: "/admin/attendance",
   payroll: "/admin/payroll",
