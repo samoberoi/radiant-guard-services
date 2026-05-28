@@ -17,7 +17,7 @@ import { nextSeq, fmtNumber, postMovements, statusBadgeClass } from "@/lib/inv-h
 
 export const Route = createFileRoute("/admin/inventory/goods-receipts")({ component: GRNPage });
 
-const MODULE = "Inventory Goods Receipts";
+const MODULE = "Inventory Delivery Challans";
 const ENTITY = "inv_goods_receipts";
 
 type GRN = {
@@ -67,10 +67,52 @@ function GRNPage() {
     },
   });
 
+  // Aggregate line totals per GRN (products count + total value using PO unit_price)
+  const { data: lineAgg = new Map<string, { products: number; qty: number; value: number }>() } = useQuery({
+    queryKey: ["inv", "grn-line-agg"],
+    queryFn: async () => {
+      const pageSize = 1000;
+      let from = 0;
+      const all: { grn_id: string; item_id: string; accepted_qty: number; rejected_qty: number; po_line_id: string | null }[] = [];
+      while (true) {
+        const { data, error } = await supabase
+          .from("inv_goods_receipt_lines" as never)
+          .select("grn_id,item_id,accepted_qty,rejected_qty,po_line_id")
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const rows = (data as unknown as typeof all) ?? [];
+        all.push(...rows);
+        if (rows.length < pageSize) break;
+        from += pageSize;
+      }
+      // Fetch unit prices for all referenced po_lines
+      const polIds = Array.from(new Set(all.map((r) => r.po_line_id).filter(Boolean))) as string[];
+      const priceMap = new Map<string, number>();
+      for (let i = 0; i < polIds.length; i += 200) {
+        const chunk = polIds.slice(i, i + 200);
+        const { data: pls } = await supabase.from("inv_po_lines" as never).select("id,unit_price").in("id", chunk);
+        for (const r of (pls as unknown as { id: string; unit_price: number }[]) ?? []) {
+          priceMap.set(r.id, Number(r.unit_price ?? 0));
+        }
+      }
+      const map = new Map<string, { products: number; qty: number; value: number; _items: Set<string> }>();
+      for (const r of all) {
+        const cur = map.get(r.grn_id) ?? { products: 0, qty: 0, value: 0, _items: new Set<string>() };
+        const qty = Number(r.accepted_qty ?? 0) + Number(r.rejected_qty ?? 0);
+        cur.qty += qty;
+        cur.value += qty * (r.po_line_id ? priceMap.get(r.po_line_id) ?? 0 : 0);
+        cur._items.add(r.item_id);
+        map.set(r.grn_id, cur);
+      }
+      const out = new Map<string, { products: number; qty: number; value: number }>();
+      for (const [k, v] of map) out.set(k, { products: v._items.size, qty: v.qty, value: v.value });
+      return out;
+    },
+  });
+
   const vMap = useMemo(() => new Map(vendors.map((v) => [v.id, v.name])), [vendors]);
   const wMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w.name])), [warehouses]);
   const poMap = useMemo(() => new Map(pos.map((p) => [p.id, p])), [pos]);
-
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [viewing, setViewing] = useState<GRN | null>(null);
@@ -100,15 +142,15 @@ function GRNPage() {
 
   return (
     <div>
-      <PageHeader title="Goods Receipts (GRN)" description="Receive vendor deliveries against a PO. Posted GRNs increase warehouse stock." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Goods Receipts" }]} />
+      <PageHeader title="Delivery Challans" description="Receive supplier deliveries against a Purchase Order. Posted challans increase warehouse stock." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Delivery Challans" }]} />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search GRN, invoice…" className="h-10 rounded-lg pl-9" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search challan, invoice…" className="h-10 rounded-lg pl-9" />
         </div>
         <Button onClick={() => setOpen(true)} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
-          <Plus className="mr-1.5 h-4 w-4" />New GRN
+          <Plus className="mr-1.5 h-4 w-4" />New Delivery Challan
         </Button>
       </div>
 
@@ -117,40 +159,47 @@ function GRNPage() {
           <table className="w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
-                <th className="px-5 py-3">GRN #</th>
+                <th className="px-5 py-3">Challan #</th>
                 <th className="px-5 py-3">PO #</th>
-                <th className="px-5 py-3">Vendor</th>
+                <th className="px-5 py-3">Supplier</th>
                 <th className="px-5 py-3">Warehouse</th>
-                <th className="px-5 py-3">Date</th>
-                <th className="px-5 py-3">Invoice #</th>
+                <th className="px-5 py-3">Delivery Date</th>
+                <th className="px-5 py-3 text-right">Products</th>
+                <th className="px-5 py-3 text-right">Total Qty</th>
+                <th className="px-5 py-3 text-right">Total Value</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((g) => (
+              {filtered.map((g) => {
+                const agg = lineAgg.get(g.id) ?? { products: 0, qty: 0, value: 0 };
+                return (
                 <tr key={g.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs">{g.grn_number}</td>
                   <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{g.po_id ? poMap.get(g.po_id)?.po_number ?? "—" : "—"}</td>
                   <td className="px-5 py-3">{g.vendor_id ? vMap.get(g.vendor_id) ?? "—" : "—"}</td>
                   <td className="px-5 py-3">{wMap.get(g.warehouse_id) ?? "—"}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{g.receipt_date}</td>
-                  <td className="px-5 py-3 text-xs">{g.vendor_invoice_number || "—"}</td>
+                  <td className="px-5 py-3 text-right tabular-nums">{agg.products}</td>
+                  <td className="px-5 py-3 text-right tabular-nums">{agg.qty}</td>
+                  <td className="px-5 py-3 text-right tabular-nums">₹{agg.value.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
                   <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(g.status)}`}>{g.status}</span></td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setViewing(g)}><Eye className="h-4 w-4" /></Button>
                       {g.status !== "received" && (
                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={async () => {
-                          if (!(await confirmAction({ title: "Delete GRN?", description: `Delete ${g.grn_number}?`, confirmText: "Delete" }))) return;
+                          if (!(await confirmAction({ title: "Delete Delivery Challan?", description: `Delete ${g.grn_number}?`, confirmText: "Delete" }))) return;
                           try { await deleteMut.mutateAsync(g); toast.success("Deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
                         }}><Trash2 className="h-4 w-4" /></Button>
                       )}
                     </div>
                   </td>
                 </tr>
-              ))}
-              {!filtered.length && <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground"><PackageCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No goods receipts yet.</td></tr>}
+                );
+              })}
+              {!filtered.length && <tr><td colSpan={10} className="px-5 py-12 text-center text-sm text-muted-foreground"><PackageCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No delivery challans yet.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -303,7 +352,7 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
       const newStatus = allReceived ? "received" : anyReceived ? "partially_received" : "open";
       await supabase.from("inv_purchase_orders" as never).update({ status: newStatus } as never).eq("id", po.id);
 
-      void logActivity({ module: "Inventory Goods Receipts", action: "create", entityType: "inv_goods_receipts", entityId: grnId, entityLabel: grn_number });
+      void logActivity({ module: "Inventory Delivery Challans", action: "create", entityType: "inv_goods_receipts", entityId: grnId, entityLabel: grn_number });
       toast.success(`GRN ${grn_number} posted — stock updated`);
       onSaved();
       onOpenChange(false);
@@ -317,7 +366,7 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
-        <DialogHeader><DialogTitle>New Goods Receipt</DialogTitle><DialogDescription>Receive items against a Purchase Order.</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>New Delivery Challan</DialogTitle><DialogDescription>Receive items against a Purchase Order.</DialogDescription></DialogHeader>
         <div className="grid gap-4 py-2">
           <div className="grid gap-2"><Label>Purchase Order</Label>
             <Select value={poId} onValueChange={loadPo}>
@@ -365,7 +414,7 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
-          <Button onClick={save} disabled={saving || !poId}>{saving ? "Posting…" : "Post GRN"}</Button>
+          <Button onClick={save} disabled={saving || !poId}>{saving ? "Posting…" : "Post Challan"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -387,7 +436,7 @@ function GRNViewDialog({ open, onOpenChange, grn }: { open: boolean; onOpenChang
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
-        <DialogHeader><DialogTitle>GRN {grn?.grn_number}</DialogTitle><DialogDescription>Posted on {grn?.receipt_date}</DialogDescription></DialogHeader>
+        <DialogHeader><DialogTitle>Delivery Challan {grn?.grn_number}</DialogTitle><DialogDescription>Posted on {grn?.receipt_date}</DialogDescription></DialogHeader>
         <div className="overflow-x-auto rounded-xl border border-border">
           <table className="w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">

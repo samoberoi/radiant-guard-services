@@ -31,7 +31,7 @@ function InventoryLayout() {
 function InventoryDashboard() {
   const steps = [
     { n: 1, t: "Purchase Order", d: "Order from supplier", to: "/admin/inventory/purchase-orders", icon: ClipboardList },
-    { n: 2, t: "Goods Receipt", d: "Verify challan, stock in", to: "/admin/inventory/goods-receipts", icon: PackageCheck },
+    { n: 2, t: "Delivery Challan", d: "Verify delivery, stock in", to: "/admin/inventory/goods-receipts", icon: PackageCheck },
     { n: 3, t: "Transfer", d: "Warehouse → Branch", to: "/admin/inventory/transfers", icon: Truck },
     { n: 4, t: "Issuance", d: "Branch → FO → Guard", to: "/admin/inventory/issuances", icon: UserCheck },
     { n: 5, t: "Write-off", d: "Lost, damaged, fixes", to: "/admin/inventory/write-offs", icon: AlertOctagon },
@@ -40,7 +40,7 @@ function InventoryDashboard() {
   const modules = [
     { to: "/admin/inventory/stock", label: "Stock Report", hint: "Live balances across the chain", icon: BarChart3, group: "Insights" },
     { to: "/admin/inventory/purchase-orders", label: "Purchase Orders", hint: "Order from suppliers", icon: ClipboardList, group: "Procurement" },
-    { to: "/admin/inventory/goods-receipts", label: "Goods Receipts", hint: "Receive into warehouse", icon: PackageCheck, group: "Procurement" },
+    { to: "/admin/inventory/goods-receipts", label: "Delivery Challans", hint: "Receive into warehouse", icon: PackageCheck, group: "Procurement" },
     { to: "/admin/inventory/transfers", label: "Transfers", hint: "Warehouse ↔ Branch", icon: Truck, group: "Movement" },
     { to: "/admin/inventory/issuances", label: "Issuances", hint: "Branch → FO → Guard", icon: UserCheck, group: "Movement" },
     { to: "/admin/inventory/write-offs", label: "Write-offs", hint: "Lost / damaged", icon: AlertOctagon, group: "Movement" },

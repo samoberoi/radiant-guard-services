@@ -110,7 +110,7 @@ export const RBAC_MODULES: ModuleDef[] = [
       { key: "vendors",           label: "Suppliers",           path: "/admin/inventory/vendors",         icon: ShoppingBag },
       { key: "warehouses",        label: "Warehouses",        path: "/admin/inventory/warehouses",      icon: Warehouse },
       { key: "purchase_orders",   label: "Purchase Orders",   path: "/admin/inventory/purchase-orders", icon: FileText },
-      { key: "goods_receipts",    label: "Goods Receipts",    path: "/admin/inventory/goods-receipts",  icon: ClipboardList },
+      { key: "goods_receipts",    label: "Delivery Challans", path: "/admin/inventory/goods-receipts",  icon: ClipboardList },
       { key: "transfers",         label: "Transfers",         path: "/admin/inventory/transfers",       icon: Boxes },
       { key: "issuances",         label: "Issuances",         path: "/admin/inventory/issuances",       icon: UserPlus },
       { key: "write_offs",        label: "Write-offs",        path: "/admin/inventory/write-offs",      icon: ShieldCheck },
