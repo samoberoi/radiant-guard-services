@@ -259,7 +259,7 @@ function ProfilePage() {
       const { data, error } = await supabase
         .from("candidates")
         .select(
-          "id,full_name,employee_code,candidate_code,status,role_key,photo_url,aadhaar_image_url,pan_image_url,signature_url,aadhaar_number,pan_number,mobile,email,date_of_birth,gender,marital_status,present_address1,present_address2,present_city,present_state,present_pincode,permanent_address1,permanent_city,permanent_state,permanent_pincode,bank_account_holder,bank_account_number,bank_ifsc,bank_name,bank_branch,preferred_joining_date,approved_at,unit_id,designation_id,documents,identification_proofs,assigned_asset_ids,physical_health",
+          "id,full_name,employee_code,candidate_code,status,role_key,photo_url,aadhaar_image_url,pan_image_url,signature_url,aadhaar_number,pan_number,mobile,email,date_of_birth,gender,marital_status,present_address1,present_address2,present_city,present_state,present_pincode,permanent_address1,permanent_city,permanent_state,permanent_pincode,bank_account_holder,bank_account_number,bank_ifsc,bank_name,bank_branch,bank_account_type,emergency_contact_name,emergency_contact_relation,emergency_contact_mobile,preferred_joining_date,approved_at,unit_id,designation_id,documents,identification_proofs,assigned_asset_ids,physical_health,contacts,nominations,references,languages,experiences,educations,extra_curricular,criminal_history,other_info",
         )
         .eq("mobile", phone)
         .order("created_at", { ascending: false })
@@ -268,16 +268,23 @@ function ProfilePage() {
       if (error) throw error;
       if (!data) return null;
       const row = data as any;
+      const arr = (v: any) => (Array.isArray(v) ? v : []);
       return {
         ...row,
         blood_group: row.physical_health?.blood_group ?? "",
-        documents: Array.isArray(row.documents) ? row.documents : [],
-        identification_proofs: Array.isArray(row.identification_proofs)
-          ? row.identification_proofs
-          : [],
-        assigned_asset_ids: Array.isArray(row.assigned_asset_ids)
-          ? row.assigned_asset_ids
-          : [],
+        physical_health_full: row.physical_health ?? {},
+        other_info: row.other_info ?? {},
+        documents: arr(row.documents),
+        identification_proofs: arr(row.identification_proofs),
+        assigned_asset_ids: arr(row.assigned_asset_ids),
+        contacts: arr(row.contacts),
+        nominations: arr(row.nominations),
+        references: arr(row.references),
+        languages: arr(row.languages),
+        experiences: arr(row.experiences),
+        educations: arr(row.educations),
+        extra_curricular: arr(row.extra_curricular),
+        criminal_history: row.criminal_history ?? { has_history: false, incidents: [] },
       } as ProfileData;
     },
   });
