@@ -18,8 +18,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useResetOnOpen, useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
 import { MiniStat } from "@/components/MiniStat";
-import { AdvancedFilters } from "@/components/AdvancedFilters";
-import { applyFilters, type FilterCondition, type FilterField } from "@/lib/advanced-filters";
 
 type StatusFilter = "all" | "expired" | "renewal" | "due" | "active";
 const STATUS_VALUES: StatusFilter[] = ["all", "expired", "renewal", "due", "active"];
