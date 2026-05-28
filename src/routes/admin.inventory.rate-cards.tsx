@@ -472,14 +472,15 @@ function MatrixView({
   items: Item[];
   onCellClick: (vendor_id: string, item_id: string, existing: RateCard | null) => void;
 }) {
-  // index by item -> vendor -> cheapest active rate card (any size)
-  const idx = new Map<string, Map<string, RateCard>>();
+  // index by item -> vendor -> all active rate cards (all sizes)
+  const idx = new Map<string, Map<string, RateCard[]>>();
   for (const r of rows) {
     if (!r.enabled) continue;
     let m = idx.get(r.item_id);
     if (!m) { m = new Map(); idx.set(r.item_id, m); }
-    const cur = m.get(r.vendor_id);
-    if (!cur || r.unit_price < cur.unit_price) m.set(r.vendor_id, r);
+    const arr = m.get(r.vendor_id) ?? [];
+    arr.push(r);
+    m.set(r.vendor_id, arr);
   }
   if (!vendors.length || !items.length) {
     return <div className="rounded-2xl border border-border bg-card p-8 text-center text-muted-foreground">Add vendors and items first.</div>;
@@ -502,8 +503,10 @@ function MatrixView({
         <tbody>
           {items.map((it) => {
             const row = idx.get(it.id);
-            const prices = row ? Array.from(row.values()).map((r) => r.unit_price) : [];
-            const min = prices.length ? Math.min(...prices) : 0;
+            // per-vendor cheapest for "Cheapest" highlight
+            const cheapestPerVendor = new Map<string, number>();
+            if (row) for (const [vid, arr] of row) cheapestPerVendor.set(vid, Math.min(...arr.map(r => r.unit_price)));
+            const allMin = cheapestPerVendor.size ? Math.min(...cheapestPerVendor.values()) : 0;
             return (
               <tr key={it.id} className="border-t border-border/60">
                 <td className="sticky left-0 z-10 bg-card p-3 font-medium">
@@ -511,22 +514,34 @@ function MatrixView({
                   <div className="text-[10px] font-normal text-muted-foreground">{it.item_code}</div>
                 </td>
                 {vendors.map((v) => {
-                  const rc = row?.get(v.id) ?? null;
-                  const cheapest = rc && rc.unit_price === min && prices.length > 1;
+                  const arr = row?.get(v.id) ?? [];
+                  const has = arr.length > 0;
+                  const min = has ? Math.min(...arr.map(r => r.unit_price)) : 0;
+                  const max = has ? Math.max(...arr.map(r => r.unit_price)) : 0;
+                  const cheapest = has && min === allMin && cheapestPerVendor.size > 1;
+                  const firstRc = has ? arr[0] : null;
+                  const tooltip = has
+                    ? arr.map(r => `${r.size_value || "—"}: ₹${r.unit_price}`).join("\n") + `\nMOQ ${firstRc!.min_order_qty} · ${firstRc!.lead_time_days}d lead`
+                    : "Not supplied — click to add capability";
                   return (
                     <td key={v.id} className="p-1 text-center">
                       <button
-                        onClick={() => onCellClick(v.id, it.id, rc)}
-                        className={`w-full rounded-md px-2 py-2 text-xs font-semibold tabular-nums transition-colors ${
-                          rc
+                        onClick={() => onCellClick(v.id, it.id, firstRc)}
+                        className={`w-full rounded-md px-2 py-1.5 text-xs font-semibold tabular-nums transition-colors ${
+                          has
                             ? cheapest
                               ? "bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25"
                               : "bg-secondary/60 hover:bg-secondary"
                             : "text-muted-foreground/40 hover:bg-secondary/30"
                         }`}
-                        title={rc ? `₹${rc.unit_price} · MOQ ${rc.min_order_qty} · ${rc.lead_time_days}d lead` : "Not supplied — click to add capability"}
+                        title={tooltip}
                       >
-                        {rc ? `₹${rc.unit_price.toLocaleString("en-IN", { maximumFractionDigits: 0 })}` : "—"}
+                        {has ? (
+                          <>
+                            <div>{min === max ? `₹${min.toLocaleString("en-IN", { maximumFractionDigits: 0 })}` : `₹${min.toLocaleString("en-IN")}–${max.toLocaleString("en-IN")}`}</div>
+                            {arr.length > 1 && <div className="text-[9px] font-normal opacity-70">{arr.length} sizes</div>}
+                          </>
+                        ) : "—"}
                       </button>
                     </td>
                   );
