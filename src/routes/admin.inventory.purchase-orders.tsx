@@ -674,9 +674,16 @@ function POFormDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
-          {!readOnly && <Button variant="outline" onClick={() => save("draft")} disabled={saving}>Save Draft</Button>}
-          {!readOnly && <Button onClick={() => save("open")} disabled={saving}>{saving ? "Saving…" : "Issue PO"}</Button>}
+          {initial ? (
+            <Button onClick={() => save(status)} disabled={saving}>{saving ? "Saving…" : "Save Changes"}</Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => save("draft")} disabled={saving}>Save Draft</Button>
+              <Button onClick={() => save("open")} disabled={saving}>{saving ? "Saving…" : "Issue PO"}</Button>
+            </>
+          )}
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
