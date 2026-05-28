@@ -1,7 +1,7 @@
 // Shared service-due calculations for vehicles.
 // Current odometer is dummy/deterministic until real integration lands.
 
-export const SERVICE_INTERVAL = 5000; // km between services
+export const DEFAULT_SERVICE_INTERVAL = 5000; // km between services (fallback)
 export const ADVANCE_ALERT_KM = 2500; // begin alerting this many km before due
 
 function hashStr(s: string): number {
@@ -16,14 +16,22 @@ export function dummyCurrentKm(vehicleNumber: string): number {
   return 8000 + idx * 500;
 }
 
-export function nextServiceDueKm(currentKm: number): number {
-  const n = Math.floor(currentKm / SERVICE_INTERVAL) + 1;
-  return n * SERVICE_INTERVAL;
+export function nextServiceDueKm(currentKm: number, interval: number): number {
+  const i = interval > 0 ? interval : DEFAULT_SERVICE_INTERVAL;
+  const n = Math.floor(currentKm / i) + 1;
+  return n * i;
 }
 
-export function serviceStatusFor(vehicleNumber: string) {
+export function serviceStatusFor(vehicleNumber: string, intervalKm?: number | null) {
+  const interval = intervalKm && intervalKm > 0 ? intervalKm : DEFAULT_SERVICE_INTERVAL;
   const currentKm = dummyCurrentKm(vehicleNumber);
-  const dueKm = nextServiceDueKm(currentKm);
+  const dueKm = nextServiceDueKm(currentKm, interval);
   const kmToService = dueKm - currentKm;
-  return { currentKm, dueKm, kmToService, dueSoon: kmToService <= ADVANCE_ALERT_KM };
+  return {
+    currentKm,
+    dueKm,
+    kmToService,
+    interval,
+    dueSoon: kmToService <= ADVANCE_ALERT_KM,
+  };
 }
