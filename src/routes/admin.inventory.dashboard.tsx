@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
@@ -10,14 +10,18 @@ import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend,
 } from "recharts";
-import { PageHeader } from "@/components/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
+// Owner Dashboard is now merged into the /admin/inventory hub.
+// This route redirects there so any old links / bookmarks keep working.
 export const Route = createFileRoute("/admin/inventory/dashboard")({
-  component: OwnerDashboard,
+  beforeLoad: () => {
+    throw redirect({ to: "/admin/inventory" });
+  },
+  component: () => null,
 });
 
 type Balance = { location_type: string; location_id: string; item_id: string; size_value: string; qty: number };
@@ -68,7 +72,7 @@ const inr = (n: number) =>
     ? (n / 1e5).toFixed(2) + " L"
     : n.toLocaleString("en-IN", { maximumFractionDigits: 0 }));
 
-function OwnerDashboard() {
+export function InventoryOwnerDashboard() {
   const [range, setRange] = useState<Range>("30d");
   const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -320,12 +324,6 @@ function OwnerDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Inventory Command Center"
-        description="Live operating picture — stock, spend, vendors, and who's holding what."
-        crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Dashboard" }]}
-      />
-
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/60 p-3 backdrop-blur">
         <div className="flex items-center gap-1 rounded-xl bg-secondary/40 p-1">
