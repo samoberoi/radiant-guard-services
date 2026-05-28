@@ -71,6 +71,7 @@ function rowToItem(r: Record<string, unknown>): Vehicle {
     owner: String(r.owner ?? ""),
     notes: String(r.notes ?? ""),
     enabled: Boolean(r.enabled ?? true),
+    service_interval_km: r.service_interval_km == null ? DEFAULT_SERVICE_INTERVAL_KM : Number(r.service_interval_km),
   };
 }
 
