@@ -373,8 +373,11 @@ function POFormDialog({
       m.set(s.item_id, arr);
     }
     return m;
-  }, [itemSizes]);
-  // Editable while not delivered. Once goods are received (fully or partially) or cancelled, lock to view-only.
+  // Line/header field edits lock once goods start arriving. Status toggle stays available unless cancelled.
+  const linesReadOnly = !!initial && !(initial.status === "draft" || initial.status === "open" || initial.status === "approved");
+  const fullyLocked = !!initial && initial.status === "cancelled";
+  const readOnly = linesReadOnly; // keep existing name for fields
+
   const readOnly = !!initial && !(initial.status === "draft" || initial.status === "open");
 
 
