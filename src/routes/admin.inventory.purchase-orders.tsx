@@ -489,7 +489,8 @@ function POFormDialog({
           notes,
           subtotal: totals.sub,
           tax_total: totals.tax,
-          grand_total: totals.grand,
+          status: targetStatus,
+
           status,
         } as never).eq("id", initial.id);
         if (error) throw error;
