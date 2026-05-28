@@ -209,6 +209,14 @@ function POPage() {
           <span className="font-semibold text-foreground">3. Transfer</span> → warehouse to branch ·{" "}
           <span className="font-semibold text-foreground">4. Issuance</span> → branch to FO / guard
         </div>
+        <div className="mt-2 leading-relaxed">
+          <span className="font-semibold text-foreground">Status criteria:</span>{" "}
+          <span className="font-semibold text-foreground">Draft</span> = saved, not sent ·{" "}
+          <span className="font-semibold text-foreground">Delivery Open</span> = PO issued, nothing received ·{" "}
+          <span className="font-semibold text-foreground">Delivery Ongoing</span> = some line items received via Goods Receipts ·{" "}
+          <span className="font-semibold text-foreground">Delivery Completed</span> = every line's received qty ≥ ordered qty. Status updates automatically as you record Goods Receipts.
+        </div>
+
       </div>
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
