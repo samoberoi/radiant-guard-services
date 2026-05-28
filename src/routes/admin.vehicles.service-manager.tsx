@@ -26,6 +26,8 @@ type VehicleRow = {
 
 function ServiceManagerPage() {
   const [search, setSearch] = useState("");
+  const [fuelFilter, setFuelFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "vehicles", "service-manager"],
@@ -39,21 +41,33 @@ function ServiceManagerPage() {
     },
   });
 
+  const fuelOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const v of data ?? []) if (v.fuel_type) set.add(v.fuel_type);
+    return Array.from(set).sort();
+  }, [data]);
+
   const rows = useMemo(() => {
     const list = (data ?? []).filter((v) => v.enabled !== false);
     const q = search.trim().toLowerCase();
-    const filtered = q
-      ? list.filter((v) =>
-          [v.vehicle_number, v.name, v.fuel_type].some((x) =>
-            String(x ?? "").toLowerCase().includes(q),
-          ),
-        )
-      : list;
-    return filtered.map((v) => {
-      const status = serviceStatusFor(v.vehicle_number, v.service_interval_km);
-      return { v, ...status };
+    const filtered = list.filter((v) => {
+      if (fuelFilter !== "all" && (v.fuel_type || "") !== fuelFilter) return false;
+      if (!q) return true;
+      return [v.vehicle_number, v.name, v.fuel_type].some((x) =>
+        String(x ?? "").toLowerCase().includes(q),
+      );
     });
-  }, [data, search]);
+    return filtered
+      .map((v) => {
+        const status = serviceStatusFor(v.vehicle_number, v.service_interval_km);
+        return { v, ...status };
+      })
+      .filter((r) => {
+        if (statusFilter === "due") return r.dueSoon;
+        if (statusFilter === "ok") return !r.dueSoon;
+        return true;
+      });
+  }, [data, search, fuelFilter, statusFilter]);
 
   const dueSoonCount = rows.filter((r) => r.dueSoon).length;
   const totalVehicles = (data ?? []).length;
