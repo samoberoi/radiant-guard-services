@@ -187,6 +187,7 @@ function POPage() {
       po_date: p.po_date,
       remarks: p.notes,
       vendor: vendorRes.data as never,
+
       lines: pdfLines,
     });
     toast.success("PDF downloaded");
@@ -208,6 +209,14 @@ function POPage() {
           <span className="font-semibold text-foreground">3. Transfer</span> → warehouse to branch ·{" "}
           <span className="font-semibold text-foreground">4. Issuance</span> → branch to FO / guard
         </div>
+        <div className="mt-2 leading-relaxed">
+          <span className="font-semibold text-foreground">Status criteria:</span>{" "}
+          <span className="font-semibold text-foreground">Draft</span> = saved, not sent ·{" "}
+          <span className="font-semibold text-foreground">Delivery Open</span> = PO issued, nothing received ·{" "}
+          <span className="font-semibold text-foreground">Delivery Ongoing</span> = some line items received via Goods Receipts ·{" "}
+          <span className="font-semibold text-foreground">Delivery Completed</span> = every line's received qty ≥ ordered qty. Status updates automatically as you record Goods Receipts.
+        </div>
+
       </div>
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -343,7 +352,9 @@ function POFormDialog({
     }
     return m;
   }, [itemSizes]);
-  const readOnly = !!initial && initial.status !== "draft";
+  // Editable while not delivered. Once goods are received (fully or partially) or cancelled, lock to view-only.
+  const readOnly = !!initial && !(initial.status === "draft" || initial.status === "open");
+
 
   // Pick best matching rate card: prefer exact size match, then blank-size fallback.
   const findRate = (vId: string, itemId: string, sizeValue: string): RateCard | undefined => {
@@ -508,7 +519,8 @@ function POFormDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{initial ? `Purchase Order ${initial.po_number}` : "New Purchase Order"}</DialogTitle>
-          <DialogDescription>{readOnly ? "Read-only view." : "Order items from a supplier."}</DialogDescription>
+          <DialogDescription>{readOnly ? "Read-only — goods have started arriving, edits are locked." : initial ? "Edit the PO. Available until the first Goods Receipt is posted." : "Order items from a supplier."}</DialogDescription>
+
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
