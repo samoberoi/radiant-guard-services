@@ -610,48 +610,7 @@ function AddEntryDialog({
     );
   }
 
-  const extractFn = useServerFn(extractFuelFromPhotos);
 
-  async function handleAutoFill() {
-    const items: Array<{ label: "odometer" | "pump" | "receipt" | "filling"; file: File }> = [];
-    if (odoFile) items.push({ label: "odometer", file: odoFile });
-    if (pumpFile) items.push({ label: "pump", file: pumpFile });
-    if (receiptFile) items.push({ label: "receipt", file: receiptFile });
-    if (fillingFile) items.push({ label: "filling", file: fillingFile });
-    if (items.length === 0) {
-      toast.error("Upload at least one photo (receipt or pump works best)");
-      return;
-    }
-    setExtracting(true);
-    try {
-      const applyExtraction = (res: FuelExtractionResult) => {
-        if (res.fuel_type) setFuelType(res.fuel_type);
-        if (res.odometer_km != null) setOdometer(String(res.odometer_km));
-        if (res.quantity != null) setQuantity(String(res.quantity));
-        if (res.rate != null) setRate(String(res.rate));
-        if (res.amount != null) setAmount(String(res.amount));
-        else if (res.quantity != null && res.rate != null) {
-          setAmount((res.quantity * res.rate).toFixed(2));
-        }
-        if (res.location_text) setLocationText(res.location_text);
-        if (res.entry_date) setEntryDate(res.entry_date);
-        if (res.entry_time) setEntryTime(res.entry_time);
-        if (res.payment_mode) setPaymentMode(res.payment_mode);
-        if (res.notes && !notes) setNotes(res.notes);
-      };
-
-      const photos = await Promise.all(
-        items.map(async (it) => ({ label: it.label, dataUrl: await fileToDataUrl(it.file) })),
-      );
-      const res = await extractFn({ data: { photos } });
-      applyExtraction(res);
-      toast.success("Auto-filled from photos — please verify");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Auto-fill failed");
-    } finally {
-      setExtracting(false);
-    }
-  }
 
   async function uploadProof(file: File | null, label: string): Promise<string> {
     if (!file) return "";
