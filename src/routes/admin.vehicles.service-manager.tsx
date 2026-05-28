@@ -7,6 +7,7 @@ import { downloadCsv } from "@/lib/csv-export";
 import { PageHeader } from "@/components/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { ADVANCE_ALERT_KM, serviceStatusFor } from "@/lib/vehicle-service";
 
