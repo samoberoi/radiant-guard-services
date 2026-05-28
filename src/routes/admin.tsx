@@ -40,6 +40,7 @@ import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/BrandMark";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useAuth } from "@/lib/auth";
+import { useCurrentPermissions } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/admin")({
