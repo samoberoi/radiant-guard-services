@@ -237,6 +237,7 @@ function AdminLayout() {
             )}
           </div>
 
+          {can("organizations") && (<>
           {/* Customers group */}
           <div>
             <div
@@ -326,6 +327,8 @@ function AdminLayout() {
             )}
           </div>
 
+          </>)}
+          {can("contracts") && (<>
           {/* Contracts group */}
           <div className="mt-2">
             <div
@@ -414,6 +417,8 @@ function AdminLayout() {
             )}
           </div>
 
+          </>)}
+          {can("employees") && (<>
           {/* Employees link */}
           <div className="mt-2">
             <Link
@@ -432,6 +437,8 @@ function AdminLayout() {
             </Link>
           </div>
 
+          </>)}
+          {can("vehicles") && (<>
           {/* Vehicles group */}
           <div className="mt-2">
             <div
@@ -520,6 +527,8 @@ function AdminLayout() {
             )}
           </div>
 
+          </>)}
+          {can("inventory") && (<>
           {/* Inventory group */}
           <div className="mt-2">
             <div
@@ -611,6 +620,8 @@ function AdminLayout() {
 
 
 
+          </>)}
+          {can("attendance") && (<>
           {/* Attendance link */}
           <div className="mt-2">
             <Link
@@ -629,6 +640,8 @@ function AdminLayout() {
             </Link>
           </div>
 
+          </>)}
+          {can("payroll") && (<>
           {/* Payroll link */}
           <div className="mt-2">
             <Link
@@ -647,6 +660,8 @@ function AdminLayout() {
             </Link>
           </div>
 
+          </>)}
+          {can("control_center") && (<>
           {/* Control Center link */}
           <div className="mt-2">
             <Link
@@ -667,6 +682,8 @@ function AdminLayout() {
             </Link>
           </div>
 
+          </>)}
+          {can("notification_center") && (<>
           {/* Notification Center link */}
           <div className="mt-2">
             <Link
@@ -684,6 +701,7 @@ function AdminLayout() {
               {!collapsed && <span>Notification Center</span>}
             </Link>
           </div>
+          </>)}
 
 
         </nav>
