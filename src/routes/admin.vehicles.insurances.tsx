@@ -131,22 +131,16 @@ function InsuranceManagerPage() {
   });
 
   const [query, setQuery] = useState("");
-  const [conditions, setConditions] = useState<FilterCondition[]>([]);
+  const [insurerFilter, setInsurerFilter] = useState<string>("all");
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Insurance | null>(null);
   const [deleting, setDeleting] = useState<Insurance | null>(null);
 
-  const filterFields: FilterField[] = useMemo(() => [
-    { key: "vehicle_number", label: "Vehicle", type: "text", accessor: (r) => vMap.get(String(r.vehicle_id))?.vehicle_number ?? "" },
-    { key: "insurance_company", label: "Insurer", type: "text" },
-    { key: "policy_number", label: "Policy No.", type: "text" },
-    { key: "engine_number", label: "Engine No.", type: "text" },
-    { key: "chassis_number", label: "Chassis No.", type: "text" },
-    { key: "premium_amount", label: "Premium", type: "number" },
-    { key: "start_date", label: "Start Date", type: "date" },
-    { key: "end_date", label: "End Date", type: "date" },
-    { key: "enabled", label: "Enabled", type: "boolean" },
-  ], [vMap]);
+  const insurerOptions = useMemo(() => {
+    const s = new Set<string>();
+    for (const i of items) { const c = i.insurance_company.trim(); if (c) s.add(c); }
+    return Array.from(s).sort();
+  }, [items]);
 
   const { status } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
@@ -157,7 +151,8 @@ function InsuranceManagerPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = items.filter((i) => {
+    return items.filter((i) => {
+      if (insurerFilter !== "all" && i.insurance_company !== insurerFilter) return false;
       if (q) {
         const v = vMap.get(i.vehicle_id);
         const hit =
@@ -178,8 +173,7 @@ function InsuranceManagerPage() {
       if (status === "active") return !isExpired;
       return true;
     });
-    return applyFilters(base as unknown as Record<string, unknown>[], filterFields, conditions) as unknown as typeof items;
-  }, [items, query, vMap, status, today, in60, conditions, filterFields]);
+  }, [items, query, vMap, status, today, in60, insurerFilter]);
 
   const stats = useMemo(() => {
     let expired = 0, renewal = 0, active = 0;
