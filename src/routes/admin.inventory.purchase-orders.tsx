@@ -219,6 +219,7 @@ function POPage() {
         vendors={vendors}
         warehouses={warehouses}
         items={items}
+        itemSizes={itemSizes}
         rateCards={rateCards}
         onSaved={invalidate}
       />
@@ -227,10 +228,11 @@ function POPage() {
 }
 
 function POFormDialog({
-  open, onOpenChange, initial, vendors, warehouses, items, rateCards, onSaved,
+  open, onOpenChange, initial, vendors, warehouses, items, itemSizes, rateCards, onSaved,
 }: {
   open: boolean; onOpenChange: (o: boolean) => void;
   initial: PO | null; vendors: Vendor[]; warehouses: Warehouse[]; items: Item[];
+  itemSizes: ItemSize[];
   rateCards: RateCard[];
   onSaved: () => void;
 }) {
