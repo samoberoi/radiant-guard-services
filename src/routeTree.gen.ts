@@ -17,6 +17,7 @@ import { Route as AdminVehiclesRouteImport } from './routes/admin.vehicles'
 import { Route as AdminSystemLogsRouteImport } from './routes/admin.system-logs'
 import { Route as AdminServiceTypeManagerRouteImport } from './routes/admin.service-type-manager'
 import { Route as AdminRbacRouteImport } from './routes/admin.rbac'
+import { Route as AdminProfileRouteImport } from './routes/admin.profile'
 import { Route as AdminProfessionalTaxManagerRouteImport } from './routes/admin.professional-tax-manager'
 import { Route as AdminPayrollManagerRouteImport } from './routes/admin.payroll-manager'
 import { Route as AdminPayrollDaysManagerRouteImport } from './routes/admin.payroll-days-manager'
@@ -109,6 +110,11 @@ const AdminServiceTypeManagerRoute = AdminServiceTypeManagerRouteImport.update({
 const AdminRbacRoute = AdminRbacRouteImport.update({
   id: '/rbac',
   path: '/rbac',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminProfileRoute = AdminProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminProfessionalTaxManagerRoute =
@@ -421,6 +427,7 @@ export interface FileRoutesByFullPath {
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
+  '/admin/profile': typeof AdminProfileRoute
   '/admin/rbac': typeof AdminRbacRoute
   '/admin/service-type-manager': typeof AdminServiceTypeManagerRoute
   '/admin/system-logs': typeof AdminSystemLogsRoute
@@ -482,6 +489,7 @@ export interface FileRoutesByTo {
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
+  '/admin/profile': typeof AdminProfileRoute
   '/admin/rbac': typeof AdminRbacRoute
   '/admin/service-type-manager': typeof AdminServiceTypeManagerRoute
   '/admin/system-logs': typeof AdminSystemLogsRoute
@@ -546,6 +554,7 @@ export interface FileRoutesById {
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
+  '/admin/profile': typeof AdminProfileRoute
   '/admin/rbac': typeof AdminRbacRoute
   '/admin/service-type-manager': typeof AdminServiceTypeManagerRoute
   '/admin/system-logs': typeof AdminSystemLogsRoute
@@ -611,6 +620,7 @@ export interface FileRouteTypes {
     | '/admin/payroll-days-manager'
     | '/admin/payroll-manager'
     | '/admin/professional-tax-manager'
+    | '/admin/profile'
     | '/admin/rbac'
     | '/admin/service-type-manager'
     | '/admin/system-logs'
@@ -672,6 +682,7 @@ export interface FileRouteTypes {
     | '/admin/payroll-days-manager'
     | '/admin/payroll-manager'
     | '/admin/professional-tax-manager'
+    | '/admin/profile'
     | '/admin/rbac'
     | '/admin/service-type-manager'
     | '/admin/system-logs'
@@ -735,6 +746,7 @@ export interface FileRouteTypes {
     | '/admin/payroll-days-manager'
     | '/admin/payroll-manager'
     | '/admin/professional-tax-manager'
+    | '/admin/profile'
     | '/admin/rbac'
     | '/admin/service-type-manager'
     | '/admin/system-logs'
@@ -834,6 +846,13 @@ declare module '@tanstack/react-router' {
       path: '/rbac'
       fullPath: '/admin/rbac'
       preLoaderRoute: typeof AdminRbacRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/profile': {
+      id: '/admin/profile'
+      path: '/profile'
+      fullPath: '/admin/profile'
+      preLoaderRoute: typeof AdminProfileRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/professional-tax-manager': {
@@ -1340,6 +1359,7 @@ interface AdminRouteChildren {
   AdminPayrollDaysManagerRoute: typeof AdminPayrollDaysManagerRoute
   AdminPayrollManagerRoute: typeof AdminPayrollManagerRoute
   AdminProfessionalTaxManagerRoute: typeof AdminProfessionalTaxManagerRoute
+  AdminProfileRoute: typeof AdminProfileRoute
   AdminRbacRoute: typeof AdminRbacRoute
   AdminServiceTypeManagerRoute: typeof AdminServiceTypeManagerRoute
   AdminSystemLogsRoute: typeof AdminSystemLogsRoute
@@ -1372,6 +1392,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminPayrollDaysManagerRoute: AdminPayrollDaysManagerRoute,
   AdminPayrollManagerRoute: AdminPayrollManagerRoute,
   AdminProfessionalTaxManagerRoute: AdminProfessionalTaxManagerRoute,
+  AdminProfileRoute: AdminProfileRoute,
   AdminRbacRoute: AdminRbacRoute,
   AdminServiceTypeManagerRoute: AdminServiceTypeManagerRoute,
   AdminSystemLogsRoute: AdminSystemLogsRoute,

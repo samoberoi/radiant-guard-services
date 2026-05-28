@@ -117,7 +117,7 @@ function AdminLayout() {
     { prefix: "/admin/inventory", module: "inventory" },
     { prefix: "/admin/attendance", module: "attendance" },
     { prefix: "/admin/payroll", module: "payroll" },
-    { prefix: "/admin/notifications", module: "notification_center" },
+    // notification center & profile are personal pages — no RBAC gate
     { prefix: "/admin/rbac", module: "rbac" },
     { prefix: "/admin/control-center", module: "control_center" },
     { prefix: "/admin/professional-tax-manager", module: "control_center" },
@@ -682,8 +682,7 @@ function AdminLayout() {
           </div>
 
           </>)}
-          {can("notification_center") && (<>
-          {/* Notification Center link */}
+          {/* Notification Center link — always visible (personal page) */}
           <div className="mt-2">
             <Link
               to="/admin/notifications"
@@ -700,7 +699,25 @@ function AdminLayout() {
               {!collapsed && <span>Notification Center</span>}
             </Link>
           </div>
-          </>)}
+
+          {/* My Profile link — always visible */}
+          <div className="mt-2">
+            <Link
+              to="/admin/profile"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+                isActive("/admin/profile")
+                  ? "bg-accent/20 text-accent"
+                  : "text-primary-foreground/85 hover:bg-white/5",
+                collapsed && "justify-center",
+              )}
+              title={collapsed ? "My Profile" : undefined}
+            >
+              <Users className="h-4.5 w-4.5 shrink-0" />
+              {!collapsed && <span>My Profile</span>}
+            </Link>
+          </div>
+
 
 
         </nav>
@@ -749,14 +766,17 @@ function AdminLayout() {
 
 
           <div className="ml-auto flex items-center gap-3">
-            <div className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground sm:flex">
+            <Link
+              to="/admin/profile"
+              className="hidden items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:border-accent hover:text-accent sm:flex"
+            >
               <span className="inline-flex h-2 w-2 rounded-full bg-accent" />
-              {user?.role === "super_admin" ? "Super Admin" : "User"}
+              {user?.role === "super_admin" ? "Super Admin" : "My Profile"}
               <span className="text-muted-foreground">·</span>
               <span className="font-mono text-muted-foreground">
                 {user ? maskPhone(user.phone) : "—"}
               </span>
-            </div>
+            </Link>
             <NotificationBell />
             <Button
               onClick={handleLogout}
