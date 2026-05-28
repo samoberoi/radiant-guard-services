@@ -185,16 +185,8 @@ function POPage() {
     await downloadPOPdf({
       po_number: p.po_number,
       po_date: p.po_date,
-          <span className="font-semibold text-foreground">4. Issuance</span> → branch to FO / guard
-        </div>
-        <div className="mt-2 leading-relaxed">
-          <span className="font-semibold text-foreground">Status criteria:</span>{" "}
-          <span className="font-semibold text-foreground">Draft</span> = saved, not yet sent ·{" "}
-          <span className="font-semibold text-foreground">Delivery Open</span> = PO issued, nothing received ·{" "}
-          <span className="font-semibold text-foreground">Delivery Ongoing</span> = some line items received via Goods Receipts ·{" "}
-          <span className="font-semibold text-foreground">Delivery Completed</span> = every line's received qty ≥ ordered qty.
-          Status updates automatically as you record Goods Receipts.
-        </div>
+      remarks: p.notes,
+      vendor: vendorRes.data as never,
 
       lines: pdfLines,
     });
