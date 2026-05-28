@@ -72,7 +72,7 @@ const inr = (n: number) =>
     ? (n / 1e5).toFixed(2) + " L"
     : n.toLocaleString("en-IN", { maximumFractionDigits: 0 }));
 
-function OwnerDashboard() {
+export function InventoryOwnerDashboard() {
   const [range, setRange] = useState<Range>("30d");
   const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -324,12 +324,6 @@ function OwnerDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Inventory Command Center"
-        description="Live operating picture — stock, spend, vendors, and who's holding what."
-        crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Dashboard" }]}
-      />
-
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/60 p-3 backdrop-blur">
         <div className="flex items-center gap-1 rounded-xl bg-secondary/40 p-1">
