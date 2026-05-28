@@ -177,9 +177,23 @@ type ProfileData = {
   approved_at: string | null;
   unit_id: string | null;
   designation_id: string | null;
+  emergency_contact_name: string;
+  emergency_contact_relation: string;
+  emergency_contact_mobile: string;
+  bank_account_type: string;
   documents: Array<{ name?: string; url?: string; type?: string }>;
   identification_proofs: Array<{ type?: string; number?: string; url?: string }>;
   assigned_asset_ids: string[];
+  contacts: Array<{ name?: string; relation?: string; mobile?: string; occupation?: string; alive?: boolean }>;
+  nominations: Array<{ name?: string; relation?: string; share?: number; dob?: string; aadhaar?: string }>;
+  references: Array<{ name?: string; relation?: string; mobile?: string; email?: string; address?: string }>;
+  languages: Array<{ name?: string; read?: boolean; write?: boolean; speak?: boolean }>;
+  experiences: Array<{ company?: string; designation?: string; from?: string; to?: string; salary?: string; reason_for_leaving?: string }>;
+  educations: Array<{ qualification?: string; institution?: string; year?: string; percentage?: string }>;
+  extra_curricular: Array<{ activity?: string; level?: string; year?: string }>;
+  criminal_history: { has_history?: boolean; incidents?: Array<{ description?: string; year?: string }> };
+  physical_health_full: Record<string, string>;
+  other_info: Record<string, string>;
 };
 
 type LookupRow = { id: string; name: string };
