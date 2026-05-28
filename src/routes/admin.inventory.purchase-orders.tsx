@@ -136,6 +136,40 @@ function POPage() {
     onSuccess: invalidate,
   });
 
+  const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+
+  const handleDownloadPO = async (p: PO) => {
+    const [vendorRes, linesRes] = await Promise.all([
+      p.vendor_id
+        ? supabase.from("inv_vendors" as never).select("vendor_code,name,phone,email,gstin,address1,address2,city,state,pincode,country").eq("id", p.vendor_id).maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      supabase.from("inv_po_lines" as never).select("item_id,size_value,ordered_qty,unit_price,tax_percent").eq("po_id", p.id).order("sort_order"),
+    ]);
+    if (vendorRes.error) throw vendorRes.error;
+    if (linesRes.error) throw linesRes.error;
+    const lineRows = ((linesRes.data ?? []) as unknown as Array<{ item_id: string; size_value: string; ordered_qty: number; unit_price: number; tax_percent: number }>);
+    const pdfLines: POPdfLine[] = lineRows.map((l) => {
+      const it = itemMap.get(l.item_id);
+      return {
+        item_code: it?.item_code ?? "",
+        item_name: it?.name ?? "",
+        unit: it?.unit ?? "",
+        size_value: l.size_value || undefined,
+        qty: Number(l.ordered_qty) || 0,
+        unit_price: Number(l.unit_price) || 0,
+        tax_percent: Number(l.tax_percent) || 0,
+      };
+    });
+    await downloadPOPdf({
+      po_number: p.po_number,
+      po_date: p.po_date,
+      remarks: p.notes,
+      vendor: vendorRes.data as never,
+      lines: pdfLines,
+    });
+    toast.success("PDF downloaded");
+  };
+
   return (
     <div>
       <PageHeader
