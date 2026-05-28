@@ -149,28 +149,31 @@ function FastTagManagerPage() {
   });
 
   const [query, setQuery] = useState("");
-  const [conditions, setConditions] = useState<FilterCondition[]>([]);
+  const [bankFilter, setBankFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<FastTag | null>(null);
   const [deleting, setDeleting] = useState<FastTag | null>(null);
 
-  const filterFields: FilterField[] = useMemo(() => [
-    { key: "vehicle_number", label: "Vehicle", type: "text", accessor: (r) => vMap.get(String(r.vehicle_id))?.vehicle_number ?? "" },
-    { key: "fastag_number", label: "FastTag No.", type: "text" },
-    { key: "bank_name", label: "Bank", type: "text" },
-    { key: "account_number", label: "Account", type: "text" },
-    { key: "balance", label: "Balance", type: "number" },
-    { key: "issued_date", label: "Issued Date", type: "date" },
-    { key: "expiry_date", label: "Expiry Date", type: "date" },
-    { key: "status", label: "Status", type: "enum", options: STATUS },
-    { key: "login_type", label: "Login Type", type: "enum", options: LOGIN_TYPES.map((l) => l.value) },
-    { key: "registered_email", label: "Registered Email", type: "text" },
-    { key: "enabled", label: "Enabled", type: "boolean" },
-  ], [vMap]);
+  const today = new Date().toISOString().slice(0, 10);
+
+  const stats = useMemo(() => {
+    let active = 0, inactive = 0, expired = 0;
+    for (const i of items) {
+      const isExpired = !!i.expiry_date && i.expiry_date < today;
+      if (isExpired) expired++;
+      if (i.enabled && i.status === "active" && !isExpired) active++;
+      else inactive++;
+    }
+    return { total: items.length, active, inactive, expired };
+  }, [items, today]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = !q ? items : items.filter((i) => {
+    return items.filter((i) => {
+      if (bankFilter !== "all" && i.bank_name !== bankFilter) return false;
+      if (statusFilter !== "all" && i.status !== statusFilter) return false;
+      if (!q) return true;
       const v = vMap.get(i.vehicle_id);
       return (
         i.fastag_number.toLowerCase().includes(q) ||
@@ -179,8 +182,7 @@ function FastTagManagerPage() {
         (v?.vehicle_number.toLowerCase().includes(q) ?? false)
       );
     });
-    return applyFilters(base as unknown as Record<string, unknown>[], filterFields, conditions) as unknown as typeof items;
-  }, [items, query, vMap, conditions, filterFields]);
+  }, [items, query, vMap, bankFilter, statusFilter]);
 
   return (
     <div>
@@ -190,10 +192,33 @@ function FastTagManagerPage() {
         crumbs={[{ label: "Vehicles", to: "/admin/vehicles" }, { label: "FastTag" }]}
       />
 
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MiniStat label="Total FastTags" value={stats.total} />
+        <MiniStat label="Active" value={stats.active} tone="accent" />
+        <MiniStat label="Inactive" value={stats.inactive} tone="warning" />
+        <MiniStat label="Expired" value={stats.expired} tone="destructive" />
+      </div>
+
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by vehicle, tag, bank…" className="h-10 rounded-lg pl-9" />
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:max-w-2xl">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search by vehicle, tag, account…" className="h-10 rounded-lg pl-9" />
+          </div>
+          <Select value={bankFilter} onValueChange={setBankFilter}>
+            <SelectTrigger className="h-10 w-full rounded-lg sm:w-48"><SelectValue placeholder="All banks" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All banks</SelectItem>
+              {BANKS.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-10 w-full rounded-lg sm:w-40"><SelectValue placeholder="All status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All status</SelectItem>
+              {STATUS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setAddOpen(true)} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
@@ -231,9 +256,6 @@ function FastTagManagerPage() {
         </div>
       </div>
 
-      <div className="mb-4">
-        <AdvancedFilters fields={filterFields} value={conditions} onChange={setConditions} />
-      </div>
 
 
 
