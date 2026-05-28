@@ -528,7 +528,8 @@ function POFormDialog({
         entityId: poId,
         entityLabel: initial?.po_number ?? "PO",
       });
-      toast.success(status === "draft" ? "Draft saved" : "PO issued");
+      toast.success(targetStatus === "draft" ? "Draft saved" : initial ? "Changes saved" : "PO issued");
+
       onSaved();
       onOpenChange(false);
     } catch (e) {
