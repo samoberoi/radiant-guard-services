@@ -233,7 +233,10 @@ function ItemsPage() {
   );
 }
 
+type SizeRow = { id?: string; size_value: string; reorder_level: number; enabled: boolean };
+
 function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubmit }: { open: boolean; onOpenChange: (o: boolean) => void; title: string; initial?: Item | null; categories: Category[]; onSubmit: (p: Payload) => Promise<string | null> }) {
+  const qc = useQueryClient();
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState<string>("");
   const [unit, setUnit] = useState("pcs");
@@ -244,8 +247,10 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
   const [enabled, setEnabled] = useState(true);
   const [stdCost, setStdCost] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [sizes, setSizes] = useState<SizeRow[]>([]);
+  const [origSizes, setOrigSizes] = useState<SizeRow[]>([]);
 
-  useResetOnOpen(open, () => {
+  useResetOnOpen(open, async () => {
     setName(initial?.name ?? "");
     setCategoryId(initial?.category_id ?? categories[0]?.id ?? "");
     setUnit(initial?.unit ?? "pcs");
@@ -255,11 +260,50 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
     setDescription(initial?.description ?? "");
     setEnabled(initial?.enabled ?? true);
     setStdCost(initial?.standard_cost ?? 0);
+    setSizes([]); setOrigSizes([]);
+    if (initial?.id) {
+      const { data } = await supabase.from("inv_item_sizes" as never).select("id,size_value,reorder_level,enabled,sort_order").eq("item_id", initial.id).order("sort_order");
+      const rows = ((data as unknown) as { id: string; size_value: string; reorder_level: number; enabled: boolean }[] | null) ?? [];
+      const mapped: SizeRow[] = rows.map((r) => ({ id: r.id, size_value: r.size_value, reorder_level: Number(r.reorder_level ?? 0), enabled: Boolean(r.enabled) }));
+      setSizes(mapped);
+      setOrigSizes(mapped);
+    }
   });
+
+  const addSize = () => setSizes((s) => [...s, { size_value: "", reorder_level: 0, enabled: true }]);
+  const updateSize = (i: number, patch: Partial<SizeRow>) => setSizes((s) => s.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+  const removeSize = (i: number) => setSizes((s) => s.filter((_, idx) => idx !== i));
+
+  async function persistSizes(itemId: string) {
+    const origById = new Map(origSizes.filter((s) => s.id).map((s) => [s.id!, s]));
+    const seenIds = new Set<string>();
+    for (let i = 0; i < sizes.length; i++) {
+      const row = sizes[i];
+      const sv = (row.size_value ?? "").trim();
+      if (!sv) continue;
+      if (row.id) {
+        seenIds.add(row.id);
+        const orig = origById.get(row.id);
+        if (!orig || orig.size_value !== sv || orig.reorder_level !== row.reorder_level || orig.enabled !== row.enabled) {
+          const { error } = await supabase.from("inv_item_sizes" as never).update({ size_value: sv, reorder_level: row.reorder_level, enabled: row.enabled, sort_order: i } as never).eq("id", row.id);
+          if (error) throw error;
+        }
+      } else {
+        const { error } = await supabase.from("inv_item_sizes" as never).insert({ item_id: itemId, size_value: sv, reorder_level: row.reorder_level, enabled: row.enabled, sort_order: i } as never);
+        if (error) throw error;
+      }
+    }
+    for (const orig of origSizes) {
+      if (orig.id && !seenIds.has(orig.id)) {
+        const { error } = await supabase.from("inv_item_sizes" as never).delete().eq("id", orig.id);
+        if (error) throw error;
+      }
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription>A stockable SKU.</DialogDescription></DialogHeader>
         <div className="grid gap-4 py-2">
           <div className="grid gap-2"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Security Shirt — Half Sleeve" /></div>
@@ -280,6 +324,38 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
             <div className="grid gap-2"><Label>Standard Cost ₹</Label><Input type="number" min={0} step="0.01" value={stdCost} onChange={(e) => setStdCost(Number(e.target.value) || 0)} /><div className="text-[10px] text-muted-foreground">Auto-updated on GRN as weighted avg.</div></div>
           </div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2"><div><div className="text-sm font-medium">Sized item</div><div className="text-xs text-muted-foreground">Has size variants (S/M/L, shoe numbers, etc.)</div></div><Switch checked={isSized} onCheckedChange={setIsSized} /></div>
+          {isSized && (
+            <div className="rounded-lg border border-border p-3">
+              <div className="mb-2 flex items-center justify-between">
+                <div className="text-sm font-medium">Sizes</div>
+                <Button size="sm" variant="outline" onClick={addSize}><Plus className="mr-1 h-3 w-3" />Add size</Button>
+              </div>
+              {sizes.length === 0 ? (
+                <div className="rounded-md border border-dashed border-border p-3 text-center text-xs text-muted-foreground">No sizes yet. Click "Add size" to define S, M, L, 40, 42 etc.</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                    <tr>
+                      <th className="px-2 py-1 text-left font-medium">Size</th>
+                      <th className="px-2 py-1 text-right font-medium">Reorder Level</th>
+                      <th className="px-2 py-1 text-center font-medium">Active</th>
+                      <th className="px-2 py-1" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sizes.map((s, i) => (
+                      <tr key={i} className="border-t border-border/60">
+                        <td className="px-2 py-1.5"><Input className="h-9" value={s.size_value} onChange={(e) => updateSize(i, { size_value: e.target.value })} placeholder="e.g. M, L, 40" /></td>
+                        <td className="px-2 py-1.5"><Input className="h-9 text-right" type="number" min={0} value={s.reorder_level} onChange={(e) => updateSize(i, { reorder_level: Number(e.target.value) || 0 })} /></td>
+                        <td className="px-2 py-1.5 text-center"><Switch checked={s.enabled} onCheckedChange={(v) => updateSize(i, { enabled: v })} /></td>
+                        <td className="px-2 py-1.5 text-right"><Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => removeSize(i)}><Trash2 className="h-4 w-4" /></Button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
           <div className="grid gap-2"><Label>Description</Label><Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} /></div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2"><div><div className="text-sm font-medium">Enabled</div><div className="text-xs text-muted-foreground">Visible in dropdowns</div></div><Switch checked={enabled} onCheckedChange={setEnabled} /></div>
         </div>
@@ -289,8 +365,26 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
             if (!(await confirmAction({ title: "Save?", description: "Save these changes?", confirmText: "Save" }))) return;
             setSaving(true);
             const err = await onSubmit({ name, category_id: categoryId || null, unit, is_sized: isSized, hsn_code: hsn, default_reorder_level: reorder, description, enabled, standard_cost: stdCost });
+            if (err) { setSaving(false); toast.error(err); return; }
+            try {
+              let targetId = initial?.id;
+              if (!targetId) {
+                const { data } = await supabase.from("inv_items" as never).select("id").eq("name", name).order("created_at", { ascending: false }).limit(1).maybeSingle();
+                targetId = (data as { id?: string } | null)?.id;
+              }
+              if (targetId && isSized) await persistSizes(targetId);
+              if (targetId && !isSized && origSizes.length) {
+                // turned off sizing — clean up any existing sizes
+                await supabase.from("inv_item_sizes" as never).delete().eq("item_id", targetId);
+              }
+              qc.invalidateQueries({ queryKey: ["rc"] });
+            } catch (e) {
+              setSaving(false);
+              toast.error("Item saved but sizes failed: " + (e instanceof Error ? e.message : "Unknown"));
+              return;
+            }
             setSaving(false);
-            if (err) toast.error(err); else onOpenChange(false);
+            onOpenChange(false);
           }}>{saving ? "Saving…" : "Save"}</Button>
         </DialogFooter>
       </DialogContent>
