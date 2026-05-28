@@ -214,6 +214,13 @@ function PucManagerPage() {
               <SelectItem value="active">Active (not expired)</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={authorityFilter} onValueChange={setAuthorityFilter}>
+            <SelectTrigger className="h-10 w-full sm:w-56 rounded-lg"><SelectValue placeholder="All authorities" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All authorities</SelectItem>
+              {authorityOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setAddOpen(true)} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="mr-1.5 h-4 w-4" />Add PUC</Button>
