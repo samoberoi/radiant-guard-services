@@ -117,7 +117,7 @@ function AdminLayout() {
     { prefix: "/admin/inventory", module: "inventory" },
     { prefix: "/admin/attendance", module: "attendance" },
     { prefix: "/admin/payroll", module: "payroll" },
-    { prefix: "/admin/notifications", module: "notification_center" },
+    // notification center & profile are personal pages — no RBAC gate
     { prefix: "/admin/rbac", module: "rbac" },
     { prefix: "/admin/control-center", module: "control_center" },
     { prefix: "/admin/professional-tax-manager", module: "control_center" },
