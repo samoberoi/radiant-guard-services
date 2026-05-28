@@ -18,8 +18,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useResetOnOpen, useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
 import { MiniStat } from "@/components/MiniStat";
-import { AdvancedFilters } from "@/components/AdvancedFilters";
-import { applyFilters, type FilterCondition, type FilterField } from "@/lib/advanced-filters";
 
 type StatusFilter = "all" | "expired" | "renewal" | "due" | "active";
 const STATUS_VALUES: StatusFilter[] = ["all", "expired", "renewal", "due", "active"];
@@ -124,10 +122,16 @@ function PucManagerPage() {
   });
 
   const [query, setQuery] = useState("");
-  const [conditions, setConditions] = useState<FilterCondition[]>([]);
+  const [authorityFilter, setAuthorityFilter] = useState<string>("all");
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Puc | null>(null);
   const [deleting, setDeleting] = useState<Puc | null>(null);
+
+  const authorityOptions = useMemo(() => {
+    const s = new Set<string>();
+    for (const i of items) { const c = i.issuing_authority.trim(); if (c) s.add(c); }
+    return Array.from(s).sort();
+  }, [items]);
 
   const { status } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
@@ -136,18 +140,10 @@ function PucManagerPage() {
   const in60Date = new Date(); in60Date.setDate(in60Date.getDate() + 60);
   const in60 = in60Date.toISOString().slice(0, 10);
 
-  const filterFields: FilterField[] = useMemo(() => [
-    { key: "vehicle_number", label: "Vehicle", type: "text", accessor: (r) => vMap.get(String(r.vehicle_id))?.vehicle_number ?? "" },
-    { key: "puc_number", label: "PUC No.", type: "text" },
-    { key: "issuing_authority", label: "Issuing Authority", type: "text" },
-    { key: "issued_date", label: "Issued Date", type: "date" },
-    { key: "expiry_date", label: "Expiry Date", type: "date" },
-    { key: "enabled", label: "Enabled", type: "boolean" },
-  ], [vMap]);
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = items.filter((i) => {
+    return items.filter((i) => {
+      if (authorityFilter !== "all" && i.issuing_authority !== authorityFilter) return false;
       if (q) {
         const v = vMap.get(i.vehicle_id);
         const hit =
@@ -166,8 +162,7 @@ function PucManagerPage() {
       if (status === "active") return !isExpired;
       return true;
     });
-    return applyFilters(base as unknown as Record<string, unknown>[], filterFields, conditions) as unknown as typeof items;
-  }, [items, query, vMap, status, today, in60, conditions, filterFields]);
+  }, [items, query, vMap, status, today, in60, authorityFilter]);
 
   const stats = useMemo(() => {
     let expired = 0, renewal = 0, active = 0;
@@ -217,6 +212,13 @@ function PucManagerPage() {
               <SelectItem value="renewal">Coming up soon (≤60d)</SelectItem>
               <SelectItem value="due">Expired + Coming up soon</SelectItem>
               <SelectItem value="active">Active (not expired)</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={authorityFilter} onValueChange={setAuthorityFilter}>
+            <SelectTrigger className="h-10 w-full sm:w-56 rounded-lg"><SelectValue placeholder="All authorities" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All authorities</SelectItem>
+              {authorityOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

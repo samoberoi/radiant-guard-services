@@ -18,8 +18,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useResetOnOpen, useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
 import { MiniStat } from "@/components/MiniStat";
-import { AdvancedFilters } from "@/components/AdvancedFilters";
-import { applyFilters, type FilterCondition, type FilterField } from "@/lib/advanced-filters";
 
 type StatusFilter = "all" | "expired" | "renewal" | "due" | "active";
 const STATUS_VALUES: StatusFilter[] = ["all", "expired", "renewal", "due", "active"];
@@ -133,22 +131,16 @@ function InsuranceManagerPage() {
   });
 
   const [query, setQuery] = useState("");
-  const [conditions, setConditions] = useState<FilterCondition[]>([]);
+  const [insurerFilter, setInsurerFilter] = useState<string>("all");
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Insurance | null>(null);
   const [deleting, setDeleting] = useState<Insurance | null>(null);
 
-  const filterFields: FilterField[] = useMemo(() => [
-    { key: "vehicle_number", label: "Vehicle", type: "text", accessor: (r) => vMap.get(String(r.vehicle_id))?.vehicle_number ?? "" },
-    { key: "insurance_company", label: "Insurer", type: "text" },
-    { key: "policy_number", label: "Policy No.", type: "text" },
-    { key: "engine_number", label: "Engine No.", type: "text" },
-    { key: "chassis_number", label: "Chassis No.", type: "text" },
-    { key: "premium_amount", label: "Premium", type: "number" },
-    { key: "start_date", label: "Start Date", type: "date" },
-    { key: "end_date", label: "End Date", type: "date" },
-    { key: "enabled", label: "Enabled", type: "boolean" },
-  ], [vMap]);
+  const insurerOptions = useMemo(() => {
+    const s = new Set<string>();
+    for (const i of items) { const c = i.insurance_company.trim(); if (c) s.add(c); }
+    return Array.from(s).sort();
+  }, [items]);
 
   const { status } = Route.useSearch();
   const navigate = useNavigate({ from: Route.fullPath });
@@ -159,7 +151,8 @@ function InsuranceManagerPage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const base = items.filter((i) => {
+    return items.filter((i) => {
+      if (insurerFilter !== "all" && i.insurance_company !== insurerFilter) return false;
       if (q) {
         const v = vMap.get(i.vehicle_id);
         const hit =
@@ -180,8 +173,7 @@ function InsuranceManagerPage() {
       if (status === "active") return !isExpired;
       return true;
     });
-    return applyFilters(base as unknown as Record<string, unknown>[], filterFields, conditions) as unknown as typeof items;
-  }, [items, query, vMap, status, today, in60, conditions, filterFields]);
+  }, [items, query, vMap, status, today, in60, insurerFilter]);
 
   const stats = useMemo(() => {
     let expired = 0, renewal = 0, active = 0;
@@ -237,6 +229,13 @@ function InsuranceManagerPage() {
               <SelectItem value="active">Active (not expired)</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={insurerFilter} onValueChange={setInsurerFilter}>
+            <SelectTrigger className="h-10 w-full sm:w-56 rounded-lg"><SelectValue placeholder="All insurers" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All insurers</SelectItem>
+              {insurerOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => setAddOpen(true)} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="mr-1.5 h-4 w-4" />Add Insurance</Button>
@@ -263,9 +262,6 @@ function InsuranceManagerPage() {
         </div>
       </div>
 
-      <div className="mb-4">
-        <AdvancedFilters fields={filterFields} value={conditions} onChange={setConditions} />
-      </div>
 
 
 
