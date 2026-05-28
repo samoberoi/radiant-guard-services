@@ -565,7 +565,19 @@ function POFormDialog({
             </div>
             <div className="grid gap-2"><Label>PO Date</Label><Input type="date" value={poDate} onChange={(e) => setPoDate(e.target.value)} disabled={readOnly} /></div>
             <div className="grid gap-2"><Label>Expected Delivery</Label><Input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} disabled={readOnly} /></div>
+            {initial && (
+              <div className="grid gap-2 sm:col-span-2"><Label>Delivery Status</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {EDITABLE_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Auto-updates as Goods Receipts are posted; override here only when needed.</p>
+              </div>
+            )}
           </div>
+
 
           <div>
             <div className="mb-2 flex items-center justify-between">
