@@ -231,6 +231,7 @@ function ProfilePage() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
+  const [cameraOpen, setCameraOpen] = useState(false);
 
   const phone = useMemo(
     () => (user?.phone ?? "").replace(/\D/g, "").slice(-10),
