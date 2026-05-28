@@ -3,15 +3,24 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  Activity,
+  Briefcase,
   Camera,
   Download,
   FileSignature,
+  GraduationCap,
+  Heart,
   IdCard,
+  Languages as LanguagesIcon,
   Mail,
   MapPin,
   Phone as PhoneIcon,
+  ShieldAlert,
   ShieldCheck,
+  Sparkles,
   Upload,
+  Users,
+  UserCheck,
   Loader2,
   X,
 } from "lucide-react";
