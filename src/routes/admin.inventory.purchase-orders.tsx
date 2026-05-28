@@ -16,16 +16,26 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, statusBadgeClass } from "@/lib/inv-helpers";
 
-// PO status → user-facing delivery label. Drafts stay as "Draft"; cancelled stays.
+// PO status → user-facing delivery label. Legacy "approved" maps to Delivery Open.
 const PO_STATUS_LABEL: Record<string, string> = {
   draft: "Draft",
   open: "Delivery Open",
+  approved: "Delivery Open",
   partially_received: "Delivery Ongoing",
   received: "Delivery Completed",
   closed: "Delivery Completed",
   cancelled: "Cancelled",
 };
 const poStatusLabel = (s: string) => PO_STATUS_LABEL[s] ?? s.replace(/_/g, " ");
+
+// Editable status options shown in the dialog toggle.
+const EDITABLE_STATUSES: Array<{ value: string; label: string }> = [
+  { value: "open", label: "Delivery Open" },
+  { value: "partially_received", label: "Delivery Ongoing" },
+  { value: "received", label: "Delivery Completed" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
 
 export const Route = createFileRoute("/admin/inventory/purchase-orders")({ component: POPage });
 
@@ -239,12 +249,12 @@ function POPage() {
             <SelectTrigger className="h-10 w-full rounded-lg sm:w-52"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
               <SelectItem value="open">Delivery Open</SelectItem>
               <SelectItem value="partially_received">Delivery Ongoing</SelectItem>
               <SelectItem value="received">Delivery Completed</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
+
           </Select>
         </div>
         <Button onClick={() => { setEditing(null); setOpen(true); }} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
@@ -271,7 +281,8 @@ function POPage() {
             <tbody className="divide-y divide-border">
               {filtered.map((p) => {
                 const agg = lineAgg.get(p.id) ?? { products: 0, qty: 0 };
-                const canEdit = p.status === "draft" || p.status === "open";
+                const canEdit = p.status !== "cancelled";
+
                 
                 const canDownload = p.status !== "draft" && p.status !== "cancelled";
                 return (
@@ -350,7 +361,9 @@ function POFormDialog({
   const [expectedDate, setExpectedDate] = useState("");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<POLine[]>([]);
+  const [status, setStatus] = useState<string>("open");
   const [saving, setSaving] = useState(false);
+
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const sizesByItem = useMemo(() => {
@@ -362,8 +375,9 @@ function POFormDialog({
     }
     return m;
   }, [itemSizes]);
-  // Editable while not delivered. Once goods are received (fully or partially) or cancelled, lock to view-only.
-  const readOnly = !!initial && !(initial.status === "draft" || initial.status === "open");
+  // Line/header field edits lock once goods start arriving. Status toggle stays available unless cancelled.
+  const readOnly = !!initial && !(initial.status === "draft" || initial.status === "open" || initial.status === "approved");
+
 
 
   // Pick best matching rate card: prefer exact size match, then blank-size fallback.
@@ -414,6 +428,8 @@ function POFormDialog({
       setPoDate(initial.po_date);
       setExpectedDate(initial.expected_date ?? "");
       setNotes(initial.notes);
+      // Legacy "approved" maps to "open" in the toggle.
+      setStatus(initial.status === "approved" ? "open" : initial.status);
       const { data } = await supabase.from("inv_po_lines" as never).select("*").eq("po_id", initial.id).order("sort_order");
       setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => ({
         id: String(r.id),
@@ -426,8 +442,9 @@ function POFormDialog({
       })));
     } else {
       setVendorId(""); setWarehouseId(""); setPoDate(new Date().toISOString().slice(0, 10));
-      setExpectedDate(""); setNotes(""); setLines([]);
+      setExpectedDate(""); setNotes(""); setLines([]); setStatus("open");
     }
+
   });
 
   const totals = useMemo(() => {
@@ -440,7 +457,8 @@ function POFormDialog({
     return { sub, tax, grand: sub + tax };
   }, [lines]);
 
-  async function save(status: "draft" | "open") {
+  async function save(targetStatus: string) {
+
     if (!vendorId) { toast.error("Supplier required"); return; }
     if (!warehouseId) { toast.error("Destination warehouse required"); return; }
     if (!lines.length) { toast.error("Add at least one line"); return; }
@@ -473,8 +491,9 @@ function POFormDialog({
           subtotal: totals.sub,
           tax_total: totals.tax,
           grand_total: totals.grand,
-          status,
+          status: targetStatus,
         } as never).eq("id", initial.id);
+
         if (error) throw error;
         const { error: delErr } = await supabase.from("inv_po_lines" as never).delete().eq("po_id", initial.id);
         if (delErr) throw delErr;
@@ -494,7 +513,8 @@ function POFormDialog({
           subtotal: totals.sub,
           tax_total: totals.tax,
           grand_total: totals.grand,
-          status,
+          status: targetStatus,
+
           created_by: user?.id ?? null,
         } as never).select("id").single();
         if (error) throw error;
@@ -509,7 +529,8 @@ function POFormDialog({
         entityId: poId,
         entityLabel: initial?.po_number ?? "PO",
       });
-      toast.success(status === "draft" ? "Draft saved" : "PO issued");
+      toast.success(targetStatus === "draft" ? "Draft saved" : initial ? "Changes saved" : "PO issued");
+
       onSaved();
       onOpenChange(false);
     } catch (e) {
@@ -549,7 +570,19 @@ function POFormDialog({
             </div>
             <div className="grid gap-2"><Label>PO Date</Label><Input type="date" value={poDate} onChange={(e) => setPoDate(e.target.value)} disabled={readOnly} /></div>
             <div className="grid gap-2"><Label>Expected Delivery</Label><Input type="date" value={expectedDate} onChange={(e) => setExpectedDate(e.target.value)} disabled={readOnly} /></div>
+            {initial && (
+              <div className="grid gap-2 sm:col-span-2"><Label>Delivery Status</Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {EDITABLE_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">Auto-updates as Goods Receipts are posted; override here only when needed.</p>
+              </div>
+            )}
           </div>
+
 
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -642,9 +675,16 @@ function POFormDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
-          {!readOnly && <Button variant="outline" onClick={() => save("draft")} disabled={saving}>Save Draft</Button>}
-          {!readOnly && <Button onClick={() => save("open")} disabled={saving}>{saving ? "Saving…" : "Issue PO"}</Button>}
+          {initial ? (
+            <Button onClick={() => save(status)} disabled={saving}>{saving ? "Saving…" : "Save Changes"}</Button>
+          ) : (
+            <>
+              <Button variant="outline" onClick={() => save("draft")} disabled={saving}>Save Draft</Button>
+              <Button onClick={() => save("open")} disabled={saving}>{saving ? "Saving…" : "Issue PO"}</Button>
+            </>
+          )}
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
