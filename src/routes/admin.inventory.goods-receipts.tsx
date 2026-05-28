@@ -17,7 +17,7 @@ import { nextSeq, fmtNumber, postMovements, statusBadgeClass } from "@/lib/inv-h
 
 export const Route = createFileRoute("/admin/inventory/goods-receipts")({ component: GRNPage });
 
-const MODULE = "Inventory Goods Receipts";
+const MODULE = "Inventory Delivery Challans";
 const ENTITY = "inv_goods_receipts";
 
 type GRN = {
@@ -65,12 +65,52 @@ function GRNPage() {
       if (error) throw error;
       return (data as unknown as Warehouse[]) ?? [];
     },
+  // Aggregate line totals per GRN (products count + total value using PO unit_price)
+  const { data: lineAgg = new Map<string, { products: number; qty: number; value: number }>() } = useQuery({
+    queryKey: ["inv", "grn-line-agg"],
+    queryFn: async () => {
+      const pageSize = 1000;
+      let from = 0;
+      const all: { grn_id: string; item_id: string; accepted_qty: number; rejected_qty: number; po_line_id: string | null }[] = [];
+      while (true) {
+        const { data, error } = await supabase
+          .from("inv_goods_receipt_lines" as never)
+          .select("grn_id,item_id,accepted_qty,rejected_qty,po_line_id")
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const rows = (data as unknown as typeof all) ?? [];
+        all.push(...rows);
+        if (rows.length < pageSize) break;
+        from += pageSize;
+      }
+      // Fetch unit prices for all referenced po_lines
+      const polIds = Array.from(new Set(all.map((r) => r.po_line_id).filter(Boolean))) as string[];
+      const priceMap = new Map<string, number>();
+      for (let i = 0; i < polIds.length; i += 200) {
+        const chunk = polIds.slice(i, i + 200);
+        const { data: pls } = await supabase.from("inv_po_lines" as never).select("id,unit_price").in("id", chunk);
+        for (const r of (pls as unknown as { id: string; unit_price: number }[]) ?? []) {
+          priceMap.set(r.id, Number(r.unit_price ?? 0));
+        }
+      }
+      const map = new Map<string, { products: number; qty: number; value: number; _items: Set<string> }>();
+      for (const r of all) {
+        const cur = map.get(r.grn_id) ?? { products: 0, qty: 0, value: 0, _items: new Set<string>() };
+        const qty = Number(r.accepted_qty ?? 0) + Number(r.rejected_qty ?? 0);
+        cur.qty += qty;
+        cur.value += qty * (r.po_line_id ? priceMap.get(r.po_line_id) ?? 0 : 0);
+        cur._items.add(r.item_id);
+        map.set(r.grn_id, cur);
+      }
+      const out = new Map<string, { products: number; qty: number; value: number }>();
+      for (const [k, v] of map) out.set(k, { products: v._items.size, qty: v.qty, value: v.value });
+      return out;
+    },
   });
 
   const vMap = useMemo(() => new Map(vendors.map((v) => [v.id, v.name])), [vendors]);
   const wMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w.name])), [warehouses]);
   const poMap = useMemo(() => new Map(pos.map((p) => [p.id, p])), [pos]);
-
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [viewing, setViewing] = useState<GRN | null>(null);
