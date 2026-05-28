@@ -106,6 +106,7 @@ function useVehicles() {
     owner: p.owner.trim(),
     notes: p.notes.trim(),
     enabled: p.enabled,
+    service_interval_km: p.service_interval_km > 0 ? Math.round(p.service_interval_km) : DEFAULT_SERVICE_INTERVAL_KM,
   });
 
   const addMut = useMutation({
