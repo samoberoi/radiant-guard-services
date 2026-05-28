@@ -682,8 +682,7 @@ function AdminLayout() {
           </div>
 
           </>)}
-          {can("notification_center") && (<>
-          {/* Notification Center link */}
+          {/* Notification Center link — always visible (personal page) */}
           <div className="mt-2">
             <Link
               to="/admin/notifications"
@@ -700,7 +699,25 @@ function AdminLayout() {
               {!collapsed && <span>Notification Center</span>}
             </Link>
           </div>
-          </>)}
+
+          {/* My Profile link — always visible */}
+          <div className="mt-2">
+            <Link
+              to="/admin/profile"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+                isActive("/admin/profile")
+                  ? "bg-accent/20 text-accent"
+                  : "text-primary-foreground/85 hover:bg-white/5",
+                collapsed && "justify-center",
+              )}
+              title={collapsed ? "My Profile" : undefined}
+            >
+              <Users className="h-4.5 w-4.5 shrink-0" />
+              {!collapsed && <span>My Profile</span>}
+            </Link>
+          </div>
+
 
 
         </nav>
