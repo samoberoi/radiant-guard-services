@@ -97,7 +97,6 @@ export const RBAC_MODULES: ModuleDef[] = [
       { key: "puc_manager",        label: "PUC Manager",         path: "/admin/vehicles/pucs",       icon: Briefcase },
       { key: "service_manager",    label: "Service Manager",     path: "/admin/vehicles/service-manager", icon: Wrench },
       { key: "expense_manager",    label: "Expense Manager",     path: "/admin/vehicles/expense-manager", icon: Fuel },
-      { key: "insight_lab",        label: "Insight Lab",         path: "/admin/vehicles/insight-lab",     icon: Sparkles },
     ],
   },
   {
