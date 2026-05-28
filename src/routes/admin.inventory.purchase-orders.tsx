@@ -336,7 +336,9 @@ function POFormDialog({
     if (!lines.length) { toast.error("Add at least one line"); return; }
     for (const l of lines) {
       if (!l.item_id) { toast.error("Pick an item on every line"); return; }
-      if (l.ordered_qty <= 0) { toast.error("Quantity must be > 0"); return; }
+      if (!Number.isInteger(l.ordered_qty) || l.ordered_qty < 1) { toast.error("Quantity must be a whole number ≥ 1"); return; }
+      const item = itemMap.get(l.item_id);
+      if (item?.is_sized && !l.size_value) { toast.error(`Pick a size for ${item.name}`); return; }
     }
     setSaving(true);
     try {
@@ -364,8 +366,10 @@ function POFormDialog({
           status,
         } as never).eq("id", initial.id);
         if (error) throw error;
-        await supabase.from("inv_po_lines" as never).delete().eq("po_id", initial.id);
-        await supabase.from("inv_po_lines" as never).insert(linesPayload.map((l) => ({ ...l, po_id: initial.id })) as never);
+        const { error: delErr } = await supabase.from("inv_po_lines" as never).delete().eq("po_id", initial.id);
+        if (delErr) throw delErr;
+        const { error: insErr } = await supabase.from("inv_po_lines" as never).insert(linesPayload.map((l) => ({ ...l, po_id: initial.id })) as never);
+        if (insErr) throw insErr;
       } else {
         const n = await nextSeq("inv_po_number_seq");
         const po_number = fmtNumber("PO", n);
@@ -385,7 +389,8 @@ function POFormDialog({
         } as never).select("id").single();
         if (error) throw error;
         poId = (ins as unknown as { id: string }).id;
-        await supabase.from("inv_po_lines" as never).insert(linesPayload.map((l) => ({ ...l, po_id: poId })) as never);
+        const { error: insErr } = await supabase.from("inv_po_lines" as never).insert(linesPayload.map((l) => ({ ...l, po_id: poId })) as never);
+        if (insErr) throw insErr;
       }
       void logActivity({
         module: MODULE,
@@ -398,7 +403,12 @@ function POFormDialog({
       onSaved();
       onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
+      const msg = (e as { message?: string; details?: string; hint?: string } | null)?.message
+        || (e as { details?: string } | null)?.details
+        || (typeof e === "string" ? e : JSON.stringify(e));
+      // eslint-disable-next-line no-console
+      console.error("PO save failed", e);
+      toast.error(msg || "Failed to save PO");
     } finally {
       setSaving(false);
     }
