@@ -106,6 +106,24 @@ function POPage() {
       return (data as unknown as ItemSize[]) ?? [];
     },
   });
+  const { data: lineAgg = new Map<string, { products: number; qty: number }>() } = useQuery({
+    queryKey: ["inv", "po-line-agg"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_po_lines" as never)
+        .select("po_id,ordered_qty");
+      if (error) throw error;
+      const rows = (data as unknown as Array<{ po_id: string; ordered_qty: number }>) ?? [];
+      const m = new Map<string, { products: number; qty: number }>();
+      for (const r of rows) {
+        const cur = m.get(r.po_id) ?? { products: 0, qty: 0 };
+        cur.products += 1;
+        cur.qty += Number(r.ordered_qty) || 0;
+        m.set(r.po_id, cur);
+      }
+      return m;
+    },
+  });
 
   const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
   const warehouseMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w])), [warehouses]);
@@ -124,8 +142,12 @@ function POPage() {
       return p.po_number.toLowerCase().includes(q) || v.toLowerCase().includes(q);
     });
   }, [pos, query, statusFilter, vendorMap]);
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["inv", "pos"] });
+    qc.invalidateQueries({ queryKey: ["inv", "po-line-agg"] });
+  };
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: ["inv", "pos"] });
+
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
@@ -221,12 +243,19 @@ function POPage() {
                 <th className="px-5 py-3">Deliver To</th>
                 <th className="px-5 py-3">Date</th>
                 <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Total</th>
+                <th className="px-5 py-3 text-right">Total Products</th>
+                <th className="px-5 py-3 text-right">Total Quantity</th>
+                <th className="px-5 py-3 text-right">Total Price</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((p) => (
+              {filtered.map((p) => {
+                const agg = lineAgg.get(p.id) ?? { products: 0, qty: 0 };
+                const canEdit = p.status === "draft" || p.status === "open";
+                
+                const canDownload = p.status !== "draft" && p.status !== "cancelled";
+                return (
                 <tr key={p.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs">{p.po_number}</td>
                   <td className="px-5 py-3 font-medium">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</td>
@@ -235,27 +264,38 @@ function POPage() {
                   <td className="px-5 py-3">
                     <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(p.status)}`}>{poStatusLabel(p.status)}</span>
                   </td>
+                  <td className="px-5 py-3 text-right tabular-nums">{agg.products}</td>
+                  <td className="px-5 py-3 text-right tabular-nums">{agg.qty}</td>
+                  <td className="px-5 py-3 text-right tabular-nums font-semibold">{Number(p.grand_total ?? 0).toFixed(2)}</td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setEditing(p); setOpen(true); }}>
-                        {p.status === "draft" ? <Edit2 className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="View" onClick={() => { setEditing(p); setOpen(true); }}>
+                        <Eye className="h-4 w-4" />
                       </Button>
-                      {p.status !== "draft" && p.status !== "cancelled" && (
+                      {canEdit && (
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Edit" onClick={() => { setEditing(p); setOpen(true); }}>
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" title="Delete" onClick={async () => {
+                        const isRaised = p.status !== "draft";
+                        const desc = isRaised
+                          ? `Are you sure? A purchase order has been raised (${p.po_number}). Do you really want to delete?`
+                          : `Delete ${p.po_number}?`;
+                        if (!(await confirmAction({ title: "Delete PO?", description: desc, confirmText: "Delete" }))) return;
+                        try { await deleteMut.mutateAsync(p.id); toast.success("Deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                      }}><Trash2 className="h-4 w-4" /></Button>
+                      {canDownload && (
                         <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Download PO PDF" onClick={async () => {
                           try { await handleDownloadPO(p); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed to generate PDF"); }
                         }}><Download className="h-4 w-4" /></Button>
                       )}
-                      {p.status === "draft" && (
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={async () => {
-                          if (!(await confirmAction({ title: "Delete PO?", description: `Delete ${p.po_number}?`, confirmText: "Delete" }))) return;
-                          try { await deleteMut.mutateAsync(p.id); toast.success("Deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
-                        }}><Trash2 className="h-4 w-4" /></Button>
-                      )}
                     </div>
                   </td>
                 </tr>
-              ))}
-              {!filtered.length && <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />No purchase orders yet. Click <span className="font-semibold text-foreground">Order from Supplier</span> to create your first PO.</td></tr>}
+              );})}
+              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />No purchase orders yet. Click <span className="font-semibold text-foreground">Order from Supplier</span> to create your first PO.</td></tr>}
+
             </tbody>
           </table>
         </div>
