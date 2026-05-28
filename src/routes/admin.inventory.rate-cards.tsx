@@ -369,10 +369,10 @@ function RateCardDialog({
                   {rows.map((r, idx) => (
                     <tr key={idx} className="border-t border-border/60">
                       <td className="px-2 py-1.5 font-medium">{r.size_value || <span className="text-muted-foreground">—</span>}</td>
-                      <td className="px-2 py-1.5"><Input type="number" step="0.01" className="h-9 text-right" value={r.unit_price} onChange={(e) => updateRow(idx, { unit_price: Number(e.target.value) || 0 })} /></td>
-                      <td className="px-2 py-1.5"><Input type="number" step="0.01" className="h-9 text-right" value={r.tax_percent} onChange={(e) => updateRow(idx, { tax_percent: Number(e.target.value) || 0 })} /></td>
-                      <td className="px-2 py-1.5"><Input type="number" className="h-9 text-right" value={r.min_order_qty} onChange={(e) => updateRow(idx, { min_order_qty: Number(e.target.value) || 0 })} /></td>
-                      <td className="px-2 py-1.5"><Input type="number" className="h-9 text-right" value={r.lead_time_days} onChange={(e) => updateRow(idx, { lead_time_days: Number(e.target.value) || 0 })} /></td>
+                      <td className="px-2 py-1.5"><Input type="number" step="0.01" className="h-9 text-right" value={r.unit_price === 0 ? "" : r.unit_price} onChange={(e) => updateRow(idx, { unit_price: e.target.value === "" ? 0 : Number(e.target.value) || 0 })} /></td>
+                      <td className="px-2 py-1.5"><Input type="number" step="0.01" className="h-9 text-right" value={r.tax_percent === 0 ? "" : r.tax_percent} onChange={(e) => updateRow(idx, { tax_percent: e.target.value === "" ? 0 : Number(e.target.value) || 0 })} /></td>
+                      <td className="px-2 py-1.5"><Input type="number" className="h-9 text-right" value={r.min_order_qty === 0 ? "" : r.min_order_qty} onChange={(e) => updateRow(idx, { min_order_qty: e.target.value === "" ? 0 : Number(e.target.value) || 0 })} /></td>
+                      <td className="px-2 py-1.5"><Input type="number" className="h-9 text-right" value={r.lead_time_days === 0 ? "" : r.lead_time_days} onChange={(e) => updateRow(idx, { lead_time_days: e.target.value === "" ? 0 : Number(e.target.value) || 0 })} /></td>
                       <td className="px-2 py-1.5 text-center"><Switch checked={r.enabled} onCheckedChange={(v) => updateRow(idx, { enabled: v })} /></td>
                     </tr>
                   ))}
