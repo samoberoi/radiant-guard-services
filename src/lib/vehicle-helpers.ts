@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export type VehicleOption = { id: string; vehicle_number: string; name: string; engine_number?: string; chassis_number?: string };
+export type VehicleOption = { id: string; vehicle_number: string; name: string; engine_number?: string; chassis_number?: string; fuel_type?: string };
 
 export function useVehicleOptions() {
   return useQuery({
@@ -10,7 +10,7 @@ export function useVehicleOptions() {
     queryFn: async (): Promise<VehicleOption[]> => {
       const { data, error } = await supabase
         .from("vehicles" as never)
-        .select("id,vehicle_number,name,engine_number,chassis_number,enabled")
+        .select("id,vehicle_number,name,engine_number,chassis_number,fuel_type,enabled")
         .order("vehicle_number", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[])
@@ -21,6 +21,7 @@ export function useVehicleOptions() {
           name: String(r.name ?? ""),
           engine_number: String(r.engine_number ?? ""),
           chassis_number: String(r.chassis_number ?? ""),
+          fuel_type: String(r.fuel_type ?? ""),
         }));
     },
   });

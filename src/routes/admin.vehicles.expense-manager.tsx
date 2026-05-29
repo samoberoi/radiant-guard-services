@@ -517,7 +517,7 @@ function ProofThumb({ url, label }: { url: string; label: string }) {
 
 /* ------------------------- Add Entry Dialog ------------------------- */
 
-type Vehicle = { id: string; vehicle_number: string; name: string };
+type Vehicle = { id: string; vehicle_number: string; name: string; fuel_type?: string };
 
 
 function AddEntryDialog({
@@ -590,9 +590,14 @@ function AddEntryDialog({
   function pickVehicle(id: string) {
     setVehicleId(id);
     setVehOpen(false);
+    const veh = vehicles.find((v) => v.id === id);
     const last = lastOdoByVehicle.get(id) ?? 0;
     if (last > 0) setOdometer(String(last));
     else setOdometer("");
+    if (expenseType === "fuel" && veh?.fuel_type) {
+      const matched = FUEL_TYPES.find((f) => f.toLowerCase() === veh.fuel_type!.trim().toLowerCase());
+      setFuelType(matched ?? veh.fuel_type!);
+    }
   }
 
   function recalcAmount(q: string, r: string) {
