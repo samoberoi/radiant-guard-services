@@ -195,6 +195,7 @@ function ExpenseManagerPage() {
   }, [filtered]);
 
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<ExpenseEntry | null>(null);
 
   const delMut = useMutation({
     mutationFn: async (e: ExpenseEntry) => {
