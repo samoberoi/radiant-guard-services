@@ -285,14 +285,15 @@ function FastTagManagerPage() {
           <table className="w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
-                <th className="px-5 py-3">Vehicle</th>
-                <th className="px-5 py-3">FastTag No.</th>
-                <th className="px-5 py-3">Bank</th>
-                <th className="px-5 py-3">Balance</th>
-                <th className="px-5 py-3">Expires</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3">Enabled</th>
+                <SortHeader label="Vehicle" sortKey="vehicle" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="FastTag No." sortKey="fastag" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Bank" sortKey="bank" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Balance" sortKey="balance" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Expires" sortKey="expires" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Status" sortKey="status" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Enabled" sortKey="enabled" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
                 <th className="px-5 py-3 text-right">Actions</th>
+
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
