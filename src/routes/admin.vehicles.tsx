@@ -1,12 +1,14 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Car, CheckCircle2, Fuel, ShieldAlert, ShieldCheck, Wind, Wrench } from "lucide-react";
+import { Car, CheckCircle2, Fuel, HelpCircle, ShieldAlert, ShieldCheck, Wind, Wrench } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtDate } from "@/lib/vehicle-helpers";
 import { serviceStatusFor } from "@/lib/vehicle-service";
 import { cn } from "@/lib/utils";
+import { VehicleTourProvider, useVehicleTour } from "@/components/VehicleTour";
 
 export const Route = createFileRoute("/admin/vehicles")({
   component: VehiclesLayout,
@@ -16,9 +18,13 @@ export const Route = createFileRoute("/admin/vehicles")({
 function VehiclesLayout() {
   const location = useLocation();
   const isHub = location.pathname === "/admin/vehicles" || location.pathname === "/admin/vehicles/";
-  if (!isHub) return <Outlet />;
-  return <VehiclesDashboard />;
+  return (
+    <VehicleTourProvider>
+      {isHub ? <VehiclesDashboard /> : <Outlet />}
+    </VehicleTourProvider>
+  );
 }
+
 
 type DashRow = Record<string, unknown>;
 
@@ -132,18 +138,19 @@ function VehiclesDashboard() {
     () => vehicles.filter((v) => v.enabled !== false && serviceStatusFor(String(v.vehicle_number ?? "")).dueSoon).length,
     [vehicles],
   );
-
   return (
     <div>
       <PageHeader
         title="Vehicles"
         description="Overview of fleet, FastTag, insurance, PUC and service status."
         crumbs={[{ label: "Vehicles" }]}
+        actions={<TourButton />}
       />
 
       {/* Top stat cards — clickable, deep-link into managers with filter */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <StatCard
+          dataTour="stat-total"
           label="Total Vehicles"
           value={totalVehicles}
           icon={Car}
@@ -151,6 +158,7 @@ function VehiclesDashboard() {
           to="/admin/vehicles/inventory"
         />
         <StatCard
+          dataTour="stat-service"
           label="Service Due Soon"
           value={serviceDueSoon}
           icon={Wrench}
@@ -159,6 +167,7 @@ function VehiclesDashboard() {
           to="/admin/vehicles/service-manager"
         />
         <StatCard
+          dataTour="stat-ins-expired"
           label="Insurance Expired"
           value={insExpired.length}
           icon={ShieldAlert}
@@ -167,6 +176,7 @@ function VehiclesDashboard() {
           search={{ status: "expired" }}
         />
         <StatCard
+          dataTour="stat-ins-renewal"
           label="Insurance Renewal (≤60d)"
           value={insRenewal.length}
           icon={ShieldCheck}
@@ -175,6 +185,7 @@ function VehiclesDashboard() {
           search={{ status: "renewal" }}
         />
         <StatCard
+          dataTour="stat-puc"
           label="PUC Expiring (≤60d)"
           value={pucExpiring.length + pucExpired.length}
           icon={Wind}
@@ -184,6 +195,7 @@ function VehiclesDashboard() {
           search={{ status: "due" }}
         />
         <StatCard
+          dataTour="stat-fuel"
           label="Fuel Spend (This Month)"
           value={Math.round(fuelSpend.total)}
           valuePrefix="₹"
@@ -192,6 +204,11 @@ function VehiclesDashboard() {
           subtle={`${fuelSpend.count} top-ups`}
           to="/admin/vehicles/expense-manager"
         />
+      </div>
+
+      {/* Fuel spend breakdown — this month */}
+      <div data-tour="breakdown" className="mt-6 grid gap-4 sm:grid-cols-2">
+
       </div>
 
       {/* Fuel spend breakdown — this month */}
@@ -220,7 +237,8 @@ function VehiclesDashboard() {
       </div>
 
       {/* Fuel mix */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+      <div data-tour="due-lists" className="mt-6 grid gap-4 lg:grid-cols-3">
+
         <div className="rounded-2xl border border-border bg-card p-5 lg:col-span-1">
 
           <div className="flex items-center gap-2">
@@ -303,12 +321,22 @@ function VehiclesDashboard() {
   );
 }
 
+function TourButton() {
+  const { start } = useVehicleTour();
+  return (
+    <Button variant="outline" size="sm" onClick={start} className="gap-2">
+      <HelpCircle className="h-4 w-4" />
+      Take Tour
+    </Button>
+  );
+}
+
 function StatCard({
-  label, value, icon: Icon, accent, subtle, to, search, valuePrefix,
+  label, value, icon: Icon, accent, subtle, to, search, valuePrefix, dataTour,
 }: {
   label: string; value: number; icon: React.ComponentType<{ className?: string }>;
   accent: "accent" | "destructive" | "warning"; subtle?: string;
-  to: string; search?: Record<string, string>; valuePrefix?: string;
+  to: string; search?: Record<string, string>; valuePrefix?: string; dataTour?: string;
 }) {
   const palette = accent === "destructive"
     ? "bg-destructive/15 text-destructive"
@@ -319,8 +347,10 @@ function StatCard({
     <Link
       to={to}
       search={search as never}
+      data-tour={dataTour}
       className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:border-accent/50 hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
+
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
