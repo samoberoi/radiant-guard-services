@@ -18,6 +18,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useResetOnOpen, useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
 import { MiniStat } from "@/components/MiniStat";
+import { SortHeader, sortRows, useSort } from "@/components/SortableHeader";
+
 
 export const Route = createFileRoute("/admin/vehicles/fastags")({
   component: FastTagManagerPage,
