@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Download,
   Fuel,
   MapPin,
   Plus,
+  Pencil,
   Trash2,
   Upload,
   Image as ImageIcon,
@@ -194,6 +195,7 @@ function ExpenseManagerPage() {
   }, [filtered]);
 
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<ExpenseEntry | null>(null);
 
   const delMut = useMutation({
     mutationFn: async (e: ExpenseEntry) => {
@@ -448,9 +450,22 @@ function ExpenseManagerPage() {
                     </div>
                   </td>
                   <td className="px-3 py-2.5 text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(e)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        title="Edit"
+                        onClick={() => {
+                          setEditing(e);
+                          setOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" title="Delete" onClick={() => handleDelete(e)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -461,8 +476,12 @@ function ExpenseManagerPage() {
 
       <AddEntryDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) setEditing(null);
+        }}
         vehicles={vehicles}
+        editing={editing}
         lastOdoByVehicle={useMemo(() => {
           const m = new Map<string, number>();
           for (const e of entries) {
@@ -506,12 +525,14 @@ function AddEntryDialog({
   onOpenChange,
   vehicles,
   lastOdoByVehicle,
+  editing,
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   vehicles: Vehicle[];
   lastOdoByVehicle: Map<string, number>;
+  editing: ExpenseEntry | null;
   onSaved: () => void;
 }) {
   const [expenseType, setExpenseType] = useState<string>("fuel");
@@ -536,6 +557,31 @@ function AddEntryDialog({
   const [busy, setBusy] = useState(false);
   
   const [vehOpen, setVehOpen] = useState(false);
+
+  useEffect(() => {
+    if (open && editing) {
+      setExpenseType(editing.expense_type || "fuel");
+      setVehicleId(editing.vehicle_id);
+      setEntryDate(editing.entry_date);
+      setEntryTime(editing.entry_time ?? "");
+      setFuelType(editing.fuel_type || "Petrol");
+      setOdometer(editing.odometer_km ? String(editing.odometer_km) : "");
+      setQuantity(editing.quantity ? String(editing.quantity) : "");
+      setRate(editing.rate ? String(editing.rate) : "");
+      setAmount(editing.amount ? String(editing.amount) : "");
+      setPaymentMode(editing.payment_mode || "PetroCard");
+      setLocationText(editing.location_text || "");
+      setGeo(editing.geo_lat != null && editing.geo_lng != null ? { lat: editing.geo_lat, lng: editing.geo_lng } : null);
+      setDescription(editing.description || "");
+      setTagsInput((editing.tags || []).join(", "));
+      setNotes(editing.notes || "");
+      setOdoFile(null);
+      setPumpFile(null);
+      setReceiptFile(null);
+      setFillingFile(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing?.id]);
 
   const isFuel = expenseType === "fuel";
   const minOdo = vehicleId ? (lastOdoByVehicle.get(vehicleId) ?? 0) : 0;
@@ -624,7 +670,7 @@ function AddEntryDialog({
         );
         return;
       }
-      if (!odoFile || !pumpFile || !receiptFile) {
+      if (!editing && (!odoFile || !pumpFile || !receiptFile)) {
         toast.error("Upload odometer, pump and receipt photos (filling photo optional)");
         return;
       }
@@ -658,33 +704,42 @@ function AddEntryDialog({
         location_text: locationText,
         geo_lat: geo?.lat ?? null,
         geo_lng: geo?.lng ?? null,
-        odometer_photo_url: odoUrl,
-        pump_photo_url: pumpUrl,
-        receipt_photo_url: receiptUrl,
-        filling_photo_url: fillingUrl,
+        odometer_photo_url: odoUrl || editing?.odometer_photo_url || "",
+        pump_photo_url: pumpUrl || editing?.pump_photo_url || "",
+        receipt_photo_url: receiptUrl || editing?.receipt_photo_url || "",
+        filling_photo_url: fillingUrl || editing?.filling_photo_url || "",
         description,
         tags,
         notes,
       };
-      const { data, error } = await supabase
-        .from(ENTITY as never)
-        .insert(payload as never)
-        .select("id")
-        .single();
-      if (error) throw error;
+      let savedId: string;
+      if (editing) {
+        const { error } = await supabase
+          .from(ENTITY as never)
+          .update(payload as never)
+          .eq("id", editing.id);
+        if (error) throw error;
+        savedId = editing.id;
+      } else {
+        const { data, error } = await supabase
+          .from(ENTITY as never)
+          .insert(payload as never)
+          .select("id")
+          .single();
+        if (error) throw error;
+        savedId = String((data as { id: string }).id);
+      }
       const veh = vehicles.find((v) => v.id === vehicleId);
       await logActivity({
         module: MODULE,
-        action: "create",
+        action: editing ? "update" : "create",
         entityType: ENTITY,
-        entityId: String((data as { id: string }).id),
+        entityId: savedId,
         entityLabel: `${veh?.vehicle_number ?? "Vehicle"} • ${expenseLabel(expenseType)} • ${fmtDate(entryDate)} • ${inr(Number(amount))}`,
+        before: editing ? (editing as unknown as Record<string, unknown>) : undefined,
         after: payload as unknown as Record<string, unknown>,
       });
-      toast.success("Expense entry added");
-      onSaved();
-      reset();
-      onOpenChange(false);
+      toast.success(editing ? "Expense entry updated" : "Expense entry added");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
     } finally {
@@ -702,7 +757,7 @@ function AddEntryDialog({
     >
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Expense Entry</DialogTitle>
+          <DialogTitle>{editing ? "Edit Expense Entry" : "Add Expense Entry"}</DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
