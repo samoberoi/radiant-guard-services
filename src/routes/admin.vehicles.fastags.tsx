@@ -183,6 +183,8 @@ function FastTagManagerPage() {
         i.account_number.toLowerCase().includes(q) ||
         (v?.vehicle_number.toLowerCase().includes(q) ?? false)
       );
+    });
+  }, [items, query, vMap, bankFilter, statusFilter]);
 
   const sort = useSort<"vehicle" | "fastag" | "bank" | "balance" | "expires" | "status" | "enabled">({ key: "vehicle", dir: "asc" });
   const sortedItems = useMemo(() => sortRows(filtered, sort.sort, (i, k) => {
@@ -197,7 +199,6 @@ function FastTagManagerPage() {
     }
   }), [filtered, sort.sort, vMap]);
 
-  }, [items, query, vMap, bankFilter, statusFilter]);
 
   return (
     <div>
