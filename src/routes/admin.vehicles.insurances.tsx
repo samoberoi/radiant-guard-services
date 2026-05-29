@@ -174,6 +174,8 @@ function InsuranceManagerPage() {
       if (status === "due") return isExpired || isRenewal;
       if (status === "active") return !isExpired;
       return true;
+    });
+  }, [items, query, vMap, status, today, in60, insurerFilter]);
 
   const sort = useSort<"vehicle" | "insurer" | "policy" | "from" | "till" | "enabled">({ key: "till", dir: "asc" });
   const sortedItems = useMemo(() => sortRows(filtered, sort.sort, (i, k) => {
@@ -183,11 +185,10 @@ function InsuranceManagerPage() {
       case "policy": return i.policy_number ?? "";
       case "from": return i.start_date ?? "";
       case "till": return i.end_date ?? "";
-      case "enabled": return i.enabled ? 1 : 0;
+      case "enabled": return (i as { enabled?: boolean }).enabled ? 1 : 0;
     }
   }), [filtered, sort.sort, vMap]);
 
-  }, [items, query, vMap, status, today, in60, insurerFilter]);
 
   const stats = useMemo(() => {
     let expired = 0, renewal = 0, active = 0;
