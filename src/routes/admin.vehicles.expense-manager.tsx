@@ -6,6 +6,7 @@ import {
   Fuel,
   MapPin,
   Plus,
+  Pencil,
   Trash2,
   Upload,
   Image as ImageIcon,
