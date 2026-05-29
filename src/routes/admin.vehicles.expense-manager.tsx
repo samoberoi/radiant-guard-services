@@ -184,6 +184,8 @@ function ExpenseManagerPage() {
       if (typeFilter !== "all" && e.expense_type !== typeFilter) return false;
       if (from && e.entry_date < from) return false;
       if (to && e.entry_date > to) return false;
+      return true;
+    });
   }, [entries, vehicleFilter, typeFilter, from, to]);
 
   const sort = useSort<"date" | "vehicle" | "type" | "description" | "odometer" | "qty" | "amount" | "payment" | "location">({ key: "date", dir: "desc" });
@@ -201,8 +203,6 @@ function ExpenseManagerPage() {
     }
   }), [filtered, sort.sort, vehMap]);
 
-    });
-  }, [entries, vehicleFilter, typeFilter, from, to]);
 
   const stats = useMemo(() => {
     const totalSpend = filtered.reduce((s, e) => s + (e.amount || 0), 0);
