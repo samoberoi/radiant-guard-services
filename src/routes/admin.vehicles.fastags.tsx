@@ -183,7 +183,20 @@ function FastTagManagerPage() {
         i.account_number.toLowerCase().includes(q) ||
         (v?.vehicle_number.toLowerCase().includes(q) ?? false)
       );
-    });
+
+  const sort = useSort<"vehicle" | "fastag" | "bank" | "balance" | "expires" | "status" | "enabled">({ key: "vehicle", dir: "asc" });
+  const sortedItems = useMemo(() => sortRows(filtered, sort.sort, (i, k) => {
+    switch (k) {
+      case "vehicle": return vMap.get(i.vehicle_id)?.vehicle_number ?? "";
+      case "fastag": return i.fastag_number;
+      case "bank": return i.bank_name;
+      case "balance": return Number(i.balance) || 0;
+      case "expires": return i.expiry_date ?? "";
+      case "status": return i.status;
+      case "enabled": return i.enabled ? 1 : 0;
+    }
+  }), [filtered, sort.sort, vMap]);
+
   }, [items, query, vMap, bankFilter, statusFilter]);
 
   return (
