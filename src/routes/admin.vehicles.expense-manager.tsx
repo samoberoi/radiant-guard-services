@@ -184,7 +184,23 @@ function ExpenseManagerPage() {
       if (typeFilter !== "all" && e.expense_type !== typeFilter) return false;
       if (from && e.entry_date < from) return false;
       if (to && e.entry_date > to) return false;
-      return true;
+  }, [entries, vehicleFilter, typeFilter, from, to]);
+
+  const sort = useSort<"date" | "vehicle" | "type" | "description" | "odometer" | "qty" | "amount" | "payment" | "location">({ key: "date", dir: "desc" });
+  const sortedFiltered = useMemo(() => sortRows(filtered, sort.sort, (e, k) => {
+    switch (k) {
+      case "date": return `${e.entry_date} ${e.entry_time ?? ""}`;
+      case "vehicle": return vehMap.get(e.vehicle_id) ?? "";
+      case "type": return `${expenseLabel(e.expense_type)} ${e.fuel_type ?? ""}`;
+      case "description": return e.description ?? "";
+      case "odometer": return Number(e.odometer_km) || 0;
+      case "qty": return Number(e.quantity) || 0;
+      case "amount": return Number(e.amount) || 0;
+      case "payment": return e.payment_mode ?? "";
+      case "location": return e.location_text ?? "";
+    }
+  }), [filtered, sort.sort, vehMap]);
+
     });
   }, [entries, vehicleFilter, typeFilter, from, to]);
 
