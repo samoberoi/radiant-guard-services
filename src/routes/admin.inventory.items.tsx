@@ -151,7 +151,7 @@ function ItemsPage() {
 
   return (
     <div>
-      <PageHeader title="Item Master" description="SKUs you stock — uniforms, accessories, equipment, consumables." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Item Master" }]} />
+      <PageHeader title="Products" description="SKUs you stock — uniforms, accessories, equipment, consumables." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Products" }]} />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row">
