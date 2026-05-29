@@ -558,6 +558,31 @@ function AddEntryDialog({
   
   const [vehOpen, setVehOpen] = useState(false);
 
+  useEffect(() => {
+    if (open && editing) {
+      setExpenseType(editing.expense_type || "fuel");
+      setVehicleId(editing.vehicle_id);
+      setEntryDate(editing.entry_date);
+      setEntryTime(editing.entry_time ?? "");
+      setFuelType(editing.fuel_type || "Petrol");
+      setOdometer(editing.odometer_km ? String(editing.odometer_km) : "");
+      setQuantity(editing.quantity ? String(editing.quantity) : "");
+      setRate(editing.rate ? String(editing.rate) : "");
+      setAmount(editing.amount ? String(editing.amount) : "");
+      setPaymentMode(editing.payment_mode || "PetroCard");
+      setLocationText(editing.location_text || "");
+      setGeo(editing.geo_lat != null && editing.geo_lng != null ? { lat: editing.geo_lat, lng: editing.geo_lng } : null);
+      setDescription(editing.description || "");
+      setTagsInput((editing.tags || []).join(", "));
+      setNotes(editing.notes || "");
+      setOdoFile(null);
+      setPumpFile(null);
+      setReceiptFile(null);
+      setFillingFile(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing?.id]);
+
   const isFuel = expenseType === "fuel";
   const minOdo = vehicleId ? (lastOdoByVehicle.get(vehicleId) ?? 0) : 0;
   const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
