@@ -10,7 +10,7 @@ export function useVehicleOptions() {
     queryFn: async (): Promise<VehicleOption[]> => {
       const { data, error } = await supabase
         .from("vehicles" as never)
-        .select("id,vehicle_number,name,engine_number,chassis_number,enabled")
+        .select("id,vehicle_number,name,engine_number,chassis_number,fuel_type,enabled")
         .order("vehicle_number", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[])
