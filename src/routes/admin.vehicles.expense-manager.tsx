@@ -379,17 +379,18 @@ function ExpenseManagerPage() {
           <table className="w-full text-sm">
             <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
-                <th className="px-3 py-3 text-left">Date</th>
-                <th className="px-3 py-3 text-left">Vehicle</th>
-                <th className="px-3 py-3 text-left">Type</th>
-                <th className="px-3 py-3 text-left">Description</th>
-                <th className="px-3 py-3 text-right">Odometer</th>
-                <th className="px-3 py-3 text-right">Qty</th>
-                <th className="px-3 py-3 text-right">Amount</th>
-                <th className="px-3 py-3 text-left">Payment</th>
-                <th className="px-3 py-3 text-left">Location</th>
+                <SortHeader label="Date" sortKey="date" sort={sort.sort} onToggle={sort.toggle} className="px-3" />
+                <SortHeader label="Vehicle" sortKey="vehicle" sort={sort.sort} onToggle={sort.toggle} className="px-3" />
+                <SortHeader label="Type" sortKey="type" sort={sort.sort} onToggle={sort.toggle} className="px-3" />
+                <SortHeader label="Description" sortKey="description" sort={sort.sort} onToggle={sort.toggle} className="px-3" />
+                <SortHeader label="Odometer" sortKey="odometer" sort={sort.sort} onToggle={sort.toggle} align="right" className="px-3" />
+                <SortHeader label="Qty" sortKey="qty" sort={sort.sort} onToggle={sort.toggle} align="right" className="px-3" />
+                <SortHeader label="Amount" sortKey="amount" sort={sort.sort} onToggle={sort.toggle} align="right" className="px-3" />
+                <SortHeader label="Payment" sortKey="payment" sort={sort.sort} onToggle={sort.toggle} className="px-3" />
+                <SortHeader label="Location" sortKey="location" sort={sort.sort} onToggle={sort.toggle} className="px-3" />
                 <th className="px-3 py-3 text-center">Proofs</th>
                 <th className="px-3 py-3" />
+
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
