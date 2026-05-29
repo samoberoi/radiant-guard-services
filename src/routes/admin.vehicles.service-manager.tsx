@@ -28,11 +28,15 @@ type VehicleRow = {
   enabled: boolean;
   service_interval_km: number | null;
 };
-
 function ServiceManagerPage() {
+  const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [fuelFilter, setFuelFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [editing, setEditing] = useState<VehicleRow | null>(null);
+
+  const { data, isLoading } = useQuery({
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin", "vehicles", "service-manager"],
