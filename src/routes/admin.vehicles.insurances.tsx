@@ -391,7 +391,12 @@ function InsuranceFormDialog({ open, onOpenChange, title, initial, vehicles, onS
         <div className="grid gap-4 py-2 sm:grid-cols-2">
           <div className="grid gap-2 sm:col-span-2">
             <Label>Vehicle *</Label>
-            <Select value={vehicleId} onValueChange={setVehicleId}>
+            <Select value={vehicleId} onValueChange={(v) => {
+              setVehicleId(v);
+              const veh = vehicles.find((x) => x.id === v);
+              setEngineNumber(veh?.engine_number?.toUpperCase() ?? "");
+              setChassisNumber(veh?.chassis_number?.toUpperCase() ?? "");
+            }}>
               <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
               <SelectContent>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.vehicle_number}</SelectItem>)}</SelectContent>
             </Select>
