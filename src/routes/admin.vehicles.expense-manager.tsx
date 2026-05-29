@@ -762,36 +762,65 @@ function AddEntryDialog({
     >
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit Expense Entry" : "Add Expense Entry"}</DialogTitle>
+          <DialogTitle>
+            {editing ? "Edit" : "Add"} {isFuel ? "Fuel" : "Expense"} Entry
+          </DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
-          {/* Expense type quick-select */}
-          <div>
-            <Label className="text-xs text-muted-foreground">Expense Type</Label>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {EXPENSE_TYPES.map((t) => {
-                const Icon = t.icon;
-                const active = expenseType === t.value;
-                return (
-                  <button
-                    key={t.value}
-                    type="button"
-                    onClick={() => setExpenseType(t.value)}
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition",
-                      active
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card hover:bg-muted",
-                    )}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    {t.label}
-                  </button>
-                );
-              })}
-            </div>
+          {/* Mode tabs: Fuel vs Other Expense */}
+          <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1 w-full sm:w-auto">
+            {([
+              { value: "fuel", label: "Fuel" },
+              { value: "other", label: "Other Expense" },
+            ] as const).map((tab) => {
+              const active = (tab.value === "fuel") === isFuel;
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => {
+                    if (tab.value === "fuel") setExpenseType("fuel");
+                    else if (isFuel) setExpenseType("maintenance");
+                  }}
+                  className={cn(
+                    "flex-1 sm:flex-none rounded-md px-4 py-1.5 text-sm font-medium transition",
+                    active
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
+
+          {/* Category select shown only for non-fuel expenses */}
+          {!isFuel && (
+            <div>
+              <Label>Category *</Label>
+              <Select value={expenseType} onValueChange={setExpenseType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {EXPENSE_TYPES.filter((t) => t.value !== "fuel").map((t) => {
+                    const Icon = t.icon;
+                    return (
+                      <SelectItem key={t.value} value={t.value}>
+                        <span className="inline-flex items-center gap-2">
+                          <Icon className="h-3.5 w-3.5" />
+                          {t.label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
