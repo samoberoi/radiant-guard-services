@@ -37,8 +37,6 @@ function ServiceManagerPage() {
 
   const { data, isLoading } = useQuery({
 
-
-  const { data, isLoading } = useQuery({
     queryKey: ["admin", "vehicles", "service-manager"],
     queryFn: async (): Promise<VehicleRow[]> => {
       const { data, error } = await supabase
