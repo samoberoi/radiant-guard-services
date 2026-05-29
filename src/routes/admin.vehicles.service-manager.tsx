@@ -157,12 +157,13 @@ function ServiceManagerPage() {
               </tr>
 
             </thead>
-            <tbody className="divide-y divide-border">
               {isLoading && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
               )}
               {!isLoading && rows.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No vehicles found.</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No vehicles found.</td></tr>
+              )}
+
               )}
               {rows.map((r) => (
                 <tr key={r.v.id} className="hover:bg-muted/20">
