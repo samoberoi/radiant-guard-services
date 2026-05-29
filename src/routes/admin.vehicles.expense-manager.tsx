@@ -704,33 +704,42 @@ function AddEntryDialog({
         location_text: locationText,
         geo_lat: geo?.lat ?? null,
         geo_lng: geo?.lng ?? null,
-        odometer_photo_url: odoUrl,
-        pump_photo_url: pumpUrl,
-        receipt_photo_url: receiptUrl,
-        filling_photo_url: fillingUrl,
+        odometer_photo_url: odoUrl || editing?.odometer_photo_url || "",
+        pump_photo_url: pumpUrl || editing?.pump_photo_url || "",
+        receipt_photo_url: receiptUrl || editing?.receipt_photo_url || "",
+        filling_photo_url: fillingUrl || editing?.filling_photo_url || "",
         description,
         tags,
         notes,
       };
-      const { data, error } = await supabase
-        .from(ENTITY as never)
-        .insert(payload as never)
-        .select("id")
-        .single();
-      if (error) throw error;
+      let savedId: string;
+      if (editing) {
+        const { error } = await supabase
+          .from(ENTITY as never)
+          .update(payload as never)
+          .eq("id", editing.id);
+        if (error) throw error;
+        savedId = editing.id;
+      } else {
+        const { data, error } = await supabase
+          .from(ENTITY as never)
+          .insert(payload as never)
+          .select("id")
+          .single();
+        if (error) throw error;
+        savedId = String((data as { id: string }).id);
+      }
       const veh = vehicles.find((v) => v.id === vehicleId);
       await logActivity({
         module: MODULE,
-        action: "create",
+        action: editing ? "update" : "create",
         entityType: ENTITY,
-        entityId: String((data as { id: string }).id),
+        entityId: savedId,
         entityLabel: `${veh?.vehicle_number ?? "Vehicle"} • ${expenseLabel(expenseType)} • ${fmtDate(entryDate)} • ${inr(Number(amount))}`,
+        before: editing ? (editing as unknown as Record<string, unknown>) : undefined,
         after: payload as unknown as Record<string, unknown>,
       });
-      toast.success("Expense entry added");
-      onSaved();
-      reset();
-      onOpenChange(false);
+      toast.success(editing ? "Expense entry updated" : "Expense entry added");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
     } finally {
