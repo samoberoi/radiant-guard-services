@@ -138,18 +138,19 @@ function VehiclesDashboard() {
     () => vehicles.filter((v) => v.enabled !== false && serviceStatusFor(String(v.vehicle_number ?? "")).dueSoon).length,
     [vehicles],
   );
-
   return (
     <div>
       <PageHeader
         title="Vehicles"
         description="Overview of fleet, FastTag, insurance, PUC and service status."
         crumbs={[{ label: "Vehicles" }]}
+        actions={<TourButton />}
       />
 
       {/* Top stat cards — clickable, deep-link into managers with filter */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
         <StatCard
+          dataTour="stat-total"
           label="Total Vehicles"
           value={totalVehicles}
           icon={Car}
@@ -157,6 +158,7 @@ function VehiclesDashboard() {
           to="/admin/vehicles/inventory"
         />
         <StatCard
+          dataTour="stat-service"
           label="Service Due Soon"
           value={serviceDueSoon}
           icon={Wrench}
@@ -165,6 +167,7 @@ function VehiclesDashboard() {
           to="/admin/vehicles/service-manager"
         />
         <StatCard
+          dataTour="stat-ins-expired"
           label="Insurance Expired"
           value={insExpired.length}
           icon={ShieldAlert}
@@ -173,6 +176,7 @@ function VehiclesDashboard() {
           search={{ status: "expired" }}
         />
         <StatCard
+          dataTour="stat-ins-renewal"
           label="Insurance Renewal (≤60d)"
           value={insRenewal.length}
           icon={ShieldCheck}
@@ -181,6 +185,7 @@ function VehiclesDashboard() {
           search={{ status: "renewal" }}
         />
         <StatCard
+          dataTour="stat-puc"
           label="PUC Expiring (≤60d)"
           value={pucExpiring.length + pucExpired.length}
           icon={Wind}
@@ -190,6 +195,7 @@ function VehiclesDashboard() {
           search={{ status: "due" }}
         />
         <StatCard
+          dataTour="stat-fuel"
           label="Fuel Spend (This Month)"
           value={Math.round(fuelSpend.total)}
           valuePrefix="₹"
@@ -198,6 +204,11 @@ function VehiclesDashboard() {
           subtle={`${fuelSpend.count} top-ups`}
           to="/admin/vehicles/expense-manager"
         />
+      </div>
+
+      {/* Fuel spend breakdown — this month */}
+      <div data-tour="breakdown" className="mt-6 grid gap-4 sm:grid-cols-2">
+
       </div>
 
       {/* Fuel spend breakdown — this month */}
