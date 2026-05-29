@@ -409,7 +409,7 @@ function ExpenseManagerPage() {
                   </td>
                 </tr>
               )}
-              {filtered.map((e) => (
+              {sortedFiltered.map((e) => (
                 <tr key={e.id} className="hover:bg-muted/20">
                   <td className="px-3 py-2.5 whitespace-nowrap">
                     <div className="font-medium">{fmtDate(e.entry_date)}</div>
