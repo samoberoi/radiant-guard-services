@@ -18,6 +18,8 @@ import {
   Receipt,
   ParkingCircle,
   Tag,
+  FileText,
+
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -75,6 +77,7 @@ const EXPENSE_TYPES = [
   { value: "repair", label: "Repair", icon: Wrench },
   { value: "parking", label: "Parking", icon: ParkingCircle },
   { value: "toll", label: "Toll", icon: Receipt },
+  { value: "challan", label: "Challan", icon: FileText },
   { value: "other", label: "Other", icon: Tag },
 ] as const;
 const FUEL_TYPES = ["Petrol", "Diesel", "CNG", "Electric"] as const;
