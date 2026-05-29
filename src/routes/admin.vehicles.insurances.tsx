@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useResetOnOpen, useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
+import { useResetOnOpen, useVehicleOptions, fmtDate, type VehicleOption } from "@/lib/vehicle-helpers";
 import { MiniStat } from "@/components/MiniStat";
 
 type StatusFilter = "all" | "expired" | "renewal" | "due" | "active";
@@ -353,7 +353,7 @@ function InsuranceManagerPage() {
 
 function InsuranceFormDialog({ open, onOpenChange, title, initial, vehicles, onSubmit }: {
   open: boolean; onOpenChange: (o: boolean) => void; title: string;
-  initial?: Insurance | null; vehicles: { id: string; vehicle_number: string; name: string }[];
+  initial?: Insurance | null; vehicles: VehicleOption[];
   onSubmit: (p: Omit<Insurance, "id">) => Promise<string | null>;
 }) {
   const [vehicleId, setVehicleId] = useState("");
@@ -391,7 +391,12 @@ function InsuranceFormDialog({ open, onOpenChange, title, initial, vehicles, onS
         <div className="grid gap-4 py-2 sm:grid-cols-2">
           <div className="grid gap-2 sm:col-span-2">
             <Label>Vehicle *</Label>
-            <Select value={vehicleId} onValueChange={setVehicleId}>
+            <Select value={vehicleId} onValueChange={(v) => {
+              setVehicleId(v);
+              const veh = vehicles.find((x) => x.id === v);
+              setEngineNumber(veh?.engine_number?.toUpperCase() ?? "");
+              setChassisNumber(veh?.chassis_number?.toUpperCase() ?? "");
+            }}>
               <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
               <SelectContent>{vehicles.map((v) => <SelectItem key={v.id} value={v.id}>{v.vehicle_number}</SelectItem>)}</SelectContent>
             </Select>
