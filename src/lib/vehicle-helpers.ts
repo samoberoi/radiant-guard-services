@@ -21,6 +21,7 @@ export function useVehicleOptions() {
           name: String(r.name ?? ""),
           engine_number: String(r.engine_number ?? ""),
           chassis_number: String(r.chassis_number ?? ""),
+          fuel_type: String(r.fuel_type ?? ""),
         }));
     },
   });
