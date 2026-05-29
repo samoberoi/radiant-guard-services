@@ -320,12 +320,22 @@ function VehiclesDashboard() {
   );
 }
 
+function TourButton() {
+  const { start } = useVehicleTour();
+  return (
+    <Button variant="outline" size="sm" onClick={start} className="gap-2">
+      <HelpCircle className="h-4 w-4" />
+      Take Tour
+    </Button>
+  );
+}
+
 function StatCard({
-  label, value, icon: Icon, accent, subtle, to, search, valuePrefix,
+  label, value, icon: Icon, accent, subtle, to, search, valuePrefix, dataTour,
 }: {
   label: string; value: number; icon: React.ComponentType<{ className?: string }>;
   accent: "accent" | "destructive" | "warning"; subtle?: string;
-  to: string; search?: Record<string, string>; valuePrefix?: string;
+  to: string; search?: Record<string, string>; valuePrefix?: string; dataTour?: string;
 }) {
   const palette = accent === "destructive"
     ? "bg-destructive/15 text-destructive"
@@ -336,8 +346,10 @@ function StatCard({
     <Link
       to={to}
       search={search as never}
+      data-tour={dataTour}
       className="group rounded-2xl border border-border bg-card p-5 transition-colors hover:border-accent/50 hover:bg-accent/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
     >
+
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
