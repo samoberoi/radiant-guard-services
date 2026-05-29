@@ -291,17 +291,18 @@ function InsuranceManagerPage() {
           <table className="w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
-                <th className="px-5 py-3">Vehicle</th>
-                <th className="px-5 py-3">Insurer</th>
-                <th className="px-5 py-3">Policy No.</th>
-                <th className="px-5 py-3">Valid From</th>
-                <th className="px-5 py-3">Valid Till</th>
-                <th className="px-5 py-3">Enabled</th>
+                <SortHeader label="Vehicle" sortKey="vehicle" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Insurer" sortKey="insurer" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Policy No." sortKey="policy" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Valid From" sortKey="from" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Valid Till" sortKey="till" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Enabled" sortKey="enabled" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((i) => {
+              {sortedItems.map((i) => {
+
                 const v = vMap.get(i.vehicle_id);
                 const expired = i.end_date && i.end_date < today;
                 return (
