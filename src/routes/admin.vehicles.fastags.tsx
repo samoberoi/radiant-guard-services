@@ -298,7 +298,7 @@ function FastTagManagerPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((i) => {
+              {sortedItems.map((i) => {
                 const v = vMap.get(i.vehicle_id);
                 return (
                   <tr key={i.id} className="hover:bg-secondary/30">
