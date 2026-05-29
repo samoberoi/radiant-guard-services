@@ -670,7 +670,7 @@ function AddEntryDialog({
         );
         return;
       }
-      if (!odoFile || !pumpFile || !receiptFile) {
+      if (!editing && (!odoFile || !pumpFile || !receiptFile)) {
         toast.error("Upload odometer, pump and receipt photos (filling photo optional)");
         return;
       }
