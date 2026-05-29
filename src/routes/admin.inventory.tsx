@@ -45,7 +45,7 @@ function InventoryDashboard() {
     { to: "/admin/inventory/issuances", label: "Issuances", hint: "Branch → FO → Guard", icon: UserCheck, group: "Movement" },
     { to: "/admin/inventory/write-offs", label: "Write-offs", hint: "Lost / damaged", icon: AlertOctagon, group: "Movement" },
     { to: "/admin/inventory/adjustments", label: "Adjustments", hint: "Cycle counts", icon: Sliders, group: "Movement" },
-    { to: "/admin/inventory/items", label: "Item Master", hint: "SKUs and sizes", icon: PackageOpen, group: "Catalog" },
+    { to: "/admin/inventory/items", label: "Products", hint: "SKUs and sizes", icon: PackageOpen, group: "Catalog" },
     { to: "/admin/inventory/rate-cards", label: "Supplier Capability Matrix", hint: "Who supplies what · prices", icon: Tags, group: "Catalog" },
     { to: "/admin/inventory/vendors", label: "Suppliers", hint: "Supplier directory", icon: ShoppingBag, group: "Catalog" },
     { to: "/admin/inventory/warehouses", label: "Warehouses", hint: "Storage locations", icon: Warehouse, group: "Catalog" },
