@@ -174,7 +174,19 @@ function InsuranceManagerPage() {
       if (status === "due") return isExpired || isRenewal;
       if (status === "active") return !isExpired;
       return true;
-    });
+
+  const sort = useSort<"vehicle" | "insurer" | "policy" | "from" | "till" | "enabled">({ key: "till", dir: "asc" });
+  const sortedItems = useMemo(() => sortRows(filtered, sort.sort, (i, k) => {
+    switch (k) {
+      case "vehicle": return vMap.get(i.vehicle_id)?.vehicle_number ?? "";
+      case "insurer": return i.insurance_company ?? "";
+      case "policy": return i.policy_number ?? "";
+      case "from": return i.start_date ?? "";
+      case "till": return i.end_date ?? "";
+      case "enabled": return i.enabled ? 1 : 0;
+    }
+  }), [filtered, sort.sort, vMap]);
+
   }, [items, query, vMap, status, today, in60, insurerFilter]);
 
   const stats = useMemo(() => {
