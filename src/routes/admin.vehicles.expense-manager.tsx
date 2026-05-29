@@ -525,12 +525,14 @@ function AddEntryDialog({
   onOpenChange,
   vehicles,
   lastOdoByVehicle,
+  editing,
   onSaved,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   vehicles: Vehicle[];
   lastOdoByVehicle: Map<string, number>;
+  editing: ExpenseEntry | null;
   onSaved: () => void;
 }) {
   const [expenseType, setExpenseType] = useState<string>("fuel");
