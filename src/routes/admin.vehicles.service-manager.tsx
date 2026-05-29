@@ -153,7 +153,9 @@ function ServiceManagerPage() {
                 <th className="px-4 py-3 text-right">Service Due At</th>
                 <th className="px-4 py-3 text-right">KM Remaining</th>
                 <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
+
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && (
