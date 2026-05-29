@@ -237,7 +237,8 @@ function VehiclesDashboard() {
       </div>
 
       {/* Fuel mix */}
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
+      <div data-tour="due-lists" className="mt-6 grid gap-4 lg:grid-cols-3">
+
         <div className="rounded-2xl border border-border bg-card p-5 lg:col-span-1">
 
           <div className="flex items-center gap-2">
