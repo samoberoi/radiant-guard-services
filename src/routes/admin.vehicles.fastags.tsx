@@ -18,6 +18,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useResetOnOpen, useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
 import { MiniStat } from "@/components/MiniStat";
+import { SortHeader, sortRows, useSort } from "@/components/SortableHeader";
+
 
 export const Route = createFileRoute("/admin/vehicles/fastags")({
   component: FastTagManagerPage,
@@ -184,6 +186,20 @@ function FastTagManagerPage() {
     });
   }, [items, query, vMap, bankFilter, statusFilter]);
 
+  const sort = useSort<"vehicle" | "fastag" | "bank" | "balance" | "expires" | "status" | "enabled">({ key: "vehicle", dir: "asc" });
+  const sortedItems = useMemo(() => sortRows(filtered, sort.sort, (i, k) => {
+    switch (k) {
+      case "vehicle": return vMap.get(i.vehicle_id)?.vehicle_number ?? "";
+      case "fastag": return i.fastag_number;
+      case "bank": return i.bank_name;
+      case "balance": return Number(i.balance) || 0;
+      case "expires": return i.expiry_date ?? "";
+      case "status": return i.status;
+      case "enabled": return i.enabled ? 1 : 0;
+    }
+  }), [filtered, sort.sort, vMap]);
+
+
   return (
     <div>
       <PageHeader
@@ -270,18 +286,19 @@ function FastTagManagerPage() {
           <table className="w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
-                <th className="px-5 py-3">Vehicle</th>
-                <th className="px-5 py-3">FastTag No.</th>
-                <th className="px-5 py-3">Bank</th>
-                <th className="px-5 py-3">Balance</th>
-                <th className="px-5 py-3">Expires</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3">Enabled</th>
+                <SortHeader label="Vehicle" sortKey="vehicle" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="FastTag No." sortKey="fastag" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Bank" sortKey="bank" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Balance" sortKey="balance" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Expires" sortKey="expires" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Status" sortKey="status" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <SortHeader label="Enabled" sortKey="enabled" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
                 <th className="px-5 py-3 text-right">Actions</th>
+
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((i) => {
+              {sortedItems.map((i) => {
                 const v = vMap.get(i.vehicle_id);
                 return (
                   <tr key={i.id} className="hover:bg-secondary/30">
