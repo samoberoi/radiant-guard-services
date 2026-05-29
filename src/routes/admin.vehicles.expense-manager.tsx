@@ -517,7 +517,7 @@ function ProofThumb({ url, label }: { url: string; label: string }) {
 
 /* ------------------------- Add Entry Dialog ------------------------- */
 
-type Vehicle = { id: string; vehicle_number: string; name: string };
+type Vehicle = { id: string; vehicle_number: string; name: string; fuel_type?: string };
 
 
 function AddEntryDialog({
