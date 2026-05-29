@@ -155,8 +155,8 @@ function ServiceManagerPage() {
                 <th className="px-4 py-3 text-left">Status</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
-
             </thead>
+            <tbody className="divide-y divide-border">
               {isLoading && (
                 <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
               )}
@@ -164,7 +164,6 @@ function ServiceManagerPage() {
                 <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No vehicles found.</td></tr>
               )}
 
-              )}
               {rows.map((r) => (
                 <tr key={r.v.id} className="hover:bg-muted/20">
                   <td className="px-4 py-3 font-medium">{r.v.vehicle_number}</td>
