@@ -476,8 +476,12 @@ function ExpenseManagerPage() {
 
       <AddEntryDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) setEditing(null);
+        }}
         vehicles={vehicles}
+        editing={editing}
         lastOdoByVehicle={useMemo(() => {
           const m = new Map<string, number>();
           for (const e of entries) {
