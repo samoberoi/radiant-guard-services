@@ -300,7 +300,7 @@ function EditIntervalDialog({
   );
 }
 
-}
+
 
 function StatTile({ label, value, tone }: { label: string; value: number | string; tone?: "warning" }) {
   return (
