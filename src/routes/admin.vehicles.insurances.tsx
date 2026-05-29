@@ -353,7 +353,7 @@ function InsuranceManagerPage() {
 
 function InsuranceFormDialog({ open, onOpenChange, title, initial, vehicles, onSubmit }: {
   open: boolean; onOpenChange: (o: boolean) => void; title: string;
-  initial?: Insurance | null; vehicles: { id: string; vehicle_number: string; name: string }[];
+  initial?: Insurance | null; vehicles: VehicleOption[];
   onSubmit: (p: Omit<Insurance, "id">) => Promise<string | null>;
 }) {
   const [vehicleId, setVehicleId] = useState("");
