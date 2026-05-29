@@ -757,7 +757,7 @@ function AddEntryDialog({
     >
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Expense Entry</DialogTitle>
+          <DialogTitle>{editing ? "Edit Expense Entry" : "Add Expense Entry"}</DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
