@@ -1,12 +1,14 @@
 import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Car, CheckCircle2, Fuel, ShieldAlert, ShieldCheck, Wind, Wrench } from "lucide-react";
+import { Car, CheckCircle2, Fuel, HelpCircle, ShieldAlert, ShieldCheck, Wind, Wrench } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtDate } from "@/lib/vehicle-helpers";
 import { serviceStatusFor } from "@/lib/vehicle-service";
 import { cn } from "@/lib/utils";
+import { VehicleTourProvider, useVehicleTour } from "@/components/VehicleTour";
 
 export const Route = createFileRoute("/admin/vehicles")({
   component: VehiclesLayout,
@@ -16,9 +18,13 @@ export const Route = createFileRoute("/admin/vehicles")({
 function VehiclesLayout() {
   const location = useLocation();
   const isHub = location.pathname === "/admin/vehicles" || location.pathname === "/admin/vehicles/";
-  if (!isHub) return <Outlet />;
-  return <VehiclesDashboard />;
+  return (
+    <VehicleTourProvider>
+      {isHub ? <VehiclesDashboard /> : <Outlet />}
+    </VehicleTourProvider>
+  );
 }
+
 
 type DashRow = Record<string, unknown>;
 
