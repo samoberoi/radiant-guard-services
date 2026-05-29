@@ -188,6 +188,11 @@ function ServiceManagerPage() {
                       </span>
                     )}
                   </td>
+                  <td className="px-4 py-3 text-right">
+                    <Button variant="ghost" size="icon" onClick={() => setEditing(r.v)} aria-label="Edit service interval">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -198,8 +203,103 @@ function ServiceManagerPage() {
       <p className="mt-3 text-xs text-muted-foreground">
         Service due is calculated automatically using each vehicle's configured service interval (set on Vehicle Inventory) and its current running. Vehicles within {ADVANCE_ALERT_KM.toLocaleString()} km of the next service are flagged.
       </p>
+
+      <EditIntervalDialog
+        vehicle={editing}
+        onClose={() => setEditing(null)}
+        onSaved={() => {
+          setEditing(null);
+          qc.invalidateQueries({ queryKey: ["admin", "vehicles", "service-manager"] });
+        }}
+      />
     </div>
   );
+}
+
+function EditIntervalDialog({
+  vehicle,
+  onClose,
+  onSaved,
+}: {
+  vehicle: VehicleRow | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [value, setValue] = useState<string>("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (vehicle) setValue(String(vehicle.service_interval_km ?? ""));
+  }, [vehicle?.id]);
+
+  const open = !!vehicle;
+
+  async function save() {
+    if (!vehicle) return;
+    const n = Number(value);
+    if (!Number.isFinite(n) || n <= 0) {
+      toast.error("Enter a valid service interval (km)");
+      return;
+    }
+    setSaving(true);
+    const before = { service_interval_km: vehicle.service_interval_km };
+    const after = { service_interval_km: n };
+    const { error } = await supabase
+      .from("vehicles" as never)
+      .update({ service_interval_km: n } as never)
+      .eq("id", vehicle.id);
+    setSaving(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    void logActivity({
+      module: "Service Manager",
+      action: "update",
+      entityType: "vehicle",
+      entityId: vehicle.id,
+      entityLabel: vehicle.vehicle_number,
+      before,
+      after,
+    });
+    toast.success("Service interval updated");
+    onSaved();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Edit Service Interval</DialogTitle>
+        </DialogHeader>
+        {vehicle && (
+          <div className="space-y-4">
+            <div className="text-sm text-muted-foreground">
+              Vehicle: <span className="font-medium text-foreground">{vehicle.vehicle_number}</span>
+              {vehicle.name ? <> · {vehicle.name}</> : null}
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="service_interval_km">Service Interval (km)</Label>
+              <Input
+                id="service_interval_km"
+                type="number"
+                min={1}
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder="e.g. 10000"
+              />
+            </div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
+          <Button onClick={save} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 }
 
 function StatTile({ label, value, tone }: { label: string; value: number | string; tone?: "warning" }) {
