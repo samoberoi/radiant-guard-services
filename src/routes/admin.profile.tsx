@@ -770,7 +770,132 @@ function ProfilePage() {
         </div>
       </div>
 
+      <Section title="My Posting & Reporting" icon={Building2}>
+        {postingsQ.isLoading ? (
+          <div className="text-sm text-muted-foreground">Loading posting details…</div>
+        ) : postings.length === 0 && !manager ? (
+          <div className="text-sm text-muted-foreground">
+            No unit posting assigned yet. Please contact HR.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {postings.length > 0 && (
+              <div className="grid gap-3 md:grid-cols-2">
+                {postings.map((u: any) => {
+                  const officers = Array.isArray(u.reporting_officers)
+                    ? u.reporting_officers
+                    : [];
+                  const cityState = [u.billing_city, u.billing_state]
+                    .filter(Boolean)
+                    .join(", ");
+                  return (
+                    <div
+                      key={u.id}
+                      className="rounded-xl border border-border bg-secondary/30 p-4"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="text-sm font-semibold">{u.name}</div>
+                        {u.is_primary && (
+                          <Badge className="bg-accent/15 text-accent">Primary posting</Badge>
+                        )}
+                        {u.code && (
+                          <Badge variant="outline" className="text-[10px]">{u.code}</Badge>
+                        )}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {[u.customer?.name, u.branch?.name, u.location || cityState]
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
+                      </div>
+
+                      <div className="mt-3">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                          Field Officers / Reporting Officers
+                        </div>
+                        {officers.length === 0 ? (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            None listed for this unit.
+                          </div>
+                        ) : (
+                          <ul className="mt-1 space-y-1">
+                            {officers.map((o: any, idx: number) => (
+                              <li
+                                key={idx}
+                                className="flex flex-wrap items-center gap-2 text-sm"
+                              >
+                                <UserCheck className="h-3.5 w-3.5 text-accent" />
+                                <span className="font-medium">{o.name || "—"}</span>
+                                {o.is_primary && (
+                                  <Badge className="bg-primary/15 text-primary text-[10px]">Primary</Badge>
+                                )}
+                                {o.is_active === false && (
+                                  <Badge variant="outline" className="text-[10px]">Inactive</Badge>
+                                )}
+                                {o.mobile && (
+                                  <span className="text-xs text-muted-foreground">· {o.mobile}</span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      {(u.emergency_contact_name || u.nearby_hospital_name) && (
+                        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {u.emergency_contact_name && (
+                            <InfoRow
+                              label="Emergency Contact"
+                              value={`${u.emergency_contact_name}${u.emergency_contact_mobile ? ` · ${u.emergency_contact_mobile}` : ""}`}
+                            />
+                          )}
+                          {u.nearby_hospital_name && (
+                            <InfoRow
+                              label="Nearby Hospital"
+                              value={`${u.nearby_hospital_name}${u.nearby_hospital_mobile ? ` · ${u.nearby_hospital_mobile}` : ""}`}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {manager && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Direct Manager
+                </div>
+                <div className="mt-2 flex items-center gap-3">
+                  {manager.photo_url ? (
+                    <img
+                      src={manager.photo_url}
+                      alt={manager.full_name}
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+                      <UserCheck className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-sm font-semibold">{manager.full_name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {[manager.designation_name, manager.employee_code, manager.mobile]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Section>
+
       <div className="grid gap-5 lg:grid-cols-2">
+
         <Section title="Contact" icon={PhoneIcon}>
           <div className="grid gap-4 sm:grid-cols-2">
             <InfoRow label="Mobile" value={profile.mobile} />
