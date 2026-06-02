@@ -524,8 +524,8 @@ function DeductionForm() {
         </div>
 
         <div className="mt-5 flex justify-end gap-2">
-          <Button variant="outline" onClick={() => setStep("info")} disabled={saving}>Previous step</Button>
-          <Button disabled={saving} onClick={async () => {
+          <Button type="button" variant="outline" onClick={() => setStep("info")} disabled={saving}>Previous step</Button>
+          <Button type="button" disabled={saving} onClick={async () => {
             setSaving(true);
             try { await saveMut.mutateAsync(); } finally { setSaving(false); }
           }}>{saving ? "Saving…" : "Save"}</Button>
