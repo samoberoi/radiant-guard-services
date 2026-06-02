@@ -265,16 +265,19 @@ function PayrollUnitPage() {
   const exportCsv = () => {
     const headers = [
       "Emp ID", "Name", "Designation", "P Days", "PH Days", "OT Hrs", "OT Days", "T Days",
-      "Earned Gross", "Total Deductions", "Net Pay", "Employer Contrib", "Employer Cost",
+      "Contract Gross (Projected)", "Earned Gross (Actual)", "Shortfall",
+      "Total Deductions", "Net Pay", "Employer Contrib", "Employer Cost",
     ];
     const lines = [headers.join(",")];
     for (const r of rows) {
       const w = r.wages;
+      const shortfall = w ? Math.round((w.contractGross - w.earnedGross) * 100) / 100 : "";
       lines.push(
         [
           r.employeeCode, JSON.stringify(r.name), JSON.stringify(r.designation),
           r.totals.pDays, r.totals.phDays, r.totals.otHours, r.totals.otDays, r.totals.tDays,
-          w?.earnedGross ?? "", w?.totalDeductions ?? "",
+          w?.contractGross ?? "", w?.earnedGross ?? "", shortfall,
+          w?.totalDeductions ?? "",
           w?.netPay ?? "", w?.totalEmployerContributions ?? "", w?.employerCost ?? "",
         ].join(","),
       );
