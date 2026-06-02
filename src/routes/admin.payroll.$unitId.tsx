@@ -239,6 +239,14 @@ function PayrollUnitPage() {
 
   const rows = data ?? [];
 
+  useEffect(() => {
+    if (!highlightCandidate || rows.length === 0) return;
+    const el = document.getElementById(`payroll-row-${highlightCandidate}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightCandidate, rows.length]);
+
+
+
   const totals = useMemo(() => {
     return rows.reduce(
       (acc, r) => {
