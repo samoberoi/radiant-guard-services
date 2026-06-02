@@ -389,6 +389,57 @@ export function InventoryOwnerDashboard() {
         <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs · ${inr(writeoffCur)} write-offs`} />
       </div>
 
+      {/* Holdings — who holds what, click for breakdown */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <HoldingsCard
+          title="Branch Holdings"
+          icon={Building2}
+          accent="text-blue-500"
+          rows={branchHoldings.map((r) => {
+            const b = branchMap.get(r.id);
+            return {
+              name: b ? `${b.code} · ${b.name}` : r.id.slice(0, 8),
+              meta: `${r.lines.length} line${r.lines.length !== 1 ? "s" : ""}`,
+              qty: r.qty,
+              value: r.value,
+              lines: r.lines,
+            };
+          })}
+        />
+        <HoldingsCard
+          title="Field Officers"
+          icon={Users}
+          accent="text-violet-500"
+          rows={foHoldings.map((r) => {
+            const c = candMap.get(r.id);
+            return {
+              name: c?.full_name ?? r.id.slice(0, 8),
+              meta: `${c?.employee_code ?? ""} · ${desigMap.get(c?.designation_id ?? "")?.name ?? "Field Officer"}`,
+              qty: r.qty,
+              value: r.value,
+              lines: r.lines,
+            };
+          })}
+        />
+        <HoldingsCard
+          title="Guards"
+          icon={ShieldCheck}
+          accent="text-teal-500"
+          rows={guardHoldings.map((r) => {
+            const c = candMap.get(r.id);
+            return {
+              name: c?.full_name ?? r.id.slice(0, 8),
+              meta: `${c?.employee_code ?? ""} · ${desigMap.get(c?.designation_id ?? "")?.name ?? "Guard"}`,
+              qty: r.qty,
+              value: r.value,
+              lines: r.lines,
+            };
+          })}
+        />
+      </div>
+
+
+
       {/* Charts row */}
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel title="Spend Trend" subtitle={RANGE_LABEL[range]} className="lg:col-span-2">
