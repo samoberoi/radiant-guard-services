@@ -1586,21 +1586,42 @@ function EmployeesPage() {
               <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Employee" : "Candidate"}
               </th>
-              <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                Mobile
-              </th>
-              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                Unit
-              </th>
-              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                Designation
-              </th>
-              {mode === "employee" && (
+              {(mode === "candidate" || columnsVisible.mobile) && (
+                <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Mobile
+                </th>
+              )}
+              {mode === "employee" && columnsVisible.email && (
+                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Email
+                </th>
+              )}
+              {(mode === "candidate" || columnsVisible.unit) && (
+                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Unit
+                </th>
+              )}
+              {(mode === "candidate" || columnsVisible.designation) && (
+                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Designation
+                </th>
+              )}
+              {mode === "employee" && columnsVisible.dob && (
+                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Date of Birth
+                </th>
+              )}
+              {mode === "employee" && columnsVisible.doj && (
+                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Date of Joining
+                </th>
+              )}
+              {mode === "employee" && columnsVisible.role && (
                 <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Role
                 </th>
               )}
-              {mode === "employee" && (
+              {mode === "employee" && columnsVisible.active && (
                 <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Active
                 </th>
