@@ -265,16 +265,19 @@ function PayrollUnitPage() {
   const exportCsv = () => {
     const headers = [
       "Emp ID", "Name", "Designation", "P Days", "PH Days", "OT Hrs", "OT Days", "T Days",
-      "Earned Gross", "Total Deductions", "Net Pay", "Employer Contrib", "Employer Cost",
+      "Contract Gross (Projected)", "Earned Gross (Actual)", "Shortfall",
+      "Total Deductions", "Net Pay", "Employer Contrib", "Employer Cost",
     ];
     const lines = [headers.join(",")];
     for (const r of rows) {
       const w = r.wages;
+      const shortfall = w ? Math.round((w.contractGross - w.earnedGross) * 100) / 100 : "";
       lines.push(
         [
           r.employeeCode, JSON.stringify(r.name), JSON.stringify(r.designation),
           r.totals.pDays, r.totals.phDays, r.totals.otHours, r.totals.otDays, r.totals.tDays,
-          w?.earnedGross ?? "", w?.totalDeductions ?? "",
+          w?.contractGross ?? "", w?.earnedGross ?? "", shortfall,
+          w?.totalDeductions ?? "",
           w?.netPay ?? "", w?.totalEmployerContributions ?? "", w?.employerCost ?? "",
         ].join(","),
       );
@@ -337,7 +340,9 @@ function PayrollUnitPage() {
                 <th className="px-4 py-3 font-medium">Designation</th>
                 <th className="px-4 py-3 text-right font-medium">T Days</th>
                 <th className="px-4 py-3 text-right font-medium">OT Hrs</th>
-                <th className="px-4 py-3 text-right font-medium">Earned gross</th>
+                <th className="px-4 py-3 text-right font-medium" title="Full contract gross — what would be paid for a full month">Projected</th>
+                <th className="px-4 py-3 text-right font-medium" title="Per-day × T Days based on actual attendance">Earned gross</th>
+                <th className="px-4 py-3 text-right font-medium" title="Projected − Earned (unpaid due to absence)">Shortfall</th>
                 <th className="px-4 py-3 text-right font-medium">Deductions</th>
                 <th className="px-4 py-3 text-right font-medium">Net pay</th>
                 <th className="px-4 py-3 text-right font-medium">Employer cost</th>
@@ -345,13 +350,14 @@ function PayrollUnitPage() {
             </thead>
             <tbody className="divide-y divide-border/50">
               {isLoading ? (
-                <tr><td colSpan={9} className="px-4 py-10 text-center text-muted-foreground">Computing wages…</td></tr>
+                <tr><td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">Computing wages…</td></tr>
               ) : error ? (
-                <tr><td colSpan={9} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
+                <tr><td colSpan={11} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={9} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
+                <tr><td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
               ) : rows.map((r) => {
                 const isHighlighted = highlightCandidate === r.id;
+                const shortfall = r.wages ? Math.round((r.wages.contractGross - r.wages.earnedGross) * 100) / 100 : 0;
                 return (
                 <tr
                   key={r.id}
@@ -363,7 +369,9 @@ function PayrollUnitPage() {
                   <td className="px-4 py-3 text-muted-foreground">{r.designation}</td>
                   <td className="px-4 py-3 text-right">{r.totals.tDays}</td>
                   <td className="px-4 py-3 text-right">{r.totals.otHours}</td>
-                  <td className="px-4 py-3 text-right">{r.wages ? fmtINR(r.wages.earnedGross) : <span className="text-xs text-amber-600">no contract</span>}</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">{r.wages ? fmtINR(r.wages.contractGross) : <span className="text-xs text-amber-600">no contract</span>}</td>
+                  <td className="px-4 py-3 text-right font-medium">{r.wages ? fmtINR(r.wages.earnedGross) : "—"}</td>
+                  <td className={`px-4 py-3 text-right ${shortfall > 0 ? "text-rose-600" : "text-muted-foreground"}`}>{r.wages ? (shortfall > 0 ? `− ${fmtINR(shortfall)}` : fmtINR(0)) : "—"}</td>
                   <td className="px-4 py-3 text-right">{r.wages ? fmtINR(r.wages.totalDeductions) : "—"}</td>
                   <td className="px-4 py-3 text-right font-semibold text-emerald-700">{r.wages ? fmtINR(r.wages.netPay) : "—"}</td>
                   <td className="px-4 py-3 text-right">{r.wages ? fmtINR(r.wages.employerCost) : "—"}</td>
@@ -375,7 +383,9 @@ function PayrollUnitPage() {
               <tfoot className="border-t border-border/60 bg-secondary/30 text-sm font-semibold">
                 <tr>
                   <td className="px-4 py-3" colSpan={5}>Totals</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">{fmtINR(rows.reduce((s, r) => s + (r.wages?.contractGross ?? 0), 0))}</td>
                   <td className="px-4 py-3 text-right">{fmtINR(totals.earnedGross)}</td>
+                  <td className="px-4 py-3 text-right text-rose-600">− {fmtINR(rows.reduce((s, r) => s + (r.wages ? r.wages.contractGross - r.wages.earnedGross : 0), 0))}</td>
                   <td className="px-4 py-3 text-right">{fmtINR(totals.deductions)}</td>
                   <td className="px-4 py-3 text-right text-emerald-700">{fmtINR(totals.net)}</td>
                   <td className="px-4 py-3 text-right">{fmtINR(totals.employerCost)}</td>
