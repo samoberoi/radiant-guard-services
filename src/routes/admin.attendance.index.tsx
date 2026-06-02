@@ -5,11 +5,23 @@ import {
   ArrowRight,
   Building2,
   ClipboardList,
+  IndianRupee,
   MapPinned,
   Search,
   Users,
   X,
 } from "lucide-react";
+
+function currentMonthRange() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const start = `${y}-${pad(m + 1)}-01`;
+  const last = new Date(y, m + 1, 0).getDate();
+  const end = `${y}-${pad(m + 1)}-${pad(last)}`;
+  return { start, end };
+}
 
 import { PageHeader } from "@/components/PageHeader";
 import { Input } from "@/components/ui/input";
