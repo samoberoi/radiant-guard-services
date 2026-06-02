@@ -619,6 +619,36 @@ function EmployeesPage() {
     } catch {}
   }, [filtersVisible]);
 
+  // Configurable columns for the Employees table
+  const DEFAULT_COLUMNS_VIS = {
+    mobile: true,
+    email: false,
+    unit: true,
+    designation: true,
+    role: true,
+    dob: false,
+    doj: false,
+    active: true,
+  };
+  const [columnsVisible, setColumnsVisible] = useState<typeof DEFAULT_COLUMNS_VIS>(() => {
+    if (typeof window === "undefined") return DEFAULT_COLUMNS_VIS;
+    try {
+      const raw = localStorage.getItem("employees.columnPrefs");
+      if (raw) return { ...DEFAULT_COLUMNS_VIS, ...JSON.parse(raw) };
+    } catch {}
+    return DEFAULT_COLUMNS_VIS;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("employees.columnPrefs", JSON.stringify(columnsVisible));
+    } catch {}
+  }, [columnsVisible]);
+
+  const fmtDate = (d: string | null | undefined) => {
+    if (!d) return "—";
+    try { return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }); } catch { return d; }
+  };
+
   // Customers (org filter) + scope assignments
   const { customers } = useCustomers();
   const { branches } = useBranches();
