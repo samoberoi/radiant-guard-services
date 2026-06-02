@@ -991,6 +991,96 @@ export type Database = {
         }
         Relationships: []
       }
+      deduction_types: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      deductions: {
+        Row: {
+          amount: number
+          calculation_type: string
+          candidate_id: string
+          created_at: string
+          deduction_date: string
+          deduction_name: string
+          deduction_type_id: string
+          description: string
+          id: string
+          installments: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          calculation_type: string
+          candidate_id: string
+          created_at?: string
+          deduction_date: string
+          deduction_name: string
+          deduction_type_id: string
+          description?: string
+          id?: string
+          installments?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          calculation_type?: string
+          candidate_id?: string
+          created_at?: string
+          deduction_date?: string
+          deduction_name?: string
+          deduction_type_id?: string
+          description?: string
+          id?: string
+          installments?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deductions_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deductions_deduction_type_id_fkey"
+            columns: ["deduction_type_id"]
+            isOneToOne: false
+            referencedRelation: "deduction_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       designations: {
         Row: {
           billable: boolean
