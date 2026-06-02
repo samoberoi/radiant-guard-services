@@ -111,6 +111,7 @@ function AdminLayout() {
   const [contractsOpen, setContractsOpen] = useState(false);
   const [vehiclesOpen, setVehiclesOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
+  const [employeesOpen, setEmployeesOpen] = useState(false);
 
   // Map current path → module key, then redirect if user lacks view perm.
   const pathToModule: { prefix: string; module: string }[] = [
