@@ -20,6 +20,7 @@ import {
   Sparkles,
   Upload,
   Users,
+  Package,
   UserCheck,
   Loader2,
   Wallet,
