@@ -321,6 +321,9 @@ function DeductionForm() {
   const [installments, setInstallments] = useState<string>("1");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<Status>("active");
+  const [minDuty, setMinDuty] = useState<string>("0");
+  const [maxDuty, setMaxDuty] = useState<string>("0");
+  const [step, setStep] = useState<"info" | "constraints">("info");
   const [saving, setSaving] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
@@ -334,6 +337,8 @@ function DeductionForm() {
     setInstallments(String(d.installments));
     setDescription(d.description ?? "");
     setStatus(d.status);
+    setMinDuty(String(d.min_duty ?? 0));
+    setMaxDuty(String(d.max_duty ?? 0));
     setHydrated(true);
   }
 
