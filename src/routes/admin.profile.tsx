@@ -736,6 +736,8 @@ function ProfilePage() {
   const issuedItems = issuedItemsQ.data ?? [];
   const postings = postingsQ.data?.postings ?? [];
   const manager = postingsQ.data?.manager ?? null;
+  const overseenUnits = postingsQ.data?.overseenUnits ?? [];
+  const directReports = postingsQ.data?.directReports ?? [];
 
   return (
     <div className="space-y-5">
