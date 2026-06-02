@@ -202,10 +202,10 @@ function AttendanceUnitsPage() {
       ) as string[];
       const { data: customers, error: cErr } = await supabase
         .from("customers")
-        .select("id, name")
+        .select("id, name, code")
         .in("id", customerIds.length ? customerIds : ["00000000-0000-0000-0000-000000000000"]);
       if (cErr) throw cErr;
-      const customerMap = new Map((customers ?? []).map((c) => [c.id, c.name as string]));
+      const customerMap = new Map((customers ?? []).map((c) => [c.id, { name: c.name as string, code: (c.code as string) || "" }]));
 
       type UnitAcc = {
         employees: Map<string, { name: string; designation: string; roleKey: string | null }>;
