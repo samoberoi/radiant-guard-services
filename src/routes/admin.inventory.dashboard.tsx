@@ -14,6 +14,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useState as useStateReact } from "react";
 
 // Owner Dashboard is now merged into the /admin/inventory hub.
 // This route redirects there so any old links / bookmarks keep working.
