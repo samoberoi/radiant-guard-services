@@ -30,6 +30,15 @@ export const Route = createFileRoute("/admin/attendance/")({
 
 type EmployeeRef = { id: string; name: string };
 
+type ClientEmployee = {
+  id: string;
+  name: string;
+  designation: string;
+  unit_id: string;
+  unit_name: string;
+  unit_code: string;
+};
+
 type UnitRow = {
   id: string;
   code: string;
@@ -38,6 +47,7 @@ type UnitRow = {
   branch_id: string | null;
   customer_id: string;
   customer_name: string;
+  customer_code: string;
   billing_state: string | null;
   contract_codes: string[];
   contract_end: string | null;
@@ -47,8 +57,9 @@ type UnitRow = {
 
 type AttendancePageData = {
   units: UnitRow[];
-  organizations: { id: string; name: string }[];
+  organizations: { id: string; name: string; code: string }[];
   securityGuards: EmployeeRef[];
+  employeesByCustomer: Record<string, ClientEmployee[]>;
   summary: { organizations: number; units: number; activeEmployees: number };
 };
 
@@ -101,6 +112,7 @@ function AttendanceUnitsPage() {
           units: [],
           organizations: [],
           securityGuards: [],
+          employeesByCustomer: {},
           summary: { organizations: 0, units: 0, activeEmployees: 0 },
         };
       }
@@ -190,10 +202,10 @@ function AttendanceUnitsPage() {
       ) as string[];
       const { data: customers, error: cErr } = await supabase
         .from("customers")
-        .select("id, name")
+        .select("id, name, code")
         .in("id", customerIds.length ? customerIds : ["00000000-0000-0000-0000-000000000000"]);
       if (cErr) throw cErr;
-      const customerMap = new Map((customers ?? []).map((c) => [c.id, c.name as string]));
+      const customerMap = new Map((customers ?? []).map((c) => [c.id, { name: c.name as string, code: (c.code as string) || "" }]));
 
       type UnitAcc = {
         employees: Map<string, { name: string; designation: string; roleKey: string | null }>;
@@ -261,7 +273,8 @@ function AttendanceUnitsPage() {
             location: u.location || "",
             branch_id: u.branch_id || null,
             customer_id: u.customer_id || "",
-            customer_name: (u.customer_id && customerMap.get(u.customer_id)) || "—",
+            customer_name: (u.customer_id && customerMap.get(u.customer_id)?.name) || "—",
+            customer_code: (u.customer_id && customerMap.get(u.customer_id)?.code) || "",
             billing_state: u.billing_state || null,
             contract_codes: contractsByUnit.get(u.id)?.codes ?? [],
             contract_end: contractsByUnit.get(u.id)?.end ?? null,
@@ -276,18 +289,43 @@ function AttendanceUnitsPage() {
         );
 
       const orgs = Array.from(
-        new Map(rows.map((r) => [r.customer_id || r.customer_name, { id: r.customer_id || r.customer_name, name: r.customer_name }])).values(),
+        new Map(
+          rows.map((r) => [
+            r.customer_id || r.customer_name,
+            { id: r.customer_id || r.customer_name, name: r.customer_name, code: r.customer_code },
+          ]),
+        ).values(),
       ).sort((a, b) => a.name.localeCompare(b.name));
 
       const sgMap = new Map<string, EmployeeRef>();
+      const employeesByCustomer: Record<string, ClientEmployee[]> = {};
       for (const r of rows) {
-        for (const sg of r.security_guards) sgMap.set(sg.id, sg);
+        for (const sg of r.security_guards) {
+          sgMap.set(sg.id, sg);
+          const key = r.customer_id || r.customer_name;
+          if (!employeesByCustomer[key]) employeesByCustomer[key] = [];
+          // de-dupe per client (employee may appear in multiple units rarely)
+          if (!employeesByCustomer[key].some((e) => e.id === sg.id && e.unit_id === r.id)) {
+            employeesByCustomer[key].push({
+              id: sg.id,
+              name: sg.name,
+              designation: "",
+              unit_id: r.id,
+              unit_name: r.name || r.code,
+              unit_code: r.code,
+            });
+          }
+        }
+      }
+      for (const key of Object.keys(employeesByCustomer)) {
+        employeesByCustomer[key].sort((a, b) => a.name.localeCompare(b.name));
       }
 
       return {
         units: rows,
         organizations: orgs,
         securityGuards: Array.from(sgMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
+        employeesByCustomer,
         summary: {
           organizations: orgs.length,
           units: rows.length,
@@ -300,7 +338,19 @@ function AttendanceUnitsPage() {
   const units = data?.units ?? [];
   const organizations = data?.organizations ?? [];
   const securityGuards = data?.securityGuards ?? [];
+  const employeesByCustomer = data?.employeesByCustomer ?? {};
   const summary = data?.summary ?? { organizations: 0, units: 0, activeEmployees: 0 };
+
+  const selectedClient = orgFilter !== "all" ? organizations.find((o) => o.id === orgFilter) ?? null : null;
+  const clientEmployees = useMemo(() => {
+    if (!selectedClient) return [] as ClientEmployee[];
+    const list = employeesByCustomer[selectedClient.id] ?? [];
+    const term = q.trim().toLowerCase();
+    if (!term) return list;
+    return list.filter((e) =>
+      [e.name, e.unit_name, e.unit_code].join(" ").toLowerCase().includes(term),
+    );
+  }, [selectedClient, employeesByCustomer, q]);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
@@ -311,6 +361,7 @@ function AttendanceUnitsPage() {
       if (term) {
         const hay = [
           u.customer_name,
+          u.customer_code,
           u.name,
           u.code,
           u.location,
@@ -364,11 +415,14 @@ function AttendanceUnitsPage() {
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             <FilterSelect
-              label="Organization"
+              label="Client (search by ID or name)"
               value={orgFilter}
               onChange={setOrgFilter}
-              options={organizations.map((o) => ({ value: o.id, label: o.name }))}
-              allLabel={`All organizations (${organizations.length})`}
+              options={organizations.map((o) => ({
+                value: o.id,
+                label: o.code ? `${o.code} · ${o.name}` : o.name,
+              }))}
+              allLabel={`All clients (${organizations.length})`}
             />
             <FilterSelect
               label="Unit"
@@ -410,6 +464,63 @@ function AttendanceUnitsPage() {
             </div>
           )}
         </div>
+
+        {selectedClient && (
+          <div className="border-b border-border/60 bg-secondary/20 px-5 py-5">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">
+                  Employees under {selectedClient.code ? `${selectedClient.code} · ` : ""}{selectedClient.name}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {clientEmployees.length} employee{clientEmployees.length === 1 ? "" : "s"} across all units of this client.
+                </p>
+              </div>
+            </div>
+            {clientEmployees.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border/60 bg-background px-4 py-6 text-center text-sm text-muted-foreground">
+                No employees found for this client.
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-border/60 bg-background">
+                <table className="min-w-full table-auto text-sm">
+                  <thead className="border-b border-border/60 bg-secondary/40 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-medium">Employee</th>
+                      <th className="px-4 py-3 text-left font-medium">Unit</th>
+                      <th className="px-4 py-3 text-right font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {clientEmployees.map((e) => (
+                      <tr key={`${e.id}-${e.unit_id}`} className="hover:bg-secondary/30">
+                        <td className="px-4 py-3 font-medium text-foreground">{e.name}</td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {e.unit_name}
+                          {e.unit_code && (
+                            <span className="ml-2 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide">
+                              {e.unit_code}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Link
+                            to="/admin/attendance/$unitId"
+                            params={{ unitId: e.unit_id }}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:border-accent/50 hover:text-accent"
+                          >
+                            Open roll <ArrowRight className="h-3 w-3" />
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
 
         <div className="overflow-x-auto">
           <table className="min-w-full table-auto">
