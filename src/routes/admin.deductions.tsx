@@ -42,6 +42,8 @@ type Deduction = {
   calculation_type: CalcType;
   amount: number;
   installments: number;
+  min_duty?: number;
+  max_duty?: number;
   description: string;
   status: Status;
 };
