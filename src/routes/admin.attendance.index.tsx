@@ -465,6 +465,63 @@ function AttendanceUnitsPage() {
           )}
         </div>
 
+        {selectedClient && (
+          <div className="border-b border-border/60 bg-secondary/20 px-5 py-5">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-semibold text-foreground">
+                  Employees under {selectedClient.code ? `${selectedClient.code} · ` : ""}{selectedClient.name}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {clientEmployees.length} employee{clientEmployees.length === 1 ? "" : "s"} across all units of this client.
+                </p>
+              </div>
+            </div>
+            {clientEmployees.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border/60 bg-background px-4 py-6 text-center text-sm text-muted-foreground">
+                No employees found for this client.
+              </div>
+            ) : (
+              <div className="overflow-x-auto rounded-xl border border-border/60 bg-background">
+                <table className="min-w-full table-auto text-sm">
+                  <thead className="border-b border-border/60 bg-secondary/40 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-medium">Employee</th>
+                      <th className="px-4 py-3 text-left font-medium">Unit</th>
+                      <th className="px-4 py-3 text-right font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/50">
+                    {clientEmployees.map((e) => (
+                      <tr key={`${e.id}-${e.unit_id}`} className="hover:bg-secondary/30">
+                        <td className="px-4 py-3 font-medium text-foreground">{e.name}</td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {e.unit_name}
+                          {e.unit_code && (
+                            <span className="ml-2 rounded-md bg-secondary px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-wide">
+                              {e.unit_code}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <Link
+                            to="/admin/attendance/$unitId"
+                            params={{ unitId: e.unit_id }}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:border-accent/50 hover:text-accent"
+                          >
+                            Open roll <ArrowRight className="h-3 w-3" />
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+
         <div className="overflow-x-auto">
           <table className="min-w-full table-auto">
             <thead className="border-b border-border/60 bg-secondary/40">
