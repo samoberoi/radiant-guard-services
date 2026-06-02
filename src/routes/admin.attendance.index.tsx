@@ -289,18 +289,43 @@ function AttendanceUnitsPage() {
         );
 
       const orgs = Array.from(
-        new Map(rows.map((r) => [r.customer_id || r.customer_name, { id: r.customer_id || r.customer_name, name: r.customer_name }])).values(),
+        new Map(
+          rows.map((r) => [
+            r.customer_id || r.customer_name,
+            { id: r.customer_id || r.customer_name, name: r.customer_name, code: r.customer_code },
+          ]),
+        ).values(),
       ).sort((a, b) => a.name.localeCompare(b.name));
 
       const sgMap = new Map<string, EmployeeRef>();
+      const employeesByCustomer: Record<string, ClientEmployee[]> = {};
       for (const r of rows) {
-        for (const sg of r.security_guards) sgMap.set(sg.id, sg);
+        for (const sg of r.security_guards) {
+          sgMap.set(sg.id, sg);
+          const key = r.customer_id || r.customer_name;
+          if (!employeesByCustomer[key]) employeesByCustomer[key] = [];
+          // de-dupe per client (employee may appear in multiple units rarely)
+          if (!employeesByCustomer[key].some((e) => e.id === sg.id && e.unit_id === r.id)) {
+            employeesByCustomer[key].push({
+              id: sg.id,
+              name: sg.name,
+              designation: "",
+              unit_id: r.id,
+              unit_name: r.name || r.code,
+              unit_code: r.code,
+            });
+          }
+        }
+      }
+      for (const key of Object.keys(employeesByCustomer)) {
+        employeesByCustomer[key].sort((a, b) => a.name.localeCompare(b.name));
       }
 
       return {
         units: rows,
         organizations: orgs,
         securityGuards: Array.from(sgMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
+        employeesByCustomer,
         summary: {
           organizations: orgs.length,
           units: rows.length,
