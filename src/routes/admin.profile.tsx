@@ -24,6 +24,7 @@ import {
   UserCheck,
   Loader2,
   Wallet,
+  Building2,
   X,
 } from "lucide-react";
 import { computeWages, fmtINR, type ContractResourceLike } from "@/lib/payroll-calc";
@@ -189,6 +190,7 @@ type ProfileData = {
   approved_at: string | null;
   unit_id: string | null;
   designation_id: string | null;
+  reports_to: string | null;
   emergency_contact_name: string;
   emergency_contact_relation: string;
   emergency_contact_mobile: string;
@@ -271,7 +273,7 @@ function ProfilePage() {
       const { data, error } = await supabase
         .from("candidates")
         .select(
-          "id,full_name,employee_code,candidate_code,status,role_key,photo_url,aadhaar_image_url,pan_image_url,signature_url,aadhaar_number,pan_number,mobile,email,date_of_birth,gender,marital_status,present_address1,present_address2,present_city,present_state,present_pincode,permanent_address1,permanent_city,permanent_state,permanent_pincode,bank_account_holder,bank_account_number,bank_ifsc,bank_name,bank_branch,bank_account_type,emergency_contact_name,emergency_contact_relation,emergency_contact_mobile,preferred_joining_date,approved_at,unit_id,designation_id,documents,identification_proofs,assigned_asset_ids,physical_health,contacts,nominations,references,languages,experiences,educations,extra_curricular,criminal_history,other_info",
+          "id,full_name,employee_code,candidate_code,status,role_key,photo_url,aadhaar_image_url,pan_image_url,signature_url,aadhaar_number,pan_number,mobile,email,date_of_birth,gender,marital_status,present_address1,present_address2,present_city,present_state,present_pincode,permanent_address1,permanent_city,permanent_state,permanent_pincode,bank_account_holder,bank_account_number,bank_ifsc,bank_name,bank_branch,bank_account_type,emergency_contact_name,emergency_contact_relation,emergency_contact_mobile,preferred_joining_date,approved_at,unit_id,designation_id,reports_to,documents,identification_proofs,assigned_asset_ids,physical_health,contacts,nominations,references,languages,experiences,educations,extra_curricular,criminal_history,other_info",
         )
         .eq("mobile", phone)
         .order("created_at", { ascending: false })
@@ -373,6 +375,93 @@ function ProfilePage() {
           status: iss.status ?? "",
         };
       });
+    },
+  });
+
+  const postingsQ = useQuery({
+    queryKey: ["my-postings", profile?.id, profile?.reports_to],
+    enabled: !!profile?.id,
+    queryFn: async () => {
+      const { data: cu, error: cuErr } = await supabase
+        .from("candidate_units")
+        .select("unit_id,is_primary,sort_order")
+        .eq("candidate_id", profile!.id)
+        .order("is_primary", { ascending: false })
+        .order("sort_order", { ascending: true });
+      if (cuErr) throw cuErr;
+      const unitIds = Array.from(
+        new Set(
+          [
+            ...(cu ?? []).map((r: any) => r.unit_id),
+            profile?.unit_id,
+          ].filter(Boolean) as string[],
+        ),
+      );
+      let units: any[] = [];
+      if (unitIds.length) {
+        const { data: u, error: uErr } = await supabase
+          .from("units")
+          .select(
+            "id,code,name,location,billing_city,billing_state,branch_id,customer_id,reporting_officers,emergency_contact_name,emergency_contact_mobile,nearby_hospital_name,nearby_hospital_mobile",
+          )
+          .in("id", unitIds);
+        if (uErr) throw uErr;
+        units = u ?? [];
+      }
+      const branchIds = Array.from(
+        new Set(units.map((u) => u.branch_id).filter(Boolean)),
+      );
+      const customerIds = Array.from(
+        new Set(units.map((u) => u.customer_id).filter(Boolean)),
+      );
+      const [branchesRes, customersRes] = await Promise.all([
+        branchIds.length
+          ? supabase.from("branches").select("id,name,code").in("id", branchIds)
+          : Promise.resolve({ data: [], error: null } as any),
+        customerIds.length
+          ? supabase.from("customers").select("id,name,short_name").in("id", customerIds)
+          : Promise.resolve({ data: [], error: null } as any),
+      ]);
+      const branchMap = new Map<string, any>(
+        ((branchesRes.data as any[]) ?? []).map((b: any) => [b.id, b]),
+      );
+      const customerMap = new Map<string, any>(
+        ((customersRes.data as any[]) ?? []).map((c: any) => [c.id, c]),
+      );
+      const cuMap = new Map<string, any>(
+        ((cu ?? []) as any[]).map((r: any) => [r.unit_id, r]),
+      );
+      const postings = units
+        .map((u: any) => ({
+          ...u,
+          is_primary:
+            cuMap.get(u.id)?.is_primary || u.id === profile?.unit_id,
+          branch: branchMap.get(u.branch_id) ?? null,
+          customer: customerMap.get(u.customer_id) ?? null,
+        }))
+        .sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0));
+
+      let manager: any = null;
+      if (profile?.reports_to) {
+        const { data: m } = await supabase
+          .from("candidates")
+          .select("id,full_name,employee_code,mobile,designation_id,photo_url")
+          .eq("id", profile.reports_to)
+          .maybeSingle();
+        if (m) {
+          let desigName = "";
+          if ((m as any).designation_id) {
+            const { data: d } = await supabase
+              .from("designations")
+              .select("name")
+              .eq("id", (m as any).designation_id)
+              .maybeSingle();
+            desigName = (d as any)?.name ?? "";
+          }
+          manager = { ...(m as any), designation_name: desigName };
+        }
+      }
+      return { postings, manager };
     },
   });
 
@@ -574,6 +663,8 @@ function ProfilePage() {
 
   const lookups = lookupsQ.data;
   const issuedItems = issuedItemsQ.data ?? [];
+  const postings = postingsQ.data?.postings ?? [];
+  const manager = postingsQ.data?.manager ?? null;
 
   return (
     <div className="space-y-5">
@@ -679,7 +770,132 @@ function ProfilePage() {
         </div>
       </div>
 
+      <Section title="My Posting & Reporting" icon={Building2}>
+        {postingsQ.isLoading ? (
+          <div className="text-sm text-muted-foreground">Loading posting details…</div>
+        ) : postings.length === 0 && !manager ? (
+          <div className="text-sm text-muted-foreground">
+            No unit posting assigned yet. Please contact HR.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {postings.length > 0 && (
+              <div className="grid gap-3 md:grid-cols-2">
+                {postings.map((u: any) => {
+                  const officers = Array.isArray(u.reporting_officers)
+                    ? u.reporting_officers
+                    : [];
+                  const cityState = [u.billing_city, u.billing_state]
+                    .filter(Boolean)
+                    .join(", ");
+                  return (
+                    <div
+                      key={u.id}
+                      className="rounded-xl border border-border bg-secondary/30 p-4"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="text-sm font-semibold">{u.name}</div>
+                        {u.is_primary && (
+                          <Badge className="bg-accent/15 text-accent">Primary posting</Badge>
+                        )}
+                        {u.code && (
+                          <Badge variant="outline" className="text-[10px]">{u.code}</Badge>
+                        )}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {[u.customer?.name, u.branch?.name, u.location || cityState]
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
+                      </div>
+
+                      <div className="mt-3">
+                        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                          Field Officers / Reporting Officers
+                        </div>
+                        {officers.length === 0 ? (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            None listed for this unit.
+                          </div>
+                        ) : (
+                          <ul className="mt-1 space-y-1">
+                            {officers.map((o: any, idx: number) => (
+                              <li
+                                key={idx}
+                                className="flex flex-wrap items-center gap-2 text-sm"
+                              >
+                                <UserCheck className="h-3.5 w-3.5 text-accent" />
+                                <span className="font-medium">{o.name || "—"}</span>
+                                {o.is_primary && (
+                                  <Badge className="bg-primary/15 text-primary text-[10px]">Primary</Badge>
+                                )}
+                                {o.is_active === false && (
+                                  <Badge variant="outline" className="text-[10px]">Inactive</Badge>
+                                )}
+                                {o.mobile && (
+                                  <span className="text-xs text-muted-foreground">· {o.mobile}</span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+
+                      {(u.emergency_contact_name || u.nearby_hospital_name) && (
+                        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                          {u.emergency_contact_name && (
+                            <InfoRow
+                              label="Emergency Contact"
+                              value={`${u.emergency_contact_name}${u.emergency_contact_mobile ? ` · ${u.emergency_contact_mobile}` : ""}`}
+                            />
+                          )}
+                          {u.nearby_hospital_name && (
+                            <InfoRow
+                              label="Nearby Hospital"
+                              value={`${u.nearby_hospital_name}${u.nearby_hospital_mobile ? ` · ${u.nearby_hospital_mobile}` : ""}`}
+                            />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {manager && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Direct Manager
+                </div>
+                <div className="mt-2 flex items-center gap-3">
+                  {manager.photo_url ? (
+                    <img
+                      src={manager.photo_url}
+                      alt={manager.full_name}
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+                      <UserCheck className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-sm font-semibold">{manager.full_name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {[manager.designation_name, manager.employee_code, manager.mobile]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Section>
+
       <div className="grid gap-5 lg:grid-cols-2">
+
         <Section title="Contact" icon={PhoneIcon}>
           <div className="grid gap-4 sm:grid-cols-2">
             <InfoRow label="Mobile" value={profile.mobile} />
