@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      addition_types: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      additions: {
+        Row: {
+          addition_date: string
+          addition_name: string
+          addition_type_id: string
+          amount: number
+          calculation_type: string
+          candidate_id: string
+          created_at: string
+          description: string
+          id: string
+          installments: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          addition_date: string
+          addition_name: string
+          addition_type_id: string
+          amount: number
+          calculation_type: string
+          candidate_id: string
+          created_at?: string
+          description?: string
+          id?: string
+          installments?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          addition_date?: string
+          addition_name?: string
+          addition_type_id?: string
+          amount?: number
+          calculation_type?: string
+          candidate_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          installments?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       allowance_types: {
         Row: {
           created_at: string
