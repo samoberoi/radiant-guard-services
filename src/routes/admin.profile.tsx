@@ -377,7 +377,92 @@ function ProfilePage() {
     },
   });
 
-  const docsQ = useQuery({
+  const postingsQ = useQuery({
+    queryKey: ["my-postings", profile?.id, profile?.reports_to],
+    enabled: !!profile?.id,
+    queryFn: async () => {
+      const { data: cu, error: cuErr } = await supabase
+        .from("candidate_units")
+        .select("unit_id,is_primary,sort_order")
+        .eq("candidate_id", profile!.id)
+        .order("is_primary", { ascending: false })
+        .order("sort_order", { ascending: true });
+      if (cuErr) throw cuErr;
+      const unitIds = Array.from(
+        new Set(
+          [
+            ...(cu ?? []).map((r: any) => r.unit_id),
+            profile?.unit_id,
+          ].filter(Boolean) as string[],
+        ),
+      );
+      let units: any[] = [];
+      if (unitIds.length) {
+        const { data: u, error: uErr } = await supabase
+          .from("units")
+          .select(
+            "id,code,name,location,billing_city,billing_state,branch_id,customer_id,reporting_officers,emergency_contact_name,emergency_contact_mobile,nearby_hospital_name,nearby_hospital_mobile",
+          )
+          .in("id", unitIds);
+        if (uErr) throw uErr;
+        units = u ?? [];
+      }
+      const branchIds = Array.from(
+        new Set(units.map((u) => u.branch_id).filter(Boolean)),
+      );
+      const customerIds = Array.from(
+        new Set(units.map((u) => u.customer_id).filter(Boolean)),
+      );
+      const [branchesRes, customersRes] = await Promise.all([
+        branchIds.length
+          ? supabase.from("branches").select("id,name,code").in("id", branchIds)
+          : Promise.resolve({ data: [], error: null } as any),
+        customerIds.length
+          ? supabase.from("customers").select("id,name,short_name").in("id", customerIds)
+          : Promise.resolve({ data: [], error: null } as any),
+      ]);
+      const branchMap = new Map<string, any>(
+        ((branchesRes.data as any[]) ?? []).map((b: any) => [b.id, b]),
+      );
+      const customerMap = new Map<string, any>(
+        ((customersRes.data as any[]) ?? []).map((c: any) => [c.id, c]),
+      );
+      const cuMap = new Map<string, any>(
+        ((cu ?? []) as any[]).map((r: any) => [r.unit_id, r]),
+      );
+      const postings = units
+        .map((u: any) => ({
+          ...u,
+          is_primary:
+            cuMap.get(u.id)?.is_primary || u.id === profile?.unit_id,
+          branch: branchMap.get(u.branch_id) ?? null,
+          customer: customerMap.get(u.customer_id) ?? null,
+        }))
+        .sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0));
+
+      let manager: any = null;
+      if (profile?.reports_to) {
+        const { data: m } = await supabase
+          .from("candidates")
+          .select("id,full_name,employee_code,mobile,designation_id,photo_url")
+          .eq("id", profile.reports_to)
+          .maybeSingle();
+        if (m) {
+          let desigName = "";
+          if ((m as any).designation_id) {
+            const { data: d } = await supabase
+              .from("designations")
+              .select("name")
+              .eq("id", (m as any).designation_id)
+              .maybeSingle();
+            desigName = (d as any)?.name ?? "";
+          }
+          manager = { ...(m as any), designation_name: desigName };
+        }
+      }
+      return { postings, manager };
+    },
+  });
     queryKey: ["my-signed-docs", profile?.id],
     enabled: !!profile?.id,
     queryFn: async (): Promise<SignedDocRow[]> => {
