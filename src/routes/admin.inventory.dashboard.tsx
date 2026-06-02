@@ -14,6 +14,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 // Owner Dashboard is now merged into the /admin/inventory hub.
 // This route redirects there so any old links / bookmarks keep working.
@@ -295,21 +296,46 @@ export function InventoryOwnerDashboard() {
     return Array.from(tally.entries()).map(([name, value]) => ({ name, value }));
   }, [balances, itemMap, catMap, categoryFilter, warehouseFilter]);
 
-  // Holdings
-  const buildHoldings = (locType: string) => {
-    const grouped = new Map<string, { qty: number; lines: number }>();
+  // Holdings — per location, with item breakdown
+  type HoldingLine = { item_id: string; item_name: string; item_code: string; size_value: string; qty: number; value: number };
+  type HoldingEntry = { id: string; qty: number; value: number; lines: HoldingLine[] };
+  const buildHoldings = (locType: string): HoldingEntry[] => {
+    const byLoc = new Map<string, Map<string, HoldingLine>>();
     for (const b of balances) {
       if (b.location_type !== locType) continue;
       if (!itemPasses(b.item_id)) continue;
       if (Number(b.qty) <= 0) continue;
-      const cur = grouped.get(b.location_id) ?? { qty: 0, lines: 0 };
-      cur.qty += Number(b.qty); cur.lines += 1; grouped.set(b.location_id, cur);
+      const it = itemMap.get(b.item_id);
+      if (!it) continue;
+      const key = `${b.item_id}|${b.size_value}`;
+      const m = byLoc.get(b.location_id) ?? new Map<string, HoldingLine>();
+      const cur = m.get(key) ?? {
+        item_id: b.item_id,
+        item_name: it.name,
+        item_code: it.item_code,
+        size_value: b.size_value,
+        qty: 0,
+        value: 0,
+      };
+      cur.qty += Number(b.qty);
+      cur.value += Number(b.qty) * Number(it.standard_cost || 0);
+      m.set(key, cur);
+      byLoc.set(b.location_id, m);
     }
-    return Array.from(grouped.entries()).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.qty - a.qty);
+    return Array.from(byLoc.entries()).map(([id, m]) => {
+      const lines = Array.from(m.values()).sort((a, b) => b.qty - a.qty);
+      return {
+        id,
+        qty: lines.reduce((s, l) => s + l.qty, 0),
+        value: lines.reduce((s, l) => s + l.value, 0),
+        lines,
+      };
+    }).sort((a, b) => b.qty - a.qty);
   };
-  const guardHoldings = useMemo(() => buildHoldings("guard"), [balances, categoryFilter]);
-  const foHoldings = useMemo(() => buildHoldings("field_officer"), [balances, categoryFilter]);
-  const branchHoldings = useMemo(() => buildHoldings("branch"), [balances, categoryFilter]);
+  const guardHoldings = useMemo(() => buildHoldings("guard"), [balances, itemMap, categoryFilter, warehouseFilter]);
+  const foHoldings = useMemo(() => buildHoldings("field_officer"), [balances, itemMap, categoryFilter, warehouseFilter]);
+  const branchHoldings = useMemo(() => buildHoldings("branch"), [balances, itemMap, categoryFilter, warehouseFilter]);
+
 
   // Recent activity
   const recent = useMemo(() => {
@@ -362,6 +388,57 @@ export function InventoryOwnerDashboard() {
         <Kpi label="GRNs Posted" value={grnsInPeriod.toString()} delta={delta(grnsInPeriod, grnsPrev)} icon={Truck} tint="from-cyan-500/15 to-cyan-500/0" iconClass="text-cyan-500" />
         <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs · ${inr(writeoffCur)} write-offs`} />
       </div>
+
+      {/* Holdings — who holds what, click for breakdown */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <HoldingsCard
+          title="Branch Holdings"
+          icon={Building2}
+          accent="text-blue-500"
+          rows={branchHoldings.map((r) => {
+            const b = branchMap.get(r.id);
+            return {
+              name: b ? `${b.code} · ${b.name}` : r.id.slice(0, 8),
+              meta: `${r.lines.length} line${r.lines.length !== 1 ? "s" : ""}`,
+              qty: r.qty,
+              value: r.value,
+              lines: r.lines,
+            };
+          })}
+        />
+        <HoldingsCard
+          title="Field Officers"
+          icon={Users}
+          accent="text-violet-500"
+          rows={foHoldings.map((r) => {
+            const c = candMap.get(r.id);
+            return {
+              name: c?.full_name ?? r.id.slice(0, 8),
+              meta: `${c?.employee_code ?? ""} · ${desigMap.get(c?.designation_id ?? "")?.name ?? "Field Officer"}`,
+              qty: r.qty,
+              value: r.value,
+              lines: r.lines,
+            };
+          })}
+        />
+        <HoldingsCard
+          title="Guards"
+          icon={ShieldCheck}
+          accent="text-teal-500"
+          rows={guardHoldings.map((r) => {
+            const c = candMap.get(r.id);
+            return {
+              name: c?.full_name ?? r.id.slice(0, 8),
+              meta: `${c?.employee_code ?? ""} · ${desigMap.get(c?.designation_id ?? "")?.name ?? "Guard"}`,
+              qty: r.qty,
+              value: r.value,
+              lines: r.lines,
+            };
+          })}
+        />
+      </div>
+
+
 
       {/* Charts row */}
       <div className="grid gap-4 lg:grid-cols-3">
@@ -492,18 +569,6 @@ export function InventoryOwnerDashboard() {
         </Panel>
       </div>
 
-      {/* Holdings */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <HoldingsCard title="Branch Holdings" icon={Building2} accent="text-blue-500" rows={branchHoldings.map((r) => {
-          const b = branchMap.get(r.id); return { name: b ? `${b.code} · ${b.name}` : r.id.slice(0, 8), meta: `${r.lines} line${r.lines !== 1 ? "s" : ""}`, qty: r.qty };
-        })} />
-        <HoldingsCard title="Field Officers" icon={Users} accent="text-violet-500" rows={foHoldings.map((r) => {
-          const c = candMap.get(r.id); return { name: c?.full_name ?? r.id.slice(0, 8), meta: `${c?.employee_code ?? ""} · ${desigMap.get(c?.designation_id ?? "")?.name ?? "Field Officer"}`, qty: r.qty };
-        })} />
-        <HoldingsCard title="Guards" icon={ShieldCheck} accent="text-teal-500" rows={guardHoldings.map((r) => {
-          const c = candMap.get(r.id); return { name: c?.full_name ?? r.id.slice(0, 8), meta: `${c?.employee_code ?? ""} · ${desigMap.get(c?.designation_id ?? "")?.name ?? "Guard"}`, qty: r.qty };
-        })} />
-      </div>
 
       {/* Activity */}
       <Panel title="Recent Activity" subtitle="Latest POs, GRNs, write-offs">
@@ -588,32 +653,85 @@ function Panel({ title, subtitle, right, children, className = "" }: {
   );
 }
 
+type HoldingRow = {
+  name: string;
+  meta: string;
+  qty: number;
+  value: number;
+  lines: { item_id: string; item_name: string; item_code: string; size_value: string; qty: number; value: number }[];
+};
+
 function HoldingsCard({ title, icon: Icon, accent, rows }: {
-  title: string; icon: React.ComponentType<{ className?: string }>; accent: string;
-  rows: { name: string; meta: string; qty: number }[];
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  accent: string;
+  rows: HoldingRow[];
 }) {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
   const total = rows.reduce((s, r) => s + r.qty, 0);
+  const active = openIdx !== null ? rows[openIdx] : null;
   return (
     <Panel title={title} subtitle={`${rows.length} holders · ${total.toLocaleString("en-IN")} units`}>
       <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/40 ${accent}`}><Icon className="h-4 w-4" /></div>
       {rows.length === 0 ? <Empty>Nothing in hand.</Empty> : (
         <div className="space-y-2">
           {rows.slice(0, 6).map((r, i) => (
-            <div key={i} className="flex items-center justify-between rounded-lg border border-border/40 px-3 py-2">
-              <div>
-                <div className="text-sm font-medium">{r.name}</div>
-                <div className="text-xs text-muted-foreground">{r.meta}</div>
+            <button
+              key={i}
+              type="button"
+              onClick={() => setOpenIdx(i)}
+              className="flex w-full items-center justify-between rounded-lg border border-border/40 px-3 py-2 text-left transition hover:border-accent/50 hover:bg-accent/5"
+            >
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium">{r.name}</div>
+                <div className="truncate text-xs text-muted-foreground">{r.meta}</div>
               </div>
-              <div className="flex items-center gap-1 text-sm font-semibold tabular-nums">
+              <div className="flex shrink-0 items-center gap-1 text-sm font-semibold tabular-nums">
                 <Boxes className="h-3.5 w-3.5 text-muted-foreground" />{r.qty.toLocaleString("en-IN")}
+                <ArrowRight className="ml-1 h-3.5 w-3.5 text-muted-foreground/60" />
               </div>
-            </div>
+            </button>
           ))}
+          {rows.length > 6 && (
+            <div className="pt-1 text-center text-[11px] text-muted-foreground">+ {rows.length - 6} more</div>
+          )}
         </div>
       )}
+
+      <Dialog open={openIdx !== null} onOpenChange={(o) => !o && setOpenIdx(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className={`flex h-7 w-7 items-center justify-center rounded-lg bg-secondary/40 ${accent}`}>
+                <Icon className="h-4 w-4" />
+              </span>
+              {active?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {active?.meta} · {active?.qty.toLocaleString("en-IN")} units · {active ? inr(active.value) : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {active && (
+            <div className="max-h-[60vh] overflow-auto">
+              <DataTable head={["Item", "Code", "Size", "Qty", "Value"]}>
+                {active.lines.map((l, i) => (
+                  <tr key={i} className="border-t border-border/60">
+                    <td className="p-2 font-medium">{l.item_name}</td>
+                    <td className="p-2 text-xs text-muted-foreground">{l.item_code}</td>
+                    <td className="p-2 text-muted-foreground">{l.size_value || "—"}</td>
+                    <td className="p-2 tabular-nums font-semibold">{l.qty.toLocaleString("en-IN")}</td>
+                    <td className="p-2 tabular-nums text-muted-foreground">{inr(l.value)}</td>
+                  </tr>
+                ))}
+              </DataTable>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Panel>
   );
 }
+
 
 function DataTable({ head, children }: { head: string[]; children: React.ReactNode }) {
   return (
