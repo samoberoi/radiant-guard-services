@@ -569,18 +569,6 @@ export function InventoryOwnerDashboard() {
         </Panel>
       </div>
 
-      {/* Holdings */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <HoldingsCard title="Branch Holdings" icon={Building2} accent="text-blue-500" rows={branchHoldings.map((r) => {
-          const b = branchMap.get(r.id); return { name: b ? `${b.code} · ${b.name}` : r.id.slice(0, 8), meta: `${r.lines} line${r.lines !== 1 ? "s" : ""}`, qty: r.qty };
-        })} />
-        <HoldingsCard title="Field Officers" icon={Users} accent="text-violet-500" rows={foHoldings.map((r) => {
-          const c = candMap.get(r.id); return { name: c?.full_name ?? r.id.slice(0, 8), meta: `${c?.employee_code ?? ""} · ${desigMap.get(c?.designation_id ?? "")?.name ?? "Field Officer"}`, qty: r.qty };
-        })} />
-        <HoldingsCard title="Guards" icon={ShieldCheck} accent="text-teal-500" rows={guardHoldings.map((r) => {
-          const c = candMap.get(r.id); return { name: c?.full_name ?? r.id.slice(0, 8), meta: `${c?.employee_code ?? ""} · ${desigMap.get(c?.designation_id ?? "")?.name ?? "Guard"}`, qty: r.qty };
-        })} />
-      </div>
 
       {/* Activity */}
       <Panel title="Recent Activity" subtitle="Latest POs, GRNs, write-offs">
