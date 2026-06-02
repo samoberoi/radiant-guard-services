@@ -74,6 +74,7 @@ const vehiclesChildren: NavItem[] = [
 ];
 
 const employeesChildren: NavItem[] = [
+  { to: "/admin/additions", label: "Additions", icon: Wallet },
   { to: "/admin/deductions", label: "Deductions", icon: Wallet },
 ];
 
