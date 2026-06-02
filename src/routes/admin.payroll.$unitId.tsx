@@ -54,7 +54,7 @@ function buildDates(start: string, end: string): string[] {
 
 function PayrollUnitPage() {
   const { unitId } = Route.useParams();
-  const { start, end } = Route.useSearch();
+  const { start, end, candidate: highlightCandidate } = Route.useSearch();
 
   const periodDates = useMemo(() => buildDates(start, end), [start, end]);
 
