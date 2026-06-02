@@ -463,6 +463,8 @@ function ProfilePage() {
       return { postings, manager };
     },
   });
+
+  const docsQ = useQuery({
     queryKey: ["my-signed-docs", profile?.id],
     enabled: !!profile?.id,
     queryFn: async (): Promise<SignedDocRow[]> => {
