@@ -334,6 +334,48 @@ function ProfilePage() {
     },
   });
 
+  const issuedItemsQ = useQuery({
+    queryKey: ["my-issued-items", profile?.id],
+    enabled: !!profile?.id,
+    queryFn: async () => {
+      const { data: issuances, error: iErr } = await supabase
+        .from("inv_issuances")
+        .select("id,issuance_number,issuance_date,status,issuance_type")
+        .eq("destination_id", profile!.id)
+        .in("destination_type", ["guard", "candidate", "employee"])
+        .in("status", ["issued", "acknowledged"])
+        .order("issuance_date", { ascending: false });
+      if (iErr) throw iErr;
+      const ids = (issuances ?? []).map((r: any) => r.id);
+      if (ids.length === 0) return [] as Array<{
+        id: string; item_name: string; item_code: string; size_value: string;
+        qty: number; condition: string; issuance_number: string;
+        issuance_date: string; status: string;
+      }>;
+      const { data: lines, error: lErr } = await supabase
+        .from("inv_issuance_lines")
+        .select("id,issuance_id,item_id,size_value,qty,condition,inv_items(name,item_code)")
+        .in("issuance_id", ids);
+      if (lErr) throw lErr;
+      const issMap = new Map<string, any>();
+      for (const r of issuances ?? []) issMap.set((r as any).id, r);
+      return (lines ?? []).map((l: any) => {
+        const iss = issMap.get(l.issuance_id) ?? {};
+        return {
+          id: l.id,
+          item_name: l.inv_items?.name ?? "Unknown item",
+          item_code: l.inv_items?.item_code ?? "",
+          size_value: l.size_value ?? "",
+          qty: Number(l.qty ?? 0),
+          condition: l.condition ?? "",
+          issuance_number: iss.issuance_number ?? "",
+          issuance_date: iss.issuance_date ?? "",
+          status: iss.status ?? "",
+        };
+      });
+    },
+  });
+
   const docsQ = useQuery({
     queryKey: ["my-signed-docs", profile?.id],
     enabled: !!profile?.id,
