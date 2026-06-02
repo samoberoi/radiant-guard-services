@@ -18,6 +18,7 @@ import {
 const searchSchema = z.object({
   start: z.string(),
   end: z.string(),
+  candidate: z.string().optional(),
 });
 
 export const Route = createFileRoute("/admin/payroll/$unitId")({
