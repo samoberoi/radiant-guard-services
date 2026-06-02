@@ -20,6 +20,7 @@ import {
   Sparkles,
   Upload,
   Users,
+  Package,
   UserCheck,
   Loader2,
   Wallet,
@@ -333,6 +334,48 @@ function ProfilePage() {
     },
   });
 
+  const issuedItemsQ = useQuery({
+    queryKey: ["my-issued-items", profile?.id],
+    enabled: !!profile?.id,
+    queryFn: async () => {
+      const { data: issuances, error: iErr } = await supabase
+        .from("inv_issuances")
+        .select("id,issuance_number,issuance_date,status,issuance_type")
+        .eq("destination_id", profile!.id)
+        .in("destination_type", ["guard", "candidate", "employee"])
+        .in("status", ["issued", "acknowledged"])
+        .order("issuance_date", { ascending: false });
+      if (iErr) throw iErr;
+      const ids = (issuances ?? []).map((r: any) => r.id);
+      if (ids.length === 0) return [] as Array<{
+        id: string; item_name: string; item_code: string; size_value: string;
+        qty: number; condition: string; issuance_number: string;
+        issuance_date: string; status: string;
+      }>;
+      const { data: lines, error: lErr } = await supabase
+        .from("inv_issuance_lines")
+        .select("id,issuance_id,item_id,size_value,qty,condition,inv_items(name,item_code)")
+        .in("issuance_id", ids);
+      if (lErr) throw lErr;
+      const issMap = new Map<string, any>();
+      for (const r of issuances ?? []) issMap.set((r as any).id, r);
+      return (lines ?? []).map((l: any) => {
+        const iss = issMap.get(l.issuance_id) ?? {};
+        return {
+          id: l.id,
+          item_name: l.inv_items?.name ?? "Unknown item",
+          item_code: l.inv_items?.item_code ?? "",
+          size_value: l.size_value ?? "",
+          qty: Number(l.qty ?? 0),
+          condition: l.condition ?? "",
+          issuance_number: iss.issuance_number ?? "",
+          issuance_date: iss.issuance_date ?? "",
+          status: iss.status ?? "",
+        };
+      });
+    },
+  });
+
   const docsQ = useQuery({
     queryKey: ["my-signed-docs", profile?.id],
     enabled: !!profile?.id,
@@ -530,6 +573,7 @@ function ProfilePage() {
   }
 
   const lookups = lookupsQ.data;
+  const issuedItems = issuedItemsQ.data ?? [];
 
   return (
     <div className="space-y-5">
@@ -922,22 +966,70 @@ function ProfilePage() {
           )}
         </Section>
 
-        <Section title="Assigned Assets" icon={Mail}>
-          {(lookups?.assets?.length ?? 0) === 0 ? (
-            <p className="text-sm text-muted-foreground">No assets assigned.</p>
+        <Section title="Assigned Assets" icon={Package}>
+          {issuedItemsQ.isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading issued items…</p>
+          ) : issuedItems.length === 0 && (lookups?.assets?.length ?? 0) === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No assets issued from inventory yet.
+            </p>
           ) : (
-            <ul className="flex flex-wrap gap-2">
-              {lookups!.assets.map((a) => (
-                <li
-                  key={a.id}
-                  className="rounded-full border border-border bg-secondary px-3 py-1 text-xs font-semibold"
-                >
-                  {a.name}
-                </li>
-              ))}
-            </ul>
+            <div className="space-y-3">
+              {issuedItems.length > 0 && (
+                <ul className="divide-y divide-border rounded-lg border border-border">
+                  {issuedItems.map((it) => (
+                    <li
+                      key={it.id}
+                      className="flex items-center justify-between gap-3 p-3 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <div className="font-medium truncate">{it.item_name}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {it.item_code}
+                          {it.size_value ? ` · Size ${it.size_value}` : ""}
+                          {it.issuance_number ? ` · ${it.issuance_number}` : ""}
+                          {it.issuance_date ? ` · ${it.issuance_date}` : ""}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant="secondary" className="capitalize">
+                          {it.condition || "new"}
+                        </Badge>
+                        <span className="text-xs font-semibold tabular-nums">
+                          × {it.qty}
+                        </span>
+                        <Badge
+                          variant={it.status === "acknowledged" ? "default" : "outline"}
+                          className="capitalize"
+                        >
+                          {it.status}
+                        </Badge>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {(lookups?.assets?.length ?? 0) > 0 && (
+                <div>
+                  <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Other assigned assets
+                  </div>
+                  <ul className="flex flex-wrap gap-2">
+                    {lookups!.assets.map((a) => (
+                      <li
+                        key={a.id}
+                        className="rounded-full border border-border bg-secondary px-3 py-1 text-xs font-semibold"
+                      >
+                        {a.name}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
           )}
         </Section>
+
 
         <Section title="Other Documents" icon={Upload}>
           {profile.documents.length === 0 ? (
