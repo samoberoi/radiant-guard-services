@@ -663,6 +663,8 @@ function ProfilePage() {
 
   const lookups = lookupsQ.data;
   const issuedItems = issuedItemsQ.data ?? [];
+  const postings = postingsQ.data?.postings ?? [];
+  const manager = postingsQ.data?.manager ?? null;
 
   return (
     <div className="space-y-5">
