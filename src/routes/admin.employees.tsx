@@ -1376,7 +1376,7 @@ function EmployeesPage() {
           {mode === "employee" && columnsVisible.doj && (
             <td className="px-3 py-3 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(c.approved_at ?? c.preferred_joining_date)}</td>
           )}
-          {mode === "employee" && (
+          {mode === "employee" && columnsVisible.role && (
             <td className="px-3 py-3">
               {c.role_key ? (
                 <Select
