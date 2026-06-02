@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { logActivity, getClientIp } from "@/lib/activity-log";
 
 const STORAGE_KEY = "radiant.auth";
+const AUTH_TIMEOUT_MS = 12_000;
+const IP_LOOKUP_TIMEOUT_MS = 1_500;
 
 /**
  * ⚠️ PRE-LAUNCH TESTING ONLY ⚠️
@@ -51,16 +53,43 @@ function credsForPhone(phone: string) {
   };
 }
 
+function withTimeout<T>(promise: Promise<T>, message: string, ms = AUTH_TIMEOUT_MS) {
+  return Promise.race<T>([
+    promise,
+    new Promise<T>((_, reject) => {
+      setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]);
+}
+
+function resolveClientIpQuickly() {
+  return Promise.race<string>([
+    getClientIp(),
+    new Promise<string>((resolve) => {
+      setTimeout(() => resolve(""), IP_LOOKUP_TIMEOUT_MS);
+    }),
+  ]).catch(() => "");
+}
+
 async function ensureSupabaseSession(phone: string) {
   const { email, password } = credsForPhone(phone);
-  const signIn = await supabase.auth.signInWithPassword({ email, password });
+  const signIn = await withTimeout(
+    supabase.auth.signInWithPassword({ email, password }),
+    "Login is taking too long. Please try again.",
+  );
   if (!signIn.error) return;
   // First-time login → sign up, then sign in.
-  const signUp = await supabase.auth.signUp({ email, password });
+  const signUp = await withTimeout(
+    supabase.auth.signUp({ email, password }),
+    "Account setup is taking too long. Please try again.",
+  );
   if (signUp.error && !/registered/i.test(signUp.error.message)) {
     throw signUp.error;
   }
-  const retry = await supabase.auth.signInWithPassword({ email, password });
+  const retry = await withTimeout(
+    supabase.auth.signInWithPassword({ email, password }),
+    "Login is taking too long. Please try again.",
+  );
   if (retry.error) throw retry.error;
 }
 
@@ -82,11 +111,29 @@ export function useAuth() {
     const digits = phone.replace(/\D/g, "").slice(-10);
     const role: AuthUser["role"] =
       digits === SUPER_ADMIN_PHONE ? "super_admin" : "user";
-    const ip = await getClientIp();
+    const ipPromise = resolveClientIpQuickly();
     try {
       await ensureSupabaseSession(phone);
     } catch (e) {
-      void logActivity({
+      void ipPromise.then((ip) =>
+        logActivity({
+          module: "Authentication",
+          action: "login",
+          entityType: "user",
+          entityLabel: phone,
+          userPhone: phone,
+          userRole: role,
+          ip,
+          status: "failure",
+          errorMessage: e instanceof Error ? e.message : String(e),
+        }),
+      );
+      throw e;
+    }
+    const u: AuthUser = { phone, role };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
+    void ipPromise.then((ip) =>
+      logActivity({
         module: "Authentication",
         action: "login",
         entityType: "user",
@@ -94,22 +141,8 @@ export function useAuth() {
         userPhone: phone,
         userRole: role,
         ip,
-        status: "failure",
-        errorMessage: e instanceof Error ? e.message : String(e),
-      });
-      throw e;
-    }
-    const u: AuthUser = { phone, role };
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
-    void logActivity({
-      module: "Authentication",
-      action: "login",
-      entityType: "user",
-      entityLabel: phone,
-      userPhone: phone,
-      userRole: role,
-      ip,
-    });
+      }),
+    );
     emit();
   }, []);
 
