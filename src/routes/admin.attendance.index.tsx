@@ -338,7 +338,19 @@ function AttendanceUnitsPage() {
   const units = data?.units ?? [];
   const organizations = data?.organizations ?? [];
   const securityGuards = data?.securityGuards ?? [];
+  const employeesByCustomer = data?.employeesByCustomer ?? {};
   const summary = data?.summary ?? { organizations: 0, units: 0, activeEmployees: 0 };
+
+  const selectedClient = orgFilter !== "all" ? organizations.find((o) => o.id === orgFilter) ?? null : null;
+  const clientEmployees = useMemo(() => {
+    if (!selectedClient) return [] as ClientEmployee[];
+    const list = employeesByCustomer[selectedClient.id] ?? [];
+    const term = q.trim().toLowerCase();
+    if (!term) return list;
+    return list.filter((e) =>
+      [e.name, e.unit_name, e.unit_code].join(" ").toLowerCase().includes(term),
+    );
+  }, [selectedClient, employeesByCustomer, q]);
 
   const filtered = useMemo(() => {
     const term = q.trim().toLowerCase();
