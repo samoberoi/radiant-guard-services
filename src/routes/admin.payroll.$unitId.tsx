@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, Download } from "lucide-react";
 import { z } from "zod";
@@ -18,6 +18,7 @@ import {
 const searchSchema = z.object({
   start: z.string(),
   end: z.string(),
+  candidate: z.string().optional(),
 });
 
 export const Route = createFileRoute("/admin/payroll/$unitId")({
@@ -53,7 +54,7 @@ function buildDates(start: string, end: string): string[] {
 
 function PayrollUnitPage() {
   const { unitId } = Route.useParams();
-  const { start, end } = Route.useSearch();
+  const { start, end, candidate: highlightCandidate } = Route.useSearch();
 
   const periodDates = useMemo(() => buildDates(start, end), [start, end]);
 
@@ -238,6 +239,14 @@ function PayrollUnitPage() {
 
   const rows = data ?? [];
 
+  useEffect(() => {
+    if (!highlightCandidate || rows.length === 0) return;
+    const el = document.getElementById(`payroll-row-${highlightCandidate}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [highlightCandidate, rows.length]);
+
+
+
   const totals = useMemo(() => {
     return rows.reduce(
       (acc, r) => {
@@ -341,8 +350,14 @@ function PayrollUnitPage() {
                 <tr><td colSpan={9} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
               ) : rows.length === 0 ? (
                 <tr><td colSpan={9} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
-              ) : rows.map((r) => (
-                <tr key={r.id} className="hover:bg-muted/40">
+              ) : rows.map((r) => {
+                const isHighlighted = highlightCandidate === r.id;
+                return (
+                <tr
+                  key={r.id}
+                  id={`payroll-row-${r.id}`}
+                  className={`hover:bg-muted/40 ${isHighlighted ? "bg-emerald-50 ring-2 ring-emerald-400 dark:bg-emerald-950/40" : ""}`}
+                >
                   <td className="px-4 py-3 font-mono text-xs">{r.employeeCode || "—"}</td>
                   <td className="px-4 py-3 font-medium">{r.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{r.designation}</td>
@@ -353,7 +368,8 @@ function PayrollUnitPage() {
                   <td className="px-4 py-3 text-right font-semibold text-emerald-700">{r.wages ? fmtINR(r.wages.netPay) : "—"}</td>
                   <td className="px-4 py-3 text-right">{r.wages ? fmtINR(r.wages.employerCost) : "—"}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
             {rows.length > 0 && (
               <tfoot className="border-t border-border/60 bg-secondary/30 text-sm font-semibold">

@@ -5,11 +5,23 @@ import {
   ArrowRight,
   Building2,
   ClipboardList,
+  IndianRupee,
   MapPinned,
   Search,
   Users,
   X,
 } from "lucide-react";
+
+function currentMonthRange() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const start = `${y}-${pad(m + 1)}-01`;
+  const last = new Date(y, m + 1, 0).getDate();
+  const end = `${y}-${pad(m + 1)}-${pad(last)}`;
+  return { start, end };
+}
 
 import { PageHeader } from "@/components/PageHeader";
 import { Input } from "@/components/ui/input";
@@ -504,13 +516,23 @@ function AttendanceUnitsPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <Link
-                            to="/admin/attendance/$unitId"
-                            params={{ unitId: e.unit_id }}
-                            className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:border-accent/50 hover:text-accent"
-                          >
-                            Open roll <ArrowRight className="h-3 w-3" />
-                          </Link>
+                          <div className="flex justify-end gap-2">
+                            <Link
+                              to="/admin/payroll/$unitId"
+                              params={{ unitId: e.unit_id }}
+                              search={{ ...currentMonthRange(), candidate: e.id }}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300/60 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-800 hover:border-emerald-500 dark:bg-emerald-950/30 dark:text-emerald-200"
+                            >
+                              <IndianRupee className="h-3 w-3" /> View salary
+                            </Link>
+                            <Link
+                              to="/admin/attendance/$unitId"
+                              params={{ unitId: e.unit_id }}
+                              className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:border-accent/50 hover:text-accent"
+                            >
+                              Open roll <ArrowRight className="h-3 w-3" />
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     ))}
