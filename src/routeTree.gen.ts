@@ -43,6 +43,7 @@ import { Route as AdminAttendanceCodeManagerRouteImport } from './routes/admin.a
 import { Route as AdminAttendanceRouteImport } from './routes/admin.attendance'
 import { Route as AdminAssetManagerRouteImport } from './routes/admin.asset-manager'
 import { Route as AdminAllowanceManagerRouteImport } from './routes/admin.allowance-manager'
+import { Route as AdminAdditionTypeManagerRouteImport } from './routes/admin.addition-type-manager'
 import { Route as AdminPayrollIndexRouteImport } from './routes/admin.payroll.index'
 import { Route as AdminAttendanceIndexRouteImport } from './routes/admin.attendance.index'
 import { Route as AdminVehiclesServiceManagerRouteImport } from './routes/admin.vehicles.service-manager'
@@ -248,6 +249,12 @@ const AdminAllowanceManagerRoute = AdminAllowanceManagerRouteImport.update({
   path: '/allowance-manager',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAdditionTypeManagerRoute =
+  AdminAdditionTypeManagerRouteImport.update({
+    id: '/addition-type-manager',
+    path: '/addition-type-manager',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminPayrollIndexRoute = AdminPayrollIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -411,6 +418,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/addition-type-manager': typeof AdminAdditionTypeManagerRoute
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
   '/admin/asset-manager': typeof AdminAssetManagerRoute
   '/admin/attendance': typeof AdminAttendanceRouteWithChildren
@@ -476,6 +484,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/addition-type-manager': typeof AdminAdditionTypeManagerRoute
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
   '/admin/asset-manager': typeof AdminAssetManagerRoute
   '/admin/attendance-code-manager': typeof AdminAttendanceCodeManagerRoute
@@ -540,6 +549,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/login': typeof LoginRoute
   '/welcome': typeof WelcomeRoute
+  '/admin/addition-type-manager': typeof AdminAdditionTypeManagerRoute
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
   '/admin/asset-manager': typeof AdminAssetManagerRoute
   '/admin/attendance': typeof AdminAttendanceRouteWithChildren
@@ -607,6 +617,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/welcome'
+    | '/admin/addition-type-manager'
     | '/admin/allowance-manager'
     | '/admin/asset-manager'
     | '/admin/attendance'
@@ -672,6 +683,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/welcome'
+    | '/admin/addition-type-manager'
     | '/admin/allowance-manager'
     | '/admin/asset-manager'
     | '/admin/attendance-code-manager'
@@ -735,6 +747,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/login'
     | '/welcome'
+    | '/admin/addition-type-manager'
     | '/admin/allowance-manager'
     | '/admin/asset-manager'
     | '/admin/attendance'
@@ -1041,6 +1054,13 @@ declare module '@tanstack/react-router' {
       path: '/allowance-manager'
       fullPath: '/admin/allowance-manager'
       preLoaderRoute: typeof AdminAllowanceManagerRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/addition-type-manager': {
+      id: '/admin/addition-type-manager'
+      path: '/addition-type-manager'
+      fullPath: '/admin/addition-type-manager'
+      preLoaderRoute: typeof AdminAdditionTypeManagerRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/payroll/': {
@@ -1354,6 +1374,7 @@ const AdminVehiclesRouteWithChildren = AdminVehiclesRoute._addFileChildren(
 )
 
 interface AdminRouteChildren {
+  AdminAdditionTypeManagerRoute: typeof AdminAdditionTypeManagerRoute
   AdminAllowanceManagerRoute: typeof AdminAllowanceManagerRoute
   AdminAssetManagerRoute: typeof AdminAssetManagerRoute
   AdminAttendanceRoute: typeof AdminAttendanceRouteWithChildren
@@ -1389,6 +1410,7 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAdditionTypeManagerRoute: AdminAdditionTypeManagerRoute,
   AdminAllowanceManagerRoute: AdminAllowanceManagerRoute,
   AdminAssetManagerRoute: AdminAssetManagerRoute,
   AdminAttendanceRoute: AdminAttendanceRouteWithChildren,
