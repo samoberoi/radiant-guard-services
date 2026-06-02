@@ -471,7 +471,7 @@ function AdminLayout() {
                     <Link
                       key={item.to}
                       to={item.to}
-                      search={item.to === "/admin/deductions" ? { mode: "list" } : undefined}
+                      search={item.to === "/admin/deductions" || item.to === "/admin/additions" ? { mode: "list" } : undefined}
                       className={cn(
                         "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
                         active
