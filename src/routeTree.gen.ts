@@ -32,6 +32,7 @@ import { Route as AdminEsicBranchManagerRouteImport } from './routes/admin.esic-
 import { Route as AdminEmployeesRouteImport } from './routes/admin.employees'
 import { Route as AdminDutyManagerRouteImport } from './routes/admin.duty-manager'
 import { Route as AdminDesignationManagerRouteImport } from './routes/admin.designation-manager'
+import { Route as AdminDeductionsRouteImport } from './routes/admin.deductions'
 import { Route as AdminDeductionTypeManagerRouteImport } from './routes/admin.deduction-type-manager'
 import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
 import { Route as AdminCostComponentManagerRouteImport } from './routes/admin.cost-component-manager'
@@ -187,6 +188,11 @@ const AdminDutyManagerRoute = AdminDutyManagerRouteImport.update({
 const AdminDesignationManagerRoute = AdminDesignationManagerRouteImport.update({
   id: '/designation-manager',
   path: '/designation-manager',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminDeductionsRoute = AdminDeductionsRouteImport.update({
+  id: '/deductions',
+  path: '/deductions',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDeductionTypeManagerRoute =
@@ -415,6 +421,7 @@ export interface FileRoutesByFullPath {
   '/admin/cost-component-manager': typeof AdminCostComponentManagerRoute
   '/admin/customers': typeof AdminCustomersRouteWithChildren
   '/admin/deduction-type-manager': typeof AdminDeductionTypeManagerRoute
+  '/admin/deductions': typeof AdminDeductionsRoute
   '/admin/designation-manager': typeof AdminDesignationManagerRoute
   '/admin/duty-manager': typeof AdminDutyManagerRoute
   '/admin/employees': typeof AdminEmployeesRoute
@@ -478,6 +485,7 @@ export interface FileRoutesByTo {
   '/admin/cost-component-manager': typeof AdminCostComponentManagerRoute
   '/admin/customers': typeof AdminCustomersRouteWithChildren
   '/admin/deduction-type-manager': typeof AdminDeductionTypeManagerRoute
+  '/admin/deductions': typeof AdminDeductionsRoute
   '/admin/designation-manager': typeof AdminDesignationManagerRoute
   '/admin/duty-manager': typeof AdminDutyManagerRoute
   '/admin/employees': typeof AdminEmployeesRoute
@@ -542,6 +550,7 @@ export interface FileRoutesById {
   '/admin/cost-component-manager': typeof AdminCostComponentManagerRoute
   '/admin/customers': typeof AdminCustomersRouteWithChildren
   '/admin/deduction-type-manager': typeof AdminDeductionTypeManagerRoute
+  '/admin/deductions': typeof AdminDeductionsRoute
   '/admin/designation-manager': typeof AdminDesignationManagerRoute
   '/admin/duty-manager': typeof AdminDutyManagerRoute
   '/admin/employees': typeof AdminEmployeesRoute
@@ -608,6 +617,7 @@ export interface FileRouteTypes {
     | '/admin/cost-component-manager'
     | '/admin/customers'
     | '/admin/deduction-type-manager'
+    | '/admin/deductions'
     | '/admin/designation-manager'
     | '/admin/duty-manager'
     | '/admin/employees'
@@ -671,6 +681,7 @@ export interface FileRouteTypes {
     | '/admin/cost-component-manager'
     | '/admin/customers'
     | '/admin/deduction-type-manager'
+    | '/admin/deductions'
     | '/admin/designation-manager'
     | '/admin/duty-manager'
     | '/admin/employees'
@@ -734,6 +745,7 @@ export interface FileRouteTypes {
     | '/admin/cost-component-manager'
     | '/admin/customers'
     | '/admin/deduction-type-manager'
+    | '/admin/deductions'
     | '/admin/designation-manager'
     | '/admin/duty-manager'
     | '/admin/employees'
@@ -952,6 +964,13 @@ declare module '@tanstack/react-router' {
       path: '/designation-manager'
       fullPath: '/admin/designation-manager'
       preLoaderRoute: typeof AdminDesignationManagerRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/deductions': {
+      id: '/admin/deductions'
+      path: '/deductions'
+      fullPath: '/admin/deductions'
+      preLoaderRoute: typeof AdminDeductionsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/deduction-type-manager': {
@@ -1345,6 +1364,7 @@ interface AdminRouteChildren {
   AdminCostComponentManagerRoute: typeof AdminCostComponentManagerRoute
   AdminCustomersRoute: typeof AdminCustomersRouteWithChildren
   AdminDeductionTypeManagerRoute: typeof AdminDeductionTypeManagerRoute
+  AdminDeductionsRoute: typeof AdminDeductionsRoute
   AdminDesignationManagerRoute: typeof AdminDesignationManagerRoute
   AdminDutyManagerRoute: typeof AdminDutyManagerRoute
   AdminEmployeesRoute: typeof AdminEmployeesRoute
@@ -1379,6 +1399,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCostComponentManagerRoute: AdminCostComponentManagerRoute,
   AdminCustomersRoute: AdminCustomersRouteWithChildren,
   AdminDeductionTypeManagerRoute: AdminDeductionTypeManagerRoute,
+  AdminDeductionsRoute: AdminDeductionsRoute,
   AdminDesignationManagerRoute: AdminDesignationManagerRoute,
   AdminDutyManagerRoute: AdminDutyManagerRoute,
   AdminEmployeesRoute: AdminEmployeesRoute,
