@@ -431,7 +431,7 @@ function ProfilePage() {
       const cuMap = new Map<string, any>(
         ((cu ?? []) as any[]).map((r: any) => [r.unit_id, r]),
       );
-      const postings = units
+      const ownPostings = units
         .map((u: any) => ({
           ...u,
           is_primary:
@@ -440,6 +440,77 @@ function ProfilePage() {
           customer: customerMap.get(u.customer_id) ?? null,
         }))
         .sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0));
+
+      // Units overseen as a reporting officer (matched by full name on units.reporting_officers JSONB)
+      let overseenUnits: any[] = [];
+      if (profile?.full_name) {
+        const { data: ou } = await supabase
+          .from("units")
+          .select(
+            "id,code,name,location,billing_city,billing_state,branch_id,customer_id,reporting_officers,emergency_contact_name,emergency_contact_mobile,nearby_hospital_name,nearby_hospital_mobile",
+          )
+          .contains("reporting_officers", [{ name: profile.full_name }]);
+        const ownIds = new Set(ownPostings.map((u: any) => u.id));
+        const extraBranchIds = Array.from(
+          new Set(((ou as any[]) ?? []).map((u: any) => u.branch_id).filter(Boolean)),
+        ).filter((id) => !branchMap.has(id as string));
+        const extraCustomerIds = Array.from(
+          new Set(((ou as any[]) ?? []).map((u: any) => u.customer_id).filter(Boolean)),
+        ).filter((id) => !customerMap.has(id as string));
+        if (extraBranchIds.length) {
+          const { data: b } = await supabase
+            .from("branches")
+            .select("id,name,code")
+            .in("id", extraBranchIds as string[]);
+          for (const row of (b as any[]) ?? []) branchMap.set(row.id, row);
+        }
+        if (extraCustomerIds.length) {
+          const { data: c } = await supabase
+            .from("customers")
+            .select("id,name,short_name")
+            .in("id", extraCustomerIds as string[]);
+          for (const row of (c as any[]) ?? []) customerMap.set(row.id, row);
+        }
+        overseenUnits = ((ou as any[]) ?? [])
+          .filter((u: any) => !ownIds.has(u.id))
+          .map((u: any) => ({
+            ...u,
+            branch: branchMap.get(u.branch_id) ?? null,
+            customer: customerMap.get(u.customer_id) ?? null,
+          }));
+      }
+
+      // Direct reports — candidates who report to this profile
+      const { data: reportsRaw } = await supabase
+        .from("candidates")
+        .select("id,full_name,employee_code,mobile,designation_id,photo_url,status,unit_id")
+        .eq("reports_to", profile!.id)
+        .order("full_name", { ascending: true });
+      const reportDesigIds = Array.from(
+        new Set(((reportsRaw as any[]) ?? []).map((r: any) => r.designation_id).filter(Boolean)),
+      );
+      const reportUnitIds = Array.from(
+        new Set(((reportsRaw as any[]) ?? []).map((r: any) => r.unit_id).filter(Boolean)),
+      );
+      const [reportDesigsRes, reportUnitsRes] = await Promise.all([
+        reportDesigIds.length
+          ? supabase.from("designations").select("id,name").in("id", reportDesigIds as string[])
+          : Promise.resolve({ data: [] } as any),
+        reportUnitIds.length
+          ? supabase.from("units").select("id,name").in("id", reportUnitIds as string[])
+          : Promise.resolve({ data: [] } as any),
+      ]);
+      const desigMap = new Map<string, string>(
+        ((reportDesigsRes.data as any[]) ?? []).map((d: any) => [d.id, d.name]),
+      );
+      const unitNameMap = new Map<string, string>(
+        ((reportUnitsRes.data as any[]) ?? []).map((u: any) => [u.id, u.name]),
+      );
+      const directReports = ((reportsRaw as any[]) ?? []).map((r: any) => ({
+        ...r,
+        designation_name: desigMap.get(r.designation_id) ?? "",
+        unit_name: unitNameMap.get(r.unit_id) ?? "",
+      }));
 
       let manager: any = null;
       if (profile?.reports_to) {
@@ -461,7 +532,7 @@ function ProfilePage() {
           manager = { ...(m as any), designation_name: desigName };
         }
       }
-      return { postings, manager };
+      return { postings: ownPostings, overseenUnits, manager, directReports };
     },
   });
 
@@ -665,6 +736,8 @@ function ProfilePage() {
   const issuedItems = issuedItemsQ.data ?? [];
   const postings = postingsQ.data?.postings ?? [];
   const manager = postingsQ.data?.manager ?? null;
+  const overseenUnits = postingsQ.data?.overseenUnits ?? [];
+  const directReports = postingsQ.data?.directReports ?? [];
 
   return (
     <div className="space-y-5">
@@ -773,9 +846,9 @@ function ProfilePage() {
       <Section title="My Posting & Reporting" icon={Building2}>
         {postingsQ.isLoading ? (
           <div className="text-sm text-muted-foreground">Loading posting details…</div>
-        ) : postings.length === 0 && !manager ? (
+        ) : postings.length === 0 && overseenUnits.length === 0 && directReports.length === 0 && !manager ? (
           <div className="text-sm text-muted-foreground">
-            No unit posting assigned yet. Please contact HR.
+            No posting, reporting line, or team mapped yet. Please contact HR.
           </div>
         ) : (
           <div className="space-y-4">
@@ -887,6 +960,79 @@ function ProfilePage() {
                         .join(" · ")}
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {overseenUnits.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <Building2 className="h-3.5 w-3.5 text-accent" />
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Units I Oversee ({overseenUnits.length})
+                  </div>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {overseenUnits.map((u: any) => (
+                    <div key={u.id} className="rounded-lg border border-border bg-secondary/30 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="text-sm font-semibold">{u.name}</div>
+                        {u.code && (
+                          <Badge variant="outline" className="text-[10px]">{u.code}</Badge>
+                        )}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {[
+                          u.customer?.name,
+                          u.branch?.name,
+                          u.location || [u.billing_city, u.billing_state].filter(Boolean).join(", "),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {directReports.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <Users className="h-3.5 w-3.5 text-accent" />
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Team / Direct Reports ({directReports.length})
+                  </div>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {directReports.map((r: any) => (
+                    <div key={r.id} className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-3">
+                      {r.photo_url ? (
+                        <img
+                          src={r.photo_url}
+                          alt={r.full_name}
+                          className="h-10 w-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="truncate text-sm font-semibold">{r.full_name}</div>
+                          {r.status && (
+                            <Badge variant="outline" className="text-[10px] capitalize">{r.status}</Badge>
+                          )}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {[r.designation_name, r.unit_name, r.employee_code, r.mobile]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
