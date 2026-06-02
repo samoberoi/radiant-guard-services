@@ -349,6 +349,7 @@ function AttendanceUnitsPage() {
       if (term) {
         const hay = [
           u.customer_name,
+          u.customer_code,
           u.name,
           u.code,
           u.location,
