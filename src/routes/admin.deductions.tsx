@@ -403,6 +403,25 @@ function DeductionForm() {
         </Link>
       </div>
 
+      {/* Tabs */}
+      <div className="mb-3 flex gap-2 border-b border-border">
+        <button
+          type="button"
+          onClick={() => setStep("info")}
+          className={`px-3 py-2 text-sm font-medium ${step === "info" ? "border-b-2 border-primary text-foreground" : "text-muted-foreground"}`}
+        >
+          Deduction Information
+        </button>
+        <button
+          type="button"
+          onClick={() => { if (candidateId && typeId && amount) setStep("constraints"); }}
+          className={`px-3 py-2 text-sm font-medium ${step === "constraints" ? "border-b-2 border-primary text-foreground" : "text-muted-foreground"}`}
+        >
+          Deduction Constraints
+        </button>
+      </div>
+
+      {step === "info" && (
       <div className="rounded-2xl border border-border bg-card p-5">
         <h3 className="mb-4 text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">Deduction Information</h3>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -481,10 +500,35 @@ function DeductionForm() {
 
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="outline" onClick={() => navigate({ to: "/admin/deductions", search: { mode: "list" } })} disabled={saving}>Cancel</Button>
-          <Button disabled={saving || !candidateId || !typeId || !amount} onClick={async () => {
+          <Button disabled={!candidateId || !typeId || !amount} onClick={() => setStep("constraints")}>Next step</Button>
+        </div>
+      </div>
+      )}
+
+      {step === "constraints" && (
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <h3 className="mb-1 text-sm font-semibold uppercase tracking-[0.12em] text-muted-foreground">Deduction Constraints</h3>
+        <p className="mb-4 text-xs text-muted-foreground">
+          Duty Information — if the employee's payroll duty count in a month is less than <strong>Min Duty</strong>, this
+          deduction will be skipped and automatically carried forward to the next month. Set <strong>Max Duty</strong> to 0 for no upper cap.
+        </p>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid gap-1.5">
+            <Label>* Min Duty</Label>
+            <Input type="number" min="0" step="0.01" value={minDuty} onChange={(e) => setMinDuty(e.target.value)} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label>* Max Duty</Label>
+            <Input type="number" min="0" step="0.01" value={maxDuty} onChange={(e) => setMaxDuty(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="outline" onClick={() => setStep("info")} disabled={saving}>Previous step</Button>
+          <Button disabled={saving} onClick={async () => {
             setSaving(true);
             try { await saveMut.mutateAsync(); } finally { setSaving(false); }
-          }}>{saving ? "Saving…" : isEdit ? "Save Changes" : "Next step"}</Button>
+          }}>{saving ? "Saving…" : "Save"}</Button>
         </div>
       </div>
     </div>
