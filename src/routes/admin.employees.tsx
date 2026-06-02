@@ -1936,18 +1936,31 @@ function EmployeesPage() {
                     <Settings2 className="h-4 w-4" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-56">
+                <PopoverContent align="end" className="w-64 max-h-[70vh] overflow-y-auto">
                   <div className="space-y-2">
                     <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Show filters</div>
                     {([
                       ["role", "Role"], ["designation", "Designation"], ["customer", "Organization"],
-                      ["unit", "Unit"], ["manager", "Reports to"], ["enabled", "Enabled status"], ["billable", "Billable"], ["offboardReason", "Offboarding reason"],
+                      ["unit", "Unit"], ["manager", "Reports to"], ["enabled", "Active / Inactive"], ["billable", "Billable"], ["offboardReason", "Offboarding reason"],
                     ] as const).map(([k, label]) => (
                       <label key={k} className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-secondary">
                         <span>{label}</span>
                         <Switch
                           checked={filtersVisible[k]}
                           onCheckedChange={(v) => setFiltersVisible((s) => ({ ...s, [k]: v }))}
+                        />
+                      </label>
+                    ))}
+                    <div className="pt-2 mt-2 border-t border-border/60 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Show columns</div>
+                    {([
+                      ["mobile", "Mobile"], ["email", "Email"], ["unit", "Unit"], ["designation", "Designation"],
+                      ["dob", "Date of Birth"], ["doj", "Date of Joining"], ["role", "Role"], ["active", "Active toggle"],
+                    ] as const).map(([k, label]) => (
+                      <label key={`col-${k}`} className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-secondary">
+                        <span>{label}</span>
+                        <Switch
+                          checked={columnsVisible[k]}
+                          onCheckedChange={(v) => setColumnsVisible((s) => ({ ...s, [k]: v }))}
                         />
                       </label>
                     ))}
