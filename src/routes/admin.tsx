@@ -113,6 +113,8 @@ function AdminLayout() {
     { prefix: "/admin/customers", module: "organizations" },
     { prefix: "/admin/contracts", module: "contracts" },
     { prefix: "/admin/employees", module: "employees" },
+    { prefix: "/admin/deductions", module: "employees" },
+    { prefix: "/admin/deduction-type-manager", module: "control_center" },
     { prefix: "/admin/vehicles", module: "vehicles" },
     { prefix: "/admin/inventory", module: "inventory" },
     { prefix: "/admin/attendance", module: "attendance" },
