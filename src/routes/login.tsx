@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Loader2, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ type Step = "phone" | "otp";
 function LoginPage() {
   const navigate = useNavigate();
   const { user, login } = useAuth();
+  const verifyInFlightRef = useRef(false);
 
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -70,9 +71,11 @@ function LoginPage() {
 
   async function handleVerify(value?: string) {
     const code = value ?? otp;
-    if (code.length !== 6) return;
+    if (code.length !== 6 || verifyInFlightRef.current) return;
+    verifyInFlightRef.current = true;
     setVerifying(true);
     if (!verifyOtp(code)) {
+      verifyInFlightRef.current = false;
       setVerifying(false);
       setError(`Incorrect code. Try ${DEMO_OTP_HINT} for the demo.`);
       setOtp("");
@@ -88,6 +91,7 @@ function LoginPage() {
       );
       setOtp("");
     } finally {
+      verifyInFlightRef.current = false;
       setVerifying(false);
     }
   }
