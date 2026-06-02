@@ -403,11 +403,14 @@ function AttendanceUnitsPage() {
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             <FilterSelect
-              label="Organization"
+              label="Client (search by ID or name)"
               value={orgFilter}
               onChange={setOrgFilter}
-              options={organizations.map((o) => ({ value: o.id, label: o.name }))}
-              allLabel={`All organizations (${organizations.length})`}
+              options={organizations.map((o) => ({
+                value: o.id,
+                label: o.code ? `${o.code} · ${o.name}` : o.name,
+              }))}
+              allLabel={`All clients (${organizations.length})`}
             />
             <FilterSelect
               label="Unit"
