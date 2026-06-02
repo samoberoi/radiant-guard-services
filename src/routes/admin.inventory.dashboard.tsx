@@ -653,32 +653,85 @@ function Panel({ title, subtitle, right, children, className = "" }: {
   );
 }
 
+type HoldingRow = {
+  name: string;
+  meta: string;
+  qty: number;
+  value: number;
+  lines: { item_id: string; item_name: string; item_code: string; size_value: string; qty: number; value: number }[];
+};
+
 function HoldingsCard({ title, icon: Icon, accent, rows }: {
-  title: string; icon: React.ComponentType<{ className?: string }>; accent: string;
-  rows: { name: string; meta: string; qty: number }[];
+  title: string;
+  icon: React.ComponentType<{ className?: string }>;
+  accent: string;
+  rows: HoldingRow[];
 }) {
+  const [openIdx, setOpenIdx] = useState<number | null>(null);
   const total = rows.reduce((s, r) => s + r.qty, 0);
+  const active = openIdx !== null ? rows[openIdx] : null;
   return (
     <Panel title={title} subtitle={`${rows.length} holders · ${total.toLocaleString("en-IN")} units`}>
       <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/40 ${accent}`}><Icon className="h-4 w-4" /></div>
       {rows.length === 0 ? <Empty>Nothing in hand.</Empty> : (
         <div className="space-y-2">
           {rows.slice(0, 6).map((r, i) => (
-            <div key={i} className="flex items-center justify-between rounded-lg border border-border/40 px-3 py-2">
-              <div>
-                <div className="text-sm font-medium">{r.name}</div>
-                <div className="text-xs text-muted-foreground">{r.meta}</div>
+            <button
+              key={i}
+              type="button"
+              onClick={() => setOpenIdx(i)}
+              className="flex w-full items-center justify-between rounded-lg border border-border/40 px-3 py-2 text-left transition hover:border-accent/50 hover:bg-accent/5"
+            >
+              <div className="min-w-0">
+                <div className="truncate text-sm font-medium">{r.name}</div>
+                <div className="truncate text-xs text-muted-foreground">{r.meta}</div>
               </div>
-              <div className="flex items-center gap-1 text-sm font-semibold tabular-nums">
+              <div className="flex shrink-0 items-center gap-1 text-sm font-semibold tabular-nums">
                 <Boxes className="h-3.5 w-3.5 text-muted-foreground" />{r.qty.toLocaleString("en-IN")}
+                <ArrowRight className="ml-1 h-3.5 w-3.5 text-muted-foreground/60" />
               </div>
-            </div>
+            </button>
           ))}
+          {rows.length > 6 && (
+            <div className="pt-1 text-center text-[11px] text-muted-foreground">+ {rows.length - 6} more</div>
+          )}
         </div>
       )}
+
+      <Dialog open={openIdx !== null} onOpenChange={(o) => !o && setOpenIdx(null)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <span className={`flex h-7 w-7 items-center justify-center rounded-lg bg-secondary/40 ${accent}`}>
+                <Icon className="h-4 w-4" />
+              </span>
+              {active?.name}
+            </DialogTitle>
+            <DialogDescription>
+              {active?.meta} · {active?.qty.toLocaleString("en-IN")} units · {active ? inr(active.value) : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {active && (
+            <div className="max-h-[60vh] overflow-auto">
+              <DataTable head={["Item", "Code", "Size", "Qty", "Value"]}>
+                {active.lines.map((l, i) => (
+                  <tr key={i} className="border-t border-border/60">
+                    <td className="p-2 font-medium">{l.item_name}</td>
+                    <td className="p-2 text-xs text-muted-foreground">{l.item_code}</td>
+                    <td className="p-2 text-muted-foreground">{l.size_value || "—"}</td>
+                    <td className="p-2 tabular-nums font-semibold">{l.qty.toLocaleString("en-IN")}</td>
+                    <td className="p-2 tabular-nums text-muted-foreground">{inr(l.value)}</td>
+                  </tr>
+                ))}
+              </DataTable>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Panel>
   );
 }
+
 
 function DataTable({ head, children }: { head: string[]; children: React.ReactNode }) {
   return (
