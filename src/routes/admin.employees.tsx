@@ -296,7 +296,7 @@ type CandidateListItem = Pick<
   | "unit_id"
   | "designation_id"
   | "status"
-> & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null; offboarding_reason_id: string | null; offboarded_at: string | null; assigned_asset_ids: string[]; no_hire: boolean; offboarding_details: OffboardingDetails };
+> & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null; offboarding_reason_id: string | null; offboarded_at: string | null; assigned_asset_ids: string[]; no_hire: boolean; offboarding_details: OffboardingDetails; date_of_birth: string | null; preferred_joining_date: string | null; approved_at: string | null };
 
 type RoleLite = { key: string; name: string };
 
@@ -385,7 +385,7 @@ function useCandidates() {
       const { data, error } = await runWithQueryTimeout("Employees", async (signal) =>
         await supabase
           .from("candidates" as never)
-          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key,is_enabled,reports_to,offboarding_reason_id,offboarded_at,assigned_asset_ids,no_hire,offboarding_details")
+          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key,is_enabled,reports_to,offboarding_reason_id,offboarded_at,assigned_asset_ids,no_hire,offboarding_details,date_of_birth,preferred_joining_date,approved_at")
           .order("created_at", { ascending: false })
           .limit(250)
           .abortSignal(signal),
@@ -618,6 +618,36 @@ function EmployeesPage() {
       localStorage.setItem("employees.filterPrefs", JSON.stringify(filtersVisible));
     } catch {}
   }, [filtersVisible]);
+
+  // Configurable columns for the Employees table
+  const DEFAULT_COLUMNS_VIS = {
+    mobile: true,
+    email: false,
+    unit: true,
+    designation: true,
+    role: true,
+    dob: false,
+    doj: false,
+    active: true,
+  };
+  const [columnsVisible, setColumnsVisible] = useState<typeof DEFAULT_COLUMNS_VIS>(() => {
+    if (typeof window === "undefined") return DEFAULT_COLUMNS_VIS;
+    try {
+      const raw = localStorage.getItem("employees.columnPrefs");
+      if (raw) return { ...DEFAULT_COLUMNS_VIS, ...JSON.parse(raw) };
+    } catch {}
+    return DEFAULT_COLUMNS_VIS;
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("employees.columnPrefs", JSON.stringify(columnsVisible));
+    } catch {}
+  }, [columnsVisible]);
+
+  const fmtDate = (d: string | null | undefined) => {
+    if (!d) return "—";
+    try { return new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }); } catch { return d; }
+  };
 
   // Customers (org filter) + scope assignments
   const { customers } = useCustomers();
@@ -1251,7 +1281,7 @@ function EmployeesPage() {
   };
 
   const renderRows = (rows: CandidateListItem[], mode: "employee" | "candidate") => {
-    const empCols = 9;
+    const empCols = 4 + Object.values(columnsVisible).filter(Boolean).length;
     const candCols = 7;
     if (isLoading) {
       return (
@@ -1319,19 +1349,34 @@ function EmployeesPage() {
               </div>
             </div>
           </td>
-          <td className="px-3 py-3 text-center text-sm font-medium text-muted-foreground">{c.mobile || "—"}</td>
-          <td className="px-3 py-3 max-w-[180px]">
-            {unit ? (
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-foreground" title={unit.name}>{unit.name}</div>
-                <div className="truncate text-xs text-muted-foreground" title={unit.customer_name}>{unit.customer_name}</div>
-              </div>
-            ) : (
-              "—"
-            )}
-          </td>
-          <td className="px-3 py-3 text-sm text-muted-foreground max-w-[140px]"><span className="line-clamp-2" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
-          {mode === "employee" && (
+          {(mode === "candidate" || columnsVisible.mobile) && (
+            <td className="px-3 py-3 text-center text-sm font-medium text-muted-foreground">{c.mobile || "—"}</td>
+          )}
+          {mode === "employee" && columnsVisible.email && (
+            <td className="px-3 py-3 text-sm text-muted-foreground max-w-[200px]"><span className="truncate block" title={c.email ?? ""}>{c.email || "—"}</span></td>
+          )}
+          {(mode === "candidate" || columnsVisible.unit) && (
+            <td className="px-3 py-3 max-w-[180px]">
+              {unit ? (
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-foreground" title={unit.name}>{unit.name}</div>
+                  <div className="truncate text-xs text-muted-foreground" title={unit.customer_name}>{unit.customer_name}</div>
+                </div>
+              ) : (
+                "—"
+              )}
+            </td>
+          )}
+          {(mode === "candidate" || columnsVisible.designation) && (
+            <td className="px-3 py-3 text-sm text-muted-foreground max-w-[140px]"><span className="line-clamp-2" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
+          )}
+          {mode === "employee" && columnsVisible.dob && (
+            <td className="px-3 py-3 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(c.date_of_birth)}</td>
+          )}
+          {mode === "employee" && columnsVisible.doj && (
+            <td className="px-3 py-3 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(c.approved_at ?? c.preferred_joining_date)}</td>
+          )}
+          {mode === "employee" && columnsVisible.role && (
             <td className="px-3 py-3">
               {c.role_key ? (
                 <Select
@@ -1390,7 +1435,7 @@ function EmployeesPage() {
               )}
             </td>
           )}
-          {mode === "employee" && (
+          {mode === "employee" && columnsVisible.active && (
             <td className="px-3 py-3">
               <Switch
                 checked={c.is_enabled && c.status !== "inactive"}
@@ -1556,21 +1601,42 @@ function EmployeesPage() {
               <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Employee" : "Candidate"}
               </th>
-              <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                Mobile
-              </th>
-              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                Unit
-              </th>
-              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-                Designation
-              </th>
-              {mode === "employee" && (
+              {(mode === "candidate" || columnsVisible.mobile) && (
+                <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Mobile
+                </th>
+              )}
+              {mode === "employee" && columnsVisible.email && (
+                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Email
+                </th>
+              )}
+              {(mode === "candidate" || columnsVisible.unit) && (
+                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Unit
+                </th>
+              )}
+              {(mode === "candidate" || columnsVisible.designation) && (
+                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Designation
+                </th>
+              )}
+              {mode === "employee" && columnsVisible.dob && (
+                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Date of Birth
+                </th>
+              )}
+              {mode === "employee" && columnsVisible.doj && (
+                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                  Date of Joining
+                </th>
+              )}
+              {mode === "employee" && columnsVisible.role && (
                 <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Role
                 </th>
               )}
-              {mode === "employee" && (
+              {mode === "employee" && columnsVisible.active && (
                 <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Active
                 </th>
@@ -1805,11 +1871,11 @@ function EmployeesPage() {
             )}
             {filtersVisible.enabled && (
               <Select value={filterEnabled} onValueChange={(v) => setFilterEnabled(v as "all" | "enabled" | "disabled")}>
-                <SelectTrigger className="h-9 w-[130px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 w-[140px] text-xs"><SelectValue placeholder="Active/Inactive" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all" className="text-xs">All</SelectItem>
-                  <SelectItem value="enabled" className="text-xs">Enabled only</SelectItem>
-                  <SelectItem value="disabled" className="text-xs">Disabled only</SelectItem>
+                  <SelectItem value="all" className="text-xs">All employees</SelectItem>
+                  <SelectItem value="enabled" className="text-xs">Active only</SelectItem>
+                  <SelectItem value="disabled" className="text-xs">Inactive only</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -1866,22 +1932,35 @@ function EmployeesPage() {
               </div>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button type="button" variant="outline" size="icon" className="h-9 w-9" title="Configure filters">
+                  <Button type="button" variant="outline" size="icon" className="h-9 w-9" title="Configure filters & columns">
                     <Settings2 className="h-4 w-4" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-56">
+                <PopoverContent align="end" className="w-64 max-h-[70vh] overflow-y-auto">
                   <div className="space-y-2">
                     <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Show filters</div>
                     {([
                       ["role", "Role"], ["designation", "Designation"], ["customer", "Organization"],
-                      ["unit", "Unit"], ["manager", "Reports to"], ["enabled", "Enabled status"], ["billable", "Billable"], ["offboardReason", "Offboarding reason"],
+                      ["unit", "Unit"], ["manager", "Reports to"], ["enabled", "Active / Inactive"], ["billable", "Billable"], ["offboardReason", "Offboarding reason"],
                     ] as const).map(([k, label]) => (
                       <label key={k} className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-secondary">
                         <span>{label}</span>
                         <Switch
                           checked={filtersVisible[k]}
                           onCheckedChange={(v) => setFiltersVisible((s) => ({ ...s, [k]: v }))}
+                        />
+                      </label>
+                    ))}
+                    <div className="pt-2 mt-2 border-t border-border/60 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Show columns</div>
+                    {([
+                      ["mobile", "Mobile"], ["email", "Email"], ["unit", "Unit"], ["designation", "Designation"],
+                      ["dob", "Date of Birth"], ["doj", "Date of Joining"], ["role", "Role"], ["active", "Active toggle"],
+                    ] as const).map(([k, label]) => (
+                      <label key={`col-${k}`} className="flex cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-sm hover:bg-secondary">
+                        <span>{label}</span>
+                        <Switch
+                          checked={columnsVisible[k]}
+                          onCheckedChange={(v) => setColumnsVisible((s) => ({ ...s, [k]: v }))}
                         />
                       </label>
                     ))}
