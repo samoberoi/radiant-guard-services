@@ -24,6 +24,7 @@ import {
   UserCheck,
   Loader2,
   Wallet,
+  Building2,
   X,
 } from "lucide-react";
 import { computeWages, fmtINR, type ContractResourceLike } from "@/lib/payroll-calc";
