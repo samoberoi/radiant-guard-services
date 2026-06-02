@@ -573,6 +573,7 @@ function ProfilePage() {
   }
 
   const lookups = lookupsQ.data;
+  const issuedItems = issuedItemsQ.data ?? [];
 
   return (
     <div className="space-y-5">
