@@ -369,6 +369,8 @@ function DeductionForm() {
         installments: inst,
         description: description.trim(),
         status,
+        min_duty: Math.max(0, Number(minDuty) || 0),
+        max_duty: Math.max(0, Number(maxDuty) || 0),
       };
       if (isEdit && search.id) {
         const { error } = await supabase.from("deductions" as never).update(payload as never).eq("id", search.id);
