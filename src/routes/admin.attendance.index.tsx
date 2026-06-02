@@ -30,6 +30,15 @@ export const Route = createFileRoute("/admin/attendance/")({
 
 type EmployeeRef = { id: string; name: string };
 
+type ClientEmployee = {
+  id: string;
+  name: string;
+  designation: string;
+  unit_id: string;
+  unit_name: string;
+  unit_code: string;
+};
+
 type UnitRow = {
   id: string;
   code: string;
@@ -38,6 +47,7 @@ type UnitRow = {
   branch_id: string | null;
   customer_id: string;
   customer_name: string;
+  customer_code: string;
   billing_state: string | null;
   contract_codes: string[];
   contract_end: string | null;
@@ -47,8 +57,9 @@ type UnitRow = {
 
 type AttendancePageData = {
   units: UnitRow[];
-  organizations: { id: string; name: string }[];
+  organizations: { id: string; name: string; code: string }[];
   securityGuards: EmployeeRef[];
+  employeesByCustomer: Record<string, ClientEmployee[]>;
   summary: { organizations: number; units: number; activeEmployees: number };
 };
 
