@@ -501,7 +501,7 @@ function AdminLayout() {
                     <Link
                       key={item.to}
                       to={item.to}
-                      search={item.to === "/admin/deductions" ? { mode: "list" } : undefined}
+                      search={item.to === "/admin/deductions" || item.to === "/admin/additions" ? { mode: "list" } : undefined}
                       title={item.label}
                       className={cn(
                         "flex items-center justify-center rounded-lg p-2.5 transition-colors",
