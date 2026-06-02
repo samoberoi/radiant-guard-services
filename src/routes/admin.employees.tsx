@@ -1349,18 +1349,33 @@ function EmployeesPage() {
               </div>
             </div>
           </td>
-          <td className="px-3 py-3 text-center text-sm font-medium text-muted-foreground">{c.mobile || "—"}</td>
-          <td className="px-3 py-3 max-w-[180px]">
-            {unit ? (
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-foreground" title={unit.name}>{unit.name}</div>
-                <div className="truncate text-xs text-muted-foreground" title={unit.customer_name}>{unit.customer_name}</div>
-              </div>
-            ) : (
-              "—"
-            )}
-          </td>
-          <td className="px-3 py-3 text-sm text-muted-foreground max-w-[140px]"><span className="line-clamp-2" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
+          {(mode === "candidate" || columnsVisible.mobile) && (
+            <td className="px-3 py-3 text-center text-sm font-medium text-muted-foreground">{c.mobile || "—"}</td>
+          )}
+          {mode === "employee" && columnsVisible.email && (
+            <td className="px-3 py-3 text-sm text-muted-foreground max-w-[200px]"><span className="truncate block" title={c.email ?? ""}>{c.email || "—"}</span></td>
+          )}
+          {(mode === "candidate" || columnsVisible.unit) && (
+            <td className="px-3 py-3 max-w-[180px]">
+              {unit ? (
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-foreground" title={unit.name}>{unit.name}</div>
+                  <div className="truncate text-xs text-muted-foreground" title={unit.customer_name}>{unit.customer_name}</div>
+                </div>
+              ) : (
+                "—"
+              )}
+            </td>
+          )}
+          {(mode === "candidate" || columnsVisible.designation) && (
+            <td className="px-3 py-3 text-sm text-muted-foreground max-w-[140px]"><span className="line-clamp-2" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
+          )}
+          {mode === "employee" && columnsVisible.dob && (
+            <td className="px-3 py-3 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(c.date_of_birth)}</td>
+          )}
+          {mode === "employee" && columnsVisible.doj && (
+            <td className="px-3 py-3 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(c.approved_at ?? c.preferred_joining_date)}</td>
+          )}
           {mode === "employee" && (
             <td className="px-3 py-3">
               {c.role_key ? (
