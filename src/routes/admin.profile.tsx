@@ -190,6 +190,7 @@ type ProfileData = {
   approved_at: string | null;
   unit_id: string | null;
   designation_id: string | null;
+  reports_to: string | null;
   emergency_contact_name: string;
   emergency_contact_relation: string;
   emergency_contact_mobile: string;
