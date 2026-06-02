@@ -1435,7 +1435,7 @@ function EmployeesPage() {
               )}
             </td>
           )}
-          {mode === "employee" && (
+          {mode === "employee" && columnsVisible.active && (
             <td className="px-3 py-3">
               <Switch
                 checked={c.is_enabled && c.status !== "inactive"}
