@@ -112,6 +112,7 @@ function AttendanceUnitsPage() {
           units: [],
           organizations: [],
           securityGuards: [],
+          employeesByCustomer: {},
           summary: { organizations: 0, units: 0, activeEmployees: 0 },
         };
       }
