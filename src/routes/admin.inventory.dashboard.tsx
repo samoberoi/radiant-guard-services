@@ -296,21 +296,46 @@ export function InventoryOwnerDashboard() {
     return Array.from(tally.entries()).map(([name, value]) => ({ name, value }));
   }, [balances, itemMap, catMap, categoryFilter, warehouseFilter]);
 
-  // Holdings
-  const buildHoldings = (locType: string) => {
-    const grouped = new Map<string, { qty: number; lines: number }>();
+  // Holdings — per location, with item breakdown
+  type HoldingLine = { item_id: string; item_name: string; item_code: string; size_value: string; qty: number; value: number };
+  type HoldingEntry = { id: string; qty: number; value: number; lines: HoldingLine[] };
+  const buildHoldings = (locType: string): HoldingEntry[] => {
+    const byLoc = new Map<string, Map<string, HoldingLine>>();
     for (const b of balances) {
       if (b.location_type !== locType) continue;
       if (!itemPasses(b.item_id)) continue;
       if (Number(b.qty) <= 0) continue;
-      const cur = grouped.get(b.location_id) ?? { qty: 0, lines: 0 };
-      cur.qty += Number(b.qty); cur.lines += 1; grouped.set(b.location_id, cur);
+      const it = itemMap.get(b.item_id);
+      if (!it) continue;
+      const key = `${b.item_id}|${b.size_value}`;
+      const m = byLoc.get(b.location_id) ?? new Map<string, HoldingLine>();
+      const cur = m.get(key) ?? {
+        item_id: b.item_id,
+        item_name: it.name,
+        item_code: it.item_code,
+        size_value: b.size_value,
+        qty: 0,
+        value: 0,
+      };
+      cur.qty += Number(b.qty);
+      cur.value += Number(b.qty) * Number(it.standard_cost || 0);
+      m.set(key, cur);
+      byLoc.set(b.location_id, m);
     }
-    return Array.from(grouped.entries()).map(([id, v]) => ({ id, ...v })).sort((a, b) => b.qty - a.qty);
+    return Array.from(byLoc.entries()).map(([id, m]) => {
+      const lines = Array.from(m.values()).sort((a, b) => b.qty - a.qty);
+      return {
+        id,
+        qty: lines.reduce((s, l) => s + l.qty, 0),
+        value: lines.reduce((s, l) => s + l.value, 0),
+        lines,
+      };
+    }).sort((a, b) => b.qty - a.qty);
   };
-  const guardHoldings = useMemo(() => buildHoldings("guard"), [balances, categoryFilter]);
-  const foHoldings = useMemo(() => buildHoldings("field_officer"), [balances, categoryFilter]);
-  const branchHoldings = useMemo(() => buildHoldings("branch"), [balances, categoryFilter]);
+  const guardHoldings = useMemo(() => buildHoldings("guard"), [balances, itemMap, categoryFilter, warehouseFilter]);
+  const foHoldings = useMemo(() => buildHoldings("field_officer"), [balances, itemMap, categoryFilter, warehouseFilter]);
+  const branchHoldings = useMemo(() => buildHoldings("branch"), [balances, itemMap, categoryFilter, warehouseFilter]);
+
 
   // Recent activity
   const recent = useMemo(() => {
