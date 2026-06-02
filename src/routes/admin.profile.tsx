@@ -846,9 +846,9 @@ function ProfilePage() {
       <Section title="My Posting & Reporting" icon={Building2}>
         {postingsQ.isLoading ? (
           <div className="text-sm text-muted-foreground">Loading posting details…</div>
-        ) : postings.length === 0 && !manager ? (
+        ) : postings.length === 0 && overseenUnits.length === 0 && directReports.length === 0 && !manager ? (
           <div className="text-sm text-muted-foreground">
-            No unit posting assigned yet. Please contact HR.
+            No posting, reporting line, or team mapped yet. Please contact HR.
           </div>
         ) : (
           <div className="space-y-4">
