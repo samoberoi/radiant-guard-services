@@ -1932,7 +1932,7 @@ function EmployeesPage() {
               </div>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button type="button" variant="outline" size="icon" className="h-9 w-9" title="Configure filters">
+                  <Button type="button" variant="outline" size="icon" className="h-9 w-9" title="Configure filters & columns">
                     <Settings2 className="h-4 w-4" />
                   </Button>
                 </PopoverTrigger>
