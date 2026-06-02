@@ -74,6 +74,7 @@ const vehiclesChildren: NavItem[] = [
 ];
 
 const employeesChildren: NavItem[] = [
+  { to: "/admin/additions", label: "Additions", icon: Wallet },
   { to: "/admin/deductions", label: "Deductions", icon: Wallet },
 ];
 
@@ -111,7 +112,7 @@ function AdminLayout() {
   const [contractsOpen, setContractsOpen] = useState(false);
   const [vehiclesOpen, setVehiclesOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
-  const [employeesOpen, setEmployeesOpen] = useState(() => pathname.startsWith("/admin/employees") || pathname.startsWith("/admin/deductions"));
+  const [employeesOpen, setEmployeesOpen] = useState(() => pathname.startsWith("/admin/employees") || pathname.startsWith("/admin/deductions") || pathname.startsWith("/admin/additions"));
 
   // Map current path → module key, then redirect if user lacks view perm.
   const pathToModule: { prefix: string; module: string }[] = [
@@ -119,7 +120,9 @@ function AdminLayout() {
     { prefix: "/admin/contracts", module: "contracts" },
     { prefix: "/admin/employees", module: "employees" },
     { prefix: "/admin/deductions", module: "employees" },
+    { prefix: "/admin/additions", module: "employees" },
     { prefix: "/admin/deduction-type-manager", module: "control_center" },
+    { prefix: "/admin/addition-type-manager", module: "control_center" },
     { prefix: "/admin/vehicles", module: "vehicles" },
     { prefix: "/admin/inventory", module: "inventory" },
     { prefix: "/admin/attendance", module: "attendance" },
@@ -430,7 +433,7 @@ function AdminLayout() {
             <div
               className={cn(
                 "group flex w-full items-center gap-1 rounded-lg pr-1 text-sm font-semibold transition-colors",
-                isActive("/admin/employees") || isActive("/admin/deductions")
+                isActive("/admin/employees") || isActive("/admin/deductions") || isActive("/admin/additions")
                   ? "bg-accent/20 text-accent"
                   : "text-primary-foreground/85 hover:bg-white/5",
               )}
@@ -468,7 +471,7 @@ function AdminLayout() {
                     <Link
                       key={item.to}
                       to={item.to}
-                      search={item.to === "/admin/deductions" ? { mode: "list" } : undefined}
+                      search={item.to === "/admin/deductions" || item.to === "/admin/additions" ? { mode: "list" } : undefined}
                       className={cn(
                         "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
                         active
@@ -498,7 +501,7 @@ function AdminLayout() {
                     <Link
                       key={item.to}
                       to={item.to}
-                      search={item.to === "/admin/deductions" ? { mode: "list" } : undefined}
+                      search={item.to === "/admin/deductions" || item.to === "/admin/additions" ? { mode: "list" } : undefined}
                       title={item.label}
                       className={cn(
                         "flex items-center justify-center rounded-lg p-2.5 transition-colors",
