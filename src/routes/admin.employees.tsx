@@ -1281,7 +1281,7 @@ function EmployeesPage() {
   };
 
   const renderRows = (rows: CandidateListItem[], mode: "employee" | "candidate") => {
-    const empCols = 9;
+    const empCols = 4 + Object.values(columnsVisible).filter(Boolean).length;
     const candCols = 7;
     if (isLoading) {
       return (
