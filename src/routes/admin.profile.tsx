@@ -963,6 +963,79 @@ function ProfilePage() {
                 </div>
               </div>
             )}
+
+            {overseenUnits.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <Building2 className="h-3.5 w-3.5 text-accent" />
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Units I Oversee ({overseenUnits.length})
+                  </div>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {overseenUnits.map((u: any) => (
+                    <div key={u.id} className="rounded-lg border border-border bg-secondary/30 p-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="text-sm font-semibold">{u.name}</div>
+                        {u.code && (
+                          <Badge variant="outline" className="text-[10px]">{u.code}</Badge>
+                        )}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {[
+                          u.customer?.name,
+                          u.branch?.name,
+                          u.location || [u.billing_city, u.billing_state].filter(Boolean).join(", "),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "—"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {directReports.length > 0 && (
+              <div className="rounded-xl border border-border bg-card p-4">
+                <div className="mb-2 flex items-center gap-2">
+                  <Users className="h-3.5 w-3.5 text-accent" />
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    Team / Direct Reports ({directReports.length})
+                  </div>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {directReports.map((r: any) => (
+                    <div key={r.id} className="flex items-center gap-3 rounded-lg border border-border bg-secondary/30 p-3">
+                      {r.photo_url ? (
+                        <img
+                          src={r.photo_url}
+                          alt={r.full_name}
+                          className="h-10 w-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-secondary">
+                          <Users className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="truncate text-sm font-semibold">{r.full_name}</div>
+                          {r.status && (
+                            <Badge variant="outline" className="text-[10px] capitalize">{r.status}</Badge>
+                          )}
+                        </div>
+                        <div className="truncate text-xs text-muted-foreground">
+                          {[r.designation_name, r.unit_name, r.employee_code, r.mobile]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </Section>
