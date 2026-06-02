@@ -1033,6 +1033,8 @@ export type Database = {
           description: string
           id: string
           installments: number
+          max_duty: number
+          min_duty: number
           status: string
           updated_at: string
         }
@@ -1047,6 +1049,8 @@ export type Database = {
           description?: string
           id?: string
           installments?: number
+          max_duty?: number
+          min_duty?: number
           status?: string
           updated_at?: string
         }
@@ -1061,6 +1065,8 @@ export type Database = {
           description?: string
           id?: string
           installments?: number
+          max_duty?: number
+          min_duty?: number
           status?: string
           updated_at?: string
         }
