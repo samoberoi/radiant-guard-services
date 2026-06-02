@@ -113,6 +113,8 @@ function AdminLayout() {
     { prefix: "/admin/customers", module: "organizations" },
     { prefix: "/admin/contracts", module: "contracts" },
     { prefix: "/admin/employees", module: "employees" },
+    { prefix: "/admin/deductions", module: "employees" },
+    { prefix: "/admin/deduction-type-manager", module: "control_center" },
     { prefix: "/admin/vehicles", module: "vehicles" },
     { prefix: "/admin/inventory", module: "inventory" },
     { prefix: "/admin/attendance", module: "attendance" },
@@ -433,6 +435,21 @@ function AdminLayout() {
             >
               <UserPlus className="h-4.5 w-4.5 shrink-0" />
               {!collapsed && <span>Employees</span>}
+            </Link>
+            <Link
+              to="/admin/deductions"
+              search={{ mode: "list" }}
+              className={cn(
+                "mt-1 flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
+                isActive("/admin/deductions")
+                  ? "bg-white/10 text-primary-foreground"
+                  : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
+                collapsed && "justify-center",
+              )}
+              title={collapsed ? "Deductions" : undefined}
+            >
+              <Wallet className="h-4 w-4 shrink-0" />
+              {!collapsed && <span>Deductions</span>}
             </Link>
           </div>
 
