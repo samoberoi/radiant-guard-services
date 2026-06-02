@@ -1871,11 +1871,11 @@ function EmployeesPage() {
             )}
             {filtersVisible.enabled && (
               <Select value={filterEnabled} onValueChange={(v) => setFilterEnabled(v as "all" | "enabled" | "disabled")}>
-                <SelectTrigger className="h-9 w-[130px] text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 w-[140px] text-xs"><SelectValue placeholder="Active/Inactive" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all" className="text-xs">All</SelectItem>
-                  <SelectItem value="enabled" className="text-xs">Enabled only</SelectItem>
-                  <SelectItem value="disabled" className="text-xs">Disabled only</SelectItem>
+                  <SelectItem value="all" className="text-xs">All employees</SelectItem>
+                  <SelectItem value="enabled" className="text-xs">Active only</SelectItem>
+                  <SelectItem value="disabled" className="text-xs">Inactive only</SelectItem>
                 </SelectContent>
               </Select>
             )}
