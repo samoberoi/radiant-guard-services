@@ -539,15 +539,20 @@ type MonthlyStats = {
   units: number; employees: number; total: number;
 };
 
+type StatusKey = "all" | SheetStatus | "unapproved";
+
 function MonthlyDashboard({
-  year, month, onChange, stats, loading, organizations,
+  year, month, onChange, stats, loading, organizations, activeStatus, onStatusChange,
 }: {
   year: number; month: number;
   onChange: (year: number, month: number) => void;
   stats: MonthlyStats | undefined;
   loading: boolean;
   organizations: number;
+  activeStatus: StatusKey;
+  onStatusChange: (s: StatusKey) => void;
 }) {
+
   const monthName = MONTH_NAMES[month];
   const shift = (delta: number) => {
     const d = new Date(year, month + delta, 1);
