@@ -1987,6 +1987,34 @@ function ContractFormDialog({
 
   const existingResources = useContractResources(editing?.id ?? null);
 
+  const auditQ = useQuery({
+    queryKey: ["contract-audit", editing?.id],
+    enabled: !!editing?.id && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("client_contracts" as never)
+        .select(
+          "approval_status,approved_by,approved_at,rejected_by,rejected_at,rejection_reason,company_signature_data,signed_at",
+        )
+        .eq("id", editing!.id)
+        .maybeSingle();
+      if (error) throw error;
+      const row = data as Record<string, unknown> | null;
+      const lookup = async (uid: string | null) => {
+        if (!uid) return null;
+        const { data: n } = await supabase.rpc("get_user_display_name" as never, {
+          _user_id: uid,
+        } as never);
+        const arr = n as Array<{ full_name?: string; role_key?: string }> | null;
+        return arr && arr[0] ? arr[0] : null;
+      };
+      const approver = await lookup((row?.approved_by as string | null) ?? null);
+      const rejecter = await lookup((row?.rejected_by as string | null) ?? null);
+      return { row, approver, rejecter };
+    },
+  });
+  const audit = auditQ.data;
+
   // Reset when opened
   useEffect(() => {
     if (!open) return;
