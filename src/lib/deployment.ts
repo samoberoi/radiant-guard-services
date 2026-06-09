@@ -83,7 +83,7 @@ export type UnitContext = {
   state_name: string; // billing state name
 };
 
-export function resolveFieldManagersForUnit(
+export function resolveFieldOfficersForUnit(
   unit: UnitContext,
   assignments: ScopeAssignment[],
   employees: EmployeeLite[],
@@ -109,7 +109,7 @@ export function resolveFieldManagersForUnit(
   const out: Array<{ fm: EmployeeLite; sources: ScopeType[] }> = [];
   for (const [cid, sources] of fmIndex) {
     const fm = employees.find((e) => e.id === cid);
-    if (!fm || fm.role_key !== "field_manager") continue;
+    if (!fm || fm.role_key !== "field_officer") continue;
     out.push({ fm, sources: Array.from(sources) });
   }
   return out.sort((a, b) => a.fm.full_name.localeCompare(b.fm.full_name));

@@ -868,8 +868,8 @@ function EmployeesPage() {
   };
 
 
-  const fieldManagers = useMemo(
-    () => candidates.filter((c) => c.role_key === "field_manager" && isEmployeeStatus(c.status)),
+  const fieldOfficers = useMemo(
+    () => candidates.filter((c) => c.role_key === "field_officer" && isEmployeeStatus(c.status)),
     [candidates],
   );
   const scopeByCandidate = useMemo(() => {
@@ -1865,7 +1865,7 @@ function EmployeesPage() {
                 <SelectTrigger className="h-9 w-[180px] text-xs"><SelectValue placeholder="Reports to" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all" className="text-xs">Any manager</SelectItem>
-                  {fieldManagers.map((m) => (<SelectItem key={m.id} value={m.id} className="text-xs">{m.full_name} ({m.employee_code})</SelectItem>))}
+                  {fieldOfficers.map((m) => (<SelectItem key={m.id} value={m.id} className="text-xs">{m.full_name} ({m.employee_code})</SelectItem>))}
                 </SelectContent>
               </Select>
             )}
@@ -1975,7 +1975,7 @@ function EmployeesPage() {
           {viewMode === "tree" ? (
             <ManagerTree
               employees={employees}
-              fieldManagers={fieldManagers}
+              fieldOfficers={fieldOfficers}
               scopeByCandidate={scopeByCandidate}
               unitMap={unitMap}
             />
@@ -2158,17 +2158,17 @@ function EmployeesPage() {
 
 function ManagerTree({
   employees,
-  fieldManagers,
+  fieldOfficers,
   scopeByCandidate,
   unitMap,
 }: {
   employees: CandidateListItem[];
-  fieldManagers: CandidateListItem[];
+  fieldOfficers: CandidateListItem[];
   scopeByCandidate: Map<string, ScopeAssignment[]>;
   unitMap: Map<string, UnitLite>;
 }) {
   const guards = employees.filter((e) => e.role_key === "guard");
-  const others = employees.filter((e) => e.role_key !== "guard" && e.role_key !== "field_manager");
+  const others = employees.filter((e) => e.role_key !== "guard" && e.role_key !== "field_officer");
   const guardsByMgr = new Map<string, CandidateListItem[]>();
   const unassigned: CandidateListItem[] = [];
   for (const g of guards) {
@@ -2179,12 +2179,12 @@ function ManagerTree({
   }
   return (
     <div className="space-y-4">
-      {fieldManagers.length === 0 && (
+      {fieldOfficers.length === 0 && (
         <div className="rounded-2xl border border-border/60 bg-card p-6 text-center text-sm text-muted-foreground">
-          No field managers yet. Assign the Field Manager role to an employee to build the tree.
+          No field officers yet. Assign the Field Officer role to an employee to build the tree.
         </div>
       )}
-      {fieldManagers.map((fm) => {
+      {fieldOfficers.map((fm) => {
         const team = guardsByMgr.get(fm.id) ?? [];
         const scopes = scopeByCandidate.get(fm.id) ?? [];
         return (

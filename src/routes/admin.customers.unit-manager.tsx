@@ -50,7 +50,7 @@ import { cn } from "@/lib/utils";
 import { resolvePt, usePincodeRanges, usePtSlabs } from "@/lib/pt-lookup";
 import { MONTH_NAMES, resolveLwf, useLwfRows } from "@/lib/lwf-lookup";
 import {
-  resolveFieldManagersForUnit,
+  resolveFieldOfficersForUnit,
   resolveGuardsForUnit,
   SCOPE_TYPE_LABEL,
   useEmployeesLite,
@@ -1206,7 +1206,7 @@ function UnitDeployment({
   const employees = emp.data ?? [];
   const candidateUnits = cu.data ?? [];
   const ctx = { id: unitId, branch_id: branchId, customer_id: customerId, state_name: stateName };
-  const fms = resolveFieldManagersForUnit(ctx, assignments, employees, candidateUnits);
+  const fms = resolveFieldOfficersForUnit(ctx, assignments, employees, candidateUnits);
   const guards = resolveGuardsForUnit(ctx, employees, assignments, candidateUnits);
   const guardsByMgr = new Map<string, typeof guards>();
   const orphan: typeof guards = [];
@@ -1222,7 +1222,7 @@ function UnitDeployment({
     <div className="grid gap-4 md:grid-cols-2">
       <div className="rounded-xl border border-border/60 bg-card p-3">
         <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tree</div>
-        {fms.length === 0 && <p className="text-xs text-muted-foreground">No field manager mapped to this unit (directly or via branch/organization/state).</p>}
+        {fms.length === 0 && <p className="text-xs text-muted-foreground">No field officer mapped to this unit (directly or via branch/organization/state).</p>}
         {fms.map(({ fm, sources }) => (
           <div key={fm.id} className="mb-2">
             <div className="flex items-center gap-2 text-sm">

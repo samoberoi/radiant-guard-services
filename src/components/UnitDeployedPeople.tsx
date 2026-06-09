@@ -1,5 +1,5 @@
 import {
-  resolveFieldManagersForUnit,
+  resolveFieldOfficersForUnit,
   resolveGuardsForUnit,
   useCandidateUnits,
   useEmployeesLite,
@@ -9,7 +9,7 @@ import { Shield, UserCog } from "lucide-react";
 
 /**
  * Compact, read-only listing of people deployed to a unit:
- *   • Field Managers/Officers (mapped via unit / branch / org / state, or candidate_units)
+ *   • Field Officers (mapped via unit / branch / org / state, or candidate_units)
  *   • Security Guards (assigned to the unit)
  *
  * Used inside the org-manager tree and the "View full hierarchy" dialog.
@@ -37,7 +37,7 @@ export function UnitDeployedPeople({
   const candidateUnits = cu.data ?? [];
 
   const ctx = { id: unitId, branch_id: branchId, customer_id: customerId, state_name: stateName };
-  const fms = resolveFieldManagersForUnit(ctx, assignments, employees, candidateUnits);
+  const fms = resolveFieldOfficersForUnit(ctx, assignments, employees, candidateUnits);
   const guards = resolveGuardsForUnit(ctx, employees, assignments, candidateUnits);
 
   if (loading) {

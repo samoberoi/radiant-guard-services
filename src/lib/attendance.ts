@@ -13,7 +13,7 @@ export type AttendanceUnitContext = {
   billing_state: string | null;
 };
 
-const FIELD_OFFICER_ROLE_KEYS = new Set(["field_manager", "field_officer"]);
+const FIELD_OFFICER_ROLE_KEYS = new Set(["field_officer", "field_officer"]);
 const SECURITY_GUARD_ROLE_KEYS = new Set(["guard", "security_guard"]);
 
 const FIELD_OFFICER_KEYWORDS = ["field officer", "field-officer", "fieldofficer", "fo "];
