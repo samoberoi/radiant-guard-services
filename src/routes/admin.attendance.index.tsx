@@ -70,7 +70,6 @@ type UnitRow = {
 type AttendancePageData = {
   units: UnitRow[];
   organizations: { id: string; name: string; code: string }[];
-  securityGuards: EmployeeRef[];
   employeesByCustomer: Record<string, ClientEmployee[]>;
   summary: { organizations: number; units: number; activeEmployees: number };
 };
@@ -83,7 +82,7 @@ function AttendanceUnitsPage() {
   const [q, setQ] = useState("");
   const [orgFilter, setOrgFilter] = useState<string>("all");
   const [unitFilter, setUnitFilter] = useState<string>("all");
-  const [sgFilter, setSgFilter] = useState<string>("all");
+
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["attendance-dashboard-v9"],
@@ -123,11 +122,11 @@ function AttendanceUnitsPage() {
         return {
           units: [],
           organizations: [],
-          securityGuards: [],
           employeesByCustomer: {},
           summary: { organizations: 0, units: 0, activeEmployees: 0 },
         };
       }
+
 
       const [
         { data: units, error: unitsError },
@@ -309,11 +308,9 @@ function AttendanceUnitsPage() {
         ).values(),
       ).sort((a, b) => a.name.localeCompare(b.name));
 
-      const sgMap = new Map<string, EmployeeRef>();
       const employeesByCustomer: Record<string, ClientEmployee[]> = {};
       for (const r of rows) {
         for (const sg of r.security_guards) {
-          sgMap.set(sg.id, sg);
           const key = r.customer_id || r.customer_name;
           if (!employeesByCustomer[key]) employeesByCustomer[key] = [];
           // de-dupe per client (employee may appear in multiple units rarely)
@@ -336,7 +333,6 @@ function AttendanceUnitsPage() {
       return {
         units: rows,
         organizations: orgs,
-        securityGuards: Array.from(sgMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
         employeesByCustomer,
         summary: {
           organizations: orgs.length,
@@ -344,14 +340,15 @@ function AttendanceUnitsPage() {
           activeEmployees: rows.reduce((s, r) => s + r.active_employee_count, 0),
         },
       };
+
     },
   });
 
   const units = data?.units ?? [];
   const organizations = data?.organizations ?? [];
-  const securityGuards = data?.securityGuards ?? [];
   const employeesByCustomer = data?.employeesByCustomer ?? {};
   const summary = data?.summary ?? { organizations: 0, units: 0, activeEmployees: 0 };
+
 
   const selectedClient = orgFilter !== "all" ? organizations.find((o) => o.id === orgFilter) ?? null : null;
   const clientEmployees = useMemo(() => {
@@ -369,7 +366,6 @@ function AttendanceUnitsPage() {
     return units.filter((u) => {
       if (orgFilter !== "all" && (u.customer_id || u.customer_name) !== orgFilter) return false;
       if (unitFilter !== "all" && u.id !== unitFilter) return false;
-      if (sgFilter !== "all" && !u.security_guards.some((g) => g.id === sgFilter)) return false;
       if (term) {
         const hay = [
           u.customer_name,
@@ -386,16 +382,18 @@ function AttendanceUnitsPage() {
       }
       return true;
     });
-  }, [q, orgFilter, unitFilter, sgFilter, units]);
+  }, [q, orgFilter, unitFilter, units]);
 
-  const anyFilter = orgFilter !== "all" || unitFilter !== "all" || sgFilter !== "all" || q.trim().length > 0;
+  const anyFilter = orgFilter !== "all" || unitFilter !== "all" || q.trim().length > 0;
+
 
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader
         title="Attendance"
-        description="Browse units with active contracts and drill into the monthly muster roll. Only billable security guards appear — field officers are on Radiant's own payroll. Filter by organization, unit, or guard."
+        description="Browse units with active contracts and drill into the monthly muster roll. Only billable employees appear — non-billable staff are on Radiant's own payroll. Filter by organization or unit."
+
         crumbs={[{ label: "Attendance" }]}
       />
 
@@ -425,7 +423,7 @@ function AttendanceUnitsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             <FilterSelect
               label="Client (search by ID or name)"
               value={orgFilter}
@@ -446,14 +444,8 @@ function AttendanceUnitsPage() {
               }))}
               allLabel={`All units (${units.length})`}
             />
-            <FilterSelect
-              label="Security guard"
-              value={sgFilter}
-              onChange={setSgFilter}
-              options={securityGuards.map((g) => ({ value: g.id, label: g.name }))}
-              allLabel={`All security guards (${securityGuards.length})`}
-            />
           </div>
+
 
           {anyFilter && (
             <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -468,13 +460,13 @@ function AttendanceUnitsPage() {
                   setQ("");
                   setOrgFilter("all");
                   setUnitFilter("all");
-                  setSgFilter("all");
                 }}
               >
                 <X className="h-3.5 w-3.5" /> Clear filters
               </Button>
             </div>
           )}
+
         </div>
 
         {selectedClient && (
