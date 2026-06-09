@@ -1987,6 +1987,34 @@ function ContractFormDialog({
 
   const existingResources = useContractResources(editing?.id ?? null);
 
+  const auditQ = useQuery({
+    queryKey: ["contract-audit", editing?.id],
+    enabled: !!editing?.id && open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("client_contracts" as never)
+        .select(
+          "approval_status,approved_by,approved_at,rejected_by,rejected_at,rejection_reason,company_signature_data,signed_at",
+        )
+        .eq("id", editing!.id)
+        .maybeSingle();
+      if (error) throw error;
+      const row = data as Record<string, unknown> | null;
+      const lookup = async (uid: string | null) => {
+        if (!uid) return null;
+        const { data: n } = await supabase.rpc("get_user_display_name" as never, {
+          _user_id: uid,
+        } as never);
+        const arr = n as Array<{ full_name?: string; role_key?: string }> | null;
+        return arr && arr[0] ? arr[0] : null;
+      };
+      const approver = await lookup((row?.approved_by as string | null) ?? null);
+      const rejecter = await lookup((row?.rejected_by as string | null) ?? null);
+      return { row, approver, rejecter };
+    },
+  });
+  const audit = auditQ.data;
+
   // Reset when opened
   useEffect(() => {
     if (!open) return;
@@ -2152,6 +2180,107 @@ function ContractFormDialog({
               </Field>
             </div>
           </Section>
+
+          {/* Approval Audit Trail */}
+          {editing && audit?.row ? (
+            <Section title="Approval Audit Trail">
+              {(() => {
+                const r = audit.row as Record<string, unknown>;
+                const status = String(r.approval_status ?? "pending");
+                const approvedAt = r.approved_at as string | null;
+                const rejectedAt = r.rejected_at as string | null;
+                const signedAt = r.signed_at as string | null;
+                const reason = String(r.rejection_reason ?? "");
+                const sig = r.company_signature_data as string | null;
+                const fmt = (iso: string | null) =>
+                  iso ? new Date(iso).toLocaleString() : "—";
+                return (
+                  <div className="space-y-4">
+                    {status === "approved" && (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-1">
+                          <div className="text-xs font-semibold text-muted-foreground">
+                            Approved By
+                          </div>
+                          <div className="text-sm font-medium">
+                            {audit.approver?.full_name ?? "—"}
+                            {audit.approver?.role_key ? (
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                ({audit.approver.role_key})
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs font-semibold text-muted-foreground">
+                            Approved At
+                          </div>
+                          <div className="text-sm">{fmt(approvedAt ?? signedAt)}</div>
+                        </div>
+                        <div className="sm:col-span-2 space-y-1">
+                          <div className="text-xs font-semibold text-muted-foreground">
+                            Authorised Signatory Signature
+                          </div>
+                          {sig ? (
+                            <div className="inline-block rounded-lg border bg-muted/30 p-2">
+                              <img
+                                src={sig}
+                                alt="Approval signature"
+                                className="h-32 w-auto object-contain"
+                              />
+                            </div>
+                          ) : (
+                            <div className="text-xs italic text-muted-foreground">
+                              No signature on file.
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {status === "rejected" && (
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-1">
+                          <div className="text-xs font-semibold text-muted-foreground">
+                            Rejected By
+                          </div>
+                          <div className="text-sm font-medium">
+                            {audit.rejecter?.full_name ?? "—"}
+                            {audit.rejecter?.role_key ? (
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                ({audit.rejecter.role_key})
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-xs font-semibold text-muted-foreground">
+                            Rejected At
+                          </div>
+                          <div className="text-sm">{fmt(rejectedAt)}</div>
+                        </div>
+                        {reason && (
+                          <div className="sm:col-span-2 space-y-1">
+                            <div className="text-xs font-semibold text-muted-foreground">
+                              Reason
+                            </div>
+                            <div className="rounded-md border bg-muted/30 p-2 text-sm">
+                              {reason}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {status === "pending" && (
+                      <div className="text-sm italic text-muted-foreground">
+                        Awaiting approval — no signature captured yet.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </Section>
+          ) : null}
+
 
           {/* General Information */}
           <Section title="General Information">

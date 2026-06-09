@@ -3697,6 +3697,14 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_user_display_name: {
+        Args: { _user_id: string }
+        Returns: {
+          full_name: string
+          mobile: string
+          role_key: string
+        }[]
+      }
       get_user_ids_with_approve: {
         Args: { _module: string }
         Returns: {
