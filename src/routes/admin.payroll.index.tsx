@@ -431,7 +431,7 @@ function PayrollUnitsPage() {
                 </tr>
               ) : (
                 filtered.map((unit) => {
-                  const latest = unit.approved_periods[0];
+                  const latest = unit.periods[0];
                   const targetPeriod =
                     periodFilter !== "all"
                       ? (() => {
@@ -457,7 +457,7 @@ function PayrollUnitsPage() {
                       <td className="px-5 py-4 align-top text-sm text-foreground">{unit.customer_name}</td>
                       <td className="px-5 py-4 align-top">
                         <div className="flex flex-wrap gap-1.5">
-                          {unit.approved_periods.slice(0, 3).map((p) => (
+                          {unit.periods.slice(0, 3).map((p) => (
                             <span
                               key={`${p.period_start}-${p.period_end}`}
                               className="inline-flex rounded-full border border-emerald-200/60 bg-emerald-100/60 px-2 py-0.5 text-[11px] font-medium text-emerald-800"
@@ -465,9 +465,9 @@ function PayrollUnitsPage() {
                               {fmtPeriod(p.period_start, p.period_end)}
                             </span>
                           ))}
-                          {unit.approved_periods.length > 3 && (
+                          {unit.periods.length > 3 && (
                             <span className="text-[11px] text-muted-foreground">
-                              +{unit.approved_periods.length - 3}
+                              +{unit.periods.length - 3}
                             </span>
                           )}
                         </div>
@@ -749,7 +749,7 @@ function EmployeeSpotlight({
   units: UnitRow[];
   onClear: () => void;
 }) {
-  const totalPeriods = units.reduce((s, u) => s + u.approved_periods.length, 0);
+  const totalPeriods = units.reduce((s, u) => s + u.periods.length, 0);
   const initials = employee.name
     .split(/\s+/)
     .filter(Boolean)
@@ -799,7 +799,7 @@ function EmployeeSpotlight({
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {units.map((u) => {
-              const latest = u.approved_periods[0];
+              const latest = u.periods[0];
               return (
                 <div
                   key={u.id}
@@ -826,7 +826,7 @@ function EmployeeSpotlight({
                   </div>
 
                   <div className="flex flex-wrap gap-1.5">
-                    {u.approved_periods.slice(0, 2).map((p) => (
+                    {u.periods.slice(0, 2).map((p) => (
                       <span
                         key={`${p.period_start}-${p.period_end}`}
                         className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800"
@@ -834,9 +834,9 @@ function EmployeeSpotlight({
                         {fmtPeriod(p.period_start, p.period_end)}
                       </span>
                     ))}
-                    {u.approved_periods.length > 2 && (
+                    {u.periods.length > 2 && (
                       <span className="text-[11px] text-muted-foreground">
-                        +{u.approved_periods.length - 2} more
+                        +{u.periods.length - 2} more
                       </span>
                     )}
                   </div>
