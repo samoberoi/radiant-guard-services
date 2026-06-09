@@ -112,6 +112,7 @@ type ClientContract = {
   unitId: string;
   startDate: string;
   endDate: string;
+  expiryDate: string;
   description: string;
   serviceTypeId: string | null;
   payrollWindowId: string | null;
@@ -216,6 +217,7 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
     unitId: String(r.unit_id ?? ""),
     startDate: r.start_date ? String(r.start_date) : "",
     endDate: r.end_date ? String(r.end_date) : "",
+    expiryDate: r.expiry_date ? String(r.expiry_date) : "",
     description: String(r.description ?? ""),
     serviceTypeId: r.service_type_id ? String(r.service_type_id) : null,
     payrollWindowId: r.payroll_window_id ? String(r.payroll_window_id) : null,
@@ -305,7 +307,7 @@ function useContracts() {
       const { data, error } = await supabase
         .from("client_contracts" as never)
         .select(
-          "id,contract_code,prospect_code,record_type,prospect_stage,promoted_at,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status,approval_status,rejection_reason,created_by",
+          "id,contract_code,prospect_code,record_type,prospect_stage,promoted_at,unit_id,start_date,end_date,expiry_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status,approval_status,rejection_reason,created_by",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -349,6 +351,7 @@ function useContracts() {
       unit_id: p.unitId,
       start_date: p.startDate || null,
       end_date: p.endDate || null,
+      expiry_date: p.expiryDate || null,
       description: p.description.trim(),
       service_type_id: p.serviceTypeId,
       payroll_window_id: p.payrollWindowId,
@@ -409,7 +412,7 @@ function useContracts() {
       const beforeRes = await supabase
         .from("client_contracts" as never)
         .select(
-          "contract_code,prospect_code,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status,record_type,approval_status,prospect_stage,rejection_reason,promoted_at",
+          "contract_code,prospect_code,unit_id,start_date,end_date,expiry_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status,record_type,approval_status,prospect_stage,rejection_reason,promoted_at",
         )
         .eq("id", id)
         .single();
@@ -917,6 +920,7 @@ const CONTRACT_FIELDS = [
   "unit_id",
   "start_date",
   "end_date",
+  "expiry_date",
   "description",
   "service_type_id",
   "payroll_window_id",
@@ -979,6 +983,7 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
   ]);
   summaryRows.push(["Start Date", contract.startDate]);
   summaryRows.push(["End Date", contract.endDate]);
+  summaryRows.push(["Expiry Date", contract.expiryDate]);
   summaryRows.push(["Status", contract.status]);
   summaryRows.push(["Description", contract.description]);
   summaryRows.push(["Service Type", svcMap.get(contract.serviceTypeId ?? "") ?? ""]);
@@ -1119,6 +1124,7 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
     unit_id: contract.unitId,
     start_date: contract.startDate,
     end_date: contract.endDate,
+    expiry_date: contract.expiryDate,
     description: contract.description,
     service_type_id: contract.serviceTypeId ?? "",
     payroll_window_id: contract.payrollWindowId ?? "",
@@ -1203,6 +1209,7 @@ function parseContractWorkbook(buf: ArrayBuffer): ImportedContract {
     apply("GST Option", "gst_option");
     apply("Start Date", "start_date");
     apply("End Date", "end_date");
+    apply("Expiry Date", "expiry_date");
   }
 
   const rSheet = wb.Sheets["Resources_Raw"] ?? wb.Sheets["Resources"];
@@ -1238,6 +1245,7 @@ async function importContractFromXlsx(buf: ArrayBuffer): Promise<{
     unit_id: unitId,
     start_date: contractRow.start_date ? String(contractRow.start_date) : null,
     end_date: contractRow.end_date ? String(contractRow.end_date) : null,
+    expiry_date: contractRow.expiry_date ? String(contractRow.expiry_date) : null,
     description: String(contractRow.description ?? ""),
     service_type_id: contractRow.service_type_id ? String(contractRow.service_type_id) : null,
     payroll_window_id: contractRow.payroll_window_id ? String(contractRow.payroll_window_id) : null,
@@ -1450,6 +1458,7 @@ function ClientContractsPage() {
                 unit: `${c.unitCode} – ${c.unitName}`,
                 start: csvDate(c.startDate),
                 end: csvDate(c.endDate),
+                expiry: csvDate(c.expiryDate),
                 description: c.description,
                 gst: c.gstOption.toUpperCase(),
                 status: c.status,
@@ -1460,6 +1469,7 @@ function ClientContractsPage() {
                 { key: "unit", header: "Unit" },
                 { key: "start", header: "Start date" },
                 { key: "end", header: "End date" },
+                { key: "expiry", header: "Expiry date" },
                 { key: "description", header: "Description" },
                 { key: "gst", header: "GST option" },
                 { key: "status", header: "Status" },
@@ -1600,6 +1610,7 @@ function ClientContractsPage() {
                   <>
                     <th className="px-5 py-3">Start</th>
                     <th className="px-5 py-3">End</th>
+                    <th className="px-5 py-3">Expiry</th>
                   </>
                 ) : (
                   <th className="px-5 py-3">Start</th>
@@ -1621,15 +1632,16 @@ function ClientContractsPage() {
                     <div>{c.unitName}</div>
                   </td>
                   {tab === "client" ? (
-                    <>
-                      <td className="px-5 py-3 text-muted-foreground">{c.startDate || "—"}</td>
-                      <td className="px-5 py-3 text-muted-foreground">{c.endDate || "—"}</td>
-                    </>
-                  ) : (
-                    <td className="px-5 py-3 text-muted-foreground">
-                      {c.startDate || "—"}
-                    </td>
-                  )}
+                  <>
+                    <td className="px-5 py-3 text-muted-foreground">{c.startDate || "—"}</td>
+                    <td className="px-5 py-3 text-muted-foreground">{c.endDate || "—"}</td>
+                    <td className="px-5 py-3 text-muted-foreground">{c.expiryDate || "—"}</td>
+                  </>
+                ) : (
+                  <td className="px-5 py-3 text-muted-foreground">
+                    {c.startDate || "—"}
+                  </td>
+                )}
                   <td className="px-5 py-3 text-xs uppercase tracking-wider text-foreground">
                     {c.gstOption === "none" ? "No GST" : c.gstOption}
                   </td>
@@ -1752,7 +1764,7 @@ function ClientContractsPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     <FileText className="mx-auto mb-2 h-6 w-6 opacity-50" />
                     {items.length === 0
                       ? "No contracts yet. Create your first contract to get started."
@@ -1968,6 +1980,7 @@ function ContractFormDialog({
   const [unitId, setUnitId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
   const [description, setDescription] = useState("");
   const [serviceTypeId, setServiceTypeId] = useState<string>("");
   const [payrollWindowId, setPayrollWindowId] = useState<string>("");
@@ -2024,6 +2037,7 @@ function ContractFormDialog({
       setUnitId(editing.unitId);
       setStartDate(editing.startDate);
       setEndDate(editing.endDate);
+      setExpiryDate(editing.expiryDate);
       setDescription(editing.description);
       setServiceTypeId(editing.serviceTypeId ?? "");
       setPayrollWindowId(editing.payrollWindowId ?? "");
@@ -2037,6 +2051,7 @@ function ContractFormDialog({
       setUnitId("");
       setStartDate("");
       setEndDate("");
+      setExpiryDate("");
       setDescription("");
       setServiceTypeId("");
       setPayrollWindowId("");
@@ -2317,6 +2332,13 @@ function ContractFormDialog({
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </Field>
+              <Field label="Expiry Date">
+                <Input
+                  type="date"
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                />
+              </Field>
               <Field label="Service Type">
                 <Select
                   value={serviceTypeId || "none"}
@@ -2498,6 +2520,7 @@ function ContractFormDialog({
                 unitId,
                 startDate,
                 endDate,
+                expiryDate,
                 description,
                 serviceTypeId: serviceTypeId || null,
                 payrollWindowId: payrollWindowId || null,
