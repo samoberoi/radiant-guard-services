@@ -646,6 +646,7 @@ export type Database = {
           esic_branch_id: string | null
           gst_option: string
           id: string
+          is_internal: boolean
           payroll_window_id: string | null
           promoted_at: string | null
           prospect_code: string | null
@@ -676,6 +677,7 @@ export type Database = {
           esic_branch_id?: string | null
           gst_option?: string
           id?: string
+          is_internal?: boolean
           payroll_window_id?: string | null
           promoted_at?: string | null
           prospect_code?: string | null
@@ -706,6 +708,7 @@ export type Database = {
           esic_branch_id?: string | null
           gst_option?: string
           id?: string
+          is_internal?: boolean
           payroll_window_id?: string | null
           promoted_at?: string | null
           prospect_code?: string | null
@@ -802,6 +805,7 @@ export type Database = {
           id: string
           payroll_day_base_id: string | null
           quantity: number
+          role_key: string | null
           service_type_id: string | null
           sort_order: number
           updated_at: string
@@ -818,6 +822,7 @@ export type Database = {
           id?: string
           payroll_day_base_id?: string | null
           quantity?: number
+          role_key?: string | null
           service_type_id?: string | null
           sort_order?: number
           updated_at?: string
@@ -834,6 +839,7 @@ export type Database = {
           id?: string
           payroll_day_base_id?: string | null
           quantity?: number
+          role_key?: string | null
           service_type_id?: string | null
           sort_order?: number
           updated_at?: string
@@ -845,6 +851,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "client_contracts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contract_resources_role_key_fkey"
+            columns: ["role_key"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["key"]
           },
         ]
       }
