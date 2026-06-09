@@ -302,7 +302,7 @@ function PayrollUnitsPage() {
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader
         title="Payroll"
-        description="Compute wages for units whose attendance has been approved. Pick a unit to see end-to-end wage breakdown for every mapped employee."
+        description="Monthly payroll dashboard. Approved attendance sheets unlock wage computation; pending and draft sheets stay visible so you can track what's outstanding."
         crumbs={[{ label: "Payroll" }]}
       />
 
