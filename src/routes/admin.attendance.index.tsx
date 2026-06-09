@@ -79,9 +79,14 @@ type AttendancePageData = {
 const ACTIVE_EMPLOYEE_STATUSES = ["active"] as const;
 
 function AttendanceUnitsPage() {
+  const now = new Date();
   const [q, setQ] = useState("");
   const [orgFilter, setOrgFilter] = useState<string>("all");
   const [unitFilter, setUnitFilter] = useState<string>("all");
+  const [monthIdx, setMonthIdx] = useState<number>(now.getMonth());
+  const [year, setYear] = useState<number>(now.getFullYear());
+
+
 
 
   const { data, isLoading, error } = useQuery({
