@@ -126,7 +126,7 @@ type ClientContract = {
   promotedAt: string | null;
 };
 
-type ApprovalPickerValue = "approved" | "rejected" | "lost" | "";
+type ApprovalPickerValue = "approved" | "rejected" | "lost";
 
 type ServiceType = { id: string; name: string };
 type PayrollWindow = {
@@ -232,11 +232,10 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
 }
 
 function getApprovalPickerValue(contract: ClientContract | null): ApprovalPickerValue {
-  if (!contract) return "";
+  if (!contract) return "rejected";
   if (contract.prospectStage === "lost") return "lost";
   if (contract.approvalStatus === "approved") return "approved";
-  if (contract.approvalStatus === "rejected") return "rejected";
-  return "";
+  return "rejected";
 }
 
 function applyApprovalPickerToPayload(
@@ -276,7 +275,13 @@ function applyApprovalPickerToPayload(
     };
   }
 
-  return payload;
+  return {
+    ...payload,
+    approvalStatus: "rejected",
+    status: "inactive",
+    recordType: "prospect",
+    prospectStage: current?.prospectStage === "lost" ? "new" : (current?.prospectStage ?? "new"),
+  };
 }
 
 function nextContractCode(existing: string[]): string {
