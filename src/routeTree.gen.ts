@@ -26,6 +26,7 @@ import { Route as AdminOffboardingReasonManagerRouteImport } from './routes/admi
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminLwfManagerRouteImport } from './routes/admin.lwf-manager'
 import { Route as AdminLanguageManagerRouteImport } from './routes/admin.language-manager'
+import { Route as AdminInvoiceRouteImport } from './routes/admin.invoice'
 import { Route as AdminInventoryRouteImport } from './routes/admin.inventory'
 import { Route as AdminExServiceManagerRouteImport } from './routes/admin.ex-service-manager'
 import { Route as AdminEsicBranchManagerRouteImport } from './routes/admin.esic-branch-manager'
@@ -46,6 +47,7 @@ import { Route as AdminAllowanceManagerRouteImport } from './routes/admin.allowa
 import { Route as AdminAdditionsRouteImport } from './routes/admin.additions'
 import { Route as AdminAdditionTypeManagerRouteImport } from './routes/admin.addition-type-manager'
 import { Route as AdminPayrollIndexRouteImport } from './routes/admin.payroll.index'
+import { Route as AdminInvoiceIndexRouteImport } from './routes/admin.invoice.index'
 import { Route as AdminAttendanceIndexRouteImport } from './routes/admin.attendance.index'
 import { Route as AdminVehiclesServiceManagerRouteImport } from './routes/admin.vehicles.service-manager'
 import { Route as AdminVehiclesPucsRouteImport } from './routes/admin.vehicles.pucs'
@@ -55,6 +57,7 @@ import { Route as AdminVehiclesInsightLabRouteImport } from './routes/admin.vehi
 import { Route as AdminVehiclesFastagsRouteImport } from './routes/admin.vehicles.fastags'
 import { Route as AdminVehiclesExpenseManagerRouteImport } from './routes/admin.vehicles.expense-manager'
 import { Route as AdminPayrollUnitIdRouteImport } from './routes/admin.payroll.$unitId'
+import { Route as AdminInvoiceUnitIdRouteImport } from './routes/admin.invoice.$unitId'
 import { Route as AdminInventoryWriteOffsRouteImport } from './routes/admin.inventory.write-offs'
 import { Route as AdminInventoryWarehousesRouteImport } from './routes/admin.inventory.warehouses'
 import { Route as AdminInventoryVendorsRouteImport } from './routes/admin.inventory.vendors'
@@ -162,6 +165,11 @@ const AdminLanguageManagerRoute = AdminLanguageManagerRouteImport.update({
   path: '/language-manager',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminInvoiceRoute = AdminInvoiceRouteImport.update({
+  id: '/invoice',
+  path: '/invoice',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminInventoryRoute = AdminInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
@@ -266,6 +274,11 @@ const AdminPayrollIndexRoute = AdminPayrollIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminPayrollRoute,
 } as any)
+const AdminInvoiceIndexRoute = AdminInvoiceIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminInvoiceRoute,
+} as any)
 const AdminAttendanceIndexRoute = AdminAttendanceIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -312,6 +325,11 @@ const AdminPayrollUnitIdRoute = AdminPayrollUnitIdRouteImport.update({
   id: '/$unitId',
   path: '/$unitId',
   getParentRoute: () => AdminPayrollRoute,
+} as any)
+const AdminInvoiceUnitIdRoute = AdminInvoiceUnitIdRouteImport.update({
+  id: '/$unitId',
+  path: '/$unitId',
+  getParentRoute: () => AdminInvoiceRoute,
 } as any)
 const AdminInventoryWriteOffsRoute = AdminInventoryWriteOffsRouteImport.update({
   id: '/write-offs',
@@ -443,6 +461,7 @@ export interface FileRoutesByFullPath {
   '/admin/esic-branch-manager': typeof AdminEsicBranchManagerRoute
   '/admin/ex-service-manager': typeof AdminExServiceManagerRoute
   '/admin/inventory': typeof AdminInventoryRouteWithChildren
+  '/admin/invoice': typeof AdminInvoiceRouteWithChildren
   '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/notifications': typeof AdminNotificationsRoute
@@ -474,6 +493,7 @@ export interface FileRoutesByFullPath {
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
   '/admin/inventory/write-offs': typeof AdminInventoryWriteOffsRoute
+  '/admin/invoice/$unitId': typeof AdminInvoiceUnitIdRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
@@ -483,6 +503,7 @@ export interface FileRoutesByFullPath {
   '/admin/vehicles/pucs': typeof AdminVehiclesPucsRoute
   '/admin/vehicles/service-manager': typeof AdminVehiclesServiceManagerRoute
   '/admin/attendance/': typeof AdminAttendanceIndexRoute
+  '/admin/invoice/': typeof AdminInvoiceIndexRoute
   '/admin/payroll/': typeof AdminPayrollIndexRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
@@ -539,6 +560,7 @@ export interface FileRoutesByTo {
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
   '/admin/inventory/write-offs': typeof AdminInventoryWriteOffsRoute
+  '/admin/invoice/$unitId': typeof AdminInvoiceUnitIdRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
@@ -548,6 +570,7 @@ export interface FileRoutesByTo {
   '/admin/vehicles/pucs': typeof AdminVehiclesPucsRoute
   '/admin/vehicles/service-manager': typeof AdminVehiclesServiceManagerRoute
   '/admin/attendance': typeof AdminAttendanceIndexRoute
+  '/admin/invoice': typeof AdminInvoiceIndexRoute
   '/admin/payroll': typeof AdminPayrollIndexRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
@@ -576,6 +599,7 @@ export interface FileRoutesById {
   '/admin/esic-branch-manager': typeof AdminEsicBranchManagerRoute
   '/admin/ex-service-manager': typeof AdminExServiceManagerRoute
   '/admin/inventory': typeof AdminInventoryRouteWithChildren
+  '/admin/invoice': typeof AdminInvoiceRouteWithChildren
   '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
   '/admin/notifications': typeof AdminNotificationsRoute
@@ -607,6 +631,7 @@ export interface FileRoutesById {
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
   '/admin/inventory/write-offs': typeof AdminInventoryWriteOffsRoute
+  '/admin/invoice/$unitId': typeof AdminInvoiceUnitIdRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
@@ -616,6 +641,7 @@ export interface FileRoutesById {
   '/admin/vehicles/pucs': typeof AdminVehiclesPucsRoute
   '/admin/vehicles/service-manager': typeof AdminVehiclesServiceManagerRoute
   '/admin/attendance/': typeof AdminAttendanceIndexRoute
+  '/admin/invoice/': typeof AdminInvoiceIndexRoute
   '/admin/payroll/': typeof AdminPayrollIndexRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
 }
@@ -645,6 +671,7 @@ export interface FileRouteTypes {
     | '/admin/esic-branch-manager'
     | '/admin/ex-service-manager'
     | '/admin/inventory'
+    | '/admin/invoice'
     | '/admin/language-manager'
     | '/admin/lwf-manager'
     | '/admin/notifications'
@@ -676,6 +703,7 @@ export interface FileRouteTypes {
     | '/admin/inventory/vendors'
     | '/admin/inventory/warehouses'
     | '/admin/inventory/write-offs'
+    | '/admin/invoice/$unitId'
     | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
@@ -685,6 +713,7 @@ export interface FileRouteTypes {
     | '/admin/vehicles/pucs'
     | '/admin/vehicles/service-manager'
     | '/admin/attendance/'
+    | '/admin/invoice/'
     | '/admin/payroll/'
     | '/admin/candidates/$id/details'
   fileRoutesByTo: FileRoutesByTo
@@ -741,6 +770,7 @@ export interface FileRouteTypes {
     | '/admin/inventory/vendors'
     | '/admin/inventory/warehouses'
     | '/admin/inventory/write-offs'
+    | '/admin/invoice/$unitId'
     | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
@@ -750,6 +780,7 @@ export interface FileRouteTypes {
     | '/admin/vehicles/pucs'
     | '/admin/vehicles/service-manager'
     | '/admin/attendance'
+    | '/admin/invoice'
     | '/admin/payroll'
     | '/admin/candidates/$id/details'
   id:
@@ -777,6 +808,7 @@ export interface FileRouteTypes {
     | '/admin/esic-branch-manager'
     | '/admin/ex-service-manager'
     | '/admin/inventory'
+    | '/admin/invoice'
     | '/admin/language-manager'
     | '/admin/lwf-manager'
     | '/admin/notifications'
@@ -808,6 +840,7 @@ export interface FileRouteTypes {
     | '/admin/inventory/vendors'
     | '/admin/inventory/warehouses'
     | '/admin/inventory/write-offs'
+    | '/admin/invoice/$unitId'
     | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
@@ -817,6 +850,7 @@ export interface FileRouteTypes {
     | '/admin/vehicles/pucs'
     | '/admin/vehicles/service-manager'
     | '/admin/attendance/'
+    | '/admin/invoice/'
     | '/admin/payroll/'
     | '/admin/candidates/$id/details'
   fileRoutesById: FileRoutesById
@@ -947,6 +981,13 @@ declare module '@tanstack/react-router' {
       path: '/language-manager'
       fullPath: '/admin/language-manager'
       preLoaderRoute: typeof AdminLanguageManagerRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/invoice': {
+      id: '/admin/invoice'
+      path: '/invoice'
+      fullPath: '/admin/invoice'
+      preLoaderRoute: typeof AdminInvoiceRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/inventory': {
@@ -1089,6 +1130,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPayrollIndexRouteImport
       parentRoute: typeof AdminPayrollRoute
     }
+    '/admin/invoice/': {
+      id: '/admin/invoice/'
+      path: '/'
+      fullPath: '/admin/invoice/'
+      preLoaderRoute: typeof AdminInvoiceIndexRouteImport
+      parentRoute: typeof AdminInvoiceRoute
+    }
     '/admin/attendance/': {
       id: '/admin/attendance/'
       path: '/'
@@ -1151,6 +1199,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/payroll/$unitId'
       preLoaderRoute: typeof AdminPayrollUnitIdRouteImport
       parentRoute: typeof AdminPayrollRoute
+    }
+    '/admin/invoice/$unitId': {
+      id: '/admin/invoice/$unitId'
+      path: '/$unitId'
+      fullPath: '/admin/invoice/$unitId'
+      preLoaderRoute: typeof AdminInvoiceUnitIdRouteImport
+      parentRoute: typeof AdminInvoiceRoute
     }
     '/admin/inventory/write-offs': {
       id: '/admin/inventory/write-offs'
@@ -1354,6 +1409,20 @@ const AdminInventoryRouteWithChildren = AdminInventoryRoute._addFileChildren(
   AdminInventoryRouteChildren,
 )
 
+interface AdminInvoiceRouteChildren {
+  AdminInvoiceUnitIdRoute: typeof AdminInvoiceUnitIdRoute
+  AdminInvoiceIndexRoute: typeof AdminInvoiceIndexRoute
+}
+
+const AdminInvoiceRouteChildren: AdminInvoiceRouteChildren = {
+  AdminInvoiceUnitIdRoute: AdminInvoiceUnitIdRoute,
+  AdminInvoiceIndexRoute: AdminInvoiceIndexRoute,
+}
+
+const AdminInvoiceRouteWithChildren = AdminInvoiceRoute._addFileChildren(
+  AdminInvoiceRouteChildren,
+)
+
 interface AdminPayrollRouteChildren {
   AdminPayrollUnitIdRoute: typeof AdminPayrollUnitIdRoute
   AdminPayrollIndexRoute: typeof AdminPayrollIndexRoute
@@ -1412,6 +1481,7 @@ interface AdminRouteChildren {
   AdminEsicBranchManagerRoute: typeof AdminEsicBranchManagerRoute
   AdminExServiceManagerRoute: typeof AdminExServiceManagerRoute
   AdminInventoryRoute: typeof AdminInventoryRouteWithChildren
+  AdminInvoiceRoute: typeof AdminInvoiceRouteWithChildren
   AdminLanguageManagerRoute: typeof AdminLanguageManagerRoute
   AdminLwfManagerRoute: typeof AdminLwfManagerRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
@@ -1449,6 +1519,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminEsicBranchManagerRoute: AdminEsicBranchManagerRoute,
   AdminExServiceManagerRoute: AdminExServiceManagerRoute,
   AdminInventoryRoute: AdminInventoryRouteWithChildren,
+  AdminInvoiceRoute: AdminInvoiceRouteWithChildren,
   AdminLanguageManagerRoute: AdminLanguageManagerRoute,
   AdminLwfManagerRoute: AdminLwfManagerRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
