@@ -557,7 +557,7 @@ function AttendanceUnitsPage() {
                             <Link
                               to="/admin/payroll/$unitId"
                               params={{ unitId: e.unit_id }}
-                              search={{ ...currentMonthRange(), candidate: e.id }}
+                              search={{ ...monthRange(year, monthIdx), candidate: e.id }}
                               className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300/60 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-800 hover:border-emerald-500 dark:bg-emerald-950/30 dark:text-emerald-200"
                             >
                               <IndianRupee className="h-3 w-3" /> View salary
@@ -565,6 +565,7 @@ function AttendanceUnitsPage() {
                             <Link
                               to="/admin/attendance/$unitId"
                               params={{ unitId: e.unit_id }}
+                              search={{ month: monthIdx, year }}
                               className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:border-accent/50 hover:text-accent"
                             >
                               Open roll <ArrowRight className="h-3 w-3" />
