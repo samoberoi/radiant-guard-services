@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Eye,
@@ -22,6 +23,7 @@ import { logActivity } from "@/lib/activity-log";
 import {
   PERMISSION_ACTIONS,
   RBAC_MODULES,
+  moduleSupportsApprove,
   type ModuleDef,
   type PermissionAction,
 } from "@/lib/rbac-modules";
@@ -41,7 +43,12 @@ export const Route = createFileRoute("/admin/rbac")({
   component: RBACPage,
 });
 
-type PermState = { can_view: boolean; can_edit: boolean; can_delete: boolean };
+type PermState = {
+  can_view: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+  can_approve: boolean;
+};
 type PermMap = Map<PermKey, PermState>;
 
 const ACTION_META: Record<
@@ -51,7 +58,15 @@ const ACTION_META: Record<
   view: { label: "View", icon: Eye, tint: "text-sky-500" },
   edit: { label: "Edit", icon: Pencil, tint: "text-amber-500" },
   delete: { label: "Delete", icon: Trash2, tint: "text-rose-500" },
+  approve: { label: "Approve", icon: CheckCircle2, tint: "text-emerald-500" },
 };
+
+function permFlag(p: PermState, a: PermissionAction): boolean {
+  if (a === "view") return p.can_view;
+  if (a === "edit") return p.can_edit;
+  if (a === "delete") return p.can_delete;
+  return p.can_approve;
+}
 
 function buildMap(rows: PermissionRow[]): PermMap {
   const m: PermMap = new Map();
@@ -60,6 +75,7 @@ function buildMap(rows: PermissionRow[]): PermMap {
       can_view: r.can_view,
       can_edit: r.can_edit,
       can_delete: r.can_delete,
+      can_approve: r.can_approve,
     });
   }
   return m;
@@ -69,7 +85,7 @@ function mapToRows(map: PermMap): PermissionRow[] {
   const out: PermissionRow[] = [];
   map.forEach((perm, key) => {
     const [module_key, sub_module_key] = key.split("::");
-    if (!perm.can_view && !perm.can_edit && !perm.can_delete) return;
+    if (!perm.can_view && !perm.can_edit && !perm.can_delete && !perm.can_approve) return;
     out.push({
       role_key: "",
       module_key,
@@ -97,18 +113,13 @@ function aggregate(
   mod: ModuleDef,
   action: PermissionAction,
 ): Tri {
+  if (action === "approve" && !moduleSupportsApprove(mod.key)) return "none";
   if (mod.subModules.length === 0) {
-    const v = getCell(map, mod.key, "");
-    const has =
-      action === "view" ? v.can_view : action === "edit" ? v.can_edit : v.can_delete;
-    return has ? "all" : "none";
+    return permFlag(getCell(map, mod.key, ""), action) ? "all" : "none";
   }
   let on = 0;
   for (const s of mod.subModules) {
-    const v = getCell(map, mod.key, s.key);
-    const has =
-      action === "view" ? v.can_view : action === "edit" ? v.can_edit : v.can_delete;
-    if (has) on++;
+    if (permFlag(getCell(map, mod.key, s.key), action)) on++;
   }
   if (on === 0) return "none";
   if (on === mod.subModules.length) return "all";
@@ -121,6 +132,7 @@ function setParent(
   action: PermissionAction,
   on: boolean,
 ): PermMap {
+  if (action === "approve" && !moduleSupportsApprove(mod.key)) return map;
   let next = map;
   if (mod.subModules.length === 0) {
     const cur = getCell(next, mod.key, "");
@@ -139,7 +151,12 @@ function setParent(
 
 function grantAll(map: PermMap, mod: ModuleDef): PermMap {
   let next = map;
-  const full = { can_view: true, can_edit: true, can_delete: true };
+  const full: PermState = {
+    can_view: true,
+    can_edit: true,
+    can_delete: true,
+    can_approve: moduleSupportsApprove(mod.key),
+  };
   if (mod.subModules.length === 0) {
     next = setCell(next, mod.key, "", full);
     return next;
@@ -173,7 +190,12 @@ function mapsEqual(a: PermMap, b: PermMap): boolean {
   for (const k of allKeys) {
     const x = a.get(k) ?? EMPTY_PERM;
     const y = b.get(k) ?? EMPTY_PERM;
-    if (x.can_view !== y.can_view || x.can_edit !== y.can_edit || x.can_delete !== y.can_delete) {
+    if (
+      x.can_view !== y.can_view ||
+      x.can_edit !== y.can_edit ||
+      x.can_delete !== y.can_delete ||
+      x.can_approve !== y.can_approve
+    ) {
       return false;
     }
   }
@@ -348,7 +370,7 @@ function RBACPage() {
       {/* Grid */}
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         {/* Header row */}
-        <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)] items-center gap-2 border-b border-border bg-secondary/40 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <div className="grid grid-cols-[minmax(0,1fr)_repeat(4,96px)] items-center gap-2 border-b border-border bg-secondary/40 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           <div>Module</div>
           {PERMISSION_ACTIONS.map((a) => {
             const Icon = ACTION_META[a].icon;
@@ -366,11 +388,12 @@ function RBACPage() {
             const open = expanded[mod.key];
             const ParentIcon = mod.icon;
             const hasChildren = mod.subModules.length > 0;
+            const supportsApprove = moduleSupportsApprove(mod.key);
 
             return (
               <div key={mod.key}>
                 {/* Parent row */}
-                <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)] items-center gap-2 px-4 py-3 hover:bg-secondary/30">
+                <div className="grid grid-cols-[minmax(0,1fr)_repeat(4,96px)] items-center gap-2 px-4 py-3 hover:bg-secondary/30">
                   <div className="flex items-center gap-2 min-w-0">
                     {hasChildren ? (
                       <button
@@ -402,6 +425,13 @@ function RBACPage() {
                   </div>
 
                   {PERMISSION_ACTIONS.map((a) => {
+                    if (a === "approve" && !supportsApprove) {
+                      return (
+                        <div key={a} className="flex justify-center text-muted-foreground/40" title="Approve permission not applicable here">
+                          —
+                        </div>
+                      );
+                    }
                     const agg = aggregate(draft, mod, a);
                     return (
                       <div key={a} className="flex justify-center">
@@ -427,7 +457,7 @@ function RBACPage() {
                       return (
                         <div
                           key={sub.key}
-                          className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)] items-center gap-2 px-4 py-2 pl-14 hover:bg-secondary/40"
+                          className="grid grid-cols-[minmax(0,1fr)_repeat(4,96px)] items-center gap-2 px-4 py-2 pl-14 hover:bg-secondary/40"
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-background text-muted-foreground">
@@ -438,12 +468,14 @@ function RBACPage() {
                             </span>
                           </div>
                           {PERMISSION_ACTIONS.map((a) => {
-                            const on =
-                              a === "view"
-                                ? cell.can_view
-                                : a === "edit"
-                                  ? cell.can_edit
-                                  : cell.can_delete;
+                            if (a === "approve" && !supportsApprove) {
+                              return (
+                                <div key={a} className="flex justify-center text-muted-foreground/40">
+                                  —
+                                </div>
+                              );
+                            }
+                            const on = permFlag(cell, a);
                             return (
                               <div key={a} className="flex justify-center">
                                 <CheckBox

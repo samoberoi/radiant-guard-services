@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { PermissionAction } from "@/lib/rbac-modules";
+import { moduleSupportsApprove } from "@/lib/rbac-modules";
 
 export type RoleRow = {
   key: string;
@@ -17,6 +18,7 @@ export type PermissionRow = {
   can_view: boolean;
   can_edit: boolean;
   can_delete: boolean;
+  can_approve: boolean;
 };
 
 export type PermKey = `${string}::${string}`; // `${module_key}::${sub_module_key}`
@@ -25,7 +27,12 @@ export function permKey(moduleKey: string, subModuleKey = ""): PermKey {
   return `${moduleKey}::${subModuleKey}` as PermKey;
 }
 
-export const EMPTY_PERM = { can_view: false, can_edit: false, can_delete: false };
+export const EMPTY_PERM = {
+  can_view: false,
+  can_edit: false,
+  can_delete: false,
+  can_approve: false,
+};
 
 export async function fetchRoles(): Promise<RoleRow[]> {
   const { data, error } = await supabase
@@ -39,7 +46,7 @@ export async function fetchRoles(): Promise<RoleRow[]> {
 export async function fetchRolePermissions(roleKey: string): Promise<PermissionRow[]> {
   const { data, error } = await supabase
     .from("role_permissions")
-    .select("id,role_key,module_key,sub_module_key,can_view,can_edit,can_delete")
+    .select("id,role_key,module_key,sub_module_key,can_view,can_edit,can_delete,can_approve")
     .eq("role_key", roleKey);
   if (error) throw error;
   return (data ?? []) as PermissionRow[];
@@ -60,21 +67,35 @@ export async function saveRolePermissions(
     can_view: r.can_view,
     can_edit: r.can_edit,
     can_delete: r.can_delete,
+    can_approve: r.can_approve,
   }));
   const ins = await supabase.from("role_permissions").insert(payload);
   if (ins.error) throw ins.error;
 }
 
-// Enforce action implications: edit ⇒ view, delete ⇒ edit+view.
-export function normalizePerm(p: { can_view: boolean; can_edit: boolean; can_delete: boolean }) {
+// Enforce action implications: edit ⇒ view, delete ⇒ edit+view, approve ⇒ view.
+export function normalizePerm(p: {
+  can_view: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+  can_approve: boolean;
+}) {
   const can_delete = p.can_delete;
   const can_edit = p.can_edit || can_delete;
-  const can_view = p.can_view || can_edit;
-  return { can_view, can_edit, can_delete };
+  const can_approve = p.can_approve;
+  const can_view = p.can_view || can_edit || can_approve;
+  return { can_view, can_edit, can_delete, can_approve };
 }
 
+type PermCell = {
+  can_view: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+  can_approve: boolean;
+};
+
 export function hasFromMap(
-  map: Map<PermKey, { can_view: boolean; can_edit: boolean; can_delete: boolean }>,
+  map: Map<PermKey, PermCell>,
   moduleKey: string,
   subModuleKey: string,
   action: PermissionAction,
@@ -83,7 +104,8 @@ export function hasFromMap(
   if (!row) return false;
   if (action === "view") return row.can_view;
   if (action === "edit") return row.can_edit;
-  return row.can_delete;
+  if (action === "delete") return row.can_delete;
+  return row.can_approve;
 }
 
 // ---------------- Runtime enforcement ----------------
@@ -129,16 +151,23 @@ export function useCurrentPermissions(): {
     map.set(`${r.module_key}::${r.sub_module_key ?? ""}`, r);
   }
 
+  const valueFor = (r: PermissionRow | undefined, action: PermissionAction) => {
+    if (!r) return false;
+    if (action === "view") return r.can_view;
+    if (action === "edit") return r.can_edit;
+    if (action === "delete") return r.can_delete;
+    return r.can_approve;
+  };
+
   const can: PermCheck = (moduleKey, action = "view") => {
-    if (isSuperAdmin) return true;
+    if (isSuperAdmin) return action === "approve" ? moduleSupportsApprove(moduleKey) : true;
+    if (action === "approve" && !moduleSupportsApprove(moduleKey)) return false;
     // Module-level grant
     const m = map.get(`${moduleKey}::`);
-    const check = (r?: PermissionRow) =>
-      !!r && (action === "view" ? r.can_view : action === "edit" ? r.can_edit : r.can_delete);
-    if (check(m)) return true;
-    // Any sub-module granted counts as view-access to parent group
+    if (valueFor(m, action)) return true;
+    // Any sub-module granted counts as access to parent group
     for (const [k, r] of map) {
-      if (k.startsWith(`${moduleKey}::`) && k !== `${moduleKey}::` && check(r)) return true;
+      if (k.startsWith(`${moduleKey}::`) && k !== `${moduleKey}::` && valueFor(r, action)) return true;
     }
     return false;
   };

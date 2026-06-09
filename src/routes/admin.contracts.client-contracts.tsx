@@ -12,6 +12,7 @@ import {
   FileSpreadsheet,
   FileText,
   Plus,
+  RefreshCcw,
   Search,
   ShieldAlert,
   Upload,
@@ -23,6 +24,8 @@ import { ContractApprovalDialog, type ApprovalMode } from "@/components/Contract
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { useCurrentPermissions } from "@/lib/rbac";
+import { notifyApprovers } from "@/lib/notifications";
 import { csvDate, downloadCsv } from "@/lib/csv-export";
 import { DeleteGuardButton } from "@/components/DeleteGuardButton";
 import { toast } from "sonner";
@@ -328,6 +331,16 @@ function useContracts() {
       if (error) throw error;
       const id = String((data as Record<string, unknown>).id);
       void logActivity({ module: "Client Contracts", action: "create", entityType: "client_contracts", entityId: id, entityLabel: p.prospectCode, details: p as unknown as Record<string, unknown> });
+      // Notify everyone with approve rights on contracts (fully RBAC-driven).
+      void notifyApprovers({
+        moduleKey: "contracts",
+        type: "contract_pending_approval",
+        title: `Prospect ${p.prospectCode} awaiting approval`,
+        message: "A new prospect contract has been submitted and needs your sign-off.",
+        link: "/admin/contracts/client-contracts",
+        entityType: "client_contracts",
+        entityId: id,
+      });
       return id;
     },
     onSuccess: invalidate,
@@ -391,7 +404,40 @@ function useContracts() {
     onSuccess: invalidate,
   });
 
-  return { items, addMut, updateMut, deleteMut, updateStageMut };
+  const resubmitMut = useMutation({
+    mutationFn: async ({ id, prospectCode }: { id: string; prospectCode: string }) => {
+      const { error } = await supabase
+        .from("client_contracts" as never)
+        .update({
+          approval_status: "pending",
+          rejection_reason: "",
+          rejected_by: null,
+          rejected_at: null,
+          status: "inactive",
+        } as never)
+        .eq("id", id);
+      if (error) throw error;
+      void logActivity({
+        module: "Client Contracts",
+        action: "resubmit",
+        entityType: "client_contracts",
+        entityId: id,
+        entityLabel: prospectCode,
+      });
+      void notifyApprovers({
+        moduleKey: "contracts",
+        type: "contract_pending_approval",
+        title: `Prospect ${prospectCode} resubmitted for approval`,
+        message: "A previously rejected prospect contract has been updated and resubmitted.",
+        link: "/admin/contracts/client-contracts",
+        entityType: "client_contracts",
+        entityId: id,
+      });
+    },
+    onSuccess: invalidate,
+  });
+
+  return { items, addMut, updateMut, deleteMut, updateStageMut, resubmitMut };
 }
 
 function useServiceTypes() {
@@ -1110,7 +1156,10 @@ async function importContractFromXlsx(buf: ArrayBuffer): Promise<{
 
 function ClientContractsPage() {
   const qc = useQueryClient();
-  const { items, addMut, updateMut, deleteMut, updateStageMut } = useContracts();
+  const { items, addMut, updateMut, deleteMut, updateStageMut, resubmitMut } = useContracts();
+  const { can } = useCurrentPermissions();
+  const canApprove = can("contracts", "approve");
+  const canEdit = can("contracts", "edit");
   const { units } = useUnits();
   const { customers } = useCustomers();
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -1181,44 +1230,44 @@ function ClientContractsPage() {
     return { prospects, clients };
   }, [items]);
 
-  const stats = useMemo(() => {
-    const scoped = items.filter((c) => c.recordType === tab);
-    if (tab === "prospect") {
-      const s = { total: scoped.length, pending: 0, rejected: 0, lost: 0 };
-      for (const c of scoped) {
-        if (c.prospectStage === "lost") s.lost++;
-        else if (c.approvalStatus === "rejected") s.rejected++;
-        else s.pending++;
+  // Merged stats — show both client AND prospect health at the top of the page.
+  const overview = useMemo(() => {
+    let activeClients = 0;
+    let inactiveClients = 0;
+    let expiredClients = 0;
+    let pendingProspects = 0;
+    let rejectedProspects = 0;
+    let lostProspects = 0;
+    for (const c of items) {
+      if (c.recordType === "client") {
+        if (c.status === "active") activeClients++;
+        else if (c.status === "inactive") inactiveClients++;
+        else if (c.status === "expired") expiredClients++;
+      } else {
+        if (c.prospectStage === "lost") lostProspects++;
+        else if (c.approvalStatus === "rejected") rejectedProspects++;
+        else pendingProspects++;
       }
-      return s;
     }
-    const s = { total: scoped.length, active: 0, inactive: 0, expired: 0 };
-    for (const c of scoped) {
-      if (c.status === "active") s.active++;
-      else if (c.status === "inactive") s.inactive++;
-      else if (c.status === "expired") s.expired++;
-    }
-    return s;
-  }, [items, tab]);
+    return {
+      total: items.length,
+      activeClients,
+      inactiveClients: inactiveClients + expiredClients,
+      pendingProspects,
+      rejectedProspects,
+      lostProspects,
+    };
+  }, [items]);
 
   return (
     <div>
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {tab === "client" ? (
-          <>
-            <StatCard label="Total Clients" value={(stats as { total: number }).total} tone="default" />
-            <StatCard label="Active" value={(stats as { active: number }).active} tone="active" />
-            <StatCard label="Inactive" value={(stats as { inactive: number }).inactive} tone="inactive" />
-            <StatCard label="Expired" value={(stats as { expired: number }).expired} tone="expired" />
-          </>
-        ) : (
-          <>
-            <StatCard label="Total Prospects" value={(stats as { total: number }).total} tone="default" />
-            <StatCard label="Pending Approval" value={(stats as { pending: number }).pending} tone="inactive" />
-            <StatCard label="Rejected" value={(stats as { rejected: number }).rejected} tone="expired" />
-            <StatCard label="Lost" value={(stats as { lost: number }).lost} tone="expired" />
-          </>
-        )}
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <StatCard label="Clients + Prospects" value={overview.total} tone="default" />
+        <StatCard label="Active Clients" value={overview.activeClients} tone="active" />
+        <StatCard label="Inactive / Expired" value={overview.inactiveClients} tone="inactive" />
+        <StatCard label="Awaiting Approval" value={overview.pendingProspects} tone="inactive" />
+        <StatCard label="Rejected" value={overview.rejectedProspects} tone="expired" />
+        <StatCard label="Lost" value={overview.lostProspects} tone="expired" />
       </div>
       <PageHeader
         title="Client Contracts"
@@ -1456,7 +1505,8 @@ function ClientContractsPage() {
                     <div className="inline-flex gap-1">
                       {tab === "prospect" &&
                         c.approvalStatus === "pending" &&
-                        c.prospectStage !== "lost" && (
+                        c.prospectStage !== "lost" &&
+                        canApprove && (
                           <>
                             <Button
                               size="sm"
@@ -1476,22 +1526,43 @@ function ClientContractsPage() {
                             >
                               <XCircle className="mr-1 h-4 w-4" /> Reject
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 px-2 text-muted-foreground hover:bg-muted"
-                              onClick={() =>
-                                updateStageMut.mutate({
-                                  id: c.id,
-                                  stage: "lost",
-                                  label: c.prospectCode,
-                                })
-                              }
-                              title="Mark prospect as lost (stays in prospects)"
-                            >
-                              Mark Lost
-                            </Button>
                           </>
+                        )}
+                      {tab === "prospect" &&
+                        c.approvalStatus === "rejected" &&
+                        c.prospectStage !== "lost" &&
+                        canEdit && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-accent hover:bg-accent/10"
+                            onClick={() =>
+                              resubmitMut.mutate({ id: c.id, prospectCode: c.prospectCode })
+                            }
+                            title="Resubmit this prospect for approval"
+                          >
+                            <RefreshCcw className="mr-1 h-4 w-4" /> Resubmit
+                          </Button>
+                        )}
+                      {tab === "prospect" &&
+                        c.approvalStatus === "pending" &&
+                        c.prospectStage !== "lost" &&
+                        canEdit && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-muted-foreground hover:bg-muted"
+                            onClick={() =>
+                              updateStageMut.mutate({
+                                id: c.id,
+                                stage: "lost",
+                                label: c.prospectCode,
+                              })
+                            }
+                            title="Mark prospect as lost (stays in prospects)"
+                          >
+                            Mark Lost
+                          </Button>
                         )}
                       <Button
                         size="sm"
@@ -1576,20 +1647,24 @@ function ClientContractsPage() {
             return e instanceof Error ? e.message : "Could not save contract";
           }
         }}
-        onApprovalAction={(mode) => {
-          if (!editing) return;
-          if (mode === "lost") {
-            updateStageMut.mutate({
-              id: editing.id,
-              stage: "lost",
-              label: editing.prospectCode,
-            });
-          } else {
-            setApprovalTarget({ contract: editing, mode });
-          }
-          setFormOpen(false);
-          setEditing(null);
-        }}
+        onApprovalAction={
+          canApprove
+            ? (mode) => {
+                if (!editing) return;
+                if (mode === "lost") {
+                  updateStageMut.mutate({
+                    id: editing.id,
+                    stage: "lost",
+                    label: editing.prospectCode,
+                  });
+                } else {
+                  setApprovalTarget({ contract: editing, mode });
+                }
+                setFormOpen(false);
+                setEditing(null);
+              }
+            : undefined
+        }
       />
 
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
