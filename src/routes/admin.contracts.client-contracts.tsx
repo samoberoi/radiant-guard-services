@@ -1793,6 +1793,7 @@ function ClientContractsPage() {
               contractId = await addMut.mutateAsync(p);
             }
             await persistResources(contractId, resources);
+            await qc.invalidateQueries({ queryKey: ["admin", "contract-resources", contractId] });
             toast.success(editing ? "Contract updated" : "Contract created");
             return null;
           } catch (e) {
