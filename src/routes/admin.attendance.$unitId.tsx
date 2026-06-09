@@ -298,6 +298,8 @@ function MusterRollPage() {
   const periodEnd = periodCells[periodCells.length - 1]?.date ?? ymd(year, monthIdx, daysInMonth(year, monthIdx));
 
   const queryClient = useQueryClient();
+  const { can } = useCurrentPermissions();
+  const canApprove = can("attendance", "approve");
 
   type SheetStatus = "draft" | "submitted" | "approved" | "rejected";
   type SheetRow = { id: string; status: SheetStatus; rejection_reason: string };
