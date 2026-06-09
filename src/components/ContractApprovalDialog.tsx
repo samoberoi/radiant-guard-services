@@ -99,6 +99,34 @@ export function ContractApprovalDialog({
       const uid = await currentUserId();
       const nowIso = new Date().toISOString();
 
+      // Enforce: only one active client contract per unit.
+      const { data: thisRow, error: thisErr } = await supabase
+        .from("client_contracts" as never)
+        .select("unit_id")
+        .eq("id", contract!.id)
+        .single();
+      if (thisErr) throw thisErr;
+      const unitId = (thisRow as Record<string, unknown> | null)?.unit_id as string | null;
+      if (unitId) {
+        const { data: dupRows, error: dupErr } = await supabase
+          .from("client_contracts" as never)
+          .select("contract_code")
+          .eq("unit_id", unitId)
+          .eq("record_type", "client")
+          .eq("status", "active")
+          .eq("approval_status", "approved")
+          .neq("id", contract!.id);
+        if (dupErr) throw dupErr;
+        const dup = ((dupRows as unknown as Record<string, unknown>[]) ?? [])[0];
+        if (dup) {
+          toast.error(
+            `Unit already has an active contract (${String(dup.contract_code ?? "—")}). Expire or end it before approving a new one.`,
+          );
+          setSaving(false);
+          return;
+        }
+      }
+
       // Generate next contract code by inspecting existing CONxxxxx values.
       const { data: codeRows, error: codeErr } = await supabase
         .from("client_contracts" as never)
