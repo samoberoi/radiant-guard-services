@@ -331,6 +331,16 @@ function useContracts() {
       if (error) throw error;
       const id = String((data as Record<string, unknown>).id);
       void logActivity({ module: "Client Contracts", action: "create", entityType: "client_contracts", entityId: id, entityLabel: p.prospectCode, details: p as unknown as Record<string, unknown> });
+      // Notify everyone with approve rights on contracts (fully RBAC-driven).
+      void notifyApprovers({
+        moduleKey: "contracts",
+        type: "contract_pending_approval",
+        title: `Prospect ${p.prospectCode} awaiting approval`,
+        message: "A new prospect contract has been submitted and needs your sign-off.",
+        link: "/admin/contracts/client-contracts",
+        entityType: "client_contracts",
+        entityId: id,
+      });
       return id;
     },
     onSuccess: invalidate,
@@ -394,7 +404,40 @@ function useContracts() {
     onSuccess: invalidate,
   });
 
-  return { items, addMut, updateMut, deleteMut, updateStageMut };
+  const resubmitMut = useMutation({
+    mutationFn: async ({ id, prospectCode }: { id: string; prospectCode: string }) => {
+      const { error } = await supabase
+        .from("client_contracts" as never)
+        .update({
+          approval_status: "pending",
+          rejection_reason: "",
+          rejected_by: null,
+          rejected_at: null,
+          status: "inactive",
+        } as never)
+        .eq("id", id);
+      if (error) throw error;
+      void logActivity({
+        module: "Client Contracts",
+        action: "resubmit",
+        entityType: "client_contracts",
+        entityId: id,
+        entityLabel: prospectCode,
+      });
+      void notifyApprovers({
+        moduleKey: "contracts",
+        type: "contract_pending_approval",
+        title: `Prospect ${prospectCode} resubmitted for approval`,
+        message: "A previously rejected prospect contract has been updated and resubmitted.",
+        link: "/admin/contracts/client-contracts",
+        entityType: "client_contracts",
+        entityId: id,
+      });
+    },
+    onSuccess: invalidate,
+  });
+
+  return { items, addMut, updateMut, deleteMut, updateStageMut, resubmitMut };
 }
 
 function useServiceTypes() {
