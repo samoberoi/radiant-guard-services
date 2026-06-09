@@ -263,9 +263,16 @@ function PayrollUnitsPage() {
     return units.filter((u) => {
       if (orgFilter !== "all" && (u.customer_id || u.customer_name) !== orgFilter) return false;
       if (selectedUnitIds && !selectedUnitIds.has(u.id)) return false;
+      if (statusFilter !== "all") {
+        if (statusFilter === "unapproved") {
+          if (!u.periods.some((p) => p.status !== "approved")) return false;
+        } else if (!u.statuses.has(statusFilter)) {
+          return false;
+        }
+      }
       if (periodFilter !== "all") {
         const [ps, pe] = periodFilter.split("|");
-        if (!u.approved_periods.some((p) => p.period_start === ps && p.period_end === pe)) {
+        if (!u.periods.some((p) => p.period_start === ps && p.period_end === pe)) {
           return false;
         }
       }
@@ -281,14 +288,15 @@ function PayrollUnitsPage() {
       }
       return true;
     });
-  }, [q, orgFilter, periodFilter, selectedEmployee, employeesByUnit, units]);
+  }, [q, orgFilter, periodFilter, statusFilter, selectedEmployee, employeesByUnit, units]);
 
   const summary = {
     organizations: organizations.length,
     units: units.length,
     activeEmployees: units.reduce((s, r) => s + r.active_employee_count, 0),
   };
-  const anyFilter = orgFilter !== "all" || periodFilter !== "all" || employeeFilter !== "all" || q.trim().length > 0;
+  const anyFilter = orgFilter !== "all" || periodFilter !== "all" || employeeFilter !== "all" || statusFilter !== "all" || q.trim().length > 0;
+
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
