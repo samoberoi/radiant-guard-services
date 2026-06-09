@@ -662,6 +662,7 @@ function AttendanceUnitsPage() {
                       <Link
                         to="/admin/attendance/$unitId"
                         params={{ unitId: unit.id }}
+                        search={{ month: monthIdx, year }}
                         className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/50 hover:text-accent"
                       >
                         Open roll <ArrowRight className="h-4 w-4" />
