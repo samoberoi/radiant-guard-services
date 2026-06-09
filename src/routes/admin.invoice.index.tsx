@@ -301,9 +301,9 @@ function PayrollUnitsPage() {
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader
-        title="Payroll"
-        description="Monthly payroll dashboard. Approved attendance sheets unlock wage computation; pending and draft sheets stay visible so you can track what's outstanding."
-        crumbs={[{ label: "Payroll" }]}
+        title="Invoice"
+        description="Monthly invoice dashboard. Approved attendance sheets unlock client invoicing — see what is billable to each customer this cycle."
+        crumbs={[{ label: "Invoice" }]}
       />
 
       <MonthlyDashboard
@@ -332,9 +332,9 @@ function PayrollUnitsPage() {
         <div className="space-y-4 border-b border-border/60 px-5 py-5">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-foreground">Payroll sheets — {MONTH_NAMES[month]} {year}</h2>
+              <h2 className="text-lg font-semibold text-foreground">Invoice sheets — {MONTH_NAMES[month]} {year}</h2>
               <p className="text-sm text-muted-foreground">
-                Every unit with an attendance sheet for this month. Approved sheets are ready for wage computation; others show their current status.
+                Every unit with an attendance sheet for this month. Approved sheets are ready to invoice; others show their current status.
               </p>
 
             </div>
@@ -434,20 +434,20 @@ function PayrollUnitsPage() {
               {isLoading ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
-                    Loading payroll units…
+                    Loading invoice units…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-12 text-center text-sm text-destructive">
-                    {error instanceof Error ? error.message : "Could not load payroll units."}
+                    {error instanceof Error ? error.message : "Could not load invoice units."}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     {units.length === 0
-                      ? "No approved attendance sheets yet. Approve one in Attendance to unlock payroll."
+                      ? "No approved attendance sheets yet. Approve one in Attendance to unlock invoicing."
                       : "No units match the current filters."}
                   </td>
                 </tr>
@@ -583,7 +583,7 @@ function MonthlyDashboard({
         <div className="flex flex-col justify-between gap-5">
           <div className="space-y-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur">
-              <CalendarDays className="h-3.5 w-3.5" /> Payroll month
+              <CalendarDays className="h-3.5 w-3.5" /> Invoice month
             </div>
             <div className="flex items-end gap-3">
               <div className="font-display text-5xl font-bold tracking-tight sm:text-6xl">{monthName}</div>
@@ -595,7 +595,7 @@ function MonthlyDashboard({
               )}
             </div>
             <p className="max-w-md text-sm text-white/70">
-              Snapshot of all payroll activity for this cycle — approved, pending, and in-progress sheets across every unit.
+              Snapshot of all invoice activity for this cycle — approved, pending, and in-progress sheets across every unit.
             </p>
           </div>
 
@@ -820,7 +820,7 @@ function EmployeeSpotlight({
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">
-                <Sparkles className="h-3.5 w-3.5" /> Employee payroll spotlight
+                <Sparkles className="h-3.5 w-3.5" /> Employee invoice spotlight
               </div>
               <div className="text-xl font-semibold text-foreground sm:text-2xl">{employee.name}</div>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
