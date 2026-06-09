@@ -1453,6 +1453,7 @@ function ClientContractsPage() {
                 unit: `${c.unitCode} – ${c.unitName}`,
                 start: csvDate(c.startDate),
                 end: csvDate(c.endDate),
+                expiry: csvDate(c.expiryDate),
                 description: c.description,
                 gst: c.gstOption.toUpperCase(),
                 status: c.status,
@@ -1463,6 +1464,7 @@ function ClientContractsPage() {
                 { key: "unit", header: "Unit" },
                 { key: "start", header: "Start date" },
                 { key: "end", header: "End date" },
+                { key: "expiry", header: "Expiry date" },
                 { key: "description", header: "Description" },
                 { key: "gst", header: "GST option" },
                 { key: "status", header: "Status" },
@@ -1603,6 +1605,7 @@ function ClientContractsPage() {
                   <>
                     <th className="px-5 py-3">Start</th>
                     <th className="px-5 py-3">End</th>
+                    <th className="px-5 py-3">Expiry</th>
                   </>
                 ) : (
                   <th className="px-5 py-3">Start</th>
@@ -1624,15 +1627,16 @@ function ClientContractsPage() {
                     <div>{c.unitName}</div>
                   </td>
                   {tab === "client" ? (
-                    <>
-                      <td className="px-5 py-3 text-muted-foreground">{c.startDate || "—"}</td>
-                      <td className="px-5 py-3 text-muted-foreground">{c.endDate || "—"}</td>
-                    </>
-                  ) : (
-                    <td className="px-5 py-3 text-muted-foreground">
-                      {c.startDate || "—"}
-                    </td>
-                  )}
+                  <>
+                    <td className="px-5 py-3 text-muted-foreground">{c.startDate || "—"}</td>
+                    <td className="px-5 py-3 text-muted-foreground">{c.endDate || "—"}</td>
+                    <td className="px-5 py-3 text-muted-foreground">{c.expiryDate || "—"}</td>
+                  </>
+                ) : (
+                  <td className="px-5 py-3 text-muted-foreground">
+                    {c.startDate || "—"}
+                  </td>
+                )}
                   <td className="px-5 py-3 text-xs uppercase tracking-wider text-foreground">
                     {c.gstOption === "none" ? "No GST" : c.gstOption}
                   </td>
