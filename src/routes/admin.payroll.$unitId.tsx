@@ -127,13 +127,20 @@ function PayrollUnitPage() {
         .in("id", designationIds.length ? designationIds : ["00000000-0000-0000-0000-000000000000"]);
       const desigMap = new Map((designations ?? []).map((d) => [d.id, d.name as string]));
 
-      // 2. Attendance entries
-      const { data: entries } = await supabase
+      // 2. Attendance entries (now include designation_id)
+      const { data: entriesRaw } = await supabase
         .from("attendance_entries")
-        .select("candidate_id, entry_date, code, ot_hours")
+        .select("candidate_id, designation_id, entry_date, code, ot_hours")
         .eq("unit_id", unitId)
         .gte("entry_date", start)
         .lte("entry_date", end);
+      const entries = (entriesRaw ?? []) as Array<{
+        candidate_id: string;
+        designation_id: string | null;
+        entry_date: string;
+        code: string;
+        ot_hours: number | string | null;
+      }>;
 
       const { data: codes } = await supabase
         .from("attendance_codes")
@@ -160,6 +167,22 @@ function PayrollUnitPage() {
           )
           .eq("contract_id", contractId);
         resources = r ?? [];
+      }
+
+      // Make sure we know the names of any designation_ids referenced by entries
+      // that weren't in the roster's primary designation list.
+      const allDesigIds = new Set<string>(designationIds);
+      for (const e of entries) if (e.designation_id) allDesigIds.add(e.designation_id);
+      for (const r of resources) {
+        const d = r.designation_id ? String(r.designation_id) : "";
+        if (d) allDesigIds.add(d);
+      }
+      if (allDesigIds.size > 0) {
+        const { data: extraDs } = await supabase
+          .from("designations")
+          .select("id, name")
+          .in("id", Array.from(allDesigIds));
+        for (const d of extraDs ?? []) desigMap.set(d.id, d.name as string);
       }
 
       const pdbIds = Array.from(
@@ -204,25 +227,50 @@ function PayrollUnitPage() {
         });
       }
 
-      // 4. Compute per-candidate
-      const rows = roster.map((c) => {
-        const did = c.designation_id ? String(c.designation_id) : "";
-        const designationName = (c.designation_id && desigMap.get(c.designation_id)) || "—";
+      // 4. Build line items per (candidate, designation_id).
+      // Each candidate gets a primary line (their own designation) plus an extra
+      // line for any other designation found in their attendance entries.
+      const rosterById = new Map(roster.map((c) => [c.id, c]));
+      const pairKey = (cid: string, did: string | null) => `${cid}|${did ?? "__none__"}`;
+      const pairs = new Map<string, { candidateId: string; designationId: string | null }>();
+
+      for (const c of roster) {
+        const k = pairKey(c.id, c.designation_id ?? null);
+        pairs.set(k, { candidateId: c.id, designationId: c.designation_id ?? null });
+      }
+      for (const e of entries) {
+        if (!rosterById.has(e.candidate_id)) continue;
+        const k = pairKey(e.candidate_id, e.designation_id);
+        if (!pairs.has(k)) pairs.set(k, { candidateId: e.candidate_id, designationId: e.designation_id });
+      }
+
+      const rows = Array.from(pairs.values()).map((p) => {
+        const c = rosterById.get(p.candidateId)!;
+        const did = p.designationId ? String(p.designationId) : "";
+        const designationName = (p.designationId && desigMap.get(p.designationId)) || "—";
+        // Filter entries to just this (candidate, designation) pair so totals reflect only that line.
+        const lineEntries = entries.filter(
+          (e) => e.candidate_id === p.candidateId && (e.designation_id ?? null) === p.designationId,
+        );
         const totals = computeAttendanceTotals(
           c.id,
           periodDates,
-          (entries ?? []) as AttendanceEntryLike[],
+          lineEntries as AttendanceEntryLike[],
           (codes ?? []) as AttendanceCodeLike[],
         );
         const resource = resourceByDesignation.get(did);
         const wages = resource
           ? computeWages(totals, resource, periodDates.length)
           : null;
+        const isPrimary = (c.designation_id ?? null) === p.designationId;
         return {
           id: c.id,
+          rowKey: pairKey(c.id, p.designationId),
           employeeCode: c.employee_code || "",
           name: c.full_name || "—",
           designation: designationName,
+          designationId: p.designationId,
+          isPrimary,
           totals,
           wages,
           resource: resource ?? null,
@@ -230,11 +278,18 @@ function PayrollUnitPage() {
         };
       });
 
-      rows.sort((a, b) => (a.employeeCode || a.name).localeCompare(b.employeeCode || b.name));
+      rows.sort((a, b) => {
+        const an = (a.employeeCode || a.name).localeCompare(b.employeeCode || b.name);
+        if (an !== 0) return an;
+        // primary first, then by designation name
+        if (a.isPrimary !== b.isPrimary) return a.isPrimary ? -1 : 1;
+        return a.designation.localeCompare(b.designation);
+      });
 
       return rows;
     },
   });
+
 
 
   const rows = data ?? [];
