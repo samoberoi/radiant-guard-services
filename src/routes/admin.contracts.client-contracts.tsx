@@ -920,6 +920,7 @@ const CONTRACT_FIELDS = [
   "unit_id",
   "start_date",
   "end_date",
+  "expiry_date",
   "description",
   "service_type_id",
   "payroll_window_id",
@@ -982,6 +983,7 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
   ]);
   summaryRows.push(["Start Date", contract.startDate]);
   summaryRows.push(["End Date", contract.endDate]);
+  summaryRows.push(["Expiry Date", contract.expiryDate]);
   summaryRows.push(["Status", contract.status]);
   summaryRows.push(["Description", contract.description]);
   summaryRows.push(["Service Type", svcMap.get(contract.serviceTypeId ?? "") ?? ""]);
@@ -1122,6 +1124,7 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
     unit_id: contract.unitId,
     start_date: contract.startDate,
     end_date: contract.endDate,
+    expiry_date: contract.expiryDate,
     description: contract.description,
     service_type_id: contract.serviceTypeId ?? "",
     payroll_window_id: contract.payrollWindowId ?? "",
@@ -1206,6 +1209,7 @@ function parseContractWorkbook(buf: ArrayBuffer): ImportedContract {
     apply("GST Option", "gst_option");
     apply("Start Date", "start_date");
     apply("End Date", "end_date");
+    apply("Expiry Date", "expiry_date");
   }
 
   const rSheet = wb.Sheets["Resources_Raw"] ?? wb.Sheets["Resources"];
@@ -1241,6 +1245,7 @@ async function importContractFromXlsx(buf: ArrayBuffer): Promise<{
     unit_id: unitId,
     start_date: contractRow.start_date ? String(contractRow.start_date) : null,
     end_date: contractRow.end_date ? String(contractRow.end_date) : null,
+    expiry_date: contractRow.expiry_date ? String(contractRow.expiry_date) : null,
     description: String(contractRow.description ?? ""),
     service_type_id: contractRow.service_type_id ? String(contractRow.service_type_id) : null,
     payroll_window_id: contractRow.payroll_window_id ? String(contractRow.payroll_window_id) : null,
@@ -1759,7 +1764,7 @@ function ClientContractsPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     <FileText className="mx-auto mb-2 h-6 w-6 opacity-50" />
                     {items.length === 0
                       ? "No contracts yet. Create your first contract to get started."
