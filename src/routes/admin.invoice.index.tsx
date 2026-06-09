@@ -511,12 +511,12 @@ function PayrollUnitsPage() {
                       <td className="px-5 py-4 text-right align-top">
                         {targetPeriod ? (
                           <Link
-                            to="/admin/payroll/$unitId"
+                            to="/admin/invoice/$unitId"
                             params={{ unitId: unit.id }}
                             search={{ start: targetPeriod.period_start, end: targetPeriod.period_end }}
                             className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/50 hover:text-accent"
                           >
-                            Compute wages <ArrowRight className="h-4 w-4" />
+                            Show invoice <ArrowRight className="h-4 w-4" />
                           </Link>
                         ) : (
                           <span className="text-xs text-muted-foreground">Awaiting approval</span>
@@ -893,7 +893,7 @@ function EmployeeSpotlight({
 
                   {latest ? (
                     <Link
-                      to="/admin/payroll/$unitId"
+                      to="/admin/invoice/$unitId"
                       params={{ unitId: u.id }}
                       search={{ start: latest.period_start, end: latest.period_end }}
                       className="mt-auto inline-flex items-center justify-between gap-2 rounded-xl bg-foreground px-3 py-2 text-xs font-semibold text-background transition hover:bg-foreground/90"

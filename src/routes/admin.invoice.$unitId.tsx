@@ -341,7 +341,7 @@ function PayrollUnitPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `payroll-${unit?.code ?? unitId}-${start}-${end}.csv`;
+    a.download = `invoice-${unit?.code ?? unitId}-${start}-${end}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -350,10 +350,10 @@ function PayrollUnitPage() {
     <div className="space-y-4 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
-          to="/admin/payroll"
+          to="/admin/invoice"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
         >
-          <ChevronLeft className="h-4 w-4" /> Back to payroll units
+          <ChevronLeft className="h-4 w-4" /> Back to invoice units
         </Link>
         <Button variant="outline" size="sm" onClick={exportCsv}>
           <Download className="mr-1.5 h-4 w-4" /> Export CSV
