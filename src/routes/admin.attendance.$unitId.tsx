@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { classifyAttendanceEmployee, matchesAttendanceScope, type AttendanceScopeAssignment, type AttendanceUnitContext } from "@/lib/attendance";
 import { cn } from "@/lib/utils";
+import { useCurrentPermissions } from "@/lib/rbac";
 
 const searchSchema = z.object({
   month: z.coerce.number().min(0).max(11).optional(),
@@ -297,6 +298,8 @@ function MusterRollPage() {
   const periodEnd = periodCells[periodCells.length - 1]?.date ?? ymd(year, monthIdx, daysInMonth(year, monthIdx));
 
   const queryClient = useQueryClient();
+  const { can } = useCurrentPermissions();
+  const canApprove = can("attendance", "approve");
 
   type SheetStatus = "draft" | "submitted" | "approved" | "rejected";
   type SheetRow = { id: string; status: SheetStatus; rejection_reason: string };
@@ -780,7 +783,7 @@ function MusterRollPage() {
               <Send className="mr-1.5 h-4 w-4" /> Submit for Payroll
             </Button>
           )}
-          {status === "submitted" && (
+          {status === "submitted" && canApprove && (
             <>
               <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => transitionSheet.mutate({ status: "approved" })} disabled={transitionSheet.isPending}>
                 <CheckCircle2 className="mr-1.5 h-4 w-4" /> Approve
@@ -790,13 +793,17 @@ function MusterRollPage() {
               </Button>
             </>
           )}
-          {status === "approved" && (
+          {status === "submitted" && !canApprove && (
+            <span className="text-xs text-muted-foreground">Awaiting approver action</span>
+          )}
+          {status === "approved" && canApprove && (
             <Button size="sm" variant="outline" onClick={() => transitionSheet.mutate({ status: "draft" })} disabled={transitionSheet.isPending}>
               <RotateCcw className="mr-1.5 h-4 w-4" /> Reopen
             </Button>
           )}
         </div>
       </div>
+
 
       {!editable && (
         <div className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-800 print:hidden">
