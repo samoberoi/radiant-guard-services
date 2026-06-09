@@ -63,6 +63,14 @@ function fmtPeriod(start: string, end: string) {
   return `${f(start)} – ${f(end)}`;
 }
 
+function deriveStatus(raw: string | null | undefined): SheetStatus {
+  const s = (raw || "").toLowerCase();
+  if (s === "approved") return "approved";
+  if (s === "submitted" || s === "pending") return "pending";
+  if (s === "rejected") return "rejected";
+  return "draft";
+}
+
 function PayrollUnitsPage() {
   const now = new Date();
   const [year, setYear] = useState<number>(now.getFullYear());
@@ -71,6 +79,7 @@ function PayrollUnitsPage() {
   const [orgFilter, setOrgFilter] = useState("all");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [employeeFilter, setEmployeeFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | SheetStatus | "unapproved">("all");
 
   const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
   const monthEnd = (() => {
@@ -78,60 +87,39 @@ function PayrollUnitsPage() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   })();
 
-  const monthlyStats = useQuery({
-    queryKey: ["payroll-monthly-stats", year, month],
-    queryFn: async () => {
-      const { data: sheets, error } = await supabase
-        .from("attendance_sheets" as never)
-        .select("id, unit_id, status, period_start, period_end")
-        .gte("period_start", monthStart)
-        .lte("period_start", monthEnd);
-      if (error) throw error;
-      const rows = (sheets ?? []) as unknown as Array<{ id: string; unit_id: string; status: string }>;
-      const counts = { approved: 0, draft: 0, pending: 0, rejected: 0 };
-      const unitSet = new Set<string>();
-      for (const r of rows) {
-        unitSet.add(r.unit_id);
-        const s = (r.status || "").toLowerCase();
-        if (s === "approved") counts.approved += 1;
-        else if (s === "submitted" || s === "pending") counts.pending += 1;
-        else if (s === "rejected") counts.rejected += 1;
-        else counts.draft += 1;
-      }
-      let employees = 0;
-      if (unitSet.size > 0) {
-        const unitIds = Array.from(unitSet);
-        const [{ count: primaryCount }, { data: links }] = await Promise.all([
-          supabase
-            .from("candidates")
-            .select("id", { count: "exact", head: true })
-            .in("unit_id", unitIds)
-            .eq("is_enabled", true)
-            .eq("status", "active"),
-          supabase.from("candidate_units").select("candidate_id").in("unit_id", unitIds),
-        ]);
-        const distinct = new Set<string>((links ?? []).map((l) => l.candidate_id));
-        employees = (primaryCount ?? 0) + distinct.size;
-      }
-      return { ...counts, units: unitSet.size, employees, total: rows.length };
-    },
-  });
-
-
-
   const { data, isLoading, error } = useQuery({
-    queryKey: ["payroll-dashboard-v1"],
+    queryKey: ["payroll-dashboard-v2", year, month],
     queryFn: async () => {
       const { data: sheetsRaw, error: sErr } = await supabase
         .from("attendance_sheets" as never)
         .select("id, unit_id, period_start, period_end, approved_at, status")
-        .eq("status", "approved");
+        .gte("period_start", monthStart)
+        .lte("period_start", monthEnd);
       if (sErr) throw sErr;
-      const sheets = (sheetsRaw ?? []) as unknown as ApprovedSheet[];
+      const sheets: SheetRow[] = ((sheetsRaw ?? []) as unknown as Array<{
+        id: string; unit_id: string; period_start: string; period_end: string;
+        approved_at: string | null; status: string | null;
+      }>).map((s) => ({
+        id: s.id,
+        unit_id: s.unit_id,
+        period_start: s.period_start,
+        period_end: s.period_end,
+        approved_at: s.approved_at,
+        status: deriveStatus(s.status),
+      }));
+
+      const counts = { approved: 0, draft: 0, pending: 0, rejected: 0 };
+      for (const s of sheets) counts[s.status] += 1;
 
       const unitIds = Array.from(new Set(sheets.map((s) => s.unit_id)));
       if (unitIds.length === 0) {
-        return { units: [] as UnitRow[], organizations: [] as { id: string; name: string }[], periods: [] as string[], employees: [] as EmployeeOption[] };
+        return {
+          units: [] as UnitRow[],
+          organizations: [] as { id: string; name: string }[],
+          periods: [] as string[],
+          employees: [] as EmployeeOption[],
+          stats: { ...counts, units: 0, employees: 0, total: sheets.length },
+        };
       }
 
       const [{ data: units }, { data: candidates }, { data: customers }, { data: links }] = await Promise.all([
@@ -151,7 +139,6 @@ function PayrollUnitsPage() {
       const custMap = new Map((customers ?? []).map((c) => [c.id, c.name as string]));
       const unitIdSet = new Set(unitIds);
 
-      // candidate -> set of unit_ids they're mapped to (primary + link table)
       const unitsByCandidate = new Map<string, Set<string>>();
       const candById = new Map<string, { id: string; unit_id: string | null; full_name: string | null; employee_code: string | null }>();
       for (const c of (candidates ?? []) as Array<{ id: string; unit_id: string | null; full_name: string | null; employee_code: string | null }>) {
@@ -193,26 +180,28 @@ function PayrollUnitsPage() {
       }
       employees.sort((a, b) => a.label.localeCompare(b.label));
 
-      const periodsByUnit = new Map<string, { period_start: string; period_end: string }[]>();
+      const periodsByUnit = new Map<string, { period_start: string; period_end: string; status: SheetStatus }[]>();
       for (const s of sheets) {
         const arr = periodsByUnit.get(s.unit_id) ?? [];
-        arr.push({ period_start: s.period_start, period_end: s.period_end });
+        arr.push({ period_start: s.period_start, period_end: s.period_end, status: s.status });
         periodsByUnit.set(s.unit_id, arr);
       }
 
-      const rows: UnitRow[] = (units ?? []).map((u) => ({
-        id: u.id,
-        code: u.code,
-        name: u.name,
-        location: u.location || "",
-        customer_id: u.customer_id || "",
-        customer_name: (u.customer_id && custMap.get(u.customer_id)) || "—",
-        active_employee_count: employeeCountByUnit.get(u.id) ?? 0,
-        employee_ids: employeeIdsByUnit.get(u.id) ?? [],
-        approved_periods: (periodsByUnit.get(u.id) ?? []).sort((a, b) =>
-          b.period_start.localeCompare(a.period_start),
-        ),
-      }));
+      const rows: UnitRow[] = (units ?? []).map((u) => {
+        const periods = (periodsByUnit.get(u.id) ?? []).sort((a, b) => b.period_start.localeCompare(a.period_start));
+        return {
+          id: u.id,
+          code: u.code,
+          name: u.name,
+          location: u.location || "",
+          customer_id: u.customer_id || "",
+          customer_name: (u.customer_id && custMap.get(u.customer_id)) || "—",
+          active_employee_count: employeeCountByUnit.get(u.id) ?? 0,
+          employee_ids: employeeIdsByUnit.get(u.id) ?? [],
+          periods,
+          statuses: new Set(periods.map((p) => p.status)),
+        };
+      });
       rows.sort((a, b) =>
         a.customer_name !== b.customer_name
           ? a.customer_name.localeCompare(b.customer_name)
@@ -227,7 +216,16 @@ function PayrollUnitsPage() {
         new Set(sheets.map((s) => `${s.period_start}|${s.period_end}`)),
       ).sort((a, b) => b.localeCompare(a));
 
-      return { units: rows, organizations: orgs, periods: allPeriods, employees };
+      // count unique employees across active units this month
+      const employeeUnique = unitsByCandidate.size;
+
+      return {
+        units: rows,
+        organizations: orgs,
+        periods: allPeriods,
+        employees,
+        stats: { ...counts, units: unitIds.length, employees: employeeUnique, total: sheets.length },
+      };
     },
   });
 
@@ -235,6 +233,8 @@ function PayrollUnitsPage() {
   const organizations = data?.organizations ?? [];
   const periods = data?.periods ?? [];
   const employees = data?.employees ?? [];
+  const monthlyStatsData = data?.stats;
+
 
   const employeeOptions = useMemo(() => {
     if (orgFilter === "all") return employees;
