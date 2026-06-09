@@ -112,6 +112,7 @@ type ClientContract = {
   unitId: string;
   startDate: string;
   endDate: string;
+  expiryDate: string;
   description: string;
   serviceTypeId: string | null;
   payrollWindowId: string | null;
