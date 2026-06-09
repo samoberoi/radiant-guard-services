@@ -75,6 +75,7 @@ function buildMap(rows: PermissionRow[]): PermMap {
       can_view: r.can_view,
       can_edit: r.can_edit,
       can_delete: r.can_delete,
+      can_approve: r.can_approve,
     });
   }
   return m;
@@ -84,7 +85,7 @@ function mapToRows(map: PermMap): PermissionRow[] {
   const out: PermissionRow[] = [];
   map.forEach((perm, key) => {
     const [module_key, sub_module_key] = key.split("::");
-    if (!perm.can_view && !perm.can_edit && !perm.can_delete) return;
+    if (!perm.can_view && !perm.can_edit && !perm.can_delete && !perm.can_approve) return;
     out.push({
       role_key: "",
       module_key,
@@ -112,18 +113,13 @@ function aggregate(
   mod: ModuleDef,
   action: PermissionAction,
 ): Tri {
+  if (action === "approve" && !moduleSupportsApprove(mod.key)) return "none";
   if (mod.subModules.length === 0) {
-    const v = getCell(map, mod.key, "");
-    const has =
-      action === "view" ? v.can_view : action === "edit" ? v.can_edit : v.can_delete;
-    return has ? "all" : "none";
+    return permFlag(getCell(map, mod.key, ""), action) ? "all" : "none";
   }
   let on = 0;
   for (const s of mod.subModules) {
-    const v = getCell(map, mod.key, s.key);
-    const has =
-      action === "view" ? v.can_view : action === "edit" ? v.can_edit : v.can_delete;
-    if (has) on++;
+    if (permFlag(getCell(map, mod.key, s.key), action)) on++;
   }
   if (on === 0) return "none";
   if (on === mod.subModules.length) return "all";
@@ -136,6 +132,7 @@ function setParent(
   action: PermissionAction,
   on: boolean,
 ): PermMap {
+  if (action === "approve" && !moduleSupportsApprove(mod.key)) return map;
   let next = map;
   if (mod.subModules.length === 0) {
     const cur = getCell(next, mod.key, "");
@@ -154,7 +151,12 @@ function setParent(
 
 function grantAll(map: PermMap, mod: ModuleDef): PermMap {
   let next = map;
-  const full = { can_view: true, can_edit: true, can_delete: true };
+  const full: PermState = {
+    can_view: true,
+    can_edit: true,
+    can_delete: true,
+    can_approve: moduleSupportsApprove(mod.key),
+  };
   if (mod.subModules.length === 0) {
     next = setCell(next, mod.key, "", full);
     return next;
