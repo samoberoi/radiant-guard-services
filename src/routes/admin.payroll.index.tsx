@@ -310,10 +310,13 @@ function PayrollUnitsPage() {
         year={year}
         month={month}
         onChange={(y, m) => { setYear(y); setMonth(m); }}
-        stats={monthlyStats.data}
-        loading={monthlyStats.isLoading}
+        stats={monthlyStatsData}
+        loading={isLoading}
         organizations={summary.organizations}
+        activeStatus={statusFilter}
+        onStatusChange={setStatusFilter}
       />
+
 
 
       {selectedEmployee && (
