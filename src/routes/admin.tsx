@@ -102,7 +102,7 @@ function maskPhone(phone: string) {
 
 function AdminLayout() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isReady } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { can, isLoading: permsLoading, isSuperAdmin } = useCurrentPermissions();
 
@@ -162,7 +162,7 @@ function AdminLayout() {
     return null;
   };
   useEffect(() => {
-    if (permsLoading || !user) return;
+    if (!isReady || permsLoading || !user) return;
     const hit = pathToModule.find((p) => pathname === p.prefix || pathname.startsWith(p.prefix + "/"));
     if (!hit) return;
     if (!can(hit.module)) {
@@ -171,22 +171,16 @@ function AdminLayout() {
       else logout();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, permsLoading, isSuperAdmin]);
+  }, [pathname, permsLoading, isSuperAdmin, isReady]);
 
   
   
 
   // Auth guard — wait for hydration; if no token in storage, kick to login.
   useEffect(() => {
-    if (user === null) {
-      const t = setTimeout(() => {
-        if (typeof window !== "undefined" && !localStorage.getItem("radiant.auth")) {
-          navigate({ to: "/login", replace: true });
-        }
-      }, 50);
-      return () => clearTimeout(t);
-    }
-  }, [user, navigate]);
+    if (!isReady) return;
+    if (!user) navigate({ to: "/login", replace: true });
+  }, [user, isReady, navigate]);
 
   // Close mobile drawer on route change
   useEffect(() => {
