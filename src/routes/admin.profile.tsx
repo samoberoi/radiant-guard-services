@@ -637,7 +637,7 @@ function ProfilePage() {
       const periodDayCount = periodEnd.getDate();
 
       const resourceLike: ContractResourceLike = {
-        designationId: res.designation_id!,
+        designationId: (res.designation_id ?? "") as string,
         components: (res.components as any) ?? [],
         benefits: (res.benefits as any) ?? [],
         deductions: (res.deductions as any) ?? [],
