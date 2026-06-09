@@ -657,11 +657,18 @@ function MusterRollPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {MONTH_NAMES.map((m, i) => (
-                <SelectItem key={m} value={String(i)}>
-                  {m}
-                </SelectItem>
-              ))}
+              {MONTH_NAMES.map((m, i) => {
+                if (contractStartDate) {
+                  const [sy, sm] = contractStartDate.split("-").map(Number);
+                  if (year < sy || (year === sy && i < sm - 1)) return null;
+                }
+                if (year > now.getFullYear() || (year === now.getFullYear() && i > now.getMonth())) return null;
+                return (
+                  <SelectItem key={m} value={String(i)}>
+                    {m}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
@@ -669,11 +676,18 @@ function MusterRollPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {[year - 2, year - 1, year, year + 1].map((y) => (
-                <SelectItem key={y} value={String(y)}>
-                  {y}
-                </SelectItem>
-              ))}
+              {[year - 2, year - 1, year, year + 1].map((y) => {
+                if (contractStartDate) {
+                  const sy = Number(contractStartDate.split("-")[0]);
+                  if (y < sy) return null;
+                }
+                if (y > now.getFullYear()) return null;
+                return (
+                  <SelectItem key={y} value={String(y)}>
+                    {y}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm" onClick={() => window.print()}>
