@@ -132,9 +132,9 @@ function buildPeriodCells(
 function MusterRollPage() {
   const { unitId } = Route.useParams();
   const now = new Date();
-  const initial = previousMonth(now);
-  const [year, setYear] = useState(initial.year);
-  const [monthIdx, setMonthIdx] = useState(initial.monthIdx); // 0-based, defaults to previous month
+  // Default to current month; user can toggle back to previous months.
+  const [year, setYear] = useState(now.getFullYear());
+  const [monthIdx, setMonthIdx] = useState(now.getMonth()); // 0-based, defaults to current month
 
   const { data: unit } = useQuery({
     queryKey: ["attendance-unit", unitId],
@@ -245,7 +245,7 @@ function MusterRollPage() {
   // dayCount/periodStart/periodEnd are derived below from the payroll window.
 
   // Resolve the payroll window for this unit via its active contract.
-  const { data: payrollWindow } = useQuery({
+  const { data: contractInfo } = useQuery({
     queryKey: ["attendance-payroll-window", unitId],
     queryFn: async () => {
       const { data: contracts, error } = await supabase
@@ -254,21 +254,28 @@ function MusterRollPage() {
         .eq("unit_id", unitId)
         .eq("record_type", "client")
         .eq("status", "active")
-        .order("start_date", { ascending: false })
+        .order("start_date", { ascending: true })
         .limit(1);
       if (error) throw error;
       const winId = contracts?.[0]?.payroll_window_id;
-      if (!winId) return null;
-      const { data: win, error: winErr } = await supabase
-        .from("payroll_windows")
-        .select("id, label, window_start_day, window_end_day")
-        .eq("id", winId)
-        .maybeSingle();
-      if (winErr) throw winErr;
-      return win;
+      const startDate = contracts?.[0]?.start_date ?? null;
+      type Win = { id: string; label: string | null; window_start_day: number; window_end_day: number };
+      let win: Win | null = null;
+      if (winId) {
+        const { data: winRow, error: winErr } = await supabase
+          .from("payroll_windows")
+          .select("id, label, window_start_day, window_end_day")
+          .eq("id", winId)
+          .maybeSingle();
+        if (winErr) throw winErr;
+        win = (winRow as Win | null) ?? null;
+      }
+      return { window: win, startDate };
     },
     enabled: Boolean(unitId),
   });
+  const payrollWindow = contractInfo?.window ?? null;
+  const contractStartDate = contractInfo?.startDate ?? null;
 
   const periodCells = useMemo(
     () => buildPeriodCells(year, monthIdx, payrollWindow ?? null),
@@ -650,11 +657,18 @@ function MusterRollPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {MONTH_NAMES.map((m, i) => (
-                <SelectItem key={m} value={String(i)}>
-                  {m}
-                </SelectItem>
-              ))}
+              {MONTH_NAMES.map((m, i) => {
+                if (contractStartDate) {
+                  const [sy, sm] = contractStartDate.split("-").map(Number);
+                  if (year < sy || (year === sy && i < sm - 1)) return null;
+                }
+                if (year > now.getFullYear() || (year === now.getFullYear() && i > now.getMonth())) return null;
+                return (
+                  <SelectItem key={m} value={String(i)}>
+                    {m}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
@@ -662,11 +676,18 @@ function MusterRollPage() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {[year - 2, year - 1, year, year + 1].map((y) => (
-                <SelectItem key={y} value={String(y)}>
-                  {y}
-                </SelectItem>
-              ))}
+              {[year - 2, year - 1, year, year + 1].map((y) => {
+                if (contractStartDate) {
+                  const sy = Number(contractStartDate.split("-")[0]);
+                  if (y < sy) return null;
+                }
+                if (y > now.getFullYear()) return null;
+                return (
+                  <SelectItem key={y} value={String(y)}>
+                    {y}
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm" onClick={() => window.print()}>
