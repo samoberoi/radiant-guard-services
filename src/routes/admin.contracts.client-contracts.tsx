@@ -217,6 +217,7 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
     unitId: String(r.unit_id ?? ""),
     startDate: r.start_date ? String(r.start_date) : "",
     endDate: r.end_date ? String(r.end_date) : "",
+    expiryDate: r.expiry_date ? String(r.expiry_date) : "",
     description: String(r.description ?? ""),
     serviceTypeId: r.service_type_id ? String(r.service_type_id) : null,
     payrollWindowId: r.payroll_window_id ? String(r.payroll_window_id) : null,
