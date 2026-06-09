@@ -173,5 +173,16 @@ export const RBAC_MODULES: ModuleDef[] = [
   },
 ];
 
-export type PermissionAction = "view" | "edit" | "delete";
-export const PERMISSION_ACTIONS: PermissionAction[] = ["view", "edit", "delete"];
+export type PermissionAction = "view" | "edit" | "delete" | "approve";
+export const PERMISSION_ACTIONS: PermissionAction[] = ["view", "edit", "delete", "approve"];
+
+// Modules where the "approve" permission is meaningful. Add module keys here
+// when introducing other approval-gated workflows (e.g. write-offs, payroll runs).
+// Keep this list as the single source of truth — the RBAC editor reads it to
+// decide which rows show the Approve checkbox, and runtime checks call
+// `moduleSupportsApprove` before evaluating an approval permission.
+export const APPROVE_CAPABLE_MODULES: ReadonlySet<string> = new Set(["contracts"]);
+
+export function moduleSupportsApprove(moduleKey: string): boolean {
+  return APPROVE_CAPABLE_MODULES.has(moduleKey);
+}
