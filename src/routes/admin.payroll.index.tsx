@@ -477,19 +477,28 @@ function PayrollUnitsPage() {
                       <td className="px-5 py-4 align-top text-sm text-foreground">{unit.customer_name}</td>
                       <td className="px-5 py-4 align-top">
                         <div className="flex flex-wrap gap-1.5">
-                          {unit.periods.slice(0, 3).map((p) => (
-                            <span
-                              key={`${p.period_start}-${p.period_end}`}
-                              className="inline-flex rounded-full border border-emerald-200/60 bg-emerald-100/60 px-2 py-0.5 text-[11px] font-medium text-emerald-800"
-                            >
-                              {fmtPeriod(p.period_start, p.period_end)}
-                            </span>
-                          ))}
+                          {unit.periods.slice(0, 3).map((p) => {
+                            const cls =
+                              p.status === "approved" ? "border-emerald-200/60 bg-emerald-100/60 text-emerald-800"
+                              : p.status === "pending" ? "border-amber-200/60 bg-amber-100/60 text-amber-800"
+                              : p.status === "rejected" ? "border-rose-200/60 bg-rose-100/60 text-rose-800"
+                              : "border-sky-200/60 bg-sky-100/60 text-sky-800";
+                            return (
+                              <span
+                                key={`${p.period_start}-${p.period_end}`}
+                                className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${cls}`}
+                                title={p.status}
+                              >
+                                {fmtPeriod(p.period_start, p.period_end)} · {p.status}
+                              </span>
+                            );
+                          })}
                           {unit.periods.length > 3 && (
                             <span className="text-[11px] text-muted-foreground">
                               +{unit.periods.length - 3}
                             </span>
                           )}
+
                         </div>
                       </td>
                       <td className="px-5 py-4 text-right align-top">
