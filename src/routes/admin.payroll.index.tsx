@@ -293,11 +293,15 @@ function PayrollUnitsPage() {
         crumbs={[{ label: "Payroll" }]}
       />
 
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
-        <Tile icon={Building2} label="Organizations" value={summary.organizations} tone="amber" />
-        <Tile icon={MapPinned} label="Approved units" value={summary.units} tone="sky" />
-        <Tile icon={Users} label="Active employees" value={summary.activeEmployees} tone="emerald" />
-      </div>
+      <MonthlyDashboard
+        year={year}
+        month={month}
+        onChange={(y, m) => { setYear(y); setMonth(m); }}
+        stats={monthlyStats.data}
+        loading={monthlyStats.isLoading}
+        organizations={summary.organizations}
+      />
+
 
       {selectedEmployee && (
         <EmployeeSpotlight
