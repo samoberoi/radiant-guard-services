@@ -245,7 +245,7 @@ function MusterRollPage() {
   // dayCount/periodStart/periodEnd are derived below from the payroll window.
 
   // Resolve the payroll window for this unit via its active contract.
-  const { data: payrollWindow } = useQuery({
+  const { data: contractInfo } = useQuery({
     queryKey: ["attendance-payroll-window", unitId],
     queryFn: async () => {
       const { data: contracts, error } = await supabase
@@ -254,21 +254,27 @@ function MusterRollPage() {
         .eq("unit_id", unitId)
         .eq("record_type", "client")
         .eq("status", "active")
-        .order("start_date", { ascending: false })
+        .order("start_date", { ascending: true })
         .limit(1);
       if (error) throw error;
       const winId = contracts?.[0]?.payroll_window_id;
-      if (!winId) return null;
-      const { data: win, error: winErr } = await supabase
-        .from("payroll_windows")
-        .select("id, label, window_start_day, window_end_day")
-        .eq("id", winId)
-        .maybeSingle();
-      if (winErr) throw winErr;
-      return win;
+      const startDate = contracts?.[0]?.start_date ?? null;
+      let window: { id: string; label: string | null; window_start_day: number; window_end_day: number } | null = null;
+      if (winId) {
+        const { data: win, error: winErr } = await supabase
+          .from("payroll_windows")
+          .select("id, label, window_start_day, window_end_day")
+          .eq("id", winId)
+          .maybeSingle();
+        if (winErr) throw winErr;
+        window = win as typeof window;
+      }
+      return { window, startDate };
     },
     enabled: Boolean(unitId),
   });
+  const payrollWindow = contractInfo?.window ?? null;
+  const contractStartDate = contractInfo?.startDate ?? null;
 
   const periodCells = useMemo(
     () => buildPeriodCells(year, monthIdx, payrollWindow ?? null),
