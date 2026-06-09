@@ -455,10 +455,10 @@ function PayrollUnitPage() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            Salary breakdown · contract vs earned
+            Invoice breakdown · projected vs actual
           </h2>
           <span className="text-xs text-muted-foreground">
-            Contract column = supposed payout · Earned column = actual based on T Days
+            Projected column = full billable amount · Actual column = billable based on T Days
           </span>
         </div>
         {rows.filter((r) => r.wages && r.resource).map((r) => (
