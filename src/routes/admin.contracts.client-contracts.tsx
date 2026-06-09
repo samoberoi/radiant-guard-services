@@ -1647,20 +1647,24 @@ function ClientContractsPage() {
             return e instanceof Error ? e.message : "Could not save contract";
           }
         }}
-        onApprovalAction={(mode) => {
-          if (!editing) return;
-          if (mode === "lost") {
-            updateStageMut.mutate({
-              id: editing.id,
-              stage: "lost",
-              label: editing.prospectCode,
-            });
-          } else {
-            setApprovalTarget({ contract: editing, mode });
-          }
-          setFormOpen(false);
-          setEditing(null);
-        }}
+        onApprovalAction={
+          canApprove
+            ? (mode) => {
+                if (!editing) return;
+                if (mode === "lost") {
+                  updateStageMut.mutate({
+                    id: editing.id,
+                    stage: "lost",
+                    label: editing.prospectCode,
+                  });
+                } else {
+                  setApprovalTarget({ contract: editing, mode });
+                }
+                setFormOpen(false);
+                setEditing(null);
+              }
+            : undefined
+        }
       />
 
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
