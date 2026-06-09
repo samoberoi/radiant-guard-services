@@ -296,7 +296,7 @@ function PayrollUnitPage() {
 
   useEffect(() => {
     if (!highlightCandidate || rows.length === 0) return;
-    const el = document.getElementById(`payroll-row-${highlightCandidate}`);
+    const el = document.getElementById(`invoice-row-${highlightCandidate}`);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [highlightCandidate, rows.length]);
 
