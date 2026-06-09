@@ -23,12 +23,15 @@ export const Route = createFileRoute("/admin/payroll/")({
 });
 
 
-type ApprovedSheet = {
+type SheetStatus = "approved" | "pending" | "draft" | "rejected";
+
+type SheetRow = {
   id: string;
   unit_id: string;
   period_start: string;
   period_end: string;
   approved_at: string | null;
+  status: SheetStatus;
 };
 
 type UnitRow = {
@@ -40,8 +43,10 @@ type UnitRow = {
   customer_name: string;
   active_employee_count: number;
   employee_ids: string[];
-  approved_periods: { period_start: string; period_end: string }[];
+  periods: { period_start: string; period_end: string; status: SheetStatus }[];
+  statuses: Set<SheetStatus>;
 };
+
 
 type EmployeeOption = { id: string; label: string; name: string; code: string; unit_ids: string[] };
 
@@ -58,6 +63,14 @@ function fmtPeriod(start: string, end: string) {
   return `${f(start)} – ${f(end)}`;
 }
 
+function deriveStatus(raw: string | null | undefined): SheetStatus {
+  const s = (raw || "").toLowerCase();
+  if (s === "approved") return "approved";
+  if (s === "submitted" || s === "pending") return "pending";
+  if (s === "rejected") return "rejected";
+  return "draft";
+}
+
 function PayrollUnitsPage() {
   const now = new Date();
   const [year, setYear] = useState<number>(now.getFullYear());
@@ -66,6 +79,7 @@ function PayrollUnitsPage() {
   const [orgFilter, setOrgFilter] = useState("all");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [employeeFilter, setEmployeeFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | SheetStatus | "unapproved">("all");
 
   const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
   const monthEnd = (() => {
@@ -73,60 +87,39 @@ function PayrollUnitsPage() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   })();
 
-  const monthlyStats = useQuery({
-    queryKey: ["payroll-monthly-stats", year, month],
-    queryFn: async () => {
-      const { data: sheets, error } = await supabase
-        .from("attendance_sheets" as never)
-        .select("id, unit_id, status, period_start, period_end")
-        .gte("period_start", monthStart)
-        .lte("period_start", monthEnd);
-      if (error) throw error;
-      const rows = (sheets ?? []) as unknown as Array<{ id: string; unit_id: string; status: string }>;
-      const counts = { approved: 0, draft: 0, pending: 0, rejected: 0 };
-      const unitSet = new Set<string>();
-      for (const r of rows) {
-        unitSet.add(r.unit_id);
-        const s = (r.status || "").toLowerCase();
-        if (s === "approved") counts.approved += 1;
-        else if (s === "submitted" || s === "pending") counts.pending += 1;
-        else if (s === "rejected") counts.rejected += 1;
-        else counts.draft += 1;
-      }
-      let employees = 0;
-      if (unitSet.size > 0) {
-        const unitIds = Array.from(unitSet);
-        const [{ count: primaryCount }, { data: links }] = await Promise.all([
-          supabase
-            .from("candidates")
-            .select("id", { count: "exact", head: true })
-            .in("unit_id", unitIds)
-            .eq("is_enabled", true)
-            .eq("status", "active"),
-          supabase.from("candidate_units").select("candidate_id").in("unit_id", unitIds),
-        ]);
-        const distinct = new Set<string>((links ?? []).map((l) => l.candidate_id));
-        employees = (primaryCount ?? 0) + distinct.size;
-      }
-      return { ...counts, units: unitSet.size, employees, total: rows.length };
-    },
-  });
-
-
-
   const { data, isLoading, error } = useQuery({
-    queryKey: ["payroll-dashboard-v1"],
+    queryKey: ["payroll-dashboard-v2", year, month],
     queryFn: async () => {
       const { data: sheetsRaw, error: sErr } = await supabase
         .from("attendance_sheets" as never)
         .select("id, unit_id, period_start, period_end, approved_at, status")
-        .eq("status", "approved");
+        .gte("period_start", monthStart)
+        .lte("period_start", monthEnd);
       if (sErr) throw sErr;
-      const sheets = (sheetsRaw ?? []) as unknown as ApprovedSheet[];
+      const sheets: SheetRow[] = ((sheetsRaw ?? []) as unknown as Array<{
+        id: string; unit_id: string; period_start: string; period_end: string;
+        approved_at: string | null; status: string | null;
+      }>).map((s) => ({
+        id: s.id,
+        unit_id: s.unit_id,
+        period_start: s.period_start,
+        period_end: s.period_end,
+        approved_at: s.approved_at,
+        status: deriveStatus(s.status),
+      }));
+
+      const counts = { approved: 0, draft: 0, pending: 0, rejected: 0 };
+      for (const s of sheets) counts[s.status] += 1;
 
       const unitIds = Array.from(new Set(sheets.map((s) => s.unit_id)));
       if (unitIds.length === 0) {
-        return { units: [] as UnitRow[], organizations: [] as { id: string; name: string }[], periods: [] as string[], employees: [] as EmployeeOption[] };
+        return {
+          units: [] as UnitRow[],
+          organizations: [] as { id: string; name: string }[],
+          periods: [] as string[],
+          employees: [] as EmployeeOption[],
+          stats: { ...counts, units: 0, employees: 0, total: sheets.length },
+        };
       }
 
       const [{ data: units }, { data: candidates }, { data: customers }, { data: links }] = await Promise.all([
@@ -146,7 +139,6 @@ function PayrollUnitsPage() {
       const custMap = new Map((customers ?? []).map((c) => [c.id, c.name as string]));
       const unitIdSet = new Set(unitIds);
 
-      // candidate -> set of unit_ids they're mapped to (primary + link table)
       const unitsByCandidate = new Map<string, Set<string>>();
       const candById = new Map<string, { id: string; unit_id: string | null; full_name: string | null; employee_code: string | null }>();
       for (const c of (candidates ?? []) as Array<{ id: string; unit_id: string | null; full_name: string | null; employee_code: string | null }>) {
@@ -188,26 +180,28 @@ function PayrollUnitsPage() {
       }
       employees.sort((a, b) => a.label.localeCompare(b.label));
 
-      const periodsByUnit = new Map<string, { period_start: string; period_end: string }[]>();
+      const periodsByUnit = new Map<string, { period_start: string; period_end: string; status: SheetStatus }[]>();
       for (const s of sheets) {
         const arr = periodsByUnit.get(s.unit_id) ?? [];
-        arr.push({ period_start: s.period_start, period_end: s.period_end });
+        arr.push({ period_start: s.period_start, period_end: s.period_end, status: s.status });
         periodsByUnit.set(s.unit_id, arr);
       }
 
-      const rows: UnitRow[] = (units ?? []).map((u) => ({
-        id: u.id,
-        code: u.code,
-        name: u.name,
-        location: u.location || "",
-        customer_id: u.customer_id || "",
-        customer_name: (u.customer_id && custMap.get(u.customer_id)) || "—",
-        active_employee_count: employeeCountByUnit.get(u.id) ?? 0,
-        employee_ids: employeeIdsByUnit.get(u.id) ?? [],
-        approved_periods: (periodsByUnit.get(u.id) ?? []).sort((a, b) =>
-          b.period_start.localeCompare(a.period_start),
-        ),
-      }));
+      const rows: UnitRow[] = (units ?? []).map((u) => {
+        const periods = (periodsByUnit.get(u.id) ?? []).sort((a, b) => b.period_start.localeCompare(a.period_start));
+        return {
+          id: u.id,
+          code: u.code,
+          name: u.name,
+          location: u.location || "",
+          customer_id: u.customer_id || "",
+          customer_name: (u.customer_id && custMap.get(u.customer_id)) || "—",
+          active_employee_count: employeeCountByUnit.get(u.id) ?? 0,
+          employee_ids: employeeIdsByUnit.get(u.id) ?? [],
+          periods,
+          statuses: new Set(periods.map((p) => p.status)),
+        };
+      });
       rows.sort((a, b) =>
         a.customer_name !== b.customer_name
           ? a.customer_name.localeCompare(b.customer_name)
@@ -222,7 +216,16 @@ function PayrollUnitsPage() {
         new Set(sheets.map((s) => `${s.period_start}|${s.period_end}`)),
       ).sort((a, b) => b.localeCompare(a));
 
-      return { units: rows, organizations: orgs, periods: allPeriods, employees };
+      // count unique employees across active units this month
+      const employeeUnique = unitsByCandidate.size;
+
+      return {
+        units: rows,
+        organizations: orgs,
+        periods: allPeriods,
+        employees,
+        stats: { ...counts, units: unitIds.length, employees: employeeUnique, total: sheets.length },
+      };
     },
   });
 
@@ -230,6 +233,8 @@ function PayrollUnitsPage() {
   const organizations = data?.organizations ?? [];
   const periods = data?.periods ?? [];
   const employees = data?.employees ?? [];
+  const monthlyStatsData = data?.stats;
+
 
   const employeeOptions = useMemo(() => {
     if (orgFilter === "all") return employees;
@@ -258,9 +263,16 @@ function PayrollUnitsPage() {
     return units.filter((u) => {
       if (orgFilter !== "all" && (u.customer_id || u.customer_name) !== orgFilter) return false;
       if (selectedUnitIds && !selectedUnitIds.has(u.id)) return false;
+      if (statusFilter !== "all") {
+        if (statusFilter === "unapproved") {
+          if (!u.periods.some((p) => p.status !== "approved")) return false;
+        } else if (!u.statuses.has(statusFilter)) {
+          return false;
+        }
+      }
       if (periodFilter !== "all") {
         const [ps, pe] = periodFilter.split("|");
-        if (!u.approved_periods.some((p) => p.period_start === ps && p.period_end === pe)) {
+        if (!u.periods.some((p) => p.period_start === ps && p.period_end === pe)) {
           return false;
         }
       }
@@ -276,20 +288,21 @@ function PayrollUnitsPage() {
       }
       return true;
     });
-  }, [q, orgFilter, periodFilter, selectedEmployee, employeesByUnit, units]);
+  }, [q, orgFilter, periodFilter, statusFilter, selectedEmployee, employeesByUnit, units]);
 
   const summary = {
     organizations: organizations.length,
     units: units.length,
     activeEmployees: units.reduce((s, r) => s + r.active_employee_count, 0),
   };
-  const anyFilter = orgFilter !== "all" || periodFilter !== "all" || employeeFilter !== "all" || q.trim().length > 0;
+  const anyFilter = orgFilter !== "all" || periodFilter !== "all" || employeeFilter !== "all" || statusFilter !== "all" || q.trim().length > 0;
+
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader
         title="Payroll"
-        description="Compute wages for units whose attendance has been approved. Pick a unit to see end-to-end wage breakdown for every mapped employee."
+        description="Monthly payroll dashboard. Approved attendance sheets unlock wage computation; pending and draft sheets stay visible so you can track what's outstanding."
         crumbs={[{ label: "Payroll" }]}
       />
 
@@ -297,10 +310,13 @@ function PayrollUnitsPage() {
         year={year}
         month={month}
         onChange={(y, m) => { setYear(y); setMonth(m); }}
-        stats={monthlyStats.data}
-        loading={monthlyStats.isLoading}
+        stats={monthlyStatsData}
+        loading={isLoading}
         organizations={summary.organizations}
+        activeStatus={statusFilter}
+        onStatusChange={setStatusFilter}
       />
+
 
 
       {selectedEmployee && (
@@ -316,10 +332,11 @@ function PayrollUnitsPage() {
         <div className="space-y-4 border-b border-border/60 px-5 py-5">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-foreground">Payroll-ready units</h2>
+              <h2 className="text-lg font-semibold text-foreground">Payroll sheets — {MONTH_NAMES[month]} {year}</h2>
               <p className="text-sm text-muted-foreground">
-                Only units whose attendance sheet is approved appear here. Pick a unit to view wage computation.
+                Every unit with an attendance sheet for this month. Approved sheets are ready for wage computation; others show their current status.
               </p>
+
             </div>
             <div className="relative w-full max-w-lg">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -332,7 +349,20 @@ function PayrollUnitsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+            <Filter
+              label="Status"
+              value={statusFilter}
+              onChange={(v) => setStatusFilter(v as typeof statusFilter)}
+              options={[
+                { value: "approved", label: `Approved (${monthlyStatsData?.approved ?? 0})` },
+                { value: "unapproved", label: `Unapproved (${(monthlyStatsData?.pending ?? 0) + (monthlyStatsData?.draft ?? 0) + (monthlyStatsData?.rejected ?? 0)})` },
+                { value: "pending", label: `Pending (${monthlyStatsData?.pending ?? 0})` },
+                { value: "draft", label: `Draft (${monthlyStatsData?.draft ?? 0})` },
+                { value: "rejected", label: `Rejected (${monthlyStatsData?.rejected ?? 0})` },
+              ]}
+              allLabel="All statuses"
+            />
             <Filter
               label="Organization"
               value={orgFilter}
@@ -351,7 +381,7 @@ function PayrollUnitsPage() {
               allLabel={`All employees (${employeeOptions.length})`}
             />
             <Filter
-              label="Approved period"
+              label="Period"
               value={periodFilter}
               onChange={setPeriodFilter}
               options={periods.map((p) => {
@@ -361,6 +391,8 @@ function PayrollUnitsPage() {
               allLabel={`All periods (${periods.length})`}
             />
           </div>
+
+
 
           {anyFilter && (
             <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -376,7 +408,9 @@ function PayrollUnitsPage() {
                   setOrgFilter("all");
                   setPeriodFilter("all");
                   setEmployeeFilter("all");
+                  setStatusFilter("all");
                 }}
+
               >
                 <X className="h-3.5 w-3.5" /> Clear filters
               </Button>
@@ -390,9 +424,10 @@ function PayrollUnitsPage() {
               <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 <th className="px-5 py-4 font-medium">Unit</th>
                 <th className="px-5 py-4 font-medium">Organization</th>
-                <th className="px-5 py-4 font-medium">Approved periods</th>
+                <th className="px-5 py-4 font-medium">Periods (status)</th>
                 <th className="px-5 py-4 text-right font-medium">Employees</th>
                 <th className="px-5 py-4 text-right font-medium">Action</th>
+
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -418,14 +453,15 @@ function PayrollUnitsPage() {
                 </tr>
               ) : (
                 filtered.map((unit) => {
-                  const latest = unit.approved_periods[0];
+                  const approvedLatest = unit.periods.find((p) => p.status === "approved");
                   const targetPeriod =
                     periodFilter !== "all"
                       ? (() => {
                           const [s, e] = periodFilter.split("|");
                           return { period_start: s, period_end: e };
                         })()
-                      : latest;
+                      : approvedLatest;
+
                   return (
                     <tr key={unit.id} className="group transition-colors hover:bg-amber-50/30">
                       <td className="px-5 py-4 align-top">
@@ -444,19 +480,28 @@ function PayrollUnitsPage() {
                       <td className="px-5 py-4 align-top text-sm text-foreground">{unit.customer_name}</td>
                       <td className="px-5 py-4 align-top">
                         <div className="flex flex-wrap gap-1.5">
-                          {unit.approved_periods.slice(0, 3).map((p) => (
-                            <span
-                              key={`${p.period_start}-${p.period_end}`}
-                              className="inline-flex rounded-full border border-emerald-200/60 bg-emerald-100/60 px-2 py-0.5 text-[11px] font-medium text-emerald-800"
-                            >
-                              {fmtPeriod(p.period_start, p.period_end)}
-                            </span>
-                          ))}
-                          {unit.approved_periods.length > 3 && (
+                          {unit.periods.slice(0, 3).map((p) => {
+                            const cls =
+                              p.status === "approved" ? "border-emerald-200/60 bg-emerald-100/60 text-emerald-800"
+                              : p.status === "pending" ? "border-amber-200/60 bg-amber-100/60 text-amber-800"
+                              : p.status === "rejected" ? "border-rose-200/60 bg-rose-100/60 text-rose-800"
+                              : "border-sky-200/60 bg-sky-100/60 text-sky-800";
+                            return (
+                              <span
+                                key={`${p.period_start}-${p.period_end}`}
+                                className={`inline-flex rounded-full border px-2 py-0.5 text-[11px] font-medium ${cls}`}
+                                title={p.status}
+                              >
+                                {fmtPeriod(p.period_start, p.period_end)} · {p.status}
+                              </span>
+                            );
+                          })}
+                          {unit.periods.length > 3 && (
                             <span className="text-[11px] text-muted-foreground">
-                              +{unit.approved_periods.length - 3}
+                              +{unit.periods.length - 3}
                             </span>
                           )}
+
                         </div>
                       </td>
                       <td className="px-5 py-4 text-right align-top">
@@ -474,8 +519,9 @@ function PayrollUnitsPage() {
                             Compute wages <ArrowRight className="h-4 w-4" />
                           </Link>
                         ) : (
-                          <span className="text-xs text-muted-foreground">No period</span>
+                          <span className="text-xs text-muted-foreground">Awaiting approval</span>
                         )}
+
                       </td>
                     </tr>
                   );
@@ -494,15 +540,20 @@ type MonthlyStats = {
   units: number; employees: number; total: number;
 };
 
+type StatusKey = "all" | SheetStatus | "unapproved";
+
 function MonthlyDashboard({
-  year, month, onChange, stats, loading, organizations,
+  year, month, onChange, stats, loading, organizations, activeStatus, onStatusChange,
 }: {
   year: number; month: number;
   onChange: (year: number, month: number) => void;
   stats: MonthlyStats | undefined;
   loading: boolean;
   organizations: number;
+  activeStatus: StatusKey;
+  onStatusChange: (s: StatusKey) => void;
 }) {
+
   const monthName = MONTH_NAMES[month];
   const shift = (delta: number) => {
     const d = new Date(year, month + delta, 1);
@@ -600,16 +651,21 @@ function MonthlyDashboard({
         {/* Right: stats grid */}
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <DashStat icon={Clock3} label="Pending" value={s.pending} accent="amber" loading={loading} />
-            <DashStat icon={CheckCircle2} label="Approved" value={s.approved} accent="emerald" loading={loading} />
-            <DashStat icon={FileEdit} label="Draft" value={s.draft} accent="sky" loading={loading} />
-            <DashStat icon={ClipboardList} label="Sheets" value={s.total} accent="violet" loading={loading} />
+            <DashStat icon={Clock3} label="Pending" value={s.pending} accent="amber" loading={loading}
+              active={activeStatus === "pending"} onClick={() => onStatusChange(activeStatus === "pending" ? "all" : "pending")} />
+            <DashStat icon={CheckCircle2} label="Approved" value={s.approved} accent="emerald" loading={loading}
+              active={activeStatus === "approved"} onClick={() => onStatusChange(activeStatus === "approved" ? "all" : "approved")} />
+            <DashStat icon={FileEdit} label="Draft" value={s.draft} accent="sky" loading={loading}
+              active={activeStatus === "draft"} onClick={() => onStatusChange(activeStatus === "draft" ? "all" : "draft")} />
+            <DashStat icon={ClipboardList} label="Sheets" value={s.total} accent="violet" loading={loading}
+              active={activeStatus === "all"} onClick={() => onStatusChange("all")} />
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <DashStat icon={Building2} label="Organizations" value={organizations} accent="rose" loading={loading} compact />
             <DashStat icon={MapPinned} label="Units" value={s.units} accent="cyan" loading={loading} compact />
             <DashStat icon={Users} label="Employees" value={s.employees} accent="lime" loading={loading} compact />
           </div>
+
 
           {/* Stacked progress bar */}
           <div>
@@ -644,12 +700,14 @@ function MonthlyDashboard({
 }
 
 function DashStat({
-  icon: Icon, label, value, accent, loading, compact,
+  icon: Icon, label, value, accent, loading, compact, active, onClick,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string; value: number;
   accent: "amber" | "emerald" | "sky" | "violet" | "rose" | "cyan" | "lime";
   loading?: boolean; compact?: boolean;
+  active?: boolean;
+  onClick?: () => void;
 }) {
   const accentMap: Record<string, string> = {
     amber: "from-amber-400/30 to-amber-500/10 text-amber-200",
@@ -660,8 +718,12 @@ function DashStat({
     cyan: "from-cyan-400/30 to-cyan-500/10 text-cyan-200",
     lime: "from-lime-400/30 to-lime-500/10 text-lime-200",
   };
+  const Cmp: React.ElementType = onClick ? "button" : "div";
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur transition hover:border-white/25 hover:bg-white/10">
+    <Cmp
+      onClick={onClick}
+      className={`group relative w-full text-left overflow-hidden rounded-2xl border bg-white/5 p-3 backdrop-blur transition hover:border-white/30 hover:bg-white/10 ${active ? "border-white/60 ring-2 ring-white/40" : "border-white/10"} ${onClick ? "cursor-pointer" : ""}`}
+    >
       <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-60 ${accentMap[accent]}`} />
       <div className="flex items-center gap-2">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
@@ -672,9 +734,10 @@ function DashStat({
       <div className={`mt-1 font-display font-bold tabular-nums tracking-tight ${compact ? "text-2xl" : "text-3xl"}`}>
         {loading ? <span className="text-white/40">—</span> : value.toLocaleString()}
       </div>
-    </div>
+    </Cmp>
   );
 }
+
 
 
 
@@ -736,7 +799,7 @@ function EmployeeSpotlight({
   units: UnitRow[];
   onClear: () => void;
 }) {
-  const totalPeriods = units.reduce((s, u) => s + u.approved_periods.length, 0);
+  const totalPeriods = units.reduce((s, u) => s + u.periods.length, 0);
   const initials = employee.name
     .split(/\s+/)
     .filter(Boolean)
@@ -786,7 +849,7 @@ function EmployeeSpotlight({
         ) : (
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {units.map((u) => {
-              const latest = u.approved_periods[0];
+              const latest = u.periods[0];
               return (
                 <div
                   key={u.id}
@@ -813,7 +876,7 @@ function EmployeeSpotlight({
                   </div>
 
                   <div className="flex flex-wrap gap-1.5">
-                    {u.approved_periods.slice(0, 2).map((p) => (
+                    {u.periods.slice(0, 2).map((p) => (
                       <span
                         key={`${p.period_start}-${p.period_end}`}
                         className="inline-flex rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-800"
@@ -821,9 +884,9 @@ function EmployeeSpotlight({
                         {fmtPeriod(p.period_start, p.period_end)}
                       </span>
                     ))}
-                    {u.approved_periods.length > 2 && (
+                    {u.periods.length > 2 && (
                       <span className="text-[11px] text-muted-foreground">
-                        +{u.approved_periods.length - 2} more
+                        +{u.periods.length - 2} more
                       </span>
                     )}
                   </div>
