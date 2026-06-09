@@ -190,7 +190,12 @@ function mapsEqual(a: PermMap, b: PermMap): boolean {
   for (const k of allKeys) {
     const x = a.get(k) ?? EMPTY_PERM;
     const y = b.get(k) ?? EMPTY_PERM;
-    if (x.can_view !== y.can_view || x.can_edit !== y.can_edit || x.can_delete !== y.can_delete) {
+    if (
+      x.can_view !== y.can_view ||
+      x.can_edit !== y.can_edit ||
+      x.can_delete !== y.can_delete ||
+      x.can_approve !== y.can_approve
+    ) {
       return false;
     }
   }
@@ -365,7 +370,7 @@ function RBACPage() {
       {/* Grid */}
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         {/* Header row */}
-        <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)] items-center gap-2 border-b border-border bg-secondary/40 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+        <div className="grid grid-cols-[minmax(0,1fr)_repeat(4,96px)] items-center gap-2 border-b border-border bg-secondary/40 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           <div>Module</div>
           {PERMISSION_ACTIONS.map((a) => {
             const Icon = ACTION_META[a].icon;
@@ -383,11 +388,12 @@ function RBACPage() {
             const open = expanded[mod.key];
             const ParentIcon = mod.icon;
             const hasChildren = mod.subModules.length > 0;
+            const supportsApprove = moduleSupportsApprove(mod.key);
 
             return (
               <div key={mod.key}>
                 {/* Parent row */}
-                <div className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)] items-center gap-2 px-4 py-3 hover:bg-secondary/30">
+                <div className="grid grid-cols-[minmax(0,1fr)_repeat(4,96px)] items-center gap-2 px-4 py-3 hover:bg-secondary/30">
                   <div className="flex items-center gap-2 min-w-0">
                     {hasChildren ? (
                       <button
@@ -419,6 +425,13 @@ function RBACPage() {
                   </div>
 
                   {PERMISSION_ACTIONS.map((a) => {
+                    if (a === "approve" && !supportsApprove) {
+                      return (
+                        <div key={a} className="flex justify-center text-muted-foreground/40" title="Approve permission not applicable here">
+                          —
+                        </div>
+                      );
+                    }
                     const agg = aggregate(draft, mod, a);
                     return (
                       <div key={a} className="flex justify-center">
@@ -444,7 +457,7 @@ function RBACPage() {
                       return (
                         <div
                           key={sub.key}
-                          className="grid grid-cols-[minmax(0,1fr)_repeat(3,96px)] items-center gap-2 px-4 py-2 pl-14 hover:bg-secondary/40"
+                          className="grid grid-cols-[minmax(0,1fr)_repeat(4,96px)] items-center gap-2 px-4 py-2 pl-14 hover:bg-secondary/40"
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="flex h-7 w-7 items-center justify-center rounded-md bg-background text-muted-foreground">
@@ -455,12 +468,14 @@ function RBACPage() {
                             </span>
                           </div>
                           {PERMISSION_ACTIONS.map((a) => {
-                            const on =
-                              a === "view"
-                                ? cell.can_view
-                                : a === "edit"
-                                  ? cell.can_edit
-                                  : cell.can_delete;
+                            if (a === "approve" && !supportsApprove) {
+                              return (
+                                <div key={a} className="flex justify-center text-muted-foreground/40">
+                                  —
+                                </div>
+                              );
+                            }
+                            const on = permFlag(cell, a);
                             return (
                               <div key={a} className="flex justify-center">
                                 <CheckBox
