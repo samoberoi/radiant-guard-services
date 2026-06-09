@@ -476,13 +476,7 @@ function MusterRollPage() {
   }, [employees, entries, extraRows, contractDesignations]);
 
   // ---- Mutations ----
-  const guardFuture = (date: string) => {
-    if (date > todayStr) {
-      toast.error("Cannot mark attendance for a future date");
-      return false;
-    }
-    return true;
-  };
+
 
   const upsertEntries = async (
     candidate_id: string,
@@ -1240,8 +1234,6 @@ function MusterRollPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Suppress unused warning - guardFuture reserved for future server-roundtrip helpers */}
-      <span hidden>{String(guardFuture("2000-01-01"))}</span>
     </div>
   );
 }
