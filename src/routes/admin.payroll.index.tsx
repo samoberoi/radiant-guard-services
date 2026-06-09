@@ -699,12 +699,14 @@ function MonthlyDashboard({
 }
 
 function DashStat({
-  icon: Icon, label, value, accent, loading, compact,
+  icon: Icon, label, value, accent, loading, compact, active, onClick,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string; value: number;
   accent: "amber" | "emerald" | "sky" | "violet" | "rose" | "cyan" | "lime";
   loading?: boolean; compact?: boolean;
+  active?: boolean;
+  onClick?: () => void;
 }) {
   const accentMap: Record<string, string> = {
     amber: "from-amber-400/30 to-amber-500/10 text-amber-200",
@@ -715,8 +717,12 @@ function DashStat({
     cyan: "from-cyan-400/30 to-cyan-500/10 text-cyan-200",
     lime: "from-lime-400/30 to-lime-500/10 text-lime-200",
   };
+  const Cmp: React.ElementType = onClick ? "button" : "div";
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur transition hover:border-white/25 hover:bg-white/10">
+    <Cmp
+      onClick={onClick}
+      className={`group relative w-full text-left overflow-hidden rounded-2xl border bg-white/5 p-3 backdrop-blur transition hover:border-white/30 hover:bg-white/10 ${active ? "border-white/60 ring-2 ring-white/40" : "border-white/10"} ${onClick ? "cursor-pointer" : ""}`}
+    >
       <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-60 ${accentMap[accent]}`} />
       <div className="flex items-center gap-2">
         <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
@@ -727,9 +733,10 @@ function DashStat({
       <div className={`mt-1 font-display font-bold tabular-nums tracking-tight ${compact ? "text-2xl" : "text-3xl"}`}>
         {loading ? <span className="text-white/40">—</span> : value.toLocaleString()}
       </div>
-    </div>
+    </Cmp>
   );
 }
+
 
 
 
