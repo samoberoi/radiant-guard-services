@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Eye,
@@ -22,6 +23,7 @@ import { logActivity } from "@/lib/activity-log";
 import {
   PERMISSION_ACTIONS,
   RBAC_MODULES,
+  moduleSupportsApprove,
   type ModuleDef,
   type PermissionAction,
 } from "@/lib/rbac-modules";
@@ -41,7 +43,12 @@ export const Route = createFileRoute("/admin/rbac")({
   component: RBACPage,
 });
 
-type PermState = { can_view: boolean; can_edit: boolean; can_delete: boolean };
+type PermState = {
+  can_view: boolean;
+  can_edit: boolean;
+  can_delete: boolean;
+  can_approve: boolean;
+};
 type PermMap = Map<PermKey, PermState>;
 
 const ACTION_META: Record<
@@ -51,7 +58,15 @@ const ACTION_META: Record<
   view: { label: "View", icon: Eye, tint: "text-sky-500" },
   edit: { label: "Edit", icon: Pencil, tint: "text-amber-500" },
   delete: { label: "Delete", icon: Trash2, tint: "text-rose-500" },
+  approve: { label: "Approve", icon: CheckCircle2, tint: "text-emerald-500" },
 };
+
+function permFlag(p: PermState, a: PermissionAction): boolean {
+  if (a === "view") return p.can_view;
+  if (a === "edit") return p.can_edit;
+  if (a === "delete") return p.can_delete;
+  return p.can_approve;
+}
 
 function buildMap(rows: PermissionRow[]): PermMap {
   const m: PermMap = new Map();
