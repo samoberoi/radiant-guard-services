@@ -518,8 +518,9 @@ function PayrollUnitsPage() {
                             Compute wages <ArrowRight className="h-4 w-4" />
                           </Link>
                         ) : (
-                          <span className="text-xs text-muted-foreground">No period</span>
+                          <span className="text-xs text-muted-foreground">Awaiting approval</span>
                         )}
+
                       </td>
                     </tr>
                   );
