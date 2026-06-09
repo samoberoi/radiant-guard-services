@@ -59,10 +59,60 @@ function fmtPeriod(start: string, end: string) {
 }
 
 function PayrollUnitsPage() {
+  const now = new Date();
+  const [year, setYear] = useState<number>(now.getFullYear());
+  const [month, setMonth] = useState<number>(now.getMonth()); // 0-indexed
   const [q, setQ] = useState("");
   const [orgFilter, setOrgFilter] = useState("all");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [employeeFilter, setEmployeeFilter] = useState<string>("all");
+
+  const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+  const monthEnd = (() => {
+    const d = new Date(year, month + 1, 0);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })();
+
+  const monthlyStats = useQuery({
+    queryKey: ["payroll-monthly-stats", year, month],
+    queryFn: async () => {
+      const { data: sheets, error } = await supabase
+        .from("attendance_sheets" as never)
+        .select("id, unit_id, status, period_start, period_end")
+        .gte("period_start", monthStart)
+        .lte("period_start", monthEnd);
+      if (error) throw error;
+      const rows = (sheets ?? []) as unknown as Array<{ id: string; unit_id: string; status: string }>;
+      const counts = { approved: 0, draft: 0, pending: 0, rejected: 0 };
+      const unitSet = new Set<string>();
+      for (const r of rows) {
+        unitSet.add(r.unit_id);
+        const s = (r.status || "").toLowerCase();
+        if (s === "approved") counts.approved += 1;
+        else if (s === "submitted" || s === "pending") counts.pending += 1;
+        else if (s === "rejected") counts.rejected += 1;
+        else counts.draft += 1;
+      }
+      let employees = 0;
+      if (unitSet.size > 0) {
+        const unitIds = Array.from(unitSet);
+        const [{ count: primaryCount }, { data: links }] = await Promise.all([
+          supabase
+            .from("candidates")
+            .select("id", { count: "exact", head: true })
+            .in("unit_id", unitIds)
+            .eq("is_enabled", true)
+            .eq("status", "active"),
+          supabase.from("candidate_units").select("candidate_id").in("unit_id", unitIds),
+        ]);
+        const distinct = new Set<string>((links ?? []).map((l) => l.candidate_id));
+        employees = (primaryCount ?? 0) + distinct.size;
+      }
+      return { ...counts, units: unitSet.size, employees, total: rows.length };
+    },
+  });
+
+
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["payroll-dashboard-v1"],
