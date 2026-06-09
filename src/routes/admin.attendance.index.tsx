@@ -82,7 +82,7 @@ function AttendanceUnitsPage() {
   const [q, setQ] = useState("");
   const [orgFilter, setOrgFilter] = useState<string>("all");
   const [unitFilter, setUnitFilter] = useState<string>("all");
-  const [sgFilter, setSgFilter] = useState<string>("all");
+
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["attendance-dashboard-v9"],
@@ -122,11 +122,11 @@ function AttendanceUnitsPage() {
         return {
           units: [],
           organizations: [],
-          securityGuards: [],
           employeesByCustomer: {},
           summary: { organizations: 0, units: 0, activeEmployees: 0 },
         };
       }
+
 
       const [
         { data: units, error: unitsError },
@@ -308,11 +308,9 @@ function AttendanceUnitsPage() {
         ).values(),
       ).sort((a, b) => a.name.localeCompare(b.name));
 
-      const sgMap = new Map<string, EmployeeRef>();
       const employeesByCustomer: Record<string, ClientEmployee[]> = {};
       for (const r of rows) {
         for (const sg of r.security_guards) {
-          sgMap.set(sg.id, sg);
           const key = r.customer_id || r.customer_name;
           if (!employeesByCustomer[key]) employeesByCustomer[key] = [];
           // de-dupe per client (employee may appear in multiple units rarely)
@@ -335,7 +333,6 @@ function AttendanceUnitsPage() {
       return {
         units: rows,
         organizations: orgs,
-        securityGuards: Array.from(sgMap.values()).sort((a, b) => a.name.localeCompare(b.name)),
         employeesByCustomer,
         summary: {
           organizations: orgs.length,
@@ -343,14 +340,15 @@ function AttendanceUnitsPage() {
           activeEmployees: rows.reduce((s, r) => s + r.active_employee_count, 0),
         },
       };
+
     },
   });
 
   const units = data?.units ?? [];
   const organizations = data?.organizations ?? [];
-  const securityGuards = data?.securityGuards ?? [];
   const employeesByCustomer = data?.employeesByCustomer ?? {};
   const summary = data?.summary ?? { organizations: 0, units: 0, activeEmployees: 0 };
+
 
   const selectedClient = orgFilter !== "all" ? organizations.find((o) => o.id === orgFilter) ?? null : null;
   const clientEmployees = useMemo(() => {
