@@ -1505,7 +1505,8 @@ function ClientContractsPage() {
                     <div className="inline-flex gap-1">
                       {tab === "prospect" &&
                         c.approvalStatus === "pending" &&
-                        c.prospectStage !== "lost" && (
+                        c.prospectStage !== "lost" &&
+                        canApprove && (
                           <>
                             <Button
                               size="sm"
@@ -1525,22 +1526,43 @@ function ClientContractsPage() {
                             >
                               <XCircle className="mr-1 h-4 w-4" /> Reject
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 px-2 text-muted-foreground hover:bg-muted"
-                              onClick={() =>
-                                updateStageMut.mutate({
-                                  id: c.id,
-                                  stage: "lost",
-                                  label: c.prospectCode,
-                                })
-                              }
-                              title="Mark prospect as lost (stays in prospects)"
-                            >
-                              Mark Lost
-                            </Button>
                           </>
+                        )}
+                      {tab === "prospect" &&
+                        c.approvalStatus === "rejected" &&
+                        c.prospectStage !== "lost" &&
+                        canEdit && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-accent hover:bg-accent/10"
+                            onClick={() =>
+                              resubmitMut.mutate({ id: c.id, prospectCode: c.prospectCode })
+                            }
+                            title="Resubmit this prospect for approval"
+                          >
+                            <RefreshCcw className="mr-1 h-4 w-4" /> Resubmit
+                          </Button>
+                        )}
+                      {tab === "prospect" &&
+                        c.approvalStatus === "pending" &&
+                        c.prospectStage !== "lost" &&
+                        canEdit && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-muted-foreground hover:bg-muted"
+                            onClick={() =>
+                              updateStageMut.mutate({
+                                id: c.id,
+                                stage: "lost",
+                                label: c.prospectCode,
+                              })
+                            }
+                            title="Mark prospect as lost (stays in prospects)"
+                          >
+                            Mark Lost
+                          </Button>
                         )}
                       <Button
                         size="sm"
