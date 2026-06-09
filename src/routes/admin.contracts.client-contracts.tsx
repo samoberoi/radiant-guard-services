@@ -239,6 +239,46 @@ function getApprovalPickerValue(contract: ClientContract | null): ApprovalPicker
   return "";
 }
 
+function applyApprovalPickerToPayload(
+  payload: Omit<ClientContract, "id">,
+  approvalValue: ApprovalPickerValue,
+  current: ClientContract | null,
+): Omit<ClientContract, "id"> {
+  if (approvalValue === "approved") {
+    return {
+      ...payload,
+      approvalStatus: "approved",
+      status: "active",
+      recordType: "client",
+      prospectStage: "closed",
+      rejectionReason: "",
+    };
+  }
+
+  if (approvalValue === "rejected") {
+    return {
+      ...payload,
+      approvalStatus: "rejected",
+      status: "inactive",
+      recordType: "prospect",
+      prospectStage: current?.prospectStage === "lost" ? "new" : (current?.prospectStage ?? "new"),
+    };
+  }
+
+  if (approvalValue === "lost") {
+    return {
+      ...payload,
+      approvalStatus: "pending",
+      status: "inactive",
+      recordType: "prospect",
+      prospectStage: "lost",
+      rejectionReason: "",
+    };
+  }
+
+  return payload;
+}
+
 function nextContractCode(existing: string[]): string {
   let max = 0;
   for (const code of existing) {
@@ -1899,7 +1939,7 @@ function ContractFormDialog({
   editing,
   existingProspectCodes,
   onSubmit,
-  onApprovalAction,
+  canManageApproval,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -1909,7 +1949,7 @@ function ContractFormDialog({
     p: Omit<ClientContract, "id">,
     resources: ContractResource[],
   ) => Promise<string | null>;
-  onApprovalAction?: (mode: "approve" | "reject" | "lost") => void;
+  canManageApproval: boolean;
 }) {
   const { units } = useUnits();
   const { customers } = useCustomers();
@@ -1934,6 +1974,7 @@ function ContractFormDialog({
   const [billingTypeId, setBillingTypeId] = useState<string>("");
   const [esicBranchId, setEsicBranchId] = useState<string>("");
   const [gstOption, setGstOption] = useState<GstOption>("csgst");
+  const [approvalValue, setApprovalValue] = useState<ApprovalPickerValue>("");
   const [unitPickerOpen, setUnitPickerOpen] = useState(false);
   const [unitQuery, setUnitQuery] = useState("");
   const [saving, setSaving] = useState(false);
@@ -1961,6 +2002,7 @@ function ContractFormDialog({
       setBillingTypeId(editing.billingTypeId ?? "");
       setEsicBranchId(editing.esicBranchId ?? "");
       setGstOption(editing.gstOption);
+      setApprovalValue(getApprovalPickerValue(editing));
     } else {
       setContractCode("");
       setProspectCode(nextProspectCode(existingProspectCodes));
@@ -1973,6 +2015,7 @@ function ContractFormDialog({
       setBillingTypeId("");
       setEsicBranchId("");
       setGstOption("csgst");
+      setApprovalValue("");
     }
     setResources([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2019,44 +2062,6 @@ function ContractFormDialog({
                 Capture client information, payroll, billing and GST settings.
               </DialogDescription>
             </div>
-            {editing &&
-              editing.recordType === "prospect" &&
-              editing.approvalStatus === "pending" &&
-              editing.prospectStage !== "lost" &&
-              onApprovalAction && (
-                <div className="mr-6 flex shrink-0 flex-wrap items-center gap-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 px-2 text-accent hover:bg-accent/10"
-                    onClick={() => onApprovalAction("approve")}
-                    title="Approve & sign — promote to client"
-                  >
-                    <CheckCircle2 className="mr-1 h-4 w-4" /> Approve
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 px-2 text-destructive hover:bg-destructive/10"
-                    onClick={() => onApprovalAction("reject")}
-                    title="Reject"
-                  >
-                    <XCircle className="mr-1 h-4 w-4" /> Reject
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 px-2 text-muted-foreground hover:bg-muted"
-                    onClick={() => onApprovalAction("lost")}
-                    title="Mark prospect as lost"
-                  >
-                    Mark Lost
-                  </Button>
-                </div>
-              )}
           </div>
         </DialogHeader>
 
@@ -2151,6 +2156,25 @@ function ContractFormDialog({
           {/* General Information */}
           <Section title="General Information">
             <div className="grid gap-4 sm:grid-cols-2">
+              {editing ? (
+                <Field label="Approval">
+                  <Select
+                    value={approvalValue || "pending"}
+                    onValueChange={(v) => setApprovalValue(v === "pending" ? "" : (v as ApprovalPickerValue))}
+                    disabled={!canManageApproval}
+                  >
+                    <SelectTrigger className="h-10 rounded-lg">
+                      <SelectValue placeholder="Pending" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                      <SelectItem value="lost">Lost</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+              ) : null}
               <Field label="Start Date">
                 <Input
                   type="date"
@@ -2339,7 +2363,7 @@ function ContractFormDialog({
               }
               if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
               setSaving(true);
-              const err = await onSubmit({
+              const payload = applyApprovalPickerToPayload({
                 contractCode,
                 prospectCode,
                 recordType: editing?.recordType ?? "prospect",
@@ -2358,7 +2382,8 @@ function ContractFormDialog({
                 rejectionReason: editing?.rejectionReason ?? "",
                 createdBy: editing?.createdBy ?? null,
                 promotedAt: editing?.promotedAt ?? null,
-              }, resources);
+              }, approvalValue, editing);
+              const err = await onSubmit(payload, resources);
               setSaving(false);
               if (err) toast.error(err);
               else onOpenChange(false);
