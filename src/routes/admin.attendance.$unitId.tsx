@@ -132,9 +132,9 @@ function buildPeriodCells(
 function MusterRollPage() {
   const { unitId } = Route.useParams();
   const now = new Date();
-  const initial = previousMonth(now);
-  const [year, setYear] = useState(initial.year);
-  const [monthIdx, setMonthIdx] = useState(initial.monthIdx); // 0-based, defaults to previous month
+  // Default to current month; user can toggle back to previous months.
+  const [year, setYear] = useState(now.getFullYear());
+  const [monthIdx, setMonthIdx] = useState(now.getMonth()); // 0-based, defaults to current month
 
   const { data: unit } = useQuery({
     queryKey: ["attendance-unit", unitId],
