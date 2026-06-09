@@ -114,7 +114,8 @@ function AdminLayout() {
   const [contractsOpen, setContractsOpen] = useState(false);
   const [vehiclesOpen, setVehiclesOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
-  const [employeesOpen, setEmployeesOpen] = useState(() => pathname.startsWith("/admin/employees") || pathname.startsWith("/admin/deductions") || pathname.startsWith("/admin/additions"));
+  const [employeesOpen, setEmployeesOpen] = useState(() => pathname.startsWith("/admin/employees"));
+  const [payrollOpen, setPayrollOpen] = useState(() => pathname.startsWith("/admin/payroll") || pathname.startsWith("/admin/deductions") || pathname.startsWith("/admin/additions"));
 
   // Map current path → module key, then redirect if user lacks view perm.
   const pathToModule: { prefix: string; module: string }[] = [
