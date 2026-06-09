@@ -70,7 +70,6 @@ type UnitRow = {
 type AttendancePageData = {
   units: UnitRow[];
   organizations: { id: string; name: string; code: string }[];
-  securityGuards: EmployeeRef[];
   employeesByCustomer: Record<string, ClientEmployee[]>;
   summary: { organizations: number; units: number; activeEmployees: number };
 };
