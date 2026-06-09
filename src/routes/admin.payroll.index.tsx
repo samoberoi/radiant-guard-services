@@ -650,16 +650,21 @@ function MonthlyDashboard({
         {/* Right: stats grid */}
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <DashStat icon={Clock3} label="Pending" value={s.pending} accent="amber" loading={loading} />
-            <DashStat icon={CheckCircle2} label="Approved" value={s.approved} accent="emerald" loading={loading} />
-            <DashStat icon={FileEdit} label="Draft" value={s.draft} accent="sky" loading={loading} />
-            <DashStat icon={ClipboardList} label="Sheets" value={s.total} accent="violet" loading={loading} />
+            <DashStat icon={Clock3} label="Pending" value={s.pending} accent="amber" loading={loading}
+              active={activeStatus === "pending"} onClick={() => onStatusChange(activeStatus === "pending" ? "all" : "pending")} />
+            <DashStat icon={CheckCircle2} label="Approved" value={s.approved} accent="emerald" loading={loading}
+              active={activeStatus === "approved"} onClick={() => onStatusChange(activeStatus === "approved" ? "all" : "approved")} />
+            <DashStat icon={FileEdit} label="Draft" value={s.draft} accent="sky" loading={loading}
+              active={activeStatus === "draft"} onClick={() => onStatusChange(activeStatus === "draft" ? "all" : "draft")} />
+            <DashStat icon={ClipboardList} label="Sheets" value={s.total} accent="violet" loading={loading}
+              active={activeStatus === "all"} onClick={() => onStatusChange("all")} />
           </div>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <DashStat icon={Building2} label="Organizations" value={organizations} accent="rose" loading={loading} compact />
             <DashStat icon={MapPinned} label="Units" value={s.units} accent="cyan" loading={loading} compact />
             <DashStat icon={Users} label="Employees" value={s.employees} accent="lime" loading={loading} compact />
           </div>
+
 
           {/* Stacked progress bar */}
           <div>
