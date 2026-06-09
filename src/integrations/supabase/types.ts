@@ -205,6 +205,7 @@ export type Database = {
           candidate_id: string
           code: string
           created_at: string
+          designation_id: string | null
           entry_date: string
           id: string
           ot_hours: number
@@ -215,6 +216,7 @@ export type Database = {
           candidate_id: string
           code?: string
           created_at?: string
+          designation_id?: string | null
           entry_date: string
           id?: string
           ot_hours?: number
@@ -225,13 +227,22 @@ export type Database = {
           candidate_id?: string
           code?: string
           created_at?: string
+          designation_id?: string | null
           entry_date?: string
           id?: string
           ot_hours?: number
           unit_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "attendance_entries_designation_id_fkey"
+            columns: ["designation_id"]
+            isOneToOne: false
+            referencedRelation: "designations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       attendance_sheets: {
         Row: {
