@@ -423,9 +423,10 @@ function PayrollUnitsPage() {
               <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 <th className="px-5 py-4 font-medium">Unit</th>
                 <th className="px-5 py-4 font-medium">Organization</th>
-                <th className="px-5 py-4 font-medium">Approved periods</th>
+                <th className="px-5 py-4 font-medium">Periods (status)</th>
                 <th className="px-5 py-4 text-right font-medium">Employees</th>
                 <th className="px-5 py-4 text-right font-medium">Action</th>
+
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
