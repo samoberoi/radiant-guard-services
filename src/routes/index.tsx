@@ -23,10 +23,11 @@ const PATH_FOR: Record<string,string> = {
 
 function Index() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isReady } = useAuth();
   const { can, isLoading, isSuperAdmin } = useCurrentPermissions();
 
   useEffect(() => {
+    if (!isReady) return;
     if (!user) {
       navigate({ to: "/login", replace: true });
       return;
@@ -43,7 +44,7 @@ function Index() {
       }
     }
     navigate({ to: "/admin/profile", replace: true });
-  }, [user, isLoading, isSuperAdmin, can, navigate]);
+  }, [user, isReady, isLoading, isSuperAdmin, can, navigate]);
 
   return <div className="min-h-screen bg-background" />;
 }
