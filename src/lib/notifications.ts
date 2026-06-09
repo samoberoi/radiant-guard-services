@@ -117,3 +117,57 @@ export async function markAllRead() {
     .is("read_at", null);
   if (error) throw error;
 }
+
+/**
+ * Returns auth user IDs of every active user whose role has the
+ * `can_approve` flag set for the given module. Used to fan out
+ * approval-pending notifications without hardcoding role names.
+ */
+export async function getApproverUserIds(moduleKey: string): Promise<string[]> {
+  const { data, error } = await supabase.rpc(
+    "get_user_ids_with_approve" as never,
+    { _module: moduleKey } as never,
+  );
+  if (error) {
+    console.error("getApproverUserIds error", error);
+    return [];
+  }
+  return ((data as unknown) as Array<{ user_id: string }>).map((r) => r.user_id);
+}
+
+/**
+ * Convenience: send the same notification to every approver of a module.
+ * Self-notifications are skipped.
+ */
+export async function notifyApprovers(input: {
+  moduleKey: string;
+  type: string;
+  title: string;
+  message: string;
+  link?: string;
+  entityType?: string;
+  entityId?: string;
+}) {
+  const [actor, ids] = await Promise.all([
+    currentUserId(),
+    getApproverUserIds(input.moduleKey),
+  ]);
+  const recipients = ids.filter((id) => id !== actor);
+  if (recipients.length === 0) return 0;
+  const rows = recipients.map((uid) => ({
+    user_id: uid,
+    actor_id: actor,
+    type: input.type,
+    title: input.title,
+    message: input.message,
+    link: input.link ?? "",
+    entity_type: input.entityType ?? "",
+    entity_id: input.entityId ?? "",
+  }));
+  const { error } = await supabase.from("notifications" as never).insert(rows as never);
+  if (error) {
+    console.error("notifyApprovers insert error", error);
+    return 0;
+  }
+  return recipients.length;
+}
