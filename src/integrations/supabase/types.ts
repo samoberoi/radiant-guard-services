@@ -3016,6 +3016,7 @@ export type Database = {
       }
       role_permissions: {
         Row: {
+          can_approve: boolean
           can_delete: boolean
           can_edit: boolean
           can_view: boolean
@@ -3027,6 +3028,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          can_approve?: boolean
           can_delete?: boolean
           can_edit?: boolean
           can_view?: boolean
@@ -3038,6 +3040,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          can_approve?: boolean
           can_delete?: boolean
           can_edit?: boolean
           can_view?: boolean
@@ -3677,6 +3680,12 @@ export type Database = {
     Functions: {
       get_admin_user_ids: {
         Args: never
+        Returns: {
+          user_id: string
+        }[]
+      }
+      get_user_ids_with_approve: {
+        Args: { _module: string }
         Returns: {
           user_id: string
         }[]
