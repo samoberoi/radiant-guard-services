@@ -452,14 +452,15 @@ function PayrollUnitsPage() {
                 </tr>
               ) : (
                 filtered.map((unit) => {
-                  const latest = unit.periods[0];
+                  const approvedLatest = unit.periods.find((p) => p.status === "approved");
                   const targetPeriod =
                     periodFilter !== "all"
                       ? (() => {
                           const [s, e] = periodFilter.split("|");
                           return { period_start: s, period_end: e };
                         })()
-                      : latest;
+                      : approvedLatest;
+
                   return (
                     <tr key={unit.id} className="group transition-colors hover:bg-amber-50/30">
                       <td className="px-5 py-4 align-top">
