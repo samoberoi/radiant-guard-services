@@ -12,6 +12,19 @@ import {
   X,
 } from "lucide-react";
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function monthRange(year: number, monthIdx: number) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const start = `${year}-${pad(monthIdx + 1)}-01`;
+  const last = new Date(year, monthIdx + 1, 0).getDate();
+  const end = `${year}-${pad(monthIdx + 1)}-${pad(last)}`;
+  return { start, end };
+}
+
 function currentMonthRange() {
   const now = new Date();
   const y = now.getFullYear();
