@@ -126,6 +126,8 @@ type ClientContract = {
   promotedAt: string | null;
 };
 
+type ApprovalPickerValue = "approved" | "rejected" | "lost" | "";
+
 type ServiceType = { id: string; name: string };
 type PayrollWindow = {
   id: string;
@@ -227,6 +229,14 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
     createdBy: r.created_by ? String(r.created_by) : null,
     promotedAt: r.promoted_at ? String(r.promoted_at) : null,
   };
+}
+
+function getApprovalPickerValue(contract: ClientContract | null): ApprovalPickerValue {
+  if (!contract) return "";
+  if (contract.prospectStage === "lost") return "lost";
+  if (contract.approvalStatus === "approved") return "approved";
+  if (contract.approvalStatus === "rejected") return "rejected";
+  return "";
 }
 
 function nextContractCode(existing: string[]): string {
@@ -347,14 +357,108 @@ function useContracts() {
   });
 
   const updateMut = useMutation({
-    mutationFn: async ({ id, p }: { id: string; p: Payload }) => {
+    mutationFn: async ({
+      id,
+      p,
+      canApproveApproval,
+    }: {
+      id: string;
+      p: Payload;
+      canApproveApproval: boolean;
+    }) => {
       const beforeRes = await supabase
         .from("client_contracts" as never)
-        .select("contract_code,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status")
+        .select(
+          "contract_code,prospect_code,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status,record_type,approval_status,prospect_stage,rejection_reason,promoted_at",
+        )
         .eq("id", id)
         .single();
       const before = (beforeRes.data ?? null) as Record<string, unknown> | null;
       const after = toRow(p, { isNew: false });
+
+      const approvalChanged =
+        String(before?.approval_status ?? "pending") !== p.approvalStatus ||
+        String(before?.prospect_stage ?? "new") !== p.prospectStage ||
+        String(before?.record_type ?? "prospect") !== p.recordType ||
+        String(before?.status ?? "inactive") !== p.status;
+
+      if (approvalChanged && !canApproveApproval) {
+        throw new Error("You do not have permission to change approval.");
+      }
+
+      if (p.approvalStatus === "approved") {
+        const unitId = p.unitId || String(before?.unit_id ?? "");
+        if (unitId) {
+          const { data: dupRows, error: dupErr } = await supabase
+            .from("client_contracts" as never)
+            .select("contract_code")
+            .eq("unit_id", unitId)
+            .eq("record_type", "client")
+            .eq("status", "active")
+            .eq("approval_status", "approved")
+            .neq("id", id);
+          if (dupErr) throw dupErr;
+          const dup = ((dupRows as unknown as Record<string, unknown>[]) ?? [])[0];
+          if (dup) {
+            throw new Error(
+              `Unit already has an active contract (${String(dup.contract_code ?? "—")}). Expire or end it before approving a new one.`,
+            );
+          }
+        }
+
+        let nextCode = p.contractCode || String(before?.contract_code ?? "");
+        if (!nextCode) {
+          const { data: codeRows, error: codeErr } = await supabase
+            .from("client_contracts" as never)
+            .select("contract_code")
+            .not("contract_code", "is", null);
+          if (codeErr) throw codeErr;
+          const existing = ((codeRows as unknown as Record<string, unknown>[]) ?? [])
+            .map((r) => String(r.contract_code ?? ""))
+            .filter(Boolean);
+          nextCode = nextContractCode(existing);
+        }
+
+        const uidRes = await supabase.auth.getUser();
+        const uid = uidRes.data.user?.id ?? null;
+        const nowIso = new Date().toISOString();
+
+        Object.assign(after, {
+          approval_status: "approved",
+          approved_by: uid,
+          approved_at: nowIso,
+          status: "active",
+          rejection_reason: "",
+          rejected_by: null,
+          rejected_at: null,
+          record_type: "client",
+          promoted_at: String(before?.promoted_at ?? "") || nowIso,
+          contract_code: nextCode,
+          prospect_stage: "closed",
+        });
+      } else {
+        Object.assign(after, {
+          approval_status: p.approvalStatus,
+          status: p.status,
+          record_type: p.recordType,
+          prospect_stage: p.prospectStage,
+        });
+
+        if (p.approvalStatus === "rejected") {
+          const uidRes = await supabase.auth.getUser();
+          const uid = uidRes.data.user?.id ?? null;
+          Object.assign(after, {
+            rejected_by: uid,
+            rejected_at: new Date().toISOString(),
+          });
+        } else {
+          Object.assign(after, {
+            rejected_by: null,
+            rejected_at: null,
+          });
+        }
+      }
+
       const { error } = await supabase
         .from("client_contracts" as never)
         .update(after as never)
@@ -1635,7 +1739,7 @@ function ClientContractsPage() {
           try {
             let contractId: string;
             if (editing) {
-              await updateMut.mutateAsync({ id: editing.id, p });
+              await updateMut.mutateAsync({ id: editing.id, p, canApproveApproval: canApprove });
               contractId = editing.id;
             } else {
               contractId = await addMut.mutateAsync(p);
@@ -1647,24 +1751,7 @@ function ClientContractsPage() {
             return e instanceof Error ? e.message : "Could not save contract";
           }
         }}
-        onApprovalAction={
-          canApprove
-            ? (mode) => {
-                if (!editing) return;
-                if (mode === "lost") {
-                  updateStageMut.mutate({
-                    id: editing.id,
-                    stage: "lost",
-                    label: editing.prospectCode,
-                  });
-                } else {
-                  setApprovalTarget({ contract: editing, mode });
-                }
-                setFormOpen(false);
-                setEditing(null);
-              }
-            : undefined
-        }
+        canManageApproval={canApprove}
       />
 
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
