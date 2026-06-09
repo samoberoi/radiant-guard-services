@@ -553,32 +553,73 @@ function ProfilePage() {
   });
 
   const salaryQ = useQuery({
-    queryKey: ["my-salary-slip", profile?.id, profile?.unit_id, profile?.designation_id],
-    enabled: !!profile?.id && !!profile?.unit_id && !!profile?.designation_id,
+    queryKey: [
+      "my-salary-slip",
+      profile?.id,
+      profile?.unit_id,
+      profile?.designation_id,
+      profile?.role_key,
+    ],
+    enabled:
+      !!profile?.id &&
+      ((!!profile?.unit_id && !!profile?.designation_id) || !!profile?.role_key),
     queryFn: async () => {
-      // Find active client contract for this unit
-      const { data: contracts, error: cErr } = await supabase
-        .from("client_contracts")
-        .select("id, contract_code, start_date, end_date, status, unit_id, record_type")
-        .eq("unit_id", profile!.unit_id!)
-        .eq("record_type", "client")
-        .eq("status", "active")
-        .order("start_date", { ascending: false });
-      if (cErr) throw cErr;
-      const contract = (contracts ?? [])[0];
-      if (!contract) return null;
+      let contract: any = null;
+      let res: any = null;
 
-      const { data: res, error: rErr } = await supabase
-        .from("contract_resources")
-        .select(
-          "id, gross, components, deductions, benefits, employer_contributions, designation_id, payroll_day_base_id",
-        )
-        .eq("contract_id", contract.id)
-        .eq("designation_id", profile!.designation_id!)
-        .limit(1)
-        .maybeSingle();
-      if (rErr) throw rErr;
+      if (profile?.unit_id && profile?.designation_id) {
+        // Billable employee: salary against client contract on their unit + designation.
+        const { data: contracts, error: cErr } = await supabase
+          .from("client_contracts")
+          .select("id, contract_code, start_date, end_date, status, unit_id, record_type")
+          .eq("unit_id", profile.unit_id)
+          .eq("record_type", "client")
+          .eq("status", "active")
+          .order("start_date", { ascending: false });
+        if (cErr) throw cErr;
+        contract = (contracts ?? [])[0];
+        if (!contract) return null;
+
+        const { data, error: rErr } = await supabase
+          .from("contract_resources")
+          .select(
+            "id, gross, components, deductions, benefits, employer_contributions, designation_id, payroll_day_base_id",
+          )
+          .eq("contract_id", contract.id)
+          .eq("designation_id", profile.designation_id)
+          .limit(1)
+          .maybeSingle();
+        if (rErr) throw rErr;
+        res = data;
+      } else if (profile?.role_key) {
+        // Non-billable employee: salary against Radiant Guard internal contract, keyed by role.
+        const { data: contracts, error: cErr } = await supabase
+          .from("client_contracts")
+          .select("id, contract_code, start_date, end_date, status, unit_id, record_type")
+          .eq("is_internal" as never, true as never)
+          .eq("status", "active")
+          .limit(1);
+        if (cErr) throw cErr;
+        contract = (contracts ?? [])[0];
+        if (!contract) return null;
+
+        const { data, error: rErr } = await supabase
+          .from("contract_resources")
+          .select(
+            "id, gross, components, deductions, benefits, employer_contributions, designation_id, payroll_day_base_id",
+          )
+          .eq("contract_id", contract.id)
+          .eq("role_key" as never, profile.role_key as never)
+          .limit(1)
+          .maybeSingle();
+        if (rErr) throw rErr;
+        res = data;
+      } else {
+        return null;
+      }
+
       if (!res) return { contract, resource: null as null, wages: null as null, pdb: null as null };
+
 
       let pdb: any = null;
       if (res.payroll_day_base_id) {
