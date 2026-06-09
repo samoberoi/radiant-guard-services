@@ -237,6 +237,7 @@ function InternalSalaryPage() {
       <PageHeader
         title="Internal Salary Structures"
         description="Configure per-role salary structures for non-billable Radiant Guard staff. Roles without a structure here will simply have no salary slip."
+        crumbs={[{ label: "Payroll" }, { label: "Internal Salary Structures" }]}
       />
 
       {!contractQ.isLoading && !contractQ.data && (
