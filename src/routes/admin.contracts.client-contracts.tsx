@@ -126,6 +126,8 @@ type ClientContract = {
   promotedAt: string | null;
 };
 
+type ApprovalPickerValue = "approved" | "rejected" | "lost" | null;
+
 type ServiceType = { id: string; name: string };
 type PayrollWindow = {
   id: string;
@@ -227,6 +229,54 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
     createdBy: r.created_by ? String(r.created_by) : null,
     promotedAt: r.promoted_at ? String(r.promoted_at) : null,
   };
+}
+
+function getApprovalPickerValue(contract: ClientContract | null): ApprovalPickerValue {
+  if (!contract) return null;
+  if (contract.prospectStage === "lost") return "lost";
+  if (contract.approvalStatus === "approved") return "approved";
+  if (contract.approvalStatus === "rejected") return "rejected";
+  return null;
+}
+
+function applyApprovalPickerToPayload(
+  payload: Omit<ClientContract, "id">,
+  approvalValue: ApprovalPickerValue,
+  current: ClientContract | null,
+): Omit<ClientContract, "id"> {
+  if (approvalValue === "approved") {
+    return {
+      ...payload,
+      approvalStatus: "approved",
+      status: "active",
+      recordType: "client",
+      prospectStage: "closed",
+      rejectionReason: "",
+    };
+  }
+
+  if (approvalValue === "rejected") {
+    return {
+      ...payload,
+      approvalStatus: "rejected",
+      status: "inactive",
+      recordType: "prospect",
+      prospectStage: current?.prospectStage === "lost" ? "new" : (current?.prospectStage ?? "new"),
+    };
+  }
+
+  if (approvalValue === "lost") {
+    return {
+      ...payload,
+      approvalStatus: "pending",
+      status: "inactive",
+      recordType: "prospect",
+      prospectStage: "lost",
+      rejectionReason: "",
+    };
+  }
+
+  return payload;
 }
 
 function nextContractCode(existing: string[]): string {
@@ -347,14 +397,108 @@ function useContracts() {
   });
 
   const updateMut = useMutation({
-    mutationFn: async ({ id, p }: { id: string; p: Payload }) => {
+    mutationFn: async ({
+      id,
+      p,
+      canApproveApproval,
+    }: {
+      id: string;
+      p: Payload;
+      canApproveApproval: boolean;
+    }) => {
       const beforeRes = await supabase
         .from("client_contracts" as never)
-        .select("contract_code,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status")
+        .select(
+          "contract_code,prospect_code,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status,record_type,approval_status,prospect_stage,rejection_reason,promoted_at",
+        )
         .eq("id", id)
         .single();
       const before = (beforeRes.data ?? null) as Record<string, unknown> | null;
       const after = toRow(p, { isNew: false });
+
+      const approvalChanged =
+        String(before?.approval_status ?? "pending") !== p.approvalStatus ||
+        String(before?.prospect_stage ?? "new") !== p.prospectStage ||
+        String(before?.record_type ?? "prospect") !== p.recordType ||
+        String(before?.status ?? "inactive") !== p.status;
+
+      if (approvalChanged && !canApproveApproval) {
+        throw new Error("You do not have permission to change approval.");
+      }
+
+      if (p.approvalStatus === "approved") {
+        const unitId = p.unitId || String(before?.unit_id ?? "");
+        if (unitId) {
+          const { data: dupRows, error: dupErr } = await supabase
+            .from("client_contracts" as never)
+            .select("contract_code")
+            .eq("unit_id", unitId)
+            .eq("record_type", "client")
+            .eq("status", "active")
+            .eq("approval_status", "approved")
+            .neq("id", id);
+          if (dupErr) throw dupErr;
+          const dup = ((dupRows as unknown as Record<string, unknown>[]) ?? [])[0];
+          if (dup) {
+            throw new Error(
+              `Unit already has an active contract (${String(dup.contract_code ?? "—")}). Expire or end it before approving a new one.`,
+            );
+          }
+        }
+
+        let nextCode = p.contractCode || String(before?.contract_code ?? "");
+        if (!nextCode) {
+          const { data: codeRows, error: codeErr } = await supabase
+            .from("client_contracts" as never)
+            .select("contract_code")
+            .not("contract_code", "is", null);
+          if (codeErr) throw codeErr;
+          const existing = ((codeRows as unknown as Record<string, unknown>[]) ?? [])
+            .map((r) => String(r.contract_code ?? ""))
+            .filter(Boolean);
+          nextCode = nextContractCode(existing);
+        }
+
+        const uidRes = await supabase.auth.getUser();
+        const uid = uidRes.data.user?.id ?? null;
+        const nowIso = new Date().toISOString();
+
+        Object.assign(after, {
+          approval_status: "approved",
+          approved_by: uid,
+          approved_at: nowIso,
+          status: "active",
+          rejection_reason: "",
+          rejected_by: null,
+          rejected_at: null,
+          record_type: "client",
+          promoted_at: String(before?.promoted_at ?? "") || nowIso,
+          contract_code: nextCode,
+          prospect_stage: "closed",
+        });
+      } else {
+        Object.assign(after, {
+          approval_status: p.approvalStatus,
+          status: p.status,
+          record_type: p.recordType,
+          prospect_stage: p.prospectStage,
+        });
+
+        if (p.approvalStatus === "rejected") {
+          const uidRes = await supabase.auth.getUser();
+          const uid = uidRes.data.user?.id ?? null;
+          Object.assign(after, {
+            rejected_by: uid,
+            rejected_at: new Date().toISOString(),
+          });
+        } else {
+          Object.assign(after, {
+            rejected_by: null,
+            rejected_at: null,
+          });
+        }
+      }
+
       const { error } = await supabase
         .from("client_contracts" as never)
         .update(after as never)
@@ -1635,7 +1779,7 @@ function ClientContractsPage() {
           try {
             let contractId: string;
             if (editing) {
-              await updateMut.mutateAsync({ id: editing.id, p });
+              await updateMut.mutateAsync({ id: editing.id, p, canApproveApproval: canApprove });
               contractId = editing.id;
             } else {
               contractId = await addMut.mutateAsync(p);
@@ -1647,24 +1791,7 @@ function ClientContractsPage() {
             return e instanceof Error ? e.message : "Could not save contract";
           }
         }}
-        onApprovalAction={
-          canApprove
-            ? (mode) => {
-                if (!editing) return;
-                if (mode === "lost") {
-                  updateStageMut.mutate({
-                    id: editing.id,
-                    stage: "lost",
-                    label: editing.prospectCode,
-                  });
-                } else {
-                  setApprovalTarget({ contract: editing, mode });
-                }
-                setFormOpen(false);
-                setEditing(null);
-              }
-            : undefined
-        }
+        canManageApproval={canApprove}
       />
 
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
@@ -1812,7 +1939,7 @@ function ContractFormDialog({
   editing,
   existingProspectCodes,
   onSubmit,
-  onApprovalAction,
+  canManageApproval,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -1822,7 +1949,7 @@ function ContractFormDialog({
     p: Omit<ClientContract, "id">,
     resources: ContractResource[],
   ) => Promise<string | null>;
-  onApprovalAction?: (mode: "approve" | "reject" | "lost") => void;
+  canManageApproval: boolean;
 }) {
   const { units } = useUnits();
   const { customers } = useCustomers();
@@ -1847,6 +1974,7 @@ function ContractFormDialog({
   const [billingTypeId, setBillingTypeId] = useState<string>("");
   const [esicBranchId, setEsicBranchId] = useState<string>("");
   const [gstOption, setGstOption] = useState<GstOption>("csgst");
+  const [approvalValue, setApprovalValue] = useState<ApprovalPickerValue>(null);
   const [unitPickerOpen, setUnitPickerOpen] = useState(false);
   const [unitQuery, setUnitQuery] = useState("");
   const [saving, setSaving] = useState(false);
@@ -1874,6 +2002,7 @@ function ContractFormDialog({
       setBillingTypeId(editing.billingTypeId ?? "");
       setEsicBranchId(editing.esicBranchId ?? "");
       setGstOption(editing.gstOption);
+      setApprovalValue(getApprovalPickerValue(editing));
     } else {
       setContractCode("");
       setProspectCode(nextProspectCode(existingProspectCodes));
@@ -1886,6 +2015,7 @@ function ContractFormDialog({
       setBillingTypeId("");
       setEsicBranchId("");
       setGstOption("csgst");
+      setApprovalValue(null);
     }
     setResources([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1932,44 +2062,6 @@ function ContractFormDialog({
                 Capture client information, payroll, billing and GST settings.
               </DialogDescription>
             </div>
-            {editing &&
-              editing.recordType === "prospect" &&
-              editing.approvalStatus === "pending" &&
-              editing.prospectStage !== "lost" &&
-              onApprovalAction && (
-                <div className="mr-6 flex shrink-0 flex-wrap items-center gap-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 px-2 text-accent hover:bg-accent/10"
-                    onClick={() => onApprovalAction("approve")}
-                    title="Approve & sign — promote to client"
-                  >
-                    <CheckCircle2 className="mr-1 h-4 w-4" /> Approve
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 px-2 text-destructive hover:bg-destructive/10"
-                    onClick={() => onApprovalAction("reject")}
-                    title="Reject"
-                  >
-                    <XCircle className="mr-1 h-4 w-4" /> Reject
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="h-8 px-2 text-muted-foreground hover:bg-muted"
-                    onClick={() => onApprovalAction("lost")}
-                    title="Mark prospect as lost"
-                  >
-                    Mark Lost
-                  </Button>
-                </div>
-              )}
           </div>
         </DialogHeader>
 
@@ -2064,6 +2156,24 @@ function ContractFormDialog({
           {/* General Information */}
           <Section title="General Information">
             <div className="grid gap-4 sm:grid-cols-2">
+              {editing ? (
+                <Field label="Approval">
+                  <Select
+                    value={approvalValue ?? undefined}
+                    onValueChange={(v) => setApprovalValue(v as Exclude<ApprovalPickerValue, null>)}
+                    disabled={!canManageApproval}
+                  >
+                    <SelectTrigger className="h-10 rounded-lg">
+                      <SelectValue placeholder="Pending" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="approved">Approved</SelectItem>
+                      <SelectItem value="rejected">Rejected</SelectItem>
+                      <SelectItem value="lost">Lost</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+              ) : null}
               <Field label="Start Date">
                 <Input
                   type="date"
@@ -2252,7 +2362,7 @@ function ContractFormDialog({
               }
               if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
               setSaving(true);
-              const err = await onSubmit({
+              const payload = applyApprovalPickerToPayload({
                 contractCode,
                 prospectCode,
                 recordType: editing?.recordType ?? "prospect",
@@ -2271,7 +2381,8 @@ function ContractFormDialog({
                 rejectionReason: editing?.rejectionReason ?? "",
                 createdBy: editing?.createdBy ?? null,
                 promotedAt: editing?.promotedAt ?? null,
-              }, resources);
+              }, approvalValue, editing);
+              const err = await onSubmit(payload, resources);
               setSaving(false);
               if (err) toast.error(err);
               else onOpenChange(false);
