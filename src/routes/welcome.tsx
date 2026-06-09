@@ -26,19 +26,12 @@ function maskPhone(phone: string) {
 
 function WelcomePage() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isReady } = useAuth();
 
   useEffect(() => {
-    if (user === null) {
-      // Wait a tick — useAuth sets state in effect, so user is null on first render.
-      const t = setTimeout(() => {
-        if (!localStorage.getItem("radiant.auth")) {
-          navigate({ to: "/login", replace: true });
-        }
-      }, 50);
-      return () => clearTimeout(t);
-    }
-  }, [user, navigate]);
+    if (!isReady) return;
+    if (!user) navigate({ to: "/login", replace: true });
+  }, [user, isReady, navigate]);
 
   function handleLogout() {
     logout();
