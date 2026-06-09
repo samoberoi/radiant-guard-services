@@ -1615,7 +1615,6 @@ function ClientContractsPage() {
                 ) : (
                   <th className="px-5 py-3">Start</th>
                 )}
-                <th className="px-5 py-3">GST</th>
                 <th className="px-5 py-3">{tab === "client" ? "Status" : "Approval"}</th>
                 <th className="px-5 py-3 text-right">Actions</th>
               </tr>
@@ -1642,10 +1641,7 @@ function ClientContractsPage() {
                     {c.startDate || "—"}
                   </td>
                 )}
-                  <td className="px-5 py-3 text-xs uppercase tracking-wider text-foreground">
-                    {c.gstOption === "none" ? "No GST" : c.gstOption}
-                  </td>
-                  <td className="px-5 py-3">
+                <td className="px-5 py-3">
                     {tab === "client" ? (
                       <StatusBadge status={c.status} />
                     ) : c.prospectStage === "lost" ? (
@@ -1764,7 +1760,7 @@ function ClientContractsPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     <FileText className="mx-auto mb-2 h-6 w-6 opacity-50" />
                     {items.length === 0
                       ? "No contracts yet. Create your first contract to get started."
