@@ -5,6 +5,7 @@ import { logActivity, getClientIp } from "@/lib/activity-log";
 const STORAGE_KEY = "radiant.auth";
 const AUTH_TIMEOUT_MS = 12_000;
 const IP_LOOKUP_TIMEOUT_MS = 1_500;
+const SESSION_BOOTSTRAP_WAIT_MS = 5_000;
 
 /**
  * ⚠️ PRE-LAUNCH TESTING ONLY ⚠️
@@ -94,16 +95,43 @@ async function ensureSupabaseSession(phone: string) {
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(() => read());
+  const [isReady, setIsReady] = useState(() => typeof window === "undefined");
 
   useEffect(() => {
-    setUser(read());
-    const sync = () => setUser(read());
+    let active = true;
+    const sync = () => {
+      if (!active) return;
+      setUser(read());
+      setIsReady(true);
+    };
+
+    sync();
     listeners.add(sync);
     window.addEventListener("storage", sync);
+
+    void supabase.auth
+      .getSession()
+      .then(() => {
+        if (!active) return;
+        sync();
+      })
+      .catch(() => {
+        if (!active) return;
+        setIsReady(true);
+      });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      sync();
+    });
+
     return () => {
+      active = false;
       listeners.delete(sync);
       window.removeEventListener("storage", sync);
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -112,8 +140,20 @@ export function useAuth() {
     const role: AuthUser["role"] =
       digits === SUPER_ADMIN_PHONE ? "super_admin" : "user";
     const ipPromise = resolveClientIpQuickly();
+    const sessionBootstrap = ensureSupabaseSession(phone);
     try {
-      await ensureSupabaseSession(phone);
+      const bootstrapped = await Promise.race([
+        sessionBootstrap.then(() => true),
+        new Promise<false>((resolve) => {
+          setTimeout(() => resolve(false), SESSION_BOOTSTRAP_WAIT_MS);
+        }),
+      ]);
+
+      if (!bootstrapped) {
+        void sessionBootstrap.catch((error) => {
+          console.warn("Background session bootstrap failed", error);
+        });
+      }
     } catch (e) {
       void ipPromise.then((ip) =>
         logActivity({
@@ -161,7 +201,7 @@ export function useAuth() {
     emit();
   }, []);
 
-  return { user, login, logout };
+  return { user, login, logout, isReady };
 }
 
 // TODO: replace with real OTP provider (Twilio / MSG91 / Supabase phone auth).
