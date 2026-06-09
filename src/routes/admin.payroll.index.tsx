@@ -23,12 +23,15 @@ export const Route = createFileRoute("/admin/payroll/")({
 });
 
 
-type ApprovedSheet = {
+type SheetStatus = "approved" | "pending" | "draft" | "rejected";
+
+type SheetRow = {
   id: string;
   unit_id: string;
   period_start: string;
   period_end: string;
   approved_at: string | null;
+  status: SheetStatus;
 };
 
 type UnitRow = {
@@ -40,8 +43,10 @@ type UnitRow = {
   customer_name: string;
   active_employee_count: number;
   employee_ids: string[];
-  approved_periods: { period_start: string; period_end: string }[];
+  periods: { period_start: string; period_end: string; status: SheetStatus }[];
+  statuses: Set<SheetStatus>;
 };
+
 
 type EmployeeOption = { id: string; label: string; name: string; code: string; unit_ids: string[] };
 
