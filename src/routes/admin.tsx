@@ -73,7 +73,9 @@ const vehiclesChildren: NavItem[] = [
   { to: "/admin/vehicles/expense-manager", label: "Expense Manager", icon: Fuel },
 ];
 
-const employeesChildren: NavItem[] = [
+const employeesChildren: NavItem[] = [];
+
+const payrollChildren: NavItem[] = [
   { to: "/admin/additions", label: "Additions", icon: Wallet },
   { to: "/admin/deductions", label: "Deductions", icon: Wallet },
 ];
