@@ -73,7 +73,9 @@ const vehiclesChildren: NavItem[] = [
   { to: "/admin/vehicles/expense-manager", label: "Expense Manager", icon: Fuel },
 ];
 
-const employeesChildren: NavItem[] = [
+const employeesChildren: NavItem[] = [];
+
+const payrollChildren: NavItem[] = [
   { to: "/admin/additions", label: "Additions", icon: Wallet },
   { to: "/admin/deductions", label: "Deductions", icon: Wallet },
 ];
@@ -112,15 +114,16 @@ function AdminLayout() {
   const [contractsOpen, setContractsOpen] = useState(false);
   const [vehiclesOpen, setVehiclesOpen] = useState(false);
   const [inventoryOpen, setInventoryOpen] = useState(false);
-  const [employeesOpen, setEmployeesOpen] = useState(() => pathname.startsWith("/admin/employees") || pathname.startsWith("/admin/deductions") || pathname.startsWith("/admin/additions"));
+  const [employeesOpen, setEmployeesOpen] = useState(() => pathname.startsWith("/admin/employees"));
+  const [payrollOpen, setPayrollOpen] = useState(() => pathname.startsWith("/admin/payroll") || pathname.startsWith("/admin/deductions") || pathname.startsWith("/admin/additions"));
 
   // Map current path → module key, then redirect if user lacks view perm.
   const pathToModule: { prefix: string; module: string }[] = [
     { prefix: "/admin/customers", module: "organizations" },
     { prefix: "/admin/contracts", module: "contracts" },
     { prefix: "/admin/employees", module: "employees" },
-    { prefix: "/admin/deductions", module: "employees" },
-    { prefix: "/admin/additions", module: "employees" },
+    { prefix: "/admin/deductions", module: "payroll" },
+    { prefix: "/admin/additions", module: "payroll" },
     { prefix: "/admin/deduction-type-manager", module: "control_center" },
     { prefix: "/admin/addition-type-manager", module: "control_center" },
     { prefix: "/admin/vehicles", module: "vehicles" },
@@ -427,7 +430,7 @@ function AdminLayout() {
             <div
               className={cn(
                 "group flex w-full items-center gap-1 rounded-lg pr-1 text-sm font-semibold transition-colors",
-                isActive("/admin/employees") || isActive("/admin/deductions") || isActive("/admin/additions")
+                isActive("/admin/employees")
                   ? "bg-accent/20 text-accent"
                   : "text-primary-foreground/85 hover:bg-white/5",
               )}
@@ -717,22 +720,95 @@ function AdminLayout() {
 
           </>)}
           {can("payroll") && (<>
-          {/* Payroll link */}
+          {/* Payroll group */}
           <div className="mt-2">
-            <Link
-              to="/admin/payroll"
+            <div
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
-                isActive("/admin/payroll")
+                "group flex w-full items-center gap-1 rounded-lg pr-1 text-sm font-semibold transition-colors",
+                isActive("/admin/payroll") || isActive("/admin/additions") || isActive("/admin/deductions")
                   ? "bg-accent/20 text-accent"
                   : "text-primary-foreground/85 hover:bg-white/5",
-                collapsed && "justify-center",
               )}
-              title={collapsed ? "Payroll" : undefined}
             >
-              <Wallet className="h-4.5 w-4.5 shrink-0" />
-              {!collapsed && <span>Payroll</span>}
-            </Link>
+              <Link
+                to="/admin/payroll"
+                onClick={() => setPayrollOpen(true)}
+                className={cn("flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5", collapsed && "justify-center")}
+                title={collapsed ? "Payroll" : undefined}
+              >
+                <Wallet className="h-4.5 w-4.5 shrink-0" />
+                {!collapsed && <span className="flex-1 text-left">Payroll</span>}
+              </Link>
+              {!collapsed && (
+                <button
+                  type="button"
+                  onClick={() => setPayrollOpen((v) => !v)}
+                  aria-label={payrollOpen ? "Collapse" : "Expand"}
+                  className="rounded-md p-1.5 text-primary-foreground/70 hover:bg-white/10"
+                >
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 transition-transform",
+                      payrollOpen ? "rotate-0" : "-rotate-90",
+                    )}
+                  />
+                </button>
+              )}
+            </div>
+
+            {payrollOpen && !collapsed && (
+              <div className="mt-1 space-y-0.5 pl-3">
+                {payrollChildren.map((item) => {
+                  const active = isActive(item.to);
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      search={item.to === "/admin/deductions" || item.to === "/admin/additions" ? { mode: "list" } : undefined}
+                      className={cn(
+                        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
+                        active
+                          ? "bg-white/10 text-primary-foreground"
+                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "absolute left-0 h-5 w-0.5 rounded-r bg-accent transition-opacity",
+                          active ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      <item.icon className="h-4 w-4 shrink-0" />
+                      <span>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+
+            {collapsed && (
+              <div className="mt-1 space-y-1">
+                {payrollChildren.map((item) => {
+                  const active = isActive(item.to);
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      search={item.to === "/admin/deductions" || item.to === "/admin/additions" ? { mode: "list" } : undefined}
+                      title={item.label}
+                      className={cn(
+                        "flex items-center justify-center rounded-lg p-2.5 transition-colors",
+                        active
+                          ? "bg-accent/20 text-accent"
+                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
+                      )}
+                    >
+                      <item.icon className="h-4.5 w-4.5" />
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           </>)}
