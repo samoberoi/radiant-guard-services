@@ -1576,6 +1576,20 @@ function ClientContractsPage() {
             return e instanceof Error ? e.message : "Could not save contract";
           }
         }}
+        onApprovalAction={(mode) => {
+          if (!editing) return;
+          if (mode === "lost") {
+            updateStageMut.mutate({
+              id: editing.id,
+              stage: "lost",
+              label: editing.prospectCode,
+            });
+          } else {
+            setApprovalTarget({ contract: editing, mode });
+          }
+          setFormOpen(false);
+          setEditing(null);
+        }}
       />
 
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
@@ -1723,6 +1737,7 @@ function ContractFormDialog({
   editing,
   existingProspectCodes,
   onSubmit,
+  onApprovalAction,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -1732,6 +1747,7 @@ function ContractFormDialog({
     p: Omit<ClientContract, "id">,
     resources: ContractResource[],
   ) => Promise<string | null>;
+  onApprovalAction?: (mode: "approve" | "reject" | "lost") => void;
 }) {
   const { units } = useUnits();
   const { customers } = useCustomers();
@@ -1834,11 +1850,54 @@ function ContractFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{editing ? "Edit Contract" : "Create Contract"}</DialogTitle>
-          <DialogDescription>
-            Capture client information, payroll, billing and GST settings.
-          </DialogDescription>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <DialogTitle>{editing ? "Edit Contract" : "Create Contract"}</DialogTitle>
+              <DialogDescription>
+                Capture client information, payroll, billing and GST settings.
+              </DialogDescription>
+            </div>
+            {editing &&
+              editing.recordType === "prospect" &&
+              editing.approvalStatus === "pending" &&
+              editing.prospectStage !== "lost" &&
+              onApprovalAction && (
+                <div className="mr-6 flex shrink-0 flex-wrap items-center gap-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 px-2 text-accent hover:bg-accent/10"
+                    onClick={() => onApprovalAction("approve")}
+                    title="Approve & sign — promote to client"
+                  >
+                    <CheckCircle2 className="mr-1 h-4 w-4" /> Approve
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 px-2 text-destructive hover:bg-destructive/10"
+                    onClick={() => onApprovalAction("reject")}
+                    title="Reject"
+                  >
+                    <XCircle className="mr-1 h-4 w-4" /> Reject
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-8 px-2 text-muted-foreground hover:bg-muted"
+                    onClick={() => onApprovalAction("lost")}
+                    title="Mark prospect as lost"
+                  >
+                    Mark Lost
+                  </Button>
+                </div>
+              )}
+          </div>
         </DialogHeader>
+
 
         <div className="space-y-5 py-2">
           {/* Client Information */}
@@ -1961,16 +2020,6 @@ function ContractFormDialog({
                     ))}
                   </SelectContent>
                 </Select>
-              </Field>
-              <Field label="Approval Status">
-                <Input
-                  value={
-                    editing
-                      ? `${editing.recordType === "client" ? "Client" : "Prospect"} · ${editing.approvalStatus}`
-                      : "Prospect · pending"
-                  }
-                  readOnly
-                />
               </Field>
               <div className="sm:col-span-2">
                 <Field label="Description">
