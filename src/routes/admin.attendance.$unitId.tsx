@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { classifyAttendanceEmployee, matchesAttendanceScope, type AttendanceScopeAssignment, type AttendanceUnitContext } from "@/lib/attendance";
 import { cn } from "@/lib/utils";
+import { useCurrentPermissions } from "@/lib/rbac";
 
 const searchSchema = z.object({
   month: z.coerce.number().min(0).max(11).optional(),
