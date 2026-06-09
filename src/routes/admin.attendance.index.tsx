@@ -12,6 +12,19 @@ import {
   X,
 } from "lucide-react";
 
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+function monthRange(year: number, monthIdx: number) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const start = `${year}-${pad(monthIdx + 1)}-01`;
+  const last = new Date(year, monthIdx + 1, 0).getDate();
+  const end = `${year}-${pad(monthIdx + 1)}-${pad(last)}`;
+  return { start, end };
+}
+
 function currentMonthRange() {
   const now = new Date();
   const y = now.getFullYear();
@@ -79,9 +92,14 @@ type AttendancePageData = {
 const ACTIVE_EMPLOYEE_STATUSES = ["active"] as const;
 
 function AttendanceUnitsPage() {
+  const now = new Date();
   const [q, setQ] = useState("");
   const [orgFilter, setOrgFilter] = useState<string>("all");
   const [unitFilter, setUnitFilter] = useState<string>("all");
+  const [monthIdx, setMonthIdx] = useState<number>(now.getMonth());
+  const [year, setYear] = useState<number>(now.getFullYear());
+
+
 
 
   const { data, isLoading, error } = useQuery({
@@ -393,9 +411,36 @@ function AttendanceUnitsPage() {
       <PageHeader
         title="Attendance"
         description="Browse units with active contracts and drill into the monthly muster roll. Only billable employees appear — non-billable staff are on Radiant's own payroll. Filter by organization or unit."
-
         crumbs={[{ label: "Attendance" }]}
       />
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Select value={String(monthIdx)} onValueChange={(v) => setMonthIdx(Number(v))}>
+            <SelectTrigger className="w-[150px] rounded-xl border-border/60 bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MONTH_NAMES.map((m, i) => (
+                <SelectItem key={m} value={String(i)}>{m}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
+            <SelectTrigger className="w-[110px] rounded-xl border-border/60 bg-background">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[year - 2, year - 1, year, year + 1].map((y) => (
+                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          Muster roll for <span className="font-medium text-foreground">{MONTH_NAMES[monthIdx]} {year}</span>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
         <SummaryTile icon={Building2} label="Organizations" value={summary.organizations} accent="organization" />
@@ -512,7 +557,7 @@ function AttendanceUnitsPage() {
                             <Link
                               to="/admin/payroll/$unitId"
                               params={{ unitId: e.unit_id }}
-                              search={{ ...currentMonthRange(), candidate: e.id }}
+                              search={{ ...monthRange(year, monthIdx), candidate: e.id }}
                               className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300/60 bg-emerald-50 px-2.5 py-1.5 text-xs font-medium text-emerald-800 hover:border-emerald-500 dark:bg-emerald-950/30 dark:text-emerald-200"
                             >
                               <IndianRupee className="h-3 w-3" /> View salary
@@ -520,6 +565,7 @@ function AttendanceUnitsPage() {
                             <Link
                               to="/admin/attendance/$unitId"
                               params={{ unitId: e.unit_id }}
+                              search={{ month: monthIdx, year }}
                               className="inline-flex items-center gap-1.5 rounded-lg border border-border/60 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground hover:border-accent/50 hover:text-accent"
                             >
                               Open roll <ArrowRight className="h-3 w-3" />
@@ -616,6 +662,7 @@ function AttendanceUnitsPage() {
                       <Link
                         to="/admin/attendance/$unitId"
                         params={{ unitId: unit.id }}
+                        search={{ month: monthIdx, year }}
                         className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/50 hover:text-accent"
                       >
                         Open roll <ArrowRight className="h-4 w-4" />

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, Printer, Download, CheckCircle2, XCircle, Send, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
+import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
 import { Button } from "@/components/ui/button";
@@ -26,8 +27,13 @@ import {
 import { classifyAttendanceEmployee, matchesAttendanceScope, type AttendanceScopeAssignment, type AttendanceUnitContext } from "@/lib/attendance";
 import { cn } from "@/lib/utils";
 
+const searchSchema = z.object({
+  month: z.coerce.number().min(0).max(11).optional(),
+  year: z.coerce.number().min(2000).max(2100).optional(),
+});
 
 export const Route = createFileRoute("/admin/attendance/$unitId")({
+  validateSearch: (s) => searchSchema.parse(s),
   component: MusterRollPage,
 });
 
@@ -131,10 +137,12 @@ function buildPeriodCells(
 
 function MusterRollPage() {
   const { unitId } = Route.useParams();
+  const search = Route.useSearch();
   const now = new Date();
   // Default to current month; user can toggle back to previous months.
-  const [year, setYear] = useState(now.getFullYear());
-  const [monthIdx, setMonthIdx] = useState(now.getMonth()); // 0-based, defaults to current month
+  // If search params are provided (from index page), use those.
+  const [year, setYear] = useState(search.year ?? now.getFullYear());
+  const [monthIdx, setMonthIdx] = useState(search.month ?? now.getMonth()); // 0-based, defaults to current month
 
   const { data: unit } = useQuery({
     queryKey: ["attendance-unit", unitId],
