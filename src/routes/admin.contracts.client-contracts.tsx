@@ -1723,6 +1723,7 @@ function ContractFormDialog({
   editing,
   existingProspectCodes,
   onSubmit,
+  onApprovalAction,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -1732,6 +1733,7 @@ function ContractFormDialog({
     p: Omit<ClientContract, "id">,
     resources: ContractResource[],
   ) => Promise<string | null>;
+  onApprovalAction?: (mode: "approve" | "reject" | "lost") => void;
 }) {
   const { units } = useUnits();
   const { customers } = useCustomers();
