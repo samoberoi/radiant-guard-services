@@ -54,7 +54,6 @@ import { Route as AdminVehiclesInsurancesRouteImport } from './routes/admin.vehi
 import { Route as AdminVehiclesInsightLabRouteImport } from './routes/admin.vehicles.insight-lab'
 import { Route as AdminVehiclesFastagsRouteImport } from './routes/admin.vehicles.fastags'
 import { Route as AdminVehiclesExpenseManagerRouteImport } from './routes/admin.vehicles.expense-manager'
-import { Route as AdminPayrollInternalSalaryRouteImport } from './routes/admin.payroll.internal-salary'
 import { Route as AdminPayrollUnitIdRouteImport } from './routes/admin.payroll.$unitId'
 import { Route as AdminInventoryWriteOffsRouteImport } from './routes/admin.inventory.write-offs'
 import { Route as AdminInventoryWarehousesRouteImport } from './routes/admin.inventory.warehouses'
@@ -309,12 +308,6 @@ const AdminVehiclesExpenseManagerRoute =
     path: '/expense-manager',
     getParentRoute: () => AdminVehiclesRoute,
   } as any)
-const AdminPayrollInternalSalaryRoute =
-  AdminPayrollInternalSalaryRouteImport.update({
-    id: '/internal-salary',
-    path: '/internal-salary',
-    getParentRoute: () => AdminPayrollRoute,
-  } as any)
 const AdminPayrollUnitIdRoute = AdminPayrollUnitIdRouteImport.update({
   id: '/$unitId',
   path: '/$unitId',
@@ -482,7 +475,6 @@ export interface FileRoutesByFullPath {
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
   '/admin/inventory/write-offs': typeof AdminInventoryWriteOffsRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
-  '/admin/payroll/internal-salary': typeof AdminPayrollInternalSalaryRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
   '/admin/vehicles/insight-lab': typeof AdminVehiclesInsightLabRoute
@@ -548,7 +540,6 @@ export interface FileRoutesByTo {
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
   '/admin/inventory/write-offs': typeof AdminInventoryWriteOffsRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
-  '/admin/payroll/internal-salary': typeof AdminPayrollInternalSalaryRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
   '/admin/vehicles/insight-lab': typeof AdminVehiclesInsightLabRoute
@@ -617,7 +608,6 @@ export interface FileRoutesById {
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
   '/admin/inventory/write-offs': typeof AdminInventoryWriteOffsRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
-  '/admin/payroll/internal-salary': typeof AdminPayrollInternalSalaryRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
   '/admin/vehicles/fastags': typeof AdminVehiclesFastagsRoute
   '/admin/vehicles/insight-lab': typeof AdminVehiclesInsightLabRoute
@@ -687,7 +677,6 @@ export interface FileRouteTypes {
     | '/admin/inventory/warehouses'
     | '/admin/inventory/write-offs'
     | '/admin/payroll/$unitId'
-    | '/admin/payroll/internal-salary'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
     | '/admin/vehicles/insight-lab'
@@ -753,7 +742,6 @@ export interface FileRouteTypes {
     | '/admin/inventory/warehouses'
     | '/admin/inventory/write-offs'
     | '/admin/payroll/$unitId'
-    | '/admin/payroll/internal-salary'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
     | '/admin/vehicles/insight-lab'
@@ -821,7 +809,6 @@ export interface FileRouteTypes {
     | '/admin/inventory/warehouses'
     | '/admin/inventory/write-offs'
     | '/admin/payroll/$unitId'
-    | '/admin/payroll/internal-salary'
     | '/admin/vehicles/expense-manager'
     | '/admin/vehicles/fastags'
     | '/admin/vehicles/insight-lab'
@@ -1158,13 +1145,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminVehiclesExpenseManagerRouteImport
       parentRoute: typeof AdminVehiclesRoute
     }
-    '/admin/payroll/internal-salary': {
-      id: '/admin/payroll/internal-salary'
-      path: '/internal-salary'
-      fullPath: '/admin/payroll/internal-salary'
-      preLoaderRoute: typeof AdminPayrollInternalSalaryRouteImport
-      parentRoute: typeof AdminPayrollRoute
-    }
     '/admin/payroll/$unitId': {
       id: '/admin/payroll/$unitId'
       path: '/$unitId'
@@ -1376,13 +1356,11 @@ const AdminInventoryRouteWithChildren = AdminInventoryRoute._addFileChildren(
 
 interface AdminPayrollRouteChildren {
   AdminPayrollUnitIdRoute: typeof AdminPayrollUnitIdRoute
-  AdminPayrollInternalSalaryRoute: typeof AdminPayrollInternalSalaryRoute
   AdminPayrollIndexRoute: typeof AdminPayrollIndexRoute
 }
 
 const AdminPayrollRouteChildren: AdminPayrollRouteChildren = {
   AdminPayrollUnitIdRoute: AdminPayrollUnitIdRoute,
-  AdminPayrollInternalSalaryRoute: AdminPayrollInternalSalaryRoute,
   AdminPayrollIndexRoute: AdminPayrollIndexRoute,
 }
 
@@ -1499,3 +1477,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
