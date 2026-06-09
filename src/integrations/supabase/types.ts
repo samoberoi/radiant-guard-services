@@ -644,6 +644,7 @@ export type Database = {
           description: string
           end_date: string | null
           esic_branch_id: string | null
+          expiry_date: string | null
           gst_option: string
           id: string
           is_internal: boolean
@@ -675,6 +676,7 @@ export type Database = {
           description?: string
           end_date?: string | null
           esic_branch_id?: string | null
+          expiry_date?: string | null
           gst_option?: string
           id?: string
           is_internal?: boolean
@@ -706,6 +708,7 @@ export type Database = {
           description?: string
           end_date?: string | null
           esic_branch_id?: string | null
+          expiry_date?: string | null
           gst_option?: string
           id?: string
           is_internal?: boolean
