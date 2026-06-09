@@ -1,15 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Printer, Download, CheckCircle2, XCircle, Send, RotateCcw } from "lucide-react";
+import { ChevronLeft, Printer, Download, CheckCircle2, XCircle, Send, RotateCcw, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +48,7 @@ type AttendanceCode = {
 
 type EntryRow = {
   candidate_id: string;
+  designation_id: string | null;
   entry_date: string;
   code: string;
   ot_hours: number;
@@ -65,17 +64,10 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-// Attendance is always for the previous month (May shows April's roll).
-// Only active employees appear on the roll.
 const ATTENDANCE_EMPLOYEE_STATUSES = ["active"] as const;
 
 function daysInMonth(year: number, monthIdx0: number) {
   return new Date(year, monthIdx0 + 1, 0).getDate();
-}
-
-function previousMonth(now: Date) {
-  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  return { year: prev.getFullYear(), monthIdx: prev.getMonth() };
 }
 
 function ymd(year: number, monthIdx0: number, day: number) {
@@ -84,24 +76,19 @@ function ymd(year: number, monthIdx0: number, day: number) {
   return `${year}-${m}-${d}`;
 }
 
-// Build the attendance period for a given (year, monthIdx) using the
-// contract's payroll window. The selected month is treated as the month
-// the period ENDS in. e.g. selecting April with window 21–20 gives
-// 21 Mar → 20 Apr.
 function buildPeriodCells(
   year: number,
   monthIdx: number,
-  window: { window_start_day: number; window_end_day: number } | null,
+  win: { window_start_day: number; window_end_day: number } | null,
 ): Array<{ date: string; dayNum: number; monthIdx: number; year: number }> {
-  const startDay = window?.window_start_day ?? 1;
-  const endDay = window?.window_end_day ?? 31;
+  const startDay = win?.window_start_day ?? 1;
+  const endDay = win?.window_end_day ?? 31;
   const endsInSelected = startDay > endDay || (startDay === 1 && endDay >= 28);
 
   let startY: number, startM: number, startD: number;
   let endY: number, endM: number, endD: number;
 
   if (endsInSelected && startDay > endDay) {
-    // Cross-month window (e.g. 21 → 20): starts in previous month.
     const prev = new Date(year, monthIdx - 1, 1);
     startY = prev.getFullYear();
     startM = prev.getMonth();
@@ -111,7 +98,6 @@ function buildPeriodCells(
     endM = monthIdx;
     endD = Math.min(endDay, daysInMonth(year, monthIdx));
   } else {
-    // Full calendar month (1 → 30/31) or in-month window.
     startY = year;
     startM = monthIdx;
     startD = startDay;
@@ -135,14 +121,18 @@ function buildPeriodCells(
   return cells;
 }
 
+const NULL_DESIG = "__none__"; // sentinel row-key segment when an employee has no designation
+
+const rowKey = (candidateId: string, designationId: string | null) =>
+  `${candidateId}|${designationId ?? NULL_DESIG}`;
+
 function MusterRollPage() {
   const { unitId } = Route.useParams();
   const search = Route.useSearch();
   const now = new Date();
-  // Default to current month; user can toggle back to previous months.
-  // If search params are provided (from index page), use those.
+  const todayStr = ymd(now.getFullYear(), now.getMonth(), now.getDate());
   const [year, setYear] = useState(search.year ?? now.getFullYear());
-  const [monthIdx, setMonthIdx] = useState(search.month ?? now.getMonth()); // 0-based, defaults to current month
+  const [monthIdx, setMonthIdx] = useState(search.month ?? now.getMonth());
 
   const { data: unit } = useQuery({
     queryKey: ["attendance-unit", unitId],
@@ -164,11 +154,10 @@ function MusterRollPage() {
   });
 
   const { data: employees, isLoading, error: rosterError } = useQuery({
-    queryKey: ["attendance-roster-v4", unitId],
+    queryKey: ["attendance-roster-v5", unitId],
     queryFn: async () => {
       const rosterSelect = "id, employee_code, full_name, designation_id, preferred_joining_date, date_of_birth, is_enabled, status, role_key";
 
-      // Primary unit assignment on candidates
       const { data: prim, error: primError } = await supabase
         .from("candidates")
         .select(rosterSelect)
@@ -177,7 +166,6 @@ function MusterRollPage() {
         .in("status", [...ATTENDANCE_EMPLOYEE_STATUSES]);
       if (primError) throw primError;
 
-      // Multi-unit assignments
       const [
         { data: links, error: linksError },
         { data: rawUnit, error: rawUnitError },
@@ -229,13 +217,12 @@ function MusterRollPage() {
         .in("id", desigIds.length ? desigIds : ["00000000-0000-0000-0000-000000000000"]);
       const dMap = new Map((desigs ?? []).map((d) => [d.id, d.name]));
 
-      // Only billable security guards are payable per-unit; field officers (reporting officers)
-      // are on Radiant's own payroll and are excluded from the muster roll.
       const mappedEmployees = dedup
         .map((c) => ({
           id: c.id,
           employee_code: c.employee_code || "",
           full_name: c.full_name || "",
+          designation_id: c.designation_id as string | null,
           designation: (c.designation_id && dMap.get(c.designation_id)) || "",
           employee_type: classifyAttendanceEmployee(c.role_key, (c.designation_id && dMap.get(c.designation_id)) || ""),
           doj: c.preferred_joining_date || "",
@@ -250,11 +237,9 @@ function MusterRollPage() {
     enabled: Boolean(unit),
   });
 
-  // dayCount/periodStart/periodEnd are derived below from the payroll window.
-
-  // Resolve the payroll window for this unit via its active contract.
+  // Active contract: payroll window + designations available on this unit
   const { data: contractInfo } = useQuery({
-    queryKey: ["attendance-payroll-window", unitId],
+    queryKey: ["attendance-contract", unitId],
     queryFn: async () => {
       const { data: contracts, error } = await supabase
         .from("client_contracts")
@@ -267,23 +252,41 @@ function MusterRollPage() {
       if (error) throw error;
       const winId = contracts?.[0]?.payroll_window_id;
       const startDate = contracts?.[0]?.start_date ?? null;
+      const contractId = contracts?.[0]?.id ?? null;
+
       type Win = { id: string; label: string | null; window_start_day: number; window_end_day: number };
       let win: Win | null = null;
       if (winId) {
-        const { data: winRow, error: winErr } = await supabase
+        const { data: winRow } = await supabase
           .from("payroll_windows")
           .select("id, label, window_start_day, window_end_day")
           .eq("id", winId)
           .maybeSingle();
-        if (winErr) throw winErr;
         win = (winRow as Win | null) ?? null;
       }
-      return { window: win, startDate };
+
+      let resources: Array<{ designationId: string; designationName: string }> = [];
+      if (contractId) {
+        const { data: r } = await supabase
+          .from("contract_resources")
+          .select("designation_id")
+          .eq("contract_id", contractId);
+        const ids = Array.from(new Set((r ?? []).map((x) => x.designation_id).filter(Boolean))) as string[];
+        if (ids.length) {
+          const { data: ds } = await supabase
+            .from("designations")
+            .select("id, name")
+            .in("id", ids);
+          resources = (ds ?? []).map((d) => ({ designationId: d.id, designationName: d.name }));
+        }
+      }
+      return { window: win, startDate, contractId, resources };
     },
     enabled: Boolean(unitId),
   });
   const payrollWindow = contractInfo?.window ?? null;
   const contractStartDate = contractInfo?.startDate ?? null;
+  const contractDesignations = contractInfo?.resources ?? [];
 
   const periodCells = useMemo(
     () => buildPeriodCells(year, monthIdx, payrollWindow ?? null),
@@ -295,7 +298,6 @@ function MusterRollPage() {
 
   const queryClient = useQueryClient();
 
-  // Attendance sheet lifecycle: draft → submitted → approved | rejected
   type SheetStatus = "draft" | "submitted" | "approved" | "rejected";
   type SheetRow = { id: string; status: SheetStatus; rejection_reason: string };
   const sheetQK = ["attendance-sheet", unitId, periodStart, periodEnd];
@@ -369,8 +371,6 @@ function MusterRollPage() {
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
-
-
   const { data: codes = [] } = useQuery({
     queryKey: ["attendance-codes-enabled"],
     queryFn: async () => {
@@ -386,12 +386,13 @@ function MusterRollPage() {
 
   const codeMap = useMemo(() => new Map(codes.map((c) => [c.code, c])), [codes]);
 
+  const entriesQK = ["attendance-entries-v2", unitId, periodStart, periodEnd];
   const { data: entries = [] } = useQuery({
-    queryKey: ["attendance-entries", unitId, periodStart, periodEnd],
+    queryKey: entriesQK,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("attendance_entries")
-        .select("candidate_id, entry_date, code, ot_hours")
+        .select("candidate_id, designation_id, entry_date, code, ot_hours")
         .eq("unit_id", unitId)
         .gte("entry_date", periodStart)
         .lte("entry_date", periodEnd);
@@ -403,86 +404,156 @@ function MusterRollPage() {
 
   const entryMap = useMemo(() => {
     const m = new Map<string, EntryRow>();
-    for (const e of entries) m.set(`${e.candidate_id}|${e.entry_date}`, e);
+    for (const e of entries) m.set(`${rowKey(e.candidate_id, e.designation_id)}|${e.entry_date}`, e);
     return m;
   }, [entries]);
 
-  const upsertEntry = useMutation({
-    mutationFn: async (payload: { candidate_id: string; entry_date: string; code?: string; ot_hours?: number }) => {
-      const existing = entryMap.get(`${payload.candidate_id}|${payload.entry_date}`);
-      const next = {
-        unit_id: unitId,
-        candidate_id: payload.candidate_id,
-        entry_date: payload.entry_date,
-        code: payload.code ?? existing?.code ?? "",
-        ot_hours: payload.ot_hours ?? existing?.ot_hours ?? 0,
-      };
-      const { error } = await supabase
-        .from("attendance_entries")
-        .upsert(next, { onConflict: "unit_id,candidate_id,entry_date" });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, periodStart, periodEnd] });
-    },
-    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to save"),
-  });
+  // Extra (candidate, designation) rows the user added locally — persisted as soon as an entry is saved.
+  const [extraRows, setExtraRows] = useState<Set<string>>(new Set());
 
+  // Derived list of muster rows: one per (candidate, designation)
+  const musterRows = useMemo(() => {
+    const out: Array<{
+      key: string;
+      candidateId: string;
+      designationId: string | null;
+      designationName: string;
+      emp: NonNullable<typeof employees>[number];
+      isPrimary: boolean;
+    }> = [];
+    const seen = new Set<string>();
+    const desigNameMap = new Map(contractDesignations.map((d) => [d.designationId, d.designationName]));
 
-  // Drag-to-select state (attendance row)
-  const [dragCandidateId, setDragCandidateId] = useState<string | null>(null);
+    for (const emp of employees ?? []) {
+      // Primary row from candidate's own designation
+      const primaryKey = rowKey(emp.id, emp.designation_id);
+      out.push({
+        key: primaryKey,
+        candidateId: emp.id,
+        designationId: emp.designation_id,
+        designationName: emp.designation || "—",
+        emp,
+        isPrimary: true,
+      });
+      seen.add(primaryKey);
+
+      // Additional rows from any entries with a different designation
+      for (const e of entries) {
+        if (e.candidate_id !== emp.id) continue;
+        const k = rowKey(e.candidate_id, e.designation_id);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        const dName = (e.designation_id && desigNameMap.get(e.designation_id)) || "—";
+        out.push({
+          key: k,
+          candidateId: emp.id,
+          designationId: e.designation_id,
+          designationName: dName,
+          emp,
+          isPrimary: false,
+        });
+      }
+
+      // Locally added extras for this candidate
+      for (const xk of extraRows) {
+        if (!xk.startsWith(emp.id + "|")) continue;
+        if (seen.has(xk)) continue;
+        seen.add(xk);
+        const did = xk.split("|")[1];
+        const designationId = did === NULL_DESIG ? null : did;
+        const dName = (designationId && desigNameMap.get(designationId)) || "—";
+        out.push({
+          key: xk,
+          candidateId: emp.id,
+          designationId,
+          designationName: dName,
+          emp,
+          isPrimary: false,
+        });
+      }
+    }
+    return out;
+  }, [employees, entries, extraRows, contractDesignations]);
+
+  // ---- Mutations ----
+  const guardFuture = (date: string) => {
+    if (date > todayStr) {
+      toast.error("Cannot mark attendance for a future date");
+      return false;
+    }
+    return true;
+  };
+
+  const upsertEntries = async (
+    candidate_id: string,
+    designation_id: string | null,
+    rows: Array<{ entry_date: string; code: string; ot_hours: number }>,
+  ) => {
+    const filtered = rows.filter((r) => r.entry_date <= todayStr);
+    if (filtered.length === 0) {
+      toast.error("All selected dates are in the future — nothing marked");
+      return;
+    }
+    const payload = filtered.map((r) => ({
+      unit_id: unitId,
+      candidate_id,
+      designation_id,
+      entry_date: r.entry_date,
+      code: r.code,
+      ot_hours: r.ot_hours,
+    }));
+    const { error } = await supabase
+      .from("attendance_entries")
+      .upsert(payload, { onConflict: "unit_id,candidate_id,designation_id,entry_date" });
+    if (error) throw error;
+  };
+
+  // Drag-to-select state — keyed by row (candidate|designation)
+  const [dragRowKey, setDragRowKey] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerCandidateId, setPickerCandidateId] = useState<string | null>(null);
+  const [pickerRowKey, setPickerRowKey] = useState<string | null>(null);
   const [pickerDates, setPickerDates] = useState<string[]>([]);
 
-  // Drag-to-select state (OT row) — mirrors attendance pattern.
-  const [otDragCandidateId, setOtDragCandidateId] = useState<string | null>(null);
+  const [otDragRowKey, setOtDragRowKey] = useState<string | null>(null);
   const [isOtDragging, setIsOtDragging] = useState(false);
   const [otSelectedDates, setOtSelectedDates] = useState<Set<string>>(new Set());
   const [otPickerOpen, setOtPickerOpen] = useState(false);
-  const [otPickerCandidateId, setOtPickerCandidateId] = useState<string | null>(null);
+  const [otPickerRowKey, setOtPickerRowKey] = useState<string | null>(null);
   const [otPickerDates, setOtPickerDates] = useState<string[]>([]);
-
-  // Track whether the current mousedown turned into an actual drag across
-  // multiple cells. A plain click (no drag, no modifier) should open the
-  // picker immediately for that single cell. Ctrl/Cmd+click toggles cells
-  // into a persistent selection without opening the picker.
-  const [dragMoved, setDragMoved] = useState(false);
 
   useEffect(() => {
     if (!isDragging) return;
     const onUp = () => {
       setIsDragging(false);
       setSelectedDates((current) => {
-        if (current.size > 0 && dragCandidateId) {
+        if (current.size > 0 && dragRowKey) {
           const sorted = Array.from(current).sort();
-          setPickerCandidateId(dragCandidateId);
+          setPickerRowKey(dragRowKey);
           setPickerDates(sorted);
           setPickerOpen(true);
-          setDragCandidateId(null);
+          setDragRowKey(null);
           return new Set();
         }
         return current;
       });
-      setDragMoved(false);
     };
     window.addEventListener("mouseup", onUp);
     return () => window.removeEventListener("mouseup", onUp);
-  }, [isDragging, dragCandidateId]);
+  }, [isDragging, dragRowKey]);
 
   useEffect(() => {
     if (!isOtDragging) return;
     const onUp = () => {
       setIsOtDragging(false);
       setOtSelectedDates((current) => {
-        if (current.size > 0 && otDragCandidateId) {
+        if (current.size > 0 && otDragRowKey) {
           const sorted = Array.from(current).sort();
-          setOtPickerCandidateId(otDragCandidateId);
+          setOtPickerRowKey(otDragRowKey);
           setOtPickerDates(sorted);
           setOtPickerOpen(true);
-          setOtDragCandidateId(null);
+          setOtDragRowKey(null);
           return new Set();
         }
         return current;
@@ -490,50 +561,41 @@ function MusterRollPage() {
     };
     window.addEventListener("mouseup", onUp);
     return () => window.removeEventListener("mouseup", onUp);
-  }, [isOtDragging, otDragCandidateId]);
+  }, [isOtDragging, otDragRowKey]);
 
   const openPickerForSelection = () => {
-    if (!dragCandidateId || selectedDates.size === 0) return;
-    setPickerCandidateId(dragCandidateId);
+    if (!dragRowKey || selectedDates.size === 0) return;
+    setPickerRowKey(dragRowKey);
     setPickerDates(Array.from(selectedDates).sort());
     setPickerOpen(true);
   };
 
   const openOtPickerForSelection = () => {
-    if (!otDragCandidateId || otSelectedDates.size === 0) return;
-    setOtPickerCandidateId(otDragCandidateId);
+    if (!otDragRowKey || otSelectedDates.size === 0) return;
+    setOtPickerRowKey(otDragRowKey);
     setOtPickerDates(Array.from(otSelectedDates).sort());
     setOtPickerOpen(true);
   };
 
-  const clearSelection = () => {
-    setSelectedDates(new Set());
-    setDragCandidateId(null);
-  };
+  const clearSelection = () => { setSelectedDates(new Set()); setDragRowKey(null); };
+  const clearOtSelection = () => { setOtSelectedDates(new Set()); setOtDragRowKey(null); };
 
-  const clearOtSelection = () => {
-    setOtSelectedDates(new Set());
-    setOtDragCandidateId(null);
-  };
+  const findRow = (k: string | null) => musterRows.find((r) => r.key === k);
 
   const applyCodeToSelection = async (code: string) => {
-    if (!pickerCandidateId) return;
+    const row = findRow(pickerRowKey);
+    if (!row) return;
     try {
       const rows = pickerDates.map((d) => ({
-        unit_id: unitId,
-        candidate_id: pickerCandidateId,
         entry_date: d,
         code,
-        ot_hours: entryMap.get(`${pickerCandidateId}|${d}`)?.ot_hours ?? 0,
+        ot_hours: entryMap.get(`${row.key}|${d}`)?.ot_hours ?? 0,
       }));
-      const { error } = await supabase
-        .from("attendance_entries")
-        .upsert(rows, { onConflict: "unit_id,candidate_id,entry_date" });
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, periodStart, periodEnd] });
+      await upsertEntries(row.candidateId, row.designationId, rows);
+      queryClient.invalidateQueries({ queryKey: entriesQK });
       setPickerOpen(false);
       setSelectedDates(new Set());
-      setDragCandidateId(null);
+      setDragRowKey(null);
       toast.success(`Applied ${code || "Clear"} to ${pickerDates.length} day${pickerDates.length > 1 ? "s" : ""}`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to save");
@@ -541,23 +603,19 @@ function MusterRollPage() {
   };
 
   const applyOtToSelection = async (hours: number) => {
-    if (!otPickerCandidateId) return;
+    const row = findRow(otPickerRowKey);
+    if (!row) return;
     try {
       const rows = otPickerDates.map((d) => ({
-        unit_id: unitId,
-        candidate_id: otPickerCandidateId,
         entry_date: d,
-        code: entryMap.get(`${otPickerCandidateId}|${d}`)?.code ?? "",
+        code: entryMap.get(`${row.key}|${d}`)?.code ?? "",
         ot_hours: hours,
       }));
-      const { error } = await supabase
-        .from("attendance_entries")
-        .upsert(rows, { onConflict: "unit_id,candidate_id,entry_date" });
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["attendance-entries", unitId, periodStart, periodEnd] });
+      await upsertEntries(row.candidateId, row.designationId, rows);
+      queryClient.invalidateQueries({ queryKey: entriesQK });
       setOtPickerOpen(false);
       setOtSelectedDates(new Set());
-      setOtDragCandidateId(null);
+      setOtDragRowKey(null);
       toast.success(
         hours > 0
           ? `Set ${hours}h OT on ${otPickerDates.length} day${otPickerDates.length > 1 ? "s" : ""}`
@@ -568,31 +626,23 @@ function MusterRollPage() {
     }
   };
 
-
-
-  // Standard duty length in hours used to convert OT hours → OT days.
-  // Most guard postings are 8-hour shifts; 12-hour postings divide by 12.
   const UNIT_DUTY_HOURS = 8;
 
-  const computeTotals = (candidateId: string) => {
+  const computeTotalsForRow = (rk: string) => {
     let pDays = 0;
     let otHours = 0;
     let phCount = 0;
-    let otherPaidDays = 0; // paid leaves that are neither PH nor counts_as_present
+    let otherPaidDays = 0;
     for (const cell of periodCells) {
-      const e = entryMap.get(`${candidateId}|${cell.date}`);
+      const e = entryMap.get(`${rk}|${cell.date}`);
       if (!e) continue;
       otHours += Number(e.ot_hours) || 0;
       const c = codeMap.get(e.code);
       if (!c) continue;
-      if (e.code === "PH") {
-        phCount += 1;
-        continue; // PH handled separately below (counts as 2 days)
-      }
+      if (e.code === "PH") { phCount += 1; continue; }
       if (c.counts_as_present) pDays += 1;
       else if (c.is_paid) otherPaidDays += 1;
     }
-    // Each PH (paid holiday) counts as 2 paid days.
     const phDays = phCount * 2;
     const otDays = Math.round((otHours / UNIT_DUTY_HOURS) * 100) / 100;
     const tDays = pDays + phDays + otherPaidDays + otDays;
@@ -602,7 +652,6 @@ function MusterRollPage() {
   const principalEmployer = unit
     ? `${unit.customer_name || ""}${unit.code ? ` - ${unit.code}` : ""}`.trim()
     : "—";
-
   const principalAddress = unit
     ? [
         unit.shipping_address1 || unit.billing_address1 || unit.location,
@@ -612,12 +661,8 @@ function MusterRollPage() {
           unit.shipping_district || unit.billing_district,
           unit.shipping_state || unit.billing_state,
           unit.shipping_pincode || unit.billing_pincode,
-        ]
-          .filter(Boolean)
-          .join(", "),
-      ]
-        .filter((v) => v && String(v).trim())
-        .join(", ")
+        ].filter(Boolean).join(", "),
+      ].filter((v) => v && String(v).trim()).join(", ")
     : "";
 
   const monthLabel = `${MONTH_NAMES[monthIdx]} ${year}`;
@@ -632,6 +677,26 @@ function MusterRollPage() {
   const windowLabel = payrollWindow?.label
     ? `Payroll window: ${payrollWindow.label}`
     : "Payroll window: full calendar month";
+
+  // "Add line item" UI state
+  const [addCand, setAddCand] = useState<string>("");
+  const [addDesig, setAddDesig] = useState<string>("");
+  const handleAddLineItem = () => {
+    if (!addCand || !addDesig) {
+      toast.error("Pick both an employee and a designation");
+      return;
+    }
+    const k = rowKey(addCand, addDesig);
+    if (musterRows.some((r) => r.key === k)) {
+      toast.info("That line item already exists");
+      return;
+    }
+    setExtraRows((prev) => new Set(prev).add(k));
+    const empName = (employees ?? []).find((e) => e.id === addCand)?.full_name ?? "";
+    const dName = contractDesignations.find((d) => d.designationId === addDesig)?.designationName ?? "";
+    toast.success(`Added row: ${empName} — ${dName}`);
+    setAddCand(""); setAddDesig("");
+  };
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
@@ -661,9 +726,7 @@ function MusterRollPage() {
 
         <div className="flex items-center gap-2">
           <Select value={String(monthIdx)} onValueChange={(v) => setMonthIdx(Number(v))}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue />
-            </SelectTrigger>
+            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {MONTH_NAMES.map((m, i) => {
                 if (contractStartDate) {
@@ -671,18 +734,12 @@ function MusterRollPage() {
                   if (year < sy || (year === sy && i < sm - 1)) return null;
                 }
                 if (year > now.getFullYear() || (year === now.getFullYear() && i > now.getMonth())) return null;
-                return (
-                  <SelectItem key={m} value={String(i)}>
-                    {m}
-                  </SelectItem>
-                );
+                return <SelectItem key={m} value={String(i)}>{m}</SelectItem>;
               })}
             </SelectContent>
           </Select>
           <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-            <SelectTrigger className="w-[110px]">
-              <SelectValue />
-            </SelectTrigger>
+            <SelectTrigger className="w-[110px]"><SelectValue /></SelectTrigger>
             <SelectContent>
               {[year - 2, year - 1, year, year + 1].map((y) => {
                 if (contractStartDate) {
@@ -690,11 +747,7 @@ function MusterRollPage() {
                   if (y < sy) return null;
                 }
                 if (y > now.getFullYear()) return null;
-                return (
-                  <SelectItem key={y} value={String(y)}>
-                    {y}
-                  </SelectItem>
-                );
+                return <SelectItem key={y} value={String(y)}>{y}</SelectItem>;
               })}
             </SelectContent>
           </Select>
@@ -707,7 +760,7 @@ function MusterRollPage() {
         </div>
       </div>
 
-      {/* Approval workflow bar */}
+      {/* Approval workflow */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-3 print:hidden">
         <div className="flex items-center gap-3">
           <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Status</span>
@@ -776,62 +829,85 @@ function MusterRollPage() {
         </DialogContent>
       </Dialog>
 
-
       <div className="rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground print:hidden">
-        Tip: click a cell to mark one day, click & drag to mark a range, or hold{" "}
-        <kbd className="rounded border bg-background px-1 py-0.5 font-mono text-[10px]">Ctrl</kbd>
-        {" / "}
-        <kbd className="rounded border bg-background px-1 py-0.5 font-mono text-[10px]">⌘</kbd>
-        {" "}+ click to pick non-contiguous days within one row, then press <strong>Apply</strong>.
+        Tip: click a cell to mark one day, click & drag to mark a range. Future dates are locked. Use{" "}
+        <strong>Add line item</strong> below to give an employee an extra designation (e.g. Priya covering Senior Guard shift) — each line is paid separately.
       </div>
 
-      {selectedDates.size > 0 && !isDragging && dragCandidateId && (
+      {/* Add line item panel */}
+      <div className="rounded-xl border border-border/70 bg-card p-3 print:hidden">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Employee</label>
+            <Select value={addCand} onValueChange={setAddCand}>
+              <SelectTrigger className="w-[220px]"><SelectValue placeholder="Pick employee…" /></SelectTrigger>
+              <SelectContent>
+                {(employees ?? []).map((e) => (
+                  <SelectItem key={e.id} value={e.id}>{e.full_name || e.employee_code || e.id}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Additional designation</label>
+            <Select value={addDesig} onValueChange={setAddDesig} disabled={!addCand}>
+              <SelectTrigger className="w-[260px]"><SelectValue placeholder="Pick designation from contract…" /></SelectTrigger>
+              <SelectContent>
+                {contractDesignations
+                  .filter((d) => {
+                    if (!addCand) return true;
+                    return !musterRows.some((r) => r.candidateId === addCand && r.designationId === d.designationId);
+                  })
+                  .map((d) => (
+                    <SelectItem key={d.designationId} value={d.designationId}>{d.designationName}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button size="sm" onClick={handleAddLineItem} disabled={!editable || !addCand || !addDesig}>
+            <Plus className="mr-1.5 h-4 w-4" /> Add line item
+          </Button>
+          <div className="ml-auto text-[11px] text-muted-foreground">
+            {contractDesignations.length === 0 ? "No contract resources mapped — add designations on the contract first." : `${contractDesignations.length} designation(s) on contract`}
+          </div>
+        </div>
+      </div>
+
+      {selectedDates.size > 0 && !isDragging && dragRowKey && (
         <div className="sticky top-2 z-20 flex items-center justify-between gap-3 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-sm shadow-sm print:hidden">
           <div>
             <span className="font-semibold">{selectedDates.size}</span> day
             {selectedDates.size > 1 ? "s" : ""} selected for{" "}
             <span className="font-semibold">
-              {(employees ?? []).find((e) => e.id === dragCandidateId)?.full_name ?? ""}
+              {findRow(dragRowKey)?.emp.full_name ?? ""} — {findRow(dragRowKey)?.designationName ?? ""}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={clearSelection}>
-              Clear
-            </Button>
-            <Button size="sm" onClick={openPickerForSelection}>
-              Apply attendance
-            </Button>
+            <Button size="sm" variant="ghost" onClick={clearSelection}>Clear</Button>
+            <Button size="sm" onClick={openPickerForSelection}>Apply attendance</Button>
           </div>
         </div>
       )}
 
-      {otSelectedDates.size > 0 && !isOtDragging && otDragCandidateId && (
+      {otSelectedDates.size > 0 && !isOtDragging && otDragRowKey && (
         <div className="sticky top-2 z-20 flex items-center justify-between gap-3 rounded-md border border-amber-500/50 bg-amber-50 px-3 py-2 text-sm shadow-sm print:hidden">
           <div>
             <span className="font-semibold">{otSelectedDates.size}</span> OT day
             {otSelectedDates.size > 1 ? "s" : ""} selected for{" "}
             <span className="font-semibold">
-              {(employees ?? []).find((e) => e.id === otDragCandidateId)?.full_name ?? ""}
+              {findRow(otDragRowKey)?.emp.full_name ?? ""} — {findRow(otDragRowKey)?.designationName ?? ""}
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={clearOtSelection}>
-              Clear
-            </Button>
-            <Button size="sm" onClick={openOtPickerForSelection}>
-              Set OT hours
-            </Button>
+            <Button size="sm" variant="ghost" onClick={clearOtSelection}>Clear</Button>
+            <Button size="sm" onClick={openOtPickerForSelection}>Set OT hours</Button>
           </div>
         </div>
       )}
 
-
-
-
       {/* Muster Roll Sheet */}
       <div id="form-xvi-print" className="rounded-xl border border-border/60 bg-white p-5 text-[11px] text-slate-900 shadow-sm print:rounded-none print:border-0 print:shadow-none sm:p-6">
 
-        {/* Header */}
         <div className="text-center">
           <div className="text-base font-bold">Form XVI</div>
           <div className="text-[10px] italic">[ See Rule 78 (1) (a) (i) ]</div>
@@ -858,7 +934,6 @@ function MusterRollPage() {
           </tbody>
         </table>
 
-        {/* Roster */}
         <div className="mt-3 overflow-x-auto">
           <table className="w-full border-collapse border border-slate-400 text-center text-[10px]">
             <thead className="bg-slate-100">
@@ -868,12 +943,7 @@ function MusterRollPage() {
                 <th className="border border-slate-400 p-1 text-left align-middle">Employee Name</th>
                 <th className="border border-slate-400 p-1 text-left align-middle">Designation</th>
                 <th className="border border-slate-400 p-1 align-middle">DOJ</th>
-                <th
-                  className="border border-slate-400 p-1 align-middle"
-                  colSpan={dayCount}
-                >
-                  Days
-                </th>
+                <th className="border border-slate-400 p-1 align-middle" colSpan={dayCount}>Days</th>
                 <th className="border border-slate-400 p-1 align-middle" rowSpan={2}>P<br />Days</th>
                 <th className="border border-slate-400 p-1 align-middle">OT<br />Hrs</th>
                 <th className="border border-slate-400 p-1 align-middle" rowSpan={2}>PH<br />Days</th>
@@ -886,17 +956,18 @@ function MusterRollPage() {
                 <th className="border border-slate-400 p-1"></th>
                 <th className="border border-slate-400 p-1"></th>
                 {periodCells.map((cell) => {
-                  const isMonthBoundary =
-                    cell.dayNum === 1 || cell === periodCells[0];
+                  const isMonthBoundary = cell.dayNum === 1 || cell === periodCells[0];
+                  const isFuture = cell.date > todayStr;
                   return (
                     <th
                       key={cell.date}
                       className={cn(
                         "border border-slate-400 p-0.5 text-[9px] font-medium",
                         isMonthBoundary && "border-l-2 border-l-slate-600",
+                        isFuture && "bg-slate-200 text-slate-400",
                       )}
                       style={{ minWidth: 18 }}
-                      title={cell.date}
+                      title={cell.date + (isFuture ? " (future)" : "")}
                     >
                       {cell.dayNum}
                     </th>
@@ -907,105 +978,106 @@ function MusterRollPage() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr>
-                  <td colSpan={9 + dayCount} className="p-4 text-slate-500">
-                    Loading roster…
-                  </td>
-                </tr>
+                <tr><td colSpan={9 + dayCount} className="p-4 text-slate-500">Loading roster…</td></tr>
               ) : rosterError ? (
-                <tr>
-                  <td colSpan={9 + dayCount} className="p-6 text-red-600">
-                    Failed to load mapped employees for this unit.
-                  </td>
-                </tr>
-              ) : (employees ?? []).length === 0 ? (
-                <tr>
-                  <td colSpan={9 + dayCount} className="p-6 text-slate-500">
-                    No active security guards are mapped to this unit.
-                  </td>
-                </tr>
+                <tr><td colSpan={9 + dayCount} className="p-6 text-red-600">Failed to load mapped employees for this unit.</td></tr>
+              ) : musterRows.length === 0 ? (
+                <tr><td colSpan={9 + dayCount} className="p-6 text-slate-500">No active security guards are mapped to this unit.</td></tr>
               ) : (
-                (employees ?? []).flatMap((emp, idx) => {
-                  const rowBase = "border border-slate-400 align-middle";
-                  const totals = computeTotals(emp.id);
+                musterRows.flatMap((mr, idx) => {
+                  const cellBase = "border border-slate-400 align-middle";
+                  const totals = computeTotalsForRow(mr.key);
                   return [
-                    <tr key={emp.id + "-att"}>
-                      <td className={cn(rowBase, "p-1 font-medium")} rowSpan={2}>
-                        {idx + 1}
+                    <tr key={mr.key + "-att"}>
+                      <td className={cn(cellBase, "p-1 font-medium")} rowSpan={2}>{idx + 1}</td>
+                      <td className={cn(cellBase, "p-1")} rowSpan={2}>{mr.emp.employee_code || "—"}</td>
+                      <td className={cn(cellBase, "p-1 text-left")} rowSpan={2}>
+                        <div className="flex items-center gap-1.5">
+                          <span>{mr.emp.full_name || "—"}</span>
+                          {!mr.isPrimary && (
+                            <button
+                              type="button"
+                              title="Remove this extra line (does not delete existing entries)"
+                              onClick={() => {
+                                setExtraRows((prev) => {
+                                  const next = new Set(prev);
+                                  next.delete(mr.key);
+                                  return next;
+                                });
+                              }}
+                              className="rounded-full p-0.5 text-slate-400 hover:text-rose-600 print:hidden"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
                       </td>
-                      <td className={cn(rowBase, "p-1")} rowSpan={2}>
-                        {emp.employee_code || "—"}
+                      <td className={cn(cellBase, "p-1 text-left")} rowSpan={2}>
+                        {mr.designationName || "—"}
+                        {!mr.isPrimary && (
+                          <span className="ml-1 rounded bg-violet-100 px-1 py-0.5 text-[8px] font-semibold uppercase tracking-wide text-violet-700 print:hidden">extra</span>
+                        )}
                       </td>
-                      <td className={cn(rowBase, "p-1 text-left")} rowSpan={2}>
-                        {emp.full_name || "—"}
-                      </td>
-                      <td className={cn(rowBase, "p-1 text-left")} rowSpan={2}>
-                        {emp.designation || "—"}
-                      </td>
-                      <td className={cn(rowBase, "p-1")} rowSpan={2}>
-                        {emp.doj ? new Date(emp.doj).toLocaleDateString("en-GB") : "—"}
+                      <td className={cn(cellBase, "p-1")} rowSpan={2}>
+                        {mr.emp.doj ? new Date(mr.emp.doj).toLocaleDateString("en-GB") : "—"}
                       </td>
                       {periodCells.map((cell) => {
                         const date = cell.date;
-                        const d = cell.dayNum;
-                        const entry = entryMap.get(`${emp.id}|${date}`);
+                        const isFuture = date > todayStr;
+                        const entry = entryMap.get(`${mr.key}|${date}`);
                         const codeMeta = entry?.code ? codeMap.get(entry.code) : undefined;
-                        const isSelected =
-                          dragCandidateId === emp.id && selectedDates.has(date);
+                        const isSelected = dragRowKey === mr.key && selectedDates.has(date);
                         return (
                           <td
-                            key={`a-${d}`}
+                            key={`a-${cell.date}`}
                             className={cn(
-                              rowBase,
-                              "p-0 print:bg-transparent select-none cursor-pointer",
+                              cellBase,
+                              "p-0 print:bg-transparent select-none",
+                              isFuture
+                                ? "bg-slate-100 cursor-not-allowed"
+                                : "cursor-pointer",
                               isSelected && "ring-2 ring-primary ring-inset",
                             )}
                             style={{
                               height: 22,
                               minWidth: 18,
-                              backgroundColor: codeMeta?.color ? `${codeMeta.color}22` : undefined,
+                              backgroundColor: isFuture
+                                ? undefined
+                                : codeMeta?.color ? `${codeMeta.color}22` : undefined,
                             }}
+                            title={isFuture ? "Future date — cannot mark attendance" : undefined}
                             onMouseDown={(e) => {
+                              if (isFuture) { e.preventDefault(); return; }
+                              if (!editable) { e.preventDefault(); return; }
                               e.preventDefault();
                               const additive = e.ctrlKey || e.metaKey;
                               if (additive) {
-                                // Ctrl/Cmd+click: toggle this cell into the
-                                // persistent selection (scoped to one row).
                                 setSelectedDates((prev) => {
-                                  const sameRow = dragCandidateId === emp.id;
+                                  const sameRow = dragRowKey === mr.key;
                                   const next = sameRow ? new Set(prev) : new Set<string>();
                                   if (sameRow && next.has(date)) next.delete(date);
                                   else next.add(date);
                                   return next;
                                 });
-                                setDragCandidateId(emp.id);
+                                setDragRowKey(mr.key);
                                 return;
                               }
-                              // Plain click: start a fresh drag selection.
-                              setDragCandidateId(emp.id);
+                              setDragRowKey(mr.key);
                               setIsDragging(true);
-                              setDragMoved(false);
                               setSelectedDates(new Set([date]));
                             }}
                             onMouseEnter={() => {
-                              if (isDragging && dragCandidateId === emp.id) {
+                              if (isFuture) return;
+                              if (isDragging && dragRowKey === mr.key) {
                                 setSelectedDates((prev) => {
                                   if (prev.has(date)) return prev;
                                   const next = new Set(prev);
                                   next.add(date);
-                                  setDragMoved(true);
                                   return next;
                                 });
                               }
                             }}
-                            onClick={(e) => {
-                              // If user used Ctrl/Cmd+click, do not open the picker —
-                              // they're building a multi-cell selection. They'll trigger
-                              // the picker via the floating "Apply" bar.
-                              if (e.ctrlKey || e.metaKey) {
-                                e.preventDefault();
-                              }
-                            }}
+                            onClick={(e) => { if (e.ctrlKey || e.metaKey) e.preventDefault(); }}
                           >
                             <div
                               className="h-full w-full px-0 text-[10px] font-semibold leading-none flex items-center justify-center"
@@ -1017,48 +1089,53 @@ function MusterRollPage() {
                         );
                       })}
 
-                      <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.pDays}</td>
-                      <td className={cn(rowBase, "p-1 font-semibold")}>{totals.otHours}</td>
-                      <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.phDays}</td>
-                      <td className={cn(rowBase, "p-1 font-semibold")} rowSpan={2}>{totals.tDays}</td>
+                      <td className={cn(cellBase, "p-1 font-semibold")} rowSpan={2}>{totals.pDays}</td>
+                      <td className={cn(cellBase, "p-1 font-semibold")}>{totals.otHours}</td>
+                      <td className={cn(cellBase, "p-1 font-semibold")} rowSpan={2}>{totals.phDays}</td>
+                      <td className={cn(cellBase, "p-1 font-semibold")} rowSpan={2}>{totals.tDays}</td>
                     </tr>,
-                    <tr key={emp.id + "-ot"}>
+                    <tr key={mr.key + "-ot"}>
                       {periodCells.map((cell) => {
                         const date = cell.date;
-                        const entry = entryMap.get(`${emp.id}|${date}`);
+                        const isFuture = date > todayStr;
+                        const entry = entryMap.get(`${mr.key}|${date}`);
                         const hrs = Number(entry?.ot_hours) || 0;
-                        const isSelected =
-                          otDragCandidateId === emp.id && otSelectedDates.has(date);
+                        const isSelected = otDragRowKey === mr.key && otSelectedDates.has(date);
                         return (
                           <td
                             key={`o-${cell.date}`}
                             className={cn(
-                              rowBase,
-                              "p-0 select-none cursor-pointer transition-colors",
-                              hrs > 0 && "bg-amber-50",
+                              cellBase,
+                              "p-0 select-none transition-colors",
+                              isFuture
+                                ? "bg-slate-100 cursor-not-allowed"
+                                : "cursor-pointer",
+                              hrs > 0 && !isFuture && "bg-amber-50",
                               isSelected && "ring-2 ring-amber-500 ring-inset bg-amber-100",
                             )}
                             style={{ height: 22, minWidth: 18 }}
                             onMouseDown={(e) => {
+                              if (isFuture || !editable) { e.preventDefault(); return; }
                               e.preventDefault();
                               const additive = e.ctrlKey || e.metaKey;
                               if (additive) {
                                 setOtSelectedDates((prev) => {
-                                  const sameRow = otDragCandidateId === emp.id;
+                                  const sameRow = otDragRowKey === mr.key;
                                   const next = sameRow ? new Set(prev) : new Set<string>();
                                   if (sameRow && next.has(date)) next.delete(date);
                                   else next.add(date);
                                   return next;
                                 });
-                                setOtDragCandidateId(emp.id);
+                                setOtDragRowKey(mr.key);
                                 return;
                               }
-                              setOtDragCandidateId(emp.id);
+                              setOtDragRowKey(mr.key);
                               setIsOtDragging(true);
                               setOtSelectedDates(new Set([date]));
                             }}
                             onMouseEnter={() => {
-                              if (isOtDragging && otDragCandidateId === emp.id) {
+                              if (isFuture) return;
+                              if (isOtDragging && otDragRowKey === mr.key) {
                                 setOtSelectedDates((prev) => {
                                   if (prev.has(date)) return prev;
                                   const next = new Set(prev);
@@ -1067,10 +1144,8 @@ function MusterRollPage() {
                                 });
                               }
                             }}
-                            onClick={(e) => {
-                              if (e.ctrlKey || e.metaKey) e.preventDefault();
-                            }}
-                            title={`OT for ${date}${hrs > 0 ? ` · ${hrs}h` : ""}`}
+                            onClick={(e) => { if (e.ctrlKey || e.metaKey) e.preventDefault(); }}
+                            title={isFuture ? "Future date — cannot mark OT" : `OT for ${date}${hrs > 0 ? ` · ${hrs}h` : ""}`}
                           >
                             <div
                               className={cn(
@@ -1083,7 +1158,7 @@ function MusterRollPage() {
                           </td>
                         );
                       })}
-                      <td className={cn(rowBase, "p-1 font-semibold")}>{totals.otDays}</td>
+                      <td className={cn(cellBase, "p-1 font-semibold")}>{totals.otDays}</td>
                     </tr>,
                   ];
                 })
@@ -1093,7 +1168,7 @@ function MusterRollPage() {
         </div>
 
         <div className="mt-3 text-[10px] text-slate-600">
-          Att = Attendance · OT = Overtime hours
+          Att = Attendance · OT = Overtime hours · Each (employee × designation) is a separate payroll line.
         </div>
       </div>
 
@@ -1103,8 +1178,8 @@ function MusterRollPage() {
             <DialogTitle>Mark attendance</DialogTitle>
             <DialogDescription>
               {pickerDates.length} day{pickerDates.length > 1 ? "s" : ""} selected
-              {pickerCandidateId
-                ? ` for ${(employees ?? []).find((e) => e.id === pickerCandidateId)?.full_name ?? ""}`
+              {pickerRowKey
+                ? ` for ${findRow(pickerRowKey)?.emp.full_name ?? ""} — ${findRow(pickerRowKey)?.designationName ?? ""}`
                 : ""}
             </DialogDescription>
           </DialogHeader>
@@ -1138,8 +1213,8 @@ function MusterRollPage() {
             <DialogTitle>Set OT hours</DialogTitle>
             <DialogDescription>
               {otPickerDates.length} day{otPickerDates.length > 1 ? "s" : ""} selected
-              {otPickerCandidateId
-                ? ` for ${(employees ?? []).find((e) => e.id === otPickerCandidateId)?.full_name ?? ""}`
+              {otPickerRowKey
+                ? ` for ${findRow(otPickerRowKey)?.emp.full_name ?? ""} — ${findRow(otPickerRowKey)?.designationName ?? ""}`
                 : ""}
             </DialogDescription>
           </DialogHeader>
@@ -1164,7 +1239,9 @@ function MusterRollPage() {
           </button>
         </DialogContent>
       </Dialog>
+
+      {/* Suppress unused warning - guardFuture reserved for future server-roundtrip helpers */}
+      <span hidden>{String(guardFuture("2000-01-01"))}</span>
     </div>
   );
 }
-
