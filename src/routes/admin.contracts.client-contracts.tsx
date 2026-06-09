@@ -2323,6 +2323,13 @@ function ContractFormDialog({
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </Field>
+              <Field label="Expiry Date">
+                <Input
+                  type="date"
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                />
+              </Field>
               <Field label="Service Type">
                 <Select
                   value={serviceTypeId || "none"}
