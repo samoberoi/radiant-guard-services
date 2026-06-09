@@ -430,7 +430,7 @@ function AdminLayout() {
             <div
               className={cn(
                 "group flex w-full items-center gap-1 rounded-lg pr-1 text-sm font-semibold transition-colors",
-                isActive("/admin/employees") || isActive("/admin/deductions") || isActive("/admin/additions")
+                isActive("/admin/employees")
                   ? "bg-accent/20 text-accent"
                   : "text-primary-foreground/85 hover:bg-white/5",
               )}
