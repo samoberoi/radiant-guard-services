@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Download, CheckCircle2, XCircle, Send, RotateCcw } from "lucide-react";
+import { ChevronLeft, Printer, Download, CheckCircle2, XCircle, Send, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
