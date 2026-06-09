@@ -259,17 +259,18 @@ function MusterRollPage() {
       if (error) throw error;
       const winId = contracts?.[0]?.payroll_window_id;
       const startDate = contracts?.[0]?.start_date ?? null;
-      let window: { id: string; label: string | null; window_start_day: number; window_end_day: number } | null = null;
+      type Win = { id: string; label: string | null; window_start_day: number; window_end_day: number };
+      let win: Win | null = null;
       if (winId) {
-        const { data: win, error: winErr } = await supabase
+        const { data: winRow, error: winErr } = await supabase
           .from("payroll_windows")
           .select("id, label, window_start_day, window_end_day")
           .eq("id", winId)
           .maybeSingle();
         if (winErr) throw winErr;
-        window = win as typeof window;
+        win = (winRow as Win | null) ?? null;
       }
-      return { window, startDate };
+      return { window: win, startDate };
     },
     enabled: Boolean(unitId),
   });
