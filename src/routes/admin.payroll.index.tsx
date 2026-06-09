@@ -489,6 +489,195 @@ function PayrollUnitsPage() {
   );
 }
 
+type MonthlyStats = {
+  approved: number; draft: number; pending: number; rejected: number;
+  units: number; employees: number; total: number;
+};
+
+function MonthlyDashboard({
+  year, month, onChange, stats, loading, organizations,
+}: {
+  year: number; month: number;
+  onChange: (year: number, month: number) => void;
+  stats: MonthlyStats | undefined;
+  loading: boolean;
+  organizations: number;
+}) {
+  const monthName = MONTH_NAMES[month];
+  const shift = (delta: number) => {
+    const d = new Date(year, month + delta, 1);
+    onChange(d.getFullYear(), d.getMonth());
+  };
+  const isCurrent = (() => {
+    const n = new Date();
+    return n.getFullYear() === year && n.getMonth() === month;
+  })();
+
+  const s: MonthlyStats = stats ?? { approved: 0, draft: 0, pending: 0, rejected: 0, units: 0, employees: 0, total: 0 };
+  const total = Math.max(s.total, 1);
+  const segs = [
+    { key: "approved", label: "Approved", value: s.approved, cls: "bg-emerald-500" },
+    { key: "pending", label: "Pending", value: s.pending, cls: "bg-amber-500" },
+    { key: "draft", label: "Draft", value: s.draft, cls: "bg-sky-500" },
+    { key: "rejected", label: "Rejected", value: s.rejected, cls: "bg-rose-500" },
+  ];
+
+  return (
+    <div className="relative overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-indigo-950 via-slate-900 to-emerald-900 text-white shadow-xl">
+      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl" />
+      <div className="pointer-events-none absolute -left-24 -bottom-24 h-72 w-72 rounded-full bg-indigo-400/20 blur-3xl" />
+
+      <div className="relative grid gap-6 p-6 sm:p-7 lg:grid-cols-[1.1fr_1.4fr]">
+        {/* Left: month hero */}
+        <div className="flex flex-col justify-between gap-5">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur">
+              <CalendarDays className="h-3.5 w-3.5" /> Payroll month
+            </div>
+            <div className="flex items-end gap-3">
+              <div className="font-display text-5xl font-bold tracking-tight sm:text-6xl">{monthName}</div>
+              <div className="pb-2 text-2xl font-semibold text-white/70">{year}</div>
+              {isCurrent && (
+                <span className="mb-2 inline-flex rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200">
+                  Current
+                </span>
+              )}
+            </div>
+            <p className="max-w-md text-sm text-white/70">
+              Snapshot of all payroll activity for this cycle — approved, pending, and in-progress sheets across every unit.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={() => shift(-1)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white hover:bg-white/15"
+              aria-label="Previous month"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <Select value={String(month)} onValueChange={(v) => onChange(year, Number(v))}>
+              <SelectTrigger className="h-9 w-[140px] rounded-xl border-white/15 bg-white/5 text-white hover:bg-white/15">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MONTH_NAMES.map((m, i) => (
+                  <SelectItem key={m} value={String(i)}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={String(year)} onValueChange={(v) => onChange(Number(v), month)}>
+              <SelectTrigger className="h-9 w-[100px] rounded-xl border-white/15 bg-white/5 text-white hover:bg-white/15">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Array.from({ length: 7 }, (_, i) => new Date().getFullYear() - 3 + i).map((y) => (
+                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <button
+              onClick={() => shift(1)}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white hover:bg-white/15"
+              aria-label="Next month"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+            {!isCurrent && (
+              <button
+                onClick={() => {
+                  const n = new Date();
+                  onChange(n.getFullYear(), n.getMonth());
+                }}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3 text-xs font-semibold text-white hover:bg-white/15"
+              >
+                Jump to today
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Right: stats grid */}
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <DashStat icon={Clock3} label="Pending" value={s.pending} accent="amber" loading={loading} />
+            <DashStat icon={CheckCircle2} label="Approved" value={s.approved} accent="emerald" loading={loading} />
+            <DashStat icon={FileEdit} label="Draft" value={s.draft} accent="sky" loading={loading} />
+            <DashStat icon={ClipboardList} label="Sheets" value={s.total} accent="violet" loading={loading} />
+          </div>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <DashStat icon={Building2} label="Organizations" value={organizations} accent="rose" loading={loading} compact />
+            <DashStat icon={MapPinned} label="Units" value={s.units} accent="cyan" loading={loading} compact />
+            <DashStat icon={Users} label="Employees" value={s.employees} accent="lime" loading={loading} compact />
+          </div>
+
+          {/* Stacked progress bar */}
+          <div>
+            <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+              <span>Sheet status mix</span>
+              <span>{s.total} total</span>
+            </div>
+            <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-white/10">
+              {segs.map((seg) =>
+                seg.value > 0 ? (
+                  <div
+                    key={seg.key}
+                    className={seg.cls}
+                    style={{ width: `${(seg.value / total) * 100}%` }}
+                    title={`${seg.label}: ${seg.value}`}
+                  />
+                ) : null,
+              )}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/70">
+              {segs.map((seg) => (
+                <span key={seg.key} className="inline-flex items-center gap-1.5">
+                  <span className={`h-2 w-2 rounded-full ${seg.cls}`} /> {seg.label} {seg.value}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DashStat({
+  icon: Icon, label, value, accent, loading, compact,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string; value: number;
+  accent: "amber" | "emerald" | "sky" | "violet" | "rose" | "cyan" | "lime";
+  loading?: boolean; compact?: boolean;
+}) {
+  const accentMap: Record<string, string> = {
+    amber: "from-amber-400/30 to-amber-500/10 text-amber-200",
+    emerald: "from-emerald-400/30 to-emerald-500/10 text-emerald-200",
+    sky: "from-sky-400/30 to-sky-500/10 text-sky-200",
+    violet: "from-violet-400/30 to-violet-500/10 text-violet-200",
+    rose: "from-rose-400/30 to-rose-500/10 text-rose-200",
+    cyan: "from-cyan-400/30 to-cyan-500/10 text-cyan-200",
+    lime: "from-lime-400/30 to-lime-500/10 text-lime-200",
+  };
+  return (
+    <div className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur transition hover:border-white/25 hover:bg-white/10">
+      <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-60 ${accentMap[accent]}`} />
+      <div className="flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
+          <Icon className="h-3.5 w-3.5" />
+        </div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">{label}</div>
+      </div>
+      <div className={`mt-1 font-display font-bold tabular-nums tracking-tight ${compact ? "text-2xl" : "text-3xl"}`}>
+        {loading ? <span className="text-white/40">—</span> : value.toLocaleString()}
+      </div>
+    </div>
+  );
+}
+
+
+
 function Filter({
   label, value, onChange, options, allLabel,
 }: {
