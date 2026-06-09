@@ -366,7 +366,6 @@ function AttendanceUnitsPage() {
     return units.filter((u) => {
       if (orgFilter !== "all" && (u.customer_id || u.customer_name) !== orgFilter) return false;
       if (unitFilter !== "all" && u.id !== unitFilter) return false;
-      if (sgFilter !== "all" && !u.security_guards.some((g) => g.id === sgFilter)) return false;
       if (term) {
         const hay = [
           u.customer_name,
@@ -383,16 +382,18 @@ function AttendanceUnitsPage() {
       }
       return true;
     });
-  }, [q, orgFilter, unitFilter, sgFilter, units]);
+  }, [q, orgFilter, unitFilter, units]);
 
-  const anyFilter = orgFilter !== "all" || unitFilter !== "all" || sgFilter !== "all" || q.trim().length > 0;
+  const anyFilter = orgFilter !== "all" || unitFilter !== "all" || q.trim().length > 0;
+
 
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
       <PageHeader
         title="Attendance"
-        description="Browse units with active contracts and drill into the monthly muster roll. Only billable security guards appear — field officers are on Radiant's own payroll. Filter by organization, unit, or guard."
+        description="Browse units with active contracts and drill into the monthly muster roll. Only billable employees appear — non-billable staff are on Radiant's own payroll. Filter by organization or unit."
+
         crumbs={[{ label: "Attendance" }]}
       />
 
@@ -422,7 +423,7 @@ function AttendanceUnitsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             <FilterSelect
               label="Client (search by ID or name)"
               value={orgFilter}
@@ -443,14 +444,8 @@ function AttendanceUnitsPage() {
               }))}
               allLabel={`All units (${units.length})`}
             />
-            <FilterSelect
-              label="Security guard"
-              value={sgFilter}
-              onChange={setSgFilter}
-              options={securityGuards.map((g) => ({ value: g.id, label: g.name }))}
-              allLabel={`All security guards (${securityGuards.length})`}
-            />
           </div>
+
 
           {anyFilter && (
             <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -465,13 +460,13 @@ function AttendanceUnitsPage() {
                   setQ("");
                   setOrgFilter("all");
                   setUnitFilter("all");
-                  setSgFilter("all");
                 }}
               >
                 <X className="h-3.5 w-3.5" /> Clear filters
               </Button>
             </div>
           )}
+
         </div>
 
         {selectedClient && (
