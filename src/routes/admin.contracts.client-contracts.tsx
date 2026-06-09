@@ -12,6 +12,7 @@ import {
   FileSpreadsheet,
   FileText,
   Plus,
+  RefreshCcw,
   Search,
   ShieldAlert,
   Upload,
@@ -23,6 +24,8 @@ import { ContractApprovalDialog, type ApprovalMode } from "@/components/Contract
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { useCurrentPermissions } from "@/lib/rbac";
+import { notifyApprovers } from "@/lib/notifications";
 import { csvDate, downloadCsv } from "@/lib/csv-export";
 import { DeleteGuardButton } from "@/components/DeleteGuardButton";
 import { toast } from "sonner";
