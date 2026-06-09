@@ -462,7 +462,7 @@ function PayrollUnitPage() {
         </div>
         {rows.filter((r) => r.wages && r.resource).map((r) => (
           <SalaryBreakdownPreview
-            key={r.id}
+            key={r.rowKey}
             employeeName={r.name}
             employeeCode={r.employeeCode}
             designationName={r.designation}
