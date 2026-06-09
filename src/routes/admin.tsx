@@ -78,7 +78,6 @@ const employeesChildren: NavItem[] = [];
 const payrollChildren: NavItem[] = [
   { to: "/admin/additions", label: "Additions", icon: Wallet },
   { to: "/admin/deductions", label: "Deductions", icon: Wallet },
-  { to: "/admin/payroll/internal-salary", label: "Internal Salary Structures", icon: Wallet },
 ];
 
 
