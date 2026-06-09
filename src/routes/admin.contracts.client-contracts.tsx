@@ -2007,16 +2007,6 @@ function ContractFormDialog({
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Approval Status">
-                <Input
-                  value={
-                    editing
-                      ? `${editing.recordType === "client" ? "Client" : "Prospect"} · ${editing.approvalStatus}`
-                      : "Prospect · pending"
-                  }
-                  readOnly
-                />
-              </Field>
               <div className="sm:col-span-2">
                 <Field label="Description">
                   <Textarea
