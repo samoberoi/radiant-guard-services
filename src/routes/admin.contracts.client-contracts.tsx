@@ -307,7 +307,7 @@ function useContracts() {
       const { data, error } = await supabase
         .from("client_contracts" as never)
         .select(
-          "id,contract_code,prospect_code,record_type,prospect_stage,promoted_at,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status,approval_status,rejection_reason,created_by",
+          "id,contract_code,prospect_code,record_type,prospect_stage,promoted_at,unit_id,start_date,end_date,expiry_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status,approval_status,rejection_reason,created_by",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -351,6 +351,7 @@ function useContracts() {
       unit_id: p.unitId,
       start_date: p.startDate || null,
       end_date: p.endDate || null,
+      expiry_date: p.expiryDate || null,
       description: p.description.trim(),
       service_type_id: p.serviceTypeId,
       payroll_window_id: p.payrollWindowId,
@@ -411,7 +412,7 @@ function useContracts() {
       const beforeRes = await supabase
         .from("client_contracts" as never)
         .select(
-          "contract_code,prospect_code,unit_id,start_date,end_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status,record_type,approval_status,prospect_stage,rejection_reason,promoted_at",
+          "contract_code,prospect_code,unit_id,start_date,end_date,expiry_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status,record_type,approval_status,prospect_stage,rejection_reason,promoted_at",
         )
         .eq("id", id)
         .single();
@@ -1970,6 +1971,7 @@ function ContractFormDialog({
   const [unitId, setUnitId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
   const [description, setDescription] = useState("");
   const [serviceTypeId, setServiceTypeId] = useState<string>("");
   const [payrollWindowId, setPayrollWindowId] = useState<string>("");
@@ -2026,6 +2028,7 @@ function ContractFormDialog({
       setUnitId(editing.unitId);
       setStartDate(editing.startDate);
       setEndDate(editing.endDate);
+      setExpiryDate(editing.expiryDate);
       setDescription(editing.description);
       setServiceTypeId(editing.serviceTypeId ?? "");
       setPayrollWindowId(editing.payrollWindowId ?? "");
@@ -2039,6 +2042,7 @@ function ContractFormDialog({
       setUnitId("");
       setStartDate("");
       setEndDate("");
+      setExpiryDate("");
       setDescription("");
       setServiceTypeId("");
       setPayrollWindowId("");
@@ -2500,6 +2504,7 @@ function ContractFormDialog({
                 unitId,
                 startDate,
                 endDate,
+                expiryDate,
                 description,
                 serviceTypeId: serviceTypeId || null,
                 payrollWindowId: payrollWindowId || null,
