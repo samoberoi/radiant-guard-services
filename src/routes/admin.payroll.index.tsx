@@ -332,10 +332,11 @@ function PayrollUnitsPage() {
         <div className="space-y-4 border-b border-border/60 px-5 py-5">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-1">
-              <h2 className="text-lg font-semibold text-foreground">Payroll-ready units</h2>
+              <h2 className="text-lg font-semibold text-foreground">Payroll sheets — {MONTH_NAMES[month]} {year}</h2>
               <p className="text-sm text-muted-foreground">
-                Only units whose attendance sheet is approved appear here. Pick a unit to view wage computation.
+                Every unit with an attendance sheet for this month. Approved sheets are ready for wage computation; others show their current status.
               </p>
+
             </div>
             <div className="relative w-full max-w-lg">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
