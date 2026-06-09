@@ -348,7 +348,20 @@ function PayrollUnitsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-4">
+            <Filter
+              label="Status"
+              value={statusFilter}
+              onChange={(v) => setStatusFilter(v as typeof statusFilter)}
+              options={[
+                { value: "approved", label: `Approved (${monthlyStatsData?.approved ?? 0})` },
+                { value: "unapproved", label: `Unapproved (${(monthlyStatsData?.pending ?? 0) + (monthlyStatsData?.draft ?? 0) + (monthlyStatsData?.rejected ?? 0)})` },
+                { value: "pending", label: `Pending (${monthlyStatsData?.pending ?? 0})` },
+                { value: "draft", label: `Draft (${monthlyStatsData?.draft ?? 0})` },
+                { value: "rejected", label: `Rejected (${monthlyStatsData?.rejected ?? 0})` },
+              ]}
+              allLabel="All statuses"
+            />
             <Filter
               label="Organization"
               value={orgFilter}
@@ -367,7 +380,7 @@ function PayrollUnitsPage() {
               allLabel={`All employees (${employeeOptions.length})`}
             />
             <Filter
-              label="Approved period"
+              label="Period"
               value={periodFilter}
               onChange={setPeriodFilter}
               options={periods.map((p) => {
@@ -377,6 +390,8 @@ function PayrollUnitsPage() {
               allLabel={`All periods (${periods.length})`}
             />
           </div>
+
+
 
           {anyFilter && (
             <div className="flex items-center justify-between text-xs text-muted-foreground">
