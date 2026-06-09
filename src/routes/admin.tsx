@@ -131,6 +131,7 @@ function AdminLayout() {
     { prefix: "/admin/inventory", module: "inventory" },
     { prefix: "/admin/attendance", module: "attendance" },
     { prefix: "/admin/payroll", module: "payroll" },
+    { prefix: "/admin/invoice", module: "invoice" },
     // notification center & profile are personal pages — no RBAC gate
     { prefix: "/admin/rbac", module: "rbac" },
     { prefix: "/admin/control-center", module: "control_center" },
@@ -154,12 +155,12 @@ function AdminLayout() {
     { prefix: "/admin/esic-branch-manager", module: "control_center" },
   ];
   const firstAllowedPath = () => {
-    const order = ["organizations","contracts","employees","vehicles","inventory","attendance","payroll","control_center","notification_center","rbac"];
+    const order = ["organizations","contracts","employees","vehicles","inventory","attendance","payroll","invoice","control_center","notification_center","rbac"];
     const pathFor: Record<string,string> = {
       organizations: "/admin/customers", contracts: "/admin/contracts/client-contracts",
       employees: "/admin/employees", vehicles: "/admin/vehicles/inventory",
       inventory: "/admin/inventory", attendance: "/admin/attendance",
-      payroll: "/admin/payroll", control_center: "/admin/control-center",
+      payroll: "/admin/payroll", invoice: "/admin/invoice", control_center: "/admin/control-center",
       notification_center: "/admin/notifications", rbac: "/admin/rbac",
     };
     for (const m of order) if (can(m)) return pathFor[m];
@@ -810,6 +811,26 @@ function AdminLayout() {
                 })}
               </div>
             )}
+          </div>
+
+          </>)}
+          {can("invoice") && (<>
+          {/* Invoice link */}
+          <div className="mt-2">
+            <Link
+              to="/admin/invoice"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+                isActive("/admin/invoice")
+                  ? "bg-accent/20 text-accent"
+                  : "text-primary-foreground/85 hover:bg-white/5",
+                collapsed && "justify-center",
+              )}
+              title={collapsed ? "Invoice" : undefined}
+            >
+              <CreditCard className="h-4.5 w-4.5 shrink-0" />
+              {!collapsed && <span>Invoice</span>}
+            </Link>
           </div>
 
           </>)}
