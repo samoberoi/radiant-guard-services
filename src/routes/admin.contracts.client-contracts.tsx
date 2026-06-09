@@ -1156,7 +1156,10 @@ async function importContractFromXlsx(buf: ArrayBuffer): Promise<{
 
 function ClientContractsPage() {
   const qc = useQueryClient();
-  const { items, addMut, updateMut, deleteMut, updateStageMut } = useContracts();
+  const { items, addMut, updateMut, deleteMut, updateStageMut, resubmitMut } = useContracts();
+  const { can } = useCurrentPermissions();
+  const canApprove = can("contracts", "approve");
+  const canEdit = can("contracts", "edit");
   const { units } = useUnits();
   const { customers } = useCustomers();
   const importInputRef = useRef<HTMLInputElement | null>(null);
@@ -1227,44 +1230,44 @@ function ClientContractsPage() {
     return { prospects, clients };
   }, [items]);
 
-  const stats = useMemo(() => {
-    const scoped = items.filter((c) => c.recordType === tab);
-    if (tab === "prospect") {
-      const s = { total: scoped.length, pending: 0, rejected: 0, lost: 0 };
-      for (const c of scoped) {
-        if (c.prospectStage === "lost") s.lost++;
-        else if (c.approvalStatus === "rejected") s.rejected++;
-        else s.pending++;
+  // Merged stats — show both client AND prospect health at the top of the page.
+  const overview = useMemo(() => {
+    let activeClients = 0;
+    let inactiveClients = 0;
+    let expiredClients = 0;
+    let pendingProspects = 0;
+    let rejectedProspects = 0;
+    let lostProspects = 0;
+    for (const c of items) {
+      if (c.recordType === "client") {
+        if (c.status === "active") activeClients++;
+        else if (c.status === "inactive") inactiveClients++;
+        else if (c.status === "expired") expiredClients++;
+      } else {
+        if (c.prospectStage === "lost") lostProspects++;
+        else if (c.approvalStatus === "rejected") rejectedProspects++;
+        else pendingProspects++;
       }
-      return s;
     }
-    const s = { total: scoped.length, active: 0, inactive: 0, expired: 0 };
-    for (const c of scoped) {
-      if (c.status === "active") s.active++;
-      else if (c.status === "inactive") s.inactive++;
-      else if (c.status === "expired") s.expired++;
-    }
-    return s;
-  }, [items, tab]);
+    return {
+      total: items.length,
+      activeClients,
+      inactiveClients: inactiveClients + expiredClients,
+      pendingProspects,
+      rejectedProspects,
+      lostProspects,
+    };
+  }, [items]);
 
   return (
     <div>
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {tab === "client" ? (
-          <>
-            <StatCard label="Total Clients" value={(stats as { total: number }).total} tone="default" />
-            <StatCard label="Active" value={(stats as { active: number }).active} tone="active" />
-            <StatCard label="Inactive" value={(stats as { inactive: number }).inactive} tone="inactive" />
-            <StatCard label="Expired" value={(stats as { expired: number }).expired} tone="expired" />
-          </>
-        ) : (
-          <>
-            <StatCard label="Total Prospects" value={(stats as { total: number }).total} tone="default" />
-            <StatCard label="Pending Approval" value={(stats as { pending: number }).pending} tone="inactive" />
-            <StatCard label="Rejected" value={(stats as { rejected: number }).rejected} tone="expired" />
-            <StatCard label="Lost" value={(stats as { lost: number }).lost} tone="expired" />
-          </>
-        )}
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <StatCard label="Clients + Prospects" value={overview.total} tone="default" />
+        <StatCard label="Active Clients" value={overview.activeClients} tone="active" />
+        <StatCard label="Inactive / Expired" value={overview.inactiveClients} tone="inactive" />
+        <StatCard label="Awaiting Approval" value={overview.pendingProspects} tone="inactive" />
+        <StatCard label="Rejected" value={overview.rejectedProspects} tone="expired" />
+        <StatCard label="Lost" value={overview.lostProspects} tone="expired" />
       </div>
       <PageHeader
         title="Client Contracts"
