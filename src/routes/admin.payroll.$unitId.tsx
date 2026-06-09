@@ -415,8 +415,8 @@ function PayrollUnitPage() {
                 const shortfall = r.wages ? Math.round((r.wages.contractGross - r.wages.earnedGross) * 100) / 100 : 0;
                 return (
                 <tr
-                  key={r.id}
-                  id={`payroll-row-${r.id}`}
+                  key={r.rowKey}
+                  id={`payroll-row-${r.rowKey}`}
                   className={`hover:bg-muted/40 ${isHighlighted ? "bg-emerald-50 ring-2 ring-emerald-400 dark:bg-emerald-950/40" : ""}`}
                 >
                   <td className="px-4 py-3 font-mono text-xs">{r.employeeCode || "—"}</td>
@@ -462,7 +462,7 @@ function PayrollUnitPage() {
         </div>
         {rows.filter((r) => r.wages && r.resource).map((r) => (
           <SalaryBreakdownPreview
-            key={r.id}
+            key={r.rowKey}
             employeeName={r.name}
             employeeCode={r.employeeCode}
             designationName={r.designation}
