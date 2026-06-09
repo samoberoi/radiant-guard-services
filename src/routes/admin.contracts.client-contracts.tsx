@@ -126,7 +126,7 @@ type ClientContract = {
   promotedAt: string | null;
 };
 
-type ApprovalPickerValue = "approved" | "rejected" | "lost";
+type ApprovalPickerValue = "approved" | "rejected" | "lost" | null;
 
 type ServiceType = { id: string; name: string };
 type PayrollWindow = {
@@ -232,10 +232,11 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
 }
 
 function getApprovalPickerValue(contract: ClientContract | null): ApprovalPickerValue {
-  if (!contract) return "rejected";
+  if (!contract) return null;
   if (contract.prospectStage === "lost") return "lost";
   if (contract.approvalStatus === "approved") return "approved";
-  return "rejected";
+  if (contract.approvalStatus === "rejected") return "rejected";
+  return null;
 }
 
 function applyApprovalPickerToPayload(
@@ -275,13 +276,7 @@ function applyApprovalPickerToPayload(
     };
   }
 
-  return {
-    ...payload,
-    approvalStatus: "rejected",
-    status: "inactive",
-    recordType: "prospect",
-    prospectStage: current?.prospectStage === "lost" ? "new" : (current?.prospectStage ?? "new"),
-  };
+  return payload;
 }
 
 function nextContractCode(existing: string[]): string {
@@ -1979,7 +1974,7 @@ function ContractFormDialog({
   const [billingTypeId, setBillingTypeId] = useState<string>("");
   const [esicBranchId, setEsicBranchId] = useState<string>("");
   const [gstOption, setGstOption] = useState<GstOption>("csgst");
-  const [approvalValue, setApprovalValue] = useState<ApprovalPickerValue>("");
+  const [approvalValue, setApprovalValue] = useState<ApprovalPickerValue>(null);
   const [unitPickerOpen, setUnitPickerOpen] = useState(false);
   const [unitQuery, setUnitQuery] = useState("");
   const [saving, setSaving] = useState(false);
@@ -2020,7 +2015,7 @@ function ContractFormDialog({
       setBillingTypeId("");
       setEsicBranchId("");
       setGstOption("csgst");
-      setApprovalValue("");
+      setApprovalValue(null);
     }
     setResources([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2164,15 +2159,14 @@ function ContractFormDialog({
               {editing ? (
                 <Field label="Approval">
                   <Select
-                    value={approvalValue || "pending"}
-                    onValueChange={(v) => setApprovalValue(v === "pending" ? "" : (v as ApprovalPickerValue))}
+                    value={approvalValue ?? undefined}
+                    onValueChange={(v) => setApprovalValue(v as Exclude<ApprovalPickerValue, null>)}
                     disabled={!canManageApproval}
                   >
                     <SelectTrigger className="h-10 rounded-lg">
                       <SelectValue placeholder="Pending" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="approved">Approved</SelectItem>
                       <SelectItem value="rejected">Rejected</SelectItem>
                       <SelectItem value="lost">Lost</SelectItem>
