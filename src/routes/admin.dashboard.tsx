@@ -760,11 +760,12 @@ function StatusTile({ icon, label, approved, pending, draft, rejected, approvedL
 
 function ContractsTile({ active, expiring }: { active: number; expiring: Array<{ id: string; contract_code: string | null; end_date: string | null }> }) {
   const soonest = expiring[0];
+  const display = useCountUp(active);
   return (
     <Shell to="/admin/contracts/client-contracts">
       <TileHeader Icon={Files} />
       <TileLabel>Contracts</TileLabel>
-      <div className="mt-1 font-display text-[38px] font-bold leading-none tabular-nums tracking-tight text-foreground">{active.toLocaleString()}</div>
+      <div className="mt-1 font-display text-[38px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
       <div className="mt-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Active</div>
       <div className="mt-auto flex items-center gap-2 rounded-xl border border-amber-200/60 bg-amber-50/80 px-3 py-1.5 text-[11px] font-medium text-amber-900">
         <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
