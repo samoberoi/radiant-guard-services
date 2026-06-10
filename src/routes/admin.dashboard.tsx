@@ -2,6 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import * as React from "react";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import {
   Building2, Briefcase, CalendarDays, ChevronLeft, ChevronRight,
   ClipboardList, Files, Fuel, PackageOpen, Receipt, TrendingDown, TrendingUp,
@@ -12,6 +13,9 @@ import { PageHeader } from "@/components/PageHeader";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { GradientBarChart } from "@/components/charts/GradientBarChart";
+import { RadialGauge } from "@/components/charts/RadialGauge";
+import { useCountUp } from "@/hooks/useCountUp";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentPermissions } from "@/lib/rbac";
 import {
@@ -512,9 +516,65 @@ function DashboardPage() {
             <div key={i} className="h-40 animate-pulse rounded-[22px] border border-border/60 bg-card" />
           ))
         ) : (
-          tiles.map((t) => <div key={t.key}>{t.node}</div>)
+          tiles.map((t, i) => (
+            <motion.div
+              key={t.key}
+              initial={{ opacity: 0, y: 14, filter: "blur(6px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={{ duration: 0.42, delay: i * 0.045, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {t.node}
+            </motion.div>
+          ))
         )}
       </div>
+
+      {/* Insights — gradient chart + speedometer */}
+      {!isLoading && data && (data.pnlRows.length > 0 || data.sheetCounts.approved + data.sheetCounts.pending + data.sheetCounts.draft + data.sheetCounts.rejected > 0) && (
+        <motion.div
+          initial={{ opacity: 0, y: 18 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+          className="grid grid-cols-1 gap-4 lg:grid-cols-3"
+        >
+          <div className="glass relative overflow-hidden rounded-3xl p-5 lg:col-span-2">
+            <div className="mb-3 flex items-end justify-between">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Top units · this cycle</div>
+                <div className="font-display text-lg font-semibold tracking-tight text-foreground">Invoice vs Payroll</div>
+              </div>
+              <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[oklch(0.62_0.20_295)]" /> Invoice</span>
+                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[oklch(0.78_0.14_200)]" /> Payroll</span>
+              </div>
+            </div>
+            <GradientBarChart
+              id="dash-invoice"
+              data={data.pnlRows.slice(0, 7).map((r) => ({
+                label: (r.unit_code || r.unit_name || "").slice(0, 8),
+                value: Math.round(r.invoice_amount),
+              }))}
+              formatValue={(n) => n >= 100000 ? `${(n / 100000).toFixed(1)}L` : n >= 1000 ? `${(n / 1000).toFixed(0)}k` : String(n)}
+              height={240}
+            />
+          </div>
+          <div className="glass relative flex flex-col items-center justify-center overflow-hidden rounded-3xl p-5">
+            <div className="mb-2 text-center">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Approval rate</div>
+              <div className="font-display text-lg font-semibold tracking-tight text-foreground">Cycle health</div>
+            </div>
+            <RadialGauge
+              value={(() => {
+                const t = data.sheetCounts.approved + data.sheetCounts.pending + data.sheetCounts.draft + data.sheetCounts.rejected;
+                return t === 0 ? 0 : Math.round((data.sheetCounts.approved / t) * 100);
+              })()}
+              label="Attendance approved"
+              sublabel={`${data.sheetCounts.approved} of ${data.sheetCounts.approved + data.sheetCounts.pending + data.sheetCounts.draft + data.sheetCounts.rejected} sheets`}
+              size={220}
+            />
+          </div>
+        </motion.div>
+      )}
 
       {/* P&L */}
       {showPnL && (
@@ -632,12 +692,13 @@ function TileLabel({ children }: { children: React.ReactNode }) {
 }
 
 function MetricTile({ icon, label, value, to }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent?: string; to: string }) {
+  const display = useCountUp(value);
   return (
     <Shell to={to}>
       <TileHeader Icon={icon} />
       <TileLabel>{label}</TileLabel>
       <div className="mt-1 font-display text-[38px] font-bold leading-none tabular-nums tracking-tight text-foreground">
-        {value.toLocaleString()}
+        {display}
       </div>
       <div className="mt-auto pt-3 text-xs font-medium text-muted-foreground">Open →</div>
     </Shell>
@@ -650,11 +711,12 @@ function DualTile({ icon, label, primary, primaryLabel, secondary, secondaryLabe
   secondary: string; secondaryLabel: string;
   accent?: string; to: string;
 }) {
+  const display = useCountUp(primary);
   return (
     <Shell to={to}>
       <TileHeader Icon={icon} />
       <TileLabel>{label}</TileLabel>
-      <div className="mt-1 font-display text-[32px] font-bold leading-none tabular-nums tracking-tight text-foreground">{primary.toLocaleString()}</div>
+      <div className="mt-1 font-display text-[32px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
       <div className="mt-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{primaryLabel}</div>
       <div className="mt-auto flex items-center justify-between border-t border-border/50 pt-3">
         <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{secondaryLabel}</span>
@@ -698,11 +760,12 @@ function StatusTile({ icon, label, approved, pending, draft, rejected, approvedL
 
 function ContractsTile({ active, expiring }: { active: number; expiring: Array<{ id: string; contract_code: string | null; end_date: string | null }> }) {
   const soonest = expiring[0];
+  const display = useCountUp(active);
   return (
     <Shell to="/admin/contracts/client-contracts">
       <TileHeader Icon={Files} />
       <TileLabel>Contracts</TileLabel>
-      <div className="mt-1 font-display text-[38px] font-bold leading-none tabular-nums tracking-tight text-foreground">{active.toLocaleString()}</div>
+      <div className="mt-1 font-display text-[38px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
       <div className="mt-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Active</div>
       <div className="mt-auto flex items-center gap-2 rounded-xl border border-amber-200/60 bg-amber-50/80 px-3 py-1.5 text-[11px] font-medium text-amber-900">
         <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
