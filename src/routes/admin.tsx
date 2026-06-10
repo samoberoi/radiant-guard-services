@@ -5,7 +5,7 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
   Building2,
@@ -23,10 +23,8 @@ import {
   MapPin,
   Menu,
   PackageOpen,
-  PanelLeftClose,
   ShieldCheck,
   ShoppingBag,
-  Sparkles,
   SlidersHorizontal,
   UserPlus,
   Users,
@@ -34,11 +32,18 @@ import {
   Wind,
   Wrench,
   X,
-  AlertTriangle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/BrandMark";
 import { NotificationBell } from "@/components/NotificationBell";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/lib/auth";
 import { useCurrentPermissions } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
@@ -47,24 +52,39 @@ export const Route = createFileRoute("/admin")({
   component: AdminLayout,
 });
 
-type NavItem = {
+type LeafItem = {
   to: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
+  search?: Record<string, unknown>;
 };
 
-const customersChildren: NavItem[] = [
+type GroupItem = {
+  key: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  /** module key for RBAC `can()`. Group hidden if user can't view. */
+  module?: string;
+  /** Single link group (no dropdown) */
+  to?: string;
+  /** Dropdown children */
+  children?: LeafItem[];
+  /** Active path prefixes */
+  activePrefixes?: string[];
+};
+
+const customersChildren: LeafItem[] = [
   { to: "/admin/customers/state-manager", label: "State Manager", icon: MapPin },
   { to: "/admin/customers/branch-manager", label: "Branch Manager", icon: Building2 },
   { to: "/admin/customers/customer-manager", label: "Organization Manager", icon: Users },
   { to: "/admin/customers/unit-manager", label: "Unit Manager", icon: Warehouse },
 ];
 
-const contractsChildren: NavItem[] = [
+const contractsChildren: LeafItem[] = [
   { to: "/admin/contracts/client-contracts", label: "Client Contracts", icon: FileText },
 ];
 
-const vehiclesChildren: NavItem[] = [
+const vehiclesChildren: LeafItem[] = [
   { to: "/admin/vehicles/inventory", label: "Vehicle Inventory", icon: Car },
   { to: "/admin/vehicles/fastags", label: "FastTag Manager", icon: CreditCard },
   { to: "/admin/vehicles/insurances", label: "Insurance Manager", icon: ShieldCheck },
@@ -73,16 +93,7 @@ const vehiclesChildren: NavItem[] = [
   { to: "/admin/vehicles/expense-manager", label: "Expense Manager", icon: Fuel },
 ];
 
-const employeesChildren: NavItem[] = [];
-
-const payrollChildren: NavItem[] = [
-  { to: "/admin/additions", label: "Additions", icon: Wallet },
-  { to: "/admin/deductions", label: "Deductions", icon: Wallet },
-];
-
-
-const inventoryChildren: NavItem[] = [
-  
+const inventoryChildren: LeafItem[] = [
   { to: "/admin/inventory/items", label: "Products", icon: PackageOpen },
   { to: "/admin/inventory/vendors", label: "Vendors", icon: ShoppingBag },
   { to: "/admin/inventory/warehouses", label: "Warehouses", icon: Warehouse },
@@ -94,9 +105,13 @@ const inventoryChildren: NavItem[] = [
   { to: "/admin/inventory/adjustments", label: "Adjustments", icon: SlidersHorizontal },
   { to: "/admin/inventory/stock", label: "Stock Report", icon: Wallet },
   { to: "/admin/inventory/rate-cards", label: "Vendor Rate Cards", icon: FileText },
-  
 ];
 
+const payrollChildren: LeafItem[] = [
+  { to: "/admin/payroll", label: "Payroll Runs", icon: Wallet },
+  { to: "/admin/additions", label: "Additions", icon: Wallet, search: { mode: "list" } },
+  { to: "/admin/deductions", label: "Deductions", icon: Wallet, search: { mode: "list" } },
+];
 
 function maskPhone(phone: string) {
   const d = phone.replace(/\D/g, "");
@@ -108,18 +123,12 @@ function AdminLayout() {
   const { user, logout, isReady } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { can, isLoading: permsLoading, isSuperAdmin, roleKey } = useCurrentPermissions();
-  const dashboardHref = roleKey === "field_officer" && !isSuperAdmin ? "/admin/field-dashboard" : "/admin/dashboard";
+  const dashboardHref =
+    roleKey === "field_officer" && !isSuperAdmin ? "/admin/field-dashboard" : "/admin/dashboard";
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-  const [customersOpen, setCustomersOpen] = useState(false);
-  const [contractsOpen, setContractsOpen] = useState(false);
-  const [vehiclesOpen, setVehiclesOpen] = useState(false);
-  const [inventoryOpen, setInventoryOpen] = useState(false);
-  const [employeesOpen, setEmployeesOpen] = useState(() => pathname.startsWith("/admin/employees"));
-  const [payrollOpen, setPayrollOpen] = useState(() => pathname.startsWith("/admin/payroll") || pathname.startsWith("/admin/deductions") || pathname.startsWith("/admin/additions"));
 
-  // Map current path → module key, then redirect if user lacks view perm.
+  // Path → module map for RBAC redirects (unchanged behavior).
   const pathToModule: { prefix: string; module: string }[] = [
     { prefix: "/admin/customers", module: "organizations" },
     { prefix: "/admin/contracts", module: "contracts" },
@@ -133,7 +142,6 @@ function AdminLayout() {
     { prefix: "/admin/attendance", module: "attendance" },
     { prefix: "/admin/payroll", module: "payroll" },
     { prefix: "/admin/invoice", module: "invoice" },
-    // notification center & profile are personal pages — no RBAC gate
     { prefix: "/admin/rbac", module: "rbac" },
     { prefix: "/admin/control-center", module: "control_center" },
     { prefix: "/admin/professional-tax-manager", module: "control_center" },
@@ -156,13 +164,22 @@ function AdminLayout() {
     { prefix: "/admin/esic-branch-manager", module: "control_center" },
   ];
   const firstAllowedPath = () => {
-    const order = ["organizations","contracts","employees","vehicles","inventory","attendance","payroll","invoice","control_center","notification_center","rbac"];
-    const pathFor: Record<string,string> = {
-      organizations: "/admin/customers", contracts: "/admin/contracts/client-contracts",
-      employees: "/admin/employees", vehicles: "/admin/vehicles/inventory",
-      inventory: "/admin/inventory", attendance: "/admin/attendance",
-      payroll: "/admin/payroll", invoice: "/admin/invoice", control_center: "/admin/control-center",
-      notification_center: "/admin/notifications", rbac: "/admin/rbac",
+    const order = [
+      "organizations","contracts","employees","vehicles","inventory","attendance",
+      "payroll","invoice","control_center","notification_center","rbac",
+    ];
+    const pathFor: Record<string, string> = {
+      organizations: "/admin/customers",
+      contracts: "/admin/contracts/client-contracts",
+      employees: "/admin/employees",
+      vehicles: "/admin/vehicles/inventory",
+      inventory: "/admin/inventory",
+      attendance: "/admin/attendance",
+      payroll: "/admin/payroll",
+      invoice: "/admin/invoice",
+      control_center: "/admin/control-center",
+      notification_center: "/admin/notifications",
+      rbac: "/admin/rbac",
     };
     for (const m of order) if (can(m)) return pathFor[m];
     return null;
@@ -178,9 +195,6 @@ function AdminLayout() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, permsLoading, isSuperAdmin, isReady]);
-
-  
-  
 
   // Auth guard — wait for hydration; if no token in storage, kick to login.
   useEffect(() => {
@@ -200,784 +214,284 @@ function AdminLayout() {
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + "/");
 
-  const sidebarWidth = collapsed ? "lg:w-20" : "lg:w-64";
+  const groups: GroupItem[] = useMemo(
+    () => [
+      { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, to: dashboardHref, activePrefixes: ["/admin/dashboard", "/admin/field-dashboard"] },
+      { key: "organizations", label: "Organizations", module: "organizations", icon: Building2, children: customersChildren, activePrefixes: ["/admin/customers"] },
+      { key: "contracts", label: "Contracts", module: "contracts", icon: Files, children: contractsChildren, activePrefixes: ["/admin/contracts"] },
+      { key: "employees", label: "Employees", module: "employees", icon: UserPlus, to: "/admin/employees", activePrefixes: ["/admin/employees"] },
+      { key: "attendance", label: "Attendance", module: "attendance", icon: ClipboardList, to: "/admin/attendance", activePrefixes: ["/admin/attendance"] },
+      { key: "payroll", label: "Payroll", module: "payroll", icon: Wallet, children: payrollChildren, activePrefixes: ["/admin/payroll", "/admin/additions", "/admin/deductions"] },
+      { key: "invoice", label: "Invoice", module: "invoice", icon: CreditCard, to: "/admin/invoice", activePrefixes: ["/admin/invoice"] },
+      { key: "inventory", label: "Inventory", module: "inventory", icon: Boxes, children: inventoryChildren, activePrefixes: ["/admin/inventory"] },
+      { key: "vehicles", label: "Vehicles", module: "vehicles", icon: Car, children: vehiclesChildren, activePrefixes: ["/admin/vehicles"] },
+      { key: "control", label: "Control Center", module: "control_center", icon: SlidersHorizontal, to: "/admin/control-center", activePrefixes: ["/admin/control-center"] },
+    ],
+    [dashboardHref],
+  );
+
+  const visibleGroups = groups.filter((g) => !g.module || can(g.module));
+  const isGroupActive = (g: GroupItem) =>
+    (g.activePrefixes ?? []).some((p) => pathname === p || pathname.startsWith(p + "/"));
 
   return (
     <div className="relative min-h-screen bg-background">
       <div className="ambient-glow pointer-events-none absolute inset-0" />
 
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-border/60 bg-primary text-primary-foreground transition-transform duration-300",
-          mobileOpen ? "translate-x-0" : "-translate-x-full",
-          "lg:translate-x-0",
-          sidebarWidth,
-        )}
-      >
-        <div className="dot-pattern pointer-events-none absolute inset-0 opacity-20" />
-
-        {/* Brand */}
-        <div className="relative flex h-16 items-center justify-between border-b border-white/10 px-4">
-          <Link to="/admin/customers" className="flex items-center gap-2.5">
-            <BrandMark
-              compact={collapsed}
-              variant="inverse"
-              className="min-w-0"
-            />
+      {/* Top nav bar */}
+      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
+        <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-3 px-4 sm:px-6 lg:px-8">
+          {/* Brand */}
+          <Link to={dashboardHref} className="flex shrink-0 items-center gap-2">
+            <BrandMark className="min-w-0" />
           </Link>
-          <button
-            type="button"
-            onClick={() => setMobileOpen(false)}
-            className="rounded-md p-1.5 text-primary-foreground/70 hover:bg-white/10 lg:hidden"
-            aria-label="Close menu"
-          >
-            <X className="h-5 w-5" />
-          </button>
+
+          {/* Desktop top nav */}
+          <nav className="ml-3 hidden flex-1 items-center gap-1 lg:flex">
+            {visibleGroups.map((g) => {
+              const active = isGroupActive(g);
+              if (!g.children || g.children.length === 0) {
+                return (
+                  <Link
+                    key={g.key}
+                    to={g.to!}
+                    className={cn(
+                      "inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-colors",
+                      active
+                        ? "bg-accent text-accent-foreground shadow-sm"
+                        : "text-foreground/70 hover:bg-secondary hover:text-foreground",
+                    )}
+                  >
+                    <g.icon className="h-4 w-4" />
+                    {g.label}
+                  </Link>
+                );
+              }
+              return (
+                <DropdownMenu key={g.key}>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-colors focus:outline-none",
+                        active
+                          ? "bg-accent text-accent-foreground shadow-sm"
+                          : "text-foreground/70 hover:bg-secondary hover:text-foreground",
+                      )}
+                    >
+                      <g.icon className="h-4 w-4" />
+                      {g.label}
+                      <ChevronDown className="h-3.5 w-3.5 opacity-70" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="start"
+                    sideOffset={8}
+                    className="w-60 rounded-xl border-border p-1.5"
+                  >
+                    <DropdownMenuLabel className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                      {g.label}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {g.children.map((c) => {
+                      const a = isActive(c.to);
+                      return (
+                        <DropdownMenuItem key={c.to} asChild className="rounded-lg p-0">
+                          <Link
+                            to={c.to}
+                            search={c.search as never}
+                            className={cn(
+                              "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm",
+                              a
+                                ? "bg-primary text-primary-foreground"
+                                : "text-foreground hover:bg-secondary",
+                            )}
+                          >
+                            <c.icon className="h-4 w-4 opacity-80" />
+                            <span className="truncate">{c.label}</span>
+                          </Link>
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              );
+            })}
+          </nav>
+
+          {/* Right cluster */}
+          <div className="ml-auto flex items-center gap-2">
+            <NotificationBell />
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className="flex h-9 items-center gap-2 rounded-full border border-border bg-card pl-1 pr-3 text-sm font-semibold text-foreground hover:bg-secondary"
+                >
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold">
+                    {(user?.full_name ?? "U").slice(0, 1).toUpperCase()}
+                  </span>
+                  <span className="hidden max-w-[140px] truncate sm:inline">
+                    {user?.full_name ?? "Account"}
+                  </span>
+                  <ChevronDown className="hidden h-3.5 w-3.5 opacity-70 sm:inline" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" sideOffset={8} className="w-56 rounded-xl">
+                <DropdownMenuLabel>
+                  <div className="text-sm font-semibold text-foreground">
+                    {user?.full_name ?? "Account"}
+                  </div>
+                  {user?.phone && (
+                    <div className="text-xs text-muted-foreground">{maskPhone(user.phone)}</div>
+                  )}
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                  <Link to="/admin/profile" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" /> My Profile
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/admin/notifications" className="flex items-center gap-2">
+                    <Bell className="h-4 w-4" /> Notifications
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" /> Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <button
+              type="button"
+              onClick={() => setMobileOpen(true)}
+              className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card text-foreground hover:bg-secondary lg:hidden"
+              aria-label="Open menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </div>
         </div>
+      </header>
 
-        {/* Nav */}
-        <nav className="relative flex-1 overflow-y-auto p-3">
-          <div className="mb-2 px-3">
-            {!collapsed && (
-              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-primary-foreground/50">
-                Main
-              </div>
-            )}
-          </div>
-
-          {/* Dashboard — always visible for any signed-in admin */}
-          <div>
-            <Link
-              to={dashboardHref}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
-                (isActive("/admin/dashboard") || isActive("/admin/field-dashboard"))
-                  ? "bg-accent/20 text-accent"
-                  : "text-primary-foreground/85 hover:bg-white/5",
-              )}
-              title="Dashboard"
-            >
-              <LayoutDashboard className="h-4.5 w-4.5 shrink-0" />
-              {!collapsed && <span className="flex-1 text-left">Dashboard</span>}
-            </Link>
-          </div>
-
-
-
-          {can("organizations") && (<>
-          {/* Customers group */}
-          <div>
-            <div
-              className={cn(
-                "group flex w-full items-center gap-1 rounded-lg pr-1 text-sm font-semibold transition-colors",
-                isActive("/admin/customers")
-                  ? "bg-accent/20 text-accent"
-                  : "text-primary-foreground/85 hover:bg-white/5",
-              )}
-            >
-              <Link
-                to="/admin/customers"
-                onClick={() => setCustomersOpen(true)}
-                className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5"
-              >
-                <LayoutDashboard className="h-4.5 w-4.5 shrink-0" />
-                {!collapsed && <span className="flex-1 text-left">Organizations</span>}
-              </Link>
-              {!collapsed && (
-                <button
-                  type="button"
-                  onClick={() => setCustomersOpen((v) => !v)}
-                  aria-label={customersOpen ? "Collapse" : "Expand"}
-                  className="rounded-md p-1.5 text-primary-foreground/70 hover:bg-white/10"
-                >
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 transition-transform",
-                      customersOpen ? "rotate-0" : "-rotate-90",
-                    )}
-                  />
-                </button>
-              )}
-            </div>
-
-            {customersOpen && !collapsed && (
-              <div className="mt-1 space-y-0.5 pl-3">
-                {customersChildren.map((item) => {
-                  const active = isActive(item.to);
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className={cn(
-                        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
-                        active
-                          ? "bg-white/10 text-primary-foreground"
-                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "absolute left-0 h-5 w-0.5 rounded-r bg-accent transition-opacity",
-                          active ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Collapsed icon-only children */}
-            {collapsed && (
-              <div className="mt-1 space-y-1">
-                {customersChildren.map((item) => {
-                  const active = isActive(item.to);
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      title={item.label}
-                      className={cn(
-                        "flex items-center justify-center rounded-lg p-2.5 transition-colors",
-                        active
-                          ? "bg-accent/20 text-accent"
-                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
-                      )}
-                    >
-                      <item.icon className="h-4.5 w-4.5" />
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          </>)}
-          {can("contracts") && (<>
-          {/* Contracts group */}
-          <div className="mt-2">
-            <div
-              className={cn(
-                "group flex w-full items-center gap-1 rounded-lg pr-1 text-sm font-semibold transition-colors",
-                isActive("/admin/contracts")
-                  ? "bg-accent/20 text-accent"
-                  : "text-primary-foreground/85 hover:bg-white/5",
-              )}
-            >
-              <Link
-                to="/admin/contracts/client-contracts"
-                onClick={() => setContractsOpen(true)}
-                className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5"
-              >
-                <Files className="h-4.5 w-4.5 shrink-0" />
-                {!collapsed && <span className="flex-1 text-left">Contracts</span>}
-              </Link>
-              {!collapsed && (
-                <button
-                  type="button"
-                  onClick={() => setContractsOpen((v) => !v)}
-                  aria-label={contractsOpen ? "Collapse" : "Expand"}
-                  className="rounded-md p-1.5 text-primary-foreground/70 hover:bg-white/10"
-                >
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 transition-transform",
-                      contractsOpen ? "rotate-0" : "-rotate-90",
-                    )}
-                  />
-                </button>
-              )}
-            </div>
-
-            {contractsOpen && !collapsed && (
-              <div className="mt-1 space-y-0.5 pl-3">
-                {contractsChildren.map((item) => {
-                  const active = isActive(item.to);
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className={cn(
-                        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
-                        active
-                          ? "bg-white/10 text-primary-foreground"
-                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "absolute left-0 h-5 w-0.5 rounded-r bg-accent transition-opacity",
-                          active ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-
-            {collapsed && (
-              <div className="mt-1 space-y-1">
-                {contractsChildren.map((item) => {
-                  const active = isActive(item.to);
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      title={item.label}
-                      className={cn(
-                        "flex items-center justify-center rounded-lg p-2.5 transition-colors",
-                        active
-                          ? "bg-accent/20 text-accent"
-                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
-                      )}
-                    >
-                      <item.icon className="h-4.5 w-4.5" />
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          </>)}
-          {can("employees") && (<>
-          {/* Employees group */}
-          <div className="mt-2">
-            <div
-              className={cn(
-                "group flex w-full items-center gap-1 rounded-lg pr-1 text-sm font-semibold transition-colors",
-                isActive("/admin/employees")
-                  ? "bg-accent/20 text-accent"
-                  : "text-primary-foreground/85 hover:bg-white/5",
-              )}
-            >
-              <Link
-                to="/admin/employees"
-                onClick={() => setEmployeesOpen(true)}
-                className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5"
-              >
-                <UserPlus className="h-4.5 w-4.5 shrink-0" />
-                {!collapsed && <span className="flex-1 text-left">Employees</span>}
-              </Link>
-              {!collapsed && (
-                <button
-                  type="button"
-                  onClick={() => setEmployeesOpen((v) => !v)}
-                  aria-label={employeesOpen ? "Collapse" : "Expand"}
-                  className="rounded-md p-1.5 text-primary-foreground/70 hover:bg-white/10"
-                >
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 transition-transform",
-                      employeesOpen ? "rotate-0" : "-rotate-90",
-                    )}
-                  />
-                </button>
-              )}
-            </div>
-
-            {employeesOpen && !collapsed && (
-              <div className="mt-1 space-y-0.5 pl-3">
-                {employeesChildren.map((item) => {
-                  const active = isActive(item.to);
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      search={item.to === "/admin/deductions" || item.to === "/admin/additions" ? { mode: "list" } : undefined}
-                      className={cn(
-                        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
-                        active
-                          ? "bg-white/10 text-primary-foreground"
-                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "absolute left-0 h-5 w-0.5 rounded-r bg-accent transition-opacity",
-                          active ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-
-            {collapsed && (
-              <div className="mt-1 space-y-1">
-                {employeesChildren.map((item) => {
-                  const active = isActive(item.to);
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      search={item.to === "/admin/deductions" || item.to === "/admin/additions" ? { mode: "list" } : undefined}
-                      title={item.label}
-                      className={cn(
-                        "flex items-center justify-center rounded-lg p-2.5 transition-colors",
-                        active
-                          ? "bg-accent/20 text-accent"
-                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
-                      )}
-                    >
-                      <item.icon className="h-4.5 w-4.5" />
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          </>)}
-          {can("vehicles") && (<>
-          {/* Vehicles group */}
-          <div className="mt-2">
-            <div
-              className={cn(
-                "group flex w-full items-center gap-1 rounded-lg pr-1 text-sm font-semibold transition-colors",
-                isActive("/admin/vehicles")
-                  ? "bg-accent/20 text-accent"
-                  : "text-primary-foreground/85 hover:bg-white/5",
-              )}
-            >
-              <Link
-                to="/admin/vehicles"
-                onClick={() => setVehiclesOpen(true)}
-                className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5"
-              >
-                <Car className="h-4.5 w-4.5 shrink-0" />
-                {!collapsed && <span className="flex-1 text-left">Vehicles</span>}
-              </Link>
-              {!collapsed && (
-                <button
-                  type="button"
-                  onClick={() => setVehiclesOpen((v) => !v)}
-                  aria-label={vehiclesOpen ? "Collapse" : "Expand"}
-                  className="rounded-md p-1.5 text-primary-foreground/70 hover:bg-white/10"
-                >
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 transition-transform",
-                      vehiclesOpen ? "rotate-0" : "-rotate-90",
-                    )}
-                  />
-                </button>
-              )}
-            </div>
-
-            {vehiclesOpen && !collapsed && (
-              <div className="mt-1 space-y-0.5 pl-3">
-                {vehiclesChildren.map((item) => {
-                  const active = isActive(item.to);
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className={cn(
-                        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
-                        active
-                          ? "bg-white/10 text-primary-foreground"
-                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "absolute left-0 h-5 w-0.5 rounded-r bg-accent transition-opacity",
-                          active ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-
-            {collapsed && (
-              <div className="mt-1 space-y-1">
-                {vehiclesChildren.map((item) => {
-                  const active = isActive(item.to);
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      title={item.label}
-                      className={cn(
-                        "flex items-center justify-center rounded-lg p-2.5 transition-colors",
-                        active
-                          ? "bg-accent/20 text-accent"
-                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
-                      )}
-                    >
-                      <item.icon className="h-4.5 w-4.5" />
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          </>)}
-          {can("inventory") && (<>
-          {/* Inventory group */}
-          <div className="mt-2">
-            <div
-              className={cn(
-                "group flex w-full items-center gap-1 rounded-lg pr-1 text-sm font-semibold transition-colors",
-                isActive("/admin/inventory")
-                  ? "bg-accent/20 text-accent"
-                  : "text-primary-foreground/85 hover:bg-white/5",
-              )}
-            >
-              <Link
-                to="/admin/inventory"
-                onClick={() => setInventoryOpen(true)}
-                className="flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5"
-              >
-                <Boxes className="h-4.5 w-4.5 shrink-0" />
-                {!collapsed && <span className="flex-1 text-left">Inventory</span>}
-              </Link>
-              {!collapsed && (
-                <button
-                  type="button"
-                  onClick={() => setInventoryOpen((v) => !v)}
-                  aria-label={inventoryOpen ? "Collapse" : "Expand"}
-                  className="rounded-md p-1.5 text-primary-foreground/70 hover:bg-white/10"
-                >
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 transition-transform",
-                      inventoryOpen ? "rotate-0" : "-rotate-90",
-                    )}
-                  />
-                </button>
-              )}
-            </div>
-
-            {inventoryOpen && !collapsed && (
-              <div className="mt-1 space-y-0.5 pl-3">
-                {inventoryChildren.map((item) => {
-                  const active = isActive(item.to);
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      className={cn(
-                        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
-                        active
-                          ? "bg-white/10 text-primary-foreground"
-                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "absolute left-0 h-5 w-0.5 rounded-r bg-accent transition-opacity",
-                          active ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-
-            {collapsed && (
-              <div className="mt-1 space-y-1">
-                {inventoryChildren.map((item) => {
-                  const active = isActive(item.to);
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      title={item.label}
-                      className={cn(
-                        "flex items-center justify-center rounded-lg p-2.5 transition-colors",
-                        active
-                          ? "bg-accent/20 text-accent"
-                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
-                      )}
-                    >
-                      <item.icon className="h-4.5 w-4.5" />
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-
-
-
-          </>)}
-          {can("attendance") && (<>
-          {/* Attendance link */}
-          <div className="mt-2">
-            <Link
-              to="/admin/attendance"
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
-                isActive("/admin/attendance")
-                  ? "bg-accent/20 text-accent"
-                  : "text-primary-foreground/85 hover:bg-white/5",
-                collapsed && "justify-center",
-              )}
-              title={collapsed ? "Attendance" : undefined}
-            >
-              <ClipboardList className="h-4.5 w-4.5 shrink-0" />
-              {!collapsed && <span>Attendance</span>}
-            </Link>
-          </div>
-
-          </>)}
-          {can("payroll") && (<>
-          {/* Payroll group */}
-          <div className="mt-2">
-            <div
-              className={cn(
-                "group flex w-full items-center gap-1 rounded-lg pr-1 text-sm font-semibold transition-colors",
-                isActive("/admin/payroll") || isActive("/admin/additions") || isActive("/admin/deductions")
-                  ? "bg-accent/20 text-accent"
-                  : "text-primary-foreground/85 hover:bg-white/5",
-              )}
-            >
-              <Link
-                to="/admin/payroll"
-                onClick={() => setPayrollOpen(true)}
-                className={cn("flex flex-1 items-center gap-3 rounded-lg px-3 py-2.5", collapsed && "justify-center")}
-                title={collapsed ? "Payroll" : undefined}
-              >
-                <Wallet className="h-4.5 w-4.5 shrink-0" />
-                {!collapsed && <span className="flex-1 text-left">Payroll</span>}
-              </Link>
-              {!collapsed && (
-                <button
-                  type="button"
-                  onClick={() => setPayrollOpen((v) => !v)}
-                  aria-label={payrollOpen ? "Collapse" : "Expand"}
-                  className="rounded-md p-1.5 text-primary-foreground/70 hover:bg-white/10"
-                >
-                  <ChevronDown
-                    className={cn(
-                      "h-4 w-4 transition-transform",
-                      payrollOpen ? "rotate-0" : "-rotate-90",
-                    )}
-                  />
-                </button>
-              )}
-            </div>
-
-            {payrollOpen && !collapsed && (
-              <div className="mt-1 space-y-0.5 pl-3">
-                {payrollChildren.map((item) => {
-                  const active = isActive(item.to);
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      search={item.to === "/admin/deductions" || item.to === "/admin/additions" ? { mode: "list" } : undefined}
-                      className={cn(
-                        "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
-                        active
-                          ? "bg-white/10 text-primary-foreground"
-                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "absolute left-0 h-5 w-0.5 rounded-r bg-accent transition-opacity",
-                          active ? "opacity-100" : "opacity-0",
-                        )}
-                      />
-                      <item.icon className="h-4 w-4 shrink-0" />
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-
-            {collapsed && (
-              <div className="mt-1 space-y-1">
-                {payrollChildren.map((item) => {
-                  const active = isActive(item.to);
-                  return (
-                    <Link
-                      key={item.to}
-                      to={item.to}
-                      search={item.to === "/admin/deductions" || item.to === "/admin/additions" ? { mode: "list" } : undefined}
-                      title={item.label}
-                      className={cn(
-                        "flex items-center justify-center rounded-lg p-2.5 transition-colors",
-                        active
-                          ? "bg-accent/20 text-accent"
-                          : "text-primary-foreground/65 hover:bg-white/5 hover:text-primary-foreground",
-                      )}
-                    >
-                      <item.icon className="h-4.5 w-4.5" />
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          </>)}
-          {can("invoice") && (<>
-          {/* Invoice link */}
-          <div className="mt-2">
-            <Link
-              to="/admin/invoice"
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
-                isActive("/admin/invoice")
-                  ? "bg-accent/20 text-accent"
-                  : "text-primary-foreground/85 hover:bg-white/5",
-                collapsed && "justify-center",
-              )}
-              title={collapsed ? "Invoice" : undefined}
-            >
-              <CreditCard className="h-4.5 w-4.5 shrink-0" />
-              {!collapsed && <span>Invoice</span>}
-            </Link>
-          </div>
-
-          </>)}
-          {can("control_center") && (<>
-          {/* Control Center link */}
-          <div className="mt-2">
-            <Link
-              to="/admin/control-center"
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
-                isActive("/admin/control-center") ||
-                  isActive("/admin/professional-tax-manager") ||
-                  isActive("/admin/lwf-manager")
-                  ? "bg-accent/20 text-accent"
-                  : "text-primary-foreground/85 hover:bg-white/5",
-                collapsed && "justify-center",
-              )}
-              title={collapsed ? "Control Center" : undefined}
-            >
-              <SlidersHorizontal className="h-4.5 w-4.5 shrink-0" />
-              {!collapsed && <span>Control Center</span>}
-            </Link>
-          </div>
-
-          </>)}
-          {/* Notification Center link — always visible (personal page) */}
-          <div className="mt-2">
-            <Link
-              to="/admin/notifications"
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
-                isActive("/admin/notifications")
-                  ? "bg-accent/20 text-accent"
-                  : "text-primary-foreground/85 hover:bg-white/5",
-                collapsed && "justify-center",
-              )}
-              title={collapsed ? "Notification Center" : undefined}
-            >
-              <Bell className="h-4.5 w-4.5 shrink-0" />
-              {!collapsed && <span>Notification Center</span>}
-            </Link>
-          </div>
-
-          {/* My Profile link — always visible */}
-          <div className="mt-2">
-            <Link
-              to="/admin/profile"
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
-                isActive("/admin/profile")
-                  ? "bg-accent/20 text-accent"
-                  : "text-primary-foreground/85 hover:bg-white/5",
-                collapsed && "justify-center",
-              )}
-              title={collapsed ? "My Profile" : undefined}
-            >
-              <Users className="h-4.5 w-4.5 shrink-0" />
-              {!collapsed && <span>My Profile</span>}
-            </Link>
-          </div>
-
-
-
-        </nav>
-
-        {/* Footer */}
-        <div className="relative border-t border-white/10 p-3">
-          <button
-            type="button"
-            onClick={() => setCollapsed((v) => !v)}
-            className="hidden w-full items-center gap-3 rounded-lg px-3 py-2 text-xs font-semibold text-primary-foreground/60 transition-colors hover:bg-white/5 hover:text-primary-foreground lg:flex"
-          >
-            <PanelLeftClose
-              className={cn("h-4 w-4 transition-transform", collapsed && "rotate-180")}
-            />
-            {!collapsed && <span>Collapse</span>}
-          </button>
-        </div>
-      </aside>
-
-      {/* Mobile backdrop */}
+      {/* Mobile sheet */}
       {mobileOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-black/50 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
+        <div className="fixed inset-0 z-40 lg:hidden">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute inset-y-0 right-0 w-[86%] max-w-sm overflow-y-auto bg-card p-4 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <BrandMark />
+              <button
+                type="button"
+                onClick={() => setMobileOpen(false)}
+                className="rounded-md p-1.5 text-foreground hover:bg-secondary"
+                aria-label="Close menu"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <nav className="space-y-1">
+              {visibleGroups.map((g) => (
+                <MobileGroup key={g.key} group={g} isActive={isActive} isGroupActive={isGroupActive(g)} />
+              ))}
+              <div className="my-2 border-t border-border" />
+              <Link
+                to="/admin/profile"
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-secondary"
+              >
+                <Users className="h-4 w-4" /> My Profile
+              </Link>
+              <Link
+                to="/admin/notifications"
+                className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-secondary"
+              >
+                <Bell className="h-4 w-4" /> Notifications
+              </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="h-4 w-4" /> Sign out
+              </button>
+            </nav>
+          </aside>
+        </div>
       )}
 
-      {/* Main column */}
-      <div className={cn("flex min-h-screen flex-col transition-[padding] duration-300", collapsed ? "lg:pl-20" : "lg:pl-64")}>
-        {/* Header */}
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-border/60 bg-background/80 px-4 backdrop-blur-md sm:px-6">
-          <button
-            type="button"
-            onClick={() => setMobileOpen(true)}
-            className="rounded-md p-2 text-foreground hover:bg-secondary lg:hidden"
-            aria-label="Open menu"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+      <main className="relative z-10 mx-auto max-w-[1600px] flex-1 px-4 py-6 sm:px-6 lg:px-8">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
 
-          <div className="hidden flex-col leading-tight sm:flex">
-            <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-              Admin Console
-            </span>
-          </div>
-
-
-          <div className="ml-auto flex items-center gap-3">
-            <NotificationBell />
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              size="sm"
-              className="h-9 rounded-lg border-border bg-card text-foreground font-semibold hover:bg-accent hover:text-accent-foreground hover:border-accent"
-            >
-              <LogOut className="mr-1.5 h-4 w-4" />
-              Sign out
-            </Button>
-          </div>
-
-        </header>
-
-        <main className="relative z-10 flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          <Outlet />
-        </main>
-      </div>
+function MobileGroup({
+  group,
+  isActive,
+  isGroupActive,
+}: {
+  group: GroupItem;
+  isActive: (p: string) => boolean;
+  isGroupActive: boolean;
+}) {
+  const [open, setOpen] = useState(isGroupActive);
+  const Icon = group.icon;
+  if (!group.children || group.children.length === 0) {
+    return (
+      <Link
+        to={group.to!}
+        className={cn(
+          "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+          isGroupActive
+            ? "bg-accent text-accent-foreground"
+            : "text-foreground hover:bg-secondary",
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        {group.label}
+      </Link>
+    );
+  }
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(
+          "flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+          isGroupActive
+            ? "bg-accent text-accent-foreground"
+            : "text-foreground hover:bg-secondary",
+        )}
+      >
+        <Icon className="h-4 w-4" />
+        <span className="flex-1 text-left">{group.label}</span>
+        <ChevronDown className={cn("h-4 w-4 transition-transform", open ? "rotate-0" : "-rotate-90")} />
+      </button>
+      {open && (
+        <div className="mt-1 space-y-0.5 pl-4">
+          {group.children.map((c) => {
+            const a = isActive(c.to);
+            return (
+              <Link
+                key={c.to}
+                to={c.to}
+                search={c.search as never}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium",
+                  a ? "bg-primary text-primary-foreground" : "text-foreground/80 hover:bg-secondary",
+                )}
+              >
+                <c.icon className="h-4 w-4 opacity-80" />
+                <span className="truncate">{c.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
