@@ -2927,6 +2927,65 @@ export type Database = {
         }
         Relationships: []
       }
+      payroll_runs: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          period_end: string
+          period_start: string
+          rejected_at: string | null
+          rejected_by: string | null
+          rejection_reason: string | null
+          status: string
+          submitted_at: string | null
+          submitted_by: string | null
+          unit_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          period_end: string
+          period_start: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          unit_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          rejected_at?: string | null
+          rejected_by?: string | null
+          rejection_reason?: string | null
+          status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
+          unit_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payroll_runs_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payroll_windows: {
         Row: {
           created_at: string
