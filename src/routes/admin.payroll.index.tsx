@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   ArrowRight, Building2, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight,
-  ClipboardList, Clock3, FileEdit, MapPinned, Search, Sparkles, UserCircle2, Users, Wallet, X,
+  ClipboardList, Clock3, FileEdit, MapPinned, RotateCcw, Search, Sparkles, UserCircle2, Users, Wallet, X,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/PageHeader";
@@ -17,6 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentPermissions } from "@/lib/rbac";
+import { logActivity } from "@/lib/activity-log";
 
 export const Route = createFileRoute("/admin/payroll/")({
   component: PayrollUnitsPage,
