@@ -652,24 +652,35 @@ function AttendanceUnitsPage() {
             <tbody className="divide-y divide-border/50">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     Loading attendance units…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-destructive">
+                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-destructive">
                     {error instanceof Error ? error.message : "Could not load attendance units right now."}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     {units.length === 0 ? "No units with active contracts yet." : "No units match the current filters."}
                   </td>
                 </tr>
               ) : (
-                filtered.map((unit) => (
+                filtered.map((unit) => {
+                  const sheet = sheetsByUnit?.get(unit.id) ?? null;
+                  const sheetStatus: SheetStatus | "none" = sheet?.status ?? "none";
+                  const statusBadge = (() => {
+                    if (sheetStatus === "approved")
+                      return { label: "Approved", cls: "border-emerald-300/60 bg-emerald-100/70 text-emerald-800", Icon: CheckCircle2 };
+                    if (sheetStatus === "submitted")
+                      return { label: "Awaiting approval", cls: "border-amber-300/60 bg-amber-100/70 text-amber-800", Icon: Clock3 };
+                    if (sheetStatus === "rejected")
+                      return { label: "Rejected — open", cls: "border-rose-300/60 bg-rose-100/70 text-rose-800", Icon: ClipboardList };
+                    return { label: "Open", cls: "border-sky-300/60 bg-sky-100/70 text-sky-800", Icon: ClipboardList };
+                  })();
                   <tr key={unit.id} className="group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5">
                     <td className="px-5 py-4 align-top">
                       <div className="flex items-start gap-3">
