@@ -444,7 +444,7 @@ function MobileGroup({
         className={cn(
           "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
           isGroupActive
-            ? "bg-accent text-accent-foreground"
+            ? "bg-primary text-primary-foreground"
             : "text-foreground hover:bg-secondary",
         )}
       >
@@ -461,7 +461,7 @@ function MobileGroup({
         className={cn(
           "flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
           isGroupActive
-            ? "bg-accent text-accent-foreground"
+            ? "bg-primary text-primary-foreground"
             : "text-foreground hover:bg-secondary",
         )}
       >
