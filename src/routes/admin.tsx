@@ -249,10 +249,10 @@ function AdminLayout() {
           {/* Dashboard — always visible for any signed-in admin */}
           <div>
             <Link
-              to="/admin/dashboard"
+              to={dashboardHref}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
-                isActive("/admin/dashboard")
+                (isActive("/admin/dashboard") || isActive("/admin/field-dashboard"))
                   ? "bg-accent/20 text-accent"
                   : "text-primary-foreground/85 hover:bg-white/5",
               )}
