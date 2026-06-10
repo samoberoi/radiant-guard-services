@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ADVANCE_ALERT_KM, serviceStatusFor } from "@/lib/vehicle-service";
 import { logActivity } from "@/lib/activity-log";
+import { VehicleDetailHeaders, VehicleDetailCells, VEHICLE_DETAIL_COLUMN_COUNT } from "@/lib/vehicle-helpers";
 
 export const Route = createFileRoute("/admin/vehicles/service-manager")({
   component: ServiceManagerPage,
@@ -27,6 +28,15 @@ type VehicleRow = {
   fuel_type: string;
   enabled: boolean;
   service_interval_km: number | null;
+  owner: string;
+  type: string;
+  brand: string;
+  make: string;
+  year: number | null;
+  color: string;
+  engine_number: string;
+  chassis_number: string;
+  registration_date: string | null;
 };
 function ServiceManagerPage() {
   const qc = useQueryClient();
@@ -41,7 +51,7 @@ function ServiceManagerPage() {
     queryFn: async (): Promise<VehicleRow[]> => {
       const { data, error } = await supabase
         .from("vehicles" as never)
-        .select("id,vehicle_number,name,fuel_type,enabled,service_interval_km")
+        .select("id,vehicle_number,name,fuel_type,enabled,service_interval_km,owner,type,brand,make,year,color,engine_number,chassis_number,registration_date")
         .order("vehicle_number", { ascending: true });
       if (error) throw error;
       return (data as unknown as VehicleRow[]) ?? [];
