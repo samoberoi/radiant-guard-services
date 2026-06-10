@@ -711,9 +711,18 @@ function EmployeesPage() {
     [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations],
   );
   const candidateRows = useMemo(
-    () => candidates.filter((c) => !isEmployeeStatus(c.status) && matchesSearch(c)),
+    () => candidates.filter((c) => {
+      if (isEmployeeStatus(c.status)) return false;
+      if (!matchesSearch(c)) return false;
+      if (isFieldOfficer) {
+        // Field officers see only their own submissions, and only while pending/rejected/draft.
+        if (currentUserId && c.created_by !== currentUserId) return false;
+        if (c.status === "approved") return false;
+      }
+      return true;
+    }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, search],
+    [candidates, search, isFieldOfficer, currentUserId],
   );
 
   // ---------------- Export ---------------- //
