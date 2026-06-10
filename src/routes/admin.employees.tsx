@@ -1341,12 +1341,12 @@ function EmployeesPage() {
       const isDisabled = mode === "employee" && !c.is_enabled;
       return (
         <tr key={c.id} className={cn("group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5", isDisabled && "opacity-60")}>
-          <td className="px-3 py-3">
+          <td className="px-2.5 py-2.5">
             <span className="rounded-md bg-secondary px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               {code}
             </span>
           </td>
-          <td className="px-3 py-3">
+          <td className="px-2.5 py-2.5">
             <div className="flex items-center gap-3">
               {c.photo_url ? (
                 <img
@@ -1368,13 +1368,13 @@ function EmployeesPage() {
             </div>
           </td>
           {(mode === "candidate" || columnsVisible.mobile) && (
-            <td className="px-3 py-3 text-center text-sm font-medium text-muted-foreground">{c.mobile || "—"}</td>
+            <td className="px-2.5 py-2.5 text-center text-sm font-medium text-muted-foreground">{c.mobile || "—"}</td>
           )}
           {mode === "employee" && columnsVisible.email && (
-            <td className="px-3 py-3 text-sm text-muted-foreground max-w-[200px]"><span className="truncate block" title={c.email ?? ""}>{c.email || "—"}</span></td>
+            <td className="px-2.5 py-2.5 text-sm text-muted-foreground max-w-[200px]"><span className="truncate block" title={c.email ?? ""}>{c.email || "—"}</span></td>
           )}
           {(mode === "candidate" || columnsVisible.unit) && (
-            <td className="px-3 py-3 max-w-[180px]">
+            <td className="px-2.5 py-2.5 max-w-[180px]">
               {unit ? (
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-foreground" title={unit.name}>{unit.name}</div>
@@ -1386,16 +1386,16 @@ function EmployeesPage() {
             </td>
           )}
           {(mode === "candidate" || columnsVisible.designation) && (
-            <td className="px-3 py-3 text-sm text-muted-foreground max-w-[140px]"><span className="line-clamp-2" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
+            <td className="px-2.5 py-2.5 text-sm text-muted-foreground max-w-[140px]"><span className="line-clamp-2" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
           )}
           {mode === "employee" && columnsVisible.dob && (
-            <td className="px-3 py-3 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(c.date_of_birth)}</td>
+            <td className="px-2.5 py-2.5 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(c.date_of_birth)}</td>
           )}
           {mode === "employee" && columnsVisible.doj && (
-            <td className="px-3 py-3 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(c.approved_at ?? c.preferred_joining_date)}</td>
+            <td className="px-2.5 py-2.5 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(c.approved_at ?? c.preferred_joining_date)}</td>
           )}
           {mode === "employee" && columnsVisible.role && (
-            <td className="px-3 py-3">
+            <td className="px-2.5 py-2.5">
               {c.role_key ? (
                 <Select
                   value={c.role_key}
@@ -1410,7 +1410,7 @@ function EmployeesPage() {
                     assignRoleMut.mutate({ candidate: c, roleKey: v });
                   }}
                 >
-                  <SelectTrigger className="h-8 w-[130px] rounded-lg border-border/60 bg-card text-xs">
+                  <SelectTrigger className="h-8 w-[108px] rounded-lg border-border/60 bg-card text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1454,7 +1454,7 @@ function EmployeesPage() {
             </td>
           )}
           {mode === "employee" && columnsVisible.active && (
-            <td className="px-3 py-3">
+            <td className="px-2.5 py-2.5">
               <Switch
                 checked={c.is_enabled && c.status !== "inactive"}
                 onCheckedChange={async (v) => {
@@ -1492,7 +1492,7 @@ function EmployeesPage() {
               />
             </td>
           )}
-          <td className="px-3 py-3">
+          <td className="px-2.5 py-2.5">
             <StatusBadge status={c.status} />
             {c.status === "rejected" && c.rejection_reason && (
               <div className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground" title={c.rejection_reason}>
@@ -1613,56 +1613,56 @@ function EmployeesPage() {
         <table className="ios-table min-w-full text-sm">
           <thead className="border-b border-border/60 bg-secondary/40">
             <tr>
-              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Emp ID" : "Code"}
               </th>
-              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Employee" : "Candidate"}
               </th>
               {(mode === "candidate" || columnsVisible.mobile) && (
-                <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Mobile
                 </th>
               )}
               {mode === "employee" && columnsVisible.email && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Email
                 </th>
               )}
               {(mode === "candidate" || columnsVisible.unit) && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Unit
                 </th>
               )}
               {(mode === "candidate" || columnsVisible.designation) && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Designation
                 </th>
               )}
               {mode === "employee" && columnsVisible.dob && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Date of Birth
                 </th>
               )}
               {mode === "employee" && columnsVisible.doj && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Date of Joining
                 </th>
               )}
               {mode === "employee" && columnsVisible.role && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Role
                 </th>
               )}
               {mode === "employee" && columnsVisible.active && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Active
                 </th>
               )}
-              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Status
               </th>
-              <th className="px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-2.5 py-2.5 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Actions
               </th>
             </tr>
@@ -3118,7 +3118,7 @@ function CandidateWizard({
           )}
         </div>
 
-        <div className="px-3 py-3">
+        <div className="px-2.5 py-2.5">
           {/* ----- Full form (single page) ----- */}
           {true && (
             <div className="space-y-6">
