@@ -1299,8 +1299,8 @@ function EmployeesPage() {
   };
 
   const renderRows = (rows: CandidateListItem[], mode: "employee" | "candidate") => {
-    const empCols = 4 + Object.values(columnsVisible).filter(Boolean).length;
-    const candCols = 7;
+    const empCols = 5 + Object.values(columnsVisible).filter(Boolean).length;
+    const candCols = 8;
     if (isLoading) {
       return (
         <tr>
@@ -1381,6 +1381,7 @@ function EmployeesPage() {
               </div>
             </div>
           </td>
+          <td aria-hidden className="p-0" />
           {(mode === "candidate" || columnsVisible.mobile) && (
             <td className="hidden px-2.5 py-2.5 text-center text-sm font-medium text-muted-foreground 2xl:table-cell">{c.mobile || "—"}</td>
           )}
@@ -1679,9 +1680,10 @@ function EmployeesPage() {
               <th className="w-[92px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Emp ID" : "Code"}
               </th>
-              <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="w-[320px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground xl:w-[380px]">
                 {mode === "employee" ? "Employee" : "Candidate"}
               </th>
+              <th aria-hidden className="p-0" />
               {(mode === "candidate" || columnsVisible.mobile) && (
                 <th className="hidden w-[128px] px-2.5 py-2.5 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
                   Mobile
