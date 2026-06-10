@@ -246,4 +246,55 @@
     40%, 80% { transform: translateX(6px); }
   }
   .animate-shake { animation: shake 0.4s ease-in-out; }
+
+  /* Apple-style page transition */
+  @keyframes page-in {
+    0% { opacity: 0; transform: translateY(8px) scale(0.995); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .page-enter {
+    animation: page-in 320ms cubic-bezier(0.32, 0.72, 0, 1) both;
+  }
+
+  /* Soft tinted canvas — adds life without noise */
+  .app-canvas {
+    background:
+      radial-gradient(ellipse 70% 55% at 8% -10%, color-mix(in oklab, var(--accent) 9%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 45% at 100% 20%, oklch(0.92 0.05 200 / 0.55) 0%, transparent 65%),
+      radial-gradient(ellipse 80% 60% at 50% 115%, oklch(0.94 0.04 320 / 0.45) 0%, transparent 60%),
+      linear-gradient(180deg, oklch(0.985 0.006 250) 0%, oklch(0.97 0.012 245) 100%);
+  }
+  .app-canvas-grid {
+    background-image:
+      linear-gradient(oklch(0.13 0.02 260 / 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.13 0.02 260 / 0.04) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse at center, black 35%, transparent 85%);
+  }
+
+  /* iOS-style data table */
+  .ios-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  .ios-table thead th {
+    position: sticky; top: 0;
+    background: color-mix(in oklab, var(--card) 92%, transparent);
+    backdrop-filter: blur(10px);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+    padding: 14px 20px;
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+    white-space: nowrap;
+  }
+  .ios-table tbody td {
+    padding: 16px 20px;
+    font-size: 14px;
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 35%, transparent);
+    vertical-align: middle;
+  }
+  .ios-table tbody tr { transition: background-color .15s ease; }
+  .ios-table tbody tr:hover { background: color-mix(in oklab, var(--accent) 4%, transparent); }
+  .ios-table tbody tr:last-child td { border-bottom: 0; }
+  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 }
