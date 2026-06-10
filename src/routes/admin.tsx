@@ -405,7 +405,9 @@ function AdminLayout() {
           <NotificationBell />
         </div>
         <div className="mx-auto max-w-[1500px]">
-          <Outlet />
+          <div key={pathname} className="page-enter">
+            <Outlet />
+          </div>
         </div>
       </main>
     </div>
