@@ -585,46 +585,72 @@ function DashboardPage() {
   );
 }
 
-/* -------------------- Tiles -------------------- */
+/* -------------------- Tiles — futuristic glass -------------------- */
 
-const accentMap: Record<string, string> = {
-  rose: "from-rose-500/20 to-rose-500/5 text-rose-600",
-  cyan: "from-cyan-500/20 to-cyan-500/5 text-cyan-600",
-  lime: "from-lime-500/20 to-lime-500/5 text-lime-600",
-  violet: "from-violet-500/20 to-violet-500/5 text-violet-600",
-  amber: "from-amber-500/20 to-amber-500/5 text-amber-600",
-  emerald: "from-emerald-500/20 to-emerald-500/5 text-emerald-600",
-  sky: "from-sky-500/20 to-sky-500/5 text-sky-600",
-  indigo: "from-indigo-500/20 to-indigo-500/5 text-indigo-600",
+// Subtle monochrome blue/navy accent halo for every tile — keeps brand cohesion.
+const haloMap: Record<string, string> = {
+  rose: "from-[oklch(0.65_0.18_20/0.18)] to-transparent",
+  cyan: "from-[oklch(0.7_0.14_220/0.18)] to-transparent",
+  lime: "from-[oklch(0.75_0.18_140/0.16)] to-transparent",
+  violet: "from-[oklch(0.6_0.2_290/0.18)] to-transparent",
+  amber: "from-[oklch(0.78_0.16_70/0.18)] to-transparent",
+  emerald: "from-[oklch(0.7_0.15_160/0.18)] to-transparent",
+  sky: "from-[oklch(0.7_0.15_240/0.2)] to-transparent",
+  indigo: "from-[oklch(0.55_0.22_262/0.22)] to-transparent",
+};
+
+const iconMap: Record<string, string> = {
+  rose: "bg-[oklch(0.95_0.04_20)] text-[oklch(0.55_0.2_20)]",
+  cyan: "bg-[oklch(0.95_0.04_220)] text-[oklch(0.5_0.16_220)]",
+  lime: "bg-[oklch(0.95_0.05_140)] text-[oklch(0.5_0.16_140)]",
+  violet: "bg-[oklch(0.95_0.04_290)] text-[oklch(0.5_0.2_290)]",
+  amber: "bg-[oklch(0.96_0.05_70)] text-[oklch(0.55_0.16_70)]",
+  emerald: "bg-[oklch(0.95_0.05_160)] text-[oklch(0.5_0.16_160)]",
+  sky: "bg-[oklch(0.95_0.04_240)] text-[oklch(0.5_0.18_240)]",
+  indigo: "bg-[oklch(0.95_0.04_262)] text-[oklch(0.55_0.22_262)]",
 };
 
 function Shell({ children, to }: { children: React.ReactNode; to: string }) {
   return (
-    <Link to={to} className="group relative block overflow-hidden rounded-3xl border border-border/70 bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md">
+    <Link
+      to={to}
+      className="group relative block overflow-hidden rounded-[22px] border border-border/60 bg-card/80 p-5 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:border-[oklch(0.55_0.22_262/0.4)] hover:shadow-[0_20px_50px_-20px_oklch(0.55_0.22_262/0.35)]"
+    >
+      {/* hairline top highlight */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/60 to-transparent" />
       {children}
     </Link>
   );
 }
 
-function MetricTile({ icon: Icon, label, value, accent, to }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent: string; to: string }) {
+function TileHeader({ Icon, label, accent }: { Icon: React.ComponentType<{ className?: string }>; label: string; accent: string }) {
+  return (
+    <>
+      <div className={`pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-gradient-radial blur-2xl bg-gradient-to-br ${haloMap[accent]}`} />
+      <div className="relative flex items-center justify-between">
+        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ring-1 ring-inset ring-black/5 ${iconMap[accent]}`}>
+          <Icon className="h-4.5 w-4.5" />
+        </div>
+        <ArrowRight className="h-4 w-4 -translate-x-1 text-muted-foreground/40 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:text-[oklch(0.55_0.22_262)] group-hover:opacity-100" />
+      </div>
+      <div className="relative mt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{label}</div>
+    </>
+  );
+}
+
+function MetricTile({ icon, label, value, accent, to }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent: string; to: string }) {
   return (
     <Shell to={to}>
-      <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-40 ${accentMap[accent]}`} />
-      <div className="flex items-center gap-3">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${accentMap[accent]}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
+      <TileHeader Icon={icon} label={label} accent={accent} />
+      <div className="relative mt-1.5 font-display text-[40px] font-bold leading-none tabular-nums tracking-tight text-foreground">
+        {value.toLocaleString()}
       </div>
-      <div className="mt-3 font-display text-4xl font-bold tabular-nums tracking-tight text-foreground">{value.toLocaleString()}</div>
-      <div className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground group-hover:text-accent">
-        Open <ArrowRight className="h-3 w-3" />
-      </div>
+      <div className="relative mt-3 text-xs font-medium text-muted-foreground">Open →</div>
     </Shell>
   );
 }
 
-function DualTile({ icon: Icon, label, primary, primaryLabel, secondary, secondaryLabel, accent, to }: {
+function DualTile({ icon, label, primary, primaryLabel, secondary, secondaryLabel, accent, to }: {
   icon: React.ComponentType<{ className?: string }>; label: string;
   primary: number; primaryLabel: string;
   secondary: string; secondaryLabel: string;
@@ -632,28 +658,24 @@ function DualTile({ icon: Icon, label, primary, primaryLabel, secondary, seconda
 }) {
   return (
     <Shell to={to}>
-      <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-40 ${accentMap[accent]}`} />
-      <div className="flex items-center gap-3">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${accentMap[accent]}`}>
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
-      </div>
-      <div className="mt-3 flex items-end justify-between gap-3">
+      <TileHeader Icon={icon} label={label} accent={accent} />
+      <div className="relative mt-1.5 flex items-end justify-between gap-3">
         <div>
-          <div className="font-display text-3xl font-bold tabular-nums tracking-tight text-foreground">{primary.toLocaleString()}</div>
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{primaryLabel}</div>
+          <div className="font-display text-[34px] font-bold leading-none tabular-nums tracking-tight text-foreground">{primary.toLocaleString()}</div>
+          <div className="mt-1.5 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{primaryLabel}</div>
         </div>
         <div className="text-right">
-          <div className="flex items-center justify-end gap-1 font-display text-lg font-semibold tabular-nums text-foreground"><Fuel className="h-3.5 w-3.5 text-muted-foreground" />{secondary}</div>
-          <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{secondaryLabel}</div>
+          <div className="flex items-center justify-end gap-1 font-display text-base font-semibold tabular-nums text-foreground">
+            <Fuel className="h-3.5 w-3.5 text-muted-foreground" />{secondary}
+          </div>
+          <div className="mt-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{secondaryLabel}</div>
         </div>
       </div>
     </Shell>
   );
 }
 
-function StatusTile({ icon: Icon, label, approved, pending, draft, rejected, accent, approvedLabel = "Approved", pendingLabel = "Pending", to }: {
+function StatusTile({ icon, label, approved, pending, draft, rejected, accent, approvedLabel = "Approved", pendingLabel = "Pending", to }: {
   icon: React.ComponentType<{ className?: string }>; label: string;
   approved: number; pending: number; draft: number; rejected: number;
   accent: string; approvedLabel?: string; pendingLabel?: string; to: string;
@@ -661,18 +683,18 @@ function StatusTile({ icon: Icon, label, approved, pending, draft, rejected, acc
   const total = Math.max(approved + pending + draft + rejected, 1);
   return (
     <Shell to={to}>
-      <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-40 ${accentMap[accent]}`} />
-      <div className="flex items-center gap-3">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${accentMap[accent]}`}>
-          <Icon className="h-5 w-5" />
+      <TileHeader Icon={icon} label={label} accent={accent} />
+      <div className="relative mt-1.5 grid grid-cols-2 gap-3">
+        <div>
+          <div className="font-display text-3xl font-bold tabular-nums leading-none text-emerald-600">{approved}</div>
+          <div className="mt-1.5 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{approvedLabel}</div>
         </div>
-        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
+        <div>
+          <div className="font-display text-3xl font-bold tabular-nums leading-none text-amber-600">{pending}</div>
+          <div className="mt-1.5 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{pendingLabel}</div>
+        </div>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-        <div><div className="font-display text-2xl font-bold tabular-nums text-emerald-700">{approved}</div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">{approvedLabel}</div></div>
-        <div><div className="font-display text-2xl font-bold tabular-nums text-amber-700">{pending}</div><div className="text-[10px] uppercase tracking-wide text-muted-foreground">{pendingLabel}</div></div>
-      </div>
-      <div className="mt-3 flex h-1.5 overflow-hidden rounded-full bg-secondary">
+      <div className="relative mt-3 flex h-1 overflow-hidden rounded-full bg-secondary">
         {approved > 0 && <div className="bg-emerald-500" style={{ width: `${(approved / total) * 100}%` }} />}
         {pending > 0 && <div className="bg-amber-500" style={{ width: `${(pending / total) * 100}%` }} />}
         {draft > 0 && <div className="bg-sky-500" style={{ width: `${(draft / total) * 100}%` }} />}
@@ -686,18 +708,12 @@ function ContractsTile({ active, expiring }: { active: number; expiring: Array<{
   const soonest = expiring[0];
   return (
     <Shell to="/admin/contracts/client-contracts">
-      <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-40 ${accentMap.indigo}`} />
-      <div className="flex items-center gap-3">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${accentMap.indigo}`}>
-          <Files className="h-5 w-5" />
-        </div>
-        <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Contracts</div>
-      </div>
-      <div className="mt-3 font-display text-4xl font-bold tabular-nums tracking-tight text-foreground">{active.toLocaleString()}</div>
-      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Active</div>
-      <div className="mt-3 flex items-center gap-2 rounded-xl border border-amber-200/60 bg-amber-50 px-3 py-1.5 text-xs text-amber-900">
-        <AlertTriangle className="h-3.5 w-3.5" />
-        {expiring.length === 0 ? "No renewals in the next 60 days" : `${expiring.length} renewal${expiring.length === 1 ? "" : "s"} in 60 days${soonest?.end_date ? ` · soonest ${soonest.end_date}` : ""}`}
+      <TileHeader Icon={Files} label="Contracts" accent="indigo" />
+      <div className="relative mt-1.5 font-display text-[40px] font-bold leading-none tabular-nums tracking-tight text-foreground">{active.toLocaleString()}</div>
+      <div className="relative mt-1.5 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Active</div>
+      <div className="relative mt-3 flex items-center gap-2 rounded-xl border border-amber-200/60 bg-amber-50/80 px-3 py-1.5 text-[11px] font-medium text-amber-900 backdrop-blur">
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+        <span className="leading-tight">{expiring.length === 0 ? "No renewals in next 60 days" : `${expiring.length} renewal${expiring.length === 1 ? "" : "s"} in 60 days${soonest?.end_date ? ` · soonest ${soonest.end_date}` : ""}`}</span>
       </div>
     </Shell>
   );
