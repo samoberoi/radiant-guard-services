@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useResetOnOpen, useVehicleOptions, fmtDate } from "@/lib/vehicle-helpers";
+import { useResetOnOpen, useVehicleOptions, fmtDate, VehicleDetailHeaders, VehicleDetailCells, VEHICLE_DETAIL_COLUMN_COUNT } from "@/lib/vehicle-helpers";
 import { MiniStat } from "@/components/MiniStat";
 
 type StatusFilter = "all" | "expired" | "renewal" | "due" | "active";
@@ -251,6 +251,7 @@ function PucManagerPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Vehicle</th>
+                <VehicleDetailHeaders />
                 <th className="px-5 py-3">Expires</th>
                 <th className="px-5 py-3">Enabled</th>
                 <th className="px-5 py-3 text-right">Actions</th>
@@ -262,7 +263,8 @@ function PucManagerPage() {
                 const expired = i.expiry_date && i.expiry_date < today;
                 return (
                   <tr key={i.id} className="hover:bg-secondary/30">
-                    <td className="px-5 py-3 font-mono font-semibold text-foreground">{v?.vehicle_number || "—"}</td>
+                    <td className="px-5 py-3 font-mono font-semibold text-foreground whitespace-nowrap">{v?.vehicle_number || "—"}</td>
+                    <VehicleDetailCells v={v} />
                     <td className="px-5 py-3">
                       <span className={expired ? "rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-semibold text-destructive" : "text-foreground/90"}>
                         {fmtDate(i.expiry_date)}{expired ? " · Expired" : ""}
@@ -285,7 +287,7 @@ function PucManagerPage() {
                 );
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={4} className="px-5 py-12 text-center text-sm text-muted-foreground">No PUC records found.</td></tr>
+                <tr><td colSpan={4 + VEHICLE_DETAIL_COLUMN_COUNT} className="px-5 py-12 text-center text-sm text-muted-foreground">No PUC records found.</td></tr>
               )}
             </tbody>
           </table>

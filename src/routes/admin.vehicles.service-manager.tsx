@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ADVANCE_ALERT_KM, serviceStatusFor } from "@/lib/vehicle-service";
 import { logActivity } from "@/lib/activity-log";
+import { VehicleDetailHeaders, VehicleDetailCells, VEHICLE_DETAIL_COLUMN_COUNT } from "@/lib/vehicle-helpers";
 
 export const Route = createFileRoute("/admin/vehicles/service-manager")({
   component: ServiceManagerPage,
@@ -27,6 +28,15 @@ type VehicleRow = {
   fuel_type: string;
   enabled: boolean;
   service_interval_km: number | null;
+  owner: string;
+  type: string;
+  brand: string;
+  make: string;
+  year: number | null;
+  color: string;
+  engine_number: string;
+  chassis_number: string;
+  registration_date: string | null;
 };
 function ServiceManagerPage() {
   const qc = useQueryClient();
@@ -41,7 +51,7 @@ function ServiceManagerPage() {
     queryFn: async (): Promise<VehicleRow[]> => {
       const { data, error } = await supabase
         .from("vehicles" as never)
-        .select("id,vehicle_number,name,fuel_type,enabled,service_interval_km")
+        .select("id,vehicle_number,name,fuel_type,enabled,service_interval_km,owner,type,brand,make,year,color,engine_number,chassis_number,registration_date")
         .order("vehicle_number", { ascending: true });
       if (error) throw error;
       return (data as unknown as VehicleRow[]) ?? [];
@@ -147,7 +157,7 @@ function ServiceManagerPage() {
             <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 text-left">Vehicle</th>
-                <th className="px-4 py-3 text-left">Fuel</th>
+                <VehicleDetailHeaders thClassName="px-4 py-3 text-left whitespace-nowrap" />
                 <th className="px-4 py-3 text-right">Interval (km)</th>
                 <th className="px-4 py-3 text-right">Current KM</th>
                 <th className="px-4 py-3 text-right">Service Due At</th>
@@ -158,16 +168,16 @@ function ServiceManagerPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={7 + VEHICLE_DETAIL_COLUMN_COUNT} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
               )}
               {!isLoading && rows.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No vehicles found.</td></tr>
+                <tr><td colSpan={7 + VEHICLE_DETAIL_COLUMN_COUNT} className="px-4 py-8 text-center text-muted-foreground">No vehicles found.</td></tr>
               )}
 
               {rows.map((r) => (
                 <tr key={r.v.id} className="hover:bg-muted/20">
-                  <td className="px-4 py-3 font-medium">{r.v.vehicle_number}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.v.fuel_type || "—"}</td>
+                  <td className="px-4 py-3 font-medium whitespace-nowrap">{r.v.vehicle_number}</td>
+                  <VehicleDetailCells v={r.v} tdClassName="px-4 py-3 text-muted-foreground whitespace-nowrap" />
                   <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{r.interval.toLocaleString()}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{r.currentKm.toLocaleString()}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{r.dueKm.toLocaleString()}</td>
