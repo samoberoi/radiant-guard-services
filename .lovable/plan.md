@@ -1,45 +1,87 @@
-## 1. Database (single migration)
+## Goal
 
-- Seed sub-module rows under `employees`:
-  - `employees / candidates` — Add Candidate sub-module
-  - `employees / approvals` — Candidate Approval sub-module
-- Permissions seed (idempotent upsert into `role_permissions`):
-  - `field_officer`: `employees` (view), `employees/candidates` (view+edit, no delete/approve). Nothing else.
-  - `hr`, `super_admin`, `leadership`: `employees/approvals` view+edit+approve.
-- Seed **No Man's Land** unit under Radiant org (existing customer). Idempotent — skip if a unit with code `NOMANS` already exists.
-- Provision test field officer:
-  - Insert into `candidates`: full_name "Field Officer Demo", mobile `1111111111`, role_key `field_officer`, status `active`, is_enabled true, employee_code auto.
-  - Map to a couple of Radiant units via `candidate_units` (incl. No Man's Land) so dashboard has data.
-  - Auth user `phone-1111111111@radiantguard.local` will be created by existing OTP flow at first login — same pattern as other test users; no auth.users insert needed.
+Redesign the entire Radiant admin portal to match the reference dashboard's structure and polish, using a high-contrast navy/yellow/white/black palette. Replace the left sidebar with a horizontal top navigation that opens dropdown menus, and rebuild the admin dashboard cards to feel like the reference (large stat numbers, dotted/segmented charts, gauge, profile hero card, right-rail list). Then push the new tokens, spacing, and card style across every admin module so the whole app feels cohesive — no more orphan styling.
 
-## 2. Candidate workflow gating
+## Design language
 
-In `src/routes/admin.employees.tsx` (and candidate detail/edit routes):
-- **Field officer view**: tabs/filters collapsed to just **Candidates**. They see only candidates **they created** (`created_by = auth.uid()`) with status `pending` or `rejected`. Approved/active rows disappear from their list automatically.
-- **Add Candidate** button visible (requires `employees/candidates` edit).
-- Rejected rows show rejection reason + "Edit & resubmit" → resets status to `pending`.
-- **HR / Leadership / Super Admin**: new **Approvals** tab listing pending candidates with Approve / Reject actions (writes `status`, `approved_by/at` or `rejected_by/at` + reason). Uses `employees/approvals` approve permission.
-- All mutations call `logActivity` with label "Employee Approvals" / "Candidate Intake".
+- Palette (locked, applied via `src/styles.css` `@theme` tokens):
+  - Background: `#FFFFFF` (page), `#F5F6F8` (app surround)
+  - Ink / primary: `#0A0A0A` (text, dark cards)
+  - Brand blue: `#1E3A8A` (filled stat cards, primary buttons)
+  - Accent yellow: `#FACC15` (highlights, active pill, key numbers, badges)
+  - Borders: `#E5E7EB`; muted text: `#6B7280`
+- Typography: keep the existing Space Grotesk display + Montserrat body, but tighten weights — display 800/700 for hero numbers, 600 for card titles, 500 body. Remove the broken remote `@import` in `src/styles.css` and load fonts via `<link>` in `__root.tsx` (also fixes the current /src/styles.css 500).
+- Radii: cards `rounded-3xl` (24px), inner chips `rounded-full`. Soft shadow `0 1px 2px rgba(0,0,0,.04), 0 8px 24px -12px rgba(10,10,10,.08)`.
+- Spacing system: page gutter 24px desktop / 16px mobile, 24px gap between cards, 20px inner card padding. Standardize via utility classes so every module inherits the same rhythm.
 
-## 3. Field Officer Dashboard
+## Navigation: sidebar → top bar with dropdowns
 
-New route `src/routes/admin.field-dashboard.tsx` (sidebar entry visible only to field_officer, replacing the main dashboard for them):
-- Tiles: Units I cover (count), Guards reporting to me (count of active candidates assigned to my units with role_key=guard), Pending candidates I submitted, Rejected awaiting fix.
-- Unit tree section: for each of my units, list unit name + org, expandable to show guards on that unit (name, mobile, designation).
-- Quick "Add Candidate" CTA pre-selecting unit.
+Replace the left rail in `src/routes/admin.tsx` with a sticky top bar.
 
-## 4. Sidebar & routing
+- Left cluster: brand mark + horizontal menu mirroring the current sidebar groups exactly (Dashboard, Employees, Customers, Contracts, Attendance, Invoice, Payroll, Inventory, Vehicles, Control Center, etc.).
+- Group with children renders a button + chevron; click opens a dropdown panel (Radix `DropdownMenu`, animated fade+slide, 150ms). Single-link groups render as plain link.
+- Active item: yellow pill background, black text, matching the reference's pill nav.
+- Right cluster: global search input, notifications bell, profile avatar with menu (profile/logout).
+- Mobile: collapse to a single "Menu" button that opens a full-screen sheet listing the same groups (accordion). Keeps RBAC filtering intact via `useCurrentPermissions`.
+- Role gating preserved — Field Officer and Guard get the same shell but only see their permitted items (their reduced menus naturally collapse to a short top bar).
 
-- Sidebar (`src/routes/admin.tsx`): Dashboard link routes to `/admin/field-dashboard` for `field_officer`, `/admin/dashboard` for everyone else. Hide modules the role has no `view` on (already the case). Employees stays visible; nested submodules respect new sub-module perms.
-- Restrict `/admin/employees` for field officer to the Candidates tab only (other tabs return null when `!can('employees', 'view')` on those sub-modules — to be added later if needed; not in scope now).
+## Admin dashboard rebuild (`src/routes/admin.dashboard.tsx`)
 
-## 5. Out of scope this round
+Recompose into the reference's 3-column grid (12-col on desktop, stacks on tablet/mobile). Real data, no mock numbers — wire each tile to the existing queries already in this file.
 
-- Mobile-app-only UX, push notifications, OTP rate-limit changes.
-- Per-candidate document attachments beyond what the existing add-candidate form already supports.
-- Re-routing already-approved employees (the No Man's Land unit gives ops a place to park them; a bulk-move tool can come later).
+```
+┌──────────────┬───────────────────────────┬──────────────────┐
+│ Hero profile │ Big stat + dotted chart   │ Right rail:      │
+│ (current     │ (avg hours / week)        │ Payroll cycle    │
+│  user card)  ├─────────────┬─────────────┤ list with        │
+│              │ Onsite 80%  │ Remote 20%  │ status pills     │
+├──────────────┼─────────────┴─────────────┤                  │
+│ Avg work     │ Track your team (gauge:   │                  │
+│ time line    │ total active employees)   │                  │
+│ chart        ├───────────────────────────┤ P&L summary      │
+│              │ Talent recruitment        │ card (dark navy, │
+│              │ (candidates pending vs    │ yellow accents,  │
+│              │  approved bar chart)      │ Take-home style) │
+└──────────────┴───────────────────────────┴──────────────────┘
+```
 
-## 6. Deliverable to user
+Tile mapping to real data:
+- Hero profile → current user (name, role, employee code) with phone/email quick actions.
+- Big stat + dotted chart → avg attendance days/employee for current payroll window; dots = last 30 days punches.
+- Onsite/Remote split → guards currently on duty vs off duty.
+- Avg work time line → 7-day attendance trend.
+- Gauge "Track your team" → active employee count vs target headcount across active contracts, segmented by designation.
+- Talent recruitment → candidates: matched (approved) vs not match (pending HR), bar chart by week.
+- Right rail list → recent payroll runs / unit-level payroll status with Done / Waiting / Failed pills.
+- Dark navy P&L summary → existing Contract / Invoice / Payroll / Variance numbers, restyled with yellow primary number and Take-home-style hierarchy.
 
-- Test login: mobile **1111111111**, OTP via existing flow. Role: Field Officer.
-- Expectation: after login they see the Field Officer dashboard, an Employees tab limited to Candidates, and an Add Candidate button. No other admin modules.
+## Module-wide application
+
+After the shell + dashboard, sweep every admin route to inherit the new look without rewriting business logic:
+
+- `PageHeader` component: restyle to match (breadcrumb + bold title left, action chips right).
+- Tables: white card, `rounded-3xl`, sticky header in `bg-secondary/60`, row hover `bg-yellow-50`, status badges in the new palette (yellow=pending, blue=in-progress, black=done, red=failed).
+- Buttons: primary = navy bg / white text; secondary = white / black border; accent CTA = yellow / black text.
+- Forms/dialogs: same radius/border tokens; inputs `h-10 rounded-xl border-border`.
+- Stat tiles across modules (Invoice, Payroll, Inventory dashboards) reuse a new `<StatCard>` primitive that matches the dashboard tiles.
+- Fix alignment & overflow: apply the responsive-header pattern (`grid-cols-[minmax(0,1fr)_auto]` + `min-w-0` + `truncate`) anywhere a current page wraps awkwardly.
+
+## Technical notes
+
+- Files touched (high level):
+  - `src/styles.css` — replace tokens (oklch), remove the remote `@import url(...)` line (currently breaking the dev server), add `--brand-yellow`, `--brand-blue` mapped via `@theme inline`.
+  - `src/routes/__root.tsx` — add Google Fonts `<link>` tags in `head()`.
+  - `src/routes/admin.tsx` — full rewrite of layout: remove sidebar, add `<TopNav>` + `<MobileMenu>`; keep all RBAC filter logic.
+  - New components: `src/components/TopNav.tsx`, `src/components/StatCard.tsx`, `src/components/SectionCard.tsx`.
+  - `src/routes/admin.dashboard.tsx` — recompose into the new grid; reuse existing data queries.
+  - `src/components/PageHeader.tsx` — restyle (no API change).
+  - Touch sweep on module routes (`admin.employees.tsx`, `admin.invoice.*`, `admin.payroll.*`, `admin.attendance.*`, `admin.inventory.*`, `admin.vehicles.*`, `admin.customers.*`, `admin.contracts.*`, control-center children) — swap surface classes to the new tokens, no logic changes.
+- No DB / RBAC / business-logic changes. Field Officer / Guard restricted views remain intact.
+- Charts: keep `recharts` already in the project; restyle colors via the new tokens. Dotted chart = small `recharts` scatter or hand-rolled CSS grid of dots driven by data.
+- Risk: this is a large visual sweep across ~40 route files. To keep regressions low, the shell + dashboard + shared primitives ship first; the module sweep follows in the same plan but is mechanical (token swaps).
+
+## Out of scope
+
+- No changes to data models, server functions, RBAC rules, or any module's business logic.
+- No new features — purely UI/visual + navigation structure.
+- Login / welcome / public routes keep their current styling unless they share components that get updated.
