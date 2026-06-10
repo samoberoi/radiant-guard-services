@@ -1299,8 +1299,8 @@ function EmployeesPage() {
   };
 
   const renderRows = (rows: CandidateListItem[], mode: "employee" | "candidate") => {
-    const empCols = 5 + Object.values(columnsVisible).filter(Boolean).length;
-    const candCols = 8;
+    const empCols = 4 + Object.values(columnsVisible).filter(Boolean).length;
+    const candCols = 7;
     if (isLoading) {
       return (
         <tr>
@@ -1347,7 +1347,7 @@ function EmployeesPage() {
             </span>
           </td>
           <td className="px-2.5 py-2.5 align-top">
-            <div className="flex items-center gap-3">
+            <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
               {c.photo_url ? (
                 <img
                   src={c.photo_url}
@@ -1365,23 +1365,35 @@ function EmployeesPage() {
                   {c.full_name || "—"}
                 </div>
                 <div className="truncate text-xs text-muted-foreground">{c.email || "—"}</div>
-                <div className="mt-1 space-y-1 text-xs text-muted-foreground 2xl:hidden">
-                  {(mode === "candidate" || columnsVisible.mobile) && <div className="truncate">{c.mobile || "—"}</div>}
+                <div className="mt-1 grid gap-x-5 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2 2xl:hidden">
+                  {(mode === "candidate" || columnsVisible.mobile) && (
+                    <div className="truncate">
+                      <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">Mobile</span>
+                      {c.mobile || "—"}
+                    </div>
+                  )}
                   {(mode === "candidate" || columnsVisible.unit) && (
                     <div className="truncate" title={unit?.name ?? ""}>
+                      <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">Unit</span>
                       {unit?.name || "—"}
                     </div>
                   )}
                   {(mode === "candidate" || columnsVisible.designation) && (
                     <div className="truncate" title={desig?.name ?? ""}>
+                      <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">Designation</span>
                       {desig?.name || "—"}
+                    </div>
+                  )}
+                  {mode === "employee" && columnsVisible.role && (
+                    <div className="truncate">
+                      <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">Role</span>
+                      {rolesList.find((r) => r.key === c.role_key)?.name ?? c.role_key ?? "—"}
                     </div>
                   )}
                 </div>
               </div>
             </div>
           </td>
-          <td aria-hidden className="p-0" />
           {(mode === "candidate" || columnsVisible.mobile) && (
             <td className="hidden px-2.5 py-2.5 text-center text-sm font-medium text-muted-foreground 2xl:table-cell">{c.mobile || "—"}</td>
           )}
@@ -1526,12 +1538,6 @@ function EmployeesPage() {
             })()}
             {mode === "employee" && (
               <div className="mt-2 space-y-2 text-xs text-muted-foreground 2xl:hidden">
-                {columnsVisible.role && (
-                  <div className="truncate">
-                    <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Role</span>
-                    {rolesList.find((r) => r.key === c.role_key)?.name ?? c.role_key ?? "—"}
-                  </div>
-                )}
                 {columnsVisible.active && (
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Active</span>
