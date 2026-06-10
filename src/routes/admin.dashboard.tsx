@@ -629,7 +629,7 @@ function TileHeader({ Icon, label, accent }: { Icon: React.ComponentType<{ class
       <div className={`pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-gradient-radial blur-2xl bg-gradient-to-br ${haloMap[accent]}`} />
       <div className="relative flex items-center justify-between">
         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ring-1 ring-inset ring-black/5 ${iconMap[accent]}`}>
-          <Icon className="h-4.5 w-4.5" />
+          <Icon className="h-[18px] w-[18px]" />
         </div>
         <ArrowRight className="h-4 w-4 -translate-x-1 text-muted-foreground/40 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:text-[oklch(0.55_0.22_262)] group-hover:opacity-100" />
       </div>
