@@ -67,23 +67,37 @@ export function fmtDate(d: string | null | undefined): string {
   return `${m[3]}/${m[2]}/${m[1]}`;
 }
 
-/** Compact column components reused by FastTag/Insurance/PUC/Service tables.
- *  Header cells + body cells must be inserted right after the "Vehicle" column. */
-export const VEHICLE_DETAIL_HEADERS: { label: string; className?: string }[] = [
-  { label: "Owner" },
-  { label: "Type" },
-  { label: "Fuel" },
-  { label: "Brand" },
-  { label: "Make / Model" },
-  { label: "Year" },
-  { label: "Color" },
-  { label: "Engine No." },
-  { label: "Chassis No." },
-  { label: "Reg. Date" },
-];
+/** Shared vehicle detail columns reused across FastTag / Insurance / PUC / Service tables. */
+const DETAIL_LABELS = [
+  "Owner",
+  "Type",
+  "Fuel",
+  "Brand",
+  "Make / Model",
+  "Year",
+  "Color",
+  "Engine No.",
+  "Chassis No.",
+  "Reg. Date",
+] as const;
 
-export function vehicleDetailCells(v: VehicleOption | undefined): (string | number)[] {
-  return [
+export const VEHICLE_DETAIL_COLUMN_COUNT = DETAIL_LABELS.length;
+
+export function VehicleDetailHeaders({ thClassName = "px-5 py-3 whitespace-nowrap" }: { thClassName?: string } = {}) {
+  return (
+    <>
+      {DETAIL_LABELS.map((l) => (
+        <th key={l} className={thClassName}>{l}</th>
+      ))}
+    </>
+  );
+}
+
+export function VehicleDetailCells({
+  v,
+  tdClassName = "px-5 py-3 text-foreground/90 whitespace-nowrap",
+}: { v: VehicleOption | undefined; tdClassName?: string }) {
+  const cells: (string | number)[] = [
     v?.owner || "—",
     v?.type || "—",
     v?.fuel_type || "—",
@@ -95,4 +109,11 @@ export function vehicleDetailCells(v: VehicleOption | undefined): (string | numb
     v?.chassis_number || "—",
     fmtDate(v?.registration_date ?? null),
   ];
+  return (
+    <>
+      {cells.map((c, i) => (
+        <td key={i} className={tdClassName}>{c}</td>
+      ))}
+    </>
+  );
 }
