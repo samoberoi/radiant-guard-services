@@ -230,7 +230,7 @@ function AdminLayout() {
     (g.activePrefixes ?? []).some((p) => pathname === p || pathname.startsWith(p + "/"));
 
   const sidebarWidth = collapsed ? "lg:w-[76px]" : "lg:w-[260px]";
-  const mainPad = collapsed ? "lg:pl-[76px]" : "lg:pl-[260px]";
+  const mainPad = collapsed ? "lg:pl-[100px]" : "lg:pl-[284px]";
 
   return (
     <div className="relative min-h-screen bg-background">
