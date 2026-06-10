@@ -92,7 +92,7 @@ function AdjustmentsPage() {
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr><th className="px-5 py-3">Adj #</th><th className="px-5 py-3">Date</th><th className="px-5 py-3">Location</th><th className="px-5 py-3">Reason</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr>
             </thead>
@@ -237,7 +237,7 @@ function AdjDialog({ open, onOpenChange, initial, warehouses, branches, candidat
               {isDraft && <Button size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { item_id: "", size_value: "", qty_change: 0, notes: "" }])}><Plus className="mr-1 h-3.5 w-3.5" />Add line</Button>}
             </div>
             <div className="overflow-x-auto rounded-xl border border-border">
-              <table className="w-full text-sm">
+              <table className="ios-table w-full text-sm">
                 <thead className="bg-secondary/60 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <tr><th className="px-3 py-2">Item</th><th className="px-3 py-2 w-16">Size</th><th className="px-3 py-2 w-28 text-right">Qty Change</th><th className="px-3 py-2">Notes</th>{isDraft && <th className="px-3 py-2 w-10"></th>}</tr>
                 </thead>

@@ -736,7 +736,7 @@ function HoldingsCard({ title, icon: Icon, accent, rows }: {
 function DataTable({ head, children }: { head: string[]; children: React.ReactNode }) {
   return (
     <div className="overflow-auto rounded-xl border border-border/60">
-      <table className="w-full text-sm">
+      <table className="ios-table w-full text-sm">
         <thead className="bg-secondary/30 text-xs uppercase tracking-wider text-muted-foreground">
           <tr>{head.map((h, i) => <th key={i} className="p-2 text-left font-medium">{h}</th>)}</tr>
         </thead>

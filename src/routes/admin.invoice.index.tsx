@@ -421,7 +421,7 @@ function PayrollUnitsPage() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-full table-auto">
+          <table className="ios-table min-w-full table-auto">
             <thead className="border-b border-border/60 bg-secondary/40">
               <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 <th className="px-5 py-4 font-medium">Unit</th>

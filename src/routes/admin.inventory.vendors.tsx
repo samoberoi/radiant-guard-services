@@ -159,7 +159,7 @@ function VendorsPage() {
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border bg-accent/10 px-5 py-2.5 text-xs"><span className="inline-flex items-center gap-2"><span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">{filtered.length}</span><span className="uppercase tracking-[0.14em] text-muted-foreground">Total rows</span></span></div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr><th className="px-5 py-3">Code</th><th className="px-5 py-3">Name</th><th className="px-5 py-3">Products</th><th className="px-5 py-3">Contact</th><th className="px-5 py-3">Phone</th><th className="px-5 py-3">GSTIN</th><th className="px-5 py-3">City</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr>
             </thead>
@@ -224,7 +224,7 @@ function VendorsPage() {
             }
             return (
               <div className="max-h-[60vh] overflow-auto rounded-xl border border-border">
-                <table className="w-full text-sm">
+                <table className="ios-table w-full text-sm">
                   <thead className="bg-secondary/40 text-[11px] uppercase tracking-wider text-muted-foreground">
                     <tr><th className="p-3 text-left">Item</th><th className="p-3 text-left">Sizes</th><th className="p-3 text-right">Price range</th><th className="p-3 text-right">Lead</th></tr>
                   </thead>
