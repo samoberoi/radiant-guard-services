@@ -122,44 +122,260 @@ function DashboardPage() {
       }
       const fuelTotal = (fuelMonth ?? []).reduce((s: number, e: { amount: number | null }) => s + (Number(e.amount) || 0), 0);
 
-      // P&L computation
-      const contractIds = (contractsForPnl ?? []).map((c) => c.id);
+      // ── P&L from actual attendance ────────────────────────────────────
+      // Mirrors the Invoice and Payroll modules: per (candidate × designation)
+      // we compute T-Days from attendance, then scale the contract resource by
+      // earnedGross/contractGross. Invoice billable = earnedGross + employer
+      // contributions (what the customer is billed). Payroll cost = the same
+      // plus benefits (extra employee outflow the agency absorbs).
+      const activeContracts = (contractsForPnl ?? []) as Array<{
+        id: string;
+        unit_id: string | null;
+      }>;
+      const contractIds = activeContracts.map((c) => c.id);
+      const unitIdsInScope = Array.from(
+        new Set(activeContracts.map((c) => c.unit_id).filter((v): v is string => !!v)),
+      );
       const unitsById = new Map((unitsForPnl ?? []).map((u) => [u.id, u]));
-      const customerIds = Array.from(new Set((unitsForPnl ?? []).map((u) => u.customer_id).filter((v): v is string => !!v)));
-      const { data: customers } = await supabase.from("customers").select("id, name").in("id", customerIds.length ? customerIds : ["00000000-0000-0000-0000-000000000000"]);
+      const customerIds = Array.from(
+        new Set(
+          (unitsForPnl ?? [])
+            .filter((u) => unitIdsInScope.includes(u.id))
+            .map((u) => u.customer_id)
+            .filter((v): v is string => !!v),
+        ),
+      );
+      const { data: customers } = customerIds.length
+        ? await supabase.from("customers").select("id, name").in("id", customerIds)
+        : { data: [] as { id: string; name: string }[] };
       const custNameById = new Map((customers ?? []).map((c) => [c.id, c.name as string]));
 
-      type Resource = { contract_id: string; quantity: number | null; gross: number | null; benefits: unknown; employer_contributions: unknown };
-      const { data: resources } = contractIds.length
-        ? await supabase.from("contract_resources").select("contract_id, quantity, gross, benefits, employer_contributions").in("contract_id", contractIds)
-        : { data: [] as Resource[] };
+      // Bulk fetch resources, attendance, codes, day bases, roster.
+      const emptyUuid = "00000000-0000-0000-0000-000000000000";
+      const [
+        { data: resourcesRaw },
+        { data: attendanceRaw },
+        { data: codesRaw },
+        { data: primaryRoster },
+        { data: roleLinks },
+      ] = await Promise.all([
+        contractIds.length
+          ? supabase
+              .from("contract_resources")
+              .select(
+                "contract_id, designation_id, quantity, components, benefits, deductions, employer_contributions, payroll_day_base_id",
+              )
+              .in("contract_id", contractIds)
+          : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+        unitIdsInScope.length
+          ? supabase
+              .from("attendance_entries")
+              .select("unit_id, candidate_id, designation_id, entry_date, code, ot_hours")
+              .in("unit_id", unitIdsInScope)
+              .gte("entry_date", monthStart)
+              .lte("entry_date", monthEnd)
+          : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+        supabase
+          .from("attendance_codes")
+          .select("code, counts_as_present, is_paid")
+          .eq("enabled", true),
+        unitIdsInScope.length
+          ? supabase
+              .from("candidates")
+              .select("id, full_name, designation_id, unit_id")
+              .in("unit_id", unitIdsInScope)
+              .eq("is_enabled", true)
+              .eq("status", "active")
+          : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+        unitIdsInScope.length
+          ? supabase
+              .from("candidate_units")
+              .select("candidate_id, unit_id")
+              .in("unit_id", unitIdsInScope)
+          : Promise.resolve({ data: [] as Record<string, unknown>[] }),
+      ]);
+
+      type ResourceRow = {
+        contract_id: string;
+        designation_id: string | null;
+        quantity: number | null;
+        components: unknown;
+        benefits: unknown;
+        deductions: unknown;
+        employer_contributions: unknown;
+        payroll_day_base_id: string | null;
+      };
+      type AttRow = {
+        unit_id: string;
+        candidate_id: string;
+        designation_id: string | null;
+        entry_date: string;
+        code: string;
+        ot_hours: number | string | null;
+      };
+      const resources = (resourcesRaw ?? []) as ResourceRow[];
+      const attendance = (attendanceRaw ?? []) as AttRow[];
+      const codes = (codesRaw ?? []) as AttendanceCodeLike[];
+      const primaryCands = (primaryRoster ?? []) as Array<{
+        id: string; full_name: string | null; designation_id: string | null; unit_id: string | null;
+      }>;
+      const links = (roleLinks ?? []) as Array<{ candidate_id: string; unit_id: string }>;
+
+      // Payroll day bases.
+      const pdbIds = Array.from(
+        new Set(resources.map((r) => r.payroll_day_base_id).filter((v): v is string => !!v)),
+      );
+      const { data: pdbs } = pdbIds.length
+        ? await supabase
+            .from("payroll_day_bases")
+            .select("id, method, fixed_days, weekly_off_day")
+            .in("id", pdbIds)
+        : { data: [] as Array<{ id: string; method: string; fixed_days: number | null; weekly_off_day: number | null }> };
+      const pdbMap = new Map<string, NonNullable<ContractResourceLike["payrollDayBase"]>>(
+        (pdbs ?? []).map((p) => [
+          p.id,
+          {
+            method: p.method as "actual_days" | "fixed_days" | "actual_minus_weekly_off",
+            fixedDays: p.fixed_days,
+            weeklyOffDay: p.weekly_off_day,
+          },
+        ]),
+      );
+
+      // Need to load secondary roster (candidates referenced via candidate_units).
+      const secondaryIds = Array.from(
+        new Set(links.map((l) => l.candidate_id).filter((id) => !primaryCands.some((c) => c.id === id))),
+      );
+      const { data: secondaryCands } = secondaryIds.length
+        ? await supabase
+            .from("candidates")
+            .select("id, full_name, designation_id")
+            .in("id", secondaryIds)
+            .eq("is_enabled", true)
+            .eq("status", "active")
+        : { data: [] as Array<{ id: string; full_name: string | null; designation_id: string | null }> };
+      const candById = new Map<string, { id: string; full_name: string | null; designation_id: string | null }>();
+      for (const c of primaryCands) candById.set(c.id, c);
+      for (const c of (secondaryCands ?? [])) candById.set(c.id, c);
+
+      // Roster grouped by unit.
+      const rosterByUnit = new Map<string, Set<string>>();
+      for (const c of primaryCands) {
+        if (!c.unit_id) continue;
+        if (!rosterByUnit.has(c.unit_id)) rosterByUnit.set(c.unit_id, new Set());
+        rosterByUnit.get(c.unit_id)!.add(c.id);
+      }
+      for (const l of links) {
+        if (!candById.has(l.candidate_id)) continue;
+        if (!rosterByUnit.has(l.unit_id)) rosterByUnit.set(l.unit_id, new Set());
+        rosterByUnit.get(l.unit_id)!.add(l.candidate_id);
+      }
+
+      // Resources grouped by (contract_id → designation_id → resource).
+      const resByContractDesig = new Map<string, Map<string, ResourceRow>>();
+      for (const r of resources) {
+        if (!r.designation_id) continue;
+        if (!resByContractDesig.has(r.contract_id)) resByContractDesig.set(r.contract_id, new Map());
+        resByContractDesig.get(r.contract_id)!.set(r.designation_id, r);
+      }
+
+      const toResource = (r: ResourceRow): ContractResourceLike => ({
+        designationId: r.designation_id ?? "",
+        components: Array.isArray(r.components)
+          ? (r.components as { name: string; amount: number }[]).map((c) => ({
+              name: String(c.name ?? ""),
+              amount: Number(c.amount) || 0,
+            }))
+          : [],
+        benefits: Array.isArray(r.benefits) ? (r.benefits as { name: string; amount: number }[]) : [],
+        deductions: Array.isArray(r.deductions) ? (r.deductions as { name: string; amount: number }[]) : [],
+        employerContributions: Array.isArray(r.employer_contributions)
+          ? (r.employer_contributions as { name: string; amount: number }[])
+          : [],
+        payrollDayBase: r.payroll_day_base_id ? pdbMap.get(r.payroll_day_base_id) ?? null : null,
+      });
 
       const sumArr = (v: unknown) => {
         if (!Array.isArray(v)) return 0;
-        return (v as Array<{ amount?: number | string }>).reduce((s, x) => s + (Number(x?.amount) || 0), 0);
+        return (v as Array<{ amount?: number | string }>).reduce(
+          (s, x) => s + (Number(x?.amount) || 0),
+          0,
+        );
       };
 
-      const perContract = new Map<string, { gross: number; benefits: number; employer: number }>();
-      for (const r of (resources ?? []) as Resource[]) {
-        const qty = Number(r.quantity) || 0;
-        const g = (Number(r.gross) || 0) * qty;
-        const b = sumArr(r.benefits) * qty;
-        const ec = sumArr(r.employer_contributions) * qty;
-        const cur = perContract.get(r.contract_id) ?? { gross: 0, benefits: 0, employer: 0 };
-        cur.gross += g; cur.benefits += b; cur.employer += ec;
-        perContract.set(r.contract_id, cur);
+      // Period dates.
+      const periodDates: string[] = [];
+      {
+        const s = new Date(monthStart);
+        const e = new Date(monthEnd);
+        for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+          periodDates.push(d.toISOString().slice(0, 10));
+        }
       }
 
       const pnlByUnit = new Map<string, PnLRow>();
-      for (const c of (contractsForPnl ?? []) as Array<{ id: string; unit_id: string | null }>) {
-        if (!c.unit_id) continue;
-        const u = unitsById.get(c.unit_id);
+      for (const contract of activeContracts) {
+        if (!contract.unit_id) continue;
+        const u = unitsById.get(contract.unit_id);
         if (!u) continue;
-        const totals = perContract.get(c.id) ?? { gross: 0, benefits: 0, employer: 0 };
-        const contractValue = totals.gross + totals.benefits + totals.employer;
-        // Until actuals are persisted, invoice = contracted billing and payroll = gross+employer outflow.
-        const invoiceAmount = contractValue;
-        const payrollCost = totals.gross + totals.employer;
+        const resMap = resByContractDesig.get(contract.id) ?? new Map();
+
+        // Contract value reference: full-month projected per resource × quantity.
+        // Mirrors Invoice module's projected (components + employer contributions),
+        // multiplied by configured headcount.
+        let contractValue = 0;
+        for (const r of resMap.values()) {
+          const qty = Number(r.quantity) || 0;
+          contractValue += qty * (sumArr(r.components) + sumArr(r.employer_contributions));
+        }
+
+        // Actuals from attendance.
+        const unitRoster = rosterByUnit.get(contract.unit_id) ?? new Set<string>();
+        const unitAtt = attendance.filter((a) => a.unit_id === contract.unit_id);
+
+        // Build (candidate, designation) pairs the same way the Invoice page does.
+        const pairs = new Map<string, { candidateId: string; designationId: string | null }>();
+        const pairKey = (cid: string, did: string | null) => `${cid}|${did ?? "_"}`;
+        for (const cid of unitRoster) {
+          const c = candById.get(cid);
+          if (!c) continue;
+          pairs.set(pairKey(cid, c.designation_id ?? null), {
+            candidateId: cid,
+            designationId: c.designation_id ?? null,
+          });
+        }
+        for (const e of unitAtt) {
+          if (!unitRoster.has(e.candidate_id)) continue;
+          pairs.set(pairKey(e.candidate_id, e.designation_id), {
+            candidateId: e.candidate_id,
+            designationId: e.designation_id,
+          });
+        }
+
+        let invoiceAmount = 0;
+        let payrollCost = 0;
+        for (const p of pairs.values()) {
+          if (!p.designationId) continue;
+          const resRow = resMap.get(p.designationId);
+          if (!resRow) continue;
+          const lineEntries = unitAtt
+            .filter((e) => e.candidate_id === p.candidateId && (e.designation_id ?? null) === p.designationId)
+            .map((e) => ({
+              candidate_id: e.candidate_id,
+              entry_date: e.entry_date,
+              code: e.code,
+              ot_hours: e.ot_hours,
+            })) as AttendanceEntryLike[];
+          const totals = computeAttendanceTotals(p.candidateId, periodDates, lineEntries, codes);
+          const wages = computeWages(totals, toResource(resRow), periodDates.length);
+          // Invoice billable mirrors Invoice module's "Actual total":
+          invoiceAmount += wages.employerCost;
+          // Payroll cost = same outflow + scaled benefits (paid to employee, not billed).
+          const scaledBenefits =
+            sumArr(resRow.benefits) * (wages.ratio || 0);
+          payrollCost += wages.employerCost + scaledBenefits;
+        }
+
         const variance = invoiceAmount - payrollCost;
         const variancePct = invoiceAmount > 0 ? (variance / invoiceAmount) * 100 : 0;
         const existing = pnlByUnit.get(u.id);
@@ -168,7 +384,9 @@ function DashboardPage() {
           existing.invoice_amount += invoiceAmount;
           existing.payroll_cost += payrollCost;
           existing.variance = existing.invoice_amount - existing.payroll_cost;
-          existing.variance_pct = existing.invoice_amount > 0 ? (existing.variance / existing.invoice_amount) * 100 : 0;
+          existing.variance_pct = existing.invoice_amount > 0
+            ? (existing.variance / existing.invoice_amount) * 100
+            : 0;
         } else {
           pnlByUnit.set(u.id, {
             unit_id: u.id,
@@ -183,6 +401,7 @@ function DashboardPage() {
           });
         }
       }
+      void emptyUuid;
       const pnlRows = Array.from(pnlByUnit.values()).sort((a, b) => b.contract_value - a.contract_value);
       const pnlTotals = pnlRows.reduce(
         (s, r) => ({ contract: s.contract + r.contract_value, invoice: s.invoice + r.invoice_amount, payroll: s.payroll + r.payroll_cost }),
