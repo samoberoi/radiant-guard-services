@@ -200,7 +200,7 @@ function DashboardPage() {
   const isCurrent = now.getFullYear() === year && now.getMonth() === month;
 
   const tiles = useMemo(() => {
-    const t: { key: string; module: string; node: JSX.Element }[] = [];
+    const t: { key: string; module: string; node: React.ReactNode }[] = [];
     if (data) {
       if (can("organizations")) t.push({ key: "orgs", module: "organizations", node: <MetricTile icon={Building2} label="Organizations" value={data.orgs} accent="rose" to="/admin/customers" /> });
       if (can("organizations")) t.push({ key: "units", module: "organizations", node: <MetricTile icon={Warehouse} label="Units" value={data.units} accent="cyan" to="/admin/customers/unit-manager" /> });
