@@ -645,7 +645,7 @@ function ChartView({
   if (kind === "table") {
     return (
       <div className="overflow-auto">
-        <table className="w-full text-sm">
+        <table className="ios-table w-full text-sm">
           <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-3 py-2 text-left">{xLabel}</th>

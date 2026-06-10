@@ -206,7 +206,7 @@ function OffboardingReasonManagerPage() {
           </span>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Name</th>

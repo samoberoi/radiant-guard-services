@@ -311,7 +311,7 @@ function SystemLogsPage() {
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-4 py-3">When</th>
@@ -574,7 +574,7 @@ function DetailsView({ details }: { details: Record<string, unknown> }) {
     <div className="space-y-3">
       {flat.length > 0 ? (
         <div className="overflow-hidden rounded-lg border border-border">
-          <table className="w-full text-xs">
+          <table className="ios-table w-full text-xs">
             <thead className="bg-secondary/60 text-left uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-3 py-2">What changed</th>
