@@ -157,7 +157,7 @@ function ServiceManagerPage() {
             <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 text-left">Vehicle</th>
-                <th className="px-4 py-3 text-left">Fuel</th>
+                <VehicleDetailHeaders thClassName="px-4 py-3 text-left whitespace-nowrap" />
                 <th className="px-4 py-3 text-right">Interval (km)</th>
                 <th className="px-4 py-3 text-right">Current KM</th>
                 <th className="px-4 py-3 text-right">Service Due At</th>
@@ -168,16 +168,16 @@ function ServiceManagerPage() {
             </thead>
             <tbody className="divide-y divide-border">
               {isLoading && (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
+                <tr><td colSpan={7 + VEHICLE_DETAIL_COLUMN_COUNT} className="px-4 py-8 text-center text-muted-foreground">Loading…</td></tr>
               )}
               {!isLoading && rows.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No vehicles found.</td></tr>
+                <tr><td colSpan={7 + VEHICLE_DETAIL_COLUMN_COUNT} className="px-4 py-8 text-center text-muted-foreground">No vehicles found.</td></tr>
               )}
 
               {rows.map((r) => (
                 <tr key={r.v.id} className="hover:bg-muted/20">
-                  <td className="px-4 py-3 font-medium">{r.v.vehicle_number}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{r.v.fuel_type || "—"}</td>
+                  <td className="px-4 py-3 font-medium whitespace-nowrap">{r.v.vehicle_number}</td>
+                  <VehicleDetailCells v={r.v} tdClassName="px-4 py-3 text-muted-foreground whitespace-nowrap" />
                   <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{r.interval.toLocaleString()}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{r.currentKm.toLocaleString()}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{r.dueKm.toLocaleString()}</td>
