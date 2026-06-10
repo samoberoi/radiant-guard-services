@@ -53,6 +53,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentPermissions } from "@/lib/rbac";
 import { extractAadhaar, type AadhaarExtraction } from "@/lib/aadhaar.functions";
 import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
@@ -296,7 +297,7 @@ type CandidateListItem = Pick<
   | "unit_id"
   | "designation_id"
   | "status"
-> & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null; offboarding_reason_id: string | null; offboarded_at: string | null; assigned_asset_ids: string[]; no_hire: boolean; offboarding_details: OffboardingDetails; date_of_birth: string | null; preferred_joining_date: string | null; approved_at: string | null };
+> & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null; offboarding_reason_id: string | null; offboarded_at: string | null; assigned_asset_ids: string[]; no_hire: boolean; offboarding_details: OffboardingDetails; date_of_birth: string | null; preferred_joining_date: string | null; approved_at: string | null; created_by: string | null };
 
 type RoleLite = { key: string; name: string };
 
@@ -385,7 +386,7 @@ function useCandidates() {
       const { data, error } = await runWithQueryTimeout("Employees", async (signal) =>
         await supabase
           .from("candidates" as never)
-          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key,is_enabled,reports_to,offboarding_reason_id,offboarded_at,assigned_asset_ids,no_hire,offboarding_details,date_of_birth,preferred_joining_date,approved_at")
+          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key,is_enabled,reports_to,offboarding_reason_id,offboarded_at,assigned_asset_ids,no_hire,offboarding_details,date_of_birth,preferred_joining_date,approved_at,created_by")
           .order("created_at", { ascending: false })
           .limit(250)
           .abortSignal(signal),
@@ -535,8 +536,16 @@ function EmployeesPage() {
   const candidatesError = candidatesQuery.error;
   const qc = useQueryClient();
 
+  const { roleKey, isSuperAdmin } = useCurrentPermissions();
+  const isFieldOfficer = roleKey === "field_officer" && !isSuperAdmin;
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
+
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"employee" | "candidate">("employee");
+  const [tab, setTab] = useState<"employee" | "candidate">(isFieldOfficer ? "candidate" : "employee");
+  useEffect(() => { if (isFieldOfficer && tab !== "candidate") setTab("candidate"); }, [isFieldOfficer, tab]);
   const [viewMode, setViewMode] = useState<"list" | "tree">("list");
   const [openWizard, setOpenWizard] = useState(false);
   const [editing, setEditing] = useState<Candidate | null>(null);
@@ -702,9 +711,18 @@ function EmployeesPage() {
     [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations],
   );
   const candidateRows = useMemo(
-    () => candidates.filter((c) => !isEmployeeStatus(c.status) && matchesSearch(c)),
+    () => candidates.filter((c) => {
+      if (isEmployeeStatus(c.status)) return false;
+      if (!matchesSearch(c)) return false;
+      if (isFieldOfficer) {
+        // Field officers see only their own submissions, and only while pending/rejected/draft.
+        if (currentUserId && c.created_by !== currentUserId) return false;
+        if (c.status === "approved") return false;
+      }
+      return true;
+    }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, search],
+    [candidates, search, isFieldOfficer, currentUserId],
   );
 
   // ---------------- Export ---------------- //
@@ -1743,17 +1761,19 @@ function EmployeesPage() {
       <Tabs value={tab} onValueChange={(v) => setTab(v as "employee" | "candidate")} className="space-y-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <TabsList className="inline-flex h-auto rounded-xl border border-border/60 bg-secondary/40 p-1 backdrop-blur-sm">
-            <TabsTrigger
-              value="employee"
-              className="rounded-lg px-6 py-2 text-sm font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-            >
-              Employees <span className="ml-1.5 text-xs opacity-60">({stats.empTotal})</span>
-            </TabsTrigger>
+            {!isFieldOfficer && (
+              <TabsTrigger
+                value="employee"
+                className="rounded-lg px-6 py-2 text-sm font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+              >
+                Employees <span className="ml-1.5 text-xs opacity-60">({stats.empTotal})</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger
               value="candidate"
               className="rounded-lg px-6 py-2 text-sm font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
             >
-              Candidates <span className="ml-1.5 text-xs opacity-60">({stats.candTotal})</span>
+              {isFieldOfficer ? "My Candidates" : "Candidates"} <span className="ml-1.5 text-xs opacity-60">({candidateRows.length})</span>
             </TabsTrigger>
           </TabsList>
 
@@ -2876,9 +2896,12 @@ function CandidateWizard({
         after: { ...(payload as unknown as Record<string, unknown>), unit_ids: form.unit_ids },
       });
     } else {
+      const { data: authData } = await supabase.auth.getUser();
+      const creatorId = authData.user?.id ?? null;
+      const insertPayload = { ...(payload as Record<string, unknown>), created_by: creatorId };
       const { data, error } = await supabase
         .from("candidates" as never)
-        .insert(payload as never)
+        .insert(insertPayload as never)
         .select("id")
         .single();
       if (error) throw error;

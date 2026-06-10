@@ -410,6 +410,7 @@ export type Database = {
           compliance: Json
           contacts: Json
           created_at: string
+          created_by: string | null
           criminal_history: Json
           date_of_birth: string | null
           designation_id: string | null
@@ -493,6 +494,7 @@ export type Database = {
           compliance?: Json
           contacts?: Json
           created_at?: string
+          created_by?: string | null
           criminal_history?: Json
           date_of_birth?: string | null
           designation_id?: string | null
@@ -576,6 +578,7 @@ export type Database = {
           compliance?: Json
           contacts?: Json
           created_at?: string
+          created_by?: string | null
           criminal_history?: Json
           date_of_birth?: string | null
           designation_id?: string | null

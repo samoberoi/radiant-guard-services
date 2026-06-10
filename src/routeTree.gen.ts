@@ -28,6 +28,7 @@ import { Route as AdminLwfManagerRouteImport } from './routes/admin.lwf-manager'
 import { Route as AdminLanguageManagerRouteImport } from './routes/admin.language-manager'
 import { Route as AdminInvoiceRouteImport } from './routes/admin.invoice'
 import { Route as AdminInventoryRouteImport } from './routes/admin.inventory'
+import { Route as AdminFieldDashboardRouteImport } from './routes/admin.field-dashboard'
 import { Route as AdminExServiceManagerRouteImport } from './routes/admin.ex-service-manager'
 import { Route as AdminEsicBranchManagerRouteImport } from './routes/admin.esic-branch-manager'
 import { Route as AdminEmployeesRouteImport } from './routes/admin.employees'
@@ -174,6 +175,11 @@ const AdminInvoiceRoute = AdminInvoiceRouteImport.update({
 const AdminInventoryRoute = AdminInventoryRouteImport.update({
   id: '/inventory',
   path: '/inventory',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFieldDashboardRoute = AdminFieldDashboardRouteImport.update({
+  id: '/field-dashboard',
+  path: '/field-dashboard',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminExServiceManagerRoute = AdminExServiceManagerRouteImport.update({
@@ -467,6 +473,7 @@ export interface FileRoutesByFullPath {
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/esic-branch-manager': typeof AdminEsicBranchManagerRoute
   '/admin/ex-service-manager': typeof AdminExServiceManagerRoute
+  '/admin/field-dashboard': typeof AdminFieldDashboardRoute
   '/admin/inventory': typeof AdminInventoryRouteWithChildren
   '/admin/invoice': typeof AdminInvoiceRouteWithChildren
   '/admin/language-manager': typeof AdminLanguageManagerRoute
@@ -537,6 +544,7 @@ export interface FileRoutesByTo {
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/esic-branch-manager': typeof AdminEsicBranchManagerRoute
   '/admin/ex-service-manager': typeof AdminExServiceManagerRoute
+  '/admin/field-dashboard': typeof AdminFieldDashboardRoute
   '/admin/inventory': typeof AdminInventoryRouteWithChildren
   '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
@@ -607,6 +615,7 @@ export interface FileRoutesById {
   '/admin/employees': typeof AdminEmployeesRoute
   '/admin/esic-branch-manager': typeof AdminEsicBranchManagerRoute
   '/admin/ex-service-manager': typeof AdminExServiceManagerRoute
+  '/admin/field-dashboard': typeof AdminFieldDashboardRoute
   '/admin/inventory': typeof AdminInventoryRouteWithChildren
   '/admin/invoice': typeof AdminInvoiceRouteWithChildren
   '/admin/language-manager': typeof AdminLanguageManagerRoute
@@ -680,6 +689,7 @@ export interface FileRouteTypes {
     | '/admin/employees'
     | '/admin/esic-branch-manager'
     | '/admin/ex-service-manager'
+    | '/admin/field-dashboard'
     | '/admin/inventory'
     | '/admin/invoice'
     | '/admin/language-manager'
@@ -750,6 +760,7 @@ export interface FileRouteTypes {
     | '/admin/employees'
     | '/admin/esic-branch-manager'
     | '/admin/ex-service-manager'
+    | '/admin/field-dashboard'
     | '/admin/inventory'
     | '/admin/language-manager'
     | '/admin/lwf-manager'
@@ -819,6 +830,7 @@ export interface FileRouteTypes {
     | '/admin/employees'
     | '/admin/esic-branch-manager'
     | '/admin/ex-service-manager'
+    | '/admin/field-dashboard'
     | '/admin/inventory'
     | '/admin/invoice'
     | '/admin/language-manager'
@@ -1007,6 +1019,13 @@ declare module '@tanstack/react-router' {
       path: '/inventory'
       fullPath: '/admin/inventory'
       preLoaderRoute: typeof AdminInventoryRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/field-dashboard': {
+      id: '/admin/field-dashboard'
+      path: '/field-dashboard'
+      fullPath: '/admin/field-dashboard'
+      preLoaderRoute: typeof AdminFieldDashboardRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/ex-service-manager': {
@@ -1500,6 +1519,7 @@ interface AdminRouteChildren {
   AdminEmployeesRoute: typeof AdminEmployeesRoute
   AdminEsicBranchManagerRoute: typeof AdminEsicBranchManagerRoute
   AdminExServiceManagerRoute: typeof AdminExServiceManagerRoute
+  AdminFieldDashboardRoute: typeof AdminFieldDashboardRoute
   AdminInventoryRoute: typeof AdminInventoryRouteWithChildren
   AdminInvoiceRoute: typeof AdminInvoiceRouteWithChildren
   AdminLanguageManagerRoute: typeof AdminLanguageManagerRoute
@@ -1539,6 +1559,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminEmployeesRoute: AdminEmployeesRoute,
   AdminEsicBranchManagerRoute: AdminEsicBranchManagerRoute,
   AdminExServiceManagerRoute: AdminExServiceManagerRoute,
+  AdminFieldDashboardRoute: AdminFieldDashboardRoute,
   AdminInventoryRoute: AdminInventoryRouteWithChildren,
   AdminInvoiceRoute: AdminInvoiceRouteWithChildren,
   AdminLanguageManagerRoute: AdminLanguageManagerRoute,
