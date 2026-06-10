@@ -90,11 +90,13 @@ function PayrollUnitsPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["payroll-dashboard-v2", year, month],
     queryFn: async () => {
+      // Include any sheet whose period overlaps the selected calendar month
+      // (e.g. a 21 May – 20 Jun sheet shows up under both May and June).
       const { data: sheetsRaw, error: sErr } = await supabase
         .from("attendance_sheets" as never)
         .select("id, unit_id, period_start, period_end, approved_at, status")
-        .gte("period_start", monthStart)
-        .lte("period_start", monthEnd);
+        .lte("period_start", monthEnd)
+        .gte("period_end", monthStart);
       if (sErr) throw sErr;
       const sheets: SheetRow[] = ((sheetsRaw ?? []) as unknown as Array<{
         id: string; unit_id: string; period_start: string; period_end: string;
