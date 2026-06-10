@@ -150,15 +150,18 @@ function DashboardPage() {
         if (!u) continue;
         const totals = perContract.get(c.id) ?? { gross: 0, benefits: 0, employer: 0 };
         const contractValue = totals.gross + totals.benefits + totals.employer;
+        // Until actuals are persisted, invoice = contracted billing and payroll = gross+employer outflow.
+        const invoiceAmount = contractValue;
         const payrollCost = totals.gross + totals.employer;
-        const variance = contractValue - payrollCost;
-        const variancePct = payrollCost > 0 ? (variance / payrollCost) * 100 : 0;
+        const variance = invoiceAmount - payrollCost;
+        const variancePct = invoiceAmount > 0 ? (variance / invoiceAmount) * 100 : 0;
         const existing = pnlByUnit.get(u.id);
         if (existing) {
           existing.contract_value += contractValue;
+          existing.invoice_amount += invoiceAmount;
           existing.payroll_cost += payrollCost;
-          existing.variance = existing.contract_value - existing.payroll_cost;
-          existing.variance_pct = existing.payroll_cost > 0 ? (existing.variance / existing.payroll_cost) * 100 : 0;
+          existing.variance = existing.invoice_amount - existing.payroll_cost;
+          existing.variance_pct = existing.invoice_amount > 0 ? (existing.variance / existing.invoice_amount) * 100 : 0;
         } else {
           pnlByUnit.set(u.id, {
             unit_id: u.id,
@@ -166,6 +169,7 @@ function DashboardPage() {
             unit_name: u.name,
             customer_name: (u.customer_id && custNameById.get(u.customer_id)) || "—",
             contract_value: contractValue,
+            invoice_amount: invoiceAmount,
             payroll_cost: payrollCost,
             variance,
             variance_pct: variancePct,
@@ -174,8 +178,8 @@ function DashboardPage() {
       }
       const pnlRows = Array.from(pnlByUnit.values()).sort((a, b) => b.contract_value - a.contract_value);
       const pnlTotals = pnlRows.reduce(
-        (s, r) => ({ contract: s.contract + r.contract_value, payroll: s.payroll + r.payroll_cost }),
-        { contract: 0, payroll: 0 },
+        (s, r) => ({ contract: s.contract + r.contract_value, invoice: s.invoice + r.invoice_amount, payroll: s.payroll + r.payroll_cost }),
+        { contract: 0, invoice: 0, payroll: 0 },
       );
 
       return {
