@@ -518,61 +518,78 @@ function DashboardPage() {
 
       {/* P&L */}
       {showPnL && (
-        <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
-          <div className="flex flex-col gap-2 border-b border-border/60 px-5 py-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">P&amp;L — {MONTH_NAMES[month]} {year}</h2>
-              <p className="text-sm text-muted-foreground">Invoice &amp; payroll are computed from attendance (same engine as the Invoice and Payroll modules). Contract value is the full-month projection for reference. Variance = invoice − payroll cost (benefits eat into margin).</p>
+        <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-[0_1px_2px_rgba(10,10,10,0.03),0_20px_50px_-30px_rgba(10,20,40,0.15)]">
+          <div className="flex flex-col gap-3 border-b border-border/50 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="max-w-2xl space-y-1">
+              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">P&amp;L — {MONTH_NAMES[month]} {year}</h2>
+              <p className="text-[13px] leading-relaxed text-muted-foreground">Invoice &amp; payroll are computed from attendance. Contract value is the full-month projection. Variance = invoice − payroll cost.</p>
             </div>
             {data && (
-              <div className="flex flex-wrap items-center gap-4 text-sm">
-                <div><span className="text-muted-foreground">Contract</span> <span className="ml-2 font-semibold tabular-nums">{fmtINR(data.pnlTotals.contract)}</span></div>
-                <div><span className="text-muted-foreground">Invoice</span> <span className="ml-2 font-semibold tabular-nums">{fmtINR(data.pnlTotals.invoice)}</span></div>
-                <div><span className="text-muted-foreground">Payroll</span> <span className="ml-2 font-semibold tabular-nums">{fmtINR(data.pnlTotals.payroll)}</span></div>
-                <div className={(data.pnlTotals.invoice - data.pnlTotals.payroll) >= 0 ? "text-emerald-700" : "text-rose-700"}>
-                  <span className="text-muted-foreground">Variance</span> <span className="ml-2 font-semibold tabular-nums">{fmtINR(data.pnlTotals.invoice - data.pnlTotals.payroll)}</span>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[13px] sm:grid-cols-4 lg:flex lg:flex-col lg:items-end lg:gap-1">
+                <div className="flex items-center justify-between gap-3 lg:gap-4"><span className="text-muted-foreground">Contract</span><span className="num font-semibold">{fmtINR(data.pnlTotals.contract)}</span></div>
+                <div className="flex items-center justify-between gap-3 lg:gap-4"><span className="text-muted-foreground">Invoice</span><span className="num font-semibold">{fmtINR(data.pnlTotals.invoice)}</span></div>
+                <div className="flex items-center justify-between gap-3 lg:gap-4"><span className="text-muted-foreground">Payroll</span><span className="num font-semibold">{fmtINR(data.pnlTotals.payroll)}</span></div>
+                <div className="flex items-center justify-between gap-3 lg:gap-4">
+                  <span className="text-muted-foreground">Variance</span>
+                  <span className={`num font-semibold ${(data.pnlTotals.invoice - data.pnlTotals.payroll) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{fmtINR(data.pnlTotals.invoice - data.pnlTotals.payroll)}</span>
                 </div>
               </div>
             )}
           </div>
           <div className="overflow-x-auto">
-            <table className="min-w-full table-auto">
-              <thead className="border-b border-border/60 bg-secondary/40">
-                <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                  <th className="px-5 py-3 font-medium">Unit</th>
-                  <th className="px-5 py-3 font-medium">Organization</th>
-                  <th className="px-5 py-3 text-right font-medium">Contract value</th>
-                  <th className="px-5 py-3 text-right font-medium">Invoice amount</th>
-                  <th className="px-5 py-3 text-right font-medium">Payroll cost</th>
-                  <th className="px-5 py-3 text-right font-medium">Variance</th>
-                  <th className="px-5 py-3 text-right font-medium">Action</th>
+            <table className="ios-table min-w-[920px]">
+              <colgroup>
+                <col className="w-[26%]" />
+                <col className="w-[22%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[12%]" />
+                <col className="w-[80px]" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th className="text-left">Unit</th>
+                  <th className="text-left">Organization</th>
+                  <th className="text-right">Contract</th>
+                  <th className="text-right">Invoice</th>
+                  <th className="text-right">Payroll</th>
+                  <th className="text-right">Variance</th>
+                  <th className="text-right" aria-label="Action" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-border/50">
+              <tbody>
                 {(data?.pnlRows ?? []).length === 0 ? (
-                  <tr><td colSpan={7} className="px-5 py-10 text-center text-sm text-muted-foreground">No active contracts for this period.</td></tr>
+                  <tr><td colSpan={7} className="px-5 py-16 text-center text-sm text-muted-foreground">No active contracts for this period.</td></tr>
                 ) : (
                   (data?.pnlRows ?? []).map((r) => {
                     const pos = r.variance >= 0;
                     return (
-                      <tr key={r.unit_id} className="hover:bg-secondary/20">
-                        <td className="px-5 py-3">
-                          <div className="text-sm font-semibold">{r.unit_name || r.unit_code}</div>
-                          <div className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">{r.unit_code}</div>
+                      <tr key={r.unit_id} className="group">
+                        <td>
+                          <div className="text-[14px] font-semibold leading-tight text-foreground">{r.unit_name || r.unit_code}</div>
+                          <div className="mt-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">{r.unit_code}</div>
                         </td>
-                        <td className="px-5 py-3 text-sm">{r.customer_name}</td>
-                        <td className="px-5 py-3 text-right text-sm tabular-nums text-muted-foreground">{fmtINR(r.contract_value)}</td>
-                        <td className="px-5 py-3 text-right text-sm tabular-nums">{fmtINR(r.invoice_amount)}</td>
-                        <td className="px-5 py-3 text-right text-sm tabular-nums">{fmtINR(r.payroll_cost)}</td>
-                        <td className={`px-5 py-3 text-right text-sm font-semibold tabular-nums ${pos ? "text-emerald-700" : "text-rose-700"}`}>
-                          <span className="inline-flex items-center gap-1.5">
-                            {pos ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-                            {fmtINR(r.variance)} <span className="text-xs opacity-70">({r.variance_pct.toFixed(1)}%)</span>
+                        <td className="text-[13px] text-muted-foreground">{r.customer_name}</td>
+                        <td className="num text-right text-muted-foreground">{fmtINR(r.contract_value)}</td>
+                        <td className="num text-right text-foreground">{fmtINR(r.invoice_amount)}</td>
+                        <td className="num text-right text-foreground">{fmtINR(r.payroll_cost)}</td>
+                        <td className="text-right">
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold num ring-1 ring-inset ${pos ? "bg-emerald-50 text-emerald-700 ring-emerald-200/70" : "bg-rose-50 text-rose-700 ring-rose-200/70"}`}>
+                            {pos ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+                            {fmtINR(r.variance)}
+                            <span className="opacity-60">({r.variance_pct.toFixed(1)}%)</span>
                           </span>
                         </td>
-                        <td className="px-5 py-3 text-right">
-                          <Link to="/admin/payroll/$unitId" params={{ unitId: r.unit_id }} search={{ start: monthStart, end: monthEnd }} className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:underline">
-                            Open <ArrowRight className="h-3 w-3" />
+                        <td className="text-right">
+                          <Link
+                            to="/admin/payroll/$unitId"
+                            params={{ unitId: r.unit_id }}
+                            search={{ start: monthStart, end: monthEnd }}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition group-hover:bg-accent/10 group-hover:text-accent hover:scale-105"
+                            aria-label="Open unit"
+                          >
+                            <ArrowRight className="h-4 w-4" />
                           </Link>
                         </td>
                       </tr>
