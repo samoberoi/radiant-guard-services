@@ -102,6 +102,76 @@ function PayrollUnitPage() {
     },
   });
 
+  const queryClient = useQueryClient();
+  const { can } = useCurrentPermissions();
+  const canApprove = can("payroll", "approve");
+
+  type RunStatus = "draft" | "submitted" | "approved" | "rejected";
+  type RunRow = { id: string; status: RunStatus; rejection_reason: string | null };
+  const runQK = ["payroll-run", unitId, start, end];
+  const { data: run } = useQuery({
+    queryKey: runQK,
+    queryFn: async (): Promise<RunRow | null> => {
+      const { data, error } = await supabase
+        .from("payroll_runs" as never)
+        .select("id, status, rejection_reason")
+        .eq("unit_id", unitId)
+        .eq("period_start", start)
+        .eq("period_end", end)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as unknown as RunRow | null);
+    },
+  });
+  const runStatus: RunStatus = run?.status ?? "draft";
+
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const transitionRun = useMutation({
+    mutationFn: async (next: { status: RunStatus; reason?: string }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth?.user?.id ?? null;
+      const ts = new Date().toISOString();
+      const base: Record<string, unknown> = {
+        unit_id: unitId,
+        period_start: start,
+        period_end: end,
+        status: next.status,
+      };
+      if (next.status === "submitted") { base.submitted_at = ts; base.submitted_by = uid; }
+      if (next.status === "approved") { base.approved_at = ts; base.approved_by = uid; }
+      if (next.status === "rejected") {
+        base.rejected_at = ts; base.rejected_by = uid;
+        base.rejection_reason = next.reason ?? "";
+      }
+      if (next.status === "draft") { base.rejection_reason = null; }
+      if (run?.id) {
+        const { error } = await supabase.from("payroll_runs" as never).update(base as never).eq("id", run.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("payroll_runs" as never).insert(base as never);
+        if (error) throw error;
+      }
+      void logActivity({
+        module: "Payroll",
+        action: next.status === "submitted" ? "submit" : next.status === "approved" ? "approve" : next.status === "rejected" ? "reject" : "reopen",
+        entityType: "payroll_runs",
+        entityLabel: `${unitId} ${start} → ${end}`,
+        details: { unit_id: unitId, period_start: start, period_end: end, status: next.status, reason: next.reason ?? "" },
+      });
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: runQK });
+      toast.success(
+        vars.status === "submitted" ? "Payroll submitted for approval" :
+        vars.status === "approved" ? "Payroll approved" :
+        vars.status === "rejected" ? "Payroll rejected" : "Payroll reopened",
+      );
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
   const { data, isLoading, error } = useQuery({
     queryKey: ["payroll-compute", unitId, start, end],
     queryFn: async () => {
