@@ -292,14 +292,15 @@ function DashboardPage() {
           <div className="flex flex-col gap-2 border-b border-border/60 px-5 py-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-foreground">P&amp;L — {MONTH_NAMES[month]} {year}</h2>
-              <p className="text-sm text-muted-foreground">Per-unit variance between contracted monthly value (what we bill) and payroll outflow (what we pay). Positive = margin.</p>
+              <p className="text-sm text-muted-foreground">Contract value is the reference. Variance compares actual invoice amount against actual payroll cost. Positive = margin.</p>
             </div>
             {data && (
               <div className="flex flex-wrap items-center gap-4 text-sm">
                 <div><span className="text-muted-foreground">Contract</span> <span className="ml-2 font-semibold tabular-nums">{fmtINR(data.pnlTotals.contract)}</span></div>
+                <div><span className="text-muted-foreground">Invoice</span> <span className="ml-2 font-semibold tabular-nums">{fmtINR(data.pnlTotals.invoice)}</span></div>
                 <div><span className="text-muted-foreground">Payroll</span> <span className="ml-2 font-semibold tabular-nums">{fmtINR(data.pnlTotals.payroll)}</span></div>
-                <div className={(data.pnlTotals.contract - data.pnlTotals.payroll) >= 0 ? "text-emerald-700" : "text-rose-700"}>
-                  <span className="text-muted-foreground">Variance</span> <span className="ml-2 font-semibold tabular-nums">{fmtINR(data.pnlTotals.contract - data.pnlTotals.payroll)}</span>
+                <div className={(data.pnlTotals.invoice - data.pnlTotals.payroll) >= 0 ? "text-emerald-700" : "text-rose-700"}>
+                  <span className="text-muted-foreground">Variance</span> <span className="ml-2 font-semibold tabular-nums">{fmtINR(data.pnlTotals.invoice - data.pnlTotals.payroll)}</span>
                 </div>
               </div>
             )}
@@ -311,6 +312,7 @@ function DashboardPage() {
                   <th className="px-5 py-3 font-medium">Unit</th>
                   <th className="px-5 py-3 font-medium">Organization</th>
                   <th className="px-5 py-3 text-right font-medium">Contract value</th>
+                  <th className="px-5 py-3 text-right font-medium">Invoice amount</th>
                   <th className="px-5 py-3 text-right font-medium">Payroll cost</th>
                   <th className="px-5 py-3 text-right font-medium">Variance</th>
                   <th className="px-5 py-3 text-right font-medium">Action</th>
@@ -318,7 +320,7 @@ function DashboardPage() {
               </thead>
               <tbody className="divide-y divide-border/50">
                 {(data?.pnlRows ?? []).length === 0 ? (
-                  <tr><td colSpan={6} className="px-5 py-10 text-center text-sm text-muted-foreground">No active contracts for this period.</td></tr>
+                  <tr><td colSpan={7} className="px-5 py-10 text-center text-sm text-muted-foreground">No active contracts for this period.</td></tr>
                 ) : (
                   (data?.pnlRows ?? []).map((r) => {
                     const pos = r.variance >= 0;
@@ -329,7 +331,8 @@ function DashboardPage() {
                           <div className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground">{r.unit_code}</div>
                         </td>
                         <td className="px-5 py-3 text-sm">{r.customer_name}</td>
-                        <td className="px-5 py-3 text-right text-sm tabular-nums">{fmtINR(r.contract_value)}</td>
+                        <td className="px-5 py-3 text-right text-sm tabular-nums text-muted-foreground">{fmtINR(r.contract_value)}</td>
+                        <td className="px-5 py-3 text-right text-sm tabular-nums">{fmtINR(r.invoice_amount)}</td>
                         <td className="px-5 py-3 text-right text-sm tabular-nums">{fmtINR(r.payroll_cost)}</td>
                         <td className={`px-5 py-3 text-right text-sm font-semibold tabular-nums ${pos ? "text-emerald-700" : "text-rose-700"}`}>
                           <span className="inline-flex items-center gap-1.5">
