@@ -1506,8 +1506,8 @@ function EmployeesPage() {
               />
             </td>
           )}
-          <td className="px-2.5 py-2.5 align-top">
-            <StatusBadge status={c.status} />
+          <td className="px-2.5 py-2.5 align-top text-right">
+            <div className="flex justify-end"><StatusBadge status={c.status} /></div>
             {c.status === "rejected" && c.rejection_reason && (
               <div className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground" title={c.rejection_reason}>
                 {c.rejection_reason}
@@ -1722,10 +1722,10 @@ function EmployeesPage() {
                   Active
                 </th>
               )}
-              <th className="w-[148px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="w-[140px] px-2.5 py-2.5 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Status
               </th>
-              <th className="w-[116px] px-2.5 py-2.5 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground sm:w-[132px] xl:w-[156px]">
+              <th className="w-[124px] px-2.5 py-2.5 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground sm:w-[140px] xl:w-[156px]">
                 Actions
               </th>
             </tr>
