@@ -116,7 +116,7 @@ function DashboardPage() {
       // P&L computation
       const contractIds = (contractsForPnl ?? []).map((c) => c.id);
       const unitsById = new Map((unitsForPnl ?? []).map((u) => [u.id, u]));
-      const customerIds = Array.from(new Set((unitsForPnl ?? []).map((u) => u.customer_id).filter(Boolean)));
+      const customerIds = Array.from(new Set((unitsForPnl ?? []).map((u) => u.customer_id).filter((v): v is string => !!v)));
       const { data: customers } = await supabase.from("customers").select("id, name").in("id", customerIds.length ? customerIds : ["00000000-0000-0000-0000-000000000000"]);
       const custNameById = new Map((customers ?? []).map((c) => [c.id, c.name as string]));
 
