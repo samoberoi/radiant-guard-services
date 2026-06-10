@@ -16,7 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useResetOnOpen, useVehicleOptions, fmtDate, type VehicleOption } from "@/lib/vehicle-helpers";
+import { useResetOnOpen, useVehicleOptions, fmtDate, VehicleDetailHeaders, VehicleDetailCells, VEHICLE_DETAIL_COLUMN_COUNT, type VehicleOption } from "@/lib/vehicle-helpers";
 import { MiniStat } from "@/components/MiniStat";
 import { SortHeader, sortRows, useSort } from "@/components/SortableHeader";
 
@@ -292,6 +292,7 @@ function InsuranceManagerPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <SortHeader label="Vehicle" sortKey="vehicle" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
+                <VehicleDetailHeaders />
                 <SortHeader label="Insurer" sortKey="insurer" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
                 <SortHeader label="Policy No." sortKey="policy" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
                 <SortHeader label="Valid From" sortKey="from" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
@@ -307,7 +308,8 @@ function InsuranceManagerPage() {
                 const expired = i.end_date && i.end_date < today;
                 return (
                   <tr key={i.id} className="hover:bg-secondary/30">
-                    <td className="px-5 py-3 font-mono font-semibold text-foreground">{v?.vehicle_number || "—"}</td>
+                    <td className="px-5 py-3 font-mono font-semibold text-foreground whitespace-nowrap">{v?.vehicle_number || "—"}</td>
+                    <VehicleDetailCells v={v} />
                     <td className="px-5 py-3 text-foreground/90">{i.insurance_company || "—"}</td>
                     <td className="px-5 py-3 font-mono text-foreground/90">{i.policy_number || "—"}</td>
                     <td className="px-5 py-3 text-foreground/90">{fmtDate(i.start_date)}</td>
@@ -333,7 +335,7 @@ function InsuranceManagerPage() {
                 );
               })}
               {filtered.length === 0 && (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">No insurance records found.</td></tr>
+                <tr><td colSpan={7 + VEHICLE_DETAIL_COLUMN_COUNT} className="px-5 py-12 text-center text-sm text-muted-foreground">No insurance records found.</td></tr>
               )}
             </tbody>
           </table>
