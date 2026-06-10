@@ -1365,7 +1365,7 @@ function EmployeesPage() {
                   {c.full_name || "—"}
                 </div>
                 <div className="truncate text-xs text-muted-foreground">{c.email || "—"}</div>
-                <div className="mt-1 space-y-1 text-xs text-muted-foreground xl:hidden">
+                <div className="mt-1 space-y-1 text-xs text-muted-foreground 2xl:hidden">
                   {(mode === "candidate" || columnsVisible.mobile) && <div className="truncate">{c.mobile || "—"}</div>}
                   {(mode === "candidate" || columnsVisible.unit) && (
                     <div className="truncate" title={unit?.name ?? ""}>
@@ -1382,13 +1382,13 @@ function EmployeesPage() {
             </div>
           </td>
           {(mode === "candidate" || columnsVisible.mobile) && (
-            <td className="hidden px-2.5 py-2.5 text-center text-sm font-medium text-muted-foreground xl:table-cell">{c.mobile || "—"}</td>
+            <td className="hidden px-2.5 py-2.5 text-center text-sm font-medium text-muted-foreground 2xl:table-cell">{c.mobile || "—"}</td>
           )}
           {mode === "employee" && columnsVisible.email && (
             <td className="hidden max-w-[180px] px-2.5 py-2.5 text-sm text-muted-foreground 2xl:table-cell"><span className="block truncate" title={c.email ?? ""}>{c.email || "—"}</span></td>
           )}
           {(mode === "candidate" || columnsVisible.unit) && (
-            <td className="hidden max-w-[150px] px-2.5 py-2.5 xl:table-cell">
+            <td className="hidden max-w-[150px] px-2.5 py-2.5 2xl:table-cell">
               {unit ? (
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-foreground" title={unit.name}>{unit.name}</div>
@@ -1400,7 +1400,7 @@ function EmployeesPage() {
             </td>
           )}
           {(mode === "candidate" || columnsVisible.designation) && (
-            <td className="hidden max-w-[130px] px-2.5 py-2.5 text-sm text-muted-foreground xl:table-cell"><span className="block truncate" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
+            <td className="hidden max-w-[130px] px-2.5 py-2.5 text-sm text-muted-foreground 2xl:table-cell"><span className="block truncate" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
           )}
           {mode === "employee" && columnsVisible.dob && (
             <td className="hidden px-2.5 py-2.5 text-sm whitespace-nowrap text-muted-foreground 2xl:table-cell">{fmtDate(c.date_of_birth)}</td>
@@ -1409,7 +1409,7 @@ function EmployeesPage() {
             <td className="hidden px-2.5 py-2.5 text-sm whitespace-nowrap text-muted-foreground 2xl:table-cell">{fmtDate(c.approved_at ?? c.preferred_joining_date)}</td>
           )}
           {mode === "employee" && columnsVisible.role && (
-            <td className="hidden px-2.5 py-2.5 xl:table-cell">
+            <td className="hidden px-2.5 py-2.5 2xl:table-cell">
               {c.role_key ? (
                 <Select
                   value={c.role_key}
@@ -1468,7 +1468,7 @@ function EmployeesPage() {
             </td>
           )}
           {mode === "employee" && columnsVisible.active && (
-            <td className="hidden px-2.5 py-2.5 xl:table-cell">
+            <td className="hidden px-2.5 py-2.5 2xl:table-cell">
               <Switch
                 checked={c.is_enabled && c.status !== "inactive"}
                 onCheckedChange={async (v) => {
@@ -1524,7 +1524,7 @@ function EmployeesPage() {
               );
             })()}
             {mode === "employee" && (
-              <div className="mt-2 space-y-2 text-xs text-muted-foreground xl:hidden">
+              <div className="mt-2 space-y-2 text-xs text-muted-foreground 2xl:hidden">
                 {columnsVisible.role && (
                   <div className="truncate">
                     <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Role</span>
@@ -1683,7 +1683,7 @@ function EmployeesPage() {
                 {mode === "employee" ? "Employee" : "Candidate"}
               </th>
               {(mode === "candidate" || columnsVisible.mobile) && (
-                <th className="hidden w-[128px] px-2.5 py-2.5 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground xl:table-cell">
+                <th className="hidden w-[128px] px-2.5 py-2.5 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
                   Mobile
                 </th>
               )}
@@ -1693,12 +1693,12 @@ function EmployeesPage() {
                 </th>
               )}
               {(mode === "candidate" || columnsVisible.unit) && (
-                <th className="hidden w-[196px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground xl:table-cell">
+                <th className="hidden w-[196px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
                   Unit
                 </th>
               )}
               {(mode === "candidate" || columnsVisible.designation) && (
-                <th className="hidden w-[160px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground xl:table-cell">
+                <th className="hidden w-[160px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
                   Designation
                 </th>
               )}
@@ -1713,12 +1713,12 @@ function EmployeesPage() {
                 </th>
               )}
               {mode === "employee" && columnsVisible.role && (
-                <th className="hidden w-[130px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground xl:table-cell">
+                <th className="hidden w-[130px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
                   Role
                 </th>
               )}
               {mode === "employee" && columnsVisible.active && (
-                <th className="hidden w-[92px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground xl:table-cell">
+                <th className="hidden w-[92px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
                   Active
                 </th>
               )}
