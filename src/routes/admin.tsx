@@ -329,10 +329,10 @@ function AdminLayout() {
                   className="flex h-9 items-center gap-2 rounded-full border border-border bg-card pl-1 pr-3 text-sm font-semibold text-foreground hover:bg-secondary"
                 >
                   <span className="grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold">
-                    {(user?.full_name ?? "U").slice(0, 1).toUpperCase()}
+                    {(user?.phone ?? "U").slice(-2)}
                   </span>
                   <span className="hidden max-w-[140px] truncate sm:inline">
-                    {user?.full_name ?? "Account"}
+                    {user?.phone ? maskPhone(user.phone) : "Account"}
                   </span>
                   <ChevronDown className="hidden h-3.5 w-3.5 opacity-70 sm:inline" />
                 </button>
@@ -340,11 +340,9 @@ function AdminLayout() {
               <DropdownMenuContent align="end" sideOffset={8} className="w-56 rounded-xl">
                 <DropdownMenuLabel>
                   <div className="text-sm font-semibold text-foreground">
-                    {user?.full_name ?? "Account"}
+                    {user?.phone ? maskPhone(user.phone) : "Account"}
                   </div>
-                  {user?.phone && (
-                    <div className="text-xs text-muted-foreground">{maskPhone(user.phone)}</div>
-                  )}
+                  <div className="text-xs text-muted-foreground capitalize">{user?.role?.replace("_", " ")}</div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
