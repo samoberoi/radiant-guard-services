@@ -645,6 +645,7 @@ function AttendanceUnitsPage() {
                 <th className="px-5 py-4 font-medium">Location</th>
                 <th className="px-5 py-4 font-medium">Security guards</th>
                 <th className="px-5 py-4 text-right font-medium">Active</th>
+                <th className="px-5 py-4 font-medium">Status</th>
                 <th className="px-5 py-4 text-right font-medium">Action</th>
               </tr>
             </thead>
