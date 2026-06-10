@@ -373,6 +373,54 @@ function AttendanceUnitsPage() {
   const employeesByCustomer = data?.employeesByCustomer ?? {};
   const summary = data?.summary ?? { organizations: 0, units: 0, activeEmployees: 0 };
 
+  const queryClient = useQueryClient();
+  const { can } = useCurrentPermissions();
+  const canApprove = can("attendance", "approve");
+
+  type SheetStatus = "draft" | "submitted" | "approved" | "rejected";
+  type SheetInfo = { id: string; unit_id: string; status: SheetStatus; period_start: string; period_end: string };
+  const { start: monthStartISO, end: monthEndISO } = monthRange(year, monthIdx);
+  const sheetsQK = ["attendance-sheets-index", monthStartISO, monthEndISO] as const;
+  const { data: sheetsByUnit } = useQuery({
+    queryKey: sheetsQK,
+    queryFn: async (): Promise<Map<string, SheetInfo>> => {
+      const { data: rows, error: e } = await supabase
+        .from("attendance_sheets" as never)
+        .select("id, unit_id, status, period_start, period_end")
+        .lte("period_start", monthEndISO)
+        .gte("period_end", monthStartISO);
+      if (e) throw e;
+      const map = new Map<string, SheetInfo>();
+      for (const r of ((rows ?? []) as unknown as SheetInfo[])) {
+        const existing = map.get(r.unit_id);
+        if (!existing || r.period_start > existing.period_start) map.set(r.unit_id, r);
+      }
+      return map;
+    },
+  });
+
+  const reopenSheet = useMutation({
+    mutationFn: async (sheet: SheetInfo) => {
+      const { error } = await supabase
+        .from("attendance_sheets" as never)
+        .update({ status: "draft", rejection_reason: "" } as never)
+        .eq("id", sheet.id);
+      if (error) throw error;
+      void logActivity({
+        module: "Attendance",
+        action: "reopen",
+        entityType: "attendance_sheets",
+        entityLabel: `${sheet.unit_id} ${sheet.period_start} → ${sheet.period_end}`,
+        details: { unit_id: sheet.unit_id, period_start: sheet.period_start, period_end: sheet.period_end, status: "draft" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: sheetsQK });
+      toast.success("Reopened for editing");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to reopen"),
+  });
+
 
   const selectedClient = orgFilter !== "all" ? organizations.find((o) => o.id === orgFilter) ?? null : null;
   const clientEmployees = useMemo(() => {
