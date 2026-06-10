@@ -1342,7 +1342,7 @@ function EmployeesPage() {
       return (
         <tr key={c.id} className={cn("group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5", isDisabled && "opacity-60")}>
           <td className="px-2.5 py-2.5">
-            <span className="rounded-md bg-secondary px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+            <span className="inline-flex items-center whitespace-nowrap rounded-md bg-secondary px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide tabular-nums text-muted-foreground">
               {code}
             </span>
           </td>
