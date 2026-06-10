@@ -31,6 +31,7 @@ type PnLRow = {
   unit_name: string;
   customer_name: string;
   contract_value: number;
+  invoice_amount: number;
   payroll_cost: number;
   variance: number;
   variance_pct: number;
