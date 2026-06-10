@@ -53,6 +53,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentPermissions } from "@/lib/rbac";
 import { extractAadhaar, type AadhaarExtraction } from "@/lib/aadhaar.functions";
 import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
