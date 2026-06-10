@@ -681,6 +681,7 @@ function AttendanceUnitsPage() {
                       return { label: "Rejected — open", cls: "border-rose-300/60 bg-rose-100/70 text-rose-800", Icon: ClipboardList };
                     return { label: "Open", cls: "border-sky-300/60 bg-sky-100/70 text-sky-800", Icon: ClipboardList };
                   })();
+                  return (
                   <tr key={unit.id} className="group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5">
                     <td className="px-5 py-4 align-top">
                       <div className="flex items-start gap-3">
@@ -707,9 +708,6 @@ function AttendanceUnitsPage() {
                               </span>
                             )}
                           </div>
-                          <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                            <ClipboardList className="h-3 w-3" /> Attendance ready
-                          </div>
                         </div>
                       </div>
                     </td>
@@ -724,18 +722,46 @@ function AttendanceUnitsPage() {
                       </div>
                       <div className="text-xs text-muted-foreground">employees</div>
                     </td>
+                    <td className="px-5 py-4 align-top">
+                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusBadge.cls}`}>
+                        <statusBadge.Icon className="h-3.5 w-3.5" /> {statusBadge.label}
+                      </span>
+                    </td>
                     <td className="px-5 py-4 text-right align-top">
-                      <Link
-                        to="/admin/attendance/$unitId"
-                        params={{ unitId: unit.id }}
-                        search={{ month: monthIdx, year }}
-                        className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/50 hover:text-accent"
-                      >
-                        Open roll <ArrowRight className="h-4 w-4" />
-                      </Link>
+                      {sheetStatus === "approved" ? (
+                        canApprove ? (
+                          <button
+                            type="button"
+                            onClick={() => sheet && reopenSheet.mutate(sheet)}
+                            disabled={!sheet || reopenSheet.isPending}
+                            className="inline-flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 transition hover:border-amber-400 hover:bg-amber-100 disabled:opacity-60"
+                          >
+                            <RotateCcw className="h-4 w-4" /> Reopen
+                          </button>
+                        ) : (
+                          <Link
+                            to="/admin/attendance/$unitId"
+                            params={{ unitId: unit.id }}
+                            search={{ month: monthIdx, year }}
+                            className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition hover:border-accent/50 hover:text-accent"
+                          >
+                            View roll <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        )
+                      ) : (
+                        <Link
+                          to="/admin/attendance/$unitId"
+                          params={{ unitId: unit.id }}
+                          search={{ month: monthIdx, year }}
+                          className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/50 hover:text-accent"
+                        >
+                          Open roll <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      )}
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
