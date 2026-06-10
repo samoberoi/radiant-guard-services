@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   ArrowRight, Building2, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight,
-  ClipboardList, Clock3, FileEdit, MapPinned, Search, Sparkles, UserCircle2, Users, Wallet, X,
+  ClipboardList, Clock3, FileEdit, MapPinned, RotateCcw, Search, Sparkles, UserCircle2, Users, Wallet, X,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/PageHeader";
@@ -17,6 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentPermissions } from "@/lib/rbac";
+import { logActivity } from "@/lib/activity-log";
 
 export const Route = createFileRoute("/admin/payroll/")({
   component: PayrollUnitsPage,
@@ -237,6 +240,54 @@ function PayrollUnitsPage() {
   const employees = data?.employees ?? [];
   const monthlyStatsData = data?.stats;
 
+  const queryClient = useQueryClient();
+  const { can } = useCurrentPermissions();
+  const canApproveRun = can("payroll", "approve");
+
+  type RunStatus = "draft" | "submitted" | "approved" | "rejected";
+  type RunRow = { id: string; unit_id: string; period_start: string; period_end: string; status: RunStatus };
+  const runsQK = ["payroll-runs-index", year, month];
+  const { data: runsData } = useQuery({
+    queryKey: runsQK,
+    queryFn: async () => {
+      const { data: rows, error } = await supabase
+        .from("payroll_runs" as never)
+        .select("id, unit_id, period_start, period_end, status")
+        .lte("period_start", monthEnd)
+        .gte("period_end", monthStart);
+      if (error) throw error;
+      const map = new Map<string, RunRow>();
+      for (const r of (rows ?? []) as RunRow[]) {
+        map.set(`${r.unit_id}|${r.period_start}|${r.period_end}`, r);
+      }
+      return map;
+    },
+  });
+  const runByKey = runsData ?? new Map<string, RunRow>();
+
+  const reopenRun = useMutation({
+    mutationFn: async (run: RunRow) => {
+      const { error } = await supabase
+        .from("payroll_runs" as never)
+        .update({ status: "draft", approved_at: null, approved_by: null, rejected_at: null, rejected_by: null, rejection_reason: null } as never)
+        .eq("id", run.id);
+      if (error) throw error;
+      void logActivity({
+        module: "Payroll",
+        action: "reopen",
+        entityType: "payroll_runs",
+        entityLabel: `${run.unit_id} ${run.period_start} → ${run.period_end}`,
+        details: { unit_id: run.unit_id, period_start: run.period_start, period_end: run.period_end },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: runsQK });
+      toast.success("Payroll reopened");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to reopen"),
+  });
+
+
 
   const employeeOptions = useMemo(() => {
     if (orgFilter === "all") return employees;
@@ -428,6 +479,7 @@ function PayrollUnitsPage() {
                 <th className="px-5 py-4 font-medium">Organization</th>
                 <th className="px-5 py-4 font-medium">Periods (status)</th>
                 <th className="px-5 py-4 text-right font-medium">Employees</th>
+                <th className="px-5 py-4 font-medium">Status</th>
                 <th className="px-5 py-4 text-right font-medium">Action</th>
 
               </tr>
@@ -435,19 +487,19 @@ function PayrollUnitsPage() {
             <tbody className="divide-y divide-border/50">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     Loading payroll units…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-destructive">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-destructive">
                     {error instanceof Error ? error.message : "Could not load payroll units."}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     {units.length === 0
                       ? "No approved attendance sheets yet. Approve one in Attendance to unlock payroll."
                       : "No units match the current filters."}
@@ -463,6 +515,21 @@ function PayrollUnitsPage() {
                           return { period_start: s, period_end: e };
                         })()
                       : approvedLatest;
+                  const attendanceApproved = !!targetPeriod;
+                  const run = targetPeriod
+                    ? runByKey.get(`${unit.id}|${targetPeriod.period_start}|${targetPeriod.period_end}`) ?? null
+                    : null;
+                  const runStatus = run?.status ?? null;
+
+                  let statusLabel = "Awaiting attendance";
+                  let statusCls = "border-amber-200/60 bg-amber-100/60 text-amber-800";
+                  if (attendanceApproved) {
+                    if (runStatus === "approved") { statusLabel = "Approved"; statusCls = "border-emerald-200/60 bg-emerald-100/60 text-emerald-800"; }
+                    else if (runStatus === "submitted") { statusLabel = "Pending approval"; statusCls = "border-amber-200/60 bg-amber-100/60 text-amber-800"; }
+                    else if (runStatus === "rejected") { statusLabel = "Rejected"; statusCls = "border-rose-200/60 bg-rose-100/60 text-rose-800"; }
+                    else if (runStatus === "draft") { statusLabel = "Draft"; statusCls = "border-sky-200/60 bg-sky-100/60 text-sky-800"; }
+                    else { statusLabel = "Ready to compute"; statusCls = "border-sky-200/60 bg-sky-100/60 text-sky-800"; }
+                  }
 
                   return (
                     <tr key={unit.id} className="group transition-colors hover:bg-amber-50/30">
@@ -503,24 +570,19 @@ function PayrollUnitsPage() {
                               +{unit.periods.length - 3}
                             </span>
                           )}
-
                         </div>
                       </td>
                       <td className="px-5 py-4 text-right align-top">
                         <div className="text-2xl font-semibold text-foreground">{unit.active_employee_count}</div>
                         <div className="text-xs text-muted-foreground">employees</div>
                       </td>
+                      <td className="px-5 py-4 align-top">
+                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusCls}`}>
+                          {statusLabel}
+                        </span>
+                      </td>
                       <td className="px-5 py-4 text-right align-top">
-                        {targetPeriod ? (
-                          <Link
-                            to="/admin/payroll/$unitId"
-                            params={{ unitId: unit.id }}
-                            search={{ start: targetPeriod.period_start, end: targetPeriod.period_end }}
-                            className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/50 hover:text-accent"
-                          >
-                            Compute wages <ArrowRight className="h-4 w-4" />
-                          </Link>
-                        ) : (
+                        {!attendanceApproved ? (
                           <Link
                             to="/admin/attendance/$unitId"
                             params={{ unitId: unit.id }}
@@ -529,13 +591,51 @@ function PayrollUnitsPage() {
                           >
                             Approve attendance <ArrowRight className="h-4 w-4" />
                           </Link>
+                        ) : runStatus === "approved" ? (
+                          canApproveRun ? (
+                            <button
+                              type="button"
+                              disabled={reopenRun.isPending}
+                              onClick={() => run && reopenRun.mutate(run)}
+                              className="inline-flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 transition hover:border-amber-400 hover:bg-amber-100 disabled:opacity-50"
+                            >
+                              <RotateCcw className="h-4 w-4" /> Reopen payroll
+                            </button>
+                          ) : (
+                            <Link
+                              to="/admin/payroll/$unitId"
+                              params={{ unitId: unit.id }}
+                              search={{ start: targetPeriod!.period_start, end: targetPeriod!.period_end }}
+                              className="inline-flex items-center gap-2 rounded-xl border border-emerald-200/60 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100"
+                            >
+                              View payroll <ArrowRight className="h-4 w-4" />
+                            </Link>
+                          )
+                        ) : runStatus === "submitted" ? (
+                          <Link
+                            to="/admin/payroll/$unitId"
+                            params={{ unitId: unit.id }}
+                            search={{ start: targetPeriod!.period_start, end: targetPeriod!.period_end }}
+                            className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/50 hover:text-accent"
+                          >
+                            Process payroll <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        ) : (
+                          <Link
+                            to="/admin/payroll/$unitId"
+                            params={{ unitId: unit.id }}
+                            search={{ start: targetPeriod!.period_start, end: targetPeriod!.period_end }}
+                            className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/50 hover:text-accent"
+                          >
+                            Compute wages <ArrowRight className="h-4 w-4" />
+                          </Link>
                         )}
-
                       </td>
                     </tr>
                   );
                 })
               )}
+
             </tbody>
           </table>
         </div>
