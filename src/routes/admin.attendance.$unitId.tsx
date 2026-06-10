@@ -1002,15 +1002,43 @@ function MusterRollPage() {
                           {!mr.isPrimary && (
                             <button
                               type="button"
-                              title="Remove this extra line (does not delete existing entries)"
-                              onClick={() => {
-                                setExtraRows((prev) => {
-                                  const next = new Set(prev);
-                                  next.delete(mr.key);
-                                  return next;
-                                });
+                              title="Remove this extra line and delete its attendance entries in this period"
+                              disabled={!editable}
+                              onClick={async () => {
+                                if (!editable) return;
+                                const hasEntries = entries.some(
+                                  (e) => e.candidate_id === mr.candidateId && e.designation_id === mr.designationId,
+                                );
+                                if (hasEntries && !window.confirm(`Remove extra line "${mr.designationName}" for ${mr.emp.full_name}? This deletes attendance entries on this line for ${periodStart} → ${periodEnd}.`)) {
+                                  return;
+                                }
+                                try {
+                                  if (hasEntries) {
+                                    let q = supabase
+                                      .from("attendance_entries")
+                                      .delete()
+                                      .eq("unit_id", unitId)
+                                      .eq("candidate_id", mr.candidateId)
+                                      .gte("entry_date", periodStart)
+                                      .lte("entry_date", periodEnd);
+                                    q = mr.designationId
+                                      ? q.eq("designation_id", mr.designationId)
+                                      : q.is("designation_id", null);
+                                    const { error } = await q;
+                                    if (error) throw error;
+                                  }
+                                  setExtraRows((prev) => {
+                                    const next = new Set(prev);
+                                    next.delete(mr.key);
+                                    return next;
+                                  });
+                                  queryClient.invalidateQueries({ queryKey: entriesQK });
+                                  toast.success("Extra line removed");
+                                } catch (e) {
+                                  toast.error(e instanceof Error ? e.message : "Failed to remove line");
+                                }
                               }}
-                              className="rounded-full p-0.5 text-slate-400 hover:text-rose-600 print:hidden"
+                              className="rounded-full p-0.5 text-slate-400 hover:text-rose-600 disabled:opacity-40 print:hidden"
                             >
                               <X className="h-3 w-3" />
                             </button>
