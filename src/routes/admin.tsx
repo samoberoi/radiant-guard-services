@@ -245,6 +245,25 @@ function AdminLayout() {
             )}
           </div>
 
+          {/* Dashboard — always visible for any signed-in admin */}
+          <div>
+            <Link
+              to="/admin/dashboard"
+              className={cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
+                isActive("/admin/dashboard")
+                  ? "bg-accent/20 text-accent"
+                  : "text-primary-foreground/85 hover:bg-white/5",
+              )}
+              title="Dashboard"
+            >
+              <LayoutDashboard className="h-4.5 w-4.5 shrink-0" />
+              {!collapsed && <span className="flex-1 text-left">Dashboard</span>}
+            </Link>
+          </div>
+
+
+
           {can("organizations") && (<>
           {/* Customers group */}
           <div>
