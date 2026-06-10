@@ -256,9 +256,9 @@ function AdminLayout() {
                     key={g.key}
                     to={g.to!}
                     className={cn(
-                      "inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-colors",
+                      "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px] font-semibold transition-colors",
                       active
-                        ? "bg-accent text-accent-foreground shadow-sm"
+                        ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-foreground/70 hover:bg-secondary hover:text-foreground",
                     )}
                   >
@@ -273,9 +273,9 @@ function AdminLayout() {
                     <button
                       type="button"
                       className={cn(
-                        "inline-flex h-9 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold transition-colors focus:outline-none",
+                        "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px] font-semibold transition-colors focus:outline-none",
                         active
-                          ? "bg-accent text-accent-foreground shadow-sm"
+                          ? "bg-primary text-primary-foreground shadow-sm"
                           : "text-foreground/70 hover:bg-secondary hover:text-foreground",
                       )}
                     >
