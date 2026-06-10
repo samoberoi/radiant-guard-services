@@ -467,37 +467,40 @@ function DashboardPage() {
         crumbs={[{ label: "Dashboard" }]}
       />
 
-      {/* Month hero — glass / aurora */}
-      <div className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[#0B1220] p-6 text-white shadow-[0_30px_80px_-40px_rgba(11,18,32,0.6)] sm:p-8">
-        <div className="pointer-events-none absolute -right-32 -top-32 h-80 w-80 rounded-full bg-[oklch(0.55_0.22_262/0.45)] blur-3xl" />
-        <div className="pointer-events-none absolute -left-32 -bottom-32 h-80 w-80 rounded-full bg-[oklch(0.45_0.18_262/0.35)] blur-3xl" />
-        <div className="pointer-events-none absolute inset-0 opacity-[0.06] [background-image:linear-gradient(rgba(255,255,255,0.6)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.6)_1px,transparent_1px)] [background-size:32px_32px]" />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+      {/* Month hero — light glass, matches tile system */}
+      <div className="relative overflow-hidden rounded-[28px] border border-border/70 bg-card/85 p-6 backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.7)_inset,0_20px_60px_-30px_rgba(10,20,40,0.18)] sm:p-8">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[oklch(0.7_0.16_262/0.18)] blur-3xl" />
+        <div className="pointer-events-none absolute -left-20 -bottom-24 h-64 w-64 rounded-full bg-[oklch(0.75_0.12_200/0.15)] blur-3xl" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
+
+        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/80 backdrop-blur-xl">
-              <Sparkles className="h-3.5 w-3.5" /> Leadership snapshot
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground backdrop-blur">
+              <Sparkles className="h-3.5 w-3.5 text-accent" /> Leadership snapshot
             </div>
             <div className="flex items-end gap-3">
-              <div className="font-display text-5xl font-bold tracking-tight sm:text-6xl">{MONTH_NAMES[month]}</div>
-              <div className="pb-2 text-2xl font-semibold text-white/60">{year}</div>
+              <div className="font-display text-5xl font-bold tracking-tight text-foreground sm:text-6xl">{MONTH_NAMES[month]}</div>
+              <div className="pb-2 text-2xl font-semibold text-muted-foreground/80">{year}</div>
               {isCurrent && (
-                <span className="mb-2 inline-flex rounded-full bg-[oklch(0.55_0.22_262/0.25)] px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[oklch(0.85_0.12_262)] ring-1 ring-inset ring-[oklch(0.55_0.22_262/0.4)]">
+                <span className="mb-2 inline-flex rounded-full bg-accent/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent ring-1 ring-inset ring-accent/30">
                   Current
                 </span>
               )}
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button onClick={() => shift(-1)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl transition hover:bg-white/15" aria-label="Previous"><ChevronLeft className="h-4 w-4" /></button>
+
+          <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-border/70 bg-background/60 p-1.5 backdrop-blur">
+            <button onClick={() => shift(-1)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label="Previous"><ChevronLeft className="h-4 w-4" /></button>
             <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-              <SelectTrigger className="h-9 w-[140px] rounded-xl border-white/10 bg-white/5 text-white backdrop-blur-xl hover:bg-white/15"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-[130px] rounded-xl border-0 bg-transparent shadow-none hover:bg-muted focus:ring-0"><SelectValue /></SelectTrigger>
               <SelectContent>{MONTH_NAMES.map((m, i) => <SelectItem key={m} value={String(i)}>{m}</SelectItem>)}</SelectContent>
             </Select>
+            <div className="h-5 w-px bg-border/70" />
             <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-              <SelectTrigger className="h-9 w-[100px] rounded-xl border-white/10 bg-white/5 text-white backdrop-blur-xl hover:bg-white/15"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-[92px] rounded-xl border-0 bg-transparent shadow-none hover:bg-muted focus:ring-0"><SelectValue /></SelectTrigger>
               <SelectContent>{Array.from({ length: 7 }, (_, i) => now.getFullYear() - 3 + i).map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
             </Select>
-            <button onClick={() => shift(1)} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 backdrop-blur-xl transition hover:bg-white/15" aria-label="Next"><ChevronRight className="h-4 w-4" /></button>
+            <button onClick={() => shift(1)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label="Next"><ChevronRight className="h-4 w-4" /></button>
           </div>
         </div>
       </div>
