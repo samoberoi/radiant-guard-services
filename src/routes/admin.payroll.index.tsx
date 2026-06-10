@@ -521,7 +521,14 @@ function PayrollUnitsPage() {
                             Compute wages <ArrowRight className="h-4 w-4" />
                           </Link>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Awaiting approval</span>
+                          <Link
+                            to="/admin/attendance/$unitId"
+                            params={{ unitId: unit.id }}
+                            className="inline-flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 transition hover:border-amber-400 hover:bg-amber-100"
+                            title="Attendance sheet must be approved before payroll can be computed"
+                          >
+                            Approve attendance <ArrowRight className="h-4 w-4" />
+                          </Link>
                         )}
 
                       </td>
