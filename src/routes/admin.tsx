@@ -234,9 +234,9 @@ function AdminLayout() {
 
   return (
     <div className="relative min-h-screen">
-      {/* Soft tinted canvas — alive but corporate */}
+      {/* Soft tinted canvas — clean glass backdrop, no grid */}
       <div className="pointer-events-none fixed inset-0 z-0 app-canvas" />
-      <div className="pointer-events-none fixed inset-0 z-0 app-canvas-grid" />
+
 
 
 
