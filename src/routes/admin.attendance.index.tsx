@@ -1,16 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { type ComponentType, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   ArrowRight,
   Building2,
+  CheckCircle2,
   ClipboardList,
+  Clock3,
   IndianRupee,
   MapPinned,
+  RotateCcw,
   Search,
   Users,
   X,
 } from "lucide-react";
+import { useCurrentPermissions } from "@/lib/rbac";
+import { logActivity } from "@/lib/activity-log";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -367,6 +373,54 @@ function AttendanceUnitsPage() {
   const employeesByCustomer = data?.employeesByCustomer ?? {};
   const summary = data?.summary ?? { organizations: 0, units: 0, activeEmployees: 0 };
 
+  const queryClient = useQueryClient();
+  const { can } = useCurrentPermissions();
+  const canApprove = can("attendance", "approve");
+
+  type SheetStatus = "draft" | "submitted" | "approved" | "rejected";
+  type SheetInfo = { id: string; unit_id: string; status: SheetStatus; period_start: string; period_end: string };
+  const { start: monthStartISO, end: monthEndISO } = monthRange(year, monthIdx);
+  const sheetsQK = ["attendance-sheets-index", monthStartISO, monthEndISO] as const;
+  const { data: sheetsByUnit } = useQuery({
+    queryKey: sheetsQK,
+    queryFn: async (): Promise<Map<string, SheetInfo>> => {
+      const { data: rows, error: e } = await supabase
+        .from("attendance_sheets" as never)
+        .select("id, unit_id, status, period_start, period_end")
+        .lte("period_start", monthEndISO)
+        .gte("period_end", monthStartISO);
+      if (e) throw e;
+      const map = new Map<string, SheetInfo>();
+      for (const r of ((rows ?? []) as unknown as SheetInfo[])) {
+        const existing = map.get(r.unit_id);
+        if (!existing || r.period_start > existing.period_start) map.set(r.unit_id, r);
+      }
+      return map;
+    },
+  });
+
+  const reopenSheet = useMutation({
+    mutationFn: async (sheet: SheetInfo) => {
+      const { error } = await supabase
+        .from("attendance_sheets" as never)
+        .update({ status: "draft", rejection_reason: "" } as never)
+        .eq("id", sheet.id);
+      if (error) throw error;
+      void logActivity({
+        module: "Attendance",
+        action: "reopen",
+        entityType: "attendance_sheets",
+        entityLabel: `${sheet.unit_id} ${sheet.period_start} → ${sheet.period_end}`,
+        details: { unit_id: sheet.unit_id, period_start: sheet.period_start, period_end: sheet.period_end, status: "draft" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: sheetsQK });
+      toast.success("Reopened for editing");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to reopen"),
+  });
+
 
   const selectedClient = orgFilter !== "all" ? organizations.find((o) => o.id === orgFilter) ?? null : null;
   const clientEmployees = useMemo(() => {
@@ -591,30 +645,43 @@ function AttendanceUnitsPage() {
                 <th className="px-5 py-4 font-medium">Location</th>
                 <th className="px-5 py-4 font-medium">Security guards</th>
                 <th className="px-5 py-4 text-right font-medium">Active</th>
+                <th className="px-5 py-4 font-medium">Status</th>
                 <th className="px-5 py-4 text-right font-medium">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     Loading attendance units…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-destructive">
+                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-destructive">
                     {error instanceof Error ? error.message : "Could not load attendance units right now."}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     {units.length === 0 ? "No units with active contracts yet." : "No units match the current filters."}
                   </td>
                 </tr>
               ) : (
-                filtered.map((unit) => (
+                filtered.map((unit) => {
+                  const sheet = sheetsByUnit?.get(unit.id) ?? null;
+                  const sheetStatus: SheetStatus | "none" = sheet?.status ?? "none";
+                  const statusBadge = (() => {
+                    if (sheetStatus === "approved")
+                      return { label: "Approved", cls: "border-emerald-300/60 bg-emerald-100/70 text-emerald-800", Icon: CheckCircle2 };
+                    if (sheetStatus === "submitted")
+                      return { label: "Awaiting approval", cls: "border-amber-300/60 bg-amber-100/70 text-amber-800", Icon: Clock3 };
+                    if (sheetStatus === "rejected")
+                      return { label: "Rejected — open", cls: "border-rose-300/60 bg-rose-100/70 text-rose-800", Icon: ClipboardList };
+                    return { label: "Open", cls: "border-sky-300/60 bg-sky-100/70 text-sky-800", Icon: ClipboardList };
+                  })();
+                  return (
                   <tr key={unit.id} className="group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5">
                     <td className="px-5 py-4 align-top">
                       <div className="flex items-start gap-3">
@@ -641,9 +708,6 @@ function AttendanceUnitsPage() {
                               </span>
                             )}
                           </div>
-                          <div className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                            <ClipboardList className="h-3 w-3" /> Attendance ready
-                          </div>
                         </div>
                       </div>
                     </td>
@@ -658,18 +722,46 @@ function AttendanceUnitsPage() {
                       </div>
                       <div className="text-xs text-muted-foreground">employees</div>
                     </td>
+                    <td className="px-5 py-4 align-top">
+                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusBadge.cls}`}>
+                        <statusBadge.Icon className="h-3.5 w-3.5" /> {statusBadge.label}
+                      </span>
+                    </td>
                     <td className="px-5 py-4 text-right align-top">
-                      <Link
-                        to="/admin/attendance/$unitId"
-                        params={{ unitId: unit.id }}
-                        search={{ month: monthIdx, year }}
-                        className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/50 hover:text-accent"
-                      >
-                        Open roll <ArrowRight className="h-4 w-4" />
-                      </Link>
+                      {sheetStatus === "approved" ? (
+                        canApprove ? (
+                          <button
+                            type="button"
+                            onClick={() => sheet && reopenSheet.mutate(sheet)}
+                            disabled={!sheet || reopenSheet.isPending}
+                            className="inline-flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 transition hover:border-amber-400 hover:bg-amber-100 disabled:opacity-60"
+                          >
+                            <RotateCcw className="h-4 w-4" /> Reopen
+                          </button>
+                        ) : (
+                          <Link
+                            to="/admin/attendance/$unitId"
+                            params={{ unitId: unit.id }}
+                            search={{ month: monthIdx, year }}
+                            className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition hover:border-accent/50 hover:text-accent"
+                          >
+                            View roll <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        )
+                      ) : (
+                        <Link
+                          to="/admin/attendance/$unitId"
+                          params={{ unitId: unit.id }}
+                          search={{ month: monthIdx, year }}
+                          className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/50 hover:text-accent"
+                        >
+                          Open roll <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      )}
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
