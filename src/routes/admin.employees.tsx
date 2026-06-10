@@ -1681,7 +1681,7 @@ function EmployeesPage() {
         crumbs={[{ label: "Employees" }]}
       />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         {(tab === "employee"
           ? [
               { label: "Total", value: stats.empTotal, accent: false as const, dot: "bg-stone-400", tone: "neutral" as const },
@@ -1717,7 +1717,7 @@ function EmployeesPage() {
           <div
             key={s.label}
             className={cn(
-              "group relative overflow-hidden rounded-2xl border p-6 shadow-sm transition-all hover:shadow-md",
+              "group relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md",
               isAlert
                 ? "border-rose-300/70 bg-rose-50/70 backdrop-blur-md"
                 : s.accent
@@ -1725,10 +1725,10 @@ function EmployeesPage() {
                 : "border-border/60 bg-card/80 backdrop-blur-md",
             )}
           >
-            <div className="relative z-10 flex items-start justify-between">
+            <div className="relative z-10 flex items-start justify-between gap-2">
               <p
                 className={cn(
-                  "text-[10px] font-bold uppercase tracking-[0.2em] transition-colors",
+                  "truncate text-[10px] font-bold uppercase tracking-[0.18em] transition-colors",
                   isAlert
                     ? "text-rose-700"
                     : s.accent
@@ -1739,20 +1739,21 @@ function EmployeesPage() {
                 {s.label}
               </p>
               {(isAlert || (s.accent && s.value > 0)) && (
-                <span className="relative flex h-2 w-2">
+                <span className="relative flex h-2 w-2 shrink-0">
                   <span className={cn("absolute inline-flex h-full w-full animate-ping rounded-full opacity-60", isAlert ? "bg-rose-400" : "bg-amber-400")} />
                   <span className={cn("relative inline-flex h-2 w-2 rounded-full", s.dot)} />
                 </span>
               )}
             </div>
-            <p className="relative z-10 mt-3 text-4xl font-bold tabular-nums text-foreground">
+            <p className="relative z-10 mt-2 text-[28px] font-bold leading-none tabular-nums text-foreground">
               {s.value}
-              {suffix && <span className="ml-1 text-base font-medium text-muted-foreground">{suffix}</span>}
+              {suffix && <span className="ml-1 text-sm font-medium text-muted-foreground">{suffix}</span>}
             </p>
             {(isAlert || s.accent) && (
               <div className={cn("pointer-events-none absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl", isAlert ? "bg-rose-200/40" : "bg-amber-200/30")} />
             )}
           </div>
+
           );
         })}
       </div>
