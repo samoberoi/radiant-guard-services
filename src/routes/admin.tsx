@@ -11,6 +11,8 @@ import {
   Building2,
   Boxes,
   ChevronDown,
+  ChevronsLeft,
+  ChevronsRight,
   ClipboardList,
   Wallet,
   FileText,
@@ -33,7 +35,6 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/BrandMark";
 import { NotificationBell } from "@/components/NotificationBell";
 import {
@@ -63,13 +64,9 @@ type GroupItem = {
   key: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  /** module key for RBAC `can()`. Group hidden if user can't view. */
   module?: string;
-  /** Single link group (no dropdown) */
   to?: string;
-  /** Dropdown children */
   children?: LeafItem[];
-  /** Active path prefixes */
   activePrefixes?: string[];
 };
 
@@ -127,8 +124,8 @@ function AdminLayout() {
     roleKey === "field_officer" && !isSuperAdmin ? "/admin/field-dashboard" : "/admin/dashboard";
 
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
-  // Path → module map for RBAC redirects (unchanged behavior).
   const pathToModule: { prefix: string; module: string }[] = [
     { prefix: "/admin/customers", module: "organizations" },
     { prefix: "/admin/contracts", module: "contracts" },
@@ -196,13 +193,11 @@ function AdminLayout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, permsLoading, isSuperAdmin, isReady]);
 
-  // Auth guard — wait for hydration; if no token in storage, kick to login.
   useEffect(() => {
     if (!isReady) return;
     if (!user) navigate({ to: "/login", replace: true });
   }, [user, isReady, navigate]);
 
-  // Close mobile drawer on route change
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
@@ -234,157 +229,142 @@ function AdminLayout() {
   const isGroupActive = (g: GroupItem) =>
     (g.activePrefixes ?? []).some((p) => pathname === p || pathname.startsWith(p + "/"));
 
+  const sidebarWidth = collapsed ? "lg:w-[76px]" : "lg:w-[260px]";
+  const mainPad = collapsed ? "lg:pl-[76px]" : "lg:pl-[260px]";
+
   return (
     <div className="relative min-h-screen bg-background">
-      <div className="ambient-glow pointer-events-none absolute inset-0" />
+      {/* Ambient iOS-style aurora background */}
+      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+        <div className="absolute -top-40 -left-32 h-[480px] w-[480px] rounded-full bg-[oklch(0.7_0.18_262/0.35)] blur-3xl" />
+        <div className="absolute top-1/3 -right-32 h-[520px] w-[520px] rounded-full bg-[oklch(0.78_0.14_310/0.28)] blur-3xl" />
+        <div className="absolute bottom-0 left-1/3 h-[440px] w-[440px] rounded-full bg-[oklch(0.82_0.12_200/0.3)] blur-3xl" />
+      </div>
 
-      {/* Top nav bar */}
-      <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-        <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center gap-3 px-4 sm:px-6 lg:px-8">
-          {/* Brand */}
-          <Link to={dashboardHref} className="flex shrink-0 items-center gap-2">
-            <BrandMark className="min-w-0" />
-          </Link>
+      {/* Desktop vertical sidebar — glass / iPadOS */}
+      <aside
+        className={cn(
+          "fixed inset-y-3 left-3 z-30 hidden flex-col rounded-3xl border border-white/40 bg-white/55 shadow-[0_8px_40px_-12px_rgba(15,23,42,0.18)] backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex",
+          sidebarWidth,
+        )}
+      >
+        {/* Brand */}
+        <div className={cn("flex items-center gap-2 px-4 pt-5 pb-4", collapsed && "justify-center px-2")}>
+          {collapsed ? (
+            <Link to={dashboardHref} className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground font-bold">
+              R
+            </Link>
+          ) : (
+            <Link to={dashboardHref} className="flex min-w-0 items-center gap-2">
+              <BrandMark />
+            </Link>
+          )}
+        </div>
 
-          {/* Desktop top nav */}
-          <nav className="scrollbar-hide ml-3 hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto lg:flex">
-            {visibleGroups.map((g) => {
-              const active = isGroupActive(g);
-              if (!g.children || g.children.length === 0) {
-                return (
-                  <Link
-                    key={g.key}
-                    to={g.to!}
-                    className={cn(
-                      "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px] font-semibold transition-colors",
-                      active
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-foreground/70 hover:bg-secondary hover:text-foreground",
-                    )}
-                  >
-                    <g.icon className="h-4 w-4" />
-                    {g.label}
-                  </Link>
-                );
-              }
-              return (
-                <DropdownMenu key={g.key}>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className={cn(
-                        "inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[13px] font-semibold transition-colors focus:outline-none",
-                        active
-                          ? "bg-primary text-primary-foreground shadow-sm"
-                          : "text-foreground/70 hover:bg-secondary hover:text-foreground",
-                      )}
-                    >
-                      <g.icon className="h-4 w-4" />
-                      {g.label}
-                      <ChevronDown className="h-3.5 w-3.5 opacity-70" />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="start"
-                    sideOffset={8}
-                    className="w-60 rounded-xl border-border p-1.5"
-                  >
-                    <DropdownMenuLabel className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                      {g.label}
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {g.children.map((c) => {
-                      const a = isActive(c.to);
-                      return (
-                        <DropdownMenuItem key={c.to} asChild className="rounded-lg p-0">
-                          <Link
-                            to={c.to}
-                            search={c.search as never}
-                            className={cn(
-                              "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm",
-                              a
-                                ? "bg-primary text-primary-foreground"
-                                : "text-foreground hover:bg-secondary",
-                            )}
-                          >
-                            <c.icon className="h-4 w-4 opacity-80" />
-                            <span className="truncate">{c.label}</span>
-                          </Link>
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              );
-            })}
-          </nav>
-
-          {/* Right cluster */}
-          <div className="ml-auto flex items-center gap-2">
-            <NotificationBell />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  className="flex h-9 items-center gap-2 rounded-full border border-border bg-card pl-1 pr-3 text-sm font-semibold text-foreground hover:bg-secondary"
-                >
-                  <span className="grid h-7 w-7 place-items-center rounded-full bg-primary text-primary-foreground text-[11px] font-bold">
-                    {(user?.phone ?? "U").slice(-2)}
-                  </span>
-                  <span className="hidden max-w-[140px] truncate sm:inline">
-                    {user?.phone ? maskPhone(user.phone) : "Account"}
-                  </span>
-                  <ChevronDown className="hidden h-3.5 w-3.5 opacity-70 sm:inline" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" sideOffset={8} className="w-56 rounded-xl">
-                <DropdownMenuLabel>
-                  <div className="text-sm font-semibold text-foreground">
-                    {user?.phone ? maskPhone(user.phone) : "Account"}
-                  </div>
-                  <div className="text-xs text-muted-foreground capitalize">{user?.role?.replace("_", " ")}</div>
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link to="/admin/profile" className="flex items-center gap-2">
-                    <Users className="h-4 w-4" /> My Profile
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link to="/admin/notifications" className="flex items-center gap-2">
-                    <Bell className="h-4 w-4" /> Notifications
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
-                  <LogOut className="mr-2 h-4 w-4" /> Sign out
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <button
-              type="button"
-              onClick={() => setMobileOpen(true)}
-              className="grid h-9 w-9 place-items-center rounded-full border border-border bg-card text-foreground hover:bg-secondary lg:hidden"
-              aria-label="Open menu"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
+        {/* Nav */}
+        <nav className="scrollbar-hide flex-1 overflow-y-auto px-3 pb-3">
+          <div className="space-y-1">
+            {visibleGroups.map((g) => (
+              <SidebarGroup
+                key={g.key}
+                group={g}
+                collapsed={collapsed}
+                isActive={isActive}
+                groupActive={isGroupActive(g)}
+              />
+            ))}
           </div>
+        </nav>
+
+        {/* Footer: user + collapse */}
+        <div className="border-t border-white/40 p-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-2xl border border-white/40 bg-white/60 p-2 text-sm font-semibold text-foreground transition hover:bg-white/80",
+                  collapsed && "justify-center p-1.5",
+                )}
+              >
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground text-[11px] font-bold">
+                  {(user?.phone ?? "U").slice(-2)}
+                </span>
+                {!collapsed && (
+                  <>
+                    <span className="min-w-0 flex-1 truncate text-left text-[13px]">
+                      {user?.phone ? maskPhone(user.phone) : "Account"}
+                    </span>
+                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                  </>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" side="right" sideOffset={10} className="w-56 rounded-2xl">
+              <DropdownMenuLabel>
+                <div className="text-sm font-semibold">{user?.phone ? maskPhone(user.phone) : "Account"}</div>
+                <div className="text-xs text-muted-foreground capitalize">{user?.role?.replace("_", " ")}</div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link to="/admin/profile" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" /> My Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/admin/notifications" className="flex items-center gap-2">
+                  <Bell className="h-4 w-4" /> Notifications
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" /> Sign out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <button
+            type="button"
+            onClick={() => setCollapsed((v) => !v)}
+            className={cn(
+              "mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-muted-foreground hover:bg-white/60 hover:text-foreground",
+            )}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><ChevronsLeft className="h-4 w-4" /> Collapse</>}
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile top bar */}
+      <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-white/40 bg-white/60 px-4 backdrop-blur-2xl backdrop-saturate-150 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="grid h-9 w-9 place-items-center rounded-xl border border-white/50 bg-white/70 text-foreground"
+          aria-label="Open menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <Link to={dashboardHref} className="ml-1 flex min-w-0 items-center gap-2">
+          <BrandMark />
+        </Link>
+        <div className="ml-auto flex items-center gap-2">
+          <NotificationBell />
         </div>
       </header>
 
-      {/* Mobile sheet */}
+      {/* Mobile drawer */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute inset-y-0 right-0 w-[86%] max-w-sm overflow-y-auto bg-card p-4 shadow-xl">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute inset-y-2 left-2 w-[86%] max-w-sm overflow-y-auto rounded-3xl border border-white/40 bg-white/80 p-4 shadow-2xl backdrop-blur-2xl">
             <div className="mb-4 flex items-center justify-between">
               <BrandMark />
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="rounded-md p-1.5 text-foreground hover:bg-secondary"
+                className="grid h-9 w-9 place-items-center rounded-xl bg-white/70 text-foreground"
                 aria-label="Close menu"
               >
                 <X className="h-5 w-5" />
@@ -394,23 +374,23 @@ function AdminLayout() {
               {visibleGroups.map((g) => (
                 <MobileGroup key={g.key} group={g} isActive={isActive} isGroupActive={isGroupActive(g)} />
               ))}
-              <div className="my-2 border-t border-border" />
+              <div className="my-2 border-t border-white/40" />
               <Link
                 to="/admin/profile"
-                className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-secondary"
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-white/70"
               >
                 <Users className="h-4 w-4" /> My Profile
               </Link>
               <Link
                 to="/admin/notifications"
-                className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-secondary"
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-white/70"
               >
                 <Bell className="h-4 w-4" /> Notifications
               </Link>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-destructive hover:bg-destructive/10"
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-destructive hover:bg-destructive/10"
               >
                 <LogOut className="h-4 w-4" /> Sign out
               </button>
@@ -419,9 +399,140 @@ function AdminLayout() {
         </div>
       )}
 
-      <main className="relative z-10 mx-auto max-w-[1600px] flex-1 px-4 py-6 sm:px-6 lg:px-8">
-        <Outlet />
+      {/* Main */}
+      <main className={cn("relative z-10 px-4 py-6 sm:px-6 lg:py-8 lg:pr-6", mainPad)}>
+        {/* Desktop top utility bar (notifications) */}
+        <div className="mb-4 hidden items-center justify-end gap-2 lg:flex">
+          <NotificationBell />
+        </div>
+        <div className="mx-auto max-w-[1500px]">
+          <Outlet />
+        </div>
       </main>
+    </div>
+  );
+}
+
+function SidebarGroup({
+  group,
+  collapsed,
+  isActive,
+  groupActive,
+}: {
+  group: GroupItem;
+  collapsed: boolean;
+  isActive: (p: string) => boolean;
+  groupActive: boolean;
+}) {
+  const [open, setOpen] = useState(groupActive);
+  const Icon = group.icon;
+
+  useEffect(() => {
+    if (groupActive) setOpen(true);
+  }, [groupActive]);
+
+  const itemBase =
+    "group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] font-semibold transition-all";
+  const itemIdle = "text-foreground/75 hover:bg-white/70 hover:text-foreground";
+  const itemActive =
+    "bg-gradient-to-b from-white to-white/70 text-primary shadow-[0_2px_8px_-2px_rgba(15,23,42,0.12)] ring-1 ring-white/80";
+
+  if (!group.children || group.children.length === 0) {
+    return (
+      <Link
+        to={group.to!}
+        title={collapsed ? group.label : undefined}
+        className={cn(itemBase, groupActive ? itemActive : itemIdle, collapsed && "justify-center px-2")}
+      >
+        <span
+          className={cn(
+            "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors",
+            groupActive ? "bg-primary text-primary-foreground" : "bg-white/70 text-foreground/70 group-hover:bg-white",
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+        {!collapsed && <span className="truncate">{group.label}</span>}
+      </Link>
+    );
+  }
+
+  if (collapsed) {
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            title={group.label}
+            className={cn(itemBase, "justify-center px-2", groupActive ? itemActive : itemIdle)}
+          >
+            <span
+              className={cn(
+                "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors",
+                groupActive ? "bg-primary text-primary-foreground" : "bg-white/70 text-foreground/70",
+              )}
+            >
+              <Icon className="h-4 w-4" />
+            </span>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="right" sideOffset={12} className="w-60 rounded-2xl">
+          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+            {group.label}
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {group.children.map((c) => (
+            <DropdownMenuItem key={c.to} asChild>
+              <Link to={c.to} search={c.search as never} className="flex items-center gap-2">
+                <c.icon className="h-4 w-4 opacity-80" />
+                <span className="truncate">{c.label}</span>
+              </Link>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={cn(itemBase, groupActive ? itemActive : itemIdle)}
+      >
+        <span
+          className={cn(
+            "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors",
+            groupActive ? "bg-primary text-primary-foreground" : "bg-white/70 text-foreground/70 group-hover:bg-white",
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+        <span className="flex-1 truncate text-left">{group.label}</span>
+        <ChevronDown className={cn("h-4 w-4 opacity-60 transition-transform", open ? "rotate-0" : "-rotate-90")} />
+      </button>
+      {open && (
+        <div className="mt-1 ml-4 space-y-0.5 border-l border-white/60 pl-3">
+          {group.children.map((c) => {
+            const a = isActive(c.to);
+            return (
+              <Link
+                key={c.to}
+                to={c.to}
+                search={c.search as never}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl px-3 py-2 text-[12.5px] font-medium transition-colors",
+                  a ? "bg-white text-primary shadow-sm ring-1 ring-white/80" : "text-foreground/70 hover:bg-white/60 hover:text-foreground",
+                )}
+              >
+                <c.icon className="h-3.5 w-3.5 opacity-80" />
+                <span className="truncate">{c.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -442,10 +553,8 @@ function MobileGroup({
       <Link
         to={group.to!}
         className={cn(
-          "flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
-          isGroupActive
-            ? "bg-primary text-primary-foreground"
-            : "text-foreground hover:bg-secondary",
+          "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+          isGroupActive ? "bg-white text-primary shadow-sm" : "text-foreground hover:bg-white/70",
         )}
       >
         <Icon className="h-4 w-4" />
@@ -459,10 +568,8 @@ function MobileGroup({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={cn(
-          "flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm font-semibold transition-colors",
-          isGroupActive
-            ? "bg-primary text-primary-foreground"
-            : "text-foreground hover:bg-secondary",
+          "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+          isGroupActive ? "bg-white text-primary shadow-sm" : "text-foreground hover:bg-white/70",
         )}
       >
         <Icon className="h-4 w-4" />
@@ -480,7 +587,7 @@ function MobileGroup({
                 search={c.search as never}
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium",
-                  a ? "bg-primary text-primary-foreground" : "text-foreground/80 hover:bg-secondary",
+                  a ? "bg-white text-primary shadow-sm" : "text-foreground/80 hover:bg-white/60",
                 )}
               >
                 <c.icon className="h-4 w-4 opacity-80" />
