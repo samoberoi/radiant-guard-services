@@ -1374,7 +1374,7 @@ function EmployeesPage() {
             <td className="px-2.5 py-2.5 text-sm text-muted-foreground max-w-[200px]"><span className="truncate block" title={c.email ?? ""}>{c.email || "—"}</span></td>
           )}
           {(mode === "candidate" || columnsVisible.unit) && (
-            <td className="px-2.5 py-2.5 max-w-[180px]">
+            <td className="px-2.5 py-2.5 max-w-[150px]">
               {unit ? (
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-foreground" title={unit.name}>{unit.name}</div>
@@ -1386,7 +1386,7 @@ function EmployeesPage() {
             </td>
           )}
           {(mode === "candidate" || columnsVisible.designation) && (
-            <td className="px-2.5 py-2.5 text-sm text-muted-foreground max-w-[140px]"><span className="line-clamp-2" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
+            <td className="px-2.5 py-2.5 text-sm text-muted-foreground max-w-[120px]"><span className="line-clamp-2" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
           )}
           {mode === "employee" && columnsVisible.dob && (
             <td className="px-2.5 py-2.5 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(c.date_of_birth)}</td>
@@ -1510,8 +1510,9 @@ function EmployeesPage() {
               );
             })()}
           </td>
-          <td className="px-4 py-5">
-            <div className="flex items-center justify-end gap-1.5">
+          <td className="px-2.5 py-2.5">
+            <div className="flex items-center justify-end gap-1">
+
               {mode === "candidate" && c.status === "pending" && (
                 <>
                   <Button
@@ -1559,7 +1560,7 @@ function EmployeesPage() {
                   </Button>
                 </>
               )}
-              <div className="ml-0.5 flex items-center gap-1 border-l border-border/60 pl-1.5">
+              <div className="ml-0.5 flex items-center gap-0.5 border-l border-border/60 pl-1">
                 <Button
                   asChild
                   variant="ghost"
