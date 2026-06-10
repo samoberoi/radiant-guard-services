@@ -253,7 +253,7 @@ function UnitRow({ unit }: { unit: UnitNode }) {
           {unit.guards.length === 0 ? (
             <div className="py-3 text-sm text-muted-foreground">No active guards on this unit yet.</div>
           ) : (
-            <table className="min-w-full table-auto text-sm">
+            <table className="ios-table min-w-full table-auto text-sm">
               <thead className="text-left text-[11px] uppercase tracking-wide text-muted-foreground">
                 <tr><th className="py-2 pr-4">Name</th><th className="py-2 pr-4">Designation</th><th className="py-2">Mobile</th></tr>
               </thead>

@@ -640,7 +640,7 @@ function UnitMappingSection({ candidateId, primaryUnitId }: { candidateId: strin
         </div>
       ) : (
         <div className="overflow-hidden rounded-md border">
-          <table className="w-full text-sm">
+          <table className="ios-table w-full text-sm">
             <thead className="bg-muted/50 text-xs uppercase text-muted-foreground">
               <tr>
                 <th className="px-3 py-2 text-left">Code</th>
