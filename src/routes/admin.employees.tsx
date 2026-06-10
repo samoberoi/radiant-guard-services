@@ -536,8 +536,16 @@ function EmployeesPage() {
   const candidatesError = candidatesQuery.error;
   const qc = useQueryClient();
 
+  const { roleKey, isSuperAdmin } = useCurrentPermissions();
+  const isFieldOfficer = roleKey === "field_officer" && !isSuperAdmin;
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
+  }, []);
+
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"employee" | "candidate">("employee");
+  const [tab, setTab] = useState<"employee" | "candidate">(isFieldOfficer ? "candidate" : "employee");
+  useEffect(() => { if (isFieldOfficer && tab !== "candidate") setTab("candidate"); }, [isFieldOfficer, tab]);
   const [viewMode, setViewMode] = useState<"list" | "tree">("list");
   const [openWizard, setOpenWizard] = useState(false);
   const [editing, setEditing] = useState<Candidate | null>(null);
