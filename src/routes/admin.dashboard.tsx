@@ -14,7 +14,14 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentPermissions } from "@/lib/rbac";
-import { fmtINR } from "@/lib/payroll-calc";
+import {
+  fmtINR,
+  computeAttendanceTotals,
+  computeWages,
+  type AttendanceCodeLike,
+  type AttendanceEntryLike,
+  type ContractResourceLike,
+} from "@/lib/payroll-calc";
 
 export const Route = createFileRoute("/admin/dashboard")({
   component: DashboardPage,
