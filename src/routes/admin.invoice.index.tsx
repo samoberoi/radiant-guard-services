@@ -428,6 +428,7 @@ function PayrollUnitsPage() {
                 <th className="px-5 py-4 font-medium">Organization</th>
                 <th className="px-5 py-4 font-medium">Periods (status)</th>
                 <th className="px-5 py-4 text-right font-medium">Employees</th>
+                <th className="px-5 py-4 font-medium">Status</th>
                 <th className="px-5 py-4 text-right font-medium">Action</th>
 
               </tr>
@@ -435,25 +436,26 @@ function PayrollUnitsPage() {
             <tbody className="divide-y divide-border/50">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     Loading invoice units…
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-destructive">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-destructive">
                     {error instanceof Error ? error.message : "Could not load invoice units."}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     {units.length === 0
                       ? "No approved attendance sheets yet. Approve one in Attendance to unlock invoicing."
                       : "No units match the current filters."}
                   </td>
                 </tr>
               ) : (
+
                 filtered.map((unit) => {
                   const approvedLatest = unit.periods.find((p) => p.status === "approved");
                   const targetPeriod =
