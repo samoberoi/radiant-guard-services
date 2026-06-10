@@ -1299,8 +1299,8 @@ function EmployeesPage() {
   };
 
   const renderRows = (rows: CandidateListItem[], mode: "employee" | "candidate") => {
-    const empCols = 5 + Object.values(columnsVisible).filter(Boolean).length;
-    const candCols = 8;
+    const empCols = 4 + Object.values(columnsVisible).filter(Boolean).length;
+    const candCols = 7;
     if (isLoading) {
       return (
         <tr>
@@ -1347,7 +1347,7 @@ function EmployeesPage() {
             </span>
           </td>
           <td className="px-2.5 py-2.5 align-top">
-            <div className="flex items-center gap-3">
+            <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
               {c.photo_url ? (
                 <img
                   src={c.photo_url}
@@ -1365,23 +1365,35 @@ function EmployeesPage() {
                   {c.full_name || "—"}
                 </div>
                 <div className="truncate text-xs text-muted-foreground">{c.email || "—"}</div>
-                <div className="mt-1 space-y-1 text-xs text-muted-foreground 2xl:hidden">
-                  {(mode === "candidate" || columnsVisible.mobile) && <div className="truncate">{c.mobile || "—"}</div>}
+                <div className="mt-1 grid gap-x-5 gap-y-1 text-xs text-muted-foreground sm:grid-cols-2 2xl:hidden">
+                  {(mode === "candidate" || columnsVisible.mobile) && (
+                    <div className="truncate">
+                      <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">Mobile</span>
+                      {c.mobile || "—"}
+                    </div>
+                  )}
                   {(mode === "candidate" || columnsVisible.unit) && (
                     <div className="truncate" title={unit?.name ?? ""}>
+                      <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">Unit</span>
                       {unit?.name || "—"}
                     </div>
                   )}
                   {(mode === "candidate" || columnsVisible.designation) && (
                     <div className="truncate" title={desig?.name ?? ""}>
+                      <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">Designation</span>
                       {desig?.name || "—"}
+                    </div>
+                  )}
+                  {mode === "employee" && columnsVisible.role && (
+                    <div className="truncate">
+                      <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/75">Role</span>
+                      {rolesList.find((r) => r.key === c.role_key)?.name ?? c.role_key ?? "—"}
                     </div>
                   )}
                 </div>
               </div>
             </div>
           </td>
-          <td aria-hidden className="p-0" />
           {(mode === "candidate" || columnsVisible.mobile) && (
             <td className="hidden px-2.5 py-2.5 text-center text-sm font-medium text-muted-foreground 2xl:table-cell">{c.mobile || "—"}</td>
           )}
@@ -1526,12 +1538,6 @@ function EmployeesPage() {
             })()}
             {mode === "employee" && (
               <div className="mt-2 space-y-2 text-xs text-muted-foreground 2xl:hidden">
-                {columnsVisible.role && (
-                  <div className="truncate">
-                    <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Role</span>
-                    {rolesList.find((r) => r.key === c.role_key)?.name ?? c.role_key ?? "—"}
-                  </div>
-                )}
                 {columnsVisible.active && (
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Active</span>
@@ -1674,60 +1680,59 @@ function EmployeesPage() {
         <span className="inline-flex items-center gap-2"><span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">{rows.length}</span><span className="uppercase tracking-[0.14em] text-muted-foreground">Total {rows.length === 1 ? "row" : "rows"}</span></span>
       </div>
       <div className="w-full overflow-hidden">
-        <table className="ios-table table-fixed w-full text-sm xl:table-auto">
+        <table className="ios-table w-full table-fixed text-sm">
           <thead className="border-b border-border/60 bg-secondary/40">
             <tr>
-              <th className="w-[92px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="w-[112px] px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Emp ID" : "Code"}
               </th>
-              <th className="w-[320px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground xl:w-[380px]">
+              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Employee" : "Candidate"}
               </th>
-              <th aria-hidden className="p-0" />
               {(mode === "candidate" || columnsVisible.mobile) && (
-                <th className="hidden w-[128px] px-2.5 py-2.5 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
+                <th className="hidden w-[132px] px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
                   Mobile
                 </th>
               )}
               {mode === "employee" && columnsVisible.email && (
-                <th className="hidden w-[180px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
+                <th className="hidden w-[176px] px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
                   Email
                 </th>
               )}
               {(mode === "candidate" || columnsVisible.unit) && (
-                <th className="hidden w-[196px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
+                <th className="hidden w-[188px] px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
                   Unit
                 </th>
               )}
               {(mode === "candidate" || columnsVisible.designation) && (
-                <th className="hidden w-[160px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
+                <th className="hidden w-[154px] px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
                   Designation
                 </th>
               )}
               {mode === "employee" && columnsVisible.dob && (
-                <th className="hidden w-[128px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
+                <th className="hidden w-[124px] px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
                   Date of Birth
                 </th>
               )}
               {mode === "employee" && columnsVisible.doj && (
-                <th className="hidden w-[128px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
+                <th className="hidden w-[124px] px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
                   Date of Joining
                 </th>
               )}
               {mode === "employee" && columnsVisible.role && (
-                <th className="hidden w-[130px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
+                <th className="hidden w-[128px] px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
                   Role
                 </th>
               )}
               {mode === "employee" && columnsVisible.active && (
-                <th className="hidden w-[92px] px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
+                <th className="hidden w-[92px] px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground 2xl:table-cell">
                   Active
                 </th>
               )}
-              <th className="w-[140px] px-2.5 py-2.5 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="w-[132px] px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground xl:w-[144px]">
                 Status
               </th>
-              <th className="w-[124px] px-2.5 py-2.5 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground sm:w-[140px] xl:w-[156px]">
+              <th className="w-[104px] px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground sm:w-[116px] xl:w-[124px]">
                 Actions
               </th>
             </tr>
