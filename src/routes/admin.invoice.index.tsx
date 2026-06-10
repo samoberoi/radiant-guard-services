@@ -512,6 +512,17 @@ function PayrollUnitsPage() {
                         <div className="text-2xl font-semibold text-foreground">{unit.active_employee_count}</div>
                         <div className="text-xs text-muted-foreground">employees</div>
                       </td>
+                      <td className="px-5 py-4 align-top">
+                        {targetPeriod ? (
+                          <span className="inline-flex rounded-full border border-emerald-200/60 bg-emerald-100/60 px-2.5 py-1 text-[11px] font-medium text-emerald-800">
+                            Ready to invoice
+                          </span>
+                        ) : (
+                          <span className="inline-flex rounded-full border border-amber-200/60 bg-amber-100/60 px-2.5 py-1 text-[11px] font-medium text-amber-800">
+                            Awaiting approval
+                          </span>
+                        )}
+                      </td>
                       <td className="px-5 py-4 text-right align-top">
                         {targetPeriod ? (
                           <Link
@@ -523,10 +534,11 @@ function PayrollUnitsPage() {
                             Show invoice <ArrowRight className="h-4 w-4" />
                           </Link>
                         ) : (
-                          <span className="text-xs text-muted-foreground">Awaiting approval</span>
+                          <span className="text-xs text-muted-foreground">—</span>
                         )}
 
                       </td>
+
                     </tr>
                   );
                 })
