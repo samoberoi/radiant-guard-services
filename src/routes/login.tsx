@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Loader2, Phone, Home, MapPin } from "lucide-react";
+import { ArrowRight, Loader2, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +9,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { useAuth, verifyOtp, DEMO_OTP_HINT } from "@/lib/auth";
-import heroImage from "@/assets/login-hero.jpg";
+import characterImage from "@/assets/login-character.jpg";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -26,6 +26,9 @@ export const Route = createFileRoute("/login")({
 });
 
 type Step = "phone" | "otp";
+
+const BRAND = "#7ec242";
+const BRAND_DARK = "#5fa028";
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -97,12 +100,7 @@ function LoginPage() {
   }
 
   return (
-    <div
-      className="relative min-h-screen overflow-hidden bg-cover bg-center px-4 py-8 sm:px-8 sm:py-12"
-      style={{ backgroundImage: `url(${heroImage})` }}
-    >
-      <div className="absolute inset-0 bg-black/30" />
-
+    <div className="relative min-h-screen overflow-hidden bg-[#0d1f12] p-3 sm:p-6">
       {/* Reveal overlay */}
       <div
         className={`pointer-events-none absolute inset-0 z-50 origin-bottom bg-white transition-transform duration-[850ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${
@@ -110,31 +108,51 @@ function LoginPage() {
         }`}
       />
 
-      <div className="relative z-10 mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl items-center justify-center">
-        <div className="grid w-full overflow-hidden rounded-[32px] bg-white shadow-[0_40px_120px_-30px_rgba(0,0,0,0.5)] md:grid-cols-2">
-          {/* LEFT — form */}
-          <div className="flex flex-col px-6 py-10 sm:px-12 sm:py-14">
-            <div className="mb-8 text-center">
-              <div className="font-display text-xl font-semibold tracking-tight text-[#2f6b53]">
+      <div className="mx-auto grid min-h-[calc(100vh-1.5rem)] max-w-[1280px] overflow-hidden rounded-[28px] bg-[#c6e8b3] shadow-[0_30px_80px_-30px_rgba(0,0,0,0.4)] md:grid-cols-[1.05fr_1fr]">
+        {/* LEFT — illustration */}
+        <div className="relative hidden min-h-[560px] md:block">
+          <img
+            src={characterImage}
+            alt="Radiant Guard mascot"
+            className="absolute inset-0 h-full w-full object-cover"
+            width={1024}
+            height={1280}
+          />
+        </div>
+
+        {/* RIGHT — white form card */}
+        <div className="relative flex items-center justify-center bg-white p-6 sm:p-10 md:rounded-l-[28px]">
+          <div className="w-full max-w-[420px]">
+            {/* Logo */}
+            <div className="mb-8 flex items-center justify-center gap-2">
+              <span
+                className="grid h-9 w-9 place-items-center rounded-lg text-white"
+                style={{ background: BRAND }}
+              >
+                <Shield className="h-5 w-5" />
+              </span>
+              <span className="font-display text-2xl font-bold tracking-tight text-neutral-900">
                 radiant
-              </div>
+              </span>
             </div>
 
-            <div className="mb-8 text-center">
-              <h1 className="font-display text-[34px] font-extrabold leading-[1.1] tracking-tight text-neutral-900 sm:text-[42px]">
-                {step === "phone" ? (
-                  <>Start your<br />perfect shift</>
-                ) : (
-                  <>Verify it's<br />really you</>
-                )}
-              </h1>
-            </div>
+            {/* Heading */}
+            <h1 className="mb-10 text-center font-display text-[44px] font-extrabold leading-[1.05] tracking-tight text-neutral-900 sm:text-[52px]">
+              {step === "phone" ? (
+                <>
+                  Sign
+                  <br />
+                  in
+                </>
+              ) : (
+                <>Verify OTP</>
+              )}
+            </h1>
 
             {step === "phone" ? (
               <form onSubmit={sendOtp} className="space-y-4">
                 <div className="relative">
-                  <Phone className="pointer-events-none absolute left-5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
-                  <span className="pointer-events-none absolute left-12 top-1/2 -translate-y-1/2 text-sm font-medium text-neutral-500">
+                  <span className="pointer-events-none absolute left-6 top-1/2 -translate-y-1/2 text-[15px] font-medium text-neutral-400">
                     +91
                   </span>
                   <input
@@ -146,32 +164,29 @@ function LoginPage() {
                     onChange={(e) =>
                       setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
                     }
-                    className="h-14 w-full rounded-full bg-neutral-100 pl-[5.25rem] pr-5 text-[15px] text-neutral-900 placeholder:text-neutral-500 focus:bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-[#2f6b53]/30"
+                    className="h-14 w-full rounded-full border border-neutral-200 bg-white pl-16 pr-5 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus:border-[color:var(--brand)] focus:outline-none focus:ring-4 focus:ring-[color:var(--brand)]/15"
+                    style={{ ["--brand" as any]: BRAND }}
                   />
-                </div>
-
-                <div className="rounded-full bg-neutral-100 px-5 py-3.5 text-[13px] text-neutral-500">
-                  We'll text a 6-digit code — no password needed
                 </div>
 
                 <Button
                   type="submit"
                   disabled={!phoneValid || sending}
-                  className="group h-14 w-full rounded-full bg-[#2f6b53] text-[15px] font-semibold text-white shadow-[0_10px_30px_-10px_rgba(47,107,83,0.6)] transition-all hover:bg-[#275a46] disabled:opacity-50"
+                  className="group h-14 w-full rounded-full text-[15px] font-semibold text-white shadow-[0_10px_24px_-8px_rgba(126,194,66,0.55)] transition-all hover:opacity-95 disabled:opacity-50"
+                  style={{ background: BRAND }}
                 >
                   {sending ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
                   ) : (
                     <>
-                      Start
+                      Send OTP
                       <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                     </>
                   )}
                 </Button>
 
                 <p className="pt-2 text-center text-[13px] text-neutral-500">
-                  New here?{" "}
-                  <span className="font-semibold text-neutral-900">Request access</span>
+                  We'll text a 6-digit code — no password needed
                 </p>
               </form>
             ) : (
@@ -195,7 +210,7 @@ function LoginPage() {
                         <InputOTPSlot
                           key={i}
                           index={i}
-                          className="h-14 w-12 rounded-2xl border-0 bg-neutral-100 text-xl font-bold text-neutral-900 first:rounded-l-2xl last:rounded-r-2xl data-[active=true]:bg-neutral-50 data-[active=true]:ring-2 data-[active=true]:ring-[#2f6b53]/40"
+                          className="h-14 w-12 rounded-2xl border border-neutral-200 bg-white text-xl font-bold text-neutral-900 first:rounded-l-2xl last:rounded-r-2xl"
                         />
                       ))}
                     </InputOTPGroup>
@@ -218,7 +233,8 @@ function LoginPage() {
                 <Button
                   onClick={() => handleVerify()}
                   disabled={otp.length !== 6 || verifying}
-                  className="h-14 w-full rounded-full bg-[#2f6b53] text-[15px] font-semibold text-white hover:bg-[#275a46] disabled:opacity-50"
+                  className="h-14 w-full rounded-full text-[15px] font-semibold text-white hover:opacity-95 disabled:opacity-50"
+                  style={{ background: BRAND }}
                 >
                   {verifying ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -243,51 +259,34 @@ function LoginPage() {
                     type="button"
                     disabled={resendIn > 0 || sending}
                     onClick={() => sendOtp()}
-                    className="font-semibold text-[#2f6b53] hover:opacity-80 disabled:cursor-not-allowed disabled:text-neutral-400"
+                    className="font-semibold hover:opacity-80 disabled:cursor-not-allowed disabled:text-neutral-400"
+                    style={{ color: BRAND_DARK }}
                   >
                     {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend OTP"}
                   </button>
                 </div>
               </div>
             )}
-          </div>
 
-          {/* RIGHT — hero image with floating pills */}
-          <div className="relative hidden min-h-[560px] overflow-hidden md:block">
-            <img
-              src={heroImage}
-              alt="Mountain trail"
-              className="absolute inset-0 h-full w-full object-cover"
-              width={1024}
-              height={1280}
-            />
-            <div className="absolute inset-0 bg-gradient-to-br from-black/10 via-transparent to-black/20" />
-
-            {/* Pill: Site */}
-            <div className="absolute left-8 top-12 flex items-center gap-2 rounded-full bg-white/25 px-3 py-2 pr-4 text-white shadow-lg backdrop-blur-md">
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-white/30">
-                <Home className="h-4 w-4" />
-              </span>
-              <div className="leading-tight">
-                <div className="text-[10px] opacity-80">Sector 21</div>
-                <div className="text-sm font-semibold">Aurora Tower</div>
-              </div>
-            </div>
-
-            {/* Pill: Stats */}
-            <div className="absolute right-8 top-1/3 rounded-2xl bg-white/25 px-4 py-3 text-white shadow-lg backdrop-blur-md">
-              <div className="text-base font-bold leading-none">12 guards</div>
-              <div className="mt-1 text-[11px] leading-tight opacity-85">
-                on duty
-                <br />right now
-              </div>
-            </div>
-
-            {/* Pill: Route label */}
-            <div className="absolute bottom-12 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-medium text-neutral-900 shadow-lg">
-              <MapPin className="h-3.5 w-3.5 text-[#2f6b53]" />
-              Patrol Route A
-            </div>
+            {step === "phone" && (
+              <p className="mt-10 text-center text-[13px] text-neutral-500">
+                By signing in you agree to Radiant's{" "}
+                <span
+                  className="font-semibold"
+                  style={{ color: BRAND_DARK }}
+                >
+                  Terms of Service
+                </span>{" "}
+                and{" "}
+                <span
+                  className="font-semibold"
+                  style={{ color: BRAND_DARK }}
+                >
+                  Privacy Policy
+                </span>
+                .
+              </p>
+            )}
           </div>
         </div>
       </div>
