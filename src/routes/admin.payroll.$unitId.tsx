@@ -1,11 +1,23 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, Download } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { ChevronLeft, Download, CheckCircle2, XCircle, Send, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentPermissions } from "@/lib/rbac";
+import { logActivity } from "@/lib/activity-log";
 import {
   computeAttendanceTotals,
   computeWages,
@@ -88,6 +100,76 @@ function PayrollUnitPage() {
         .maybeSingle();
       return data as unknown as { status: string; approved_at: string | null } | null;
     },
+  });
+
+  const queryClient = useQueryClient();
+  const { can } = useCurrentPermissions();
+  const canApprove = can("payroll", "approve");
+
+  type RunStatus = "draft" | "submitted" | "approved" | "rejected";
+  type RunRow = { id: string; status: RunStatus; rejection_reason: string | null };
+  const runQK = ["payroll-run", unitId, start, end];
+  const { data: run } = useQuery({
+    queryKey: runQK,
+    queryFn: async (): Promise<RunRow | null> => {
+      const { data, error } = await supabase
+        .from("payroll_runs" as never)
+        .select("id, status, rejection_reason")
+        .eq("unit_id", unitId)
+        .eq("period_start", start)
+        .eq("period_end", end)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as unknown as RunRow | null);
+    },
+  });
+  const runStatus: RunStatus = run?.status ?? "draft";
+
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+
+  const transitionRun = useMutation({
+    mutationFn: async (next: { status: RunStatus; reason?: string }) => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth?.user?.id ?? null;
+      const ts = new Date().toISOString();
+      const base: Record<string, unknown> = {
+        unit_id: unitId,
+        period_start: start,
+        period_end: end,
+        status: next.status,
+      };
+      if (next.status === "submitted") { base.submitted_at = ts; base.submitted_by = uid; }
+      if (next.status === "approved") { base.approved_at = ts; base.approved_by = uid; }
+      if (next.status === "rejected") {
+        base.rejected_at = ts; base.rejected_by = uid;
+        base.rejection_reason = next.reason ?? "";
+      }
+      if (next.status === "draft") { base.rejection_reason = null; }
+      if (run?.id) {
+        const { error } = await supabase.from("payroll_runs" as never).update(base as never).eq("id", run.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("payroll_runs" as never).insert(base as never);
+        if (error) throw error;
+      }
+      void logActivity({
+        module: "Payroll",
+        action: next.status === "submitted" ? "submit" : next.status === "approved" ? "approve" : next.status === "rejected" ? "reject" : "reopen",
+        entityType: "payroll_runs",
+        entityLabel: `${unitId} ${start} → ${end}`,
+        details: { unit_id: unitId, period_start: start, period_end: end, status: next.status, reason: next.reason ?? "" },
+      });
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: runQK });
+      toast.success(
+        vars.status === "submitted" ? "Payroll submitted for approval" :
+        vars.status === "approved" ? "Payroll approved" :
+        vars.status === "rejected" ? "Payroll rejected" : "Payroll reopened",
+      );
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
   const { data, isLoading, error } = useQuery({
@@ -384,6 +466,75 @@ function PayrollUnitPage() {
           <Stat label="Total employer cost" value={fmtINR(totals.employerCost)} tone="amber" />
         </div>
       </div>
+
+      {/* Payroll approval workflow */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-3">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Payroll status</span>
+          <span className={cn(
+            "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold",
+            runStatus === "draft" && "bg-slate-100 text-slate-700",
+            runStatus === "submitted" && "bg-amber-100 text-amber-800",
+            runStatus === "approved" && "bg-emerald-100 text-emerald-800",
+            runStatus === "rejected" && "bg-rose-100 text-rose-800",
+          )}>
+            {runStatus === "draft" && "Draft"}
+            {runStatus === "submitted" && "Submitted — awaiting approval"}
+            {runStatus === "approved" && <><CheckCircle2 className="h-3.5 w-3.5" /> Approved</>}
+            {runStatus === "rejected" && <><XCircle className="h-3.5 w-3.5" /> Rejected</>}
+          </span>
+          {runStatus === "rejected" && run?.rejection_reason && (
+            <span className="text-xs text-rose-700">Reason: {run.rejection_reason}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {sheet?.status !== "approved" && (
+            <span className="text-xs text-amber-700">Approve attendance first to submit payroll.</span>
+          )}
+          {sheet?.status === "approved" && (runStatus === "draft" || runStatus === "rejected") && (
+            <Button size="sm" onClick={() => transitionRun.mutate({ status: "submitted" })} disabled={transitionRun.isPending}>
+              <Send className="mr-1.5 h-4 w-4" /> Submit for Approval
+            </Button>
+          )}
+          {runStatus === "submitted" && canApprove && (
+            <>
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => transitionRun.mutate({ status: "approved" })} disabled={transitionRun.isPending}>
+                <CheckCircle2 className="mr-1.5 h-4 w-4" /> Approve
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => setRejectOpen(true)} disabled={transitionRun.isPending}>
+                <XCircle className="mr-1.5 h-4 w-4" /> Reject
+              </Button>
+            </>
+          )}
+          {runStatus === "submitted" && !canApprove && (
+            <span className="text-xs text-muted-foreground">Awaiting leadership approval</span>
+          )}
+          {runStatus === "approved" && canApprove && (
+            <Button size="sm" variant="outline" onClick={() => transitionRun.mutate({ status: "draft" })} disabled={transitionRun.isPending}>
+              <RotateCcw className="mr-1.5 h-4 w-4" /> Reopen
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Reject payroll</DialogTitle>
+            <DialogDescription>Provide a reason so the submitter knows what to fix.</DialogDescription>
+          </DialogHeader>
+          <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Reason for rejection…" rows={4} />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setRejectOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => {
+              if (!rejectReason.trim()) { toast.error("Reason required"); return; }
+              transitionRun.mutate({ status: "rejected", reason: rejectReason.trim() }, {
+                onSuccess: () => { setRejectOpen(false); setRejectReason(""); },
+              });
+            }}>Reject</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
         <div className="overflow-x-auto">
