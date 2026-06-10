@@ -165,10 +165,30 @@
   .font-heading { font-family: var(--font-heading); }
   .font-display { font-family: var(--font-display); }
 
+  /* ============ Glassmorphism system ============ */
   .glass {
-    background: color-mix(in oklab, var(--card) 70%, transparent);
-    backdrop-filter: blur(20px) saturate(1.4);
-    border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+    background: color-mix(in oklab, white 55%, transparent);
+    backdrop-filter: blur(22px) saturate(160%);
+    border: 1px solid color-mix(in oklab, white 60%, transparent);
+    box-shadow:
+      0 1px 0 0 color-mix(in oklab, white 70%, transparent) inset,
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 12px 32px -16px rgba(15, 23, 42, 0.14);
+  }
+  .glass-strong {
+    background: color-mix(in oklab, white 72%, transparent);
+    backdrop-filter: blur(28px) saturate(180%);
+    border: 1px solid color-mix(in oklab, white 75%, transparent);
+    box-shadow:
+      0 1px 0 0 color-mix(in oklab, white 85%, transparent) inset,
+      0 2px 4px rgba(15, 23, 42, 0.05),
+      0 24px 48px -20px rgba(15, 23, 42, 0.18);
+  }
+  .glass-dark {
+    background: color-mix(in oklab, oklch(0.18 0.03 260) 70%, transparent);
+    backdrop-filter: blur(24px) saturate(160%);
+    border: 1px solid color-mix(in oklab, white 12%, transparent);
+    color: white;
   }
 
   .text-gradient-accent {
@@ -203,7 +223,6 @@
     box-shadow: 0 1px 2px rgba(10,10,10,0.04), 0 8px 24px -12px rgba(10,10,10,0.08);
   }
 
-  /* Global unified tile — use across dashboards/pages for visual consistency */
   .tile {
     position: relative;
     display: flex;
@@ -212,21 +231,21 @@
     min-height: 168px;
     padding: 1.25rem;
     border-radius: 22px;
-    background: color-mix(in oklab, var(--card) 88%, transparent);
-    border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
-    backdrop-filter: blur(20px) saturate(1.4);
+    background: color-mix(in oklab, white 58%, transparent);
+    border: 1px solid color-mix(in oklab, white 65%, transparent);
+    backdrop-filter: blur(22px) saturate(160%);
     box-shadow:
-      0 1px 0 0 color-mix(in oklab, white 60%, transparent) inset,
-      0 1px 2px rgba(10,10,10,0.03),
-      0 10px 30px -18px rgba(10,10,10,0.10);
+      0 1px 0 0 color-mix(in oklab, white 75%, transparent) inset,
+      0 1px 2px rgba(15,23,42,0.04),
+      0 14px 36px -20px rgba(15,23,42,0.16);
     transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
   }
   .tile-interactive:hover {
     transform: translateY(-2px);
     border-color: color-mix(in oklab, var(--accent) 40%, transparent);
     box-shadow:
-      0 1px 0 0 color-mix(in oklab, white 70%, transparent) inset,
-      0 18px 40px -22px color-mix(in oklab, var(--accent) 35%, transparent);
+      0 1px 0 0 color-mix(in oklab, white 80%, transparent) inset,
+      0 22px 48px -22px color-mix(in oklab, var(--accent) 35%, transparent);
   }
   .tile-icon {
     display: inline-flex;
@@ -235,7 +254,7 @@
     height: 2.25rem;
     width: 2.25rem;
     border-radius: 0.75rem;
-    background: color-mix(in oklab, var(--accent) 10%, var(--card));
+    background: color-mix(in oklab, var(--accent) 12%, white);
     color: var(--accent);
     box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 18%, transparent);
   }
@@ -247,37 +266,49 @@
   }
   .animate-shake { animation: shake 0.4s ease-in-out; }
 
-  /* Apple-style page transition */
   @keyframes page-in {
-    0% { opacity: 0; transform: translateY(8px) scale(0.995); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
+    0% { opacity: 0; transform: translateY(14px) scale(0.99); filter: blur(6px); }
+    100% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
   }
-  .page-enter {
-    animation: page-in 320ms cubic-bezier(0.32, 0.72, 0, 1) both;
-  }
+  .page-enter { animation: page-in 460ms cubic-bezier(0.32, 0.72, 0, 1) both; }
 
-  /* Soft tinted canvas — adds life without noise */
+  @keyframes reveal-up {
+    0% { opacity: 0; transform: translateY(14px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  .reveal > * { animation: reveal-up 520ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .reveal > *:nth-child(1) { animation-delay: 40ms; }
+  .reveal > *:nth-child(2) { animation-delay: 90ms; }
+  .reveal > *:nth-child(3) { animation-delay: 140ms; }
+  .reveal > *:nth-child(4) { animation-delay: 190ms; }
+  .reveal > *:nth-child(5) { animation-delay: 240ms; }
+  .reveal > *:nth-child(6) { animation-delay: 290ms; }
+  .reveal > *:nth-child(7) { animation-delay: 340ms; }
+  .reveal > *:nth-child(8) { animation-delay: 390ms; }
+
+  @keyframes aurora-float {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    33% { transform: translate(4%, -3%) scale(1.05); }
+    66% { transform: translate(-3%, 4%) scale(0.97); }
+  }
+  .aurora-blob { animation: aurora-float 18s ease-in-out infinite; }
+
+  /* Soft tinted canvas — clean, no grid */
   .app-canvas {
     background:
-      radial-gradient(ellipse 70% 55% at 8% -10%, color-mix(in oklab, var(--accent) 9%, transparent) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 45% at 100% 20%, oklch(0.92 0.05 200 / 0.55) 0%, transparent 65%),
-      radial-gradient(ellipse 80% 60% at 50% 115%, oklch(0.94 0.04 320 / 0.45) 0%, transparent 60%),
-      linear-gradient(180deg, oklch(0.985 0.006 250) 0%, oklch(0.97 0.012 245) 100%);
+      radial-gradient(ellipse 70% 55% at 5% -10%, color-mix(in oklab, var(--accent) 11%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 45% at 100% 15%, oklch(0.9 0.06 200 / 0.6) 0%, transparent 65%),
+      radial-gradient(ellipse 80% 60% at 50% 115%, oklch(0.93 0.05 320 / 0.5) 0%, transparent 60%),
+      linear-gradient(180deg, oklch(0.985 0.006 250) 0%, oklch(0.96 0.014 240) 100%);
   }
-  .app-canvas-grid {
-    background-image:
-      linear-gradient(oklch(0.13 0.02 260 / 0.04) 1px, transparent 1px),
-      linear-gradient(90deg, oklch(0.13 0.02 260 / 0.04) 1px, transparent 1px);
-    background-size: 56px 56px;
-    mask-image: radial-gradient(ellipse at center, black 35%, transparent 85%);
-  }
+  /* Grid removed — kept as no-op so existing usages stay safe */
+  .app-canvas-grid { background-image: none; }
 
-  /* iOS-style data table */
   .ios-table { width: 100%; border-collapse: separate; border-spacing: 0; }
   .ios-table thead th {
     position: sticky; top: 0;
-    background: color-mix(in oklab, var(--card) 92%, transparent);
-    backdrop-filter: blur(10px);
+    background: color-mix(in oklab, white 80%, transparent);
+    backdrop-filter: blur(12px);
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.08em;
@@ -294,7 +325,7 @@
     vertical-align: middle;
   }
   .ios-table tbody tr { transition: background-color .15s ease; }
-  .ios-table tbody tr:hover { background: color-mix(in oklab, var(--accent) 4%, transparent); }
+  .ios-table tbody tr:hover { background: color-mix(in oklab, var(--accent) 5%, transparent); }
   .ios-table tbody tr:last-child td { border-bottom: 0; }
   .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
 }
