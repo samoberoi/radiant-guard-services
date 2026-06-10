@@ -186,7 +186,7 @@ function RateCardsPage() {
         />
       ) : view === "list" ? (
       <div className="overflow-auto rounded-2xl border border-border bg-card">
-        <table className="w-full text-sm">
+        <table className="ios-table w-full text-sm">
           <thead className="bg-secondary/30 text-xs uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="p-3 text-left font-medium">Supplier</th>
@@ -354,7 +354,7 @@ function RateCardDialog({
                 </div>
                 {rows.length > 1 && <Button size="sm" variant="ghost" onClick={copyFromFirst}>Copy first row to all</Button>}
               </div>
-              <table className="w-full text-sm">
+              <table className="ios-table w-full text-sm">
                 <thead className="bg-secondary/10 text-[10px] uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th className="px-2 py-2 text-left font-medium">Size</th>
@@ -429,7 +429,7 @@ function CompareView({ rows, vendorMap, itemMap }: { rows: RateCard[]; vendorMap
                 <div className="text-xs text-muted-foreground">{g.list.length} supplier{g.list.length === 1 ? "" : "s"} · spread ₹{min.toFixed(2)} – ₹{max.toFixed(2)}{min !== max && <> · {(((max - min) / min) * 100).toFixed(0)}% gap</>}</div>
               </div>
             </div>
-            <table className="w-full text-sm">
+            <table className="ios-table w-full text-sm">
               <thead className="bg-secondary/10 text-[10px] uppercase tracking-wider text-muted-foreground">
                 <tr>
                   <th className="px-4 py-2 text-left font-medium">Supplier</th>
@@ -487,7 +487,7 @@ function MatrixView({
   }
   return (
     <div className="overflow-auto rounded-2xl border border-border bg-card">
-      <table className="w-full text-sm">
+      <table className="ios-table w-full text-sm">
         <thead className="bg-secondary/30 text-[10px] uppercase tracking-wider text-muted-foreground">
           <tr>
             <th className="sticky left-0 z-10 bg-secondary/30 p-3 text-left font-medium">Item ↓ &nbsp;/&nbsp; Supplier →</th>

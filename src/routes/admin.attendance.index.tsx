@@ -586,7 +586,7 @@ function AttendanceUnitsPage() {
               </div>
             ) : (
               <div className="overflow-x-auto rounded-xl border border-border/60 bg-background">
-                <table className="min-w-full table-auto text-sm">
+                <table className="ios-table min-w-full table-auto text-sm">
                   <thead className="border-b border-border/60 bg-secondary/40 text-xs uppercase tracking-[0.16em] text-muted-foreground">
                     <tr>
                       <th className="px-4 py-3 text-left font-medium">Employee</th>
@@ -637,7 +637,7 @@ function AttendanceUnitsPage() {
 
 
         <div className="overflow-x-auto">
-          <table className="min-w-full table-auto">
+          <table className="ios-table min-w-full table-auto">
             <thead className="border-b border-border/60 bg-secondary/40">
               <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
                 <th className="px-5 py-4 font-medium">Unit</th>

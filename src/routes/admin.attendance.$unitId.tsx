@@ -919,7 +919,7 @@ function MusterRollPage() {
           <div className="mt-1 text-sm font-bold tracking-wide">MUSTER ROLL</div>
         </div>
 
-        <table className="mt-3 w-full border border-slate-400 text-[11px]">
+        <table className="ios-table mt-3 w-full border border-slate-400 text-[11px]">
           <tbody>
             <tr>
               <td className="w-1/2 border border-slate-400 p-2 align-top">
@@ -940,7 +940,7 @@ function MusterRollPage() {
         </table>
 
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full border-collapse border border-slate-400 text-center text-[10px]">
+          <table className="ios-table w-full border-collapse border border-slate-400 text-center text-[10px]">
             <thead className="bg-slate-100">
               <tr>
                 <th className="border border-slate-400 p-1 align-middle">Sl.<br />No.</th>

@@ -1600,7 +1600,7 @@ function ClientContractsPage() {
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">{tab === "client" ? "Contract ID" : "Prospect ID"}</th>
@@ -3828,7 +3828,7 @@ function SalaryBreakdownTable({
         </p>
       </div>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="ios-table w-full text-sm">
           <tbody className="[&_tr]:border-b [&_tr]:border-border/60 [&_td]:px-3 [&_td]:py-2">
             <tr className="bg-secondary/20">
               <td className="font-medium text-muted-foreground">Designation</td>
