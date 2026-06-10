@@ -1381,6 +1381,7 @@ function EmployeesPage() {
               </div>
             </div>
           </td>
+          <td aria-hidden className="p-0" />
           {(mode === "candidate" || columnsVisible.mobile) && (
             <td className="hidden px-2.5 py-2.5 text-center text-sm font-medium text-muted-foreground 2xl:table-cell">{c.mobile || "—"}</td>
           )}
