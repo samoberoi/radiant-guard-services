@@ -240,6 +240,54 @@ function PayrollUnitsPage() {
   const employees = data?.employees ?? [];
   const monthlyStatsData = data?.stats;
 
+  const queryClient = useQueryClient();
+  const { can } = useCurrentPermissions();
+  const canApproveRun = can("payroll", "approve");
+
+  type RunStatus = "draft" | "submitted" | "approved" | "rejected";
+  type RunRow = { id: string; unit_id: string; period_start: string; period_end: string; status: RunStatus };
+  const runsQK = ["payroll-runs-index", year, month];
+  const { data: runsData } = useQuery({
+    queryKey: runsQK,
+    queryFn: async () => {
+      const { data: rows, error } = await supabase
+        .from("payroll_runs" as never)
+        .select("id, unit_id, period_start, period_end, status")
+        .lte("period_start", monthEnd)
+        .gte("period_end", monthStart);
+      if (error) throw error;
+      const map = new Map<string, RunRow>();
+      for (const r of (rows ?? []) as RunRow[]) {
+        map.set(`${r.unit_id}|${r.period_start}|${r.period_end}`, r);
+      }
+      return map;
+    },
+  });
+  const runByKey = runsData ?? new Map<string, RunRow>();
+
+  const reopenRun = useMutation({
+    mutationFn: async (run: RunRow) => {
+      const { error } = await supabase
+        .from("payroll_runs" as never)
+        .update({ status: "draft", approved_at: null, approved_by: null, rejected_at: null, rejected_by: null, rejection_reason: null } as never)
+        .eq("id", run.id);
+      if (error) throw error;
+      void logActivity({
+        module: "Payroll",
+        action: "reopen",
+        entityType: "payroll_runs",
+        entityLabel: `${run.unit_id} ${run.period_start} → ${run.period_end}`,
+        details: { unit_id: run.unit_id, period_start: run.period_start, period_end: run.period_end },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: runsQK });
+      toast.success("Payroll reopened");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to reopen"),
+  });
+
+
 
   const employeeOptions = useMemo(() => {
     if (orgFilter === "all") return employees;
