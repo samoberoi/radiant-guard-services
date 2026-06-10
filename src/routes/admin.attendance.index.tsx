@@ -1,16 +1,22 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { type ComponentType, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   ArrowRight,
   Building2,
+  CheckCircle2,
   ClipboardList,
+  Clock3,
   IndianRupee,
   MapPinned,
+  RotateCcw,
   Search,
   Users,
   X,
 } from "lucide-react";
+import { useCurrentPermissions } from "@/lib/rbac";
+import { logActivity } from "@/lib/activity-log";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
