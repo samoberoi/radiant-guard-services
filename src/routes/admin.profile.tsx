@@ -871,6 +871,10 @@ function ProfilePage() {
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
               <InfoRow label="Employee Code" value={profile.employee_code || "—"} />
               <InfoRow
+                label="Role"
+                value={lookups?.role?.name || (profile.role_key ? profile.role_key : "Not assigned")}
+              />
+              <InfoRow
                 label="Date of Joining"
                 value={
                   profile.approved_at?.slice(0, 10) ??
