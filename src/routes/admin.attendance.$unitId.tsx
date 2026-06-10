@@ -854,14 +854,18 @@ function MusterRollPage() {
             <Select value={addDesig} onValueChange={setAddDesig} disabled={!addCand}>
               <SelectTrigger className="w-[260px]"><SelectValue placeholder="Pick designation from contract…" /></SelectTrigger>
               <SelectContent>
-                {contractDesignations
-                  .filter((d) => {
-                    if (!addCand) return true;
-                    return !musterRows.some((r) => r.candidateId === addCand && r.designationId === d.designationId);
+                {contractDesignations.length === 0 ? (
+                  <div className="px-3 py-2 text-xs text-muted-foreground">No designations on this contract.</div>
+                ) : (
+                  contractDesignations.map((d) => {
+                    const used = !!addCand && musterRows.some((r) => r.candidateId === addCand && r.designationId === d.designationId);
+                    return (
+                      <SelectItem key={d.designationId} value={d.designationId}>
+                        {d.designationName}{used ? " (already added)" : ""}
+                      </SelectItem>
+                    );
                   })
-                  .map((d) => (
-                    <SelectItem key={d.designationId} value={d.designationId}>{d.designationName}</SelectItem>
-                  ))}
+                )}
               </SelectContent>
             </Select>
           </div>
