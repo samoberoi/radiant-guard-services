@@ -2,7 +2,21 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-export type VehicleOption = { id: string; vehicle_number: string; name: string; engine_number?: string; chassis_number?: string; fuel_type?: string };
+export type VehicleOption = {
+  id: string;
+  vehicle_number: string;
+  name: string;
+  owner?: string;
+  type?: string;
+  fuel_type?: string;
+  brand?: string;
+  make?: string;
+  year?: number | null;
+  color?: string;
+  engine_number?: string;
+  chassis_number?: string;
+  registration_date?: string | null;
+};
 
 export function useVehicleOptions() {
   return useQuery({
@@ -10,7 +24,9 @@ export function useVehicleOptions() {
     queryFn: async (): Promise<VehicleOption[]> => {
       const { data, error } = await supabase
         .from("vehicles" as never)
-        .select("id,vehicle_number,name,engine_number,chassis_number,fuel_type,enabled")
+        .select(
+          "id,vehicle_number,name,owner,type,fuel_type,brand,make,year,color,engine_number,chassis_number,registration_date,enabled",
+        )
         .order("vehicle_number", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[])
@@ -19,9 +35,16 @@ export function useVehicleOptions() {
           id: String(r.id),
           vehicle_number: String(r.vehicle_number ?? ""),
           name: String(r.name ?? ""),
+          owner: String(r.owner ?? ""),
+          type: String(r.type ?? ""),
+          fuel_type: String(r.fuel_type ?? ""),
+          brand: String(r.brand ?? ""),
+          make: String(r.make ?? ""),
+          year: r.year == null ? null : Number(r.year),
+          color: String(r.color ?? ""),
           engine_number: String(r.engine_number ?? ""),
           chassis_number: String(r.chassis_number ?? ""),
-          fuel_type: String(r.fuel_type ?? ""),
+          registration_date: (r.registration_date as string) ?? null,
         }));
     },
   });
@@ -42,4 +65,34 @@ export function fmtDate(d: string | null | undefined): string {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(d);
   if (!m) return d;
   return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+/** Compact column components reused by FastTag/Insurance/PUC/Service tables.
+ *  Header cells + body cells must be inserted right after the "Vehicle" column. */
+export const VEHICLE_DETAIL_HEADERS: { label: string; className?: string }[] = [
+  { label: "Owner" },
+  { label: "Type" },
+  { label: "Fuel" },
+  { label: "Brand" },
+  { label: "Make / Model" },
+  { label: "Year" },
+  { label: "Color" },
+  { label: "Engine No." },
+  { label: "Chassis No." },
+  { label: "Reg. Date" },
+];
+
+export function vehicleDetailCells(v: VehicleOption | undefined): (string | number)[] {
+  return [
+    v?.owner || "—",
+    v?.type || "—",
+    v?.fuel_type || "—",
+    v?.brand || "—",
+    [v?.make, v?.name].filter(Boolean).join(" ") || "—",
+    v?.year ?? "—",
+    v?.color || "—",
+    v?.engine_number || "—",
+    v?.chassis_number || "—",
+    fmtDate(v?.registration_date ?? null),
+  ];
 }
