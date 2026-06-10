@@ -233,12 +233,11 @@ function AdminLayout() {
   const mainPad = collapsed ? "lg:pl-[100px]" : "lg:pl-[284px]";
 
   return (
-    <div className="relative min-h-screen bg-background">
-      {/* Corporate ambient backdrop — subtle monochrome navy mesh + grid */}
-      <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_15%_-10%,oklch(0.95_0.03_240/0.9),transparent_60%),radial-gradient(ellipse_50%_40%_at_100%_30%,oklch(0.94_0.025_220/0.7),transparent_65%),radial-gradient(ellipse_70%_50%_at_50%_110%,oklch(0.93_0.03_260/0.55),transparent_60%)]" />
-        <div className="absolute inset-0 opacity-[0.025] [background-image:linear-gradient(oklch(0.13_0.02_260)_1px,transparent_1px),linear-gradient(90deg,oklch(0.13_0.02_260)_1px,transparent_1px)] [background-size:48px_48px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_85%)]" />
-      </div>
+    <div className="relative min-h-screen">
+      {/* Soft tinted canvas — alive but corporate */}
+      <div className="pointer-events-none fixed inset-0 z-0 app-canvas" />
+      <div className="pointer-events-none fixed inset-0 z-0 app-canvas-grid" />
+
 
 
       {/* Desktop vertical sidebar — glass / iPadOS */}
@@ -406,7 +405,9 @@ function AdminLayout() {
           <NotificationBell />
         </div>
         <div className="mx-auto max-w-[1500px]">
-          <Outlet />
+          <div key={pathname} className="page-enter">
+            <Outlet />
+          </div>
         </div>
       </main>
     </div>
