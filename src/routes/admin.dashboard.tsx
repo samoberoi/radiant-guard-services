@@ -518,7 +518,7 @@ function DashboardPage() {
           <div className="flex flex-col gap-2 border-b border-border/60 px-5 py-5 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold text-foreground">P&amp;L — {MONTH_NAMES[month]} {year}</h2>
-              <p className="text-sm text-muted-foreground">Contract value is the reference. Variance compares actual invoice amount against actual payroll cost. Positive = margin.</p>
+              <p className="text-sm text-muted-foreground">Invoice &amp; payroll are computed from attendance (same engine as the Invoice and Payroll modules). Contract value is the full-month projection for reference. Variance = invoice − payroll cost (benefits eat into margin).</p>
             </div>
             {data && (
               <div className="flex flex-wrap items-center gap-4 text-sm">
