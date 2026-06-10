@@ -2896,9 +2896,12 @@ function CandidateWizard({
         after: { ...(payload as unknown as Record<string, unknown>), unit_ids: form.unit_ids },
       });
     } else {
+      const { data: authData } = await supabase.auth.getUser();
+      const creatorId = authData.user?.id ?? null;
+      const insertPayload = { ...(payload as Record<string, unknown>), created_by: creatorId };
       const { data, error } = await supabase
         .from("candidates" as never)
-        .insert(payload as never)
+        .insert(insertPayload as never)
         .select("id")
         .single();
       if (error) throw error;
