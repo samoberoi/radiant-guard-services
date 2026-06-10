@@ -1341,24 +1341,25 @@ function EmployeesPage() {
       const isDisabled = mode === "employee" && !c.is_enabled;
       return (
         <tr key={c.id} className={cn("group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5", isDisabled && "opacity-60")}>
-          <td className="px-3 py-3">
+          <td className="px-2.5 py-2.5">
             <span className="rounded-md bg-secondary px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
               {code}
             </span>
           </td>
-          <td className="px-3 py-3">
+          <td className="px-2.5 py-2.5">
             <div className="flex items-center gap-3">
               {c.photo_url ? (
                 <img
                   src={c.photo_url}
                   alt=""
-                  className="h-10 w-10 flex-shrink-0 rounded-full object-cover shadow-sm ring-2 ring-card"
+                  className="h-8 w-8 flex-shrink-0 rounded-full object-cover shadow-sm ring-2 ring-card"
                 />
               ) : (
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground shadow-sm ring-2 ring-card">
-                  <UserPlus className="h-4 w-4" />
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-secondary text-muted-foreground shadow-sm ring-2 ring-card">
+                  <UserPlus className="h-3.5 w-3.5" />
                 </div>
               )}
+
               <div className="min-w-0">
                 <div className="truncate font-semibold leading-tight text-foreground group-hover:text-amber-900 dark:group-hover:text-amber-300">
                   {c.full_name || "—"}
@@ -1368,13 +1369,13 @@ function EmployeesPage() {
             </div>
           </td>
           {(mode === "candidate" || columnsVisible.mobile) && (
-            <td className="px-3 py-3 text-center text-sm font-medium text-muted-foreground">{c.mobile || "—"}</td>
+            <td className="px-2.5 py-2.5 text-center text-sm font-medium text-muted-foreground">{c.mobile || "—"}</td>
           )}
           {mode === "employee" && columnsVisible.email && (
-            <td className="px-3 py-3 text-sm text-muted-foreground max-w-[200px]"><span className="truncate block" title={c.email ?? ""}>{c.email || "—"}</span></td>
+            <td className="px-2.5 py-2.5 text-sm text-muted-foreground max-w-[200px]"><span className="truncate block" title={c.email ?? ""}>{c.email || "—"}</span></td>
           )}
           {(mode === "candidate" || columnsVisible.unit) && (
-            <td className="px-3 py-3 max-w-[180px]">
+            <td className="px-2.5 py-2.5 max-w-[150px]">
               {unit ? (
                 <div className="min-w-0">
                   <div className="truncate text-sm font-semibold text-foreground" title={unit.name}>{unit.name}</div>
@@ -1386,16 +1387,16 @@ function EmployeesPage() {
             </td>
           )}
           {(mode === "candidate" || columnsVisible.designation) && (
-            <td className="px-3 py-3 text-sm text-muted-foreground max-w-[140px]"><span className="line-clamp-2" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
+            <td className="px-2.5 py-2.5 text-sm text-muted-foreground max-w-[120px]"><span className="line-clamp-2" title={desig?.name ?? ""}>{desig?.name ?? "—"}</span></td>
           )}
           {mode === "employee" && columnsVisible.dob && (
-            <td className="px-3 py-3 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(c.date_of_birth)}</td>
+            <td className="px-2.5 py-2.5 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(c.date_of_birth)}</td>
           )}
           {mode === "employee" && columnsVisible.doj && (
-            <td className="px-3 py-3 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(c.approved_at ?? c.preferred_joining_date)}</td>
+            <td className="px-2.5 py-2.5 text-sm text-muted-foreground whitespace-nowrap">{fmtDate(c.approved_at ?? c.preferred_joining_date)}</td>
           )}
           {mode === "employee" && columnsVisible.role && (
-            <td className="px-3 py-3">
+            <td className="px-2.5 py-2.5">
               {c.role_key ? (
                 <Select
                   value={c.role_key}
@@ -1410,7 +1411,7 @@ function EmployeesPage() {
                     assignRoleMut.mutate({ candidate: c, roleKey: v });
                   }}
                 >
-                  <SelectTrigger className="h-8 w-[130px] rounded-lg border-border/60 bg-card text-xs">
+                  <SelectTrigger className="h-8 w-[108px] rounded-lg border-border/60 bg-card text-xs">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1454,7 +1455,7 @@ function EmployeesPage() {
             </td>
           )}
           {mode === "employee" && columnsVisible.active && (
-            <td className="px-3 py-3">
+            <td className="px-2.5 py-2.5">
               <Switch
                 checked={c.is_enabled && c.status !== "inactive"}
                 onCheckedChange={async (v) => {
@@ -1492,7 +1493,7 @@ function EmployeesPage() {
               />
             </td>
           )}
-          <td className="px-3 py-3">
+          <td className="px-2.5 py-2.5">
             <StatusBadge status={c.status} />
             {c.status === "rejected" && c.rejection_reason && (
               <div className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground" title={c.rejection_reason}>
@@ -1510,15 +1511,16 @@ function EmployeesPage() {
               );
             })()}
           </td>
-          <td className="px-4 py-5">
-            <div className="flex items-center justify-end gap-1.5">
+          <td className="px-2.5 py-2.5">
+            <div className="flex items-center justify-end gap-1">
+
               {mode === "candidate" && c.status === "pending" && (
                 <>
                   <Button
                     size="icon"
                     onClick={() => approveMut.mutate(c)}
                     disabled={approveMut.isPending}
-                    className="h-8 w-8 rounded-lg bg-emerald-600 text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
+                    className="h-7 w-7 rounded-md bg-emerald-600 text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
                     title="Approve & assign Employee ID"
                   >
                     <Check className="h-4 w-4" />
@@ -1530,7 +1532,7 @@ function EmployeesPage() {
                       setRejectTarget(c);
                       setRejectReason("");
                     }}
-                    className="h-8 w-8 rounded-lg border-rose-200 bg-rose-50/50 text-rose-600 transition-all hover:bg-rose-50 hover:text-rose-600 active:scale-95 dark:border-rose-500/40 dark:bg-transparent dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+                    className="h-7 w-7 rounded-md border-rose-200 bg-rose-50/50 text-rose-600 transition-all hover:bg-rose-50 hover:text-rose-600 active:scale-95 dark:border-rose-500/40 dark:bg-transparent dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
                     title="Reject candidate"
                   >
                     <X className="h-4 w-4" />
@@ -1543,7 +1545,7 @@ function EmployeesPage() {
                     variant="outline"
                     size="icon"
                     onClick={() => setSignTarget({ id: c.id, docType: "nda" })}
-                    className="h-8 w-8 rounded-lg border-amber-200 bg-amber-50/50 text-amber-700 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-500/40 dark:bg-transparent dark:text-amber-300 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
+                    className="h-7 w-7 rounded-md border-amber-200 bg-amber-50/50 text-amber-700 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-500/40 dark:bg-transparent dark:text-amber-300 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
                     title="Sign NDA"
                   >
                     <FileSignature className="h-4 w-4" />
@@ -1552,19 +1554,19 @@ function EmployeesPage() {
                     variant="outline"
                     size="icon"
                     onClick={() => setSignTarget({ id: c.id, docType: "appointment_letter" })}
-                    className="h-8 w-8 rounded-lg border-sky-200 bg-sky-50/50 text-sky-700 hover:bg-sky-50 hover:text-sky-700 dark:border-sky-500/40 dark:bg-transparent dark:text-sky-300 dark:hover:bg-sky-500/10 dark:hover:text-sky-300"
+                    className="h-7 w-7 rounded-md border-sky-200 bg-sky-50/50 text-sky-700 hover:bg-sky-50 hover:text-sky-700 dark:border-sky-500/40 dark:bg-transparent dark:text-sky-300 dark:hover:bg-sky-500/10 dark:hover:text-sky-300"
                     title="Sign Appointment Letter"
                   >
                     <FileText className="h-4 w-4" />
                   </Button>
                 </>
               )}
-              <div className="ml-0.5 flex items-center gap-1 border-l border-border/60 pl-1.5">
+              <div className="ml-0.5 flex items-center gap-0.5 border-l border-border/60 pl-1">
                 <Button
                   asChild
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  className="h-7 w-7 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
                   title="Open the full 10-section editor"
                 >
                   <Link to="/admin/candidates/$id/details" params={{ id: c.id }}>
@@ -1576,7 +1578,7 @@ function EmployeesPage() {
                   size="icon"
                   onClick={() => void openEditor(c.id)}
                   disabled={openingCandidateId === c.id}
-                  className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  className="h-7 w-7 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
                   title="Quick edit"
                 >
                   {openingCandidateId === c.id ? (
@@ -1590,7 +1592,7 @@ function EmployeesPage() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setConfirmDelete(c)}
-                    className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
+                    className="h-7 w-7 rounded-md text-muted-foreground hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10"
                     title="Delete"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -1613,56 +1615,56 @@ function EmployeesPage() {
         <table className="ios-table min-w-full text-sm">
           <thead className="border-b border-border/60 bg-secondary/40">
             <tr>
-              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Emp ID" : "Code"}
               </th>
-              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 {mode === "employee" ? "Employee" : "Candidate"}
               </th>
               {(mode === "candidate" || columnsVisible.mobile) && (
-                <th className="px-3 py-3 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-center text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Mobile
                 </th>
               )}
               {mode === "employee" && columnsVisible.email && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Email
                 </th>
               )}
               {(mode === "candidate" || columnsVisible.unit) && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Unit
                 </th>
               )}
               {(mode === "candidate" || columnsVisible.designation) && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Designation
                 </th>
               )}
               {mode === "employee" && columnsVisible.dob && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Date of Birth
                 </th>
               )}
               {mode === "employee" && columnsVisible.doj && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Date of Joining
                 </th>
               )}
               {mode === "employee" && columnsVisible.role && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Role
                 </th>
               )}
               {mode === "employee" && columnsVisible.active && (
-                <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+                <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                   Active
                 </th>
               )}
-              <th className="px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-2.5 py-2.5 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Status
               </th>
-              <th className="px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+              <th className="px-2.5 py-2.5 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
                 Actions
               </th>
             </tr>
@@ -1681,7 +1683,7 @@ function EmployeesPage() {
         crumbs={[{ label: "Employees" }]}
       />
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
         {(tab === "employee"
           ? [
               { label: "Total", value: stats.empTotal, accent: false as const, dot: "bg-stone-400", tone: "neutral" as const },
@@ -1717,7 +1719,7 @@ function EmployeesPage() {
           <div
             key={s.label}
             className={cn(
-              "group relative overflow-hidden rounded-2xl border p-6 shadow-sm transition-all hover:shadow-md",
+              "group relative overflow-hidden rounded-2xl border p-4 shadow-sm transition-all hover:shadow-md",
               isAlert
                 ? "border-rose-300/70 bg-rose-50/70 backdrop-blur-md"
                 : s.accent
@@ -1725,10 +1727,10 @@ function EmployeesPage() {
                 : "border-border/60 bg-card/80 backdrop-blur-md",
             )}
           >
-            <div className="relative z-10 flex items-start justify-between">
+            <div className="relative z-10 flex items-start justify-between gap-2">
               <p
                 className={cn(
-                  "text-[10px] font-bold uppercase tracking-[0.2em] transition-colors",
+                  "truncate text-[10px] font-bold uppercase tracking-[0.18em] transition-colors",
                   isAlert
                     ? "text-rose-700"
                     : s.accent
@@ -1739,20 +1741,21 @@ function EmployeesPage() {
                 {s.label}
               </p>
               {(isAlert || (s.accent && s.value > 0)) && (
-                <span className="relative flex h-2 w-2">
+                <span className="relative flex h-2 w-2 shrink-0">
                   <span className={cn("absolute inline-flex h-full w-full animate-ping rounded-full opacity-60", isAlert ? "bg-rose-400" : "bg-amber-400")} />
                   <span className={cn("relative inline-flex h-2 w-2 rounded-full", s.dot)} />
                 </span>
               )}
             </div>
-            <p className="relative z-10 mt-3 text-4xl font-bold tabular-nums text-foreground">
+            <p className="relative z-10 mt-2 text-[28px] font-bold leading-none tabular-nums text-foreground">
               {s.value}
-              {suffix && <span className="ml-1 text-base font-medium text-muted-foreground">{suffix}</span>}
+              {suffix && <span className="ml-1 text-sm font-medium text-muted-foreground">{suffix}</span>}
             </p>
             {(isAlert || s.accent) && (
               <div className={cn("pointer-events-none absolute -right-4 -bottom-4 h-16 w-16 rounded-full blur-2xl", isAlert ? "bg-rose-200/40" : "bg-amber-200/30")} />
             )}
           </div>
+
           );
         })}
       </div>
@@ -3117,7 +3120,7 @@ function CandidateWizard({
           )}
         </div>
 
-        <div className="px-3 py-3">
+        <div className="px-2.5 py-2.5">
           {/* ----- Full form (single page) ----- */}
           {true && (
             <div className="space-y-6">
