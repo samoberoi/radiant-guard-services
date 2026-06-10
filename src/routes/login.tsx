@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Loader2, Shield } from "lucide-react";
+import { ArrowRight, Loader2, ShieldCheck, MapPin, Users, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +9,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { useAuth, verifyOtp, DEMO_OTP_HINT } from "@/lib/auth";
-import characterImage from "@/assets/login-character.jpg";
+import logo from "@/assets/radiant-logo-v2.png";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -26,9 +26,6 @@ export const Route = createFileRoute("/login")({
 });
 
 type Step = "phone" | "otp";
-
-const BRAND = "#7ec242";
-const BRAND_DARK = "#5fa028";
 
 function LoginPage() {
   const navigate = useNavigate();
@@ -100,7 +97,27 @@ function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0d1f12] p-3 sm:p-6">
+    <div className="relative min-h-screen overflow-hidden bg-[#0b0f1a] p-3 sm:p-6">
+      {/* Ambient aurora */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-80"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 50% at 18% 20%, rgba(37,99,235,0.28), transparent 60%), radial-gradient(ellipse 50% 40% at 90% 85%, rgba(99,102,241,0.22), transparent 60%), radial-gradient(ellipse 40% 30% at 50% 50%, rgba(56,189,248,0.10), transparent 70%)",
+        }}
+      />
+      {/* dot grid */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.12]"
+        style={{
+          backgroundImage:
+            "radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+        }}
+      />
+
       {/* Reveal overlay */}
       <div
         className={`pointer-events-none absolute inset-0 z-50 origin-bottom bg-white transition-transform duration-[850ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${
@@ -108,72 +125,153 @@ function LoginPage() {
         }`}
       />
 
-      <div className="mx-auto grid min-h-[calc(100vh-1.5rem)] max-w-[1280px] overflow-hidden rounded-[28px] bg-[#c6e8b3] shadow-[0_30px_80px_-30px_rgba(0,0,0,0.4)] md:grid-cols-[1.05fr_1fr]">
-        {/* LEFT — illustration */}
-        <div className="relative hidden min-h-[560px] md:block">
-          <img
-            src={characterImage}
-            alt="Radiant Guard mascot"
-            className="absolute inset-0 h-full w-full object-cover"
-            width={1024}
-            height={1280}
+      <div className="relative mx-auto grid min-h-[calc(100vh-1.5rem)] max-w-[1240px] overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] shadow-[0_50px_140px_-40px_rgba(0,0,0,0.7)] backdrop-blur-2xl md:grid-cols-[1.05fr_1fr]">
+        {/* LEFT — brand panel */}
+        <div className="relative hidden flex-col justify-between overflow-hidden p-10 md:flex">
+          {/* gradient backdrop */}
+          <div
+            aria-hidden
+            className="absolute inset-0"
+            style={{
+              background:
+                "linear-gradient(160deg, #0b1220 0%, #0f1d36 45%, #1a3a6e 100%)",
+            }}
           />
+          {/* aurora blobs */}
+          <div
+            aria-hidden
+            className="aurora-blob absolute -left-20 -top-20 h-80 w-80 rounded-full opacity-50 blur-3xl"
+            style={{ background: "radial-gradient(circle, #2563eb, transparent 70%)" }}
+          />
+          <div
+            aria-hidden
+            className="aurora-blob absolute -right-24 bottom-0 h-96 w-96 rounded-full opacity-40 blur-3xl"
+            style={{ background: "radial-gradient(circle, #38bdf8, transparent 70%)" }}
+          />
+          {/* subtle shield watermark */}
+          <ShieldCheck
+            aria-hidden
+            className="absolute -right-10 top-1/2 h-[420px] w-[420px] -translate-y-1/2 text-white/[0.04]"
+            strokeWidth={1}
+          />
+
+          {/* Logo top-left */}
+          <div className="relative flex items-center gap-3">
+            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white/95 shadow-lg">
+              <img src={logo} alt="Radiant Guard" className="h-9 w-9 object-contain" />
+            </div>
+            <div className="leading-tight">
+              <div className="font-display text-lg font-bold tracking-tight text-white">
+                Radiant Guard
+              </div>
+              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/60">
+                Services Pvt. Ltd.
+              </div>
+            </div>
+          </div>
+
+          {/* Headline */}
+          <div className="relative max-w-md">
+            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80 backdrop-blur">
+              <Sparkles className="h-3 w-3" /> Operations portal
+            </div>
+            <h1 className="font-display text-[44px] font-extrabold leading-[1.04] tracking-tight text-white">
+              Command your<br />
+              <span className="text-gradient-accent bg-gradient-to-r from-sky-300 to-indigo-200 bg-clip-text text-transparent">
+                guard force.
+              </span>
+            </h1>
+            <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-white/70">
+              Sign in to manage employees, units, attendance, payroll and
+              compliance — all in one place.
+            </p>
+          </div>
+
+          {/* floating glass pills */}
+          <div className="relative space-y-3">
+            <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-white backdrop-blur-xl">
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-400/20 text-emerald-300">
+                <Users className="h-4 w-4" />
+              </div>
+              <div className="leading-tight">
+                <div className="text-sm font-semibold">12 guards on duty</div>
+                <div className="text-[11px] text-white/60">Live across 3 units</div>
+              </div>
+              <span className="ml-auto inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]" />
+            </div>
+            <div className="ml-8 flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-white backdrop-blur-xl">
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-sky-400/20 text-sky-300">
+                <MapPin className="h-4 w-4" />
+              </div>
+              <div className="leading-tight">
+                <div className="text-sm font-semibold">Aurora Tower · Sector 21</div>
+                <div className="text-[11px] text-white/60">Patrol Route A · on schedule</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* RIGHT — white form card */}
-        <div className="relative flex items-center justify-center bg-white p-6 sm:p-10 md:rounded-l-[28px]">
-          <div className="w-full max-w-[420px]">
-            {/* Logo */}
-            <div className="mb-8 flex items-center justify-center gap-2">
-              <span
-                className="grid h-9 w-9 place-items-center rounded-lg text-white"
-                style={{ background: BRAND }}
-              >
-                <Shield className="h-5 w-5" />
-              </span>
-              <span className="font-display text-2xl font-bold tracking-tight text-neutral-900">
-                radiant
-              </span>
+        <div className="relative flex items-center justify-center bg-white p-6 sm:p-10">
+          <div className="w-full max-w-[400px]">
+            {/* mobile logo */}
+            <div className="mb-8 flex items-center gap-2 md:hidden">
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#0b1220]">
+                <img src={logo} alt="Radiant" className="h-7 w-7 object-contain" />
+              </div>
+              <div className="leading-tight">
+                <div className="font-display text-base font-bold tracking-tight text-neutral-900">
+                  Radiant Guard
+                </div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
+                  Services Pvt. Ltd.
+                </div>
+              </div>
             </div>
 
             {/* Heading */}
-            <h1 className="mb-10 text-center font-display text-[44px] font-extrabold leading-[1.05] tracking-tight text-neutral-900 sm:text-[52px]">
-              {step === "phone" ? (
-                <>
-                  Sign
-                  <br />
-                  in
-                </>
-              ) : (
-                <>Verify OTP</>
-              )}
-            </h1>
+            <div className="mb-8">
+              <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-[#0b1220]/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0b1220]/70">
+                {step === "phone" ? "Welcome back" : "Almost there"}
+              </div>
+              <h2 className="font-display text-[38px] font-extrabold leading-[1.05] tracking-tight text-neutral-900">
+                {step === "phone" ? "Sign in" : "Verify OTP"}
+              </h2>
+              <p className="mt-2 text-[14px] text-neutral-500">
+                {step === "phone"
+                  ? "Enter your mobile number to receive a one-time code."
+                  : `We sent a 6-digit code to +91 ••• ••• ${phone.slice(-4)}.`}
+              </p>
+            </div>
 
             {step === "phone" ? (
               <form onSubmit={sendOtp} className="space-y-4">
-                <div className="relative">
-                  <span className="pointer-events-none absolute left-6 top-1/2 -translate-y-1/2 text-[15px] font-medium text-neutral-400">
-                    +91
+                <label className="block">
+                  <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.16em] text-neutral-500">
+                    Mobile number
                   </span>
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    autoComplete="tel"
-                    placeholder="Mobile number"
-                    value={phone}
-                    onChange={(e) =>
-                      setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
-                    }
-                    className="h-14 w-full rounded-full border border-neutral-200 bg-white pl-16 pr-5 text-[15px] text-neutral-900 placeholder:text-neutral-400 focus:border-[color:var(--brand)] focus:outline-none focus:ring-4 focus:ring-[color:var(--brand)]/15"
-                    style={{ ["--brand" as any]: BRAND }}
-                  />
-                </div>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-[15px] font-semibold text-neutral-400">
+                      +91
+                    </span>
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      autoComplete="tel"
+                      placeholder="98765 43210"
+                      value={phone}
+                      onChange={(e) =>
+                        setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+                      }
+                      className="h-14 w-full rounded-2xl border border-neutral-200 bg-neutral-50 pl-14 pr-5 text-[15px] font-medium tracking-wide text-neutral-900 placeholder:text-neutral-400 transition-all focus:border-[#2563eb] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#2563eb]/12"
+                    />
+                  </div>
+                </label>
 
                 <Button
                   type="submit"
                   disabled={!phoneValid || sending}
-                  className="group h-14 w-full rounded-full text-[15px] font-semibold text-white shadow-[0_10px_24px_-8px_rgba(126,194,66,0.55)] transition-all hover:opacity-95 disabled:opacity-50"
-                  style={{ background: BRAND }}
+                  className="group h-14 w-full rounded-2xl bg-[#0b1220] text-[15px] font-semibold text-white shadow-[0_18px_40px_-12px_rgba(11,18,32,0.55)] transition-all hover:bg-[#111a30] hover:shadow-[0_22px_44px_-12px_rgba(11,18,32,0.65)] disabled:opacity-50"
                 >
                   {sending ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -185,15 +283,12 @@ function LoginPage() {
                   )}
                 </Button>
 
-                <p className="pt-2 text-center text-[13px] text-neutral-500">
-                  We'll text a 6-digit code — no password needed
+                <p className="pt-1 text-center text-[12.5px] text-neutral-500">
+                  No password required — we'll text you a code.
                 </p>
               </form>
             ) : (
               <div className="space-y-5">
-                <p className="text-center text-sm text-neutral-500">
-                  Code sent to +91 ••• ••• {phone.slice(-4)}
-                </p>
                 <div className={error ? "animate-shake" : ""}>
                   <InputOTP
                     maxLength={6}
@@ -203,14 +298,14 @@ function LoginPage() {
                       setError(null);
                       if (v.length === 6) handleVerify(v);
                     }}
-                    containerClassName="justify-center gap-2"
+                    containerClassName="justify-between gap-2"
                   >
-                    <InputOTPGroup className="justify-center gap-2">
+                    <InputOTPGroup className="flex w-full justify-between gap-2">
                       {[0, 1, 2, 3, 4, 5].map((i) => (
                         <InputOTPSlot
                           key={i}
                           index={i}
-                          className="h-14 w-12 rounded-2xl border border-neutral-200 bg-white text-xl font-bold text-neutral-900 first:rounded-l-2xl last:rounded-r-2xl"
+                          className="h-14 w-12 rounded-2xl border border-neutral-200 bg-neutral-50 text-xl font-bold tabular-nums text-neutral-900 first:rounded-l-2xl last:rounded-r-2xl data-[active=true]:border-[#2563eb] data-[active=true]:bg-white data-[active=true]:ring-4 data-[active=true]:ring-[#2563eb]/12"
                         />
                       ))}
                     </InputOTPGroup>
@@ -233,8 +328,7 @@ function LoginPage() {
                 <Button
                   onClick={() => handleVerify()}
                   disabled={otp.length !== 6 || verifying}
-                  className="h-14 w-full rounded-full text-[15px] font-semibold text-white hover:opacity-95 disabled:opacity-50"
-                  style={{ background: BRAND }}
+                  className="h-14 w-full rounded-2xl bg-[#0b1220] text-[15px] font-semibold text-white shadow-[0_18px_40px_-12px_rgba(11,18,32,0.55)] hover:bg-[#111a30] disabled:opacity-50"
                 >
                   {verifying ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -259,8 +353,7 @@ function LoginPage() {
                     type="button"
                     disabled={resendIn > 0 || sending}
                     onClick={() => sendOtp()}
-                    className="font-semibold hover:opacity-80 disabled:cursor-not-allowed disabled:text-neutral-400"
-                    style={{ color: BRAND_DARK }}
+                    className="font-semibold text-[#2563eb] hover:opacity-80 disabled:cursor-not-allowed disabled:text-neutral-400"
                   >
                     {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend OTP"}
                   </button>
@@ -269,24 +362,21 @@ function LoginPage() {
             )}
 
             {step === "phone" && (
-              <p className="mt-10 text-center text-[13px] text-neutral-500">
+              <p className="mt-10 text-center text-[12px] leading-relaxed text-neutral-500">
                 By signing in you agree to Radiant's{" "}
-                <span
-                  className="font-semibold"
-                  style={{ color: BRAND_DARK }}
-                >
-                  Terms of Service
-                </span>{" "}
+                <span className="font-semibold text-neutral-700">Terms of Service</span>{" "}
                 and{" "}
-                <span
-                  className="font-semibold"
-                  style={{ color: BRAND_DARK }}
-                >
-                  Privacy Policy
-                </span>
-                .
+                <span className="font-semibold text-neutral-700">Privacy Policy</span>.
               </p>
             )}
+
+            {/* Powered by slot — replace with RevdInfo logo when provided */}
+            <div className="mt-8 flex items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
+              <span>Powered by</span>
+              <span className="rounded-md border border-neutral-200 px-2 py-0.5 text-neutral-600">
+                RevdInfo
+              </span>
+            </div>
           </div>
         </div>
       </div>
