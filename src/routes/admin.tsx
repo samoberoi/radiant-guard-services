@@ -240,14 +240,14 @@ function AdminLayout() {
 
       {/* Top nav bar */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
-        <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-3 px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex h-16 w-full max-w-[1600px] items-center gap-3 px-4 sm:px-6 lg:px-8">
           {/* Brand */}
           <Link to={dashboardHref} className="flex shrink-0 items-center gap-2">
             <BrandMark className="min-w-0" />
           </Link>
 
           {/* Desktop top nav */}
-          <nav className="ml-3 hidden flex-1 items-center gap-1 lg:flex">
+          <nav className="scrollbar-hide ml-3 hidden min-w-0 flex-1 items-center gap-1 overflow-x-auto lg:flex">
             {visibleGroups.map((g) => {
               const active = isGroupActive(g);
               if (!g.children || g.children.length === 0) {
