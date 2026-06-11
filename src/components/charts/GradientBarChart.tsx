@@ -30,7 +30,7 @@ export function GradientBarChart({
           <defs>
             <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={gradientFrom} stopOpacity={1} />
-              <stop offset="100%" stopColor={gradientTo} stopOpacity={0.55} />
+              <stop offset="100%" stopColor={gradientTo} stopOpacity={1} />
             </linearGradient>
           </defs>
           <CartesianGrid stroke="oklch(0.92 0.01 250)" vertical={false} strokeDasharray="3 6" />
