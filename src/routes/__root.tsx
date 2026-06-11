@@ -7,10 +7,12 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
 
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { ConfirmProvider } from "@/components/ConfirmProvider";
+
 
 function NotFoundComponent() {
   return (
@@ -119,6 +121,55 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
+  // Promote any [title] into a styled floating pill via [data-tip],
+  // and suppress the slow native browser tooltip.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const promote = (root: ParentNode) => {
+      root.querySelectorAll<HTMLElement>("[title]").forEach((el) => {
+        const t = el.getAttribute("title");
+        if (!t) return;
+        el.setAttribute("data-tip", t);
+        el.removeAttribute("title");
+      });
+      // Icon-only buttons/anchors with aria-label → tooltip pill
+      root
+        .querySelectorAll<HTMLElement>("button[aria-label], a[aria-label]")
+        .forEach((el) => {
+          if (el.hasAttribute("data-tip")) return;
+          const label = el.getAttribute("aria-label");
+          if (!label) return;
+          const hasText = (el.textContent ?? "").trim().length > 0;
+          if (hasText) return; // only annotate icon-only controls
+          el.setAttribute("data-tip", label);
+        });
+    };
+
+    promote(document.body);
+    const obs = new MutationObserver((muts) => {
+      for (const m of muts) {
+        m.addedNodes.forEach((n) => {
+          if (n.nodeType === 1) promote(n as Element);
+        });
+        if (m.type === "attributes" && m.target.nodeType === 1) {
+          const el = m.target as HTMLElement;
+          const t = el.getAttribute("title");
+          if (t) {
+            el.setAttribute("data-tip", t);
+            el.removeAttribute("title");
+          }
+        }
+      }
+    });
+    obs.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["title"],
+    });
+    return () => obs.disconnect();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ConfirmProvider>
@@ -128,3 +179,4 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
+

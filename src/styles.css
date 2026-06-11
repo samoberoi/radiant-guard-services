@@ -346,4 +346,45 @@
      Individual cells/columns may still set their own overflow as needed. */
   .ios-table-card { overflow-x: clip; }
 
+  /* Floating pill tooltip — driven by [data-tip] (set at runtime from title attr).
+     Provides a consistent shadcn-style hover hint across all icon action buttons. */
+  [data-tip] { position: relative; }
+  [data-tip]:hover::after,
+  [data-tip]:focus-visible::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 60;
+    white-space: nowrap;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: oklch(0.18 0.02 260);
+    color: oklch(0.99 0 0);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+    box-shadow: 0 4px 14px -4px rgba(0,0,0,0.25);
+    pointer-events: none;
+    opacity: 0;
+    animation: tipFade .12s ease-out forwards;
+  }
+  [data-tip]:hover::before,
+  [data-tip]:focus-visible::before {
+    content: "";
+    position: absolute;
+    bottom: calc(100% + 2px);
+    left: 50%;
+    transform: translateX(-50%);
+    border: 4px solid transparent;
+    border-top-color: oklch(0.18 0.02 260);
+    z-index: 60;
+    pointer-events: none;
+    opacity: 0;
+    animation: tipFade .12s ease-out forwards;
+  }
+  @keyframes tipFade { to { opacity: 1; } }
 }
+
