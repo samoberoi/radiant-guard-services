@@ -597,15 +597,15 @@ function DashboardPage() {
             )}
           </div>
           <div className="overflow-x-clip">
-            <table className="ios-table min-w-[920px]">
+            <table className="ios-table min-w-[1040px]">
               <colgroup>
-                <col className="w-[26%]" />
                 <col className="w-[22%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[80px]" />
+                <col className="w-[20%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[180px]" />
+                <col className="w-[64px]" />
               </colgroup>
               <thead>
                 <tr>
