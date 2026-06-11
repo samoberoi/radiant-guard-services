@@ -9,12 +9,10 @@ import {
   ChevronRight,
   ClipboardList,
   ShieldCheck,
-  Sparkles,
   UserPlus,
   Warehouse,
 } from "lucide-react";
 
-import { PageHeader } from "@/components/PageHeader";
 import { HeroTile } from "@/components/HeroTile";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentPermissions } from "@/lib/rbac";
