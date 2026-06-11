@@ -2491,7 +2491,7 @@ function StatusBadge({ status }: { status: string }) {
     pending: "bg-amber-500/15 text-amber-600",
     rejected: "bg-rose-500/15 text-rose-600",
   };
-  return <Badge className={cn("border-0 font-semibold capitalize", map[status] ?? "bg-secondary text-foreground")}>{status}</Badge>;
+  return <Badge className={cn("border-0 font-semibold capitalize whitespace-nowrap", map[status] ?? "bg-secondary text-foreground")}>{status}</Badge>;
 }
 
 function maskAadhaar(n: string) {
