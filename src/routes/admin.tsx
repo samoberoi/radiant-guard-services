@@ -426,6 +426,7 @@ function SidebarGroup({
   groupActive: boolean;
 }) {
   const [open, setOpen] = useState(groupActive);
+  const [hoverOpen, setHoverOpen] = useState(false);
   const Icon = group.icon;
 
   useEffect(() => {
@@ -434,9 +435,13 @@ function SidebarGroup({
 
   const itemBase =
     "group relative flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] font-semibold transition-all";
-  const itemIdle = "text-foreground/75 hover:bg-white/70 hover:text-foreground";
+  const itemIdle = "text-foreground/75 hover:bg-accent/10 hover:text-accent";
   const itemActive =
     "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)] shadow-[0_2px_8px_-2px_color-mix(in_oklab,var(--accent)_25%,transparent)] before:absolute before:left-0 before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-accent";
+
+  const iconSpanBase = "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors";
+  const iconSpanActive = "bg-accent text-accent-foreground shadow-[0_4px_12px_-4px_color-mix(in_oklab,var(--accent)_55%,transparent)]";
+  const iconSpanIdle = "bg-white/70 text-foreground/70 group-hover:bg-accent/15 group-hover:text-accent";
 
   if (!group.children || group.children.length === 0) {
     return (
@@ -445,12 +450,7 @@ function SidebarGroup({
         title={collapsed ? group.label : undefined}
         className={cn(itemBase, groupActive ? itemActive : itemIdle, collapsed && "justify-center px-2")}
       >
-        <span
-          className={cn(
-            "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors",
-            groupActive ? "bg-accent text-accent-foreground shadow-[0_4px_12px_-4px_color-mix(in_oklab,var(--accent)_55%,transparent)]" : "bg-white/70 text-foreground/70 group-hover:bg-white",
-          )}
-        >
+        <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
           <Icon className="h-4 w-4" />
         </span>
         {!collapsed && <span className="truncate">{group.label}</span>}
@@ -460,38 +460,49 @@ function SidebarGroup({
 
   if (collapsed) {
     return (
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            title={group.label}
-            className={cn(itemBase, "justify-center px-2", groupActive ? itemActive : itemIdle)}
-          >
-            <span
-              className={cn(
-                "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors",
-                groupActive ? "bg-accent text-accent-foreground" : "bg-white/70 text-foreground/70",
-              )}
-            >
-              <Icon className="h-4 w-4" />
-            </span>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="right" sideOffset={12} className="w-60 rounded-2xl">
-          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-            {group.label}
-          </DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {group.children.map((c) => (
-            <DropdownMenuItem key={c.to} asChild>
-              <Link to={c.to} search={c.search as never} className="flex items-center gap-2">
-                <c.icon className="h-4 w-4 opacity-80" />
-                <span className="truncate">{c.label}</span>
-              </Link>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <div
+        className="relative"
+        onMouseEnter={() => setHoverOpen(true)}
+        onMouseLeave={() => setHoverOpen(false)}
+      >
+        <button
+          type="button"
+          title={group.label}
+          className={cn(itemBase, "justify-center px-2", groupActive ? itemActive : itemIdle)}
+        >
+          <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
+            <Icon className="h-4 w-4" />
+          </span>
+        </button>
+        {hoverOpen && (
+          <div className="absolute left-full top-0 z-50 ml-3 w-60 rounded-2xl border border-white/50 bg-white/95 p-2 shadow-2xl backdrop-blur-xl">
+            <div className="mb-1 px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+              {group.label}
+            </div>
+            <div className="space-y-0.5">
+              {group.children.map((c) => {
+                const a = isActive(c.to);
+                return (
+                  <Link
+                    key={c.to}
+                    to={c.to}
+                    search={c.search as never}
+                    className={cn(
+                      "flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
+                      a
+                        ? "bg-accent/10 text-accent"
+                        : "text-foreground/80 hover:bg-accent/10 hover:text-accent",
+                    )}
+                  >
+                    <c.icon className="h-4 w-4" />
+                    <span className="truncate">{c.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     );
   }
 
@@ -502,12 +513,7 @@ function SidebarGroup({
         onClick={() => setOpen((v) => !v)}
         className={cn(itemBase, groupActive ? itemActive : itemIdle)}
       >
-        <span
-          className={cn(
-            "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors",
-            groupActive ? "bg-accent text-accent-foreground shadow-[0_4px_12px_-4px_color-mix(in_oklab,var(--accent)_55%,transparent)]" : "bg-white/70 text-foreground/70 group-hover:bg-white",
-          )}
-        >
+        <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
           <Icon className="h-4 w-4" />
         </span>
         <span className="flex-1 truncate text-left">{group.label}</span>
@@ -524,7 +530,9 @@ function SidebarGroup({
                 search={c.search as never}
                 className={cn(
                   "relative flex items-center gap-2 rounded-xl px-3 py-2 text-[12.5px] font-medium transition-colors",
-                  a ? "bg-[color-mix(in_oklab,var(--accent)_10%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_25%,transparent)]" : "text-foreground/70 hover:bg-white/60 hover:text-foreground",
+                  a
+                    ? "bg-[color-mix(in_oklab,var(--accent)_10%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_25%,transparent)]"
+                    : "text-foreground/70 hover:bg-accent/10 hover:text-accent",
                 )}
               >
                 <c.icon className="h-3.5 w-3.5 opacity-80" />
@@ -555,7 +563,9 @@ function MobileGroup({
         to={group.to!}
         className={cn(
           "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
-          isGroupActive ? "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)]" : "text-foreground hover:bg-white/70",
+          isGroupActive
+            ? "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)]"
+            : "text-foreground hover:bg-accent/10 hover:text-accent",
         )}
       >
         <Icon className="h-4 w-4" />
@@ -570,7 +580,9 @@ function MobileGroup({
         onClick={() => setOpen((v) => !v)}
         className={cn(
           "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
-          isGroupActive ? "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)]" : "text-foreground hover:bg-white/70",
+          isGroupActive
+            ? "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)]"
+            : "text-foreground hover:bg-accent/10 hover:text-accent",
         )}
       >
         <Icon className="h-4 w-4" />
@@ -587,8 +599,10 @@ function MobileGroup({
                 to={c.to}
                 search={c.search as never}
                 className={cn(
-                  "flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium",
-                  a ? "bg-[color-mix(in_oklab,var(--accent)_10%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_25%,transparent)]" : "text-foreground/80 hover:bg-white/60",
+                  "flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
+                  a
+                    ? "bg-[color-mix(in_oklab,var(--accent)_10%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_25%,transparent)]"
+                    : "text-foreground/80 hover:bg-accent/10 hover:text-accent",
                 )}
               >
                 <c.icon className="h-4 w-4 opacity-80" />
