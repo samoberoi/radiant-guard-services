@@ -447,7 +447,8 @@ function SidebarGroup({
     return (
       <Link
         to={group.to!}
-        title={collapsed ? group.label : undefined}
+        aria-label={collapsed ? group.label : undefined}
+        data-no-tip
         className={cn(itemBase, groupActive ? itemActive : itemIdle, collapsed && "justify-center px-2")}
       >
         <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
