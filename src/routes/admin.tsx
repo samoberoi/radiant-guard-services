@@ -45,6 +45,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/lib/auth";
 import { useCurrentPermissions } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
@@ -426,7 +427,6 @@ function SidebarGroup({
   groupActive: boolean;
 }) {
   const [open, setOpen] = useState(groupActive);
-  const [hoverOpen, setHoverOpen] = useState(false);
   const Icon = group.icon;
 
   useEffect(() => {
@@ -608,37 +608,30 @@ function CollapsedGroupPopover({
   iconSpanActive: string;
   Icon: GroupItem["icon"];
 }) {
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const [hoverOpen, setHoverOpen] = useState(false);
-  const [clickOpen, setClickOpen] = useState(false);
-  useEffect(() => {
-    if (!clickOpen) return;
-    const onDoc = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setClickOpen(false);
-    };
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [clickOpen]);
-  const popoverOpen = hoverOpen || clickOpen;
+  const [open, setOpen] = useState(false);
+
   return (
-    <div
-      ref={wrapRef}
-      className="relative"
-      onMouseEnter={() => setHoverOpen(true)}
-      onMouseLeave={() => setHoverOpen(false)}
-    >
-      <button
-        type="button"
-        title={group.label}
-        onClick={() => setClickOpen((v) => !v)}
-        className={cn(itemBase, "justify-center px-2", groupActive ? itemActive : itemIdle)}
-      >
-        <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
-          <Icon className="h-4 w-4" />
-        </span>
-      </button>
-      {popoverOpen && group.children && (
-        <div className="absolute left-full top-0 z-50 ml-3 w-60 rounded-2xl border border-white/50 bg-white/95 p-2 shadow-2xl backdrop-blur-xl">
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          title={group.label}
+          aria-label={group.label}
+          aria-expanded={open}
+          className={cn(itemBase, "justify-center px-2", groupActive ? itemActive : itemIdle)}
+        >
+          <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
+            <Icon className="h-4 w-4" />
+          </span>
+        </button>
+      </PopoverTrigger>
+      {group.children && (
+        <PopoverContent
+          side="right"
+          align="start"
+          sideOffset={12}
+          className="w-60 rounded-2xl border border-white/50 bg-white/95 p-2 shadow-2xl backdrop-blur-xl"
+        >
           <div className="mb-1 px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
             {group.label}
           </div>
@@ -650,7 +643,7 @@ function CollapsedGroupPopover({
                   key={c.to}
                   to={c.to}
                   search={c.search as never}
-                  onClick={() => setClickOpen(false)}
+                  onClick={() => setOpen(false)}
                   className={cn(
                     "flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
                     a
@@ -664,8 +657,8 @@ function CollapsedGroupPopover({
               );
             })}
           </div>
-        </div>
+        </PopoverContent>
       )}
-    </div>
+    </Popover>
   );
 }
