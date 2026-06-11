@@ -1519,7 +1519,7 @@ function EmployeesPage() {
               />
             </td>
           )}
-          <td className="px-2.5 py-2.5 align-top text-right">
+          <td className="px-2.5 py-2.5 align-top text-right" data-col="status">
             <div className="flex justify-end"><StatusBadge status={c.status} /></div>
             {c.status === "rejected" && c.rejection_reason && (
               <div className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground" title={c.rejection_reason}>
