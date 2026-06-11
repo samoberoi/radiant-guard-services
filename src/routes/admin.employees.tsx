@@ -1629,7 +1629,7 @@ function EmployeesPage() {
                   </Button>
                 </>
               )}
-              <div className="ml-0.5 flex items-center gap-0.5 border-l border-border/60 pl-1">
+              <div className="ml-1 flex items-center gap-1.5 border-l border-border/60 pl-2">
                 <Button
                   asChild
                   variant="ghost"
