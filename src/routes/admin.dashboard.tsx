@@ -597,15 +597,15 @@ function DashboardPage() {
             )}
           </div>
           <div className="overflow-x-clip">
-            <table className="ios-table min-w-[920px]">
+            <table className="ios-table min-w-[1040px]">
               <colgroup>
-                <col className="w-[26%]" />
                 <col className="w-[22%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[12%]" />
-                <col className="w-[80px]" />
+                <col className="w-[20%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[11%]" />
+                <col className="w-[180px]" />
+                <col className="w-[64px]" />
               </colgroup>
               <thead>
                 <tr>
@@ -635,9 +635,9 @@ function DashboardPage() {
                         <td className="num text-right text-foreground">{fmtINR(r.invoice_amount)}</td>
                         <td className="num text-right text-foreground">{fmtINR(r.payroll_cost)}</td>
                         <td className="text-right">
-                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[12px] font-semibold num ring-1 ring-inset ${pos ? "bg-emerald-50 text-emerald-700 ring-emerald-200/70" : "bg-rose-50 text-rose-700 ring-rose-200/70"}`}>
-                            {pos ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                            {fmtINR(r.variance)}
+                          <span className={`inline-flex w-full max-w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-semibold num ring-1 ring-inset ${pos ? "bg-emerald-50 text-emerald-700 ring-emerald-200/70" : "bg-rose-50 text-rose-700 ring-rose-200/70"}`}>
+                            {pos ? <TrendingUp className="h-3 w-3 shrink-0" /> : <TrendingDown className="h-3 w-3 shrink-0" />}
+                            <span>{fmtINR(r.variance)}</span>
                             <span className="opacity-60">({r.variance_pct.toFixed(1)}%)</span>
                           </span>
                         </td>
