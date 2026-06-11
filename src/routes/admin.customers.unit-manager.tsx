@@ -306,7 +306,7 @@ function UnitManagerPage() {
         <div className="flex items-center justify-between border-b border-border bg-accent/10 px-5 py-2.5 text-xs font-medium text-foreground">
           <span className="inline-flex items-center gap-2"><span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">{rows.length}</span><span className="uppercase tracking-[0.14em] text-muted-foreground">Total {rows.length === 1 ? "row" : "rows"}</span></span>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-clip">
           <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
@@ -1062,7 +1062,7 @@ function ProfessionalTaxBlock({
               {result.slabs.length === 0 ? (
                 <p className="text-muted-foreground">No slab rows defined for this region.</p>
               ) : (
-                <div className="overflow-x-auto">
+                <div className="overflow-x-clip">
                   <table className="ios-table w-full text-xs">
                     <thead className="bg-secondary/60 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       <tr>

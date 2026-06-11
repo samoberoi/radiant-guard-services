@@ -126,7 +126,7 @@ function IssuancesPage() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-clip">
           <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
@@ -348,7 +348,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
               <Label className="text-sm font-semibold">Items</Label>
               {isDraft && <Button size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { item_id: "", size_value: "", qty: 1, condition: "new", notes: "" }])}><Plus className="mr-1 h-3.5 w-3.5" />Add line</Button>}
             </div>
-            <div className="overflow-x-auto rounded-xl border border-border">
+            <div className="overflow-x-clip rounded-xl border border-border">
               <table className="ios-table w-full text-sm">
                 <thead className="bg-secondary/60 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <tr>

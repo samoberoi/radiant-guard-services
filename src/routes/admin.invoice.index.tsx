@@ -420,7 +420,7 @@ function PayrollUnitsPage() {
           )}
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-clip">
           <table className="ios-table min-w-full table-auto">
             <thead className="border-b border-border/60 bg-secondary/40">
               <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">

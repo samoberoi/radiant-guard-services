@@ -152,7 +152,7 @@ function ServiceManagerPage() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-clip">
           <table className="ios-table w-full text-sm">
             <thead className="bg-muted/40 text-xs uppercase tracking-wide text-muted-foreground">
               <tr>

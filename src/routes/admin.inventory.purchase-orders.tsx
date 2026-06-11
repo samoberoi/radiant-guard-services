@@ -263,7 +263,7 @@ function POPage() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-clip">
           <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
@@ -593,7 +593,7 @@ function POFormDialog({
                 </Button>
               )}
             </div>
-            <div className="overflow-x-auto rounded-xl border border-border">
+            <div className="overflow-x-clip rounded-xl border border-border">
               <table className="ios-table w-full text-sm">
                 <thead className="bg-secondary/60 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <tr>
