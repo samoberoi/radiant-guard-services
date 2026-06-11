@@ -596,7 +596,7 @@ function DashboardPage() {
               </div>
             )}
           </div>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-clip">
             <table className="ios-table min-w-[920px]">
               <colgroup>
                 <col className="w-[26%]" />

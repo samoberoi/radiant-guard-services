@@ -390,7 +390,7 @@ function PayrollUnitPage() {
       </div>
 
       <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-clip">
           <table className="ios-table min-w-full table-auto text-sm">
             <thead className="border-b border-border/60 bg-secondary/40">
               <tr className="text-left text-xs uppercase tracking-[0.16em] text-muted-foreground">
@@ -532,7 +532,7 @@ function SalaryBreakdownPreview({
           </p>
         </div>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-clip">
         <table className="ios-table w-full text-sm">
           <tbody className="[&_tr]:border-b [&_tr]:border-border/60 [&_td]:px-3 [&_td]:py-2">
             <tr className="bg-secondary/20">

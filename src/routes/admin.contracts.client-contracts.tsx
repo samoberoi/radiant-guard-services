@@ -1599,7 +1599,7 @@ function ClientContractsPage() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-clip">
           <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
@@ -3827,7 +3827,7 @@ function SalaryBreakdownTable({
           Auto-computed from wage components, benefits, deductions and the selected payroll-days rule.
         </p>
       </div>
-      <div className="overflow-x-auto">
+      <div className="overflow-x-clip">
         <table className="ios-table w-full text-sm">
           <tbody className="[&_tr]:border-b [&_tr]:border-border/60 [&_td]:px-3 [&_td]:py-2">
             <tr className="bg-secondary/20">

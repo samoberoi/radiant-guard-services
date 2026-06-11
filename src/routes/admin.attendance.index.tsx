@@ -585,7 +585,7 @@ function AttendanceUnitsPage() {
                 No employees found for this client.
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-border/60 bg-background">
+              <div className="overflow-x-clip rounded-xl border border-border/60 bg-background">
                 <table className="ios-table min-w-full table-auto text-sm">
                   <thead className="border-b border-border/60 bg-secondary/40 text-xs uppercase tracking-[0.16em] text-muted-foreground">
                     <tr>
@@ -636,7 +636,7 @@ function AttendanceUnitsPage() {
         )}
 
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-clip">
           <table className="ios-table min-w-full table-auto">
             <thead className="border-b border-border/60 bg-secondary/40">
               <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
