@@ -434,6 +434,10 @@
     opacity: 0;
     animation: tipFade .12s ease-out forwards;
   }
+  [data-no-tip]:hover::after,
+  [data-no-tip]:focus-visible::after,
+  [data-no-tip]:hover::before,
+  [data-no-tip]:focus-visible::before { content: none !important; display: none !important; }
   @keyframes tipFade { to { opacity: 1; } }
 }
 
