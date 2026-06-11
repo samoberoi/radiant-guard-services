@@ -148,7 +148,7 @@ function StateManagerPage() {
                 <th className="px-5 py-3">#</th>
                 <th className="px-5 py-3">State</th>
                 <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -176,7 +176,7 @@ function StateManagerPage() {
                         </Badge>
                       )}
                     </td>
-                    <td className="px-5 py-3 text-right">
+                    <td className="px-5 py-3 text-right" data-col="actions">
                       <div className="inline-flex gap-1">
                         <Button
                           size="sm"
