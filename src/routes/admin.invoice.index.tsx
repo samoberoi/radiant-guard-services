@@ -483,7 +483,7 @@ function PayrollUnitsPage() {
                       </td>
                       <td className="px-5 py-4 align-top text-sm text-foreground">{unit.customer_name}</td>
                       <td className="px-5 py-4 align-top">
-                        <div className="flex flex-wrap gap-1.5">
+                        <div className="flex gap-1.5 overflow-hidden">
                           {unit.periods.slice(0, 3).map((p) => {
                             const cls =
                               p.status === "approved" ? "border-emerald-200/60 bg-emerald-100/60 text-emerald-800"
