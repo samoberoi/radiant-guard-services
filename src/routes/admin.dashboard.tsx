@@ -544,8 +544,8 @@ function DashboardPage() {
                 <div className="font-display text-lg font-semibold tracking-tight text-foreground">Invoice vs Payroll</div>
               </div>
               <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[oklch(0.62_0.20_295)]" /> Invoice</span>
-                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[oklch(0.78_0.14_200)]" /> Payroll</span>
+                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[oklch(0.55_0.22_255)]" /> Invoice</span>
+                <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-[oklch(0.85_0.18_95)]" /> Payroll</span>
               </div>
             </div>
             <GradientBarChart
