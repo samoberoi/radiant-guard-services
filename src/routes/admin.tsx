@@ -433,10 +433,10 @@ function SidebarGroup({
   }, [groupActive]);
 
   const itemBase =
-    "group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] font-semibold transition-all";
+    "group relative flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] font-semibold transition-all";
   const itemIdle = "text-foreground/75 hover:bg-white/70 hover:text-foreground";
   const itemActive =
-    "bg-gradient-to-b from-white to-white/70 text-primary shadow-[0_2px_8px_-2px_rgba(15,23,42,0.12)] ring-1 ring-white/80";
+    "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)] shadow-[0_2px_8px_-2px_color-mix(in_oklab,var(--accent)_25%,transparent)] before:absolute before:left-0 before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-accent";
 
   if (!group.children || group.children.length === 0) {
     return (
