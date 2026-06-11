@@ -230,8 +230,8 @@ function AdminLayout() {
   const isGroupActive = (g: GroupItem) =>
     (g.activePrefixes ?? []).some((p) => pathname === p || pathname.startsWith(p + "/"));
 
-  const sidebarWidth = collapsed ? "lg:w-[76px]" : "lg:w-[260px]";
-  const mainPad = collapsed ? "lg:pl-[100px]" : "lg:pl-[284px]";
+  const sidebarWidth = collapsed ? "lg:w-[72px]" : "lg:w-[244px]";
+  const mainPad = collapsed ? "lg:pl-[92px]" : "lg:pl-[264px]";
 
   return (
     <div className="relative min-h-screen">
@@ -244,26 +244,26 @@ function AdminLayout() {
       {/* Desktop vertical sidebar — glass / iPadOS */}
       <aside
         className={cn(
-          "fixed inset-y-3 left-3 z-30 hidden flex-col rounded-3xl border border-white/40 bg-white/55 shadow-[0_8px_40px_-12px_rgba(15,23,42,0.18)] backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex",
+          "fixed inset-y-3 left-3 z-30 hidden flex-col rounded-[26px] border border-white/50 bg-white/65 shadow-[0_10px_40px_-16px_rgba(15,23,42,0.18)] backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex",
           sidebarWidth,
         )}
       >
         {/* Brand */}
-        <div className={cn("flex items-center gap-2 px-4 pt-5 pb-4", collapsed && "justify-center px-2")}>
+        <div className={cn("flex items-center px-4 pt-5 pb-4", collapsed && "justify-center px-2")}>
           {collapsed ? (
-            <Link to={dashboardHref} className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground font-bold">
+            <Link to={dashboardHref} className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground text-[13px] font-bold">
               R
             </Link>
           ) : (
-            <Link to={dashboardHref} className="flex min-w-0 items-center gap-2">
+            <Link to={dashboardHref} className="flex min-w-0 items-center">
               <BrandMark />
             </Link>
           )}
         </div>
 
         {/* Nav */}
-        <nav className="scrollbar-hide flex-1 overflow-y-auto px-3 pb-3">
-          <div className="space-y-1">
+        <nav className="scrollbar-hide flex-1 overflow-y-auto px-2.5 pb-3">
+          <div className="space-y-[3px]">
             {visibleGroups.map((g) => (
               <SidebarGroup
                 key={g.key}
@@ -434,14 +434,14 @@ function SidebarGroup({
   }, [groupActive]);
 
   const itemBase =
-    "group relative flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] font-semibold transition-all";
-  const itemIdle = "text-foreground/75 hover:bg-accent/10 hover:text-accent";
+    "group relative flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium transition-colors";
+  const itemIdle = "text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground";
   const itemActive =
-    "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)] shadow-[0_2px_8px_-2px_color-mix(in_oklab,var(--accent)_25%,transparent)] before:absolute before:left-0 before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-accent";
+    "bg-accent/10 text-accent font-semibold before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-accent";
 
-  const iconSpanBase = "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors";
-  const iconSpanActive = "bg-accent text-accent-foreground shadow-[0_4px_12px_-4px_color-mix(in_oklab,var(--accent)_55%,transparent)]";
-  const iconSpanIdle = "bg-white/70 text-foreground/70 group-hover:bg-accent/15 group-hover:text-accent";
+  const iconSpanBase = "grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors";
+  const iconSpanActive = "bg-accent text-accent-foreground";
+  const iconSpanIdle = "text-foreground/60 group-hover:text-foreground";
 
   if (!group.children || group.children.length === 0) {
     return (
@@ -487,10 +487,10 @@ function SidebarGroup({
           <Icon className="h-4 w-4" />
         </span>
         <span className="flex-1 truncate text-left">{group.label}</span>
-        <ChevronDown className={cn("h-4 w-4 opacity-60 transition-transform", open ? "rotate-0" : "-rotate-90")} />
+        <ChevronDown className={cn("h-3.5 w-3.5 opacity-50 transition-transform", open ? "rotate-0" : "-rotate-90")} />
       </button>
       {open && (
-        <div className="mt-1 ml-4 space-y-0.5 border-l border-white/60 pl-3">
+        <div className="mt-0.5 ml-[22px] space-y-0.5 border-l border-foreground/10 pl-3">
           {group.children.map((c) => {
             const a = isActive(c.to);
             return (
@@ -499,13 +499,13 @@ function SidebarGroup({
                 to={c.to}
                 search={c.search as never}
                 className={cn(
-                  "relative flex items-center gap-2 rounded-xl px-3 py-2 text-[12.5px] font-medium transition-colors",
+                  "relative flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium transition-colors",
                   a
-                    ? "bg-[color-mix(in_oklab,var(--accent)_10%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_25%,transparent)]"
-                    : "text-foreground/70 hover:bg-accent/10 hover:text-accent",
+                    ? "bg-accent/10 text-accent font-semibold"
+                    : "text-foreground/65 hover:bg-foreground/[0.04] hover:text-foreground",
                 )}
               >
-                <c.icon className="h-3.5 w-3.5 opacity-80" />
+                <c.icon className="h-3.5 w-3.5 opacity-70" />
                 <span className="truncate">{c.label}</span>
               </Link>
             );
