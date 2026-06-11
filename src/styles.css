@@ -344,9 +344,12 @@
   .ios-table tbody td[data-wrap="false"] { white-space: nowrap; }
   .ios-table tbody td > * { min-width: 0; max-width: 100%; }
   .ios-table [data-col="actions"] {
-    width: 1%;
+    width: 112px;
     white-space: nowrap;
   }
+  .ios-table [data-col="status"] { width: 140px; }
+  .ios-table [data-col="date"] { width: 108px; }
+  .ios-table [data-col="code"] { width: 150px; }
   .ios-table [data-col="date"],
   .ios-table [data-col="status"],
   .ios-table [data-col="code"] {
