@@ -1598,50 +1598,54 @@ function ClientContractsPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+      <div className="ios-table-card overflow-hidden rounded-2xl border border-border bg-card">
         <div className="overflow-x-clip">
           <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
-                <th className="px-5 py-3">{tab === "client" ? "Contract ID" : "Prospect ID"}</th>
+                <th className="px-5 py-3" data-col="code">{tab === "client" ? "Contract ID" : "Prospect ID"}</th>
                 <th className="px-5 py-3">Organization</th>
                 <th className="px-5 py-3">Unit</th>
                 {tab === "client" ? (
                   <>
-                    <th className="px-5 py-3">Start</th>
-                    <th className="px-5 py-3">End</th>
-                    <th className="px-5 py-3">Expiry</th>
+                    <th className="px-5 py-3" data-col="date">Start</th>
+                    <th className="px-5 py-3" data-col="date">End</th>
+                    <th className="px-5 py-3" data-col="date">Expiry</th>
                   </>
                 ) : (
-                  <th className="px-5 py-3">Start</th>
+                  <th className="px-5 py-3" data-col="date">Start</th>
                 )}
-                <th className="px-5 py-3">{tab === "client" ? "Status" : "Approval"}</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3" data-col="status">{tab === "client" ? "Status" : "Approval"}</th>
+                <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((c) => (
                 <tr key={c.id} className="hover:bg-secondary/30">
-                  <td className="px-5 py-3 font-mono text-xs font-semibold text-accent">
+                  <td className="px-5 py-3 font-mono text-xs font-semibold text-accent" data-col="code">
                     {tab === "client" ? c.contractCode : c.prospectCode}
                   </td>
-                  <td className="px-5 py-3 font-medium text-foreground">{c.orgName}</td>
+                  <td className="px-5 py-3 font-medium text-foreground">
+                    <span className="cell-primary">{c.orgName}</span>
+                  </td>
                   <td className="px-5 py-3 text-foreground">
-                    <div className="font-mono text-[11px] text-muted-foreground">{c.unitCode}</div>
-                    <div>{c.unitName}</div>
+                    <div className="cell-stack">
+                      <span className="cell-secondary font-mono">{c.unitCode}</span>
+                      <span className="cell-primary">{c.unitName}</span>
+                    </div>
                   </td>
                   {tab === "client" ? (
                   <>
-                    <td className="px-5 py-3 text-muted-foreground">{c.startDate || "—"}</td>
-                    <td className="px-5 py-3 text-muted-foreground">{c.endDate || "—"}</td>
-                    <td className="px-5 py-3 text-muted-foreground">{c.expiryDate || "—"}</td>
+                    <td className="px-5 py-3 text-muted-foreground" data-col="date">{c.startDate || "—"}</td>
+                    <td className="px-5 py-3 text-muted-foreground" data-col="date">{c.endDate || "—"}</td>
+                    <td className="px-5 py-3 text-muted-foreground" data-col="date">{c.expiryDate || "—"}</td>
                   </>
                 ) : (
-                  <td className="px-5 py-3 text-muted-foreground">
+                  <td className="px-5 py-3 text-muted-foreground" data-col="date">
                     {c.startDate || "—"}
                   </td>
                 )}
-                <td className="px-5 py-3">
+                <td className="px-5 py-3" data-col="status">
                     {tab === "client" ? (
                       <StatusBadge status={c.status} />
                     ) : c.prospectStage === "lost" ? (
@@ -1653,7 +1657,7 @@ function ClientContractsPage() {
                       />
                     )}
                   </td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-5 py-3 text-right" data-col="actions">
                     <div className="inline-flex gap-1">
                       {tab === "prospect" &&
                         c.approvalStatus === "pending" &&
