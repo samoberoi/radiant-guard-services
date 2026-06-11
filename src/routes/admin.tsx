@@ -470,7 +470,7 @@ function SidebarGroup({
             <span
               className={cn(
                 "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors",
-                groupActive ? "bg-primary text-primary-foreground" : "bg-white/70 text-foreground/70",
+                groupActive ? "bg-accent text-accent-foreground" : "bg-white/70 text-foreground/70",
               )}
             >
               <Icon className="h-4 w-4" />
