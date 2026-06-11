@@ -9,12 +9,11 @@ import {
   ChevronRight,
   ClipboardList,
   ShieldCheck,
-  Sparkles,
   UserPlus,
   Warehouse,
 } from "lucide-react";
 
-import { PageHeader } from "@/components/PageHeader";
+import { HeroTile } from "@/components/HeroTile";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentPermissions } from "@/lib/rbac";
 
@@ -147,32 +146,21 @@ function FieldOfficerDashboard() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
-      <PageHeader
-        title="Field Officer Dashboard"
+      <HeroTile
+        eyebrow="Field operations"
+        title={data?.meName || "Welcome"}
+        subtitle={phone ? `+91 ${phone}` : undefined}
         description="Your units, your guards, and the status of candidates you've submitted."
-        crumbs={[{ label: "Dashboard" }]}
-      />
-
-      <div className="relative overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-emerald-950 via-slate-900 to-indigo-900 p-6 text-white shadow-xl sm:p-7">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl" />
-        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5" /> Field operations
-            </div>
-            <div className="font-display text-4xl font-bold tracking-tight sm:text-5xl">
-              {data?.meName || "Welcome"}
-            </div>
-            <div className="text-sm text-white/70">{phone ? `+91 ${phone}` : ""}</div>
-          </div>
+        right={
           <Link
             to="/admin/employees"
-            className="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-semibold text-stone-900 shadow-lg shadow-amber-500/20 transition hover:-translate-y-0.5 hover:bg-amber-300"
+            className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground shadow-lg shadow-accent/20 transition hover:-translate-y-0.5 hover:bg-accent/90"
           >
             <UserPlus className="h-4 w-4" /> Add Candidate
           </Link>
-        </div>
-      </div>
+        }
+      />
+
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatCard icon={Warehouse} label="Units I cover" value={data?.units.length ?? 0} accent="from-cyan-500/20 to-cyan-500/5 text-cyan-600" />

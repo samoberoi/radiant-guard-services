@@ -1,137 +1,105 @@
-## Goal
+# Portal-Wide Design Unification
 
-Two outcomes:
-1. Every table across the admin portal looks and behaves the same — clean, "iOS-like", no horizontal scrollbars, no cell-content wrapping into ugly two-line stacks (EMP ID, names, etc.), consistent paddings, alignment, typography and CTA placement.
-2. The login screen is redesigned to match the portal's theme (dark sidebar + soft gradient surface, rounded cards, Radiant Guard branding), keeping the existing phone → OTP flow.
+A single end-to-end pass over every admin route. Three shared primitives, then a sweep that retrofits them everywhere.
 
----
+## 1. Sidebar — selected item in accent blue
 
-## Part 1 — Global table system (one source of truth)
+Today the active sidebar item turns white-on-primary. Change it to a clear accent pill so the selected row is obvious at a glance.
 
-Today every page renders tables with ad-hoc Tailwind classes. The shared `Table` primitives in `src/components/ui/table.tsx` are almost empty (no row spacing, no header style, no nowrap rules), so each route reinvents the look. That is why the Employees table:
-- scrolls horizontally on 1280-ish viewports
-- stacks `EMP ID` / `EMP-017` onto two lines
-- shows different paddings/colors than e.g. Customers, Contracts, Inventory
+- `src/routes/admin.tsx`
+  - Top-level item (active): `bg-accent/12 text-accent ring-1 ring-accent/30` pill; icon chip flips to `bg-accent text-accent-foreground`.
+  - Sub-item (active): `bg-accent/10 text-accent ring-1 ring-accent/25`, icon `text-accent`.
+  - Same treatment in mobile drawer + collapsed-mode dropdown trigger.
+  - Add a 3px left bar (`before:` pseudo) on active sub-items for extra affordance.
+- Hover stays neutral (`bg-white/70`) so active vs hover are visually distinct.
 
-### Fix at the primitive level
+## 2. Shared primitives (new files)
 
-Rebuild `src/components/ui/table.tsx` so every table in the app inherits the same look without each route changing classnames:
-
-- Container: `rounded-2xl border border-border/60 bg-card/70 backdrop-blur shadow-[0_1px_0_rgba(0,0,0,0.02)] overflow-hidden` — no inner horizontal scroll; the table fills its container.
-- Header (`<thead>`): uppercase 11px tracked label, `text-muted-foreground/80`, sticky-friendly, divider underline.
-- Rows: 56px target height, hairline divider (`divide-y divide-border/50`), `hover:bg-muted/40` transition.
-- Cells: `px-4 py-3.5`, `align-middle`, `whitespace-nowrap` by default; an opt-in `data-wrap` attribute for cells that intentionally need wrapping (long addresses, notes).
-- Numeric columns: right-aligned via a `numeric` variant.
-- First/last cell get extra left/right padding for breathing room.
-- A new `TableScroll` wrapper exposes horizontal scroll **only** when the parent really cannot fit, with edge fades — opt-in, not default.
-
-### Eliminate horizontal scroll on Employees-style tables
-
-A "responsive grid table" pattern, applied to wide list views (Employees, Candidates, Customers, Units, Contracts, Inventory items, Vehicles, Payroll, Invoice, Attendance):
-
-- Replace each route's hand-rolled `<table>` with the shared primitives.
-- Fix EMP ID to a single line: merge the `EMP-017` chip + dash row into one compact pill (`EMP‑017` with non-breaking hyphen, `tabular-nums`, `whitespace-nowrap`, fixed `w-[88px]`).
-- Collapse "EMP ID" + "Employee" into one cell on `< xl` (avatar, name, EMP code as muted caption below). On `xl+` keep them as separate columns.
-- Truncate long values with `min-w-0 truncate` + a `Tooltip` for the full string (Unit, Designation, Manager).
-- Hide low-priority columns under a breakpoint (`hidden lg:table-cell`, `hidden xl:table-cell`) rather than scrolling: Active toggle and Status badge are always visible; Designation/Role/Manager fold in progressively.
-- Action column pinned right, `w-[72px]`, vertical kebab menu instead of multiple inline buttons where space is tight.
-
-### Consistency pass across every list page
-
-For each of these routes, apply the same primitives + responsive priority rules so the look and behavior are identical:
-
-```
-admin.employees · admin.candidates.$id.details
-admin.customers · .customer-manager · .branch-manager · .unit-manager · .state-manager
-admin.contracts.client-contracts
-admin.attendance.index · attendance.$unitId
-admin.payroll.index · payroll.$unitId
-admin.invoice.index · invoice.$unitId
-admin.inventory.* (items, stock, goods-receipts, issuances, transfers, write-offs, adjustments, purchase-orders, vendors, warehouses, rate-cards)
-admin.vehicles.* (inventory, insurances, pucs, fastags, service-manager, expense-manager)
-admin.system-logs · admin.notifications · admin.rbac · admin.company-documents
-all *-manager.tsx config pages (allowance, addition-type, deduction-type, designation, duty, esic-branch, lwf, professional-tax, payroll-days, billing-type, service-type, language, attendance-code, ex-service, offboarding-reason, asset, cost-component, vehicles.service-manager, vehicles.expense-manager)
-```
-
-For every page, also normalize:
-- Page title block uses `PageHeader` (same H1 size, same description treatment, same breadcrumb spacing).
-- Top "stat tiles" row uses the existing `Card` with one consistent grid: `grid-cols-2 md:grid-cols-3 xl:grid-cols-5`, `p-4`, 28px metric, 11px uppercase label, animated counter via existing `useCountUp`. Removes the cramped 5-across at 1280px that caused the Employees overflow.
-- Filter bar: pill `Select` triggers, same height (h-10), same gap (`gap-2`), wraps onto a second row instead of growing wider than the page.
-- Search input and primary CTA share a row, CTA right-aligned, identical 40px height, identical rounded-full styling.
-- Tabs (Employees / Candidates style) use the shared `Tabs` primitive with the same active-pill treatment.
-
-### Typography & spacing tokens
-
-Add a couple of design tokens in `src/styles.css` so spacing/typography are enforced globally rather than per-page:
-- `--table-row-h: 56px`
-- `--table-cell-x: 16px`
-- `--label-uppercase` utility (11px, 600, 0.06em tracking, muted)
-- `--surface-card`, `--surface-table` for the slightly tinted card backgrounds visible in the screenshot.
-
----
-
-## Part 2 — Login screen redesign
-
-Goal: feel like part of the same portal — dark calm background, soft pastel/gradient surface, big rounded white card, Radiant Guard logo, same typography as the dashboard.
-
-### Layout (`src/routes/login.tsx`)
+`src/components/HeroTile.tsx` — the "Leadership snapshot" tile, generalized.
 
 ```text
-┌──────────────────────────────────────────────────────────────┐
-│  Dark gradient backdrop (matches sidebar tone)              │
-│                                                              │
-│   ┌──────────────────────────────────────────────────┐       │
-│   │ LEFT  (brand panel, soft mint→teal gradient)     │       │
-│   │  • Radiant Guard logo + wordmark (top-left)      │       │
-│   │  • Headline: "Welcome back"                      │       │
-│   │  • Sub:  "Sign in to manage your guard force."   │       │
-│   │  • 3 floating glass pills (existing):            │       │
-│   │      – "12 guards on duty"                       │       │
-│   │      – "Patrol Route A"                          │       │
-│   │      – "Aurora Tower · Sector 21"                │       │
-│   │  • Faint dotted grid + soft shield silhouette    │       │
-│   ├──────────────────────────────────────────────────┤       │
-│   │ RIGHT  (white card, form)                        │       │
-│   │  • Small Radiant logo (mobile only)              │       │
-│   │  • H1: "Sign in"                                 │       │
-│   │  • Step 1: +91 prefix + 10-digit phone field     │       │
-│   │            "Send OTP" pill button (brand green)  │       │
-│   │  • Step 2: 6-slot OTP, resend timer, change #    │       │
-│   │  • Footer: Terms · Privacy, version chip         │       │
-│   └──────────────────────────────────────────────────┘       │
-└──────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ ◦ EYEBROW                                  [right slot]  │
+│ Big Title           subtitle / chip                      │
+│ optional description line                                │
+└──────────────────────────────────────────────────────────┘
 ```
 
-### Visual rules
+Props: `eyebrow`, `title`, `subtitle?`, `chip?`, `description?`, `right?` (ReactNode for month picker, filters, primary CTA). Reuses the same gradient/blur/glass styling lifted verbatim from the current dashboard hero (lines 475–510 of `admin.dashboard.tsx`).
 
-- Outer page background: same dark `#0d1f12`-style tone as the rest of the app shell, so the login card feels like the portal opening up.
-- Card: `rounded-[28px]`, white, large soft shadow (`0_40px_120px_-30px_rgba(0,0,0,0.5)`), `grid md:grid-cols-2`.
-- Left panel uses the brand mint→deep-green gradient already defined in `styles.css` (no more stock 3D illustration), with the Radiant Guard logo top-left and a subtle shield watermark.
-- Typography: same `font-display` weights as PageHeader (`text-[44px]/[1.05] font-extrabold`).
-- Buttons: full-radius pill, brand green, same hover/disabled treatment used in the dashboard primary CTA.
-- OTP slots: 48×56, soft `bg-neutral-100`, focus ring in brand color, shake animation on error.
-- Mobile: single column, brand panel collapses to a compact header strip with logo + tagline so the form stays above the fold.
-- Reveal animation on successful sign-in kept.
+`src/components/DataTable.tsx` — the P&L-styled table shell.
 
-### Logo handling
+- Wraps the rounded-3xl card + header (title, description, totals strip) + body.
+- Body uses `ios-table` with `table-fixed`, semantic alignment, `num` class for figures.
+- Built-in responsive column hiding: each `column` accepts `hideBelow?: "sm"|"md"|"lg"|"xl"|"2xl"` → emits `hidden md:table-cell` etc. on both `<th>` and `<td>`. **No horizontal scroll** anywhere — overflow container is removed; instead columns drop out at smaller widths.
+- Optional `rowExpand` render-prop for a "more" toggle row that re-surfaces hidden columns as a key/value grid (used where >7 columns exist).
+- Slots: `title`, `description`, `totals?` (right-aligned key/value strip), `toolbar?` (filters/search), `empty`, `loading`.
 
-- Use the existing Radiant Guard badge from `src/components/BrandMark.tsx` (already used in the sidebar) so the login matches the sidebar 1:1.
-- Add a small `"Radiant Guard Services Pvt. Ltd."` line under the wordmark, same treatment as the sidebar header.
-- Leave a clearly-marked slot for the user-provided RevdInfo logo (footer "Powered by"). Placeholder until they hand the asset over — easy swap with one import.
+`src/components/SectionCard.tsx` — a thin wrapper for non-table content cards (insight panels, forms) so every card across the portal shares radius, border, shadow, padding.
 
-### Functional behavior (unchanged)
+## 3. Apply HeroTile to every top-level admin page
 
-- Phone → OTP flow, `useAuth().login`, `verifyOtp`, `DEMO_OTP_HINT`, toast on send, resend countdown, redirect to `/` on success — all preserved exactly as today.
+Every list/dashboard page gets a HeroTile at the top, replacing whatever ad-hoc header it currently has (gradient banner, plain `PageHeader`, etc.). `PageHeader` is kept only for breadcrumbs which move inside the hero's eyebrow.
 
----
+Pages updated (right slot in parens):
 
-## Out of scope
+- `admin.dashboard` (month picker — already this shape, just swap to component)
+- `admin.field-dashboard` (Add Candidate CTA)
+- `admin.employees` (Add + filters)
+- `admin.attendance.index` + `admin.attendance.$unitId` (unit + month)
+- `admin.payroll.index` + `admin.payroll.$unitId` (month picker)
+- `admin.invoice.index` + `admin.invoice.$unitId` (month picker)
+- `admin.contracts.client-contracts` (status filter)
+- `admin.customers.*` (4 pages — search)
+- `admin.inventory.dashboard` + 13 inventory subpages
+- `admin.vehicles.*` (8 pages)
+- `admin.notifications`, `admin.profile`, `admin.system-logs`, `admin.rbac`
+- `admin.control-center` (tile grid — hero kept above existing grid)
+- All 18 "manager" pages under control-center (designation, allowance, duty, lwf, pt, esic-branch, asset, language, ex-service, billing-type, service-type, attendance-code, payroll-days, payroll, cost-component, offboarding-reason, addition-type, deduction-type)
 
-- No business-logic, schema, RLS or server-function changes.
-- No new routes or features.
-- The RevdInfo logo image itself — slot is reserved; the user can drop the asset in afterwards.
+## 4. Apply DataTable everywhere
 
-## Risk / verification
+Every existing table is rewritten on top of `DataTable`. Columns audited per page and a `hideBelow` rule assigned per column based on importance:
 
-- Touching the shared `Table` primitive affects every page. Verification: spot-check Employees, Customers, Contracts, Inventory items, Vehicles inventory, Attendance, System Logs in the preview at 1280 / 1440 / 1920 widths — no horizontal scrollbar, EMP IDs on one line, identical row heights and header styling across pages.
-- Login: verify both steps (phone + OTP), error shake, resend timer, and the post-login reveal animation still trigger.
+- Always visible: identity column (name/code), status, primary action, primary numeric.
+- `hideBelow="md"`: secondary identifiers.
+- `hideBelow="lg"`: metadata (designation, mobile, unit name when code shown, dates).
+- `hideBelow="xl"` / `"2xl"`: tertiary (role, created-by, notes, sub-totals).
+
+Critical wide tables that get the row-expand fallback so nothing is truly lost on narrow widths:
+
+- `admin.employees` (employee + candidate tabs)
+- `admin.payroll.$unitId` (earnings/deductions grid)
+- `admin.attendance.$unitId` (calendar grid stays as-is — that one is intentionally horizontal)
+- `admin.invoice.$unitId` (line items)
+- `admin.inventory.purchase-orders`, `.goods-receipts`, `.issuances`, `.stock`, `.transfers`, `.write-offs`, `.adjustments`, `.rate-cards`
+- `admin.contracts.client-contracts`
+
+The attendance calendar is the **only** exception kept horizontally scrollable (a day-grid is fundamentally wide); it gets a sticky first column so it still reads cleanly.
+
+## 5. Card consistency pass
+
+Every standalone card (insight panels, stat groups, form sections, control-center tiles, field-dashboard StatCards, MiniStat) is rewritten through `SectionCard` or aligned to the same tokens: `rounded-3xl border border-border/70 bg-card shadow-[…dashboard-shadow…]`, padding `p-5 sm:p-6`, header row `flex items-end justify-between` with eyebrow + title + right slot. Equal heights via grid `auto-rows-fr` where cards share a row.
+
+## 6. Token additions in `src/styles.css`
+
+```css
+@theme inline {
+  --shadow-elevated: 0 1px 2px rgba(10,10,10,0.03), 0 20px 50px -30px rgba(10,20,40,0.15);
+  --radius-tile: 1.5rem;       /* 24px */
+  --radius-hero: 1.75rem;      /* 28px */
+}
+```
+
+Add `.surface-tile`, `.surface-hero`, `.pill-active` utilities (via `@utility`) so every card/hero/active pill consumes the same recipe.
+
+## 7. Verification
+
+- Visit each route at 1280, 1440, 1920 widths in the preview; confirm no horizontal page scroll.
+- Confirm sidebar active state on each top-level + sub-link is the accent pill.
+- Confirm every page's first child is a HeroTile.
+- Confirm every table is a DataTable (grep for raw `<Table` or `<table` outside `DataTable.tsx` and the attendance calendar).
+
+## Scope note
+
+This touches ~70 route files plus 3 new components. It will land as one large change set; expect a long apply step. Behavior, data flow, queries, and routes are untouched — this is purely presentational.

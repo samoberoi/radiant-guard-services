@@ -433,10 +433,10 @@ function SidebarGroup({
   }, [groupActive]);
 
   const itemBase =
-    "group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] font-semibold transition-all";
+    "group relative flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-[13.5px] font-semibold transition-all";
   const itemIdle = "text-foreground/75 hover:bg-white/70 hover:text-foreground";
   const itemActive =
-    "bg-gradient-to-b from-white to-white/70 text-primary shadow-[0_2px_8px_-2px_rgba(15,23,42,0.12)] ring-1 ring-white/80";
+    "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)] shadow-[0_2px_8px_-2px_color-mix(in_oklab,var(--accent)_25%,transparent)] before:absolute before:left-0 before:top-1/2 before:h-6 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-accent";
 
   if (!group.children || group.children.length === 0) {
     return (
@@ -448,7 +448,7 @@ function SidebarGroup({
         <span
           className={cn(
             "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors",
-            groupActive ? "bg-primary text-primary-foreground" : "bg-white/70 text-foreground/70 group-hover:bg-white",
+            groupActive ? "bg-accent text-accent-foreground shadow-[0_4px_12px_-4px_color-mix(in_oklab,var(--accent)_55%,transparent)]" : "bg-white/70 text-foreground/70 group-hover:bg-white",
           )}
         >
           <Icon className="h-4 w-4" />
@@ -470,7 +470,7 @@ function SidebarGroup({
             <span
               className={cn(
                 "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors",
-                groupActive ? "bg-primary text-primary-foreground" : "bg-white/70 text-foreground/70",
+                groupActive ? "bg-accent text-accent-foreground" : "bg-white/70 text-foreground/70",
               )}
             >
               <Icon className="h-4 w-4" />
@@ -505,7 +505,7 @@ function SidebarGroup({
         <span
           className={cn(
             "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors",
-            groupActive ? "bg-primary text-primary-foreground" : "bg-white/70 text-foreground/70 group-hover:bg-white",
+            groupActive ? "bg-accent text-accent-foreground shadow-[0_4px_12px_-4px_color-mix(in_oklab,var(--accent)_55%,transparent)]" : "bg-white/70 text-foreground/70 group-hover:bg-white",
           )}
         >
           <Icon className="h-4 w-4" />
@@ -523,8 +523,8 @@ function SidebarGroup({
                 to={c.to}
                 search={c.search as never}
                 className={cn(
-                  "flex items-center gap-2 rounded-xl px-3 py-2 text-[12.5px] font-medium transition-colors",
-                  a ? "bg-white text-primary shadow-sm ring-1 ring-white/80" : "text-foreground/70 hover:bg-white/60 hover:text-foreground",
+                  "relative flex items-center gap-2 rounded-xl px-3 py-2 text-[12.5px] font-medium transition-colors",
+                  a ? "bg-[color-mix(in_oklab,var(--accent)_10%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_25%,transparent)]" : "text-foreground/70 hover:bg-white/60 hover:text-foreground",
                 )}
               >
                 <c.icon className="h-3.5 w-3.5 opacity-80" />
@@ -555,7 +555,7 @@ function MobileGroup({
         to={group.to!}
         className={cn(
           "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
-          isGroupActive ? "bg-white text-primary shadow-sm" : "text-foreground hover:bg-white/70",
+          isGroupActive ? "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)]" : "text-foreground hover:bg-white/70",
         )}
       >
         <Icon className="h-4 w-4" />
@@ -570,7 +570,7 @@ function MobileGroup({
         onClick={() => setOpen((v) => !v)}
         className={cn(
           "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
-          isGroupActive ? "bg-white text-primary shadow-sm" : "text-foreground hover:bg-white/70",
+          isGroupActive ? "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)]" : "text-foreground hover:bg-white/70",
         )}
       >
         <Icon className="h-4 w-4" />
@@ -588,7 +588,7 @@ function MobileGroup({
                 search={c.search as never}
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium",
-                  a ? "bg-white text-primary shadow-sm" : "text-foreground/80 hover:bg-white/60",
+                  a ? "bg-[color-mix(in_oklab,var(--accent)_10%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_25%,transparent)]" : "text-foreground/80 hover:bg-white/60",
                 )}
               >
                 <c.icon className="h-4 w-4 opacity-80" />

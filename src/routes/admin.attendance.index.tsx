@@ -43,6 +43,7 @@ function currentMonthRange() {
 }
 
 import { PageHeader } from "@/components/PageHeader";
+import { HeroTile } from "@/components/HeroTile";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -462,39 +463,38 @@ function AttendanceUnitsPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
-      <PageHeader
-        title="Attendance"
-        description="Browse units with active contracts and drill into the monthly muster roll. Only billable employees appear — non-billable staff are on Radiant's own payroll. Filter by organization or unit."
-        crumbs={[{ label: "Attendance" }]}
+      <HeroTile
+        eyebrow="Attendance month"
+        title={MONTH_NAMES[monthIdx]}
+        subtitle={String(year)}
+        description="Browse units with active contracts and drill into the monthly muster roll. Only billable employees appear — non-billable staff are on Radiant's own payroll."
+        right={
+          <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-border/70 bg-background/60 p-1.5 backdrop-blur">
+            <Select value={String(monthIdx)} onValueChange={(v) => setMonthIdx(Number(v))}>
+              <SelectTrigger className="h-8 w-[130px] rounded-xl border-0 bg-transparent shadow-none hover:bg-muted focus:ring-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {MONTH_NAMES.map((m, i) => (
+                  <SelectItem key={m} value={String(i)}>{m}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="h-5 w-px bg-border/70" />
+            <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
+              <SelectTrigger className="h-8 w-[92px] rounded-xl border-0 bg-transparent shadow-none hover:bg-muted focus:ring-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[year - 2, year - 1, year, year + 1].map((y) => (
+                  <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        }
       />
 
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <Select value={String(monthIdx)} onValueChange={(v) => setMonthIdx(Number(v))}>
-            <SelectTrigger className="w-[150px] rounded-xl border-border/60 bg-background">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MONTH_NAMES.map((m, i) => (
-                <SelectItem key={m} value={String(i)}>{m}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-            <SelectTrigger className="w-[110px] rounded-xl border-border/60 bg-background">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[year - 2, year - 1, year, year + 1].map((y) => (
-                <SelectItem key={y} value={String(y)}>{y}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="text-sm text-muted-foreground">
-          Muster roll for <span className="font-medium text-foreground">{MONTH_NAMES[monthIdx]} {year}</span>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
         <SummaryTile icon={Building2} label="Organizations" value={summary.organizations} accent="organization" />
