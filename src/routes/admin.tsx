@@ -487,10 +487,10 @@ function SidebarGroup({
           <Icon className="h-4 w-4" />
         </span>
         <span className="flex-1 truncate text-left">{group.label}</span>
-        <ChevronDown className={cn("h-4 w-4 opacity-60 transition-transform", open ? "rotate-0" : "-rotate-90")} />
+        <ChevronDown className={cn("h-3.5 w-3.5 opacity-50 transition-transform", open ? "rotate-0" : "-rotate-90")} />
       </button>
       {open && (
-        <div className="mt-1 ml-4 space-y-0.5 border-l border-white/60 pl-3">
+        <div className="mt-0.5 ml-[22px] space-y-0.5 border-l border-foreground/10 pl-3">
           {group.children.map((c) => {
             const a = isActive(c.to);
             return (
@@ -499,13 +499,13 @@ function SidebarGroup({
                 to={c.to}
                 search={c.search as never}
                 className={cn(
-                  "relative flex items-center gap-2 rounded-xl px-3 py-2 text-[12.5px] font-medium transition-colors",
+                  "relative flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium transition-colors",
                   a
-                    ? "bg-[color-mix(in_oklab,var(--accent)_10%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_25%,transparent)]"
-                    : "text-foreground/70 hover:bg-accent/10 hover:text-accent",
+                    ? "bg-accent/10 text-accent font-semibold"
+                    : "text-foreground/65 hover:bg-foreground/[0.04] hover:text-foreground",
                 )}
               >
-                <c.icon className="h-3.5 w-3.5 opacity-80" />
+                <c.icon className="h-3.5 w-3.5 opacity-70" />
                 <span className="truncate">{c.label}</span>
               </Link>
             );
