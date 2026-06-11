@@ -173,7 +173,7 @@ function CustomerManagerPage() {
           <span className="inline-flex items-center gap-2"><span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">{rows.length}</span><span className="uppercase tracking-[0.14em] text-muted-foreground">Total {rows.length === 1 ? "row" : "rows"}</span></span>
         </div>
         <div className="overflow-x-clip">
-          <table className="ios-table w-full text-sm">
+          <table className="ios-table w-full table-fixed text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Org ID</th>
@@ -192,9 +192,9 @@ function CustomerManagerPage() {
                     {c.code}
                   </td>
                   <td className="px-5 py-3">
-                    <div className="font-semibold text-foreground">{c.name}</div>
+                    <div className="truncate font-semibold text-foreground">{c.name}</div>
                     {c.address && (
-                      <div className="text-xs text-muted-foreground line-clamp-1">
+                      <div className="truncate text-xs text-muted-foreground">
                         {c.address}
                       </div>
                     )}
@@ -552,9 +552,9 @@ function normaliseUrl(url: string) {
 
 function StatusBadge({ status }: { status: CustomerStatus }) {
   return (
-    <span
+                        <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider",
+                            "inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider",
         status === "active"
           ? "bg-accent/15 text-accent"
           : "bg-muted text-muted-foreground",

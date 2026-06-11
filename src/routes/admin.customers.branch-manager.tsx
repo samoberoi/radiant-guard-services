@@ -173,7 +173,7 @@ function BranchManagerPage() {
           <span className="inline-flex items-center gap-2"><span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">{rows.length}</span><span className="uppercase tracking-[0.14em] text-muted-foreground">Total {rows.length === 1 ? "row" : "rows"}</span></span>
         </div>
         <div className="overflow-x-clip">
-          <table className="ios-table w-full text-sm">
+          <table className="ios-table w-full table-fixed text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Code</th>
@@ -192,10 +192,10 @@ function BranchManagerPage() {
                   <td className="px-5 py-3 font-semibold text-foreground">
                     <span className="font-mono text-accent">{b.code}</span>
                     <span className="mx-2 text-muted-foreground">–</span>
-                    <span>{b.stateName}</span>
+                    <span className="truncate">{b.stateName}</span>
                   </td>
-                  <td className="px-5 py-3 text-foreground">{b.stateName}</td>
-                  <td className="px-5 py-3 text-muted-foreground">
+                  <td className="truncate px-5 py-3 text-foreground">{b.stateName}</td>
+                  <td className="truncate px-5 py-3 text-muted-foreground">
                     {b.description || <span className="italic opacity-60">—</span>}
                   </td>
                   <td className="px-5 py-3 text-right">
