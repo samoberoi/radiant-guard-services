@@ -505,7 +505,7 @@ function SidebarGroup({
         <span
           className={cn(
             "grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors",
-            groupActive ? "bg-primary text-primary-foreground" : "bg-white/70 text-foreground/70 group-hover:bg-white",
+            groupActive ? "bg-accent text-accent-foreground shadow-[0_4px_12px_-4px_color-mix(in_oklab,var(--accent)_55%,transparent)]" : "bg-white/70 text-foreground/70 group-hover:bg-white",
           )}
         >
           <Icon className="h-4 w-4" />
