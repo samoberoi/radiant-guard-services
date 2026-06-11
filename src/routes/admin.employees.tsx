@@ -1575,8 +1575,9 @@ function EmployeesPage() {
               )}
             </div>
           </td>
-          <td className="px-2.5 py-2.5" data-col="actions">
-            <div className="flex items-center justify-end gap-2">
+          <td className="px-2.5 py-2.5 align-middle" data-col="actions">
+            <div className="flex items-center justify-end gap-1.5">
+
 
               {mode === "candidate" && c.status === "pending" && (
                 <>
