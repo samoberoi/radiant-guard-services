@@ -344,8 +344,15 @@
   .ios-table tbody td[data-wrap="false"] { white-space: nowrap; }
   .ios-table tbody td > * { min-width: 0; max-width: 100%; }
   .ios-table [data-col="actions"] {
-    width: 112px;
+    width: 140px;
     white-space: nowrap;
+    text-align: right;
+  }
+  .ios-table [data-col="actions"] > * {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
   }
   .ios-table [data-col="status"] { width: 140px; }
   .ios-table [data-col="date"] { width: 108px; }
