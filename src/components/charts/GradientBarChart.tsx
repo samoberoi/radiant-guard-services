@@ -17,8 +17,8 @@ type Props = {
 export function GradientBarChart({
   data,
   height = 220,
-  gradientFrom = "oklch(0.62 0.20 255)",
-  gradientTo = "oklch(0.88 0.17 95)",
+  gradientFrom = "oklch(0.55 0.22 255)",
+  gradientTo = "oklch(0.55 0.22 255)",
   formatValue,
   id = "grad-bar",
 }: Props) {
