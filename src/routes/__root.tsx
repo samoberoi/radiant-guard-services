@@ -132,7 +132,19 @@ function RootComponent() {
         el.setAttribute("data-tip", t);
         el.removeAttribute("title");
       });
+      // Icon-only buttons/anchors with aria-label → tooltip pill
+      root
+        .querySelectorAll<HTMLElement>("button[aria-label], a[aria-label]")
+        .forEach((el) => {
+          if (el.hasAttribute("data-tip")) return;
+          const label = el.getAttribute("aria-label");
+          if (!label) return;
+          const hasText = (el.textContent ?? "").trim().length > 0;
+          if (hasText) return; // only annotate icon-only controls
+          el.setAttribute("data-tip", label);
+        });
     };
+
     promote(document.body);
     const obs = new MutationObserver((muts) => {
       for (const m of muts) {
