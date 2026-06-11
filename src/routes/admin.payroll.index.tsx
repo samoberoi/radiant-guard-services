@@ -683,41 +683,42 @@ function MonthlyDashboard({
   ];
 
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-border/70 bg-gradient-to-br from-indigo-950 via-slate-900 to-emerald-900 text-white shadow-xl">
-      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-emerald-400/20 blur-3xl" />
-      <div className="pointer-events-none absolute -left-24 -bottom-24 h-72 w-72 rounded-full bg-indigo-400/20 blur-3xl" />
+    <div className="relative overflow-hidden rounded-[28px] border border-border/70 bg-card/85 backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.7)_inset,0_20px_60px_-30px_rgba(10,20,40,0.18)]">
+      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[oklch(0.7_0.16_262/0.18)] blur-3xl" />
+      <div className="pointer-events-none absolute -left-20 -bottom-24 h-64 w-64 rounded-full bg-[oklch(0.75_0.12_200/0.15)] blur-3xl" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
 
       <div className="relative grid gap-6 p-6 sm:p-7 lg:grid-cols-[1.1fr_1.4fr]">
         {/* Left: month hero */}
         <div className="flex flex-col justify-between gap-5">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80 backdrop-blur">
-              <CalendarDays className="h-3.5 w-3.5" /> Payroll month
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground backdrop-blur">
+              <CalendarDays className="h-3.5 w-3.5 text-accent" /> Payroll month
             </div>
             <div className="flex items-end gap-3">
-              <div className="font-display text-5xl font-bold tracking-tight sm:text-6xl">{monthName}</div>
-              <div className="pb-2 text-2xl font-semibold text-white/70">{year}</div>
+              <div className="font-display text-5xl font-bold tracking-tight text-foreground sm:text-6xl">{monthName}</div>
+              <div className="pb-2 text-2xl font-semibold text-muted-foreground/80">{year}</div>
               {isCurrent && (
-                <span className="mb-2 inline-flex rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-200">
+                <span className="mb-2 inline-flex rounded-full bg-accent/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent ring-1 ring-inset ring-accent/30">
                   Current
                 </span>
               )}
             </div>
-            <p className="max-w-md text-sm text-white/70">
+            <p className="max-w-md text-sm text-muted-foreground">
               Snapshot of all payroll activity for this cycle — approved, pending, and in-progress sheets across every unit.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-border/70 bg-background/60 p-1.5 backdrop-blur w-fit">
             <button
               onClick={() => shift(-1)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white hover:bg-white/15"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
               aria-label="Previous month"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
             <Select value={String(month)} onValueChange={(v) => onChange(year, Number(v))}>
-              <SelectTrigger className="h-9 w-[140px] rounded-xl border-white/15 bg-white/5 text-white hover:bg-white/15">
+              <SelectTrigger className="h-8 w-[130px] rounded-xl border-0 bg-transparent shadow-none hover:bg-muted focus:ring-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -726,8 +727,9 @@ function MonthlyDashboard({
                 ))}
               </SelectContent>
             </Select>
+            <div className="h-5 w-px bg-border/70" />
             <Select value={String(year)} onValueChange={(v) => onChange(Number(v), month)}>
-              <SelectTrigger className="h-9 w-[100px] rounded-xl border-white/15 bg-white/5 text-white hover:bg-white/15">
+              <SelectTrigger className="h-8 w-[92px] rounded-xl border-0 bg-transparent shadow-none hover:bg-muted focus:ring-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -738,7 +740,7 @@ function MonthlyDashboard({
             </Select>
             <button
               onClick={() => shift(1)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-white hover:bg-white/15"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground"
               aria-label="Next month"
             >
               <ChevronRight className="h-4 w-4" />
@@ -749,7 +751,7 @@ function MonthlyDashboard({
                   const n = new Date();
                   onChange(n.getFullYear(), n.getMonth());
                 }}
-                className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-white/15 bg-white/5 px-3 text-xs font-semibold text-white hover:bg-white/15"
+                className="inline-flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold text-accent hover:bg-accent/10"
               >
                 Jump to today
               </button>
@@ -778,11 +780,11 @@ function MonthlyDashboard({
 
           {/* Stacked progress bar */}
           <div>
-            <div className="mb-2 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
+            <div className="mb-2 flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
               <span>Sheet status mix</span>
               <span>{s.total} total</span>
             </div>
-            <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-white/10">
+            <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-muted">
               {segs.map((seg) =>
                 seg.value > 0 ? (
                   <div
@@ -794,7 +796,7 @@ function MonthlyDashboard({
                 ) : null,
               )}
             </div>
-            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-white/70">
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-muted-foreground">
               {segs.map((seg) => (
                 <span key={seg.key} className="inline-flex items-center gap-1.5">
                   <span className={`h-2 w-2 rounded-full ${seg.cls}`} /> {seg.label} {seg.value}
