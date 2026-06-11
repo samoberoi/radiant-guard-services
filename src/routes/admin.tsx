@@ -460,49 +460,18 @@ function SidebarGroup({
 
   if (collapsed) {
     return (
-      <div
-        className="relative"
-        onMouseEnter={() => setHoverOpen(true)}
-        onMouseLeave={() => setHoverOpen(false)}
-      >
-        <button
-          type="button"
-          title={group.label}
-          className={cn(itemBase, "justify-center px-2", groupActive ? itemActive : itemIdle)}
-        >
-          <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
-            <Icon className="h-4 w-4" />
-          </span>
-        </button>
-        {hoverOpen && (
-          <div className="absolute left-full top-0 z-50 ml-3 w-60 rounded-2xl border border-white/50 bg-white/95 p-2 shadow-2xl backdrop-blur-xl">
-            <div className="mb-1 px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-              {group.label}
-            </div>
-            <div className="space-y-0.5">
-              {group.children.map((c) => {
-                const a = isActive(c.to);
-                return (
-                  <Link
-                    key={c.to}
-                    to={c.to}
-                    search={c.search as never}
-                    className={cn(
-                      "flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium transition-colors",
-                      a
-                        ? "bg-accent/10 text-accent"
-                        : "text-foreground/80 hover:bg-accent/10 hover:text-accent",
-                    )}
-                  >
-                    <c.icon className="h-4 w-4" />
-                    <span className="truncate">{c.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
+      <CollapsedGroupPopover
+        group={group}
+        groupActive={groupActive}
+        isActive={isActive}
+        itemBase={itemBase}
+        itemIdle={itemIdle}
+        itemActive={itemActive}
+        iconSpanBase={iconSpanBase}
+        iconSpanIdle={iconSpanIdle}
+        iconSpanActive={iconSpanActive}
+        Icon={Icon}
+      />
     );
   }
 
