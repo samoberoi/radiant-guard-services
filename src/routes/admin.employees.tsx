@@ -1519,7 +1519,7 @@ function EmployeesPage() {
               />
             </td>
           )}
-          <td className="px-2.5 py-2.5 align-top text-right">
+          <td className="px-2.5 py-2.5 align-top text-right" data-col="status">
             <div className="flex justify-end"><StatusBadge status={c.status} /></div>
             {c.status === "rejected" && c.rejection_reason && (
               <div className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground" title={c.rejection_reason}>
@@ -1579,8 +1579,8 @@ function EmployeesPage() {
               </div>
             )}
           </td>
-          <td className="px-2.5 py-2.5">
-            <div className="flex items-center justify-end gap-1">
+          <td className="px-2.5 py-2.5" data-col="actions">
+            <div className="flex items-center justify-end gap-2">
 
               {mode === "candidate" && c.status === "pending" && (
                 <>
@@ -1629,7 +1629,7 @@ function EmployeesPage() {
                   </Button>
                 </>
               )}
-              <div className="ml-0.5 flex items-center gap-0.5 border-l border-border/60 pl-1">
+              <div className="ml-1 flex items-center gap-1.5 border-l border-border/60 pl-2">
                 <Button
                   asChild
                   variant="ghost"
@@ -1729,10 +1729,10 @@ function EmployeesPage() {
                   Active
                 </th>
               )}
-              <th className="w-[132px] px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground xl:w-[144px]">
+              <th className="w-[140px] px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground xl:w-[152px]" data-col="status">
                 Status
               </th>
-              <th className="w-[104px] px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground sm:w-[116px] xl:w-[124px]">
+              <th className="w-[176px] px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground sm:w-[188px] xl:w-[200px]" data-col="actions">
                 Actions
               </th>
             </tr>
