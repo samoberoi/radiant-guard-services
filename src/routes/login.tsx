@@ -97,7 +97,7 @@ function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0b0f1a] p-3 sm:p-6">
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#0b0f1a]">
       {/* Ambient aurora */}
       <div
         aria-hidden
@@ -125,9 +125,9 @@ function LoginPage() {
         }`}
       />
 
-      <div className="relative mx-auto grid min-h-[calc(100vh-1.5rem)] max-w-[1240px] overflow-hidden rounded-[28px] border border-white/10 bg-white/[0.04] shadow-[0_50px_140px_-40px_rgba(0,0,0,0.7)] backdrop-blur-2xl md:grid-cols-[1.05fr_1fr]">
+      <div className="relative grid min-h-screen w-full overflow-hidden bg-white/[0.02] backdrop-blur-2xl lg:grid-cols-[1.05fr_1fr]">
         {/* LEFT — brand panel */}
-        <div className="relative hidden flex-col justify-between overflow-hidden p-10 md:flex">
+        <div className="relative hidden flex-col justify-between overflow-hidden p-8 xl:p-12 lg:flex">
           {/* gradient backdrop */}
           <div
             aria-hidden
@@ -175,7 +175,7 @@ function LoginPage() {
             <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80 backdrop-blur">
               <Sparkles className="h-3 w-3" /> Operations portal
             </div>
-            <h1 className="font-display text-[44px] font-extrabold leading-[1.04] tracking-tight text-white">
+            <h1 className="font-display text-[clamp(2rem,4vw,3.25rem)] font-extrabold leading-[1.04] tracking-tight text-white">
               Command your<br />
               <span className="text-gradient-accent bg-gradient-to-r from-sky-300 to-indigo-200 bg-clip-text text-transparent">
                 guard force.
@@ -212,10 +212,10 @@ function LoginPage() {
         </div>
 
         {/* RIGHT — white form card */}
-        <div className="relative flex items-center justify-center bg-white p-6 sm:p-10">
-          <div className="w-full max-w-[400px]">
+        <div className="relative flex min-h-screen items-center justify-center bg-white px-5 py-10 sm:px-10 lg:px-12">
+          <div className="w-full max-w-[420px]">
             {/* mobile logo */}
-            <div className="mb-8 flex items-center gap-2 md:hidden">
+            <div className="mb-8 flex items-center gap-2 lg:hidden">
               <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#0b1220]">
                 <img src={logo} alt="Radiant" className="h-7 w-7 object-contain" />
               </div>
@@ -234,7 +234,7 @@ function LoginPage() {
               <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-[#0b1220]/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0b1220]/70">
                 {step === "phone" ? "Welcome back" : "Almost there"}
               </div>
-              <h2 className="font-display text-[38px] font-extrabold leading-[1.05] tracking-tight text-neutral-900">
+              <h2 className="font-display text-[clamp(2rem,5vw,2.5rem)] font-extrabold leading-[1.05] tracking-tight text-neutral-900">
                 {step === "phone" ? "Sign in" : "Verify OTP"}
               </h2>
               <p className="mt-2 text-[14px] text-neutral-500">
