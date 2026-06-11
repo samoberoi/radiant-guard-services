@@ -1519,65 +1519,61 @@ function EmployeesPage() {
               />
             </td>
           )}
-          <td className="px-2.5 py-2.5 align-top text-right" data-col="status">
-            <div className="flex justify-end"><StatusBadge status={c.status} /></div>
-            {c.status === "rejected" && c.rejection_reason && (
-              <div className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground" title={c.rejection_reason}>
-                {c.rejection_reason}
-              </div>
-            )}
-            {c.status === "inactive" && c.offboarding_reason_id && (() => {
-              const r = offboardReasons.find((x) => x.id === c.offboarding_reason_id);
-              const date = c.offboarded_at ? new Date(c.offboarded_at).toLocaleDateString() : null;
-              const label = r?.name || "Offboarded";
-              return (
-                <div className="mt-1 max-w-[220px] truncate text-xs text-muted-foreground" title={`${label}${date ? " · " + date : ""}`}>
-                  {label}{date ? ` · ${date}` : ""}
+          <td className="px-2.5 py-2.5 align-middle" data-col="status">
+            <div className="flex flex-col items-end gap-1.5">
+              <StatusBadge status={c.status} />
+              {c.status === "rejected" && c.rejection_reason && (
+                <div className="max-w-[220px] truncate text-right text-xs text-muted-foreground" title={c.rejection_reason}>
+                  {c.rejection_reason}
                 </div>
-              );
-            })()}
-            {mode === "employee" && (
-              <div className="mt-2 space-y-2 text-xs text-muted-foreground 2xl:hidden">
-                {columnsVisible.active && (
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">Active</span>
-                    <Switch
-                      checked={c.is_enabled && c.status !== "inactive"}
-                      onCheckedChange={async (v) => {
-                        if (!v) {
-                          setOffboardTarget(c);
-                          setOffboardReasonId("");
-                          return;
-                        }
-                        if (c.no_hire) {
-                          toast.error("This employee is flagged Do not re-hire and cannot be reactivated.");
-                          return;
-                        }
-                        const wasOffboarded = !!c.offboarding_reason_id || !!c.offboarded_at;
-                        if (wasOffboarded) {
-                          const ok = await confirmAction({
-                            title: "Reactivate employee?",
-                            description: `A new employee record will be created for ${c.full_name || c.employee_code} with today's joining date. All documents and KYC details will be copied over. Offboarding history will be reset on the new record. The original record (${c.employee_code}) stays archived for audit.`,
-                            confirmText: "Reactivate & create new record",
-                          });
-                          if (!ok) return;
-                          reactivateMut.mutate({ candidate: c });
-                          return;
-                        }
-                        const ok = await confirmAction({
-                          title: "Activate employee?",
-                          description: `${c.full_name || c.employee_code} will be marked active again.`,
-                          confirmText: "Activate",
-                        });
-                        if (!ok) return;
-                        toggleEnabledMut.mutate({ candidate: c, enabled: true });
-                      }}
-                      disabled={!c.is_enabled && c.no_hire}
-                    />
+              )}
+              {c.status === "inactive" && c.offboarding_reason_id && (() => {
+                const r = offboardReasons.find((x) => x.id === c.offboarding_reason_id);
+                const date = c.offboarded_at ? new Date(c.offboarded_at).toLocaleDateString() : null;
+                const label = r?.name || "Offboarded";
+                return (
+                  <div className="max-w-[220px] truncate text-right text-xs text-muted-foreground" title={`${label}${date ? " · " + date : ""}`}>
+                    {label}{date ? ` · ${date}` : ""}
                   </div>
-                )}
-              </div>
-            )}
+                );
+              })()}
+              {mode === "employee" && columnsVisible.active && (
+                <Switch
+                  className="2xl:hidden"
+                  checked={c.is_enabled && c.status !== "inactive"}
+                  onCheckedChange={async (v) => {
+                    if (!v) {
+                      setOffboardTarget(c);
+                      setOffboardReasonId("");
+                      return;
+                    }
+                    if (c.no_hire) {
+                      toast.error("This employee is flagged Do not re-hire and cannot be reactivated.");
+                      return;
+                    }
+                    const wasOffboarded = !!c.offboarding_reason_id || !!c.offboarded_at;
+                    if (wasOffboarded) {
+                      const ok = await confirmAction({
+                        title: "Reactivate employee?",
+                        description: `A new employee record will be created for ${c.full_name || c.employee_code} with today's joining date. All documents and KYC details will be copied over. Offboarding history will be reset on the new record. The original record (${c.employee_code}) stays archived for audit.`,
+                        confirmText: "Reactivate & create new record",
+                      });
+                      if (!ok) return;
+                      reactivateMut.mutate({ candidate: c });
+                      return;
+                    }
+                    const ok = await confirmAction({
+                      title: "Activate employee?",
+                      description: `${c.full_name || c.employee_code} will be marked active again.`,
+                      confirmText: "Activate",
+                    });
+                    if (!ok) return;
+                    toggleEnabledMut.mutate({ candidate: c, enabled: true });
+                  }}
+                  disabled={!c.is_enabled && c.no_hire}
+                />
+              )}
+            </div>
           </td>
           <td className="px-2.5 py-2.5" data-col="actions">
             <div className="flex items-center justify-end gap-2">
