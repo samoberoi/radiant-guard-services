@@ -127,6 +127,10 @@ function RootComponent() {
     if (typeof window === "undefined") return;
     const promote = (root: ParentNode) => {
       root.querySelectorAll<HTMLElement>("[title]").forEach((el) => {
+        if (el.hasAttribute("data-no-tip")) {
+          el.removeAttribute("title");
+          return;
+        }
         const t = el.getAttribute("title");
         if (!t) return;
         el.setAttribute("data-tip", t);
@@ -137,6 +141,7 @@ function RootComponent() {
         .querySelectorAll<HTMLElement>("button[aria-label], a[aria-label]")
         .forEach((el) => {
           if (el.hasAttribute("data-tip")) return;
+          if (el.hasAttribute("data-no-tip")) return;
           const label = el.getAttribute("aria-label");
           if (!label) return;
           const hasText = (el.textContent ?? "").trim().length > 0;
@@ -153,10 +158,17 @@ function RootComponent() {
         });
         if (m.type === "attributes" && m.target.nodeType === 1) {
           const el = m.target as HTMLElement;
+          if (el.hasAttribute("data-no-tip")) {
+            el.removeAttribute("title");
+            el.removeAttribute("data-tip");
+            continue;
+          }
           const t = el.getAttribute("title");
           if (t) {
             el.setAttribute("data-tip", t);
             el.removeAttribute("title");
+          } else if (!el.getAttribute("aria-label")) {
+            el.removeAttribute("data-tip");
           }
         }
       }
