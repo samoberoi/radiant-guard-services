@@ -821,29 +821,29 @@ function DashStat({
   onClick?: () => void;
 }) {
   const accentMap: Record<string, string> = {
-    amber: "from-amber-400/30 to-amber-500/10 text-amber-200",
-    emerald: "from-emerald-400/30 to-emerald-500/10 text-emerald-200",
-    sky: "from-sky-400/30 to-sky-500/10 text-sky-200",
-    violet: "from-violet-400/30 to-violet-500/10 text-violet-200",
-    rose: "from-rose-400/30 to-rose-500/10 text-rose-200",
-    cyan: "from-cyan-400/30 to-cyan-500/10 text-cyan-200",
-    lime: "from-lime-400/30 to-lime-500/10 text-lime-200",
+    amber: "from-amber-100 to-amber-50 text-amber-700",
+    emerald: "from-emerald-100 to-emerald-50 text-emerald-700",
+    sky: "from-sky-100 to-sky-50 text-sky-700",
+    violet: "from-violet-100 to-violet-50 text-violet-700",
+    rose: "from-rose-100 to-rose-50 text-rose-700",
+    cyan: "from-cyan-100 to-cyan-50 text-cyan-700",
+    lime: "from-lime-100 to-lime-50 text-lime-700",
   };
   const Cmp: React.ElementType = onClick ? "button" : "div";
   return (
     <Cmp
       onClick={onClick}
-      className={`group relative w-full text-left overflow-hidden rounded-2xl border bg-white/5 p-3 backdrop-blur transition hover:border-white/30 hover:bg-white/10 ${active ? "border-white/60 ring-2 ring-white/40" : "border-white/10"} ${onClick ? "cursor-pointer" : ""}`}
+      className={`group relative w-full text-left overflow-hidden rounded-2xl border bg-background/60 p-3 backdrop-blur transition hover:border-accent/40 hover:bg-background ${active ? "border-accent/60 ring-2 ring-accent/30" : "border-border/60"} ${onClick ? "cursor-pointer" : ""}`}
     >
-      <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-60 ${accentMap[accent]}`} />
+      <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-50 ${accentMap[accent]}`} />
       <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/10">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/80 ring-1 ring-border/60">
           <Icon className="h-3.5 w-3.5" />
         </div>
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/70">{label}</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
       </div>
-      <div className={`mt-1 font-display font-bold tabular-nums tracking-tight ${compact ? "text-2xl" : "text-3xl"}`}>
-        {loading ? <span className="text-white/40">—</span> : value.toLocaleString()}
+      <div className={`mt-1 font-display font-bold tabular-nums tracking-tight text-foreground ${compact ? "text-2xl" : "text-3xl"}`}>
+        {loading ? <span className="text-muted-foreground/40">—</span> : value.toLocaleString()}
       </div>
     </Cmp>
   );
