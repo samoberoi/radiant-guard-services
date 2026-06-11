@@ -523,8 +523,8 @@ function SidebarGroup({
                 to={c.to}
                 search={c.search as never}
                 className={cn(
-                  "flex items-center gap-2 rounded-xl px-3 py-2 text-[12.5px] font-medium transition-colors",
-                  a ? "bg-white text-primary shadow-sm ring-1 ring-white/80" : "text-foreground/70 hover:bg-white/60 hover:text-foreground",
+                  "relative flex items-center gap-2 rounded-xl px-3 py-2 text-[12.5px] font-medium transition-colors",
+                  a ? "bg-[color-mix(in_oklab,var(--accent)_10%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_25%,transparent)]" : "text-foreground/70 hover:bg-white/60 hover:text-foreground",
                 )}
               >
                 <c.icon className="h-3.5 w-3.5 opacity-80" />
