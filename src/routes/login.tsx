@@ -234,7 +234,7 @@ function LoginPage() {
               <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-[#0b1220]/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0b1220]/70">
                 {step === "phone" ? "Welcome back" : "Almost there"}
               </div>
-              <h2 className="font-display text-[38px] font-extrabold leading-[1.05] tracking-tight text-neutral-900">
+              <h2 className="font-display text-[clamp(2rem,5vw,2.5rem)] font-extrabold leading-[1.05] tracking-tight text-neutral-900">
                 {step === "phone" ? "Sign in" : "Verify OTP"}
               </h2>
               <p className="mt-2 text-[14px] text-neutral-500">
