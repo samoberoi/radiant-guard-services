@@ -230,8 +230,8 @@ function AdminLayout() {
   const isGroupActive = (g: GroupItem) =>
     (g.activePrefixes ?? []).some((p) => pathname === p || pathname.startsWith(p + "/"));
 
-  const sidebarWidth = collapsed ? "lg:w-[76px]" : "lg:w-[260px]";
-  const mainPad = collapsed ? "lg:pl-[100px]" : "lg:pl-[284px]";
+  const sidebarWidth = collapsed ? "lg:w-[72px]" : "lg:w-[244px]";
+  const mainPad = collapsed ? "lg:pl-[92px]" : "lg:pl-[264px]";
 
   return (
     <div className="relative min-h-screen">
@@ -244,26 +244,26 @@ function AdminLayout() {
       {/* Desktop vertical sidebar — glass / iPadOS */}
       <aside
         className={cn(
-          "fixed inset-y-3 left-3 z-30 hidden flex-col rounded-3xl border border-white/40 bg-white/55 shadow-[0_8px_40px_-12px_rgba(15,23,42,0.18)] backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex",
+          "fixed inset-y-3 left-3 z-30 hidden flex-col rounded-[26px] border border-white/50 bg-white/65 shadow-[0_10px_40px_-16px_rgba(15,23,42,0.18)] backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex",
           sidebarWidth,
         )}
       >
         {/* Brand */}
-        <div className={cn("flex items-center gap-2 px-4 pt-5 pb-4", collapsed && "justify-center px-2")}>
+        <div className={cn("flex items-center px-4 pt-5 pb-4", collapsed && "justify-center px-2")}>
           {collapsed ? (
-            <Link to={dashboardHref} className="grid h-10 w-10 place-items-center rounded-2xl bg-primary text-primary-foreground font-bold">
+            <Link to={dashboardHref} className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground text-[13px] font-bold">
               R
             </Link>
           ) : (
-            <Link to={dashboardHref} className="flex min-w-0 items-center gap-2">
+            <Link to={dashboardHref} className="flex min-w-0 items-center">
               <BrandMark />
             </Link>
           )}
         </div>
 
         {/* Nav */}
-        <nav className="scrollbar-hide flex-1 overflow-y-auto px-3 pb-3">
-          <div className="space-y-1">
+        <nav className="scrollbar-hide flex-1 overflow-y-auto px-2.5 pb-3">
+          <div className="space-y-[3px]">
             {visibleGroups.map((g) => (
               <SidebarGroup
                 key={g.key}
