@@ -180,7 +180,7 @@ function BranchManagerPage() {
                 <th className="px-5 py-3">Branch (Code – State)</th>
                 <th className="px-5 py-3">State</th>
                 <th className="px-5 py-3">Description</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -198,7 +198,7 @@ function BranchManagerPage() {
                   <td className="truncate px-5 py-3 text-muted-foreground">
                     {b.description || <span className="italic opacity-60">—</span>}
                   </td>
-                  <td className="px-5 py-3 text-right">
+                  <td className="px-5 py-3 text-right" data-col="actions">
                     <div className="inline-flex gap-1">
                       <Button
                         size="sm"
