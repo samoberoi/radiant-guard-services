@@ -334,7 +334,7 @@
     overflow-wrap: normal;
   }
   .ios-table tbody td:first-child { padding-left: 20px; }
-  .ios-table tbody td:last-child { padding-right: 20px; }
+  .ios-table tbody td:last-child { padding-right: 20px; overflow: visible; }
   .ios-table tbody td[data-wrap="false"] { white-space: nowrap; }
   .ios-table tbody td > * { min-width: 0; max-width: 100%; }
   .ios-table tbody tr { transition: background-color .15s ease; }
