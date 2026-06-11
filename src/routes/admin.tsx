@@ -570,7 +570,7 @@ function MobileGroup({
         onClick={() => setOpen((v) => !v)}
         className={cn(
           "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
-          isGroupActive ? "bg-white text-primary shadow-sm" : "text-foreground hover:bg-white/70",
+          isGroupActive ? "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)]" : "text-foreground hover:bg-white/70",
         )}
       >
         <Icon className="h-4 w-4" />
