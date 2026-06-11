@@ -304,7 +304,12 @@
   /* Grid removed — kept as no-op so existing usages stay safe */
   .app-canvas-grid { background-image: none; }
 
-  .ios-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+  .ios-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
   .ios-table thead th {
     position: sticky; top: 0;
     background: color-mix(in oklab, white 80%, transparent);
@@ -324,7 +329,8 @@
   .ios-table thead th:first-child { padding-left: 20px; }
   .ios-table thead th:last-child { padding-right: 20px; }
   .ios-table tbody td {
-    padding: 12px 14px;
+    min-width: 0;
+    padding: 12px 12px;
     font-size: 13.5px;
     border-bottom: 1px solid color-mix(in oklab, var(--border) 35%, transparent);
     vertical-align: middle;
@@ -337,6 +343,32 @@
   .ios-table tbody td:last-child { padding-right: 20px; overflow: visible; }
   .ios-table tbody td[data-wrap="false"] { white-space: nowrap; }
   .ios-table tbody td > * { min-width: 0; max-width: 100%; }
+  .ios-table [data-col="actions"] {
+    width: 1%;
+    white-space: nowrap;
+  }
+  .ios-table [data-col="date"],
+  .ios-table [data-col="status"],
+  .ios-table [data-col="code"] {
+    white-space: nowrap;
+  }
+  .ios-table .cell-stack {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+  }
+  .ios-table .cell-primary,
+  .ios-table .cell-secondary {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .ios-table .cell-secondary {
+    font-size: 11px;
+    color: var(--muted-foreground);
+  }
   .ios-table tbody tr { transition: background-color .15s ease; }
   .ios-table tbody tr:hover { background: color-mix(in oklab, var(--accent) 4%, transparent); }
   .ios-table tbody tr:last-child td { border-bottom: 0; }
