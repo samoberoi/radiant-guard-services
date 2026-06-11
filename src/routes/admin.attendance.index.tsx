@@ -43,6 +43,7 @@ function currentMonthRange() {
 }
 
 import { PageHeader } from "@/components/PageHeader";
+import { HeroTile } from "@/components/HeroTile";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
