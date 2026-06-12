@@ -919,7 +919,7 @@ function MusterRollPage() {
           <div className="mt-1 text-sm font-bold tracking-wide">MUSTER ROLL</div>
         </div>
 
-        <table className="ios-table mt-3 w-full border border-slate-400 text-[11px]">
+        <table className="mt-3 w-full border border-slate-400 text-[11px]">
           <tbody>
             <tr>
               <td className="w-1/2 border border-slate-400 p-2 align-top">
