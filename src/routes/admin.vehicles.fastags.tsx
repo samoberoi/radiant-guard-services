@@ -294,7 +294,7 @@ function FastTagManagerPage() {
                 <SortHeader label="Expires" sortKey="expires" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
                 <SortHeader label="Status" sortKey="status" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
                 <SortHeader label="Enabled" sortKey="enabled" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
 
               </tr>
             </thead>

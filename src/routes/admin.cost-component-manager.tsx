@@ -287,7 +287,7 @@ function CostComponentManagerPage() {
                 <th className="px-5 py-3">%</th>
                 <th className="px-5 py-3">State</th>
                 <th className="px-5 py-3">Active</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

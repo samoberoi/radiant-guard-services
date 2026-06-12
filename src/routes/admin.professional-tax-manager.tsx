@@ -330,7 +330,7 @@ function ProfessionalTaxManagerPage() {
                 <th className="px-5 py-3">Gender</th>
                 <th className="px-5 py-3">Working days</th>
                 <th className="px-5 py-3">Period</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

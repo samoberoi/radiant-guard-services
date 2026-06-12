@@ -429,7 +429,7 @@ function PayrollUnitsPage() {
                 <th className="px-5 py-4 font-medium">Periods (status)</th>
                 <th className="px-5 py-4 text-right font-medium">Employees</th>
                 <th className="px-5 py-4 font-medium">Status</th>
-                <th className="px-5 py-4 text-right font-medium">Action</th>
+                <th className="px-5 py-4 text-right font-medium" data-col="actions">Action</th>
 
               </tr>
             </thead>

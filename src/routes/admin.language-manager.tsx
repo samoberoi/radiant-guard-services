@@ -171,7 +171,7 @@ function LanguageManagerPage() {
               <tr>
                 <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">

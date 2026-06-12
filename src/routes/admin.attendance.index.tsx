@@ -591,7 +591,7 @@ function AttendanceUnitsPage() {
                     <tr>
                       <th className="px-4 py-3 text-left font-medium">Employee</th>
                       <th className="px-4 py-3 text-left font-medium">Unit</th>
-                      <th className="px-4 py-3 text-right font-medium">Action</th>
+                      <th className="px-4 py-3 text-right font-medium" data-col="actions">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/50">
@@ -646,7 +646,7 @@ function AttendanceUnitsPage() {
                 <th className="px-5 py-4 font-medium">Security guards</th>
                 <th className="px-5 py-4 text-right font-medium">Active</th>
                 <th className="px-5 py-4 font-medium">Status</th>
-                <th className="px-5 py-4 text-right font-medium">Action</th>
+                <th className="px-5 py-4 text-right font-medium" data-col="actions">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">

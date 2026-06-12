@@ -254,7 +254,7 @@ function PucManagerPage() {
                 <VehicleDetailHeaders />
                 <th className="px-5 py-3">Expires</th>
                 <th className="px-5 py-3">Enabled</th>
-                <th className="px-5 py-3 text-right">Actions</th>
+                <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
