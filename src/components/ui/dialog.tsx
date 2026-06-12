@@ -129,21 +129,36 @@ const DialogContent = React.forwardRef<
     [ref],
   );
 
-  // Attach input/change listeners so any field interaction marks the dialog dirty.
+  // Mark the dialog dirty on any field interaction, and pristine when a
+  // save-intent button is clicked or a form is submitted (so successful
+  // saves close silently; failed saves re-dirty as the user resumes typing).
   React.useEffect(() => {
     if (!contentElement || !dirtyCtx || dirtyCtx.disabled) return;
     dirtyCtx.reset();
-    const mark = (e: Event) => {
-      const t = e.target as HTMLElement | null;
-      // Ignore clicks on the dialog itself (Radix forwards some events).
-      if (!t) return;
+    const markDirty = () => {
       dirtyCtx.dirtyRef.current = true;
     };
-    contentElement.addEventListener("input", mark, true);
-    contentElement.addEventListener("change", mark, true);
+    const SAVE_RX = /^(save|update|create|add|submit|confirm|apply|generate|send|approve|sign|upload|import|export|next|continue|finish|done)\b/i;
+    const onClick = (e: Event) => {
+      const btn = (e.target as HTMLElement | null)?.closest?.(
+        "button",
+      ) as HTMLButtonElement | null;
+      if (!btn) return;
+      const txt = (btn.textContent || "").trim();
+      if (btn.type === "submit" || SAVE_RX.test(txt)) {
+        dirtyCtx.reset();
+      }
+    };
+    const onSubmit = () => dirtyCtx.reset();
+    contentElement.addEventListener("input", markDirty, true);
+    contentElement.addEventListener("change", markDirty, true);
+    contentElement.addEventListener("click", onClick, true);
+    contentElement.addEventListener("submit", onSubmit, true);
     return () => {
-      contentElement.removeEventListener("input", mark, true);
-      contentElement.removeEventListener("change", mark, true);
+      contentElement.removeEventListener("input", markDirty, true);
+      contentElement.removeEventListener("change", markDirty, true);
+      contentElement.removeEventListener("click", onClick, true);
+      contentElement.removeEventListener("submit", onSubmit, true);
     };
   }, [contentElement, dirtyCtx]);
 
