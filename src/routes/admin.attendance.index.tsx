@@ -685,19 +685,19 @@ function AttendanceUnitsPage() {
                   <tr key={unit.id} className="group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5">
                     <td className="px-5 py-4 align-top">
                       <div className="flex items-start gap-3">
-                        <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-100/80 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
+                        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-100/80 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
                           <MapPinned className="h-4 w-4" />
                         </div>
-                          <div className="min-w-0 flex-1">
-                          <div className="truncate text-sm font-semibold text-foreground">{unit.name || unit.code}</div>
-                            <div className="mt-1 flex items-center gap-1.5 overflow-hidden">
-                            <span className="inline-flex rounded-md bg-secondary px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-foreground">
+                        <div className="min-w-[180px]">
+                          <div className="whitespace-nowrap text-sm font-semibold text-foreground">{unit.name || unit.code}</div>
+                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                            <span className="inline-flex whitespace-nowrap rounded-md bg-secondary px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-foreground">
                               {unit.code || "—"}
                             </span>
                             {unit.contract_codes.slice(0, 2).map((cc) => (
                               <span
                                 key={cc}
-                                className="inline-flex rounded-full border border-accent/20 bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent"
+                                className="inline-flex whitespace-nowrap rounded-full border border-accent/20 bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent"
                               >
                                 {cc}
                               </span>
