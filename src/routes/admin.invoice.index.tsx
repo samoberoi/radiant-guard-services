@@ -524,21 +524,24 @@ function PayrollUnitsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="px-5 py-4 text-right align-top">
+                      <td className="px-5 py-4 text-right align-top whitespace-nowrap">
                         {targetPeriod ? (
                           <Link
                             to="/admin/invoice/$unitId"
                             params={{ unitId: unit.id }}
                             search={{ start: targetPeriod.period_start, end: targetPeriod.period_end }}
-                            className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/50 hover:text-accent"
+                            data-no-pill
+                            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-accent/50 hover:text-accent"
+                            title="Show invoice"
                           >
-                            Show invoice <ArrowRight className="h-4 w-4" />
+                            <ArrowRight className="h-3.5 w-3.5" /> Show invoice
                           </Link>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
 
                       </td>
+
 
                     </tr>
                   );
