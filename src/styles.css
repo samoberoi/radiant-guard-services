@@ -344,7 +344,7 @@
   .ios-table tbody td[data-wrap="false"] { white-space: nowrap; }
   .ios-table tbody td > * { min-width: 0; max-width: 100%; }
   .ios-table [data-col="actions"] {
-    width: 152px;
+    width: 188px;
     white-space: nowrap;
     text-align: right;
   }
@@ -352,14 +352,37 @@
     display: inline-flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 8px;
+    gap: 6px;
+  }
+  /* Flatten any nested wrapper divs so every action button shares the
+     same gap rhythm regardless of how authors group them. */
+  .ios-table [data-col="actions"] div {
+    display: contents;
   }
   /* Fallback when action buttons are direct children (no wrapper) */
   .ios-table [data-col="actions"] > button + button,
   .ios-table [data-col="actions"] > a + a,
   .ios-table [data-col="actions"] > button + a,
   .ios-table [data-col="actions"] > a + button {
-    margin-left: 8px;
+    margin-left: 6px;
+  }
+  /* Globally normalize action icon buttons: equal-sized circular pills. */
+  .ios-table [data-col="actions"] button,
+  .ios-table [data-col="actions"] a[role="button"],
+  .ios-table [data-col="actions"] a:has(> svg:only-child) {
+    height: 32px !important;
+    width: 32px !important;
+    padding: 0 !important;
+    border-radius: 9999px !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  .ios-table [data-col="actions"] button > svg,
+  .ios-table [data-col="actions"] a > svg {
+    height: 15px;
+    width: 15px;
   }
   .ios-table [data-col="status"] { width: 140px; }
   .ios-table [data-col="date"] { width: 108px; }
