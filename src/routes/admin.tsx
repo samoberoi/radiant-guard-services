@@ -49,6 +49,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useAuth } from "@/lib/auth";
 import { useCurrentPermissions } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -198,6 +200,18 @@ function AdminLayout() {
     if (!isReady) return;
     if (!user) navigate({ to: "/login", replace: true });
   }, [user, isReady, navigate]);
+
+  // When the Supabase session finishes restoring (or the user signs in), drop
+  // any cached empty results from queries that fired before auth was ready.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+        queryClient.invalidateQueries();
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, [queryClient]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -407,7 +421,13 @@ function AdminLayout() {
         </div>
         <div className="mx-auto max-w-[1500px]">
           <div key={pathname} className="page-enter">
-            <Outlet />
+            {isReady && user ? (
+              <Outlet />
+            ) : (
+              <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground/70" />
+              </div>
+            )}
           </div>
         </div>
       </main>
