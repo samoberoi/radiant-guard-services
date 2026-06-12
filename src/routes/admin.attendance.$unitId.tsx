@@ -940,7 +940,7 @@ function MusterRollPage() {
         </table>
 
         <div className="mt-3 overflow-x-auto">
-          <table className="ios-table w-full border-collapse border border-slate-400 text-center text-[10px]">
+          <table className="w-full border-collapse border border-slate-400 text-center text-[10px]">
             <thead className="bg-slate-100">
               <tr>
                 <th className="border border-slate-400 p-1 align-middle">Sl.<br />No.</th>
