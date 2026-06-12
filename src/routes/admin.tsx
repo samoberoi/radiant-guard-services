@@ -201,6 +201,18 @@ function AdminLayout() {
     if (!user) navigate({ to: "/login", replace: true });
   }, [user, isReady, navigate]);
 
+  // When the Supabase session finishes restoring (or the user signs in), drop
+  // any cached empty results from queries that fired before auth was ready.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION") {
+        queryClient.invalidateQueries();
+      }
+    });
+    return () => data.subscription.unsubscribe();
+  }, [queryClient]);
+
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
