@@ -441,3 +441,10 @@
   @keyframes tipFade { to { opacity: 1; } }
 }
 
+
+/* Dialog dirty-guard: disable save-intent buttons until the user edits something. */
+[data-pristine="true"] button[data-save-intent="true"] {
+  opacity: 0.5;
+  pointer-events: none;
+  filter: grayscale(0.2);
+}
