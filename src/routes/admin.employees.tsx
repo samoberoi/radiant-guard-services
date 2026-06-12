@@ -1578,8 +1578,9 @@ function EmployeesPage() {
             </div>
           </td>
 
-          <td className="px-2.5 py-2.5 align-middle" data-col="actions">
-            <div className="flex items-center justify-end gap-1.5">
+          <td className="px-3 py-2.5 align-middle" data-col="actions">
+            <div className="flex items-center justify-end gap-1">
+
 
 
               {mode === "candidate" && c.status === "pending" && (
@@ -1629,7 +1630,7 @@ function EmployeesPage() {
                   </Button>
                 </>
               )}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <Button
                   asChild
                   variant="ghost"
