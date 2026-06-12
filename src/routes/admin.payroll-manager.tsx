@@ -462,7 +462,6 @@ function PayrollFormDialog({
           <Button
             disabled={saving}
             onClick={async () => {
-              if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
               setSaving(true);
               const err = await onSubmit({
                 label,

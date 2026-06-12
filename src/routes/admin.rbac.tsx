@@ -355,7 +355,6 @@ function RBACPage() {
           <Button
             size="sm"
             onClick={async () => {
-              if (!(await confirmAction({ title: "Save permissions?", description: "Apply these permission changes to the selected role?", confirmText: "Save" }))) return;
               saveMutation.mutate();
             }}
             disabled={!dirty || saveMutation.isPending || isSuper}

@@ -1,69 +1,53 @@
-Goal: every table in the portal matches the Dashboard P&L table — no horizontal scroll, consistent typography, solid (non-transparent) filter chrome, clean alignment at 1280–1920px.
+# Fix duplicate save confirmation + add unsaved-changes guard
 
-## 1. Shared primitive: `src/components/DataTable.tsx` (new)
+## What's happening today
 
-A single table shell every page consumes. Mirrors the dashboard P&L card exactly.
+I reviewed the form dialogs across the admin section and found two patterns that match your complaints exactly:
 
-- Card: `rounded-3xl border border-border/70 bg-card shadow-[dashboard-shadow] overflow-hidden` — NO horizontal scroll wrapper.
-- Header strip: title + count chip + description + right slot (toolbar).
-- Table: `ios-table w-full table-fixed`, header row `text-[11px] uppercase tracking-[0.18em] text-muted-foreground`, body `text-sm`, row hover `bg-accent/[0.04]`, dividers `border-border/50`, numeric cells `tabular-nums text-right`.
-- Column API: `{ key, header, cell, align, width?, hideBelow?: "sm"|"md"|"lg"|"xl"|"2xl", priority: 1|2|3 }`.
-  - `hideBelow` emits `hidden md:table-cell` etc. on both `<th>` and `<td>` so secondary columns drop out responsively instead of scrolling.
-  - Priority-3 columns collapse into an expandable "More" row (chevron on first cell) so nothing is lost on smaller widths.
-- Slots: `toolbar` (search + filters, right-aligned), `totals` (right-aligned key/value strip), `empty`, `loading`.
+1. **Double save confirmation.** ~40 form dialogs (designation, duty, allowance, customer/branch/unit, vehicles, inventory, etc.) call `confirmAction({ title: "Save changes?" })` *before* actually submitting. So clicking Save shows "Do you want to save these changes?", then on confirm it saves and shows a success toast — that's the two messages you're seeing.
+2. **No discard guard.** All form dialogs use the shadcn `Dialog`, which closes immediately on:
+   - the top-right ✕ icon
+   - clicking outside the panel
+   - pressing Escape
+   - the Cancel button
+   None of these check whether the user has typed anything, so half-filled forms are lost silently.
 
-## 2. Shared primitive: `src/components/ui/SolidSelect.tsx` + `SolidSearch.tsx`
+## Plan
 
-Replace the current translucent filter chrome.
+### 1. Remove the pre-save confirmation (everywhere)
 
-- Input/Select: `bg-card border border-border/70 shadow-sm hover:border-accent/40 focus:border-accent focus:ring-2 focus:ring-accent/15 rounded-xl h-10 text-sm`.
-- Solid white popovers (`bg-popover` not `bg-popover/80`), 8px shadow, no backdrop blur.
-- Applied globally by swapping the existing `Select`/`Input` usage above every table.
+Strip the `confirmAction({ title: "Save changes?", ... })` guard from every Save handler. Clicking the Save button is already an explicit intent — the only feedback should be the success/error toast. Files touched (one or two lines each):
 
-## 3. Column audit — `hideBelow` rules per page
+`admin.designation-manager`, `admin.duty-manager`, `admin.allowance-manager`, `admin.language-manager`, `admin.service-type-manager`, `admin.billing-type-manager`, `admin.attendance-code-manager`, `admin.cost-component-manager`, `admin.payroll-manager`, `admin.payroll-days-manager`, `admin.offboarding-reason-manager`, `admin.ex-service-manager`, `admin.asset-manager`, `admin.lwf-manager`, `admin.professional-tax-manager`, `admin.esic-branch-manager`, `admin.company-documents`, `admin.contracts.client-contracts`, `admin.candidates.$id.details`, `admin.rbac`, `admin.customers.{state,branch,unit,customer}-manager`, `admin.vehicles.{pucs,fastags,insurances,inventory}`, `admin.inventory.{items,vendors,warehouses}`.
 
-Always visible: identity column, status, primary action, primary numeric. Hide rules below:
+Destructive actions (Delete / Disable) keep their existing confirm — those are not what you're complaining about.
 
-| Page | hideBelow="md" | hideBelow="lg" | hideBelow="xl" | Collapse into More |
-|---|---|---|---|---|
-| Employees | EMP ID | Mobile | Designation | Role, secondary actions |
-| Attendance index | Org code | Location | Active count | Security guard chips |
-| Org/Branch/Unit/State managers | Secondary code | Address line 2 | Phone | Contract start, website |
-| Client Contracts | Contract code | Period | Created by | Notes |
-| Payroll/Invoice index | Org code | Period chip | Sub-total | Created at |
-| Inventory POs | PO# secondary | Deliver-to | Total products | Total qty (kept), date |
-| Stock report | Size | Unit | Reorder@ | Holder secondary |
-| Vendor rate cards | — (matrix table keeps its grid, but caps visible suppliers at 6 with horizontal pagination chevrons inside the card, NOT page scroll) |
-| Vehicle inventory / FastTag / Insurance / PUC / Service / Expense | Vehicle ID | Owner | Brand (when Make shown) | Fuel, Type |
+### 2. Global "Discard unsaved changes?" guard
 
-Result: no page horizontally scrolls between 1280–1920px.
+Build one reusable primitive instead of patching every dialog ad-hoc:
 
-## 4. Pages touched
+- **New file `src/components/DirtyDialog.tsx`** — thin wrapper around shadcn `Dialog` + `DialogContent` that accepts a `dirty: boolean` prop. It intercepts:
+  - `onOpenChange(false)` (Cancel button, programmatic close)
+  - `onPointerDownOutside` (clicking the backdrop)
+  - `onEscapeKeyDown` (Esc key)
+  - the built-in top-right ✕ (replaced with our own so it routes through the same handler)
+  
+  When `dirty` is true it calls `confirmAction({ title: "Discard unsaved changes?", description: "Any information you've entered will be lost.", confirmText: "Discard", destructive: true })` and only closes on confirm. When `dirty` is false it closes immediately (current behaviour).
 
-All list/table routes are rewritten on `DataTable`:
+- **Dirty tracking helper `useDirtyForm(initialValues)`** in the same file — returns `{ dirty, markPristine, bind }` so each form can wire it up with two lines: compare current state to a snapshot taken when the dialog opens, reset on successful save.
 
-- `admin.employees`, `admin.attendance.index`, `admin.payroll.index`, `admin.invoice.index`
-- `admin.contracts.client-contracts`
-- `admin.customers.{state,branch,customer,unit}-manager`
-- `admin.inventory.{items,vendors,warehouses,purchase-orders,issuances,transfers,write-offs,adjustments,stock,rate-cards}` + `delivery-challans` if present
-- `admin.vehicles.{inventory,fastags,insurances,pucs,service-manager,expense-manager,insight-lab}`
-- `admin.notifications`, `admin.system-logs`, `admin.rbac`
-- All 18 manager pages under `admin.control-center`: designation, allowance, duty, lwf, professional-tax, esic-branch, asset, language, ex-service, billing-type, service-type, attendance-code, payroll-days, payroll, cost-component, offboarding-reason, addition-type, deduction-type
+- **Migrate the form dialogs** in the files listed above from `<Dialog>` / `<DialogContent>` to `<DirtyDialog dirty={...}>`. Cancel buttons keep calling `onOpenChange(false)` so they go through the same guard automatically.
 
-Attendance calendar (`admin.attendance.$unitId`) is the one intentional exception (a day-grid is fundamentally wide) — keeps horizontal scroll with a sticky first column.
+- **Leave alone:** `AlertDialog` confirmations (already modal-by-intent), `Sheet` side panels not used for editing, dropdown/command popovers, and read-only view dialogs — no dirty state to protect.
 
-## 5. Filter chrome pass
+### 3. Verification
 
-Every search input + dropdown above every table swaps to SolidSearch / SolidSelect. Removes the current "translucent on gradient" look the screenshots flagged. Same treatment in HeroTile right slots.
+- Open any form (e.g. Designation → Add): typing then clicking outside / Esc / ✕ / Cancel → shows "Discard unsaved changes?". Clicking Save → saves directly with one success toast, no "Save changes?" prompt.
+- Opening a form and closing without typing → closes immediately, no prompt (so we don't annoy users who just peeked).
 
-## 6. Deliverable: tracker CSV
+## Technical notes
 
-`/mnt/documents/table-redesign-tracker.csv` with columns: Route, Page name, Table(s), Status (Fixed/Pending), Notes. Every route in section 4 listed and marked Fixed at the end; the attendance calendar exception is called out explicitly.
-
-## 7. Verification at 1280 / 1440 / 1920
-
-For each route: confirm no `overflow-x` scroll, header alignment, padding `p-5 sm:p-6`, hover row, dropdown background solid, typography matches dashboard.
-
-## Scope
-
-~50 route files + 3 new components (DataTable, SolidSelect, SolidSearch). Purely presentational — no data, query, or behavior changes. One large change set; tracker CSV delivered at the end.
+- The wrapper hides Radix's default `DialogPrimitive.Close` and renders its own ✕ that calls the guarded close, so the existing absolute-positioned close icon in `ui/dialog.tsx` stays untouched for non-form dialogs.
+- `confirmAction` from `ConfirmProvider` already works module-level, so the wrapper has no extra context wiring.
+- Dirty comparison uses a shallow JSON snapshot of the tracked field object — adequate for the flat form shapes used here; nested arrays (e.g. line-item editors in goods-receipts/PO) will pass the whole object so any change still flips dirty=true.
+- No backend, schema, or business-logic changes.
