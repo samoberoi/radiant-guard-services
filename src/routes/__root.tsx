@@ -128,26 +128,35 @@ function RootComponent() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const promote = (root: ParentNode) => {
-      root.querySelectorAll<HTMLElement>("[title]").forEach((el) => {
+    const promoteEl = (el: HTMLElement) => {
+      if (el.hasAttribute("title")) {
         if (el.hasAttribute("data-no-tip")) {
           el.removeAttribute("title");
-          return;
+        } else {
+          const t = el.getAttribute("title");
+          if (t) {
+            el.setAttribute("data-tip", t);
+            el.removeAttribute("title");
+          }
         }
-        const t = el.getAttribute("title");
-        if (!t) return;
-        el.setAttribute("data-tip", t);
-        el.removeAttribute("title");
-      });
+      }
+      if (
+        !el.hasAttribute("data-tip") &&
+        !el.hasAttribute("data-no-tip") &&
+        (el.tagName === "BUTTON" || el.tagName === "A") &&
+        el.hasAttribute("aria-label") &&
+        (el.textContent ?? "").trim().length === 0
+      ) {
+        const label = el.getAttribute("aria-label");
+        if (label) el.setAttribute("data-tip", label);
+      }
+    };
+
+    const promote = (root: ParentNode) => {
+      if ((root as HTMLElement).nodeType === 1) promoteEl(root as HTMLElement);
       root
-        .querySelectorAll<HTMLElement>("button[aria-label], a[aria-label]")
-        .forEach((el) => {
-          if (el.hasAttribute("data-tip") || el.hasAttribute("data-no-tip")) return;
-          const label = el.getAttribute("aria-label");
-          if (!label) return;
-          if ((el.textContent ?? "").trim().length > 0) return;
-          el.setAttribute("data-tip", label);
-        });
+        .querySelectorAll<HTMLElement>("[title], button[aria-label], a[aria-label]")
+        .forEach(promoteEl);
     };
 
     promote(document.body);
