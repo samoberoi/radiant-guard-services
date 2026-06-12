@@ -121,10 +121,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
-  // Promote any [title] into a styled floating pill via [data-tip],
-  // and suppress the slow native browser tooltip.
+  // Promote any [title] into [data-tip] (to suppress the slow native tooltip)
+  // and render a portal-mounted floating pill on hover/focus. Using a fixed
+  // portal element guarantees the pill escapes any overflow:hidden container
+  // (tables, cards, scroll wrappers) — pure CSS ::after tooltips do not.
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     const promote = (root: ParentNode) => {
       root.querySelectorAll<HTMLElement>("[title]").forEach((el) => {
         if (el.hasAttribute("data-no-tip")) {
@@ -136,16 +139,13 @@ function RootComponent() {
         el.setAttribute("data-tip", t);
         el.removeAttribute("title");
       });
-      // Icon-only buttons/anchors with aria-label → tooltip pill
       root
         .querySelectorAll<HTMLElement>("button[aria-label], a[aria-label]")
         .forEach((el) => {
-          if (el.hasAttribute("data-tip")) return;
-          if (el.hasAttribute("data-no-tip")) return;
+          if (el.hasAttribute("data-tip") || el.hasAttribute("data-no-tip")) return;
           const label = el.getAttribute("aria-label");
           if (!label) return;
-          const hasText = (el.textContent ?? "").trim().length > 0;
-          if (hasText) return; // only annotate icon-only controls
+          if ((el.textContent ?? "").trim().length > 0) return;
           el.setAttribute("data-tip", label);
         });
     };
@@ -179,7 +179,123 @@ function RootComponent() {
       attributes: true,
       attributeFilter: ["title"],
     });
-    return () => obs.disconnect();
+
+    // ---- portal pill ----------------------------------------------------
+    const pill = document.createElement("div");
+    pill.setAttribute("role", "tooltip");
+    pill.style.cssText = [
+      "position:fixed",
+      "z-index:99999",
+      "pointer-events:none",
+      "padding:4px 8px",
+      "border-radius:6px",
+      "background:oklch(0.18 0.02 260)",
+      "color:oklch(0.99 0 0)",
+      "font-size:11px",
+      "font-weight:500",
+      "line-height:1.2",
+      "letter-spacing:0.01em",
+      "box-shadow:0 6px 18px -6px rgba(0,0,0,0.35)",
+      "white-space:nowrap",
+      "max-width:280px",
+      "opacity:0",
+      "transform:translate(-50%,4px)",
+      "transition:opacity .12s ease-out, transform .12s ease-out",
+      "top:-9999px",
+      "left:-9999px",
+    ].join(";");
+    document.body.appendChild(pill);
+
+    let current: HTMLElement | null = null;
+    let showTimer: number | null = null;
+
+    const place = (target: HTMLElement) => {
+      const r = target.getBoundingClientRect();
+      const label = target.getAttribute("data-tip") ?? "";
+      pill.textContent = label;
+      // measure
+      pill.style.opacity = "0";
+      pill.style.top = "0px";
+      pill.style.left = "0px";
+      pill.style.transform = "translate(-50%, 4px)";
+      const pw = pill.offsetWidth;
+      const ph = pill.offsetHeight;
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      let top = r.bottom + 8;
+      let placeAbove = false;
+      if (top + ph > vh - 8) {
+        top = r.top - ph - 8;
+        placeAbove = true;
+      }
+      let left = r.left + r.width / 2;
+      const halfW = pw / 2;
+      if (left - halfW < 8) left = halfW + 8;
+      if (left + halfW > vw - 8) left = vw - halfW - 8;
+      pill.style.top = `${top}px`;
+      pill.style.left = `${left}px`;
+      pill.style.transform = placeAbove
+        ? "translate(-50%, -4px)"
+        : "translate(-50%, 4px)";
+      requestAnimationFrame(() => {
+        pill.style.opacity = "1";
+        pill.style.transform = "translate(-50%, 0)";
+      });
+    };
+
+    const hide = () => {
+      current = null;
+      if (showTimer) {
+        window.clearTimeout(showTimer);
+        showTimer = null;
+      }
+      pill.style.opacity = "0";
+      pill.style.top = "-9999px";
+      pill.style.left = "-9999px";
+    };
+
+    const findTip = (start: EventTarget | null): HTMLElement | null => {
+      let el = start as HTMLElement | null;
+      while (el && el.nodeType === 1) {
+        if (el.hasAttribute?.("data-tip") && !el.hasAttribute("data-no-tip")) return el;
+        el = el.parentElement;
+      }
+      return null;
+    };
+
+    const onOver = (e: Event) => {
+      const tip = findTip(e.target);
+      if (!tip || tip === current) return;
+      current = tip;
+      if (showTimer) window.clearTimeout(showTimer);
+      showTimer = window.setTimeout(() => place(tip), 120);
+    };
+    const onOut = (e: Event) => {
+      const tip = findTip(e.target);
+      if (!tip) return;
+      const next = (e as MouseEvent).relatedTarget as Node | null;
+      if (next && tip.contains(next)) return;
+      hide();
+    };
+    const onScroll = () => hide();
+
+    document.addEventListener("mouseover", onOver, true);
+    document.addEventListener("mouseout", onOut, true);
+    document.addEventListener("focusin", onOver, true);
+    document.addEventListener("focusout", onOut, true);
+    window.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", hide);
+
+    return () => {
+      obs.disconnect();
+      document.removeEventListener("mouseover", onOver, true);
+      document.removeEventListener("mouseout", onOut, true);
+      document.removeEventListener("focusin", onOver, true);
+      document.removeEventListener("focusout", onOut, true);
+      window.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", hide);
+      pill.remove();
+    };
   }, []);
 
   return (
@@ -191,4 +307,5 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
+
 
