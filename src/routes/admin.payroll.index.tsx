@@ -480,7 +480,8 @@ function PayrollUnitsPage() {
                 <th className="px-5 py-4 font-medium">Periods (status)</th>
                 <th className="px-5 py-4 text-right font-medium">Employees</th>
                 <th className="px-5 py-4 font-medium" data-col="status">Status</th>
-                <th className="px-5 py-4 font-medium" data-col="actions">Action</th>
+                <th className="px-5 py-4 text-right font-medium whitespace-nowrap">Action</th>
+
 
               </tr>
             </thead>
@@ -582,16 +583,16 @@ function PayrollUnitsPage() {
                           {statusLabel}
                         </span>
                       </td>
-                      <td className="px-5 py-4 align-top" data-col="actions">
-                        <div>
+                      <td className="px-5 py-4 text-right align-top whitespace-nowrap">
                         {!attendanceApproved ? (
                           <Link
                             to="/admin/attendance/$unitId"
                             params={{ unitId: unit.id }}
+                            data-no-pill
+                            className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:border-amber-400 hover:bg-amber-100"
                             title="Approve attendance sheet to unlock payroll"
-                            aria-label="Approve attendance"
                           >
-                            <ArrowRight />
+                            <ArrowRight className="h-3.5 w-3.5" /> Approve attendance
                           </Link>
                         ) : runStatus === "approved" ? (
                           canApproveRun ? (
@@ -599,20 +600,22 @@ function PayrollUnitsPage() {
                               type="button"
                               disabled={reopenRun.isPending}
                               onClick={() => run && reopenRun.mutate(run)}
+                              data-no-pill
+                              className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:border-amber-400 hover:bg-amber-100 disabled:opacity-50"
                               title="Reopen payroll"
-                              aria-label="Reopen payroll"
                             >
-                              <RotateCcw />
+                              <RotateCcw className="h-3.5 w-3.5" /> Reopen payroll
                             </button>
                           ) : (
                             <Link
                               to="/admin/payroll/$unitId"
                               params={{ unitId: unit.id }}
                               search={{ start: targetPeriod!.period_start, end: targetPeriod!.period_end }}
+                              data-no-pill
+                              className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200/60 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-800 transition hover:border-emerald-300 hover:bg-emerald-100"
                               title="View payroll"
-                              aria-label="View payroll"
                             >
-                              <ArrowRight />
+                              <ArrowRight className="h-3.5 w-3.5" /> View payroll
                             </Link>
                           )
                         ) : runStatus === "submitted" ? (
@@ -620,24 +623,26 @@ function PayrollUnitsPage() {
                             to="/admin/payroll/$unitId"
                             params={{ unitId: unit.id }}
                             search={{ start: targetPeriod!.period_start, end: targetPeriod!.period_end }}
+                            data-no-pill
+                            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-accent/50 hover:text-accent"
                             title="Process payroll"
-                            aria-label="Process payroll"
                           >
-                            <Sparkles />
+                            <Sparkles className="h-3.5 w-3.5" /> Process payroll
                           </Link>
                         ) : (
                           <Link
                             to="/admin/payroll/$unitId"
                             params={{ unitId: unit.id }}
                             search={{ start: targetPeriod!.period_start, end: targetPeriod!.period_end }}
+                            data-no-pill
+                            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-accent/50 hover:text-accent"
                             title="Compute wages"
-                            aria-label="Compute wages"
                           >
-                            <Wallet />
+                            <Wallet className="h-3.5 w-3.5" /> Compute wages
                           </Link>
                         )}
-                        </div>
                       </td>
+
 
                     </tr>
                   );
