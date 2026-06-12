@@ -1587,22 +1587,26 @@ function EmployeesPage() {
                 <>
                   <Button
                     size="icon"
+                    data-variant="success"
                     onClick={() => approveMut.mutate(c)}
                     disabled={approveMut.isPending}
-                    className="h-7 w-7 rounded-md bg-emerald-600 text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
+                    className="h-8 w-8 rounded-full bg-emerald-600 text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
                     title="Approve & assign Employee ID"
+                    aria-label="Approve"
                   >
                     <Check className="h-4 w-4" />
                   </Button>
                   <Button
                     size="icon"
+                    data-variant="danger"
                     variant="outline"
                     onClick={() => {
                       setRejectTarget(c);
                       setRejectReason("");
                     }}
-                    className="h-7 w-7 rounded-md border-rose-200 bg-rose-50/50 text-rose-600 transition-all hover:bg-rose-50 hover:text-rose-600 active:scale-95 dark:border-rose-500/40 dark:bg-transparent dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+                    className="h-8 w-8 rounded-full border-rose-200 bg-rose-50 text-rose-600 transition-all hover:bg-rose-100 hover:text-rose-700 active:scale-95 dark:border-rose-500/40 dark:bg-transparent dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
                     title="Reject candidate"
+                    aria-label="Reject"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -1613,18 +1617,22 @@ function EmployeesPage() {
                   <Button
                     variant="outline"
                     size="icon"
+                    data-variant="warn"
                     onClick={() => setSignTarget({ id: c.id, docType: "nda" })}
-                    className="h-7 w-7 rounded-md border-amber-200 bg-amber-50/50 text-amber-700 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-500/40 dark:bg-transparent dark:text-amber-300 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
+                    className="h-8 w-8 rounded-full border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 dark:border-amber-500/40 dark:bg-transparent dark:text-amber-300 dark:hover:bg-amber-500/10 dark:hover:text-amber-300"
                     title="Sign NDA"
+                    aria-label="Sign NDA"
                   >
                     <FileSignature className="h-4 w-4" />
                   </Button>
                   <Button
                     variant="outline"
                     size="icon"
+                    data-variant="warn"
                     onClick={() => setSignTarget({ id: c.id, docType: "appointment_letter" })}
-                    className="h-7 w-7 rounded-md border-sky-200 bg-sky-50/50 text-sky-700 hover:bg-sky-50 hover:text-sky-700 dark:border-sky-500/40 dark:bg-transparent dark:text-sky-300 dark:hover:bg-sky-500/10 dark:hover:text-sky-300"
+                    className="h-8 w-8 rounded-full border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 hover:text-sky-800 dark:border-sky-500/40 dark:bg-transparent dark:text-sky-300 dark:hover:bg-sky-500/10 dark:hover:text-sky-300"
                     title="Sign Appointment Letter"
+                    aria-label="Sign Appointment Letter"
                   >
                     <FileText className="h-4 w-4" />
                   </Button>

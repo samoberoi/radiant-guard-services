@@ -344,32 +344,77 @@
   .ios-table tbody td[data-wrap="false"] { white-space: nowrap; }
   .ios-table tbody td > * { min-width: 0; max-width: 100%; }
   .ios-table [data-col="actions"] {
-    width: 188px;
+    width: 168px;
     white-space: nowrap;
     text-align: right;
   }
-  .ios-table [data-col="actions"] > * {
+  /* Action header label must sit flush-right above the icon group. */
+  .ios-table thead th[data-col="actions"] {
+    text-align: right;
+    padding-right: 20px;
+  }
+  .ios-table thead th[data-col="actions"] > * {
     display: inline-flex;
+    justify-content: flex-end;
+    width: 100%;
+  }
+  /* The wrapper div inside an actions cell becomes the flex row. We do NOT
+     use display:contents anymore — it broke alignment when authors nested
+     more than one wrapper. Instead, allow one wrapper to lay out children. */
+  .ios-table [data-col="actions"] > div {
+    display: inline-flex !important;
     align-items: center;
     justify-content: flex-end;
     gap: 6px;
+    width: 100%;
   }
-  /* Flatten any nested wrapper divs so every action button shares the
-     same gap rhythm regardless of how authors group them. */
-  .ios-table [data-col="actions"] div {
+  /* Nested wrappers inside the row collapse so siblings share the same gap. */
+  .ios-table [data-col="actions"] > div > div {
     display: contents;
   }
-  /* Fallback when action buttons are direct children (no wrapper) */
+  /* Fallback when action buttons are direct children of the td (no wrapper). */
   .ios-table [data-col="actions"] > button + button,
   .ios-table [data-col="actions"] > a + a,
   .ios-table [data-col="actions"] > button + a,
   .ios-table [data-col="actions"] > a + button {
     margin-left: 6px;
   }
-  /* Globally normalize action icon buttons: equal-sized circular pills. */
-  .ios-table [data-col="actions"] button,
-  .ios-table [data-col="actions"] a[role="button"],
-  .ios-table [data-col="actions"] a:has(> svg:only-child) {
+  /* Globally normalize action icon buttons everywhere in tables: equal-sized
+     circular pills with a soft white surface and a dark hover state that
+     flips the icon to white. Skip elements that explicitly opt out via
+     data-variant (colored approve/reject chips) or data-no-pill. */
+  .ios-table tbody td button:where(:has(> svg:only-child)):not([data-variant]):not([data-no-pill]),
+  .ios-table tbody td a:where(:has(> svg:only-child)):not([data-variant]):not([data-no-pill]) {
+    height: 32px !important;
+    width: 32px !important;
+    padding: 0 !important;
+    border-radius: 9999px !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    background: white;
+    border: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+    color: var(--muted-foreground);
+    transition: background-color .15s ease, color .15s ease, border-color .15s ease;
+  }
+  .ios-table tbody td button:where(:has(> svg:only-child)):not([data-variant]):not([data-no-pill]):hover,
+  .ios-table tbody td a:where(:has(> svg:only-child)):not([data-variant]):not([data-no-pill]):hover {
+    background: var(--foreground);
+    border-color: var(--foreground);
+    color: white;
+  }
+  .ios-table tbody td button:where(:has(> svg:only-child)) > svg,
+  .ios-table tbody td a:where(:has(> svg:only-child)) > svg {
+    height: 15px;
+    width: 15px;
+    color: inherit;
+  }
+  /* Colored variants (approve / reject / warn) keep their accent color but
+     still respect the circular pill sizing. */
+  .ios-table tbody td button[data-variant="success"]:where(:has(> svg:only-child)),
+  .ios-table tbody td button[data-variant="danger"]:where(:has(> svg:only-child)),
+  .ios-table tbody td button[data-variant="warn"]:where(:has(> svg:only-child)) {
     height: 32px !important;
     width: 32px !important;
     padding: 0 !important;
@@ -379,16 +424,13 @@
     justify-content: center;
     flex: 0 0 auto;
   }
-  .ios-table [data-col="actions"] button > svg,
-  .ios-table [data-col="actions"] a > svg {
-    height: 15px;
-    width: 15px;
-  }
   .ios-table [data-col="status"] { width: 140px; }
+  .ios-table [data-col="approval"] { width: 156px; }
   .ios-table [data-col="date"] { width: 108px; }
   .ios-table [data-col="code"] { width: 150px; }
   .ios-table [data-col="date"],
   .ios-table [data-col="status"],
+  .ios-table [data-col="approval"],
   .ios-table [data-col="code"] {
     white-space: nowrap;
   }

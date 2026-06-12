@@ -11,6 +11,7 @@ import {
   FileSignature,
   FileSpreadsheet,
   FileText,
+  Flag,
   Plus,
   RefreshCcw,
   Search,
@@ -1615,7 +1616,7 @@ function ClientContractsPage() {
                 ) : (
                   <th className="px-5 py-3" data-col="date">Start</th>
                 )}
-                <th className="px-5 py-3" data-col="status">{tab === "client" ? "Status" : "Approval"}</th>
+                <th className="px-5 py-3" data-col={tab === "client" ? "status" : "approval"}>{tab === "client" ? "Status" : "Approval"}</th>
                 <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
             </thead>
@@ -1645,7 +1646,7 @@ function ClientContractsPage() {
                     {c.startDate || "—"}
                   </td>
                 )}
-                <td className="px-5 py-3" data-col="status">
+                <td className="px-5 py-3" data-col={tab === "client" ? "status" : "approval"}>
                     {tab === "client" ? (
                       <StatusBadge status={c.status} />
                     ) : c.prospectStage === "lost" ? (
@@ -1665,22 +1666,25 @@ function ClientContractsPage() {
                         canApprove && (
                           <>
                             <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 px-2 text-accent hover:bg-accent/10"
+                              size="icon"
+                              data-variant="success"
+                              className="h-8 w-8 rounded-full bg-emerald-600 text-white shadow-sm hover:bg-emerald-700"
                               onClick={() => setApprovalTarget({ contract: c, mode: "approve" })}
                               title="Approve & sign — promote to client"
+                              aria-label="Approve"
                             >
-                              <CheckCircle2 className="mr-1 h-4 w-4" /> Approve
+                              <CheckCircle2 className="h-4 w-4" />
                             </Button>
                             <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-8 px-2 text-destructive hover:bg-destructive/10"
+                              size="icon"
+                              data-variant="danger"
+                              variant="outline"
+                              className="h-8 w-8 rounded-full border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100"
                               onClick={() => setApprovalTarget({ contract: c, mode: "reject" })}
                               title="Reject"
+                              aria-label="Reject"
                             >
-                              <XCircle className="mr-1 h-4 w-4" /> Reject
+                              <XCircle className="h-4 w-4" />
                             </Button>
                           </>
                         )}
@@ -1689,15 +1693,16 @@ function ClientContractsPage() {
                         c.prospectStage !== "lost" &&
                         canEdit && (
                           <Button
-                            size="sm"
+                            size="icon"
                             variant="ghost"
-                            className="h-8 px-2 text-accent hover:bg-accent/10"
+                            className="text-muted-foreground hover:text-accent"
                             onClick={() =>
                               resubmitMut.mutate({ id: c.id, prospectCode: c.prospectCode })
                             }
                             title="Resubmit this prospect for approval"
+                            aria-label="Resubmit"
                           >
-                            <RefreshCcw className="mr-1 h-4 w-4" /> Resubmit
+                            <RefreshCcw className="h-4 w-4" />
                           </Button>
                         )}
                       {tab === "prospect" &&
@@ -1705,9 +1710,9 @@ function ClientContractsPage() {
                         c.prospectStage !== "lost" &&
                         canEdit && (
                           <Button
-                            size="sm"
+                            size="icon"
                             variant="ghost"
-                            className="h-8 px-2 text-muted-foreground hover:bg-muted"
+                            className="text-muted-foreground"
                             onClick={() =>
                               updateStageMut.mutate({
                                 id: c.id,
@@ -1716,8 +1721,9 @@ function ClientContractsPage() {
                               })
                             }
                             title="Mark prospect as lost (stays in prospects)"
+                            aria-label="Mark Lost"
                           >
-                            Mark Lost
+                            <Flag className="h-4 w-4" />
                           </Button>
                         )}
                       <Button
