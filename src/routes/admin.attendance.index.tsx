@@ -636,7 +636,7 @@ function AttendanceUnitsPage() {
         )}
 
 
-        <div className="overflow-x-clip">
+        <div className="overflow-x-auto">
           <table className="ios-table min-w-full table-auto">
             <thead className="border-b border-border/60 bg-secondary/40">
               <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
@@ -646,7 +646,7 @@ function AttendanceUnitsPage() {
                 <th className="px-5 py-4 font-medium">Security guards</th>
                 <th className="px-5 py-4 text-right font-medium">Active</th>
                 <th className="px-5 py-4 font-medium">Status</th>
-                <th className="px-5 py-4 text-right font-medium" data-col="actions">Action</th>
+                <th className="px-5 py-4 whitespace-nowrap text-right font-medium">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
