@@ -142,7 +142,7 @@ export function useAuth() {
         setUser(nextUser);
       } finally {
         if (!active) return;
-      setIsReady(true);
+        setIsReady(true);
       }
     };
 
