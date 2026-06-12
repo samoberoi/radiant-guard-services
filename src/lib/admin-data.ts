@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { useAuth } from "@/lib/auth";
 
 /**
  * Cloud-backed admin data store.
@@ -110,13 +111,20 @@ function errMsg(e: unknown, fallback: string): string {
   return fallback;
 }
 
+function useAdminQueryEnabled() {
+  const { user, isReady } = useAuth();
+  return isReady && !!user;
+}
+
 // ───────────────────────── States ─────────────────────────
 
 export function useStates() {
   const qc = useQueryClient();
+  const enabled = useAdminQueryEnabled();
 
   const { data: states = [] } = useQuery({
     queryKey: QK.states,
+    enabled,
     queryFn: async (): Promise<State[]> => {
       const { data, error } = await supabase
         .from("states")
@@ -196,9 +204,11 @@ export function useStates() {
 
 export function useBranches() {
   const qc = useQueryClient();
+  const enabled = useAdminQueryEnabled();
 
   const { data: branches = [] } = useQuery({
     queryKey: QK.branches,
+    enabled,
     queryFn: async (): Promise<Branch[]> => {
       const { data, error } = await supabase
         .from("branches")
@@ -405,9 +415,11 @@ function customerToRow(data: Omit<Customer, "id">) {
 
 export function useCustomers() {
   const qc = useQueryClient();
+  const enabled = useAdminQueryEnabled();
 
   const { data: customers = [] } = useQuery({
     queryKey: QK.customers,
+    enabled,
     queryFn: async (): Promise<Customer[]> => {
       const { data, error } = await supabase.from("customers").select("*");
       if (error) throw error;
@@ -738,9 +750,11 @@ function unitToRow(data: Omit<Unit, "id">) {
 
 export function useUnits() {
   const qc = useQueryClient();
+  const enabled = useAdminQueryEnabled();
 
   const { data: units = [] } = useQuery({
     queryKey: QK_UNITS,
+    enabled,
     queryFn: async (): Promise<Unit[]> => {
       const { data, error } = await supabase.from("units").select("*");
       if (error) throw error;
