@@ -11,6 +11,7 @@ import {
   FileSignature,
   FileSpreadsheet,
   FileText,
+  Flag,
   Plus,
   RefreshCcw,
   Search,
