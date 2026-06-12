@@ -5,8 +5,6 @@ import { logActivity, getClientIp } from "@/lib/activity-log";
 const STORAGE_KEY = "radiant.auth";
 const AUTH_TIMEOUT_MS = 12_000;
 const IP_LOOKUP_TIMEOUT_MS = 1_500;
-const SESSION_BOOTSTRAP_WAIT_MS = 5_000;
-
 /**
  * ⚠️ PRE-LAUNCH TESTING ONLY ⚠️
  * The OTP below is a hardcoded development bypass used while the SMS gateway
@@ -72,6 +70,47 @@ function resolveClientIpQuickly() {
   ]).catch(() => "");
 }
 
+function deriveUserFromSession(): AuthUser | null {
+  const stored = read();
+  if (stored) return stored;
+
+  if (typeof window === "undefined") return null;
+
+  return null;
+}
+
+async function authUserFromSession(): Promise<AuthUser | null> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(STORAGE_KEY);
+    }
+    return null;
+  }
+
+  const stored = read();
+  if (stored) return stored;
+
+  const email = session.user.email ?? "";
+  const match = email.match(/^phone-(\d{10})@radiantguard\.local$/i);
+  if (!match) return null;
+
+  const phone = `+91${match[1]}`;
+  const user: AuthUser = {
+    phone,
+    role: match[1] === SUPER_ADMIN_PHONE ? "super_admin" : "user",
+  };
+
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(user));
+  }
+
+  return user;
+}
+
 async function ensureSupabaseSession(phone: string) {
   const { email, password } = credsForPhone(phone);
   const signIn = await withTimeout(
@@ -100,37 +139,71 @@ export function useAuth() {
 
   useEffect(() => {
     let active = true;
-    const sync = () => {
+    const syncStoredUser = () => {
       if (!active) return;
       setUser(read());
-      setIsReady(true);
     };
 
-    sync();
-    listeners.add(sync);
-    window.addEventListener("storage", sync);
+    const syncFromSession = async () => {
+      try {
+        const nextUser = await authUserFromSession();
+        if (!active) return;
+        setUser(nextUser);
+      } finally {
+        if (!active) return;
+      setIsReady(true);
+      }
+    };
 
-    void supabase.auth
-      .getSession()
-      .then(() => {
-        if (!active) return;
-        sync();
-      })
-      .catch(() => {
-        if (!active) return;
-        setIsReady(true);
-      });
+    listeners.add(syncStoredUser);
+    window.addEventListener("storage", syncStoredUser);
+
+    void syncFromSession().catch(() => {
+      if (!active) return;
+      setUser(null);
+      setIsReady(true);
+    });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      sync();
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!active) return;
+
+      if (!session?.user) {
+        window.localStorage.removeItem(STORAGE_KEY);
+        setUser(null);
+        setIsReady(true);
+        return;
+      }
+
+      const stored = read();
+      if (stored) {
+        setUser(stored);
+        setIsReady(true);
+        return;
+      }
+
+      const email = session.user.email ?? "";
+      const match = email.match(/^phone-(\d{10})@radiantguard\.local$/i);
+      if (!match) {
+        setUser(null);
+        setIsReady(true);
+        return;
+      }
+
+      const nextUser: AuthUser = {
+        phone: `+91${match[1]}`,
+        role: match[1] === SUPER_ADMIN_PHONE ? "super_admin" : "user",
+      };
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextUser));
+      setUser(nextUser);
+      setIsReady(true);
     });
 
     return () => {
       active = false;
-      listeners.delete(sync);
-      window.removeEventListener("storage", sync);
+      listeners.delete(syncStoredUser);
+      window.removeEventListener("storage", syncStoredUser);
       subscription.unsubscribe();
     };
   }, []);
@@ -140,20 +213,8 @@ export function useAuth() {
     const role: AuthUser["role"] =
       digits === SUPER_ADMIN_PHONE ? "super_admin" : "user";
     const ipPromise = resolveClientIpQuickly();
-    const sessionBootstrap = ensureSupabaseSession(phone);
     try {
-      const bootstrapped = await Promise.race([
-        sessionBootstrap.then(() => true),
-        new Promise<false>((resolve) => {
-          setTimeout(() => resolve(false), SESSION_BOOTSTRAP_WAIT_MS);
-        }),
-      ]);
-
-      if (!bootstrapped) {
-        void sessionBootstrap.catch((error) => {
-          console.warn("Background session bootstrap failed", error);
-        });
-      }
+      await ensureSupabaseSession(phone);
     } catch (e) {
       void ipPromise.then((ip) =>
         logActivity({
