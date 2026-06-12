@@ -424,16 +424,15 @@
     justify-content: center;
     flex: 0 0 auto;
   }
-  .ios-table [data-col="status"] { width: 140px; }
-  .ios-table [data-col="approval"] { width: 156px; }
+  .ios-table [data-col="status"] { min-width: 140px; white-space: nowrap; }
+  .ios-table [data-col="approval"] { min-width: 156px; white-space: nowrap; }
   .ios-table [data-col="date"] { width: 108px; }
   .ios-table [data-col="code"] { width: 150px; }
   .ios-table [data-col="date"],
-  .ios-table [data-col="status"],
-  .ios-table [data-col="approval"],
   .ios-table [data-col="code"] {
     white-space: nowrap;
   }
+
   .ios-table .cell-stack {
     display: grid;
     min-width: 0;
