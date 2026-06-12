@@ -636,7 +636,7 @@ function AttendanceUnitsPage() {
         )}
 
 
-        <div className="overflow-x-clip">
+        <div className="overflow-x-auto">
           <table className="ios-table min-w-full table-auto">
             <thead className="border-b border-border/60 bg-secondary/40">
               <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
@@ -646,7 +646,7 @@ function AttendanceUnitsPage() {
                 <th className="px-5 py-4 font-medium">Security guards</th>
                 <th className="px-5 py-4 text-right font-medium">Active</th>
                 <th className="px-5 py-4 font-medium">Status</th>
-                <th className="px-5 py-4 text-right font-medium" data-col="actions">Action</th>
+                <th className="px-5 py-4 whitespace-nowrap text-right font-medium">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -688,8 +688,8 @@ function AttendanceUnitsPage() {
                         <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-sky-100/80 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
                           <MapPinned className="h-4 w-4" />
                         </div>
-                          <div className="min-w-0">
-                          <div className="text-sm font-semibold text-foreground">{unit.name || unit.code}</div>
+                          <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-semibold text-foreground">{unit.name || unit.code}</div>
                             <div className="mt-1 flex items-center gap-1.5 overflow-hidden">
                             <span className="inline-flex rounded-md bg-secondary px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-foreground">
                               {unit.code || "—"}
@@ -727,25 +727,27 @@ function AttendanceUnitsPage() {
                         <statusBadge.Icon className="h-3.5 w-3.5" /> {statusBadge.label}
                       </span>
                     </td>
-                    <td className="px-5 py-4 text-right align-top">
+                    <td className="px-5 py-4 text-right align-top whitespace-nowrap">
                       {sheetStatus === "approved" ? (
                         canApprove ? (
                           <button
                             type="button"
+                            data-no-pill
                             onClick={() => sheet && reopenSheet.mutate(sheet)}
                             disabled={!sheet || reopenSheet.isPending}
-                            className="inline-flex items-center gap-2 rounded-xl border border-amber-300/60 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 transition hover:border-amber-400 hover:bg-amber-100 disabled:opacity-60"
+                            className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:border-amber-400 hover:bg-amber-100 disabled:opacity-60"
                           >
-                            <RotateCcw className="h-4 w-4" /> Reopen
+                            <RotateCcw className="h-3.5 w-3.5" /> Reopen
                           </button>
                         ) : (
                           <Link
                             to="/admin/attendance/$unitId"
                             params={{ unitId: unit.id }}
                             search={{ month: monthIdx, year }}
-                            className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-muted-foreground transition hover:border-accent/50 hover:text-accent"
+                            data-no-pill
+                            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-accent/50 hover:text-accent"
                           >
-                            View roll <ArrowRight className="h-4 w-4" />
+                            View roll <ArrowRight className="h-3.5 w-3.5" />
                           </Link>
                         )
                       ) : (
@@ -753,9 +755,10 @@ function AttendanceUnitsPage() {
                           to="/admin/attendance/$unitId"
                           params={{ unitId: unit.id }}
                           search={{ month: monthIdx, year }}
-                          className="inline-flex items-center gap-2 rounded-xl border border-border/60 bg-background px-3 py-2 text-sm font-medium text-foreground transition hover:border-accent/50 hover:text-accent"
+                          data-no-pill
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-accent/50 hover:text-accent"
                         >
-                          Open roll <ArrowRight className="h-4 w-4" />
+                          Open roll <ArrowRight className="h-3.5 w-3.5" />
                         </Link>
                       )}
                     </td>
