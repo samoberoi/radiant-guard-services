@@ -70,15 +70,6 @@ function resolveClientIpQuickly() {
   ]).catch(() => "");
 }
 
-function deriveUserFromSession(): AuthUser | null {
-  const stored = read();
-  if (stored) return stored;
-
-  if (typeof window === "undefined") return null;
-
-  return null;
-}
-
 async function authUserFromSession(): Promise<AuthUser | null> {
   const {
     data: { session },
