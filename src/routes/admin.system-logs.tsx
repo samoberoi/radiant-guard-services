@@ -316,7 +316,7 @@ function SystemLogsPage() {
               <tr>
                 <th className="px-4 py-3">When</th>
                 <th className="px-4 py-3">Module</th>
-                <th className="px-4 py-3">Action</th>
+                <th className="px-4 py-3" data-col="actions">Action</th>
                 <th className="px-4 py-3">Entity</th>
                 <th className="px-4 py-3">Changes</th>
                 <th className="px-4 py-3">User</th>

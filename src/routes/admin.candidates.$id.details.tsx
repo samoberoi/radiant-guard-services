@@ -646,7 +646,7 @@ function UnitMappingSection({ candidateId, primaryUnitId }: { candidateId: strin
                 <th className="px-3 py-2 text-left">Unit</th>
                 <th className="px-3 py-2 text-left">Location</th>
                 <th className="px-3 py-2 text-left">Primary</th>
-                <th className="px-3 py-2 text-right">Actions</th>
+                <th className="px-3 py-2 text-right" data-col="actions">Actions</th>
               </tr>
             </thead>
             <tbody>
