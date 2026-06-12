@@ -1587,22 +1587,26 @@ function EmployeesPage() {
                 <>
                   <Button
                     size="icon"
+                    data-variant="success"
                     onClick={() => approveMut.mutate(c)}
                     disabled={approveMut.isPending}
-                    className="h-7 w-7 rounded-md bg-emerald-600 text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
+                    className="h-8 w-8 rounded-full bg-emerald-600 text-white shadow-sm transition-all hover:bg-emerald-700 active:scale-95"
                     title="Approve & assign Employee ID"
+                    aria-label="Approve"
                   >
                     <Check className="h-4 w-4" />
                   </Button>
                   <Button
                     size="icon"
+                    data-variant="danger"
                     variant="outline"
                     onClick={() => {
                       setRejectTarget(c);
                       setRejectReason("");
                     }}
-                    className="h-7 w-7 rounded-md border-rose-200 bg-rose-50/50 text-rose-600 transition-all hover:bg-rose-50 hover:text-rose-600 active:scale-95 dark:border-rose-500/40 dark:bg-transparent dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+                    className="h-8 w-8 rounded-full border-rose-200 bg-rose-50 text-rose-600 transition-all hover:bg-rose-100 hover:text-rose-700 active:scale-95 dark:border-rose-500/40 dark:bg-transparent dark:text-rose-300 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
                     title="Reject candidate"
+                    aria-label="Reject"
                   >
                     <X className="h-4 w-4" />
                   </Button>
