@@ -523,7 +523,6 @@ function TemplateEditorDialog({
           <Button
             disabled={saving || !title.trim() || !body.trim()}
             onClick={async () => {
-              if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
               setSaving(true);
               try {
                 await onSubmit(title, body);

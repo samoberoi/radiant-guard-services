@@ -247,7 +247,6 @@ function BranchManagerPage() {
         availableStates={availableStates}
         allStates={states}
         onSubmit={async (data) => {
-          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           const r = editing
             ? await updateBranch(editing.id, data)
             : await addBranch(data);
@@ -398,7 +397,6 @@ function BranchFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
             const err = await onSubmit({
               code,
               name: selectedState?.name ?? "",

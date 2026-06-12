@@ -362,7 +362,6 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
           <Button disabled={saving} onClick={async () => {
-            if (!(await confirmAction({ title: "Save?", description: "Save these changes?", confirmText: "Save" }))) return;
             setSaving(true);
             const err = await onSubmit({ name, category_id: categoryId || null, unit, is_sized: isSized, hsn_code: hsn, default_reorder_level: reorder, description, enabled, standard_cost: stdCost });
             if (err) { setSaving(false); toast.error(err); return; }

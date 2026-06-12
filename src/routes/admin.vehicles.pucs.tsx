@@ -370,7 +370,6 @@ function PucFormDialog({ open, onOpenChange, title, initial, vehicles, onSubmit 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
           <Button disabled={saving} onClick={async () => {
-            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return;
             setSaving(true);
             const err = await onSubmit({
               vehicle_id: vehicleId, puc_number: pucNumber, issuing_authority: issuingAuthority,

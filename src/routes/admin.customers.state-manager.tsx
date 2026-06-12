@@ -216,7 +216,6 @@ function StateManagerPage() {
         onOpenChange={setAddOpen}
         title="Add state"
         onSubmit={async (name) => {
-          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           const r = await addState(name);
           if (!r.ok) return r.error;
           void logActivity({ module: "State Manager", action: "create", entityType: "states", entityLabel: name, details: { name } });
@@ -231,7 +230,6 @@ function StateManagerPage() {
         onOpenChange={(o) => !o && setEditing(null)}
         title="Edit state"
         onSubmit={async (name) => {
-          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           if (!editing) return null;
           const r = await updateState(editing.id, name);
           if (!r.ok) return r.error;
@@ -346,7 +344,6 @@ function StateFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
             const err = await onSubmit(name);
             if (err) setError(err);
             else {

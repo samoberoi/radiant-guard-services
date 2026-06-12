@@ -402,7 +402,6 @@ function ProfessionalTaxManagerPage() {
         title="New professional tax slab"
         knownStates={states}
         onSubmit={async (p) => {
-          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           try {
             await addMut.mutateAsync(p);
             toast.success("Tax slab added");
@@ -420,7 +419,6 @@ function ProfessionalTaxManagerPage() {
         title="Edit professional tax slab"
         knownStates={states}
         onSubmit={async (p) => {
-          if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
           if (!editing) return null;
           try {
             await updateMut.mutateAsync({ id: editing.id, p });
@@ -581,7 +579,6 @@ function PtSlabFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            if (!(await confirmAction({ title: "Save changes?", description: "Do you want to save these changes?", confirmText: "Save" }))) return null;
             if (!form.state.trim()) {
               setError("State is required");
               return;

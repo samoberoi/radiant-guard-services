@@ -186,7 +186,6 @@ function WHFormDialog({ open, onOpenChange, title, initial, onSubmit }: { open: 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
           <Button disabled={saving} onClick={async () => {
-            if (!(await confirmAction({ title: "Save?", description: "Save these changes?", confirmText: "Save" }))) return;
             setSaving(true);
             const err = await onSubmit(p);
             setSaving(false);
