@@ -1646,7 +1646,7 @@ function ClientContractsPage() {
                     {c.startDate || "—"}
                   </td>
                 )}
-                <td className="px-5 py-3" data-col="status">
+                <td className="px-5 py-3" data-col={tab === "client" ? "status" : "approval"}>
                     {tab === "client" ? (
                       <StatusBadge status={c.status} />
                     ) : c.prospectStage === "lost" ? (
