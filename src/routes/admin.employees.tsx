@@ -1630,7 +1630,7 @@ function EmployeesPage() {
                   </Button>
                 </>
               )}
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1">
                 <Button
                   asChild
                   variant="ghost"
