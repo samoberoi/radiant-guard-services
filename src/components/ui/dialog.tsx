@@ -115,6 +115,7 @@ const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
   const [contentElement, setContentElement] = React.useState<HTMLElement | null>(null);
+  const [pristine, setPristine] = React.useState(true);
   const dirtyCtx = React.useContext(DialogDirtyContext);
 
   const handleRef = React.useCallback(
@@ -132,33 +133,59 @@ const DialogContent = React.forwardRef<
   // Mark the dialog dirty on any field interaction, and pristine when a
   // save-intent button is clicked or a form is submitted (so successful
   // saves close silently; failed saves re-dirty as the user resumes typing).
+  // The `pristine` React state mirrors the ref so we can render
+  // `data-pristine` and disable save-intent buttons via CSS until edits exist.
   React.useEffect(() => {
     if (!contentElement || !dirtyCtx || dirtyCtx.disabled) return;
     dirtyCtx.reset();
-    const markDirty = () => {
-      dirtyCtx.dirtyRef.current = true;
-    };
+    setPristine(true);
     const SAVE_RX = /^(save|update|create|add|submit|confirm|apply|generate|send|approve|sign|upload|import|export|next|continue|finish|done)\b/i;
+
+    const markDirty = (e: Event) => {
+      // Programmatic value changes (React-driven prefill) shouldn't dirty.
+      if (!(e as UIEvent).isTrusted) return;
+      if (!dirtyCtx.dirtyRef.current) {
+        dirtyCtx.dirtyRef.current = true;
+        setPristine(false);
+      }
+    };
+    const markPristine = () => {
+      dirtyCtx.reset();
+      setPristine(true);
+    };
     const onClick = (e: Event) => {
       const btn = (e.target as HTMLElement | null)?.closest?.(
         "button",
       ) as HTMLButtonElement | null;
       if (!btn) return;
       const txt = (btn.textContent || "").trim();
-      if (btn.type === "submit" || SAVE_RX.test(txt)) {
-        dirtyCtx.reset();
-      }
+      if (btn.type === "submit" || SAVE_RX.test(txt)) markPristine();
     };
-    const onSubmit = () => dirtyCtx.reset();
+
+    // Tag save-intent buttons inside the dialog so CSS can disable them
+    // while pristine. Re-scan when children change.
+    const scan = () => {
+      contentElement.querySelectorAll("button").forEach((b) => {
+        const txt = (b.textContent || "").trim();
+        const isSave = b.type === "submit" || SAVE_RX.test(txt);
+        if (isSave) b.setAttribute("data-save-intent", "true");
+        else b.removeAttribute("data-save-intent");
+      });
+    };
+    scan();
+    const mo = new MutationObserver(scan);
+    mo.observe(contentElement, { childList: true, subtree: true, characterData: true });
+
     contentElement.addEventListener("input", markDirty, true);
     contentElement.addEventListener("change", markDirty, true);
     contentElement.addEventListener("click", onClick, true);
-    contentElement.addEventListener("submit", onSubmit, true);
+    contentElement.addEventListener("submit", markPristine, true);
     return () => {
+      mo.disconnect();
       contentElement.removeEventListener("input", markDirty, true);
       contentElement.removeEventListener("change", markDirty, true);
       contentElement.removeEventListener("click", onClick, true);
-      contentElement.removeEventListener("submit", onSubmit, true);
+      contentElement.removeEventListener("submit", markPristine, true);
     };
   }, [contentElement, dirtyCtx]);
 
@@ -168,6 +195,7 @@ const DialogContent = React.forwardRef<
       <DialogPortalContainerContext.Provider value={contentElement}>
         <DialogPrimitive.Content
           ref={handleRef}
+          data-pristine={pristine ? "true" : "false"}
           className={cn(
             "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4 border border-white/40 dark:border-white/10 bg-white/75 dark:bg-background/70 backdrop-blur-2xl backdrop-saturate-150 p-6 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.35)] duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] sm:rounded-2xl",
             className,
