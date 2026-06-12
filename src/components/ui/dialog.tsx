@@ -5,6 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { confirmAction } from "@/components/ConfirmProvider";
 
 const DialogPortalContainerContext = React.createContext<HTMLElement | null>(null);
 
@@ -12,7 +13,81 @@ export function useDialogPortalContainer() {
   return React.useContext(DialogPortalContainerContext);
 }
 
-const Dialog = DialogPrimitive.Root;
+// ---- Dirty-guard plumbing -----------------------------------------------
+// Tracks whether the user has typed/interacted inside an open dialog. If so,
+// any close attempt (Cancel button, ✕, outside click, Escape) is intercepted
+// and a "Discard unsaved changes?" confirmation is shown first.
+type DirtyCtx = {
+  dirtyRef: React.MutableRefObject<boolean>;
+  reset: () => void;
+  disabled: boolean;
+};
+const DialogDirtyContext = React.createContext<DirtyCtx | null>(null);
+
+/** Opt out of the global unsaved-changes guard for a specific Dialog. */
+export const DialogDirtyGuardOff = ({ children }: { children: React.ReactNode }) => {
+  const dirtyRef = React.useRef(false);
+  return (
+    <DialogDirtyContext.Provider
+      value={{ dirtyRef, reset: () => {}, disabled: true }}
+    >
+      {children}
+    </DialogDirtyContext.Provider>
+  );
+};
+
+type DialogRootProps = React.ComponentProps<typeof DialogPrimitive.Root>;
+
+const Dialog = ({ onOpenChange, open, defaultOpen, children, ...props }: DialogRootProps) => {
+  const dirtyRef = React.useRef(false);
+  const ctxRef = React.useRef<DirtyCtx>({
+    dirtyRef,
+    reset: () => {
+      dirtyRef.current = false;
+    },
+    disabled: false,
+  });
+
+  const handleOpenChange = React.useCallback(
+    (next: boolean) => {
+      if (next) {
+        dirtyRef.current = false;
+        onOpenChange?.(true);
+        return;
+      }
+      if (!dirtyRef.current || ctxRef.current.disabled) {
+        onOpenChange?.(false);
+        return;
+      }
+      void confirmAction({
+        title: "Discard unsaved changes?",
+        description: "Any information you've entered will be lost.",
+        confirmText: "Discard",
+        cancelText: "Keep editing",
+        destructive: true,
+      }).then((ok) => {
+        if (ok) {
+          dirtyRef.current = false;
+          onOpenChange?.(false);
+        }
+      });
+    },
+    [onOpenChange],
+  );
+
+  return (
+    <DialogDirtyContext.Provider value={ctxRef.current}>
+      <DialogPrimitive.Root
+        open={open}
+        defaultOpen={defaultOpen}
+        onOpenChange={handleOpenChange}
+        {...props}
+      >
+        {children}
+      </DialogPrimitive.Root>
+    </DialogDirtyContext.Provider>
+  );
+};
 
 const DialogTrigger = DialogPrimitive.Trigger;
 
@@ -40,6 +115,7 @@ const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => {
   const [contentElement, setContentElement] = React.useState<HTMLElement | null>(null);
+  const dirtyCtx = React.useContext(DialogDirtyContext);
 
   const handleRef = React.useCallback(
     (node: React.ElementRef<typeof DialogPrimitive.Content> | null) => {
@@ -52,6 +128,24 @@ const DialogContent = React.forwardRef<
     },
     [ref],
   );
+
+  // Attach input/change listeners so any field interaction marks the dialog dirty.
+  React.useEffect(() => {
+    if (!contentElement || !dirtyCtx || dirtyCtx.disabled) return;
+    dirtyCtx.reset();
+    const mark = (e: Event) => {
+      const t = e.target as HTMLElement | null;
+      // Ignore clicks on the dialog itself (Radix forwards some events).
+      if (!t) return;
+      dirtyCtx.dirtyRef.current = true;
+    };
+    contentElement.addEventListener("input", mark, true);
+    contentElement.addEventListener("change", mark, true);
+    return () => {
+      contentElement.removeEventListener("input", mark, true);
+      contentElement.removeEventListener("change", mark, true);
+    };
+  }, [contentElement, dirtyCtx]);
 
   return (
     <DialogPortal>
@@ -113,6 +207,23 @@ const DialogDescription = React.forwardRef<
   />
 ));
 DialogDescription.displayName = DialogPrimitive.Description.displayName;
+
+/**
+ * Imperatively mark the nearest enclosing Dialog as pristine — call after a
+ * successful save so the close that follows won't trigger the discard prompt.
+ */
+export function useDialogDirty() {
+  const ctx = React.useContext(DialogDirtyContext);
+  return React.useMemo(
+    () => ({
+      markPristine: () => ctx?.reset(),
+      markDirty: () => {
+        if (ctx) ctx.dirtyRef.current = true;
+      },
+    }),
+    [ctx],
+  );
+}
 
 export {
   Dialog,
