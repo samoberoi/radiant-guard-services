@@ -176,9 +176,9 @@ function RootComponent() {
           if (t) {
             el.setAttribute("data-tip", t);
             el.removeAttribute("title");
-          } else if (!el.getAttribute("aria-label")) {
-            el.removeAttribute("data-tip");
           }
+          // NOTE: do not remove data-tip when title disappears — our own
+          // promotion removes title and would otherwise wipe the tooltip.
         }
       }
     });
