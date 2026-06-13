@@ -209,7 +209,7 @@ function CandidateDetailsPage() {
         .eq("id", id);
       if (error) throw error;
       setForm((p: any) => {
-        const updated = { ...p, status: next, rejection_reason: reason };
+        const updated = { ...p, status: dbStatus, rejection_reason: reason };
         setBaselinePayload(JSON.stringify(buildCandidatePayload(updated)));
         return updated;
       });
