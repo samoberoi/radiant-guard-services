@@ -188,27 +188,9 @@ function LoginPage() {
           </div>
 
           {/* floating glass pills */}
-          <div className="relative space-y-3">
-            <div className="flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-white backdrop-blur-xl">
-              <div className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-400/20 text-emerald-300">
-                <Users className="h-4 w-4" />
-              </div>
-              <div className="leading-tight">
-                <div className="text-sm font-semibold">12 guards on duty</div>
-                <div className="text-[11px] text-white/60">Live across 3 units</div>
-              </div>
-              <span className="ml-auto inline-flex h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.8)]" />
-            </div>
-            <div className="ml-8 flex items-center gap-3 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-white backdrop-blur-xl">
-              <div className="grid h-9 w-9 place-items-center rounded-xl bg-sky-400/20 text-sky-300">
-                <MapPin className="h-4 w-4" />
-              </div>
-              <div className="leading-tight">
-                <div className="text-sm font-semibold">Aurora Tower · Sector 21</div>
-                <div className="text-[11px] text-white/60">Patrol Route A · on schedule</div>
-              </div>
-            </div>
-          </div>
+          {/* floating glass pills removed */}
+          <div />
+
         </div>
 
         {/* RIGHT — white form card */}
