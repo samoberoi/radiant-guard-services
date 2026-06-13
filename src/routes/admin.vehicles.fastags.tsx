@@ -282,8 +282,11 @@ function FastTagManagerPage() {
             <span className="uppercase tracking-[0.14em] text-muted-foreground">Total {filtered.length === 1 ? "row" : "rows"}</span>
           </span>
         </div>
-        <div className="overflow-x-clip">
-          <table className="ios-table w-full text-sm">
+        <div className="overflow-x-auto">
+          <table
+            className="ios-table min-w-max text-sm"
+            style={{ tableLayout: "auto", width: "max-content", minWidth: "100%" }}
+          >
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <SortHeader label="Vehicle" sortKey="vehicle" sort={sort.sort} onToggle={sort.toggle} className="px-5" />
@@ -305,10 +308,10 @@ function FastTagManagerPage() {
                   <tr key={i.id} className="hover:bg-secondary/30">
                     <td className="px-5 py-3 font-mono font-semibold text-foreground whitespace-nowrap">{v?.vehicle_number || "—"}</td>
                     <VehicleDetailCells v={v} />
-                    <td className="px-5 py-3 font-mono text-foreground/90">{i.fastag_number || "—"}</td>
-                    <td className="px-5 py-3 text-foreground/90">{i.bank_name || "—"}</td>
-                    <td className="px-5 py-3 text-foreground/90">₹ {i.balance.toLocaleString("en-IN")}</td>
-                    <td className="px-5 py-3 text-foreground/90">{fmtDate(i.expiry_date)}</td>
+                    <td className="px-5 py-3 font-mono text-foreground/90 whitespace-nowrap">{i.fastag_number || "—"}</td>
+                    <td className="px-5 py-3 text-foreground/90 whitespace-nowrap">{i.bank_name || "—"}</td>
+                    <td className="px-5 py-3 text-foreground/90 whitespace-nowrap">₹ {i.balance.toLocaleString("en-IN")}</td>
+                    <td className="px-5 py-3 text-foreground/90 whitespace-nowrap">{fmtDate(i.expiry_date)}</td>
                     <td className="px-5 py-3">
                       <span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{i.status}</span>
                     </td>
