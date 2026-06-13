@@ -16,9 +16,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { useResetOnOpen, useVehicleOptions, fmtDate, VehicleDetailHeaders, VehicleDetailCells, VEHICLE_DETAIL_COLUMN_COUNT, type VehicleOption } from "@/lib/vehicle-helpers";
+import { useResetOnOpen, useVehicleOptions, fmtDate, type VehicleOption } from "@/lib/vehicle-helpers";
 import { MiniStat } from "@/components/MiniStat";
-import { SortHeader, sortRows, useSort } from "@/components/SortableHeader";
+import { sortRows, useSort } from "@/components/SortableHeader";
 
 
 type StatusFilter = "all" | "expired" | "renewal" | "due" | "active";
