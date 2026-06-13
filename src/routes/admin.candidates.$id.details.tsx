@@ -200,13 +200,16 @@ function CandidateDetailsPage() {
   ) => {
     setStatusBusy(true);
     try {
+      // Approval immediately promotes the candidate to an "active" employee
+      // so they appear in attendance rosters and the Active stat tile.
+      const dbStatus = next === "approved" ? "active" : next;
       const { error } = await supabase
         .from("candidates")
-        .update({ status: next, rejection_reason: reason })
+        .update({ status: dbStatus, rejection_reason: reason })
         .eq("id", id);
       if (error) throw error;
       setForm((p: any) => {
-        const updated = { ...p, status: next, rejection_reason: reason };
+        const updated = { ...p, status: dbStatus, rejection_reason: reason };
         setBaselinePayload(JSON.stringify(buildCandidatePayload(updated)));
         return updated;
       });
