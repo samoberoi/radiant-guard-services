@@ -25,6 +25,7 @@ export function SignaturePad({
     addEventListener: (e: string, cb: () => void) => void;
   } | null>(null);
   const [ready, setReady] = useState(false);
+  const { markDirty, markPristine } = useDialogDirty();
 
   useEffect(() => {
     let active = true;
