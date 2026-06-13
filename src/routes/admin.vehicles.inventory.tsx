@@ -293,72 +293,100 @@ function VehicleInventoryPage() {
 
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="flex items-center justify-between border-b border-border bg-accent/10 px-5 py-2.5 text-xs font-medium text-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-accent/10 px-5 py-2.5 text-xs font-medium text-foreground">
           <span className="inline-flex items-center gap-2">
             <span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">{filtered.length}</span>
-            <span className="uppercase tracking-[0.14em] text-muted-foreground">Total {filtered.length === 1 ? "row" : "rows"}</span>
+            <span className="uppercase tracking-[0.14em] text-muted-foreground">Total {filtered.length === 1 ? "vehicle" : "vehicles"}</span>
           </span>
         </div>
-        <div className="overflow-x-clip">
-          <table className="ios-table w-full text-sm">
-            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3">Vehicle ID</th>
-                <th className="px-5 py-3">Vehicle No.</th>
-                <th className="px-5 py-3">Owner</th>
-                <th className="px-5 py-3">Brand / Make</th>
-                <th className="px-5 py-3">Type / Fuel</th>
-                <th className="px-5 py-3">Engine No.</th>
-                <th className="px-5 py-3">Chassis No.</th>
-                <th className="px-5 py-3">Reg. Date</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((i) => (
-                <tr key={i.id} className="hover:bg-secondary/30">
-                  <td className="px-5 py-3 font-mono text-[12px] font-semibold text-accent">{i.vehicle_id || "—"}</td>
-                  <td className="px-5 py-3 font-mono font-semibold text-foreground">
-                    <span className="inline-flex items-center gap-2"><Car className="h-4 w-4 text-muted-foreground" />{i.vehicle_number}</span>
-                    {i.name && <div className="mt-0.5 text-[11px] font-sans font-normal text-muted-foreground">{i.name}</div>}
-                  </td>
-                  <td className="px-5 py-3 text-foreground/90">{i.owner || "—"}</td>
-                  <td className="px-5 py-3 text-foreground/90">{[i.brand, i.make].filter(Boolean).join(" / ") || "—"}{i.year && <div className="text-[11px] text-muted-foreground">{i.year}</div>}</td>
-                  <td className="px-5 py-3">
-                    <div className="flex flex-col gap-1">
-                      {i.type && <span className="w-fit rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{i.type}</span>}
-                      {i.fuel_type && <span className="w-fit rounded-full bg-accent/15 px-2 py-0.5 text-[11px] font-semibold text-accent">{i.fuel_type}</span>}
-                      {!i.type && !i.fuel_type && "—"}
+
+        <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((i) => (
+            <div key={i.id} className="group relative flex flex-col gap-3 rounded-xl border border-border bg-background/60 p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-md bg-primary/10 px-2 py-0.5 font-mono text-sm font-bold text-primary">{i.vehicle_number || "—"}</span>
+                    <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${i.enabled ? "bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400" : "bg-secondary text-muted-foreground border-border"}`}>
+                      {i.enabled ? "Enabled" : "Disabled"}
+                    </span>
+                  </div>
+                  {i.name && (
+                    <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Car className="h-3.5 w-3.5" />
+                      <span className="font-medium">{i.name}</span>
                     </div>
-                  </td>
-                  <td className="px-5 py-3 font-mono text-[12px] text-foreground/80">{i.engine_number || "—"}</td>
-                  <td className="px-5 py-3 font-mono text-[12px] text-foreground/80">{i.chassis_number || "—"}</td>
-                  <td className="px-5 py-3 text-foreground/90">{fmtDate(i.registration_date)}</td>
-                  <td className="px-5 py-3">
-                    <Switch
-                      checked={i.enabled}
-                      onCheckedChange={(v) =>
-                        toggleMut.mutate({ id: i.id, enabled: v }, {
-                          onSuccess: () => toast.success(v ? "Enabled" : "Disabled"),
-                          onError: (e) => toast.error(e instanceof Error ? e.message : "Update failed"),
-                        })
-                      }
-                    />
-                  </td>
-                  <td className="px-5 py-3 text-right">
-                    <div className="inline-flex gap-1">
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => setEditing(i)} aria-label="Edit"><Edit2 className="h-4 w-4" /></Button>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => setDeleting(i)} aria-label="Delete"><Trash2 className="h-4 w-4" /></Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={10} className="px-5 py-12 text-center text-sm text-muted-foreground">No vehicles found.</td></tr>
+                  )}
+                </div>
+                <Switch
+                  checked={i.enabled}
+                  onCheckedChange={(val) =>
+                    toggleMut.mutate({ id: i.id, enabled: val }, {
+                      onSuccess: () => toast.success(val ? "Enabled" : "Disabled"),
+                      onError: (e) => toast.error(e instanceof Error ? e.message : "Update failed"),
+                    })
+                  }
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 rounded-lg border border-border/60 bg-secondary/30 p-3 text-xs">
+                <div className="min-w-0">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Owner</div>
+                  <div className="truncate font-semibold text-foreground">{i.owner || "—"}</div>
+                </div>
+                <div className="min-w-0 text-right">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Brand / Make</div>
+                  <div className="truncate font-semibold text-foreground">{[i.brand, i.make].filter(Boolean).join(" / ") || "—"}</div>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Type</div>
+                  <div className="font-medium text-foreground/90">{i.type || "—"}</div>
+                </div>
+                <div className="min-w-0 text-right">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Fuel</div>
+                  <div className="font-medium text-foreground/90">{i.fuel_type || "—"}</div>
+                </div>
+                <div className="min-w-0">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Engine No.</div>
+                  <div className="truncate font-mono font-medium text-foreground/80">{i.engine_number || "—"}</div>
+                </div>
+                <div className="min-w-0 text-right">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Chassis No.</div>
+                  <div className="truncate font-mono font-medium text-foreground/80">{i.chassis_number || "—"}</div>
+                </div>
+                <div className="min-w-0 col-span-2">
+                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Registration Date</div>
+                  <div className="font-medium text-foreground/90">{fmtDate(i.registration_date)}</div>
+                </div>
+              </div>
+
+              {i.year && (
+                <div className="text-xs text-muted-foreground">
+                  <span className="uppercase tracking-wider">Year:</span>{" "}
+                  <span className="font-mono text-foreground/80">{i.year}</span>
+                  {i.color && (
+                    <>
+                      <span className="mx-1 text-muted-foreground/50">|</span>
+                      <span className="uppercase tracking-wider">Color:</span>{" "}
+                      <span className="font-medium text-foreground/80">{i.color}</span>
+                    </>
+                  )}
+                </div>
               )}
-            </tbody>
-          </table>
+
+              <div className="mt-auto flex items-center justify-end gap-1 border-t border-border/60 pt-2">
+                <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground" onClick={() => setEditing(i)}>
+                  <Edit2 className="h-3.5 w-3.5" /> Edit
+                </Button>
+                <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-destructive" onClick={() => setDeleting(i)}>
+                  <Trash2 className="h-3.5 w-3.5" /> Delete
+                </Button>
+              </div>
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full py-12 text-center text-sm text-muted-foreground">No vehicles found.</div>
+          )}
         </div>
       </div>
 
