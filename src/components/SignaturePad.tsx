@@ -63,19 +63,20 @@ export function SignaturePad({
         }
       };
 
-      const handleStrokeEnd = () => {
+      const handleStrokeProgress = () => {
         requestAnimationFrame(syncValue);
       };
 
-      pad?.addEventListener("endStroke", handleStrokeEnd);
-      canvas.addEventListener("pointerup", handleStrokeEnd);
-      canvas.addEventListener("mouseup", handleStrokeEnd);
-      canvas.addEventListener("touchend", handleStrokeEnd);
+      pad?.addEventListener("afterUpdateStroke", handleStrokeProgress);
+      pad?.addEventListener("endStroke", handleStrokeProgress);
+      canvas.addEventListener("pointerup", handleStrokeProgress);
+      canvas.addEventListener("mouseup", handleStrokeProgress);
+      canvas.addEventListener("touchend", handleStrokeProgress);
 
       cleanup = () => {
-        canvas.removeEventListener("pointerup", handleStrokeEnd);
-        canvas.removeEventListener("mouseup", handleStrokeEnd);
-        canvas.removeEventListener("touchend", handleStrokeEnd);
+        canvas.removeEventListener("pointerup", handleStrokeProgress);
+        canvas.removeEventListener("mouseup", handleStrokeProgress);
+        canvas.removeEventListener("touchend", handleStrokeProgress);
       };
       setReady(true);
     })();
