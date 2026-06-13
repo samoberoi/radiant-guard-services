@@ -65,7 +65,7 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
-const ATTENDANCE_EMPLOYEE_STATUSES = ["active"] as const;
+const ATTENDANCE_EMPLOYEE_STATUSES = ["active", "approved"] as const;
 
 function daysInMonth(year: number, monthIdx0: number) {
   return new Date(year, monthIdx0 + 1, 0).getDate();
