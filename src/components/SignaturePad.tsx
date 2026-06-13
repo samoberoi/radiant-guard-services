@@ -132,6 +132,7 @@ export function SignaturePad({
           onClick={() => {
             padRef.current?.clear();
             onChange("");
+            markPristine();
           }}
         >
           <Eraser className="mr-1 h-3.5 w-3.5" />
