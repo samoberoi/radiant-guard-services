@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Eraser } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useDialogDirty } from "@/components/ui/dialog";
 
 /**
  * Lightweight signature pad — uses `signature_pad` dynamically (browser only).
@@ -24,6 +25,7 @@ export function SignaturePad({
     addEventListener: (e: string, cb: () => void) => void;
   } | null>(null);
   const [ready, setReady] = useState(false);
+  const { markDirty, markPristine } = useDialogDirty();
 
   useEffect(() => {
     let active = true;
@@ -58,8 +60,10 @@ export function SignaturePad({
         if (!padRef.current) return;
         if (padRef.current.isEmpty()) {
           onChange("");
+          markPristine();
         } else {
           onChange(padRef.current.toDataURL("image/png"));
+          markDirty();
         }
       };
 
@@ -128,6 +132,7 @@ export function SignaturePad({
           onClick={() => {
             padRef.current?.clear();
             onChange("");
+            markPristine();
           }}
         >
           <Eraser className="mr-1 h-3.5 w-3.5" />
