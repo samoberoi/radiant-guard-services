@@ -54,7 +54,7 @@ export function SignaturePad({
           /* ignore */
         }
       }
-      const handle = () => {
+      const syncValue = () => {
         if (!padRef.current) return;
         if (padRef.current.isEmpty()) {
           onChange("");
@@ -62,9 +62,21 @@ export function SignaturePad({
           onChange(padRef.current.toDataURL("image/png"));
         }
       };
-      pad?.addEventListener("endStroke", handle);
+
+      const handleStrokeProgress = () => {
+        requestAnimationFrame(syncValue);
+      };
+
+      pad?.addEventListener("afterUpdateStroke", handleStrokeProgress);
+      pad?.addEventListener("endStroke", handleStrokeProgress);
+      canvas.addEventListener("pointerup", handleStrokeProgress);
+      canvas.addEventListener("mouseup", handleStrokeProgress);
+      canvas.addEventListener("touchend", handleStrokeProgress);
+
       cleanup = () => {
-        // signature_pad cleans itself when canvas is removed
+        canvas.removeEventListener("pointerup", handleStrokeProgress);
+        canvas.removeEventListener("mouseup", handleStrokeProgress);
+        canvas.removeEventListener("touchend", handleStrokeProgress);
       };
       setReady(true);
     })();
@@ -75,6 +87,24 @@ export function SignaturePad({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const pad = padRef.current;
+    if (!pad) return;
+
+    if (!value) {
+      pad.clear();
+      return;
+    }
+
+    if (pad.isEmpty()) {
+      try {
+        pad.fromDataURL(value);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [value]);
 
   return (
     <div className="space-y-2">
