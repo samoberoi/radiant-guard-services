@@ -637,10 +637,10 @@ function AttendanceUnitsPage() {
           <table className="ios-table min-w-full table-auto">
             <thead className="border-b border-border/60 bg-secondary/40">
               <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                <th className="px-5 py-4 font-medium">Unit</th>
-                <th className="px-5 py-4 font-medium">Organization</th>
-                <th className="px-5 py-4 font-medium">Location</th>
-                <th className="px-5 py-4 font-medium">Security guards</th>
+                <th className="px-5 py-4 font-medium min-w-[240px]">Unit</th>
+                <th className="px-5 py-4 font-medium min-w-[160px]">Organization</th>
+                <th className="px-5 py-4 font-medium min-w-[160px]">Location</th>
+                <th className="px-5 py-4 font-medium min-w-[220px]">Security guards</th>
                 <th className="px-5 py-4 text-right font-medium">Active</th>
                 <th className="px-5 py-4 font-medium">Status</th>
                 <th className="px-5 py-4 whitespace-nowrap text-right font-medium">Action</th>
