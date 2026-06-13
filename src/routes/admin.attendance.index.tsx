@@ -680,13 +680,13 @@ function AttendanceUnitsPage() {
                   })();
                   return (
                   <tr key={unit.id} className="group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5">
-                    <td className="px-5 py-4 align-top">
+                    <td className="px-5 py-4 align-top" style={{ whiteSpace: "normal", overflow: "visible", textOverflow: "clip" }}>
                       <div className="flex items-start gap-3">
                         <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-100/80 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
                           <MapPinned className="h-4 w-4" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="text-sm font-semibold text-foreground break-words leading-snug">{unit.name || unit.code}</div>
+                          <div className="text-sm font-semibold text-foreground break-words leading-snug" style={{ whiteSpace: "normal" }}>{unit.name || unit.code}</div>
                           <div className="mt-1 flex flex-wrap items-center gap-1.5">
                             <span className="inline-flex whitespace-nowrap rounded-md bg-secondary px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-foreground">
                               {unit.code || "—"}
@@ -708,8 +708,8 @@ function AttendanceUnitsPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4 align-top text-sm text-foreground">{unit.customer_name}</td>
-                    <td className="px-5 py-4 align-top text-sm text-muted-foreground">{unit.location || "—"}</td>
+                    <td className="px-5 py-4 align-top text-sm text-foreground break-words" style={{ whiteSpace: "normal", overflow: "visible", textOverflow: "clip" }}>{unit.customer_name}</td>
+                    <td className="px-5 py-4 align-top text-sm text-muted-foreground break-words" style={{ whiteSpace: "normal", overflow: "visible", textOverflow: "clip" }}>{unit.location || "—"}</td>
                     <td className="px-5 py-4 align-top">
                       <EmployeeChips list={unit.security_guards} empty="—" tone="emerald" />
                     </td>
