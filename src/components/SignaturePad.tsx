@@ -60,8 +60,10 @@ export function SignaturePad({
         if (!padRef.current) return;
         if (padRef.current.isEmpty()) {
           onChange("");
+          markPristine();
         } else {
           onChange(padRef.current.toDataURL("image/png"));
+          markDirty();
         }
       };
 
