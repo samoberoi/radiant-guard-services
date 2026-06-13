@@ -271,12 +271,15 @@ export function ContractApprovalDialog({
             Cancel
           </Button>
           <Button
-            disabled={saving}
+            disabled={
+              saving ||
+              (isApprove ? !signature : reason.trim().length < 10)
+            }
             onClick={isApprove ? handleApprove : handleReject}
             className={
               isApprove
-                ? "bg-accent text-accent-foreground hover:bg-accent/90"
-                : "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                ? "bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                : "bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
             }
           >
             {saving ? (
