@@ -21,6 +21,8 @@ type DirtyCtx = {
   dirtyRef: React.MutableRefObject<boolean>;
   reset: () => void;
   disabled: boolean;
+  markDirty: () => void;
+  markPristine: () => void;
 };
 const DialogDirtyContext = React.createContext<DirtyCtx | null>(null);
 
@@ -29,7 +31,13 @@ export const DialogDirtyGuardOff = ({ children }: { children: React.ReactNode })
   const dirtyRef = React.useRef(false);
   return (
     <DialogDirtyContext.Provider
-      value={{ dirtyRef, reset: () => {}, disabled: true }}
+      value={{
+        dirtyRef,
+        reset: () => {},
+        disabled: true,
+        markDirty: () => {},
+        markPristine: () => {},
+      }}
     >
       {children}
     </DialogDirtyContext.Provider>
@@ -46,6 +54,12 @@ const Dialog = ({ onOpenChange, open, defaultOpen, children, ...props }: DialogR
       dirtyRef.current = false;
     },
     disabled: false,
+    markDirty: () => {
+      dirtyRef.current = true;
+    },
+    markPristine: () => {
+      dirtyRef.current = false;
+    },
   });
 
   const handleOpenChange = React.useCallback(
@@ -153,6 +167,13 @@ const DialogContent = React.forwardRef<
       dirtyCtx.reset();
       setPristine(true);
     };
+    dirtyCtx.markDirty = () => {
+      if (!dirtyCtx.dirtyRef.current) {
+        dirtyCtx.dirtyRef.current = true;
+      }
+      setPristine(false);
+    };
+    dirtyCtx.markPristine = markPristine;
     const onClick = (e: Event) => {
       const btn = (e.target as HTMLElement | null)?.closest?.(
         "button",
@@ -181,6 +202,12 @@ const DialogContent = React.forwardRef<
     contentElement.addEventListener("click", onClick, true);
     contentElement.addEventListener("submit", markPristine, true);
     return () => {
+      dirtyCtx.markDirty = () => {
+        dirtyCtx.dirtyRef.current = true;
+      };
+      dirtyCtx.markPristine = () => {
+        dirtyCtx.reset();
+      };
       mo.disconnect();
       contentElement.removeEventListener("input", markDirty, true);
       contentElement.removeEventListener("change", markDirty, true);
@@ -259,10 +286,8 @@ export function useDialogDirty() {
   const ctx = React.useContext(DialogDirtyContext);
   return React.useMemo(
     () => ({
-      markPristine: () => ctx?.reset(),
-      markDirty: () => {
-        if (ctx) ctx.dirtyRef.current = true;
-      },
+      markPristine: () => ctx?.markPristine(),
+      markDirty: () => ctx?.markDirty(),
     }),
     [ctx],
   );
