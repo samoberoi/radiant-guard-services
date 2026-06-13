@@ -240,57 +240,77 @@ function PucManagerPage() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="flex items-center justify-between border-b border-border bg-accent/10 px-5 py-2.5 text-xs font-medium text-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-accent/10 px-5 py-2.5 text-xs font-medium text-foreground">
           <span className="inline-flex items-center gap-2">
             <span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">{filtered.length}</span>
-            <span className="uppercase tracking-[0.14em] text-muted-foreground">Total {filtered.length === 1 ? "row" : "rows"}</span>
+            <span className="uppercase tracking-[0.14em] text-muted-foreground">Total {filtered.length === 1 ? "record" : "records"}</span>
           </span>
         </div>
-        <div className="overflow-x-clip">
-          <table className="ios-table w-full text-sm">
-            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3">Vehicle</th>
-                <VehicleDetailHeaders />
-                <th className="px-5 py-3">Expires</th>
-                <th className="px-5 py-3">Enabled</th>
-                <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((i) => {
-                const v = vMap.get(i.vehicle_id);
-                const expired = i.expiry_date && i.expiry_date < today;
-                return (
-                  <tr key={i.id} className="hover:bg-secondary/30">
-                    <td className="px-5 py-3 font-mono font-semibold text-foreground whitespace-nowrap">{v?.vehicle_number || "—"}</td>
-                    <VehicleDetailCells v={v} />
-                    <td className="px-5 py-3">
-                      <span className={expired ? "rounded-full bg-destructive/15 px-2 py-0.5 text-[11px] font-semibold text-destructive" : "text-foreground/90"}>
-                        {fmtDate(i.expiry_date)}{expired ? " · Expired" : ""}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <Switch checked={i.enabled} onCheckedChange={(val) =>
-                        toggleMut.mutate({ id: i.id, enabled: val }, {
-                          onSuccess: () => toast.success(val ? "Enabled" : "Disabled"),
-                          onError: (e) => toast.error(e instanceof Error ? e.message : "Update failed"),
-                        })} />
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <div className="inline-flex gap-1">
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground" onClick={() => setEditing(i)} aria-label="Edit"><Edit2 className="h-4 w-4" /></Button>
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => setDeleting(i)} aria-label="Delete"><Trash2 className="h-4 w-4" /></Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr><td colSpan={4 + VEHICLE_DETAIL_COLUMN_COUNT} className="px-5 py-12 text-center text-sm text-muted-foreground">No PUC records found.</td></tr>
-              )}
-            </tbody>
-          </table>
+
+        <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((i) => {
+            const v = vMap.get(i.vehicle_id);
+            const isExpired = !!i.expiry_date && i.expiry_date < today;
+            const isRenewal = !!i.expiry_date && !isExpired && i.expiry_date <= in60;
+            const statusTone = isExpired
+              ? "bg-destructive/15 text-destructive border-destructive/30"
+              : isRenewal
+              ? "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-300"
+              : "bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-400";
+            const statusLabel = isExpired ? "expired" : isRenewal ? "renewal" : "active";
+            return (
+              <div key={i.id} className="group relative flex flex-col gap-3 rounded-xl border border-border bg-background/60 p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-md bg-primary/10 px-2 py-0.5 font-mono text-sm font-bold text-primary">{v?.vehicle_number || "—"}</span>
+                      <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${statusTone}`}>{statusLabel}</span>
+                    </div>
+                    <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Wind className="h-3.5 w-3.5" />
+                      <span className="truncate font-medium text-foreground/90">{i.issuing_authority || "—"}</span>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={i.enabled}
+                    onCheckedChange={(val) =>
+                      toggleMut.mutate({ id: i.id, enabled: val }, {
+                        onSuccess: () => toast.success(val ? "Enabled" : "Disabled"),
+                        onError: (e) => toast.error(e instanceof Error ? e.message : "Update failed"),
+                      })
+                    }
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 rounded-lg border border-border/60 bg-secondary/30 p-3 text-xs">
+                  <div className="min-w-0 col-span-2">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">PUC No.</div>
+                    <div className="truncate font-mono font-semibold text-foreground">{i.puc_number || "—"}</div>
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Issued</div>
+                    <div className="font-medium text-foreground/90">{fmtDate(i.issued_date)}</div>
+                  </div>
+                  <div className="min-w-0 text-right">
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Expires</div>
+                    <div className={`font-medium ${isExpired ? "text-destructive" : "text-foreground/90"}`}>{fmtDate(i.expiry_date)}</div>
+                  </div>
+                </div>
+
+                <div className="mt-auto flex items-center justify-end gap-1 border-t border-border/60 pt-2">
+                  <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-foreground" onClick={() => setEditing(i)}>
+                    <Edit2 className="h-3.5 w-3.5" /> Edit
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-8 gap-1.5 px-2 text-xs text-muted-foreground hover:text-destructive" onClick={() => setDeleting(i)}>
+                    <Trash2 className="h-3.5 w-3.5" /> Delete
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+          {filtered.length === 0 && (
+            <div className="col-span-full py-12 text-center text-sm text-muted-foreground">No PUC records found.</div>
+          )}
         </div>
       </div>
 
