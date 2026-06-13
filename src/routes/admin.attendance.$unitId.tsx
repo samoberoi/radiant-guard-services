@@ -228,7 +228,6 @@ function MusterRollPage() {
           employee_type: classifyAttendanceEmployee(c.role_key, (c.designation_id && dMap.get(c.designation_id)) || ""),
           doj: c.preferred_joining_date || "",
         }))
-        .filter((e) => e.employee_type === "security_guard")
         .sort((a, b) =>
           (a.employee_code || a.full_name).localeCompare(b.employee_code || b.full_name),
         );
