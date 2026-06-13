@@ -290,7 +290,7 @@ function FastTagManagerPage() {
               { key: "expires", label: "Expires" },
               { key: "status", label: "Status" },
             ] as const).map((o) => {
-              const active = sort.sort.key === o.key;
+              const active = sort.sort?.key === o.key;
               return (
                 <button
                   key={o.key}
@@ -298,7 +298,7 @@ function FastTagManagerPage() {
                   onClick={() => sort.toggle(o.key)}
                   className={`rounded-full border px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider transition ${active ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground hover:text-foreground"}`}
                 >
-                  {o.label}{active ? (sort.sort.dir === "asc" ? " ↑" : " ↓") : ""}
+                  {o.label}{active ? (sort.sort?.dir === "asc" ? " ↑" : " ↓") : ""}
                 </button>
               );
             })}
