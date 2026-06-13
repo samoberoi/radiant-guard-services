@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Eraser } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useDialogDirty } from "@/components/ui/dialog";
 
 /**
  * Lightweight signature pad — uses `signature_pad` dynamically (browser only).
