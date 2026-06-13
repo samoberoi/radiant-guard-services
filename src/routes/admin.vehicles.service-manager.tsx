@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ADVANCE_ALERT_KM, serviceStatusFor } from "@/lib/vehicle-service";
 import { logActivity } from "@/lib/activity-log";
-import { VehicleDetailHeaders, VehicleDetailCells, VEHICLE_DETAIL_COLUMN_COUNT } from "@/lib/vehicle-helpers";
+
 
 export const Route = createFileRoute("/admin/vehicles/service-manager")({
   component: ServiceManagerPage,
