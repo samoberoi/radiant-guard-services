@@ -296,11 +296,8 @@ function AttendanceUnitsPage() {
           const employees = a ? Array.from(a.employees.entries()) : [];
           const sgs: EmployeeRef[] = [];
           for (const [id, info] of employees) {
-            // Only billable security guards are payable per unit. Field officers are on
-            // Radiant's own payroll (non-billable) and are intentionally excluded.
-            if (classifyAttendanceEmployee(info.roleKey, info.designation) === "security_guard") {
-              sgs.push({ id, name: info.name });
-            }
+            // Include all designations on the attendance roster (not just security guards).
+            sgs.push({ id, name: info.name });
           }
           return {
             id: u.id,
