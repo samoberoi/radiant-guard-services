@@ -685,8 +685,8 @@ function AttendanceUnitsPage() {
                         <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-100/80 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
                           <MapPinned className="h-4 w-4" />
                         </div>
-                        <div className="min-w-[180px]">
-                          <div className="whitespace-nowrap text-sm font-semibold text-foreground">{unit.name || unit.code}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold text-foreground break-words leading-snug">{unit.name || unit.code}</div>
                           <div className="mt-1 flex flex-wrap items-center gap-1.5">
                             <span className="inline-flex whitespace-nowrap rounded-md bg-secondary px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-foreground">
                               {unit.code || "—"}
