@@ -637,10 +637,10 @@ function AttendanceUnitsPage() {
           <table className="ios-table min-w-full table-auto">
             <thead className="border-b border-border/60 bg-secondary/40">
               <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                <th className="px-5 py-4 font-medium">Unit</th>
-                <th className="px-5 py-4 font-medium">Organization</th>
-                <th className="px-5 py-4 font-medium">Location</th>
-                <th className="px-5 py-4 font-medium">Security guards</th>
+                <th className="px-5 py-4 font-medium min-w-[240px]">Unit</th>
+                <th className="px-5 py-4 font-medium min-w-[160px]">Organization</th>
+                <th className="px-5 py-4 font-medium min-w-[160px]">Location</th>
+                <th className="px-5 py-4 font-medium min-w-[220px]">Security guards</th>
                 <th className="px-5 py-4 text-right font-medium">Active</th>
                 <th className="px-5 py-4 font-medium">Status</th>
                 <th className="px-5 py-4 whitespace-nowrap text-right font-medium">Action</th>
@@ -685,8 +685,8 @@ function AttendanceUnitsPage() {
                         <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-100/80 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
                           <MapPinned className="h-4 w-4" />
                         </div>
-                        <div className="min-w-[180px]">
-                          <div className="whitespace-nowrap text-sm font-semibold text-foreground">{unit.name || unit.code}</div>
+                        <div className="min-w-0 flex-1">
+                          <div className="text-sm font-semibold text-foreground break-words leading-snug">{unit.name || unit.code}</div>
                           <div className="mt-1 flex flex-wrap items-center gap-1.5">
                             <span className="inline-flex whitespace-nowrap rounded-md bg-secondary px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-foreground">
                               {unit.code || "—"}
