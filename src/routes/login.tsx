@@ -177,8 +177,8 @@ function LoginPage() {
             </div>
             <h1 className="font-display text-[clamp(2rem,4vw,3.25rem)] font-extrabold leading-[1.04] tracking-tight text-white">
               Command your<br />
-              <span className="text-gradient-accent bg-gradient-to-r from-sky-300 to-indigo-200 bg-clip-text text-transparent">
-                guard force.
+              <span className="text-white">
+                Guard Force.
               </span>
             </h1>
             <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-white/70">
