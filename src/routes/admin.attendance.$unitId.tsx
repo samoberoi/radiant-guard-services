@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Printer, Download, CheckCircle2, XCircle, Send, RotateCcw, Plus, X } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { ChevronLeft, Printer, Download, CheckCircle2, XCircle, Send, RotateCcw, Plus, X, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { extractAttendanceFromImage } from "@/lib/attendance-ocr.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
