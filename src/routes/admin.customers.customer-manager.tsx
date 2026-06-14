@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, Download, Edit2, ExternalLink, List as ListIcon, MapPin, Network, Plus, Search, Trash2, Users, Warehouse } from "lucide-react";
+import { ChevronRight, Download, Edit2, ExternalLink, List as ListIcon, MapPin, Network, Plus, Search, Users, Warehouse } from "lucide-react";
 import { DeleteGuardButton } from "@/components/DeleteGuardButton";
-import { csvDate, csvStatus, downloadCsv } from "@/lib/csv-export";
+import { csvStatus, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmProvider";
 import { logActivity } from "@/lib/activity-log";
@@ -42,7 +42,7 @@ import {
   type Unit,
 } from "@/lib/admin-data";
 import { supabase } from "@/integrations/supabase/client";
-import { gstinStateCode, gstinStateName } from "@/lib/gstin";
+
 import { cn } from "@/lib/utils";
 import { UnitDeployedPeople } from "@/components/UnitDeployedPeople";
 
@@ -135,7 +135,6 @@ function CustomerManagerPage() {
                   website: c.website,
                   phone: c.phone,
                   address: c.address,
-                  contractStart: csvDate(c.contractStartDate),
                   status: csvStatus(c.status),
                 })),
                 [
@@ -144,7 +143,6 @@ function CustomerManagerPage() {
                   { key: "website", header: "Website" },
                   { key: "phone", header: "Phone" },
                   { key: "address", header: "Address" },
-                  { key: "contractStart", header: "Contract start" },
                   { key: "status", header: "Status" },
                 ],
               )
@@ -180,7 +178,6 @@ function CustomerManagerPage() {
                 <th className="px-5 py-3">Organisation</th>
                 <th className="px-5 py-3">Website</th>
                 <th className="px-5 py-3">Phone</th>
-                <th className="px-5 py-3">Contract start</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
@@ -217,9 +214,6 @@ function CustomerManagerPage() {
                   <td className="px-5 py-3 font-mono text-xs text-foreground">
                     {c.phone || <span className="italic opacity-60">—</span>}
                   </td>
-                  <td className="px-5 py-3 text-foreground">
-                    {formatDate(c.contractStartDate)}
-                  </td>
                   <td className="px-5 py-3">
                     <StatusBadge status={c.status} />
                   </td>
@@ -252,7 +246,6 @@ function CustomerManagerPage() {
                         entityLabel="organization"
                         checks={[
                           { table: "units", column: "customer_id", label: "units" },
-                          { table: "customer_gst_numbers", column: "customer_id", label: "GSTINs" },
                         ]}
                         onDelete={() => setDeleting(c)}
                       />
@@ -596,7 +589,6 @@ function StatCard({
   );
 }
 
-type GstEntry = { id?: string; gstin: string; label: string };
 
 function CustomerFormDialog({
   open,
@@ -617,7 +609,7 @@ function CustomerFormDialog({
   const [form, setForm] = useState<Omit<Customer, "id">>(emptyCustomer());
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [gstEntries, setGstEntries] = useState<GstEntry[]>([]);
+  
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -626,18 +618,8 @@ function CustomerFormDialog({
       const { id: _id, ...rest } = editing;
       void _id;
       setForm(rest);
-      // load existing GST numbers for this organisation
-      void (async () => {
-        const { data } = await supabase
-          .from("customer_gst_numbers" as never)
-          .select("id,gstin,label")
-          .eq("customer_id", editing.id);
-        const rows = ((data ?? []) as unknown) as Array<{ id: string; gstin: string; label: string }>;
-        setGstEntries(rows.map((r) => ({ id: r.id, gstin: r.gstin, label: r.label ?? "" })));
-      })();
     } else {
       setForm({ ...emptyCustomer(), code: nextCustomerCode(customers) });
-      setGstEntries([]);
     }
     setError(null);
   }, [open, editing, customers]);
@@ -699,44 +681,12 @@ function CustomerFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            // basic GST validation: skip blanks, enforce length-15 if filled
-            const cleaned = gstEntries
-              .map((g) => ({ ...g, gstin: g.gstin.trim().toUpperCase() }))
-              .filter((g) => g.gstin.length > 0);
-            if (cleaned.some((g) => g.gstin.length !== 15)) {
-              setError("Each GSTIN must be 15 characters long");
-              return;
-            }
             setSubmitting(true);
             try {
               const result = await onSubmit(form);
               if (result.error) {
                 setError(result.error);
                 return;
-              }
-              const customerId = result.id;
-              if (customerId) {
-                // wipe and rewrite GST records (simple, predictable)
-                await supabase
-                  .from("customer_gst_numbers" as never)
-                  .delete()
-                  .eq("customer_id", customerId);
-                if (cleaned.length > 0) {
-                  const rows = cleaned.map((g) => ({
-                    customer_id: customerId,
-                    gstin: g.gstin,
-                    state_code: gstinStateCode(g.gstin),
-                    state_name: gstinStateName(g.gstin),
-                    label: g.label.trim(),
-                  }));
-                  const { error: gstErr } = await supabase
-                    .from("customer_gst_numbers" as never)
-                    .insert(rows as never);
-                  if (gstErr) {
-                    setError(`Saved org but GST save failed: ${gstErr.message}`);
-                    return;
-                  }
-                }
               }
               onSuccess();
               onOpenChange(false);
@@ -844,119 +794,8 @@ function CustomerFormDialog({
                 />
               </div>
             </Field>
-            <Field label="Contract start date">
-              <Input
-                type="date"
-                value={form.contractStartDate}
-                onChange={(e) => set("contractStartDate", e.target.value)}
-              />
-            </Field>
-            <Field label="Contract end date">
-              <Input
-                type="date"
-                value={form.contractEndDate}
-                onChange={(e) => set("contractEndDate", e.target.value)}
-              />
-            </Field>
           </div>
 
-          <div>
-            <div className="mb-3 flex items-center justify-between gap-3 border-b border-border pb-2">
-              <SectionHeading title="GST numbers" inline />
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() =>
-                  setGstEntries((rows) => [...rows, { gstin: "", label: "" }])
-                }
-              >
-                <Plus className="mr-1 h-3.5 w-3.5" /> Add GSTIN
-              </Button>
-            </div>
-            {gstEntries.length === 0 ? (
-              <p className="text-xs text-muted-foreground">
-                No GSTINs added. An organisation can have multiple GSTINs across states; the
-                first 2 digits of each GSTIN map to the state automatically.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {gstEntries.map((g, idx) => {
-                  const stateName = gstinStateName(g.gstin);
-                  const code = gstinStateCode(g.gstin);
-                  const valid =
-                    g.gstin.trim().length === 0 || g.gstin.trim().length === 15;
-                  return (
-                    <div
-                      key={idx}
-                      className="grid gap-2 rounded-lg border border-border bg-secondary/30 p-3 sm:grid-cols-[1fr_1fr_auto]"
-                    >
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          GSTIN
-                        </Label>
-                        <Input
-                          value={g.gstin}
-                          maxLength={15}
-                          onChange={(e) => {
-                            const v = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
-                            setGstEntries((rows) =>
-                              rows.map((r, i) => (i === idx ? { ...r, gstin: v } : r)),
-                            );
-                          }}
-                          placeholder="22AAAAA0000A1Z5"
-                          className={cn("font-mono text-sm", !valid && "border-destructive")}
-                        />
-                        <div className="text-[11px] text-muted-foreground">
-                          {g.gstin.trim().length === 0 ? (
-                            <span className="italic">Enter a 15-character GSTIN</span>
-                          ) : stateName ? (
-                            <>
-                              State: <span className="font-semibold text-foreground">{stateName}</span>
-                              <span className="ml-1 font-mono opacity-60">({code})</span>
-                            </>
-                          ) : (
-                            <span className="text-destructive">
-                              Unknown state code "{code}"
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          Label (optional)
-                        </Label>
-                        <Input
-                          value={g.label}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setGstEntries((rows) =>
-                              rows.map((r, i) => (i === idx ? { ...r, label: v } : r)),
-                            );
-                          }}
-                          placeholder="e.g. HQ, Branch office"
-                        />
-                      </div>
-                      <div className="flex items-end">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setGstEntries((rows) => rows.filter((_, i) => i !== idx))
-                          }
-                          className="h-9 w-9 p-0 text-muted-foreground hover:text-destructive"
-                          aria-label="Remove GSTIN"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
 
           <SectionHeading title="Billing information" />
           <div className="grid gap-4 sm:grid-cols-2">

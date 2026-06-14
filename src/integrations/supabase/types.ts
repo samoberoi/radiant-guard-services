@@ -3298,6 +3298,8 @@ export type Database = {
           branch_id: string | null
           closing_date: string | null
           code: string
+          contract_end_date: string | null
+          contract_start_date: string | null
           created_at: string
           customer_id: string | null
           description: string
@@ -3306,6 +3308,8 @@ export type Database = {
           enable_lwf: boolean
           enable_pt: boolean
           gst_number: string
+          gst_payable: boolean
+          gst_type: string | null
           id: string
           latitude: number | null
           location: string
@@ -3347,6 +3351,8 @@ export type Database = {
           branch_id?: string | null
           closing_date?: string | null
           code: string
+          contract_end_date?: string | null
+          contract_start_date?: string | null
           created_at?: string
           customer_id?: string | null
           description?: string
@@ -3355,6 +3361,8 @@ export type Database = {
           enable_lwf?: boolean
           enable_pt?: boolean
           gst_number?: string
+          gst_payable?: boolean
+          gst_type?: string | null
           id?: string
           latitude?: number | null
           location?: string
@@ -3396,6 +3404,8 @@ export type Database = {
           branch_id?: string | null
           closing_date?: string | null
           code?: string
+          contract_end_date?: string | null
+          contract_start_date?: string | null
           created_at?: string
           customer_id?: string | null
           description?: string
@@ -3404,6 +3414,8 @@ export type Database = {
           enable_lwf?: boolean
           enable_pt?: boolean
           gst_number?: string
+          gst_payable?: boolean
+          gst_type?: string | null
           id?: string
           latitude?: number | null
           location?: string

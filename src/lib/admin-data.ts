@@ -539,7 +539,11 @@ export type Unit = {
   customerId: string | null;
   onboardingDate: string;
   closingDate: string;
+  contractStartDate: string;
+  contractEndDate: string;
   panNumber: string;
+  gstPayable: boolean;
+  gstType: string;
   gstNumber: string;
   billingSalutation: string;
   billingName: string;
@@ -597,7 +601,11 @@ type UnitRow = {
   customer_id: string | null;
   onboarding_date: string | null;
   closing_date: string | null;
+  contract_start_date: string | null;
+  contract_end_date: string | null;
   pan_number: string | null;
+  gst_payable: boolean | null;
+  gst_type: string | null;
   gst_number: string | null;
   billing_salutation: string | null;
   billing_name: string | null;
@@ -654,7 +662,11 @@ function rowToUnit(r: UnitRow): Unit {
     customerId: r.customer_id,
     onboardingDate: r.onboarding_date ?? "",
     closingDate: r.closing_date ?? "",
+    contractStartDate: r.contract_start_date ?? "",
+    contractEndDate: r.contract_end_date ?? "",
     panNumber: r.pan_number ?? "",
+    gstPayable: Boolean(r.gst_payable),
+    gstType: r.gst_type ?? "",
     gstNumber: r.gst_number ?? "",
     billingSalutation: r.billing_salutation ?? "",
     billingName: r.billing_name ?? "",
@@ -706,8 +718,12 @@ function unitToRow(data: Omit<Unit, "id">) {
     customer_id: data.customerId || null,
     onboarding_date: data.onboardingDate || null,
     closing_date: data.closingDate || null,
+    contract_start_date: data.contractStartDate || null,
+    contract_end_date: data.contractEndDate || null,
     pan_number: data.panNumber.trim(),
-    gst_number: data.gstNumber.trim(),
+    gst_payable: Boolean(data.gstPayable),
+    gst_type: data.gstPayable ? (data.gstType || null) : null,
+    gst_number: data.gstPayable ? data.gstNumber.trim() : "",
     billing_salutation: data.billingSalutation,
     billing_name: data.billingName,
     billing_address1: data.billingAddress1,

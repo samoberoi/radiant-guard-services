@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, Edit2, MapPin, Plus, Search, Warehouse, X } from "lucide-react";
 import { DeleteGuardButton } from "@/components/DeleteGuardButton";
 import { csvDate, csvJoin, csvMapLink, csvStatus, csvYesNo, downloadCsv } from "@/lib/csv-export";
@@ -64,6 +64,15 @@ export const Route = createFileRoute("/admin/customers/unit-manager")({
 
 const SALUTATIONS = ["Mr.", "Mrs.", "Ms.", "Dr.", "Mx."];
 
+const GST_TYPES = [
+  "Regular",
+  "Composition",
+  "SEZ Unit",
+  "SEZ Developer",
+  "Casual Taxable Person",
+  "Non-Resident Taxable Person",
+];
+
 function emptyUnit(code: string): Omit<Unit, "id"> {
   return {
     code,
@@ -73,9 +82,13 @@ function emptyUnit(code: string): Omit<Unit, "id"> {
     status: "active",
     branchId: null,
     customerId: null,
-    onboardingDate: new Date().toISOString().slice(0, 10),
+    onboardingDate: "",
     closingDate: "",
+    contractStartDate: "",
+    contractEndDate: "",
     panNumber: "",
+    gstPayable: false,
+    gstType: "",
     gstNumber: "",
     billingSalutation: "",
     billingName: "",
@@ -199,9 +212,11 @@ function UnitManagerPage() {
                   location: u.location,
                   description: u.description,
                   status: csvStatus(u.status),
-                  onboardingDate: csvDate(u.onboardingDate),
-                  closingDate: csvDate(u.closingDate),
+                  contractStartDate: csvDate(u.contractStartDate),
+                  contractEndDate: csvDate(u.contractEndDate),
                   pan: u.panNumber,
+                  gstPayable: csvYesNo(u.gstPayable),
+                  gstType: u.gstType,
                   gst: u.gstNumber,
                   billingContact: csvJoin([u.billingSalutation, u.billingName], " "),
                   billingAddress: csvJoin(
@@ -263,9 +278,11 @@ function UnitManagerPage() {
                   { key: "location", header: "Location" },
                   { key: "description", header: "Description" },
                   { key: "status", header: "Status" },
-                  { key: "onboardingDate", header: "Onboarding date" },
-                  { key: "closingDate", header: "Closing date" },
+                  { key: "contractStartDate", header: "Contract start" },
+                  { key: "contractEndDate", header: "Contract end" },
                   { key: "pan", header: "PAN" },
+                  { key: "gstPayable", header: "GST payable" },
+                  { key: "gstType", header: "GST type" },
                   { key: "gst", header: "GST" },
                   { key: "billingContact", header: "Billing contact" },
                   { key: "billingAddress", header: "Billing address" },
@@ -527,6 +544,28 @@ function UnitFormDialog({
 
   const selectedOrg = customers.find((c) => c.id === form.customerId);
 
+  // Sync defaults from the selected organisation into empty billing/contact fields
+  const prevCustomerIdRef = useRef<string | null>(form.customerId);
+  useEffect(() => {
+    if (form.customerId === prevCustomerIdRef.current) return;
+    prevCustomerIdRef.current = form.customerId;
+    if (!form.customerId) return;
+    const org = customers.find((c) => c.id === form.customerId);
+    if (!org) return;
+    setForm((f) => ({
+      ...f,
+      billingSalutation: f.billingSalutation || org.billingSalutation,
+      billingName: f.billingName || org.billingName || org.name,
+      billingAddress1: f.billingAddress1 || org.billingAddress1,
+      billingAddress2: f.billingAddress2 || org.billingAddress2,
+      billingPincode: f.billingPincode || org.billingPincode,
+      billingCity: f.billingCity || org.billingCity,
+      billingDistrict: f.billingDistrict || org.billingDistrict,
+      billingState: f.billingState || org.billingState,
+      billingCountry: f.billingCountry || org.billingCountry || "India",
+    }));
+  }, [form.customerId, customers]);
+
   // Apply "shipping same as billing"
   useEffect(() => {
     if (!form.shippingSameAsBilling) return;
@@ -608,10 +647,54 @@ function UnitFormDialog({
           }}
           className="space-y-5"
         >
+          {/* ORG & BRANCH (first) */}
+          <Section title="Organisation & branch">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Organisation *">
+                <Select value={form.customerId ?? ""} onValueChange={(v) => set("customerId", v || null)}>
+                  <SelectTrigger><SelectValue placeholder="Select organisation first" /></SelectTrigger>
+                  <SelectContent>
+                    {customerOptions.length === 0 ? (
+                      <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+                        No organisations yet
+                      </div>
+                    ) : (
+                      customerOptions.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.code} – {c.name}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field label="Branch *">
+                <Select
+                  value={form.branchId ?? ""}
+                  onValueChange={(v) => set("branchId", v || null)}
+                  disabled={!form.customerId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={form.customerId ? "Select branch" : "Pick organisation first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branchOptions.length === 0 ? (
+                      <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+                        No branches yet
+                      </div>
+                    ) : (
+                      branchOptions.map((b) => (
+                        <SelectItem key={b.id} value={b.id}>{b.label}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+          </Section>
+
           {/* UNIT INFO */}
           <Section title="Unit information">
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Unit code">
+              <Field label="Unit code (auto, editable)">
                 <Input
                   value={form.code}
                   onChange={(e) => set("code", e.target.value.toUpperCase())}
@@ -648,46 +731,22 @@ function UnitFormDialog({
             </div>
           </Section>
 
-          {/* ADDITIONAL */}
-          <Section title="Additional information">
+          {/* CONTRACT PERIOD */}
+          <Section title="Contract period">
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Branch">
-                <Select value={form.branchId ?? ""} onValueChange={(v) => set("branchId", v || null)}>
-                  <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
-                  <SelectContent>
-                    {branchOptions.length === 0 ? (
-                      <div className="px-2 py-3 text-center text-xs text-muted-foreground">
-                        No branches yet
-                      </div>
-                    ) : (
-                      branchOptions.map((b) => (
-                        <SelectItem key={b.id} value={b.id}>{b.label}</SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
+              <Field label="Contract start date">
+                <Input
+                  type="date"
+                  value={form.contractStartDate}
+                  onChange={(e) => set("contractStartDate", e.target.value)}
+                />
               </Field>
-              <Field label="Organisation">
-                <Select value={form.customerId ?? ""} onValueChange={(v) => set("customerId", v || null)}>
-                  <SelectTrigger><SelectValue placeholder="Select organisation" /></SelectTrigger>
-                  <SelectContent>
-                    {customerOptions.length === 0 ? (
-                      <div className="px-2 py-3 text-center text-xs text-muted-foreground">
-                        No organisations yet
-                      </div>
-                    ) : (
-                      customerOptions.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.code} – {c.name}</SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field label="Onboarding date">
-                <Input type="date" value={form.onboardingDate} onChange={(e) => set("onboardingDate", e.target.value)} />
-              </Field>
-              <Field label="Closing date">
-                <Input type="date" value={form.closingDate} onChange={(e) => set("closingDate", e.target.value)} />
+              <Field label="Contract end date">
+                <Input
+                  type="date"
+                  value={form.contractEndDate}
+                  onChange={(e) => set("contractEndDate", e.target.value)}
+                />
               </Field>
             </div>
           </Section>
@@ -704,15 +763,48 @@ function UnitFormDialog({
                   className="font-mono"
                 />
               </Field>
-              <Field label="GST number">
-                <Input
-                  value={form.gstNumber}
-                  onChange={(e) => set("gstNumber", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15))}
-                  placeholder="22AAAAA0000A1Z5"
-                  maxLength={15}
-                  className="font-mono"
-                />
+              <Field label="GST payable?">
+                <div className="flex h-9 items-center justify-between rounded-md border border-input bg-background px-3">
+                  <span className="text-sm font-medium text-foreground">
+                    {form.gstPayable ? "Yes" : "No"}
+                  </span>
+                  <Switch
+                    checked={form.gstPayable}
+                    onCheckedChange={(v) => {
+                      set("gstPayable", v);
+                      if (!v) {
+                        setForm((f) => ({ ...f, gstType: "", gstNumber: "" }));
+                      }
+                    }}
+                  />
+                </div>
               </Field>
+              {form.gstPayable && (
+                <>
+                  <Field label="GST type">
+                    <Select value={form.gstType} onValueChange={(v) => set("gstType", v)}>
+                      <SelectTrigger><SelectValue placeholder="Select GST type" /></SelectTrigger>
+                      <SelectContent>
+                        {GST_TYPES.map((t) => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field label="GST number">
+                    <Input
+                      value={form.gstNumber}
+                      onChange={(e) => set("gstNumber", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15))}
+                      placeholder="22AAAAA0000A1Z5"
+                      maxLength={15}
+                      className="font-mono"
+                    />
+                  </Field>
+                  <div className="sm:col-span-2 text-xs text-muted-foreground">
+                    GSTIN portal auto-verification (type detection) is coming soon — for now please pick the type manually.
+                  </div>
+                </>
+              )}
             </div>
           </Section>
 

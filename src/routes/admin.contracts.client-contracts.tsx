@@ -2083,6 +2083,19 @@ function ContractFormDialog({
   const selectedOrg = selectedUnit?.customerId
     ? customerById.get(selectedUnit.customerId)
     : undefined;
+
+  // Auto-fill contract start/end from the selected unit's contract period.
+  // Only overwrite when the field is empty so the user can still edit.
+  useEffect(() => {
+    if (!selectedUnit) return;
+    if (selectedUnit.contractStartDate) {
+      setStartDate((prev) => prev || selectedUnit.contractStartDate);
+    }
+    if (selectedUnit.contractEndDate) {
+      setEndDate((prev) => prev || selectedUnit.contractEndDate);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUnit?.id]);
   const filteredUnits = useMemo(() => {
     const query = unitQuery.trim().toLowerCase();
     if (!query) return units;
