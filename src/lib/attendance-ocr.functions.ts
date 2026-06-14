@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { generateText } from "ai";
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
 const InputSchema = z.object({
   imageDataUrl: z.string().min(20).max(20_000_000),
@@ -183,6 +182,7 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<AttendanceOcrResult> => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("LOVABLE_API_KEY not configured");
+    const { createLovableAiGatewayProvider } = await import("./ai-gateway.server");
 
     const employeeList = data.employees
       .map(
