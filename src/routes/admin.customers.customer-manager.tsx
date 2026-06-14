@@ -683,44 +683,12 @@ function CustomerFormDialog({
         <form
           onSubmit={async (e) => {
             e.preventDefault();
-            // basic GST validation: skip blanks, enforce length-15 if filled
-            const cleaned = gstEntries
-              .map((g) => ({ ...g, gstin: g.gstin.trim().toUpperCase() }))
-              .filter((g) => g.gstin.length > 0);
-            if (cleaned.some((g) => g.gstin.length !== 15)) {
-              setError("Each GSTIN must be 15 characters long");
-              return;
-            }
             setSubmitting(true);
             try {
               const result = await onSubmit(form);
               if (result.error) {
                 setError(result.error);
                 return;
-              }
-              const customerId = result.id;
-              if (customerId) {
-                // wipe and rewrite GST records (simple, predictable)
-                await supabase
-                  .from("customer_gst_numbers" as never)
-                  .delete()
-                  .eq("customer_id", customerId);
-                if (cleaned.length > 0) {
-                  const rows = cleaned.map((g) => ({
-                    customer_id: customerId,
-                    gstin: g.gstin,
-                    state_code: gstinStateCode(g.gstin),
-                    state_name: gstinStateName(g.gstin),
-                    label: g.label.trim(),
-                  }));
-                  const { error: gstErr } = await supabase
-                    .from("customer_gst_numbers" as never)
-                    .insert(rows as never);
-                  if (gstErr) {
-                    setError(`Saved org but GST save failed: ${gstErr.message}`);
-                    return;
-                  }
-                }
               }
               onSuccess();
               onOpenChange(false);
