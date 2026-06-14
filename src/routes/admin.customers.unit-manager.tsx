@@ -544,6 +544,28 @@ function UnitFormDialog({
 
   const selectedOrg = customers.find((c) => c.id === form.customerId);
 
+  // Sync defaults from the selected organisation into empty billing/contact fields
+  const prevCustomerIdRef = useRef<string | null>(form.customerId);
+  useEffect(() => {
+    if (form.customerId === prevCustomerIdRef.current) return;
+    prevCustomerIdRef.current = form.customerId;
+    if (!form.customerId) return;
+    const org = customers.find((c) => c.id === form.customerId);
+    if (!org) return;
+    setForm((f) => ({
+      ...f,
+      billingSalutation: f.billingSalutation || org.billingSalutation,
+      billingName: f.billingName || org.billingName || org.name,
+      billingAddress1: f.billingAddress1 || org.billingAddress1,
+      billingAddress2: f.billingAddress2 || org.billingAddress2,
+      billingPincode: f.billingPincode || org.billingPincode,
+      billingCity: f.billingCity || org.billingCity,
+      billingDistrict: f.billingDistrict || org.billingDistrict,
+      billingState: f.billingState || org.billingState,
+      billingCountry: f.billingCountry || org.billingCountry || "India",
+    }));
+  }, [form.customerId, customers]);
+
   // Apply "shipping same as billing"
   useEffect(() => {
     if (!form.shippingSameAsBilling) return;
