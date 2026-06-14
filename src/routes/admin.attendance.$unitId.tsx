@@ -616,7 +616,7 @@ function MusterRollPage() {
       logActivity({
         module: "Attendance",
         action: "Upload attendance image (OCR)",
-        details: `${confidentCount} filled, ${uncertainCount} flagged · unit ${unitId}`,
+        details: { confidentCount, uncertainCount, unit_id: unitId },
       }).catch(() => {});
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "OCR failed");
