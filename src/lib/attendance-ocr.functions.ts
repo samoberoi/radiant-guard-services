@@ -104,7 +104,8 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
     const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (only these are valid):\n${dateList}\n\nEmployees (use the UUID as candidate_id):\n${employeeList}\n\nNow read the attached attendance sheet image and produce the JSON.`;
 
     const gateway = createLovableAiGatewayProvider(key);
-    const model = gateway("google/gemini-2.5-pro");
+    // gemini-2.5-flash is multimodal and ~5-10x faster than pro for OCR-style tasks
+    const model = gateway("google/gemini-2.5-flash");
 
     const { output } = await generateText({
       model,
