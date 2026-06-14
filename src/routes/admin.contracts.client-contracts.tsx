@@ -2644,6 +2644,70 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+const DECIMAL_INPUT_REGEX = /^\d*\.?\d*$/;
+
+function DecimalAmountInput({
+  value,
+  onValueChange,
+  className,
+}: {
+  value: number;
+  onValueChange: (amount: number) => void;
+  className?: string;
+}) {
+  const [draft, setDraft] = useState(value === 0 ? "" : String(value));
+  const editingRef = useRef(false);
+
+  useEffect(() => {
+    if (!editingRef.current) {
+      setDraft(value === 0 ? "" : String(value));
+    }
+  }, [value]);
+
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      placeholder="0.00"
+      className={className}
+      value={draft}
+      onChange={(e) => {
+        const next = e.target.value.trim();
+        if (!DECIMAL_INPUT_REGEX.test(next)) return;
+        setDraft(next);
+        if (next === "" || next === ".") {
+          onValueChange(0);
+          return;
+        }
+        const parsed = Number.parseFloat(next);
+        if (Number.isFinite(parsed)) {
+          onValueChange(parsed);
+        }
+      }}
+      onFocus={(e) => {
+        editingRef.current = true;
+        e.target.select();
+      }}
+      onBlur={() => {
+        editingRef.current = false;
+        const next = draft.trim();
+        if (next === "" || next === ".") {
+          setDraft("");
+          onValueChange(0);
+          return;
+        }
+        const parsed = Number.parseFloat(next);
+        if (!Number.isFinite(parsed)) {
+          setDraft(value === 0 ? "" : String(value));
+          return;
+        }
+        onValueChange(parsed);
+        setDraft(parsed === 0 ? "" : String(parsed));
+      }}
+    />
+  );
+}
+
 function ResourcesSection({
   resources,
   onAdd,
