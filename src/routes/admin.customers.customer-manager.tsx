@@ -143,7 +143,6 @@ function CustomerManagerPage() {
                   { key: "website", header: "Website" },
                   { key: "phone", header: "Phone" },
                   { key: "address", header: "Address" },
-                  { key: "contractStart", header: "Contract start" },
                   { key: "status", header: "Status" },
                 ],
               )
