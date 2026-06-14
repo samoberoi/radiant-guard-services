@@ -80,6 +80,36 @@ function ymd(year: number, monthIdx0: number, day: number) {
   return `${year}-${m}-${d}`;
 }
 
+async function downscaleImage(file: File, maxDim: number, quality: number): Promise<string> {
+  const bitmap = await createImageBitmap(file).catch(async () => {
+    // Safari/HEIC fallback via <img>
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = reject;
+        i.src = url;
+      });
+      return img as unknown as ImageBitmap;
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+  const w = (bitmap as ImageBitmap).width ?? (bitmap as unknown as HTMLImageElement).naturalWidth;
+  const h = (bitmap as ImageBitmap).height ?? (bitmap as unknown as HTMLImageElement).naturalHeight;
+  const scale = Math.min(1, maxDim / Math.max(w, h));
+  const tw = Math.round(w * scale);
+  const th = Math.round(h * scale);
+  const canvas = document.createElement("canvas");
+  canvas.width = tw;
+  canvas.height = th;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Canvas unsupported");
+  ctx.drawImage(bitmap as CanvasImageSource, 0, 0, tw, th);
+  return canvas.toDataURL("image/jpeg", quality);
+}
+
 function buildPeriodCells(
   year: number,
   monthIdx: number,
