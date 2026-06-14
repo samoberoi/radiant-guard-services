@@ -3644,6 +3644,16 @@ function ResourceFormDialog({
             )}
           </div>
 
+          {/* Salary Breakdown Preview */}
+          <SalaryBreakdownTable
+            designationName={selectedDesignation?.name ?? ""}
+            payrollDayBase={payrollDayBases.find((p) => p.id === payrollDayBaseId)}
+            components={components}
+            benefits={benefits}
+            deductions={deductions}
+            employerContributions={employerContributions}
+          />
+
           {/* Employer Contribution */}
           <div className="rounded-xl border border-border bg-secondary/30 p-3">
             <div className="mb-2 flex items-center justify-between">
@@ -3662,7 +3672,6 @@ function ResourceFormDialog({
                     size="sm"
                     variant="outline"
                     className="h-8"
-                    
                   >
                     <Plus className="mr-1 h-3.5 w-3.5" /> Add component
                   </Button>
@@ -3790,16 +3799,6 @@ function ResourceFormDialog({
               </div>
             )}
           </div>
-
-          {/* Salary Breakdown Preview */}
-          <SalaryBreakdownTable
-            designationName={selectedDesignation?.name ?? ""}
-            payrollDayBase={payrollDayBases.find((p) => p.id === payrollDayBaseId)}
-            components={components}
-            benefits={benefits}
-            deductions={deductions}
-            employerContributions={employerContributions}
-          />
         </div>
 
         <DialogFooter>
