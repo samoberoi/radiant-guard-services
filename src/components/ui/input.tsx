@@ -12,7 +12,6 @@ const baseClasses =
 const DateInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, value, defaultValue, onChange, disabled, name, id, placeholder, min, max, ...props }, ref) => {
     const [open, setOpen] = React.useState(false);
-    const isControlled = value !== undefined;
     const [internal, setInternal] = React.useState<string>(
       typeof value === "string" ? value : typeof defaultValue === "string" ? defaultValue : "",
     );
