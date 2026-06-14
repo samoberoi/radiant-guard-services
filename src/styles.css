@@ -381,7 +381,8 @@
     border-color: color-mix(in oklab, var(--accent) 38%, transparent);
   }
   .ios-table [data-col="actions"] {
-    width: 168px;
+    width: 260px;
+    min-width: 260px;
     white-space: nowrap;
     text-align: right;
   }
