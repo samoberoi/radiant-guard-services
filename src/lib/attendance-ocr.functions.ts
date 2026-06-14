@@ -154,7 +154,7 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
     const codeList = data.codes.map((c) => `${c.code} = ${c.label}`).join(", ");
     const dateList = data.dates.join(", ");
 
-    const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (only these are valid):\n${dateList}\n\nEmployees (use the UUID as candidate_id):\n${employeeList}\n\nNow read the attached attendance sheet image and return only a JSON object in this shape:\n{"rows":[{"candidate_id":"uuid","entry_date":"YYYY-MM-DD","code":"P","ot_hours":0,"confident":true}],"unmatched_names":[],"notes":"brief note"}`;
+    const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (these are the calendar dates of the month — ONLY emit rows for the dates whose day-of-month is actually visible as a column on the sheet; if the printed header stops at day 30, do NOT emit day 31 even though it appears below):\n${dateList}\n\nEmployees (use the UUID as candidate_id, match by name or employee_code only with 100% certainty):\n${employeeList}\n\nReminder: confident=true ONLY when the cell is unambiguous and the code is in the allowed list. When in doubt → confident=false. Return ONLY a JSON object in this shape:\n{"rows":[{"candidate_id":"uuid","entry_date":"YYYY-MM-DD","code":"P","ot_hours":0,"confident":true}],"unmatched_names":[],"notes":"visible_days=NN"}`;
 
     const gateway = createLovableAiGatewayProvider(key);
     // gemini-2.5-flash is multimodal and ~5-10x faster than pro for OCR-style tasks
