@@ -1690,7 +1690,7 @@ function EmployeesPage() {
         <span className="inline-flex items-center gap-2"><span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">{rows.length}</span><span className="uppercase tracking-[0.14em] text-muted-foreground">Total {rows.length === 1 ? "row" : "rows"}</span></span>
       </div>
       <div className="w-full overflow-x-auto">
-        <table className="ios-table min-w-[1480px] w-full table-auto text-sm">
+        <table className="ios-table w-full table-auto text-sm 2xl:min-w-[1480px]">
 
           <thead className="border-b border-border/60 bg-secondary/40">
             <tr>
