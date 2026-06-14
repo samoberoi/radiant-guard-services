@@ -135,7 +135,6 @@ function CustomerManagerPage() {
                   website: c.website,
                   phone: c.phone,
                   address: c.address,
-                  contractStart: csvDate(c.contractStartDate),
                   status: csvStatus(c.status),
                 })),
                 [
