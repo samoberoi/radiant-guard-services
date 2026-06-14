@@ -3368,7 +3368,7 @@ function ResourceFormDialog({
                     size="sm"
                     variant="outline"
                     className="h-8"
-                    disabled={availableBenefits.length === 0}
+                    
                   >
                     <Plus className="mr-1 h-3.5 w-3.5" /> Add component
                   </Button>
@@ -3515,7 +3515,7 @@ function ResourceFormDialog({
                     size="sm"
                     variant="outline"
                     className="h-8"
-                    disabled={availableDeductions.length === 0}
+                    
                   >
                     <Plus className="mr-1 h-3.5 w-3.5" /> Add component
                   </Button>
@@ -3662,7 +3662,7 @@ function ResourceFormDialog({
                     size="sm"
                     variant="outline"
                     className="h-8"
-                    disabled={availableEmployer.length === 0}
+                    
                   >
                     <Plus className="mr-1 h-3.5 w-3.5" /> Add component
                   </Button>
