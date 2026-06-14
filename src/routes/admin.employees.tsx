@@ -1740,10 +1740,10 @@ function EmployeesPage() {
                   Active
                 </th>
               )}
-              <th className="w-[160px] min-w-[160px] whitespace-nowrap px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground" data-col="status">
+              <th className="w-[110px] min-w-[100px] whitespace-nowrap px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground" data-col="status">
                 Status
               </th>
-              <th className="w-[320px] min-w-[320px] whitespace-nowrap px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground" data-col="actions">
+              <th className="w-[200px] min-w-[180px] whitespace-nowrap px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground" data-col="actions">
                 Actions
               </th>
             </tr>
