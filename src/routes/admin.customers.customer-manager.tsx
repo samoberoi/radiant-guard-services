@@ -611,7 +611,7 @@ function CustomerFormDialog({
   const [form, setForm] = useState<Omit<Customer, "id">>(emptyCustomer());
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [submitting2, setSubmitting2] = useState(false); void submitting2;
+  
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
