@@ -1629,7 +1629,6 @@ function ClientContractsPage() {
                   <>
                     <th className="px-5 py-3" data-col="date">Start</th>
                     <th className="px-5 py-3" data-col="date">End</th>
-                    <th className="px-5 py-3" data-col="date">Expiry</th>
                   </>
                 ) : (
                   <th className="px-5 py-3" data-col="date">Start</th>
