@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateText, Output } from "ai";
+import { generateText } from "ai";
 import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
 const InputSchema = z.object({
@@ -42,40 +42,6 @@ export type AttendanceOcrResult = {
   notes: string;
 };
 
-const OutputSchema = z.object({
-  rows: z
-    .array(
-      z.object({
-        candidate_id: z.string().describe("UUID from the employees list"),
-        entry_date: z.string().describe("YYYY-MM-DD date"),
-        code: z
-          .string()
-          .describe(
-            "One of the allowed attendance codes, or empty string if not readable",
-          ),
-        ot_hours: z
-          .number()
-          .min(0)
-          .max(24)
-          .describe("Overtime hours for that day, 0 if none"),
-        confident: z
-          .boolean()
-          .describe(
-            "True only if the cell is clearly legible AND the code is in the allowed list",
-          ),
-      }),
-    )
-    .describe("One row per (employee, date) cell you can clearly read"),
-  unmatched_names: z
-    .array(z.string())
-    .describe(
-      "Names visible on the sheet that did not match any provided employee",
-    ),
-  notes: z
-    .string()
-    .describe("Short free-form note about overall image quality"),
-});
-
 const SYSTEM_PROMPT = `You are an OCR engine that reads a hand-written or printed monthly attendance / muster-roll sheet from India.
 You will be given the exact list of employees (id, name, employee_code, designation) and the exact list of period dates.
 Rules:
@@ -84,7 +50,94 @@ Rules:
 - "code" MUST be one of the provided attendance code strings (case-sensitive), or "" if you cannot tell. Map common variants (P=present, A=absent, WO=week off, L=leave, OT marker etc.) only when they exactly match a provided code.
 - "ot_hours" is the overtime hours number for that cell, 0 when not applicable. Many sheets list OT on a separate sub-row under each day — attribute it to the same date.
 - Set "confident": false when the cell text is ambiguous, smudged, crossed out, partially visible, or you had to guess. Set true only when the cell is clearly legible AND the code is in the allowed list.
-- Never invent entries for blank cells. Never output a date that is not in the provided period list.`;
+- Never invent entries for blank cells. Never output a date that is not in the provided period list.
+- Return ONLY a single JSON object with exactly these top-level keys: rows, unmatched_names, notes.
+- Do not wrap the JSON in markdown fences or explanatory text.
+- Each item in rows must use keys: candidate_id, entry_date, code, ot_hours, confident.
+- ot_hours must be a number. confident must be true or false.`;
+
+function stripMarkdownFences(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("```")) return trimmed;
+  return trimmed
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/\s*```$/i, "")
+    .trim();
+}
+
+function extractJsonObject(text: string): Record<string, unknown> {
+  const cleaned = stripMarkdownFences(text);
+  try {
+    const parsed = JSON.parse(cleaned);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch {
+    // Fall through to balanced-brace extraction.
+  }
+
+  for (let start = 0; start < cleaned.length; start++) {
+    if (cleaned[start] !== "{") continue;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = start; i < cleaned.length; i++) {
+      const ch = cleaned[i];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+        } else if (ch === "\\") {
+          escaped = true;
+        } else if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      if (ch === "{") depth += 1;
+      if (ch === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          const candidate = cleaned.slice(start, i + 1);
+          try {
+            const parsed = JSON.parse(candidate);
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+              return parsed as Record<string, unknown>;
+            }
+          } catch {
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  throw new Error("OCR returned unreadable JSON");
+}
+
+function toNumber(value: unknown) {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") {
+    const cleaned = value.trim().replace(/[^\d.\-]/g, "");
+    return cleaned ? Number(cleaned) : 0;
+  }
+  return Number(value ?? 0);
+}
+
+function toBoolean(value: unknown) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "true" || normalized === "yes" || normalized === "y";
+  }
+  return Boolean(value);
+}
 
 export const extractAttendanceFromImage = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
@@ -101,13 +154,13 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
     const codeList = data.codes.map((c) => `${c.code} = ${c.label}`).join(", ");
     const dateList = data.dates.join(", ");
 
-    const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (only these are valid):\n${dateList}\n\nEmployees (use the UUID as candidate_id):\n${employeeList}\n\nNow read the attached attendance sheet image and produce the JSON.`;
+    const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (only these are valid):\n${dateList}\n\nEmployees (use the UUID as candidate_id):\n${employeeList}\n\nNow read the attached attendance sheet image and return only a JSON object in this shape:\n{"rows":[{"candidate_id":"uuid","entry_date":"YYYY-MM-DD","code":"P","ot_hours":0,"confident":true}],"unmatched_names":[],"notes":"brief note"}`;
 
     const gateway = createLovableAiGatewayProvider(key);
     // gemini-2.5-flash is multimodal and ~5-10x faster than pro for OCR-style tasks
     const model = gateway("google/gemini-2.5-flash");
 
-    const { output } = await generateText({
+    const { text } = await generateText({
       model,
       system: SYSTEM_PROMPT,
       messages: [
@@ -131,9 +184,10 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
           ],
         },
       ],
-      output: Output.object({ schema: OutputSchema }),
       temperature: 0,
     });
+
+    const output = extractJsonObject(text);
 
     const validIds = new Set(data.employees.map((e) => e.id));
     const validDates = new Set(data.dates);
@@ -149,10 +203,8 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
         (r as { entry_date?: unknown }).entry_date ?? "",
       );
       const codeRaw = String((r as { code?: unknown }).code ?? "").trim();
-      const ot = Number((r as { ot_hours?: unknown }).ot_hours ?? 0);
-      const confidentRaw = Boolean(
-        (r as { confident?: unknown }).confident,
-      );
+      const ot = toNumber((r as { ot_hours?: unknown }).ot_hours ?? 0);
+      const confidentRaw = toBoolean((r as { confident?: unknown }).confident);
 
       if (!validIds.has(candidate_id) || !validDates.has(entry_date)) continue;
       const codeValid = codeRaw === "" || validCodes.has(codeRaw);
