@@ -1477,7 +1477,6 @@ function ClientContractsPage() {
                 unit: `${c.unitCode} – ${c.unitName}`,
                 start: csvDate(c.startDate),
                 end: csvDate(c.endDate),
-                expiry: csvDate(c.expiryDate),
                 description: c.description,
                 gst: c.gstOption.toUpperCase(),
                 status: c.status,
@@ -1488,7 +1487,6 @@ function ClientContractsPage() {
                 { key: "unit", header: "Unit" },
                 { key: "start", header: "Start date" },
                 { key: "end", header: "End date" },
-                { key: "expiry", header: "Expiry date" },
                 { key: "description", header: "Description" },
                 { key: "gst", header: "GST option" },
                 { key: "status", header: "Status" },
@@ -1629,7 +1627,6 @@ function ClientContractsPage() {
                   <>
                     <th className="px-5 py-3" data-col="date">Start</th>
                     <th className="px-5 py-3" data-col="date">End</th>
-                    <th className="px-5 py-3" data-col="date">Expiry</th>
                   </>
                 ) : (
                   <th className="px-5 py-3" data-col="date">Start</th>
@@ -1657,7 +1654,6 @@ function ClientContractsPage() {
                   <>
                     <td className="px-5 py-3 text-muted-foreground" data-col="date">{c.startDate || "—"}</td>
                     <td className="px-5 py-3 text-muted-foreground" data-col="date">{c.endDate || "—"}</td>
-                    <td className="px-5 py-3 text-muted-foreground" data-col="date">{c.expiryDate || "—"}</td>
                   </>
                 ) : (
                   <td className="px-5 py-3 text-muted-foreground" data-col="date">
