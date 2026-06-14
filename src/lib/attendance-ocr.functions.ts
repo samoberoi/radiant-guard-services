@@ -42,19 +42,19 @@ export type AttendanceOcrResult = {
   notes: string;
 };
 
-const SYSTEM_PROMPT = `You are an OCR engine that reads a hand-written or printed monthly attendance / muster-roll sheet from India.
+const SYSTEM_PROMPT = `You are a STRICT OCR engine reading a hand-written or printed monthly attendance / muster-roll sheet from India.
 You will be given the exact list of employees (id, name, employee_code, designation) and the exact list of period dates.
-Rules:
-- Match each visible row on the sheet to one employee in the provided list, by name OR employee_code. Use candidate_id (UUID) in the output, NEVER the name.
-- For each (employee, date) cell you can clearly read, emit one row. Skip cells that are blank on the sheet.
-- "code" MUST be one of the provided attendance code strings (case-sensitive), or "" if you cannot tell. Map common variants (P=present, A=absent, WO=week off, L=leave, OT marker etc.) only when they exactly match a provided code.
-- "ot_hours" is the overtime hours number for that cell, 0 when not applicable. Many sheets list OT on a separate sub-row under each day — attribute it to the same date.
-- Set "confident": false when the cell text is ambiguous, smudged, crossed out, partially visible, or you had to guess. Set true only when the cell is clearly legible AND the code is in the allowed list.
-- Never invent entries for blank cells. Never output a date that is not in the provided period list.
-- Return ONLY a single JSON object with exactly these top-level keys: rows, unmatched_names, notes.
-- Do not wrap the JSON in markdown fences or explanatory text.
-- Each item in rows must use keys: candidate_id, entry_date, code, ot_hours, confident.
-- ot_hours must be a number. confident must be true or false.`;
+
+ABSOLUTE RULES:
+1. VISIBLE DAYS ONLY — First, look at the day-number column headers printed on the sheet (e.g. "1 2 3 ... 30"). Note the LARGEST visible day number N. Do NOT emit any row whose entry_date day-of-month is greater than N, even if the period list contains later dates. If the sheet shows 30 days, never emit day 31.
+2. NEVER EXTRAPOLATE — Only emit a row for a cell you can actually SEE filled in on the paper. Empty/blank cells = no row. Do not pattern-fill or assume continuation.
+3. 100% CONFIDENCE THRESHOLD — Set "confident": true ONLY if the handwriting is crystal clear AND unambiguous AND the symbol exactly matches one of the allowed codes. ANY doubt (smudge, overwrite, ambiguous letter, faint pen, partial visibility, looks like it could be two different codes) → "confident": false. When in doubt, mark false.
+4. Match each visible row to one employee in the list by name OR employee_code. Use candidate_id (UUID) in output, NEVER the name. If you cannot match a row to an employee with 100% certainty, add the visible name to unmatched_names and DO NOT guess a candidate_id.
+5. "code" MUST be exactly one of the provided code strings (case-sensitive). P=present, A=absent etc. only when they exactly match a provided code. If unsure, set code to "" and confident to false.
+6. "ot_hours" is the overtime number for that day cell (OT sub-row under each day belongs to the same date). 0 if blank. If the OT digit is unclear, set confident=false for that cell.
+7. Return ONLY a single JSON object with exactly these top-level keys: rows, unmatched_names, notes. No markdown fences, no prose.
+8. Each row item uses keys: candidate_id, entry_date, code, ot_hours, confident. ot_hours is a number; confident is true or false.
+9. In "notes", state the largest visible day number N you saw on the sheet header (e.g. "visible_days=30").`;
 
 function stripMarkdownFences(text: string) {
   const trimmed = text.trim();
@@ -154,7 +154,7 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
     const codeList = data.codes.map((c) => `${c.code} = ${c.label}`).join(", ");
     const dateList = data.dates.join(", ");
 
-    const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (only these are valid):\n${dateList}\n\nEmployees (use the UUID as candidate_id):\n${employeeList}\n\nNow read the attached attendance sheet image and return only a JSON object in this shape:\n{"rows":[{"candidate_id":"uuid","entry_date":"YYYY-MM-DD","code":"P","ot_hours":0,"confident":true}],"unmatched_names":[],"notes":"brief note"}`;
+    const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (these are the calendar dates of the month — ONLY emit rows for the dates whose day-of-month is actually visible as a column on the sheet; if the printed header stops at day 30, do NOT emit day 31 even though it appears below):\n${dateList}\n\nEmployees (use the UUID as candidate_id, match by name or employee_code only with 100% certainty):\n${employeeList}\n\nReminder: confident=true ONLY when the cell is unambiguous and the code is in the allowed list. When in doubt → confident=false. Return ONLY a JSON object in this shape:\n{"rows":[{"candidate_id":"uuid","entry_date":"YYYY-MM-DD","code":"P","ot_hours":0,"confident":true}],"unmatched_names":[],"notes":"visible_days=NN"}`;
 
     const gateway = createLovableAiGatewayProvider(key);
     // gemini-2.5-flash is multimodal and ~5-10x faster than pro for OCR-style tasks
@@ -193,6 +193,10 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
     const validDates = new Set(data.dates);
     const validCodes = new Set(data.codes.map((c) => c.code));
 
+    const notesStr = String(output.notes ?? "");
+    const visibleMatch = notesStr.match(/visible_days\s*=\s*(\d{1,2})/i);
+    const visibleDays = visibleMatch ? Math.min(31, Math.max(1, parseInt(visibleMatch[1], 10))) : null;
+
     const rows = Array.isArray(output.rows) ? output.rows : [];
     const cleanedRows: AttendanceOcrRow[] = [];
     for (const r of rows) {
@@ -207,10 +211,14 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
       const confidentRaw = toBoolean((r as { confident?: unknown }).confident);
 
       if (!validIds.has(candidate_id) || !validDates.has(entry_date)) continue;
+      // Hard drop any day beyond the visible columns the model reported
+      if (visibleDays !== null) {
+        const dayNum = parseInt(entry_date.slice(8, 10), 10);
+        if (Number.isFinite(dayNum) && dayNum > visibleDays) continue;
+      }
       const codeValid = codeRaw === "" || validCodes.has(codeRaw);
       const code = codeValid ? codeRaw : "";
       const ot_hours = Number.isFinite(ot) ? Math.max(0, Math.min(24, ot)) : 0;
-      // If code missing entirely AND no OT, skip (blank cell, not informative)
       if (!code && ot_hours <= 0) continue;
       cleanedRows.push({
         candidate_id,
@@ -228,6 +236,6 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
     return {
       rows: cleanedRows,
       unmatched_names: unmatched,
-      notes: String(output.notes ?? ""),
+      notes: notesStr,
     };
   });
