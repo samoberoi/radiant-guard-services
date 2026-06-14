@@ -2502,7 +2502,7 @@ function StatusBadge({ status }: { status: string }) {
     rejected: "bg-rose-500/15 text-rose-600",
   };
   const label = status === "approved" ? "active" : status;
-  return <Badge className={cn("border-0 font-semibold capitalize whitespace-nowrap", map[status] ?? "bg-secondary text-foreground")}>{label}</Badge>;
+  return <Badge className={cn("inline-flex shrink-0 border-0 font-semibold capitalize whitespace-nowrap", map[status] ?? "bg-secondary text-foreground")}>{label}</Badge>;
 }
 
 function maskAadhaar(n: string) {
