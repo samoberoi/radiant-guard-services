@@ -400,6 +400,7 @@ function useContracts() {
         .single();
       if (error) throw error;
       const id = String((data as Record<string, unknown>).id);
+      await syncUnitDates(p.unitId, p.startDate, p.endDate);
       void logActivity({ module: "Client Contracts", action: "create", entityType: "client_contracts", entityId: id, entityLabel: p.prospectCode, details: p as unknown as Record<string, unknown> });
       // Notify everyone with approve rights on contracts (fully RBAC-driven).
       void notifyApprovers({
