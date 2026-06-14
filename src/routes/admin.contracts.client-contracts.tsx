@@ -2880,6 +2880,19 @@ function ResourceFormDialog({
   const [deductionQuery, setDeductionQuery] = useState("");
   const [employerPickerOpen, setEmployerPickerOpen] = useState(false);
   const [employerQuery, setEmployerQuery] = useState("");
+  const dialogContentRef = useRef<HTMLDivElement | null>(null);
+
+  const preserveDialogScroll = (update: () => void) => {
+    const scrollTop = dialogContentRef.current?.scrollTop ?? 0;
+    update();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (dialogContentRef.current) {
+          dialogContentRef.current.scrollTop = scrollTop;
+        }
+      });
+    });
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -3050,16 +3063,18 @@ function ResourceFormDialog({
   };
 
   const addComponent = (a: AllowanceType) => {
-    setComponents((prev) => [
-      ...prev,
-      {
-        allowanceId: a.id,
-        name: a.shortName || a.displayName,
-        amount: 0,
-      },
-    ]);
-    setAllowanceQuery("");
-    setAllowancePickerOpen(false);
+    preserveDialogScroll(() => {
+      setComponents((prev) => [
+        ...prev,
+        {
+          allowanceId: a.id,
+          name: a.shortName || a.displayName,
+          amount: 0,
+        },
+      ]);
+      setAllowanceQuery("");
+      setAllowancePickerOpen(false);
+    });
   };
 
   const addBenefit = (c: CostComponentOption) => {
@@ -3076,9 +3091,11 @@ function ResourceFormDialog({
     if (benefit.calcType === "percentage") {
       benefit.amount = computeBenefitAmount(benefit, components, [], allowanceTypes);
     }
-    setBenefits((prev) => [...prev, benefit]);
-    setBenefitQuery("");
-    setBenefitPickerOpen(false);
+    preserveDialogScroll(() => {
+      setBenefits((prev) => [...prev, benefit]);
+      setBenefitQuery("");
+      setBenefitPickerOpen(false);
+    });
   };
 
   const updateBenefitAmount = (id: string, amount: number) => {
@@ -3103,9 +3120,11 @@ function ResourceFormDialog({
     if (item.calcType === "percentage") {
       item.amount = computeBenefitAmount(item, components, benefits, allowanceTypes);
     }
-    setDeductions((prev) => [...prev, item]);
-    setDeductionQuery("");
-    setDeductionPickerOpen(false);
+    preserveDialogScroll(() => {
+      setDeductions((prev) => [...prev, item]);
+      setDeductionQuery("");
+      setDeductionPickerOpen(false);
+    });
   };
 
   const updateDeductionAmount = (id: string, amount: number) => {
@@ -3140,9 +3159,11 @@ function ResourceFormDialog({
         refsCtc ? employerContributions : [],
       );
     }
-    setEmployerContributions((prev) => [...prev, item]);
-    setEmployerQuery("");
-    setEmployerPickerOpen(false);
+    preserveDialogScroll(() => {
+      setEmployerContributions((prev) => [...prev, item]);
+      setEmployerQuery("");
+      setEmployerPickerOpen(false);
+    });
   };
 
   const updateEmployerAmount = (id: string, amount: number) => {
@@ -3192,7 +3213,10 @@ function ResourceFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-[min(92vw,1100px)]">
+      <DialogContent
+        ref={dialogContentRef}
+        className="max-h-[92vh] overflow-y-auto sm:max-w-[min(92vw,1100px)]"
+      >
         <DialogHeader>
           <DialogTitle>
             {initial?.id ? "Edit Resource" : "Add Resource"}
