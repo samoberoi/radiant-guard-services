@@ -432,11 +432,14 @@ function StatusPill({ status }: { status: string }) {
     draft: "bg-slate-500/15 text-slate-600",
     pending: "bg-amber-500/15 text-amber-600",
     approved: "bg-emerald-500/15 text-emerald-600",
+    active: "bg-emerald-500/15 text-emerald-600",
+    inactive: "bg-slate-500/15 text-slate-600",
     rejected: "bg-rose-500/15 text-rose-600",
   };
+  const label = status === "approved" ? "active" : status;
   return (
     <Badge className={`border-0 font-semibold capitalize ${map[status] ?? "bg-secondary text-foreground"}`}>
-      {status || "—"}
+      {label || "—"}
     </Badge>
   );
 }
