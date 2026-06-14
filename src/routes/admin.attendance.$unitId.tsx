@@ -1,11 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Printer, Download, CheckCircle2, XCircle, Send, RotateCcw, Plus, X } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { ChevronLeft, Printer, Download, CheckCircle2, XCircle, Send, RotateCcw, Plus, X, Upload, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { extractAttendanceFromImage } from "@/lib/attendance-ocr.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -519,6 +521,111 @@ function MusterRollPage() {
   const [otPickerRowKey, setOtPickerRowKey] = useState<string | null>(null);
   const [otPickerDates, setOtPickerDates] = useState<string[]>([]);
 
+  // ---- OCR upload state ----
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const [processingOcr, setProcessingOcr] = useState(false);
+  const [uncertainCells, setUncertainCells] = useState<Set<string>>(new Set());
+  const [ocrSummary, setOcrSummary] = useState<string | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const runOcr = useServerFn(extractAttendanceFromImage);
+
+  const onPickUploadFile = (file: File | null) => {
+    setUploadFile(file);
+    setUploadPreview(null);
+    setOcrSummary(null);
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setUploadPreview(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  const processAttendanceImage = async () => {
+    if (!uploadPreview) { toast.error("Choose an image first"); return; }
+    if (!editable) { toast.error("Sheet is locked"); return; }
+    if (!musterRows.length) { toast.error("No employees in this muster"); return; }
+    if (!codes.length) { toast.error("No attendance codes configured"); return; }
+    setProcessingOcr(true);
+    setOcrSummary(null);
+    try {
+      const primaryByCandidate = new Map<string, typeof musterRows[number]>();
+      for (const mr of musterRows) {
+        if (mr.isPrimary && !primaryByCandidate.has(mr.candidateId)) {
+          primaryByCandidate.set(mr.candidateId, mr);
+        }
+      }
+      const employeesPayload = Array.from(primaryByCandidate.values()).map((mr) => ({
+        id: mr.candidateId,
+        name: mr.emp.full_name,
+        employee_code: mr.emp.employee_code ?? null,
+        designation: mr.designationName ?? null,
+      }));
+      const result = await runOcr({
+        data: {
+          imageDataUrl: uploadPreview,
+          dates: periodCells.map((c) => c.date),
+          employees: employeesPayload,
+          codes: codes.map((c) => ({ code: c.code, label: c.label })),
+        },
+      });
+
+      // Group rows by candidate so we can upsert in one shot per employee
+      const validDates = new Set(periodCells.map((c) => c.date));
+      const byCandidate = new Map<string, typeof result.rows>();
+      const uncertainNext = new Set<string>();
+      let confidentCount = 0;
+      let uncertainCount = 0;
+
+      for (const r of result.rows) {
+        if (!validDates.has(r.entry_date)) continue;
+        if (r.entry_date > todayStr) continue;
+        const mr = primaryByCandidate.get(r.candidate_id);
+        if (!mr) continue;
+        const cellKey = `${mr.key}|${r.entry_date}`;
+        if (r.confident && r.code) {
+          const list = byCandidate.get(r.candidate_id) ?? [];
+          list.push(r);
+          byCandidate.set(r.candidate_id, list);
+          confidentCount += 1;
+        } else {
+          uncertainNext.add(cellKey);
+          uncertainCount += 1;
+        }
+      }
+
+      for (const [candidateId, rows] of byCandidate.entries()) {
+        const mr = primaryByCandidate.get(candidateId)!;
+        await upsertEntries(
+          candidateId,
+          mr.designationId,
+          rows.map((r) => ({ entry_date: r.entry_date, code: r.code, ot_hours: r.ot_hours })),
+        );
+      }
+      await queryClient.invalidateQueries({ queryKey: entriesQK });
+
+      setUncertainCells((prev) => {
+        const next = new Set(prev);
+        for (const k of uncertainNext) next.add(k);
+        return next;
+      });
+
+      const summary = `${confidentCount} cell${confidentCount === 1 ? "" : "s"} auto-filled · ${uncertainCount} flagged for review${result.unmatched_names.length ? ` · ${result.unmatched_names.length} unmatched row${result.unmatched_names.length === 1 ? "" : "s"}` : ""}`;
+      setOcrSummary(summary);
+      toast.success(summary);
+      logActivity({
+        module: "Attendance",
+        action: "Upload attendance image (OCR)",
+        details: { confidentCount, uncertainCount, unit_id: unitId },
+      }).catch(() => {});
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "OCR failed");
+    } finally {
+      setProcessingOcr(false);
+    }
+  };
+
+
   useEffect(() => {
     if (!isDragging) return;
     const onUp = () => {
@@ -747,6 +854,15 @@ function MusterRollPage() {
               })}
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setUploadOpen(true); }}
+            disabled={!editable}
+            title={editable ? "Upload an attendance sheet image to auto-fill" : "Sheet locked"}
+          >
+            <Upload className="mr-1.5 h-4 w-4" /> Upload Attendance
+          </Button>
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="mr-1.5 h-4 w-4" /> Print
           </Button>
@@ -755,6 +871,69 @@ function MusterRollPage() {
           </Button>
         </div>
       </div>
+
+      {/* Upload Attendance dialog */}
+      <Dialog open={uploadOpen} onOpenChange={(o) => { setUploadOpen(o); if (!o) { setUploadFile(null); setUploadPreview(null); setOcrSummary(null); } }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Upload Attendance Sheet</DialogTitle>
+            <DialogDescription>
+              Upload a photo or scan of the filled muster. The AI reads each cell and fills the table.
+              Cells it cannot read confidently are left blank and flagged in red so you can correct them manually.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <input
+              ref={uploadInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => onPickUploadFile(e.target.files?.[0] ?? null)}
+            />
+            {!uploadPreview ? (
+              <button
+                type="button"
+                onClick={() => uploadInputRef.current?.click()}
+                className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-muted/30 px-6 py-10 text-sm text-muted-foreground hover:border-primary hover:text-primary"
+              >
+                <Upload className="h-6 w-6" />
+                <span>Click to choose an attendance sheet image</span>
+                <span className="text-xs">PNG, JPG, HEIC etc.</span>
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <div className="overflow-hidden rounded-lg border border-border bg-muted/20">
+                  <img src={uploadPreview} alt="Attendance preview" className="max-h-80 w-full object-contain" />
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{uploadFile?.name}</span>
+                  <button
+                    type="button"
+                    className="text-primary hover:underline"
+                    onClick={() => uploadInputRef.current?.click()}
+                  >
+                    Choose a different image
+                  </button>
+                </div>
+              </div>
+            )}
+            {ocrSummary && (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                {ocrSummary}
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              Allowed codes: {codes.map((c) => c.code).join(", ") || "—"} · Period {periodStart} → {periodEnd}
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setUploadOpen(false)} disabled={processingOcr}>Close</Button>
+            <Button onClick={processAttendanceImage} disabled={!uploadPreview || processingOcr}>
+              {processingOcr ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Reading…</> : "Process & Fill"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Approval workflow */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-3 print:hidden">
@@ -1059,6 +1238,7 @@ function MusterRollPage() {
                         const entry = entryMap.get(`${mr.key}|${date}`);
                         const codeMeta = entry?.code ? codeMap.get(entry.code) : undefined;
                         const isSelected = dragRowKey === mr.key && selectedDates.has(date);
+                        const isUncertain = !entry?.code && uncertainCells.has(`${mr.key}|${date}`);
                         return (
                           <td
                             key={`a-${cell.date}`}
@@ -1069,6 +1249,7 @@ function MusterRollPage() {
                                 ? "bg-slate-100 cursor-not-allowed"
                                 : "cursor-pointer",
                               isSelected && "ring-2 ring-primary ring-inset",
+                              isUncertain && "ring-2 ring-rose-500 ring-inset bg-rose-50",
                             )}
                             style={{
                               height: 22,
@@ -1077,7 +1258,7 @@ function MusterRollPage() {
                                 ? undefined
                                 : codeMeta?.color ? `${codeMeta.color}22` : undefined,
                             }}
-                            title={isFuture ? "Future date — cannot mark attendance" : undefined}
+                            title={isFuture ? "Future date — cannot mark attendance" : isUncertain ? "OCR could not read this cell — please mark manually" : undefined}
                             onMouseDown={(e) => {
                               if (isFuture) { e.preventDefault(); return; }
                               if (!editable) { e.preventDefault(); return; }
