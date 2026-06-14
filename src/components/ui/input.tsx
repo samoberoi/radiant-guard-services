@@ -10,26 +10,32 @@ const baseClasses =
   "flex h-10 w-full rounded-lg border border-border/70 bg-card px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground hover:border-accent/50 focus-visible:outline-none focus-visible:border-accent focus-visible:ring-2 focus-visible:ring-accent/15 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
 
 const DateInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, value, onChange, disabled, name, id, placeholder, min, max, ...props }, ref) => {
+  ({ className, value, defaultValue, onChange, disabled, name, id, placeholder, min, max, ...props }, ref) => {
     const [open, setOpen] = React.useState(false);
+    const isControlled = value !== undefined;
+    const [internal, setInternal] = React.useState<string>(
+      typeof defaultValue === "string" ? defaultValue : "",
+    );
     const hiddenRef = React.useRef<HTMLInputElement>(null);
     React.useImperativeHandle(ref, () => hiddenRef.current as HTMLInputElement);
 
-    const strValue = typeof value === "string" ? value : "";
+    const strValue = isControlled ? (typeof value === "string" ? value : "") : internal;
     const parsed = strValue ? parse(strValue, "yyyy-MM-dd", new Date()) : undefined;
     const selected = parsed && isValid(parsed) ? parsed : undefined;
     const display = selected ? format(selected, "dd/MM/yyyy") : "";
 
     const fireChange = (v: string) => {
+      if (!isControlled) setInternal(v);
       const el = hiddenRef.current;
-      if (!el) return;
-      const setter = Object.getOwnPropertyDescriptor(
-        window.HTMLInputElement.prototype,
-        "value",
-      )?.set;
-      setter?.call(el, v);
-      el.dispatchEvent(new Event("input", { bubbles: true }));
-      el.dispatchEvent(new Event("change", { bubbles: true }));
+      if (el) {
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype,
+          "value",
+        )?.set;
+        setter?.call(el, v);
+        el.dispatchEvent(new Event("input", { bubbles: true }));
+        el.dispatchEvent(new Event("change", { bubbles: true }));
+      }
     };
 
     const minDate = typeof min === "string" && min ? parse(min, "yyyy-MM-dd", new Date()) : undefined;
@@ -47,7 +53,7 @@ const DateInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input
             <CalendarIcon className="ml-2 h-4 w-4 opacity-60" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
+        <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
           <Calendar
             mode="single"
             selected={selected}
