@@ -539,9 +539,10 @@ function PayrollUnitPage() {
 
       <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
         <div className="overflow-x-auto overscroll-x-contain">
-          <table className="ios-table min-w-[1180px] table-auto text-sm">
+          <table className="ios-table min-w-[1480px] table-auto text-sm">
             <thead className="border-b border-border/60 bg-secondary/40">
               <tr className="text-left text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                <th className="px-4 py-3 font-medium w-[60px]"></th>
                 <th className="px-4 py-3 font-medium">Emp ID</th>
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Designation</th>
@@ -557,20 +558,35 @@ function PayrollUnitPage() {
             </thead>
             <tbody className="divide-y divide-border/50">
               {isLoading ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">Computing wages…</td></tr>
+                <tr><td colSpan={12} className="px-4 py-10 text-center text-muted-foreground">Computing wages…</td></tr>
               ) : error ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
+                <tr><td colSpan={12} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
+                <tr><td colSpan={12} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
               ) : rows.map((r) => {
                 const isHighlighted = highlightCandidate === r.id;
                 const shortfall = r.wages ? Math.round((r.wages.contractGross - r.wages.earnedGross) * 100) / 100 : 0;
+                const isExpanded = expandedRows.has(r.rowKey);
                 return (
+                <>
                 <tr
                   key={r.rowKey}
                   id={`payroll-row-${r.rowKey}`}
                   className={`hover:bg-muted/40 ${isHighlighted ? "bg-emerald-50 ring-2 ring-emerald-400 dark:bg-emerald-950/40" : ""}`}
                 >
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => {
+                        const next = new Set(expandedRows);
+                        if (next.has(r.rowKey)) next.delete(r.rowKey);
+                        else next.add(r.rowKey);
+                        setExpandedRows(next);
+                      }}
+                      className="inline-flex items-center justify-center rounded-lg border border-border/60 bg-background p-1 hover:bg-muted transition-colors"
+                    >
+                      {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </button>
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs">{r.employeeCode || "—"}</td>
                   <td className="px-4 py-3 font-medium">{r.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{r.designation}</td>
@@ -583,12 +599,90 @@ function PayrollUnitPage() {
                   <td className="px-4 py-3 text-right font-semibold text-emerald-700">{r.wages ? fmtINR(r.wages.netPay) : "—"}</td>
                   <td className="px-4 py-3 text-right">{r.wages ? fmtINR(r.wages.employerCost) : "—"}</td>
                 </tr>
+                {isExpanded && r.wages && r.resource && (
+                  <tr key={`${r.rowKey}-detail`} className="bg-secondary/20">
+                    <td colSpan={12} className="px-4 py-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs my-3 rounded-lg border border-border/60 overflow-hidden">
+                          <tbody>
+                            <tr className="bg-muted/40">
+                              <td className="px-3 py-2 font-bold uppercase">Salary Particulars</td>
+                              <td className="px-3 py-2 text-center font-bold">{r.wages.baseDays} Days (contract)</td>
+                              <td className="px-3 py-2 text-right font-bold">Earned Rs.</td>
+                            </tr>
+                            {r.resource.components.filter((c) => c.amount > 0).map((c) => {
+                              const ratio = r.wages!.baseDays > 0 ? r.totals.tDays / r.wages!.baseDays : 0;
+                              const earned = Math.round(c.amount * ratio * 100) / 100;
+                              return (
+                                <tr key={`c-${c.name}`} className="border-b border-border/40">
+                                  <td className="px-3 py-2">{c.name}</td>
+                                  <td className="px-3 py-2 text-center tabular-nums">{c.amount.toFixed(2)}</td>
+                                  <td className="px-3 py-2 text-right tabular-nums">{earned.toFixed(2)}</td>
+                                </tr>
+                              );
+                            })}
+                            {r.resource.benefits?.filter((b) => b.amount > 0).map((b) => {
+                              const ratio = r.wages!.baseDays > 0 ? r.totals.tDays / r.wages!.baseDays : 0;
+                              const earned = Math.round(b.amount * ratio * 100) / 100;
+                              return (
+                                <tr key={`b-${b.name}`} className="border-b border-border/40">
+                                  <td className="px-3 py-2">{b.name}</td>
+                                  <td className="px-3 py-2 text-center tabular-nums">{b.amount.toFixed(2)}</td>
+                                  <td className="px-3 py-2 text-right tabular-nums">{earned.toFixed(2)}</td>
+                                </tr>
+                              );
+                            })}
+                            {(r.resource.components.filter((c) => c.amount > 0).length === 0 && (r.resource.benefits?.filter((b) => b.amount > 0).length ?? 0) === 0) && (
+                              <tr><td colSpan={3} className="px-3 py-3 text-center text-muted-foreground">No salary particulars configured.</td></tr>
+                            )}
+                            <tr className="bg-sky-100 font-bold dark:bg-sky-500/20">
+                              <td className="px-3 py-2 uppercase">TOTAL Gross Rs.</td>
+                              <td className="px-3 py-2 text-center tabular-nums">{(r.resource.components.reduce((s, c) => s + c.amount, 0) + (r.resource.benefits?.reduce((s, b) => s + b.amount, 0) ?? 0)).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{r.wages.earnedGross.toFixed(2)}</td>
+                            </tr>
+                            <tr className="bg-muted/40">
+                              <td className="px-3 py-2 font-bold uppercase">Deductions</td>
+                              <td className="px-3 py-2" />
+                              <td className="px-3 py-2 text-right font-bold">Earned Rs.</td>
+                            </tr>
+                            {r.resource.deductions?.filter((d) => d.amount > 0).map((d) => {
+                              const ratio = r.wages!.baseDays > 0 ? r.totals.tDays / r.wages!.baseDays : 0;
+                              const earned = Math.round(d.amount * ratio * 100) / 100;
+                              return (
+                                <tr key={`d-${d.name}`} className="border-b border-border/40">
+                                  <td className="px-3 py-2">{d.name}</td>
+                                  <td className="px-3 py-2 text-center tabular-nums">{d.amount.toFixed(2)}</td>
+                                  <td className="px-3 py-2 text-right tabular-nums">{earned.toFixed(2)}</td>
+                                </tr>
+                              );
+                            })}
+                            {(r.resource.deductions?.filter((d) => d.amount > 0).length ?? 0) === 0 && (
+                              <tr><td colSpan={3} className="px-3 py-3 text-center text-muted-foreground">No deductions configured.</td></tr>
+                            )}
+                            <tr className="bg-rose-100 font-semibold dark:bg-rose-500/20">
+                              <td className="px-3 py-2 uppercase">Total Deductions Rs.</td>
+                              <td className="px-3 py-2 text-center tabular-nums">{(r.resource.deductions?.reduce((s, d) => s + d.amount, 0) ?? 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{r.wages.totalDeductions.toFixed(2)}</td>
+                            </tr>
+                            <tr className="bg-cyan-100 font-bold dark:bg-cyan-500/20">
+                              <td className="px-3 py-2 uppercase">Total Amount (Payable) Rs.</td>
+                              <td className="px-3 py-2 text-center tabular-nums">{((r.resource.components.reduce((s, c) => s + c.amount, 0) + (r.resource.benefits?.reduce((s, b) => s + b.amount, 0) ?? 0)) - (r.resource.deductions?.reduce((s, d) => s + d.amount, 0) ?? 0)).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{r.wages.netPay.toFixed(2)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </>
                 );
               })}
             </tbody>
             {rows.length > 0 && (
               <tfoot className="border-t border-border/60 bg-secondary/30 text-sm font-semibold">
                 <tr>
+                  <td className="px-4 py-3" />
                   <td className="px-4 py-3" colSpan={5}>Totals</td>
                   <td className="px-4 py-3 text-right text-muted-foreground">{fmtINR(rows.reduce((s, r) => s + (r.wages?.contractGross ?? 0), 0))}</td>
                   <td className="px-4 py-3 text-right">{fmtINR(totals.earnedGross)}</td>
