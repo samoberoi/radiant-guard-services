@@ -3165,7 +3165,7 @@ function ResourceFormDialog({
                   className="w-[--radix-popover-trigger-width] p-0"
                   align="start"
                 >
-                  <Command key={benefitOptionsKey} shouldFilter={false}>
+                  <Command shouldFilter={false}>
                     <CommandInput
                       placeholder="Search designation…"
                       value={designationQuery}
@@ -3279,7 +3279,7 @@ function ResourceFormDialog({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-72 p-0" align="end">
-                  <Command key={deductionOptionsKey} shouldFilter={false}>
+                  <Command shouldFilter={false}>
                     <CommandInput
                       placeholder="Search allowance…"
                       value={allowanceQuery}
@@ -3386,7 +3386,7 @@ function ResourceFormDialog({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="end">
-                  <Command key={employerOptionsKey} shouldFilter={false}>
+                  <Command key={benefitOptionsKey} shouldFilter={false}>
                     <CommandInput
                       placeholder="Which benefit would you like to add?"
                       value={benefitQuery}
