@@ -696,35 +696,6 @@ function PayrollUnitPage() {
           </table>
         </div>
       </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            Salary breakdown · contract vs earned
-          </h2>
-          <span className="text-xs text-muted-foreground">
-            Contract column = supposed payout · Earned column = actual based on T Days
-          </span>
-        </div>
-        {rows.filter((r) => r.wages && r.resource).map((r) => (
-          <SalaryBreakdownPreview
-            key={r.rowKey}
-            employeeName={r.name}
-            employeeCode={r.employeeCode}
-            designationName={r.designation}
-            tDays={r.totals.tDays}
-            baseDays={r.wages!.baseDays}
-            components={r.resource!.components.map((c) => ({ name: c.name, amount: Number(c.amount) || 0 }))}
-            benefits={(r.resource!.benefits ?? []).map((b) => ({ name: b.name, amount: Number(b.amount) || 0 }))}
-            deductions={(r.resource!.deductions ?? []).map((b) => ({ name: b.name, amount: Number(b.amount) || 0 }))}
-          />
-        ))}
-        {rows.filter((r) => !r.wages).length > 0 && (
-          <div className="rounded-xl border border-amber-300/60 bg-amber-50 p-3 text-xs text-amber-900">
-            {rows.filter((r) => !r.wages).length} employee(s) have no contract mapped for their designation and were excluded from the breakdown.
-          </div>
-        )}
-      </div>
     </div>
   );
 }
