@@ -522,9 +522,10 @@ function MusterRollPage() {
   const [otPickerRowKey, setOtPickerRowKey] = useState<string | null>(null);
   const [otPickerDates, setOtPickerDates] = useState<string[]>([]);
 
-  // ---- OCR upload state ----
+  // ---- OCR / Excel upload state ----
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadKind, setUploadKind] = useState<"image" | "excel" | null>(null);
   const [uploadPreview, setUploadPreview] = useState<string | null>(null);
   const [processingOcr, setProcessingOcr] = useState(false);
   const [uncertainCells, setUncertainCells] = useState<Set<string>>(new Set());
@@ -532,14 +533,29 @@ function MusterRollPage() {
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const runOcr = useServerFn(extractAttendanceFromImage);
 
+  const detectKind = (file: File): "image" | "excel" | null => {
+    const name = file.name.toLowerCase();
+    if (file.type.startsWith("image/") || /\.(png|jpe?g|webp|heic|heif|bmp|gif)$/.test(name)) return "image";
+    if (/\.(xlsx|xls|xlsm|csv|ods)$/.test(name)) return "excel";
+    return null;
+  };
+
   const onPickUploadFile = (file: File | null) => {
     setUploadFile(file);
     setUploadPreview(null);
+    setUploadKind(null);
     setOcrSummary(null);
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setUploadPreview(String(reader.result));
-    reader.readAsDataURL(file);
+    const kind = detectKind(file);
+    if (!kind) { toast.error("Unsupported file. Choose an image or Excel/CSV file."); return; }
+    setUploadKind(kind);
+    if (kind === "image") {
+      const reader = new FileReader();
+      reader.onload = () => setUploadPreview(String(reader.result));
+      reader.readAsDataURL(file);
+    } else {
+      setUploadPreview(file.name);
+    }
   };
 
   const processAttendanceImage = async () => {
@@ -571,7 +587,6 @@ function MusterRollPage() {
         },
       });
 
-      // Group rows by candidate so we can upsert in one shot per employee
       const validDates = new Set(periodCells.map((c) => c.date));
       const byCandidate = new Map<string, typeof result.rows>();
       const uncertainNext = new Set<string>();
@@ -625,6 +640,161 @@ function MusterRollPage() {
       setProcessingOcr(false);
     }
   };
+
+  const processAttendanceExcel = async () => {
+    if (!uploadFile) { toast.error("Choose a file first"); return; }
+    if (!editable) { toast.error("Sheet is locked"); return; }
+    if (!musterRows.length) { toast.error("No employees in this muster"); return; }
+    if (!codes.length) { toast.error("No attendance codes configured"); return; }
+    setProcessingOcr(true);
+    setOcrSummary(null);
+    try {
+      const buf = await uploadFile.arrayBuffer();
+      const wb = XLSX.read(buf, { cellDates: true });
+      const sheet = wb.Sheets[wb.SheetNames[0]];
+      const aoa: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: null });
+
+      const validDateSet = new Set(periodCells.map((c) => c.date));
+      const dayToDate = new Map<number, string>();
+      for (const c of periodCells) dayToDate.set(Number(c.date.slice(8, 10)), c.date);
+
+      const toIsoDate = (v: any): string | null => {
+        if (v == null) return null;
+        if (v instanceof Date) {
+          const y = v.getFullYear();
+          const m = String(v.getMonth() + 1).padStart(2, "0");
+          const d = String(v.getDate()).padStart(2, "0");
+          const iso = `${y}-${m}-${d}`;
+          return validDateSet.has(iso) ? iso : null;
+        }
+        const s = String(v).trim();
+        if (!s) return null;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return validDateSet.has(s) ? s : null;
+        const m1 = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+        if (m1) {
+          const dd = Number(m1[1]); const mm = Number(m1[2]);
+          let yy = Number(m1[3]); if (yy < 100) yy += 2000;
+          const iso = `${yy}-${String(mm).padStart(2, "0")}-${String(dd).padStart(2, "0")}`;
+          return validDateSet.has(iso) ? iso : null;
+        }
+        if (/^\d{1,2}$/.test(s)) return dayToDate.get(Number(s)) ?? null;
+        return null;
+      };
+
+      let headerRowIdx = -1;
+      let headerDates: Array<{ col: number; date: string }> = [];
+      for (let r = 0; r < Math.min(aoa.length, 25); r++) {
+        const row = aoa[r] || [];
+        const hits: Array<{ col: number; date: string }> = [];
+        for (let c = 0; c < row.length; c++) {
+          const iso = toIsoDate(row[c]);
+          if (iso) hits.push({ col: c, date: iso });
+        }
+        if (hits.length > headerDates.length) {
+          headerDates = hits;
+          headerRowIdx = r;
+        }
+      }
+      if (headerRowIdx < 0 || headerDates.length === 0) {
+        throw new Error("Could not find date columns. Header row must contain dates or day numbers from this period.");
+      }
+
+      const primaryByCandidate = new Map<string, typeof musterRows[number]>();
+      for (const mr of musterRows) {
+        if (mr.isPrimary && !primaryByCandidate.has(mr.candidateId)) {
+          primaryByCandidate.set(mr.candidateId, mr);
+        }
+      }
+      const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+      const byName = new Map<string, typeof musterRows[number]>();
+      const byCode = new Map<string, typeof musterRows[number]>();
+      for (const mr of primaryByCandidate.values()) {
+        byName.set(norm(mr.emp.full_name), mr);
+        if (mr.emp.employee_code) byCode.set(norm(String(mr.emp.employee_code)), mr);
+      }
+
+      const codeSet = new Map<string, string>();
+      for (const c of codes) codeSet.set(c.code.toUpperCase(), c.code);
+
+      const byCandidate = new Map<string, Array<{ entry_date: string; code: string; ot_hours: number }>>();
+      const unmatchedNames: string[] = [];
+      let filled = 0;
+
+      for (let r = headerRowIdx + 1; r < aoa.length; r++) {
+        const row = aoa[r] || [];
+        if (!row.some((v) => v != null && String(v).trim() !== "")) continue;
+
+        let mr: typeof musterRows[number] | undefined;
+        let labelCell = "";
+        for (let c = 0; c < Math.min(row.length, 6); c++) {
+          const v = row[c];
+          if (v == null) continue;
+          const s = String(v).trim();
+          if (!s) continue;
+          if (!labelCell) labelCell = s;
+          const n = norm(s);
+          if (!n) continue;
+          if (byCode.has(n)) { mr = byCode.get(n); break; }
+          if (byName.has(n)) { mr = byName.get(n); break; }
+        }
+        if (!mr) {
+          const joined = norm(row.slice(0, 4).map((v) => (v == null ? "" : String(v))).join(" "));
+          if (joined) {
+            for (const [k, m] of byName.entries()) {
+              if (k && (joined.includes(k) || k.includes(joined))) { mr = m; break; }
+            }
+          }
+        }
+        if (!mr) {
+          if (labelCell) unmatchedNames.push(labelCell);
+          continue;
+        }
+
+        const rows: Array<{ entry_date: string; code: string; ot_hours: number }> = [];
+        for (const h of headerDates) {
+          if (h.date > todayStr) continue;
+          const raw = row[h.col];
+          if (raw == null || String(raw).trim() === "") continue;
+          const cell = String(raw).trim().toUpperCase();
+          const m = cell.match(/^([A-Z]+)(?:\s+(\d+(?:\.\d+)?))?$/);
+          if (!m) continue;
+          const canonical = codeSet.get(m[1]);
+          if (!canonical) continue;
+          const ot = m[2] ? Number(m[2]) : 0;
+          rows.push({ entry_date: h.date, code: canonical, ot_hours: Number.isFinite(ot) ? ot : 0 });
+        }
+        if (rows.length) {
+          byCandidate.set(mr.candidateId, rows);
+          filled += rows.length;
+        }
+      }
+
+      for (const [candidateId, rows] of byCandidate.entries()) {
+        const mr = primaryByCandidate.get(candidateId)!;
+        await upsertEntries(candidateId, mr.designationId, rows);
+      }
+      await queryClient.invalidateQueries({ queryKey: entriesQK });
+
+      const summary = `${filled} cell${filled === 1 ? "" : "s"} imported from ${uploadFile.name}${unmatchedNames.length ? ` · ${unmatchedNames.length} unmatched row${unmatchedNames.length === 1 ? "" : "s"}` : ""}`;
+      setOcrSummary(summary);
+      toast.success(summary);
+      logActivity({
+        module: "Attendance",
+        action: "Upload attendance Excel",
+        details: { filled, unmatched: unmatchedNames.length, unit_id: unitId, file: uploadFile.name },
+      }).catch(() => {});
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Excel import failed");
+    } finally {
+      setProcessingOcr(false);
+    }
+  };
+
+  const processUpload = () => {
+    if (uploadKind === "excel") return processAttendanceExcel();
+    return processAttendanceImage();
+  };
+
 
 
   useEffect(() => {
