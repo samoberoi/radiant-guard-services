@@ -610,34 +610,34 @@ function PayrollUnitPage() {
                               <td className="px-3 py-2 text-center font-bold">{r.wages.baseDays} Days (contract)</td>
                               <td className="px-3 py-2 text-right font-bold">Earned Rs.</td>
                             </tr>
-                            {r.resource.components.filter((c) => c.amount > 0).map((c) => {
+                            {r.resource.components.filter((c) => Number(c.amount) > 0).map((c) => {
                               const ratio = r.wages!.baseDays > 0 ? r.totals.tDays / r.wages!.baseDays : 0;
-                              const earned = Math.round(c.amount * ratio * 100) / 100;
+                              const earned = Math.round(Number(c.amount) * ratio * 100) / 100;
                               return (
                                 <tr key={`c-${c.name}`} className="border-b border-border/40">
                                   <td className="px-3 py-2">{c.name}</td>
-                                  <td className="px-3 py-2 text-center tabular-nums">{c.amount.toFixed(2)}</td>
+                                  <td className="px-3 py-2 text-center tabular-nums">{Number(c.amount).toFixed(2)}</td>
                                   <td className="px-3 py-2 text-right tabular-nums">{earned.toFixed(2)}</td>
                                 </tr>
                               );
                             })}
-                            {r.resource.benefits?.filter((b) => b.amount > 0).map((b) => {
+                            {r.resource.benefits?.filter((b) => Number(b.amount) > 0).map((b) => {
                               const ratio = r.wages!.baseDays > 0 ? r.totals.tDays / r.wages!.baseDays : 0;
-                              const earned = Math.round(b.amount * ratio * 100) / 100;
+                              const earned = Math.round(Number(b.amount) * ratio * 100) / 100;
                               return (
                                 <tr key={`b-${b.name}`} className="border-b border-border/40">
                                   <td className="px-3 py-2">{b.name}</td>
-                                  <td className="px-3 py-2 text-center tabular-nums">{b.amount.toFixed(2)}</td>
+                                  <td className="px-3 py-2 text-center tabular-nums">{Number(b.amount).toFixed(2)}</td>
                                   <td className="px-3 py-2 text-right tabular-nums">{earned.toFixed(2)}</td>
                                 </tr>
                               );
                             })}
-                            {(r.resource.components.filter((c) => c.amount > 0).length === 0 && (r.resource.benefits?.filter((b) => b.amount > 0).length ?? 0) === 0) && (
+                            {(r.resource.components.filter((c) => Number(c.amount) > 0).length === 0 && (r.resource.benefits?.filter((b) => Number(b.amount) > 0).length ?? 0) === 0) && (
                               <tr><td colSpan={3} className="px-3 py-3 text-center text-muted-foreground">No salary particulars configured.</td></tr>
                             )}
                             <tr className="bg-sky-100 font-bold dark:bg-sky-500/20">
                               <td className="px-3 py-2 uppercase">TOTAL Gross Rs.</td>
-                              <td className="px-3 py-2 text-center tabular-nums">{(r.resource.components.reduce((s, c) => s + c.amount, 0) + (r.resource.benefits?.reduce((s, b) => s + b.amount, 0) ?? 0)).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-center tabular-nums">{(r.resource.components.reduce((s, c) => s + Number(c.amount), 0) + (r.resource.benefits?.reduce((s, b) => s + Number(b.amount), 0) ?? 0)).toFixed(2)}</td>
                               <td className="px-3 py-2 text-right tabular-nums">{r.wages.earnedGross.toFixed(2)}</td>
                             </tr>
                             <tr className="bg-muted/40">
@@ -645,28 +645,28 @@ function PayrollUnitPage() {
                               <td className="px-3 py-2" />
                               <td className="px-3 py-2 text-right font-bold">Earned Rs.</td>
                             </tr>
-                            {r.resource.deductions?.filter((d) => d.amount > 0).map((d) => {
+                            {r.resource.deductions?.filter((d) => Number(d.amount) > 0).map((d) => {
                               const ratio = r.wages!.baseDays > 0 ? r.totals.tDays / r.wages!.baseDays : 0;
-                              const earned = Math.round(d.amount * ratio * 100) / 100;
+                              const earned = Math.round(Number(d.amount) * ratio * 100) / 100;
                               return (
                                 <tr key={`d-${d.name}`} className="border-b border-border/40">
                                   <td className="px-3 py-2">{d.name}</td>
-                                  <td className="px-3 py-2 text-center tabular-nums">{d.amount.toFixed(2)}</td>
+                                  <td className="px-3 py-2 text-center tabular-nums">{Number(d.amount).toFixed(2)}</td>
                                   <td className="px-3 py-2 text-right tabular-nums">{earned.toFixed(2)}</td>
                                 </tr>
                               );
                             })}
-                            {(r.resource.deductions?.filter((d) => d.amount > 0).length ?? 0) === 0 && (
+                            {(r.resource.deductions?.filter((d) => Number(d.amount) > 0).length ?? 0) === 0 && (
                               <tr><td colSpan={3} className="px-3 py-3 text-center text-muted-foreground">No deductions configured.</td></tr>
                             )}
                             <tr className="bg-rose-100 font-semibold dark:bg-rose-500/20">
                               <td className="px-3 py-2 uppercase">Total Deductions Rs.</td>
-                              <td className="px-3 py-2 text-center tabular-nums">{(r.resource.deductions?.reduce((s, d) => s + d.amount, 0) ?? 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-center tabular-nums">{(r.resource.deductions?.reduce((s, d) => s + Number(d.amount), 0) ?? 0).toFixed(2)}</td>
                               <td className="px-3 py-2 text-right tabular-nums">{r.wages.totalDeductions.toFixed(2)}</td>
                             </tr>
                             <tr className="bg-cyan-100 font-bold dark:bg-cyan-500/20">
                               <td className="px-3 py-2 uppercase">Total Amount (Payable) Rs.</td>
-                              <td className="px-3 py-2 text-center tabular-nums">{((r.resource.components.reduce((s, c) => s + c.amount, 0) + (r.resource.benefits?.reduce((s, b) => s + b.amount, 0) ?? 0)) - (r.resource.deductions?.reduce((s, d) => s + d.amount, 0) ?? 0)).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-center tabular-nums">{((r.resource.components.reduce((s, c) => s + Number(c.amount), 0) + (r.resource.benefits?.reduce((s, b) => s + Number(b.amount), 0) ?? 0)) - (r.resource.deductions?.reduce((s, d) => s + Number(d.amount), 0) ?? 0)).toFixed(2)}</td>
                               <td className="px-3 py-2 text-right tabular-nums">{r.wages.netPay.toFixed(2)}</td>
                             </tr>
                           </tbody>
