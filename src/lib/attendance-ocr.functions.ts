@@ -193,6 +193,10 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
     const validDates = new Set(data.dates);
     const validCodes = new Set(data.codes.map((c) => c.code));
 
+    const notesStr = String(output.notes ?? "");
+    const visibleMatch = notesStr.match(/visible_days\s*=\s*(\d{1,2})/i);
+    const visibleDays = visibleMatch ? Math.min(31, Math.max(1, parseInt(visibleMatch[1], 10))) : null;
+
     const rows = Array.isArray(output.rows) ? output.rows : [];
     const cleanedRows: AttendanceOcrRow[] = [];
     for (const r of rows) {
@@ -207,10 +211,14 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
       const confidentRaw = toBoolean((r as { confident?: unknown }).confident);
 
       if (!validIds.has(candidate_id) || !validDates.has(entry_date)) continue;
+      // Hard drop any day beyond the visible columns the model reported
+      if (visibleDays !== null) {
+        const dayNum = parseInt(entry_date.slice(8, 10), 10);
+        if (Number.isFinite(dayNum) && dayNum > visibleDays) continue;
+      }
       const codeValid = codeRaw === "" || validCodes.has(codeRaw);
       const code = codeValid ? codeRaw : "";
       const ot_hours = Number.isFinite(ot) ? Math.max(0, Math.min(24, ot)) : 0;
-      // If code missing entirely AND no OT, skip (blank cell, not informative)
       if (!code && ot_hours <= 0) continue;
       cleanedRows.push({
         candidate_id,
@@ -228,6 +236,6 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
     return {
       rows: cleanedRows,
       unmatched_names: unmatched,
-      notes: String(output.notes ?? ""),
+      notes: notesStr,
     };
   });
