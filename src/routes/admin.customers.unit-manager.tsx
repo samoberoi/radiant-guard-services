@@ -731,21 +731,31 @@ function UnitFormDialog({
             </div>
           </Section>
 
-          {/* CONTRACT PERIOD */}
+          {/* CONTRACT PERIOD (read-only — synced from Client Contracts) */}
           <Section title="Contract period">
+            <div className="mb-3 rounded-lg border border-accent/30 bg-accent/5 px-3 py-2 text-xs text-muted-foreground">
+              These dates are managed from <span className="font-medium text-foreground">Client Contracts</span>.
+              When you create or update a contract for this unit, the contract start &amp; end dates will reflect here automatically.
+            </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Contract start date">
                 <Input
                   type="date"
                   value={form.contractStartDate}
-                  onChange={(e) => set("contractStartDate", e.target.value)}
+                  readOnly
+                  disabled
+                  title="Set via Client Contracts"
+                  className="cursor-not-allowed bg-muted/40"
                 />
               </Field>
               <Field label="Contract end date">
                 <Input
                   type="date"
                   value={form.contractEndDate}
-                  onChange={(e) => set("contractEndDate", e.target.value)}
+                  readOnly
+                  disabled
+                  title="Set via Client Contracts"
+                  className="cursor-not-allowed bg-muted/40"
                 />
               </Field>
             </div>
