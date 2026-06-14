@@ -14,18 +14,24 @@ const DateInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input
     const [open, setOpen] = React.useState(false);
     const isControlled = value !== undefined;
     const [internal, setInternal] = React.useState<string>(
-      typeof defaultValue === "string" ? defaultValue : "",
+      typeof value === "string" ? value : typeof defaultValue === "string" ? defaultValue : "",
     );
     const hiddenRef = React.useRef<HTMLInputElement>(null);
     React.useImperativeHandle(ref, () => hiddenRef.current as HTMLInputElement);
 
-    const strValue = isControlled ? (typeof value === "string" ? value : "") : internal;
+    React.useEffect(() => {
+      if (typeof value === "string") {
+        setInternal(value);
+      }
+    }, [value]);
+
+    const strValue = internal;
     const parsed = strValue ? parse(strValue, "yyyy-MM-dd", new Date()) : undefined;
     const selected = parsed && isValid(parsed) ? parsed : undefined;
     const display = selected ? format(selected, "dd/MM/yyyy") : "";
 
     const fireChange = (v: string) => {
-      if (!isControlled) setInternal(v);
+      setInternal(v);
       const el = hiddenRef.current;
       if (el) {
         const setter = Object.getOwnPropertyDescriptor(
@@ -35,6 +41,15 @@ const DateInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input
         setter?.call(el, v);
         el.dispatchEvent(new Event("input", { bubbles: true }));
         el.dispatchEvent(new Event("change", { bubbles: true }));
+        onChange?.({
+          target: el,
+          currentTarget: el,
+        } as React.ChangeEvent<HTMLInputElement>);
+      } else {
+        onChange?.({
+          target: { value: v, name, id } as EventTarget & HTMLInputElement,
+          currentTarget: { value: v, name, id } as EventTarget & HTMLInputElement,
+        } as React.ChangeEvent<HTMLInputElement>);
       }
     };
 
