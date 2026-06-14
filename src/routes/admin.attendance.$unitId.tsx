@@ -550,9 +550,14 @@ function MusterRollPage() {
     if (!kind) { toast.error("Unsupported file. Choose an image or Excel/CSV file."); return; }
     setUploadKind(kind);
     if (kind === "image") {
-      const reader = new FileReader();
-      reader.onload = () => setUploadPreview(String(reader.result));
-      reader.readAsDataURL(file);
+      // Downscale large photos so OCR upload stays fast and request body small
+      downscaleImage(file, 1600, 0.85)
+        .then((dataUrl) => setUploadPreview(dataUrl))
+        .catch(() => {
+          const reader = new FileReader();
+          reader.onload = () => setUploadPreview(String(reader.result));
+          reader.readAsDataURL(file);
+        });
     } else {
       setUploadPreview(file.name);
     }
