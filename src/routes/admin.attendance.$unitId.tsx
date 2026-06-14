@@ -1238,6 +1238,7 @@ function MusterRollPage() {
                         const entry = entryMap.get(`${mr.key}|${date}`);
                         const codeMeta = entry?.code ? codeMap.get(entry.code) : undefined;
                         const isSelected = dragRowKey === mr.key && selectedDates.has(date);
+                        const isUncertain = !entry?.code && uncertainCells.has(`${mr.key}|${date}`);
                         return (
                           <td
                             key={`a-${cell.date}`}
@@ -1248,6 +1249,7 @@ function MusterRollPage() {
                                 ? "bg-slate-100 cursor-not-allowed"
                                 : "cursor-pointer",
                               isSelected && "ring-2 ring-primary ring-inset",
+                              isUncertain && "ring-2 ring-rose-500 ring-inset bg-rose-50",
                             )}
                             style={{
                               height: 22,
@@ -1256,7 +1258,7 @@ function MusterRollPage() {
                                 ? undefined
                                 : codeMeta?.color ? `${codeMeta.color}22` : undefined,
                             }}
-                            title={isFuture ? "Future date — cannot mark attendance" : undefined}
+                            title={isFuture ? "Future date — cannot mark attendance" : isUncertain ? "OCR could not read this cell — please mark manually" : undefined}
                             onMouseDown={(e) => {
                               if (isFuture) { e.preventDefault(); return; }
                               if (!editable) { e.preventDefault(); return; }
