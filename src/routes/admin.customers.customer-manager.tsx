@@ -589,7 +589,6 @@ function StatCard({
   );
 }
 
-type GstEntry = { id?: string; gstin: string; label: string };
 
 function CustomerFormDialog({
   open,
