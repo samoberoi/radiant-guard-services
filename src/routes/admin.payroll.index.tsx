@@ -471,86 +471,67 @@ function PayrollUnitsPage() {
           )}
         </div>
 
-        <div className="overflow-x-clip">
-          <table className="ios-table min-w-full table-auto">
-            <thead className="border-b border-border/60 bg-secondary/40">
-              <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                <th className="px-5 py-4 font-medium">Unit</th>
-                <th className="px-5 py-4 font-medium">Organization</th>
-                <th className="px-5 py-4 font-medium">Periods (status)</th>
-                <th className="px-5 py-4 text-right font-medium">Employees</th>
-                <th className="px-5 py-4 font-medium" data-col="status">Status</th>
-                <th className="px-5 py-4 text-right font-medium whitespace-nowrap">Action</th>
+        <div className="space-y-3 p-5">
+          {isLoading ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">Loading payroll units…</div>
+          ) : error ? (
+            <div className="py-12 text-center text-sm text-destructive">
+              {error instanceof Error ? error.message : "Could not load payroll units."}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="py-12 text-center text-sm text-muted-foreground">
+              {units.length === 0
+                ? "No approved attendance sheets yet. Approve one in Attendance to unlock payroll."
+                : "No units match the current filters."}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+              {filtered.map((unit) => {
+                const approvedLatest = unit.periods.find((p) => p.status === "approved");
+                const targetPeriod =
+                  periodFilter !== "all"
+                    ? (() => {
+                        const [s, e] = periodFilter.split("|");
+                        return { period_start: s, period_end: e };
+                      })()
+                    : approvedLatest;
+                const attendanceApproved = !!targetPeriod;
+                const run = targetPeriod
+                  ? runByKey.get(`${unit.id}|${targetPeriod.period_start}|${targetPeriod.period_end}`) ?? null
+                  : null;
+                const runStatus = run?.status ?? null;
 
+                let statusLabel = "Awaiting attendance";
+                let statusCls = "border-amber-200/60 bg-amber-100/60 text-amber-800";
+                if (attendanceApproved) {
+                  if (runStatus === "approved") { statusLabel = "Approved"; statusCls = "border-emerald-200/60 bg-emerald-100/60 text-emerald-800"; }
+                  else if (runStatus === "submitted") { statusLabel = "Pending approval"; statusCls = "border-amber-200/60 bg-amber-100/60 text-amber-800"; }
+                  else if (runStatus === "rejected") { statusLabel = "Rejected"; statusCls = "border-rose-200/60 bg-rose-100/60 text-rose-800"; }
+                  else if (runStatus === "draft") { statusLabel = "Draft"; statusCls = "border-sky-200/60 bg-sky-100/60 text-sky-800"; }
+                  else { statusLabel = "Ready to compute"; statusCls = "border-sky-200/60 bg-sky-100/60 text-sky-800"; }
+                }
 
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-border/50">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
-                    Loading payroll units…
-                  </td>
-                </tr>
-              ) : error ? (
-                <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-destructive">
-                    {error instanceof Error ? error.message : "Could not load payroll units."}
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
-                    {units.length === 0
-                      ? "No approved attendance sheets yet. Approve one in Attendance to unlock payroll."
-                      : "No units match the current filters."}
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((unit) => {
-                  const approvedLatest = unit.periods.find((p) => p.status === "approved");
-                  const targetPeriod =
-                    periodFilter !== "all"
-                      ? (() => {
-                          const [s, e] = periodFilter.split("|");
-                          return { period_start: s, period_end: e };
-                        })()
-                      : approvedLatest;
-                  const attendanceApproved = !!targetPeriod;
-                  const run = targetPeriod
-                    ? runByKey.get(`${unit.id}|${targetPeriod.period_start}|${targetPeriod.period_end}`) ?? null
-                    : null;
-                  const runStatus = run?.status ?? null;
-
-                  let statusLabel = "Awaiting attendance";
-                  let statusCls = "border-amber-200/60 bg-amber-100/60 text-amber-800";
-                  if (attendanceApproved) {
-                    if (runStatus === "approved") { statusLabel = "Approved"; statusCls = "border-emerald-200/60 bg-emerald-100/60 text-emerald-800"; }
-                    else if (runStatus === "submitted") { statusLabel = "Pending approval"; statusCls = "border-amber-200/60 bg-amber-100/60 text-amber-800"; }
-                    else if (runStatus === "rejected") { statusLabel = "Rejected"; statusCls = "border-rose-200/60 bg-rose-100/60 text-rose-800"; }
-                    else if (runStatus === "draft") { statusLabel = "Draft"; statusCls = "border-sky-200/60 bg-sky-100/60 text-sky-800"; }
-                    else { statusLabel = "Ready to compute"; statusCls = "border-sky-200/60 bg-sky-100/60 text-sky-800"; }
-                  }
-
-                  return (
-                    <tr key={unit.id} className="group transition-colors hover:bg-amber-50/30">
-                      <td className="px-5 py-4 align-top">
-                        <div className="flex items-start gap-3">
-                          <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-100/80 text-emerald-700">
-                            <Wallet className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-semibold text-foreground">{unit.name || unit.code}</div>
-                            <span className="mt-1 inline-flex rounded-md bg-secondary px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-foreground">
-                              {unit.code || "—"}
-                            </span>
-                          </div>
+                return (
+                  <div
+                    key={unit.id}
+                    className="group flex flex-col gap-3 rounded-2xl border border-border/60 bg-card p-4 shadow-sm transition hover:border-border hover:shadow-md sm:flex-row sm:items-start sm:gap-4"
+                  >
+                    {/* Left: Unit + Org */}
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-100/80 text-emerald-700">
+                        <Wallet className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-semibold text-foreground">{unit.name || unit.code}</div>
+                        <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                          <span className="inline-flex rounded-md bg-secondary px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-foreground">
+                            {unit.code || "—"}
+                          </span>
+                          <span className="text-xs text-muted-foreground">{unit.customer_name}</span>
                         </div>
-                      </td>
-                      <td className="px-5 py-4 align-top text-sm text-foreground">{unit.customer_name}</td>
-                      <td className="px-5 py-4 align-top">
-                        <div className="flex gap-1.5 overflow-hidden">
+
+                        {/* Periods */}
+                        <div className="mt-2 flex flex-wrap gap-1.5">
                           {unit.periods.slice(0, 3).map((p) => {
                             const cls =
                               p.status === "approved" ? "border-emerald-200/60 bg-emerald-100/60 text-emerald-800"
@@ -568,22 +549,24 @@ function PayrollUnitsPage() {
                             );
                           })}
                           {unit.periods.length > 3 && (
-                            <span className="text-[11px] text-muted-foreground">
-                              +{unit.periods.length - 3}
-                            </span>
+                            <span className="text-[11px] text-muted-foreground">+{unit.periods.length - 3}</span>
                           )}
                         </div>
-                      </td>
-                      <td className="px-5 py-4 text-right align-top">
-                        <div className="text-2xl font-semibold text-foreground">{unit.active_employee_count}</div>
-                        <div className="text-xs text-muted-foreground">employees</div>
-                      </td>
-                      <td className="px-5 py-4 align-top" data-col="status">
-                        <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusCls}`}>
-                          {statusLabel}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4 text-right align-top whitespace-nowrap">
+                      </div>
+                    </div>
+
+                    {/* Right: Stats + Status + Action */}
+                    <div className="flex flex-col gap-2.5 sm:items-end sm:text-right">
+                      <div className="flex items-center gap-2 sm:flex-col sm:gap-0">
+                        <span className="text-2xl font-semibold text-foreground">{unit.active_employee_count}</span>
+                        <span className="text-xs text-muted-foreground">employees</span>
+                      </div>
+
+                      <span className={`inline-flex self-start rounded-full border px-2.5 py-1 text-[11px] font-medium sm:self-auto ${statusCls}`}>
+                        {statusLabel}
+                      </span>
+
+                      <div className="mt-1">
                         {!attendanceApproved ? (
                           <Link
                             to="/admin/attendance/$unitId"
@@ -641,16 +624,13 @@ function PayrollUnitsPage() {
                             <Wallet className="h-3.5 w-3.5" /> Compute wages
                           </Link>
                         )}
-                      </td>
-
-
-                    </tr>
-                  );
-                })
-              )}
-
-            </tbody>
-          </table>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </div>
