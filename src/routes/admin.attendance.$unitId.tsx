@@ -718,6 +718,31 @@ function MusterRollPage() {
         }
       }
 
+      const sheetCandidateIds = new Set<string>([
+        ...summaryByCandidate.keys(),
+        ...byCandidate.keys(),
+      ]);
+
+      for (const candidateId of sheetCandidateIds) {
+        const mr = primaryByCandidate.get(candidateId);
+        if (!mr) continue;
+        let query = supabase
+          .from("attendance_entries")
+          .delete()
+          .eq("unit_id", unitId)
+          .eq("candidate_id", candidateId)
+          .gte("entry_date", periodStart)
+          .lte("entry_date", periodEnd);
+        query = mr.designationId
+          ? query.eq("designation_id", mr.designationId)
+          : query.is("designation_id", null);
+        const { error } = await query;
+        if (error) throw error;
+      }
+
+      confidentCount = Array.from(byCandidate.values()).reduce((sum, rows) => sum + rows.length, 0);
+      uncertainCount = uncertainNext.size;
+
       for (const [candidateId, rows] of byCandidate.entries()) {
         const mr = primaryByCandidate.get(candidateId)!;
         await upsertEntries(
