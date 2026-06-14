@@ -1044,46 +1044,59 @@ function MusterRollPage() {
       </div>
 
       {/* Upload Attendance dialog */}
-      <Dialog open={uploadOpen} onOpenChange={(o) => { setUploadOpen(o); if (!o) { setUploadFile(null); setUploadPreview(null); setOcrSummary(null); } }}>
+      <Dialog open={uploadOpen} onOpenChange={(o) => { setUploadOpen(o); if (!o) { setUploadFile(null); setUploadPreview(null); setUploadKind(null); setOcrSummary(null); } }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Upload Attendance Sheet</DialogTitle>
             <DialogDescription>
-              Upload a photo or scan of the filled muster. The AI reads each cell and fills the table.
-              Cells it cannot read confidently are left blank and flagged in red so you can correct them manually.
+              Upload a photo/scan (AI reads each cell) or an Excel/CSV file (matched by employee name or code).
+              Cells the AI cannot read confidently are left blank and flagged in red so you can correct them manually.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <input
               ref={uploadInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,.xlsx,.xls,.xlsm,.csv,.ods"
               className="hidden"
               onChange={(e) => onPickUploadFile(e.target.files?.[0] ?? null)}
             />
-            {!uploadPreview ? (
+            {!uploadFile ? (
               <button
                 type="button"
                 onClick={() => uploadInputRef.current?.click()}
                 className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-muted/30 px-6 py-10 text-sm text-muted-foreground hover:border-primary hover:text-primary"
               >
                 <Upload className="h-6 w-6" />
-                <span>Click to choose an attendance sheet image</span>
-                <span className="text-xs">PNG, JPG, HEIC etc.</span>
+                <span>Click to choose an attendance image or Excel file</span>
+                <span className="text-xs">PNG, JPG, HEIC · XLSX, XLS, CSV</span>
               </button>
-            ) : (
+            ) : uploadKind === "image" && uploadPreview ? (
               <div className="space-y-2">
                 <div className="overflow-hidden rounded-lg border border-border bg-muted/20">
                   <img src={uploadPreview} alt="Attendance preview" className="max-h-80 w-full object-contain" />
                 </div>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>{uploadFile?.name}</span>
-                  <button
-                    type="button"
-                    className="text-primary hover:underline"
-                    onClick={() => uploadInputRef.current?.click()}
-                  >
-                    Choose a different image
+                  <span className="inline-flex items-center gap-1.5"><ImageIcon className="h-3.5 w-3.5" /> {uploadFile.name}</span>
+                  <button type="button" className="text-primary hover:underline" onClick={() => uploadInputRef.current?.click()}>
+                    Choose a different file
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/20 px-4 py-6">
+                  <FileSpreadsheet className="h-8 w-8 text-emerald-600" />
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate text-sm font-medium">{uploadFile.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      Excel/CSV · matched by employee name or code · dates from header row
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end text-xs">
+                  <button type="button" className="text-primary hover:underline" onClick={() => uploadInputRef.current?.click()}>
+                    Choose a different file
                   </button>
                 </div>
               </div>
@@ -1099,12 +1112,13 @@ function MusterRollPage() {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={() => setUploadOpen(false)} disabled={processingOcr}>Close</Button>
-            <Button onClick={processAttendanceImage} disabled={!uploadPreview || processingOcr}>
-              {processingOcr ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Reading…</> : "Process & Fill"}
+            <Button onClick={processUpload} disabled={!uploadFile || processingOcr}>
+              {processingOcr ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> {uploadKind === "excel" ? "Importing…" : "Reading…"}</> : (uploadKind === "excel" ? "Import & Fill" : "Process & Fill")}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
 
       {/* Approval workflow */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-3 print:hidden">
