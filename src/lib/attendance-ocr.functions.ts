@@ -115,8 +115,10 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
           content: [
             { type: "text" as const, text: promptText },
             {
-              type: "image_url" as const,
-              image_url: { url: data.imageDataUrl },
+              type: "image" as const,
+              image: data.imageDataUrl.startsWith("data:")
+                ? { source: { url: data.imageDataUrl } }
+                : { url: data.imageDataUrl },
             },
           ],
         },
