@@ -521,6 +521,111 @@ function MusterRollPage() {
   const [otPickerRowKey, setOtPickerRowKey] = useState<string | null>(null);
   const [otPickerDates, setOtPickerDates] = useState<string[]>([]);
 
+  // ---- OCR upload state ----
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<string | null>(null);
+  const [processingOcr, setProcessingOcr] = useState(false);
+  const [uncertainCells, setUncertainCells] = useState<Set<string>>(new Set());
+  const [ocrSummary, setOcrSummary] = useState<string | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const runOcr = useServerFn(extractAttendanceFromImage);
+
+  const onPickUploadFile = (file: File | null) => {
+    setUploadFile(file);
+    setUploadPreview(null);
+    setOcrSummary(null);
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setUploadPreview(String(reader.result));
+    reader.readAsDataURL(file);
+  };
+
+  const processAttendanceImage = async () => {
+    if (!uploadPreview) { toast.error("Choose an image first"); return; }
+    if (!editable) { toast.error("Sheet is locked"); return; }
+    if (!musterRows.length) { toast.error("No employees in this muster"); return; }
+    if (!codes.length) { toast.error("No attendance codes configured"); return; }
+    setProcessingOcr(true);
+    setOcrSummary(null);
+    try {
+      const primaryByCandidate = new Map<string, typeof musterRows[number]>();
+      for (const mr of musterRows) {
+        if (mr.isPrimary && !primaryByCandidate.has(mr.candidateId)) {
+          primaryByCandidate.set(mr.candidateId, mr);
+        }
+      }
+      const employeesPayload = Array.from(primaryByCandidate.values()).map((mr) => ({
+        id: mr.candidateId,
+        name: mr.emp.full_name,
+        employee_code: mr.emp.employee_code ?? null,
+        designation: mr.designationName ?? null,
+      }));
+      const result = await runOcr({
+        data: {
+          imageDataUrl: uploadPreview,
+          dates: periodCells.map((c) => c.date),
+          employees: employeesPayload,
+          codes: codes.map((c) => ({ code: c.code, label: c.label })),
+        },
+      });
+
+      // Group rows by candidate so we can upsert in one shot per employee
+      const validDates = new Set(periodCells.map((c) => c.date));
+      const byCandidate = new Map<string, typeof result.rows>();
+      const uncertainNext = new Set<string>();
+      let confidentCount = 0;
+      let uncertainCount = 0;
+
+      for (const r of result.rows) {
+        if (!validDates.has(r.entry_date)) continue;
+        if (r.entry_date > todayStr) continue;
+        const mr = primaryByCandidate.get(r.candidate_id);
+        if (!mr) continue;
+        const cellKey = `${mr.key}|${r.entry_date}`;
+        if (r.confident && r.code) {
+          const list = byCandidate.get(r.candidate_id) ?? [];
+          list.push(r);
+          byCandidate.set(r.candidate_id, list);
+          confidentCount += 1;
+        } else {
+          uncertainNext.add(cellKey);
+          uncertainCount += 1;
+        }
+      }
+
+      for (const [candidateId, rows] of byCandidate.entries()) {
+        const mr = primaryByCandidate.get(candidateId)!;
+        await upsertEntries(
+          candidateId,
+          mr.designationId,
+          rows.map((r) => ({ entry_date: r.entry_date, code: r.code, ot_hours: r.ot_hours })),
+        );
+      }
+      await queryClient.invalidateQueries({ queryKey: entriesQK });
+
+      setUncertainCells((prev) => {
+        const next = new Set(prev);
+        for (const k of uncertainNext) next.add(k);
+        return next;
+      });
+
+      const summary = `${confidentCount} cell${confidentCount === 1 ? "" : "s"} auto-filled · ${uncertainCount} flagged for review${result.unmatched_names.length ? ` · ${result.unmatched_names.length} unmatched row${result.unmatched_names.length === 1 ? "" : "s"}` : ""}`;
+      setOcrSummary(summary);
+      toast.success(summary);
+      logActivity({
+        module: "Attendance",
+        action: "Upload attendance image (OCR)",
+        details: `${confidentCount} filled, ${uncertainCount} flagged · unit ${unitId}`,
+      }).catch(() => {});
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "OCR failed");
+    } finally {
+      setProcessingOcr(false);
+    }
+  };
+
+
   useEffect(() => {
     if (!isDragging) return;
     const onUp = () => {
