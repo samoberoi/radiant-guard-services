@@ -214,9 +214,6 @@ function CustomerManagerPage() {
                   <td className="px-5 py-3 font-mono text-xs text-foreground">
                     {c.phone || <span className="italic opacity-60">—</span>}
                   </td>
-                  <td className="px-5 py-3 text-foreground">
-                    {formatDate(c.contractStartDate)}
-                  </td>
                   <td className="px-5 py-3">
                     <StatusBadge status={c.status} />
                   </td>
