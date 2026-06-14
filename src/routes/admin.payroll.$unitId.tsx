@@ -127,6 +127,7 @@ function PayrollUnitPage() {
 
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const transitionRun = useMutation({
     mutationFn: async (next: { status: RunStatus; reason?: string }) => {
