@@ -381,7 +381,8 @@
     border-color: color-mix(in oklab, var(--accent) 38%, transparent);
   }
   .ios-table [data-col="actions"] {
-    width: 168px;
+    width: 260px;
+    min-width: 260px;
     white-space: nowrap;
     text-align: right;
   }
@@ -461,7 +462,7 @@
     justify-content: center;
     flex: 0 0 auto;
   }
-  .ios-table [data-col="status"] { min-width: 140px; white-space: nowrap; }
+  .ios-table [data-col="status"] { width: 140px; min-width: 140px; white-space: nowrap; }
   .ios-table [data-col="approval"] { min-width: 156px; white-space: nowrap; }
   .ios-table [data-col="date"] { width: 108px; }
   .ios-table [data-col="code"] { width: 150px; }
