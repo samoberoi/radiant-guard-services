@@ -196,15 +196,16 @@ function CustomerManagerPage() {
                       </div>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground">
+                  <td className="px-5 py-3 text-muted-foreground" data-wrap="true">
                     {c.website ? (
                       <a
                         href={normaliseUrl(c.website)}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-foreground hover:text-accent"
+                        className="cell-pill"
+                        title={c.website}
                       >
-                        {c.website}
+                        <span>{c.website}</span>
                         <ExternalLink className="h-3 w-3" />
                       </a>
                     ) : (
