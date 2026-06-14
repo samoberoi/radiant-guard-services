@@ -1217,7 +1217,7 @@ function EmployeesPage() {
     mutationFn: async (c: CandidateListItem) => {
       const { data, error } = await supabase
         .from("candidates" as never)
-        .update({ status: "approved", rejection_reason: "" } as unknown as never)
+        .update({ status: "active", rejection_reason: "" } as unknown as never)
         .eq("id", c.id)
         .select("id,employee_code,full_name")
         .single();
@@ -2500,7 +2500,8 @@ function StatusBadge({ status }: { status: string }) {
     pending: "bg-amber-500/15 text-amber-600",
     rejected: "bg-rose-500/15 text-rose-600",
   };
-  return <Badge className={cn("border-0 font-semibold capitalize whitespace-nowrap", map[status] ?? "bg-secondary text-foreground")}>{status}</Badge>;
+  const label = status === "approved" ? "active" : status;
+  return <Badge className={cn("border-0 font-semibold capitalize whitespace-nowrap", map[status] ?? "bg-secondary text-foreground")}>{label}</Badge>;
 }
 
 function maskAadhaar(n: string) {
