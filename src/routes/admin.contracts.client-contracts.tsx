@@ -3341,7 +3341,11 @@ function ResourceFormDialog({
                     <Plus className="mr-1 h-3.5 w-3.5" /> Add allowance
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-72 p-0" align="end">
+                <PopoverContent
+                  className="w-72 p-0"
+                  align="end"
+                  onOpenAutoFocus={(e) => e.preventDefault()}
+                >
                   <Command shouldFilter={false}>
                     <CommandInput
                       placeholder="Search allowance…"
@@ -3393,22 +3397,9 @@ function ResourceFormDialog({
                         <X className="h-3 w-3" />
                       </button>
                     </Label>
-                    <Input
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      value={c.amount === 0 ? "" : String(c.amount)}
-                      onChange={(e) => {
-                        const raw = e.target.value.trim();
-                        if (raw === "") {
-                          updateAmount(c.allowanceId, 0);
-                          return;
-                        }
-                        if (!/^\d*\.?\d*$/.test(raw)) return;
-                        const n = parseFloat(raw);
-                        updateAmount(c.allowanceId, Number.isFinite(n) ? n : 0);
-                      }}
-                      onFocus={(e) => e.target.select()}
+                    <DecimalAmountInput
+                      value={c.amount}
+                      onValueChange={(amount) => updateAmount(c.allowanceId, amount)}
                     />
                   </div>
                 ))}
@@ -3448,7 +3439,11 @@ function ResourceFormDialog({
                     <Plus className="mr-1 h-3.5 w-3.5" /> Add component
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="end">
+                <PopoverContent
+                  className="w-80 p-0"
+                  align="end"
+                  onOpenAutoFocus={(e) => e.preventDefault()}
+                >
                   <Command key={benefitOptionsKey} shouldFilter={false}>
                     <CommandInput
                       placeholder="Which benefit would you like to add?"
@@ -3525,23 +3520,11 @@ function ResourceFormDialog({
                     </div>
                     <div className="flex items-center gap-2">
                       {b.calcType === "fixed" ? (
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="0.00"
-                          className="h-9 w-28"
-                          value={b.amount === 0 ? "" : String(b.amount)}
-                          onChange={(e) => {
-                            const raw = e.target.value.trim();
-                            if (raw === "") {
-                              updateBenefitAmount(b.costComponentId, 0);
-                              return;
-                            }
-                            if (!/^\d*\.?\d*$/.test(raw)) return;
-                            const n = parseFloat(raw);
-                            updateBenefitAmount(b.costComponentId, Number.isFinite(n) ? n : 0);
-                          }}
-                        />
+                         <DecimalAmountInput
+                           value={b.amount}
+                           className="h-9 w-28"
+                           onValueChange={(amount) => updateBenefitAmount(b.costComponentId, amount)}
+                         />
                       ) : (
                         <span className="w-28 text-right text-sm font-semibold text-foreground">
                           {b.amount.toFixed(2)}
@@ -3595,7 +3578,11 @@ function ResourceFormDialog({
                     <Plus className="mr-1 h-3.5 w-3.5" /> Add component
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="end">
+                <PopoverContent
+                  className="w-80 p-0"
+                  align="end"
+                  onOpenAutoFocus={(e) => e.preventDefault()}
+                >
                   <Command key={deductionOptionsKey} shouldFilter={false}>
                     <CommandInput
                       placeholder="Which deduction would you like to add?"
@@ -3672,23 +3659,11 @@ function ResourceFormDialog({
                     </div>
                     <div className="flex items-center gap-2">
                       {b.calcType === "fixed" ? (
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="0.00"
-                          className="h-9 w-28"
-                          value={b.amount === 0 ? "" : String(b.amount)}
-                          onChange={(e) => {
-                            const raw = e.target.value.trim();
-                            if (raw === "") {
-                              updateDeductionAmount(b.costComponentId, 0);
-                              return;
-                            }
-                            if (!/^\d*\.?\d*$/.test(raw)) return;
-                            const n = parseFloat(raw);
-                            updateDeductionAmount(b.costComponentId, Number.isFinite(n) ? n : 0);
-                          }}
-                        />
+                         <DecimalAmountInput
+                           value={b.amount}
+                           className="h-9 w-28"
+                           onValueChange={(amount) => updateDeductionAmount(b.costComponentId, amount)}
+                         />
                       ) : (
                         <span className="w-28 text-right text-sm font-semibold text-foreground">
                           {b.amount.toFixed(2)}
@@ -3751,7 +3726,11 @@ function ResourceFormDialog({
                     <Plus className="mr-1 h-3.5 w-3.5" /> Add component
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="end">
+                <PopoverContent
+                  className="w-80 p-0"
+                  align="end"
+                  onOpenAutoFocus={(e) => e.preventDefault()}
+                >
                   <Command key={employerOptionsKey} shouldFilter={false}>
                     <CommandInput
                       placeholder="Which contribution would you like to add?"
@@ -3828,23 +3807,11 @@ function ResourceFormDialog({
                     </div>
                     <div className="flex items-center gap-2">
                       {b.calcType === "fixed" ? (
-                        <Input
-                          type="text"
-                          inputMode="decimal"
-                          placeholder="0.00"
-                          className="h-9 w-28"
-                          value={b.amount === 0 ? "" : String(b.amount)}
-                          onChange={(e) => {
-                            const raw = e.target.value.trim();
-                            if (raw === "") {
-                              updateEmployerAmount(b.costComponentId, 0);
-                              return;
-                            }
-                            if (!/^\d*\.?\d*$/.test(raw)) return;
-                            const n = parseFloat(raw);
-                            updateEmployerAmount(b.costComponentId, Number.isFinite(n) ? n : 0);
-                          }}
-                        />
+                         <DecimalAmountInput
+                           value={b.amount}
+                           className="h-9 w-28"
+                           onValueChange={(amount) => updateEmployerAmount(b.costComponentId, amount)}
+                         />
                       ) : (
                         <span className="w-28 text-right text-sm font-semibold text-foreground">
                           {b.amount.toFixed(2)}
