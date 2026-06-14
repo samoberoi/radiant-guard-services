@@ -537,8 +537,8 @@ function PayrollUnitPage() {
       </Dialog>
 
       <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
-        <div className="overflow-x-clip">
-          <table className="ios-table min-w-full table-auto text-sm">
+        <div className="overflow-x-auto overscroll-x-contain">
+          <table className="ios-table min-w-[1180px] table-auto text-sm">
             <thead className="border-b border-border/60 bg-secondary/40">
               <tr className="text-left text-xs uppercase tracking-[0.16em] text-muted-foreground">
                 <th className="px-4 py-3 font-medium">Emp ID</th>
