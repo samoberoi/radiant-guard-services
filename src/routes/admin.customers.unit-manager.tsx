@@ -340,25 +340,26 @@ function UnitManagerPage() {
               {rows.map((u) => (
                 <tr key={u.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs font-semibold text-accent">{u.code}</td>
-                  <td className="px-5 py-3 font-semibold text-foreground">{u.name}</td>
-                  <td className="px-5 py-3 text-muted-foreground">
-                    <div className="flex items-center gap-2">
+                  <td className="px-5 py-3 font-semibold text-foreground" data-wrap="true">{u.name}</td>
+                  <td className="px-5 py-3 text-muted-foreground" data-wrap="true">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span>{u.location || <span className="italic opacity-60">—</span>}</span>
                       {(u.latitude != null && u.longitude != null) && (
                         <a
                           href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 rounded-md border border-border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent hover:bg-accent/10"
+                          className="cell-pill"
                           title="Open in Google Maps"
                         >
-                          <MapPin className="h-3 w-3" /> Map
+                          <MapPin className="h-3 w-3" />
+                          <span>Map</span>
                         </a>
                       )}
                     </div>
                   </td>
-                  <td className="px-5 py-3 text-foreground">{u.branchLabel}</td>
-                  <td className="px-5 py-3 text-foreground">{u.customerLabel}</td>
+                  <td className="px-5 py-3 text-foreground" data-wrap="true">{u.branchLabel}</td>
+                  <td className="px-5 py-3 text-foreground" data-wrap="true">{u.customerLabel}</td>
                   <td className="px-5 py-3">
                     <StatusBadge active={u.status === "active"} />
                   </td>

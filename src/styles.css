@@ -342,7 +342,44 @@
   .ios-table tbody td:first-child { padding-left: 20px; }
   .ios-table tbody td:last-child { padding-right: 20px; overflow: visible; }
   .ios-table tbody td[data-wrap="false"] { white-space: nowrap; }
+  /* Wrappable cells: allow the content to flow onto multiple lines and
+     reveal full text instead of truncating with an ellipsis. */
+  .ios-table tbody td[data-wrap="true"] {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
   .ios-table tbody td > * { min-width: 0; max-width: 100%; }
+
+  /* Inline pill used inside table cells for things like website / map / tag
+     links. Stays as a single rounded capsule even when the surrounding cell
+     is narrow — the label inside truncates instead of the pill clipping. */
+  .cell-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 4px 10px;
+    border-radius: 9999px;
+    background: color-mix(in oklab, var(--accent) 10%, white);
+    border: 1px solid color-mix(in oklab, var(--accent) 22%, transparent);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .cell-pill > span { overflow: hidden; text-overflow: ellipsis; }
+  .cell-pill > svg { flex: 0 0 auto; height: 12px; width: 12px; }
+  .cell-pill:hover {
+    background: color-mix(in oklab, var(--accent) 18%, white);
+    border-color: color-mix(in oklab, var(--accent) 38%, transparent);
+  }
   .ios-table [data-col="actions"] {
     width: 168px;
     white-space: nowrap;

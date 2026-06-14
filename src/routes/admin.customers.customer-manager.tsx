@@ -188,23 +188,24 @@ function CustomerManagerPage() {
                   <td className="px-5 py-3 font-mono text-xs font-semibold text-accent">
                     {c.code}
                   </td>
-                  <td className="px-5 py-3">
-                    <div className="truncate font-semibold text-foreground">{c.name}</div>
+                  <td className="px-5 py-3" data-wrap="true">
+                    <div className="font-semibold text-foreground">{c.name}</div>
                     {c.address && (
-                      <div className="truncate text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {c.address}
                       </div>
                     )}
                   </td>
-                  <td className="px-5 py-3 text-muted-foreground">
+                  <td className="px-5 py-3 text-muted-foreground" data-wrap="true">
                     {c.website ? (
                       <a
                         href={normaliseUrl(c.website)}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-foreground hover:text-accent"
+                        className="cell-pill"
+                        title={c.website}
                       >
-                        {c.website}
+                        <span>{c.website}</span>
                         <ExternalLink className="h-3 w-3" />
                       </a>
                     ) : (
