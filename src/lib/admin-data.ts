@@ -601,7 +601,11 @@ type UnitRow = {
   customer_id: string | null;
   onboarding_date: string | null;
   closing_date: string | null;
+  contract_start_date: string | null;
+  contract_end_date: string | null;
   pan_number: string | null;
+  gst_payable: boolean | null;
+  gst_type: string | null;
   gst_number: string | null;
   billing_salutation: string | null;
   billing_name: string | null;
