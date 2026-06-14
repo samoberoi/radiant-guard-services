@@ -58,6 +58,14 @@ type EntryRow = {
   ot_hours: number;
 };
 
+type OcrRowSummary = {
+  candidate_id: string;
+  p_days: number | null;
+  ot_days: number | null;
+  t_days: number | null;
+  confident: boolean;
+};
+
 const SERVICE_PROVIDER = {
   name: "Radiant Guard Services Private Limited",
   address: "Office No. 818, 8th Floor, Clover Hills Plaza, NIBM Road, Pune. 411048",
@@ -78,6 +86,15 @@ function ymd(year: number, monthIdx0: number, day: number) {
   const m = String(monthIdx0 + 1).padStart(2, "0");
   const d = String(day).padStart(2, "0");
   return `${year}-${m}-${d}`;
+}
+
+function roundHalf(value: number) {
+  return Math.round(value * 2) / 2;
+}
+
+function nearlyEqual(a: number | null, b: number | null, epsilon = 0.01) {
+  if (a == null || b == null) return false;
+  return Math.abs(a - b) <= epsilon;
 }
 
 async function downscaleImage(file: File, maxDim: number, quality: number): Promise<string> {
@@ -628,6 +645,7 @@ function MusterRollPage() {
       const validDates = new Set(periodCells.map((c) => c.date));
       const byCandidate = new Map<string, typeof result.rows>();
       const uncertainNext = new Set<string>();
+      const rejectedRowCandidates = new Set<string>();
       let confidentCount = 0;
       let uncertainCount = 0;
 
@@ -648,6 +666,83 @@ function MusterRollPage() {
         }
       }
 
+      const computeImportedSummary = (rows: Array<{ entry_date: string; code: string; ot_hours: number }>): OcrRowSummary => {
+        let pDays = 0;
+        let otherPaidDays = 0;
+        let phCount = 0;
+        let otHours = 0;
+        for (const row of rows) {
+          otHours += Number(row.ot_hours) || 0;
+          const meta = codeMap.get(row.code);
+          if (!meta) continue;
+          if (row.code === "PH") {
+            phCount += 1;
+            continue;
+          }
+          if (meta.counts_as_present) pDays += 1;
+          else if (meta.is_paid) otherPaidDays += 1;
+        }
+        const otDays = roundHalf(otHours / 8);
+        const tDays = roundHalf(pDays + otherPaidDays + phCount * 2 + otDays);
+        return {
+          candidate_id: "",
+          p_days: roundHalf(pDays),
+          ot_days: otDays,
+          t_days: tDays,
+          confident: true,
+        };
+      };
+
+      const summaryByCandidate = new Map(
+        (result.row_summaries ?? []).map((summary) => [summary.candidate_id, summary as OcrRowSummary]),
+      );
+
+      for (const [candidateId, rows] of Array.from(byCandidate.entries())) {
+        const expected = summaryByCandidate.get(candidateId);
+        if (!expected?.confident) continue;
+        const actual = computeImportedSummary(rows);
+        const pOk = expected.p_days == null || nearlyEqual(actual.p_days, roundHalf(expected.p_days));
+        const otOk = expected.ot_days == null || nearlyEqual(actual.ot_days, roundHalf(expected.ot_days));
+        const tOk = expected.t_days == null || nearlyEqual(actual.t_days, roundHalf(expected.t_days));
+        if (!pOk || !otOk || !tOk) {
+          rejectedRowCandidates.add(candidateId);
+          byCandidate.delete(candidateId);
+        }
+      }
+
+      for (const candidateId of rejectedRowCandidates) {
+        const mr = primaryByCandidate.get(candidateId);
+        if (!mr) continue;
+        for (const cell of periodCells) {
+          uncertainNext.add(`${mr.key}|${cell.date}`);
+        }
+      }
+
+      const sheetCandidateIds = new Set<string>([
+        ...summaryByCandidate.keys(),
+        ...byCandidate.keys(),
+      ]);
+
+      for (const candidateId of sheetCandidateIds) {
+        const mr = primaryByCandidate.get(candidateId);
+        if (!mr) continue;
+        let query = supabase
+          .from("attendance_entries")
+          .delete()
+          .eq("unit_id", unitId)
+          .eq("candidate_id", candidateId)
+          .gte("entry_date", periodStart)
+          .lte("entry_date", periodEnd);
+        query = mr.designationId
+          ? query.eq("designation_id", mr.designationId)
+          : query.is("designation_id", null);
+        const { error } = await query;
+        if (error) throw error;
+      }
+
+      confidentCount = Array.from(byCandidate.values()).reduce((sum, rows) => sum + rows.length, 0);
+      uncertainCount = uncertainNext.size;
+
       for (const [candidateId, rows] of byCandidate.entries()) {
         const mr = primaryByCandidate.get(candidateId)!;
         await upsertEntries(
@@ -664,7 +759,7 @@ function MusterRollPage() {
         return next;
       });
 
-      const summary = `${confidentCount} cell${confidentCount === 1 ? "" : "s"} auto-filled · ${uncertainCount} flagged for review${result.unmatched_names.length ? ` · ${result.unmatched_names.length} unmatched row${result.unmatched_names.length === 1 ? "" : "s"}` : ""}`;
+      const summary = `${confidentCount} cell${confidentCount === 1 ? "" : "s"} auto-filled · ${uncertainCount} flagged for review${rejectedRowCandidates.size ? ` · ${rejectedRowCandidates.size} row${rejectedRowCandidates.size === 1 ? "" : "s"} rejected by totals check` : ""}${result.unmatched_names.length ? ` · ${result.unmatched_names.length} unmatched row${result.unmatched_names.length === 1 ? "" : "s"}` : ""}`;
       setOcrSummary(summary);
       setUploadReadyToContinue(true);
       toast.success(summary);

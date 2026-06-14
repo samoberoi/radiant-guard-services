@@ -36,8 +36,17 @@ export type AttendanceOcrRow = {
   confident: boolean;
 };
 
+export type AttendanceOcrRowSummary = {
+  candidate_id: string;
+  p_days: number | null;
+  ot_days: number | null;
+  t_days: number | null;
+  confident: boolean;
+};
+
 export type AttendanceOcrResult = {
   rows: AttendanceOcrRow[];
+  row_summaries: AttendanceOcrRowSummary[];
   unmatched_names: string[];
   notes: string;
 };
@@ -52,9 +61,14 @@ ABSOLUTE RULES:
 4. Match each visible row to one employee in the list by name OR employee_code. Use candidate_id (UUID) in output, NEVER the name. If you cannot match a row to an employee with 100% certainty, add the visible name to unmatched_names and DO NOT guess a candidate_id.
 5. "code" MUST be exactly one of the provided code strings (case-sensitive). P=present, A=absent etc. only when they exactly match a provided code. If unsure, set code to "" and confident to false.
 6. "ot_hours" is the overtime number for that day cell (OT sub-row under each day belongs to the same date). 0 if blank. If the OT digit is unclear, set confident=false for that cell.
-7. Return ONLY a single JSON object with exactly these top-level keys: rows, unmatched_names, notes. No markdown fences, no prose.
-8. Each row item uses keys: candidate_id, entry_date, code, ot_hours, confident. ot_hours is a number; confident is true or false.
-9. In "notes", state the largest visible day number N you saw on the sheet header (e.g. "visible_days=30").`;
+7. Cross-check each matched employee row against the handwritten/printed totals on the RIGHT side of the same row (P Days, OT, T Days). If the day cells you read do not reconcile with those row totals, that row is NOT reliable.
+8. Return ONLY a single JSON object with exactly these top-level keys: rows, row_summaries, unmatched_names, notes. No markdown fences, no prose.
+9. Each row_summaries item uses keys: candidate_id, p_days, ot_days, t_days, confident.
+   - Output numeric DAY values, not text. Examples: "8:4" means 8.5 days, "44:8" means 45 days.
+   - Set row_summaries[].confident=true ONLY when the right-side totals are clearly legible for that employee row.
+   - If a total is unreadable, use null for that field.
+10. Each row item uses keys: candidate_id, entry_date, code, ot_hours, confident. ot_hours is a number; confident is true or false.
+11. In "notes", state the largest visible day number N you saw on the sheet header (e.g. "visible_days=30").`;
 
 function stripMarkdownFences(text: string) {
   const trimmed = text.trim();
@@ -139,6 +153,31 @@ function toBoolean(value: unknown) {
   return Boolean(value);
 }
 
+function toDayNumber(value: unknown) {
+  if (value == null) return null;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? Math.max(0, value) : null;
+  }
+  if (typeof value === "string") {
+    const raw = value.trim();
+    if (!raw) return null;
+    const mixed = raw.match(/^(\d+(?:\.\d+)?)\s*:\s*(\d+(?:\.\d+)?)$/);
+    if (mixed) {
+      const days = Number(mixed[1]);
+      const hours = Number(mixed[2]);
+      if (Number.isFinite(days) && Number.isFinite(hours)) {
+        return Math.max(0, days + hours / 8);
+      }
+    }
+    const cleaned = raw.replace(/[^\d.\-]/g, "");
+    if (!cleaned) return null;
+    const num = Number(cleaned);
+    return Number.isFinite(num) ? Math.max(0, num) : null;
+  }
+  const num = Number(value);
+  return Number.isFinite(num) ? Math.max(0, num) : null;
+}
+
 export const extractAttendanceFromImage = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<AttendanceOcrResult> => {
@@ -154,7 +193,7 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
     const codeList = data.codes.map((c) => `${c.code} = ${c.label}`).join(", ");
     const dateList = data.dates.join(", ");
 
-    const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (these are the calendar dates of the month — ONLY emit rows for the dates whose day-of-month is actually visible as a column on the sheet; if the printed header stops at day 30, do NOT emit day 31 even though it appears below):\n${dateList}\n\nEmployees (use the UUID as candidate_id, match by name or employee_code only with 100% certainty):\n${employeeList}\n\nReminder: confident=true ONLY when the cell is unambiguous and the code is in the allowed list. When in doubt → confident=false. Return ONLY a JSON object in this shape:\n{"rows":[{"candidate_id":"uuid","entry_date":"YYYY-MM-DD","code":"P","ot_hours":0,"confident":true}],"unmatched_names":[],"notes":"visible_days=NN"}`;
+    const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (these are the calendar dates of the month — ONLY emit rows for the dates whose day-of-month is actually visible as a column on the sheet; if the printed header stops at day 30, do NOT emit day 31 even though it appears below):\n${dateList}\n\nEmployees (use the UUID as candidate_id, match by name or employee_code only with 100% certainty):\n${employeeList}\n\nReminder: confident=true ONLY when the cell is unambiguous and the code is in the allowed list. When in doubt → confident=false. Also read the right-side row totals (P Days, OT, T Days) for each matched employee and return them in row_summaries. Return ONLY a JSON object in this shape:\n{"rows":[{"candidate_id":"uuid","entry_date":"YYYY-MM-DD","code":"P","ot_hours":0,"confident":true}],"row_summaries":[{"candidate_id":"uuid","p_days":26.5,"ot_days":18.5,"t_days":45,"confident":true}],"unmatched_names":[],"notes":"visible_days=NN"}`;
 
     const gateway = createLovableAiGatewayProvider(key);
     // gemini-2.5-flash is multimodal and ~5-10x faster than pro for OCR-style tasks
@@ -229,12 +268,36 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
       });
     }
 
+    const summaries = Array.isArray(output.row_summaries)
+      ? output.row_summaries
+          .map((item) => {
+            const summary = item as {
+              candidate_id?: unknown;
+              p_days?: unknown;
+              ot_days?: unknown;
+              t_days?: unknown;
+              confident?: unknown;
+            };
+            const candidate_id = String(summary.candidate_id ?? "");
+            if (!validIds.has(candidate_id)) return null;
+            return {
+              candidate_id,
+              p_days: toDayNumber(summary.p_days),
+              ot_days: toDayNumber(summary.ot_days),
+              t_days: toDayNumber(summary.t_days),
+              confident: toBoolean(summary.confident),
+            } satisfies AttendanceOcrRowSummary;
+          })
+          .filter((item): item is AttendanceOcrRowSummary => item !== null)
+      : [];
+
     const unmatched = Array.isArray(output.unmatched_names)
       ? output.unmatched_names.map((n) => String(n)).slice(0, 50)
       : [];
 
     return {
       rows: cleanedRows,
+      row_summaries: summaries,
       unmatched_names: unmatched,
       notes: notesStr,
     };
