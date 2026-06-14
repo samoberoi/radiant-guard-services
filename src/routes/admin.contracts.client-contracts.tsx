@@ -2147,10 +2147,14 @@ function ContractFormDialog({
           {/* Client Information */}
           <Section title="Client Information">
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label={editing && editing.recordType === "client" ? "Contract ID" : "Prospect ID"}>
+              <Field label="Contract ID">
                 <Input
                   value={editing && editing.recordType === "client" ? contractCode : prospectCode}
-                  readOnly
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (editing && editing.recordType === "client") setContractCode(v);
+                    else setProspectCode(v);
+                  }}
                   className="font-mono"
                 />
               </Field>
