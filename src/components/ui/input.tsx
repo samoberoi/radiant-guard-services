@@ -103,10 +103,64 @@ const DateInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input
 );
 DateInput.displayName = "DateInput";
 
+const DECIMAL_RE = /^-?\d*\.?\d*$/;
+
+const NumberInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
+  ({ className, value, defaultValue, onChange, onBlur, ...props }, ref) => {
+    const toStr = (v: unknown) =>
+      v === undefined || v === null || (typeof v === "number" && Number.isNaN(v)) ? "" : String(v);
+    const [draft, setDraft] = React.useState<string>(() =>
+      value !== undefined ? toStr(value) : toStr(defaultValue),
+    );
+
+    React.useEffect(() => {
+      if (value === undefined) return;
+      const incoming = toStr(value);
+      // Avoid clobbering an in-progress decimal like "1." when parent echoes 1
+      if (parseFloat(incoming) !== parseFloat(draft) || (draft === "" && incoming !== "")) {
+        setDraft(incoming);
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [value]);
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const v = e.target.value;
+      if (v !== "" && !DECIMAL_RE.test(v)) return;
+      setDraft(v);
+      onChange?.(e);
+    };
+
+    const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+      if (draft.endsWith(".") || draft === "-" || draft === "-.") {
+        const cleaned = draft.replace(/\.$/, "").replace(/^-\.?$/, "");
+        setDraft(cleaned);
+      }
+      onBlur?.(e);
+    };
+
+    return (
+      <input
+        {...props}
+        ref={ref}
+        type="text"
+        inputMode="decimal"
+        value={draft}
+        onChange={handleChange}
+        onBlur={handleBlur}
+        className={cn(baseClasses, className)}
+      />
+    );
+  },
+);
+NumberInput.displayName = "NumberInput";
+
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   ({ className, type, ...props }, ref) => {
     if (type === "date") {
       return <DateInput className={className} {...props} ref={ref} />;
+    }
+    if (type === "number") {
+      return <NumberInput className={className} {...props} ref={ref} />;
     }
     return (
       <input
