@@ -42,19 +42,19 @@ export type AttendanceOcrResult = {
   notes: string;
 };
 
-const SYSTEM_PROMPT = `You are an OCR engine that reads a hand-written or printed monthly attendance / muster-roll sheet from India.
+const SYSTEM_PROMPT = `You are a STRICT OCR engine reading a hand-written or printed monthly attendance / muster-roll sheet from India.
 You will be given the exact list of employees (id, name, employee_code, designation) and the exact list of period dates.
-Rules:
-- Match each visible row on the sheet to one employee in the provided list, by name OR employee_code. Use candidate_id (UUID) in the output, NEVER the name.
-- For each (employee, date) cell you can clearly read, emit one row. Skip cells that are blank on the sheet.
-- "code" MUST be one of the provided attendance code strings (case-sensitive), or "" if you cannot tell. Map common variants (P=present, A=absent, WO=week off, L=leave, OT marker etc.) only when they exactly match a provided code.
-- "ot_hours" is the overtime hours number for that cell, 0 when not applicable. Many sheets list OT on a separate sub-row under each day — attribute it to the same date.
-- Set "confident": false when the cell text is ambiguous, smudged, crossed out, partially visible, or you had to guess. Set true only when the cell is clearly legible AND the code is in the allowed list.
-- Never invent entries for blank cells. Never output a date that is not in the provided period list.
-- Return ONLY a single JSON object with exactly these top-level keys: rows, unmatched_names, notes.
-- Do not wrap the JSON in markdown fences or explanatory text.
-- Each item in rows must use keys: candidate_id, entry_date, code, ot_hours, confident.
-- ot_hours must be a number. confident must be true or false.`;
+
+ABSOLUTE RULES:
+1. VISIBLE DAYS ONLY — First, look at the day-number column headers printed on the sheet (e.g. "1 2 3 ... 30"). Note the LARGEST visible day number N. Do NOT emit any row whose entry_date day-of-month is greater than N, even if the period list contains later dates. If the sheet shows 30 days, never emit day 31.
+2. NEVER EXTRAPOLATE — Only emit a row for a cell you can actually SEE filled in on the paper. Empty/blank cells = no row. Do not pattern-fill or assume continuation.
+3. 100% CONFIDENCE THRESHOLD — Set "confident": true ONLY if the handwriting is crystal clear AND unambiguous AND the symbol exactly matches one of the allowed codes. ANY doubt (smudge, overwrite, ambiguous letter, faint pen, partial visibility, looks like it could be two different codes) → "confident": false. When in doubt, mark false.
+4. Match each visible row to one employee in the list by name OR employee_code. Use candidate_id (UUID) in output, NEVER the name. If you cannot match a row to an employee with 100% certainty, add the visible name to unmatched_names and DO NOT guess a candidate_id.
+5. "code" MUST be exactly one of the provided code strings (case-sensitive). P=present, A=absent etc. only when they exactly match a provided code. If unsure, set code to "" and confident to false.
+6. "ot_hours" is the overtime number for that day cell (OT sub-row under each day belongs to the same date). 0 if blank. If the OT digit is unclear, set confident=false for that cell.
+7. Return ONLY a single JSON object with exactly these top-level keys: rows, unmatched_names, notes. No markdown fences, no prose.
+8. Each row item uses keys: candidate_id, entry_date, code, ot_hours, confident. ot_hours is a number; confident is true or false.
+9. In "notes", state the largest visible day number N you saw on the sheet header (e.g. "visible_days=30").`;
 
 function stripMarkdownFences(text: string) {
   const trimmed = text.trim();
