@@ -146,6 +146,7 @@ type AddressBlock = {
 type Candidate = {
   id: string;
   candidate_code: string;
+  employee_code: string;
   rejection_reason: string;
   aadhaar_number: string;
   full_name: string;
@@ -2538,6 +2539,7 @@ type CandidateForm = Omit<Candidate, "id"> & {
 function emptyForm(): CandidateForm {
   return {
     candidate_code: "",
+    employee_code: "",
     rejection_reason: "",
     aadhaar_number: "",
     full_name: "",
@@ -3300,6 +3302,14 @@ function CandidateWizard({
                   </Field>
                   <Field label="Aadhaar Number">
                     <Input value={form.aadhaar_number} disabled className="font-mono" />
+                  </Field>
+                  <Field label="Employee Code">
+                    <Input
+                      value={form.employee_code}
+                      placeholder="EMP-001"
+                      className="font-mono"
+                      onChange={(e) => set("employee_code", e.target.value)}
+                    />
                   </Field>
                 </div>
               </Section>
