@@ -2963,6 +2963,18 @@ function ResourceFormDialog({
       [c.name, c.state, c.id].join(" ").toLowerCase().includes(q),
     );
   }, [employerQuery, availableEmployer]);
+  const benefitOptionsKey = useMemo(
+    () => availableBenefits.map((c) => c.id).join("|") || "empty",
+    [availableBenefits],
+  );
+  const deductionOptionsKey = useMemo(
+    () => availableDeductions.map((c) => c.id).join("|") || "empty",
+    [availableDeductions],
+  );
+  const employerOptionsKey = useMemo(
+    () => availableEmployer.map((c) => c.id).join("|") || "empty",
+    [availableEmployer],
+  );
 
   const updateAmount = (allowanceId: string, amount: number) => {
     setComponents((prev) =>
@@ -3374,7 +3386,7 @@ function ResourceFormDialog({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="end">
-                  <Command shouldFilter={false}>
+                  <Command key={benefitOptionsKey} shouldFilter={false}>
                     <CommandInput
                       placeholder="Which benefit would you like to add?"
                       value={benefitQuery}
@@ -3521,7 +3533,7 @@ function ResourceFormDialog({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="end">
-                  <Command shouldFilter={false}>
+                  <Command key={deductionOptionsKey} shouldFilter={false}>
                     <CommandInput
                       placeholder="Which deduction would you like to add?"
                       value={deductionQuery}
@@ -3677,7 +3689,7 @@ function ResourceFormDialog({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="end">
-                  <Command shouldFilter={false}>
+                  <Command key={employerOptionsKey} shouldFilter={false}>
                     <CommandInput
                       placeholder="Which contribution would you like to add?"
                       value={employerQuery}
