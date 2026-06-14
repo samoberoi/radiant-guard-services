@@ -700,33 +700,6 @@ function PayrollUnitPage() {
   );
 }
 
-function SalaryBreakdownPreview({
-  employeeName,
-  employeeCode,
-  designationName,
-  tDays,
-  baseDays,
-  components,
-  benefits,
-  deductions,
-}: {
-  employeeName: string;
-  employeeCode: string;
-  designationName: string;
-  tDays: number;
-  baseDays: number;
-  components: { name: string; amount: number }[];
-  benefits: { name: string; amount: number }[];
-  deductions: { name: string; amount: number }[];
-}) {
-  const componentsTotal = components.reduce((s, c) => s + c.amount, 0);
-  const benefitsTotal = benefits.reduce((s, b) => s + b.amount, 0);
-  const gross = componentsTotal + benefitsTotal;
-  const deductionsTotal = deductions.reduce((s, b) => s + b.amount, 0);
-  const netPayable = gross - deductionsTotal;
-
-  const ratio = baseDays > 0 ? tDays / baseDays : 0;
-  const earnedFor = (amount: number) => Math.round(amount * ratio * 100) / 100;
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "emerald" | "amber" }) {
   const cls = tone === "emerald" ? "text-emerald-700" : tone === "amber" ? "text-amber-700" : "text-foreground";
   return (
