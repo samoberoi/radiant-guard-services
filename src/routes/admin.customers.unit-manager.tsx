@@ -64,6 +64,15 @@ export const Route = createFileRoute("/admin/customers/unit-manager")({
 
 const SALUTATIONS = ["Mr.", "Mrs.", "Ms.", "Dr.", "Mx."];
 
+const GST_TYPES = [
+  "Regular",
+  "Composition",
+  "SEZ Unit",
+  "SEZ Developer",
+  "Casual Taxable Person",
+  "Non-Resident Taxable Person",
+];
+
 function emptyUnit(code: string): Omit<Unit, "id"> {
   return {
     code,
