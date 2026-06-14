@@ -620,18 +620,8 @@ function CustomerFormDialog({
       const { id: _id, ...rest } = editing;
       void _id;
       setForm(rest);
-      // load existing GST numbers for this organisation
-      void (async () => {
-        const { data } = await supabase
-          .from("customer_gst_numbers" as never)
-          .select("id,gstin,label")
-          .eq("customer_id", editing.id);
-        const rows = ((data ?? []) as unknown) as Array<{ id: string; gstin: string; label: string }>;
-        setGstEntries(rows.map((r) => ({ id: r.id, gstin: r.gstin, label: r.label ?? "" })));
-      })();
     } else {
       setForm({ ...emptyCustomer(), code: nextCustomerCode(customers) });
-      setGstEntries([]);
     }
     setError(null);
   }, [open, editing, customers]);
