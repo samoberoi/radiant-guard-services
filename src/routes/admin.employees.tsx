@@ -1519,7 +1519,7 @@ function EmployeesPage() {
               />
             </td>
           )}
-          <td className="px-2.5 py-2.5 align-middle" data-col="status">
+          <td className="w-[140px] min-w-[140px] whitespace-nowrap px-2.5 py-2.5 align-middle" data-col="status">
             <div className="flex flex-col items-end gap-1.5">
               <div className="flex items-center justify-end gap-2">
                 <StatusBadge status={c.status} />
