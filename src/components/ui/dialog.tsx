@@ -153,9 +153,9 @@ const DialogContent = React.forwardRef<
     if (!contentElement || !dirtyCtx || dirtyCtx.disabled) return;
     dirtyCtx.reset();
     setPristine(true);
-    // Note: "upload" intentionally excluded — it clashes with file-upload tile buttons
-    // ("Upload (Image or PDF)") which are field inputs, not primary save actions.
-    const SAVE_RX = /^(save|update|create|add|submit|confirm|apply|generate|send|approve|sign|import|export|next|continue|finish|done)\b/i;
+    // Note: action words like "add"/"import" are intentionally excluded because
+    // dialogs also contain secondary controls such as "Add component" pickers.
+    const SAVE_RX = /^(save|update|create|submit|confirm|apply|generate|send|approve|sign|next|continue|finish|done)\b/i;
 
     const markDirty = (e: Event) => {
       // Programmatic value changes (React-driven prefill) shouldn't dirty.
