@@ -203,9 +203,11 @@ function UnitManagerPage() {
                   location: u.location,
                   description: u.description,
                   status: csvStatus(u.status),
-                  onboardingDate: csvDate(u.onboardingDate),
-                  closingDate: csvDate(u.closingDate),
+                  contractStartDate: csvDate(u.contractStartDate),
+                  contractEndDate: csvDate(u.contractEndDate),
                   pan: u.panNumber,
+                  gstPayable: csvYesNo(u.gstPayable),
+                  gstType: u.gstType,
                   gst: u.gstNumber,
                   billingContact: csvJoin([u.billingSalutation, u.billingName], " "),
                   billingAddress: csvJoin(
