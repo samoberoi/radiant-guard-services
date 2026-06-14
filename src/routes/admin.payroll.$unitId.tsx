@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Download, CheckCircle2, XCircle, Send, RotateCcw } from "lucide-react";
+import { ChevronLeft, Download, CheckCircle2, XCircle, Send, RotateCcw, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -127,6 +127,7 @@ function PayrollUnitPage() {
 
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const transitionRun = useMutation({
     mutationFn: async (next: { status: RunStatus; reason?: string }) => {
@@ -538,9 +539,10 @@ function PayrollUnitPage() {
 
       <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
         <div className="overflow-x-auto overscroll-x-contain">
-          <table className="ios-table min-w-[1180px] table-auto text-sm">
+          <table className="ios-table min-w-[1480px] table-auto text-sm">
             <thead className="border-b border-border/60 bg-secondary/40">
               <tr className="text-left text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                <th className="px-4 py-3 font-medium w-[60px]"></th>
                 <th className="px-4 py-3 font-medium">Emp ID</th>
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Designation</th>
@@ -556,20 +558,35 @@ function PayrollUnitPage() {
             </thead>
             <tbody className="divide-y divide-border/50">
               {isLoading ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">Computing wages…</td></tr>
+                <tr><td colSpan={12} className="px-4 py-10 text-center text-muted-foreground">Computing wages…</td></tr>
               ) : error ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
+                <tr><td colSpan={12} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
+                <tr><td colSpan={12} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
               ) : rows.map((r) => {
                 const isHighlighted = highlightCandidate === r.id;
                 const shortfall = r.wages ? Math.round((r.wages.contractGross - r.wages.earnedGross) * 100) / 100 : 0;
+                const isExpanded = expandedRows.has(r.rowKey);
                 return (
+                <>
                 <tr
                   key={r.rowKey}
                   id={`payroll-row-${r.rowKey}`}
                   className={`hover:bg-muted/40 ${isHighlighted ? "bg-emerald-50 ring-2 ring-emerald-400 dark:bg-emerald-950/40" : ""}`}
                 >
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => {
+                        const next = new Set(expandedRows);
+                        if (next.has(r.rowKey)) next.delete(r.rowKey);
+                        else next.add(r.rowKey);
+                        setExpandedRows(next);
+                      }}
+                      className="inline-flex items-center justify-center rounded-lg border border-border/60 bg-background p-1 hover:bg-muted transition-colors"
+                    >
+                      {isExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    </button>
+                  </td>
                   <td className="px-4 py-3 font-mono text-xs">{r.employeeCode || "—"}</td>
                   <td className="px-4 py-3 font-medium">{r.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{r.designation}</td>
@@ -582,12 +599,90 @@ function PayrollUnitPage() {
                   <td className="px-4 py-3 text-right font-semibold text-emerald-700">{r.wages ? fmtINR(r.wages.netPay) : "—"}</td>
                   <td className="px-4 py-3 text-right">{r.wages ? fmtINR(r.wages.employerCost) : "—"}</td>
                 </tr>
+                {isExpanded && r.wages && r.resource && (
+                  <tr key={`${r.rowKey}-detail`} className="bg-secondary/20">
+                    <td colSpan={12} className="px-4 py-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-xs my-3 rounded-lg border border-border/60 overflow-hidden">
+                          <tbody>
+                            <tr className="bg-muted/40">
+                              <td className="px-3 py-2 font-bold uppercase">Salary Particulars</td>
+                              <td className="px-3 py-2 text-center font-bold">{r.wages.baseDays} Days (contract)</td>
+                              <td className="px-3 py-2 text-right font-bold">Earned Rs.</td>
+                            </tr>
+                            {r.resource.components.filter((c) => Number(c.amount) > 0).map((c) => {
+                              const ratio = r.wages!.baseDays > 0 ? r.totals.tDays / r.wages!.baseDays : 0;
+                              const earned = Math.round(Number(c.amount) * ratio * 100) / 100;
+                              return (
+                                <tr key={`c-${c.name}`} className="border-b border-border/40">
+                                  <td className="px-3 py-2">{c.name}</td>
+                                  <td className="px-3 py-2 text-center tabular-nums">{Number(c.amount).toFixed(2)}</td>
+                                  <td className="px-3 py-2 text-right tabular-nums">{earned.toFixed(2)}</td>
+                                </tr>
+                              );
+                            })}
+                            {r.resource.benefits?.filter((b) => Number(b.amount) > 0).map((b) => {
+                              const ratio = r.wages!.baseDays > 0 ? r.totals.tDays / r.wages!.baseDays : 0;
+                              const earned = Math.round(Number(b.amount) * ratio * 100) / 100;
+                              return (
+                                <tr key={`b-${b.name}`} className="border-b border-border/40">
+                                  <td className="px-3 py-2">{b.name}</td>
+                                  <td className="px-3 py-2 text-center tabular-nums">{Number(b.amount).toFixed(2)}</td>
+                                  <td className="px-3 py-2 text-right tabular-nums">{earned.toFixed(2)}</td>
+                                </tr>
+                              );
+                            })}
+                            {(r.resource.components.filter((c) => Number(c.amount) > 0).length === 0 && (r.resource.benefits?.filter((b) => Number(b.amount) > 0).length ?? 0) === 0) && (
+                              <tr><td colSpan={3} className="px-3 py-3 text-center text-muted-foreground">No salary particulars configured.</td></tr>
+                            )}
+                            <tr className="bg-sky-100 font-bold dark:bg-sky-500/20">
+                              <td className="px-3 py-2 uppercase">TOTAL Gross Rs.</td>
+                              <td className="px-3 py-2 text-center tabular-nums">{(r.resource.components.reduce((s, c) => s + Number(c.amount), 0) + (r.resource.benefits?.reduce((s, b) => s + Number(b.amount), 0) ?? 0)).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{r.wages.earnedGross.toFixed(2)}</td>
+                            </tr>
+                            <tr className="bg-muted/40">
+                              <td className="px-3 py-2 font-bold uppercase">Deductions</td>
+                              <td className="px-3 py-2" />
+                              <td className="px-3 py-2 text-right font-bold">Earned Rs.</td>
+                            </tr>
+                            {r.resource.deductions?.filter((d) => Number(d.amount) > 0).map((d) => {
+                              const ratio = r.wages!.baseDays > 0 ? r.totals.tDays / r.wages!.baseDays : 0;
+                              const earned = Math.round(Number(d.amount) * ratio * 100) / 100;
+                              return (
+                                <tr key={`d-${d.name}`} className="border-b border-border/40">
+                                  <td className="px-3 py-2">{d.name}</td>
+                                  <td className="px-3 py-2 text-center tabular-nums">{Number(d.amount).toFixed(2)}</td>
+                                  <td className="px-3 py-2 text-right tabular-nums">{earned.toFixed(2)}</td>
+                                </tr>
+                              );
+                            })}
+                            {(r.resource.deductions?.filter((d) => Number(d.amount) > 0).length ?? 0) === 0 && (
+                              <tr><td colSpan={3} className="px-3 py-3 text-center text-muted-foreground">No deductions configured.</td></tr>
+                            )}
+                            <tr className="bg-rose-100 font-semibold dark:bg-rose-500/20">
+                              <td className="px-3 py-2 uppercase">Total Deductions Rs.</td>
+                              <td className="px-3 py-2 text-center tabular-nums">{(r.resource.deductions?.reduce((s, d) => s + Number(d.amount), 0) ?? 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{r.wages.totalDeductions.toFixed(2)}</td>
+                            </tr>
+                            <tr className="bg-cyan-100 font-bold dark:bg-cyan-500/20">
+                              <td className="px-3 py-2 uppercase">Total Amount (Payable) Rs.</td>
+                              <td className="px-3 py-2 text-center tabular-nums">{((r.resource.components.reduce((s, c) => s + Number(c.amount), 0) + (r.resource.benefits?.reduce((s, b) => s + Number(b.amount), 0) ?? 0)) - (r.resource.deductions?.reduce((s, d) => s + Number(d.amount), 0) ?? 0)).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-right tabular-nums">{r.wages.netPay.toFixed(2)}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                </>
                 );
               })}
             </tbody>
             {rows.length > 0 && (
               <tfoot className="border-t border-border/60 bg-secondary/30 text-sm font-semibold">
                 <tr>
+                  <td className="px-4 py-3" />
                   <td className="px-4 py-3" colSpan={5}>Totals</td>
                   <td className="px-4 py-3 text-right text-muted-foreground">{fmtINR(rows.reduce((s, r) => s + (r.wages?.contractGross ?? 0), 0))}</td>
                   <td className="px-4 py-3 text-right">{fmtINR(totals.earnedGross)}</td>
@@ -601,179 +696,9 @@ function PayrollUnitPage() {
           </table>
         </div>
       </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            Salary breakdown · contract vs earned
-          </h2>
-          <span className="text-xs text-muted-foreground">
-            Contract column = supposed payout · Earned column = actual based on T Days
-          </span>
-        </div>
-        {rows.filter((r) => r.wages && r.resource).map((r) => (
-          <SalaryBreakdownPreview
-            key={r.rowKey}
-            employeeName={r.name}
-            employeeCode={r.employeeCode}
-            designationName={r.designation}
-            tDays={r.totals.tDays}
-            baseDays={r.wages!.baseDays}
-            components={r.resource!.components.map((c) => ({ name: c.name, amount: Number(c.amount) || 0 }))}
-            benefits={(r.resource!.benefits ?? []).map((b) => ({ name: b.name, amount: Number(b.amount) || 0 }))}
-            deductions={(r.resource!.deductions ?? []).map((b) => ({ name: b.name, amount: Number(b.amount) || 0 }))}
-          />
-        ))}
-        {rows.filter((r) => !r.wages).length > 0 && (
-          <div className="rounded-xl border border-amber-300/60 bg-amber-50 p-3 text-xs text-amber-900">
-            {rows.filter((r) => !r.wages).length} employee(s) have no contract mapped for their designation and were excluded from the breakdown.
-          </div>
-        )}
-      </div>
     </div>
   );
 }
-
-function SalaryBreakdownPreview({
-  employeeName,
-  employeeCode,
-  designationName,
-  tDays,
-  baseDays,
-  components,
-  benefits,
-  deductions,
-}: {
-  employeeName: string;
-  employeeCode: string;
-  designationName: string;
-  tDays: number;
-  baseDays: number;
-  components: { name: string; amount: number }[];
-  benefits: { name: string; amount: number }[];
-  deductions: { name: string; amount: number }[];
-}) {
-  const componentsTotal = components.reduce((s, c) => s + c.amount, 0);
-  const benefitsTotal = benefits.reduce((s, b) => s + b.amount, 0);
-  const gross = componentsTotal + benefitsTotal;
-  const deductionsTotal = deductions.reduce((s, b) => s + b.amount, 0);
-  const netPayable = gross - deductionsTotal;
-
-  const ratio = baseDays > 0 ? tDays / baseDays : 0;
-  const earnedFor = (amount: number) => Math.round(amount * ratio * 100) / 100;
-  const earnedGross = earnedFor(gross);
-  const earnedDeductions = earnedFor(deductionsTotal);
-  const earnedNetPayable = earnedFor(netPayable);
-
-  const visibleComponents = components.filter((c) => c.amount > 0);
-  const visibleBenefits = benefits.filter((b) => b.amount > 0);
-  const visibleDeductions = deductions.filter((b) => b.amount > 0);
-
-  return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden">
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-secondary/40 px-4 py-2.5">
-        <div>
-          <h4 className="text-sm font-semibold text-foreground">
-            {employeeName}
-            {employeeCode && <span className="ml-2 text-xs font-mono text-muted-foreground">{employeeCode}</span>}
-          </h4>
-          <p className="mt-0.5 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            Salary Breakdown Preview
-          </p>
-        </div>
-      </div>
-      <div className="overflow-x-clip">
-        <table className="ios-table w-full text-sm">
-          <tbody className="[&_tr]:border-b [&_tr]:border-border/60 [&_td]:px-3 [&_td]:py-2">
-            <tr className="bg-secondary/20">
-              <td className="font-medium text-muted-foreground">Designation</td>
-              <td className="text-center font-semibold">{designationName || "—"}</td>
-              <td className="text-right text-muted-foreground">Total Payable Days</td>
-              <td className="text-right">
-                <span className="inline-block rounded bg-amber-200/70 px-2 py-0.5 font-bold text-amber-900 dark:bg-amber-300/30 dark:text-amber-100">
-                  {tDays}
-                </span>
-              </td>
-            </tr>
-            <tr className="bg-muted/40">
-              <td className="font-bold uppercase text-foreground">Salary Particulars</td>
-              <td className="text-center font-bold">{baseDays} Days (contract)</td>
-              <td />
-              <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
-            </tr>
-            {visibleComponents.length === 0 && visibleBenefits.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
-                  No salary particulars configured.
-                </td>
-              </tr>
-            ) : (
-              <>
-                {visibleComponents.map((c) => (
-                  <tr key={`c-${c.name}`}>
-                    <td>{c.name}</td>
-                    <td className="text-center tabular-nums">{c.amount.toFixed(2)}</td>
-                    <td />
-                    <td className="text-right tabular-nums">{earnedFor(c.amount).toFixed(2)}</td>
-                  </tr>
-                ))}
-                {visibleBenefits.map((b) => (
-                  <tr key={`b-${b.name}`}>
-                    <td>{b.name}</td>
-                    <td className="text-center tabular-nums">{b.amount.toFixed(2)}</td>
-                    <td />
-                    <td className="text-right tabular-nums">{earnedFor(b.amount).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </>
-            )}
-            <tr className="bg-sky-100 font-bold dark:bg-sky-500/20">
-              <td className="uppercase">TOTAL Gross Rs.</td>
-              <td className="text-center tabular-nums">{gross.toFixed(2)}</td>
-              <td />
-              <td className="text-right text-base tabular-nums">{earnedGross.toFixed(2)}</td>
-            </tr>
-            <tr className="bg-muted/40">
-              <td className="font-bold uppercase text-foreground">Deductions</td>
-              <td />
-              <td />
-              <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
-            </tr>
-            {visibleDeductions.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="py-3 text-center text-xs text-muted-foreground">
-                  No deductions configured.
-                </td>
-              </tr>
-            ) : (
-              visibleDeductions.map((b) => (
-                <tr key={`d-${b.name}`}>
-                  <td>{b.name}</td>
-                  <td className="text-center tabular-nums">{b.amount.toFixed(2)}</td>
-                  <td />
-                  <td className="text-right tabular-nums">{earnedFor(b.amount).toFixed(2)}</td>
-                </tr>
-              ))
-            )}
-            <tr className="bg-rose-100 font-semibold dark:bg-rose-500/20">
-              <td className="uppercase">Total Deductions Rs.</td>
-              <td className="text-center tabular-nums">{deductionsTotal.toFixed(2)}</td>
-              <td />
-              <td className="text-right tabular-nums">{earnedDeductions.toFixed(2)}</td>
-            </tr>
-            <tr className="bg-cyan-100 font-bold dark:bg-cyan-500/20">
-              <td className="uppercase">Total Amount (Payable) Rs.</td>
-              <td className="text-center tabular-nums">{netPayable.toFixed(2)}</td>
-              <td />
-              <td className="text-right text-base tabular-nums">{earnedNetPayable.toFixed(2)}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "emerald" | "amber" }) {
   const cls = tone === "emerald" ? "text-emerald-700" : tone === "amber" ? "text-amber-700" : "text-foreground";
