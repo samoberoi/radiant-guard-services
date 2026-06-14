@@ -546,14 +546,14 @@ function PayrollUnitPage() {
                 <th className="px-4 py-3 font-medium">Emp ID</th>
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Designation</th>
-                <th className="px-4 py-3 text-right font-medium">T Days</th>
-                <th className="px-4 py-3 text-right font-medium">OT Hrs</th>
-                <th className="px-4 py-3 text-right font-medium" title="Full contract gross — what would be paid for a full month">Projected</th>
-                <th className="px-4 py-3 text-right font-medium" title="Per-day × T Days based on actual attendance">Earned gross</th>
-                <th className="px-4 py-3 text-right font-medium" title="Projected − Earned (unpaid due to absence)">Shortfall</th>
-                <th className="px-4 py-3 text-right font-medium">Deductions</th>
-                <th className="px-4 py-3 text-right font-medium">Net pay</th>
-                <th className="px-4 py-3 text-right font-medium">Employer cost</th>
+                <th className="px-4 py-3 text-left font-medium">T Days</th>
+                <th className="px-4 py-3 text-left font-medium">OT Hrs</th>
+                <th className="px-4 py-3 text-left font-medium" title="Full contract gross — what would be paid for a full month">Projected</th>
+                <th className="px-4 py-3 text-left font-medium" title="Per-day × T Days based on actual attendance">Earned gross</th>
+                <th className="px-4 py-3 text-left font-medium" title="Projected − Earned (unpaid due to absence)">Shortfall</th>
+                <th className="px-4 py-3 text-left font-medium">Deductions</th>
+                <th className="px-4 py-3 text-left font-medium">Net pay</th>
+                <th className="px-4 py-3 text-left font-medium">Employer cost</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
@@ -590,14 +590,14 @@ function PayrollUnitPage() {
                   <td className="px-4 py-3 font-mono text-xs">{r.employeeCode || "—"}</td>
                   <td className="px-4 py-3 font-medium">{r.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{r.designation}</td>
-                  <td className="px-4 py-3 text-right">{r.totals.tDays}</td>
-                  <td className="px-4 py-3 text-right">{r.totals.otHours}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{r.wages ? fmtINR(r.wages.contractGross) : <span className="text-xs text-amber-600">no contract</span>}</td>
-                  <td className="px-4 py-3 text-right font-medium">{r.wages ? fmtINR(r.wages.earnedGross) : "—"}</td>
-                  <td className={`px-4 py-3 text-right ${shortfall > 0 ? "text-rose-600" : "text-muted-foreground"}`}>{r.wages ? (shortfall > 0 ? `− ${fmtINR(shortfall)}` : fmtINR(0)) : "—"}</td>
-                  <td className="px-4 py-3 text-right">{r.wages ? fmtINR(r.wages.totalDeductions) : "—"}</td>
-                  <td className="px-4 py-3 text-right font-semibold text-emerald-700">{r.wages ? fmtINR(r.wages.netPay) : "—"}</td>
-                  <td className="px-4 py-3 text-right">{r.wages ? fmtINR(r.wages.employerCost) : "—"}</td>
+                  <td className="px-4 py-3 text-left">{r.totals.tDays}</td>
+                  <td className="px-4 py-3 text-left">{r.totals.otHours}</td>
+                  <td className="px-4 py-3 text-left text-muted-foreground">{r.wages ? fmtINR(r.wages.contractGross) : <span className="text-xs text-amber-600">no contract</span>}</td>
+                  <td className="px-4 py-3 text-left font-medium">{r.wages ? fmtINR(r.wages.earnedGross) : "—"}</td>
+                  <td className={`px-4 py-3 text-left ${shortfall > 0 ? "text-rose-600" : "text-muted-foreground"}`}>{r.wages ? (shortfall > 0 ? `− ${fmtINR(shortfall)}` : fmtINR(0)) : "—"}</td>
+                  <td className="px-4 py-3 text-left">{r.wages ? fmtINR(r.wages.totalDeductions) : "—"}</td>
+                  <td className="px-4 py-3 text-left font-semibold text-emerald-700">{r.wages ? fmtINR(r.wages.netPay) : "—"}</td>
+                  <td className="px-4 py-3 text-left">{r.wages ? fmtINR(r.wages.employerCost) : "—"}</td>
                 </tr>
                 {isExpanded && r.wages && r.resource && (
                   <tr key={`${r.rowKey}-detail`} className="bg-secondary/20">
@@ -684,12 +684,12 @@ function PayrollUnitPage() {
                 <tr>
                   <td className="px-4 py-3" />
                   <td className="px-4 py-3" colSpan={5}>Totals</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{fmtINR(rows.reduce((s, r) => s + (r.wages?.contractGross ?? 0), 0))}</td>
-                  <td className="px-4 py-3 text-right">{fmtINR(totals.earnedGross)}</td>
-                  <td className="px-4 py-3 text-right text-rose-600">− {fmtINR(rows.reduce((s, r) => s + (r.wages ? r.wages.contractGross - r.wages.earnedGross : 0), 0))}</td>
-                  <td className="px-4 py-3 text-right">{fmtINR(totals.deductions)}</td>
-                  <td className="px-4 py-3 text-right text-emerald-700">{fmtINR(totals.net)}</td>
-                  <td className="px-4 py-3 text-right">{fmtINR(totals.employerCost)}</td>
+                  <td className="px-4 py-3 text-left text-muted-foreground">{fmtINR(rows.reduce((s, r) => s + (r.wages?.contractGross ?? 0), 0))}</td>
+                  <td className="px-4 py-3 text-left">{fmtINR(totals.earnedGross)}</td>
+                  <td className="px-4 py-3 text-left text-rose-600">− {fmtINR(rows.reduce((s, r) => s + (r.wages ? r.wages.contractGross - r.wages.earnedGross : 0), 0))}</td>
+                  <td className="px-4 py-3 text-left">{fmtINR(totals.deductions)}</td>
+                  <td className="px-4 py-3 text-left text-emerald-700">{fmtINR(totals.net)}</td>
+                  <td className="px-4 py-3 text-left">{fmtINR(totals.employerCost)}</td>
                 </tr>
               </tfoot>
             )}
