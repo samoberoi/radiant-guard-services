@@ -188,10 +188,10 @@ function CustomerManagerPage() {
                   <td className="px-5 py-3 font-mono text-xs font-semibold text-accent">
                     {c.code}
                   </td>
-                  <td className="px-5 py-3">
-                    <div className="truncate font-semibold text-foreground">{c.name}</div>
+                  <td className="px-5 py-3" data-wrap="true">
+                    <div className="font-semibold text-foreground">{c.name}</div>
                     {c.address && (
-                      <div className="truncate text-xs text-muted-foreground">
+                      <div className="text-xs text-muted-foreground">
                         {c.address}
                       </div>
                     )}
