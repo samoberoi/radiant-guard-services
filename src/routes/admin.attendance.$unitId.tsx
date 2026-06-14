@@ -1252,7 +1252,12 @@ function MusterRollPage() {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={() => setUploadOpen(false)} disabled={processingOcr}>Close</Button>
-            <Button onClick={processUpload} disabled={(!uploadFile && !uploadReadyToContinue) || processingOcr}>
+            <Button
+              type="button"
+              onClick={processUpload}
+              disabled={(!uploadFile && !uploadReadyToContinue) || processingOcr}
+              className={cn(uploadReadyToContinue && !processingOcr && "bg-primary text-primary-foreground opacity-100 hover:bg-primary/90")}
+            >
               {processingOcr ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> {uploadKind === "excel" ? "Importing…" : "Reading…"}</> : uploadReadyToContinue ? "Continue" : (uploadKind === "excel" ? "Import & Fill" : "Process & Fill")}
             </Button>
           </div>
