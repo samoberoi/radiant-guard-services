@@ -462,7 +462,7 @@
     justify-content: center;
     flex: 0 0 auto;
   }
-  .ios-table [data-col="status"] { min-width: 140px; white-space: nowrap; }
+  .ios-table [data-col="status"] { width: 140px; min-width: 140px; white-space: nowrap; }
   .ios-table [data-col="approval"] { min-width: 156px; white-space: nowrap; }
   .ios-table [data-col="date"] { width: 108px; }
   .ios-table [data-col="code"] { width: 150px; }
