@@ -1688,8 +1688,9 @@ function EmployeesPage() {
       <div className="flex items-center justify-between border-b border-border bg-accent/10 px-5 py-2.5 text-xs font-medium text-foreground">
         <span className="inline-flex items-center gap-2"><span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">{rows.length}</span><span className="uppercase tracking-[0.14em] text-muted-foreground">Total {rows.length === 1 ? "row" : "rows"}</span></span>
       </div>
-      <div className="w-full overflow-hidden">
-        <table className="ios-table w-full table-fixed text-sm">
+      <div className="w-full overflow-x-auto">
+        <table className="ios-table w-full text-sm">
+
           <thead className="border-b border-border/60 bg-secondary/40">
             <tr>
               <th className="w-[112px] px-3 py-3 text-left text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
