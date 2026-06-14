@@ -58,6 +58,14 @@ type EntryRow = {
   ot_hours: number;
 };
 
+type OcrRowSummary = {
+  candidate_id: string;
+  p_days: number | null;
+  ot_days: number | null;
+  t_days: number | null;
+  confident: boolean;
+};
+
 const SERVICE_PROVIDER = {
   name: "Radiant Guard Services Private Limited",
   address: "Office No. 818, 8th Floor, Clover Hills Plaza, NIBM Road, Pune. 411048",
@@ -78,6 +86,15 @@ function ymd(year: number, monthIdx0: number, day: number) {
   const m = String(monthIdx0 + 1).padStart(2, "0");
   const d = String(day).padStart(2, "0");
   return `${year}-${m}-${d}`;
+}
+
+function roundHalf(value: number) {
+  return Math.round(value * 2) / 2;
+}
+
+function nearlyEqual(a: number | null, b: number | null, epsilon = 0.01) {
+  if (a == null || b == null) return false;
+  return Math.abs(a - b) <= epsilon;
 }
 
 async function downscaleImage(file: File, maxDim: number, quality: number): Promise<string> {
