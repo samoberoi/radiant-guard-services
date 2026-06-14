@@ -344,7 +344,23 @@ function useContracts() {
     },
   });
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: QK });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: QK });
+    qc.invalidateQueries({ queryKey: ["admin", "units"] });
+  };
+
+  const syncUnitDates = async (unitId: string, startDate: string, endDate: string) => {
+    if (!unitId) return;
+    const patch: Record<string, unknown> = {
+      contract_start_date: startDate || null,
+      contract_end_date: endDate || null,
+    };
+    const { error } = await supabase
+      .from("units" as never)
+      .update(patch as never)
+      .eq("id", unitId);
+    if (error) console.warn("Failed to sync unit contract dates:", error.message);
+  };
 
   type Payload = Omit<ClientContract, "id">;
   const toRow = (p: Payload, opts: { isNew: boolean }) => {
@@ -384,6 +400,7 @@ function useContracts() {
         .single();
       if (error) throw error;
       const id = String((data as Record<string, unknown>).id);
+      await syncUnitDates(p.unitId, p.startDate, p.endDate);
       void logActivity({ module: "Client Contracts", action: "create", entityType: "client_contracts", entityId: id, entityLabel: p.prospectCode, details: p as unknown as Record<string, unknown> });
       // Notify everyone with approve rights on contracts (fully RBAC-driven).
       void notifyApprovers({
@@ -508,6 +525,7 @@ function useContracts() {
         .update(after as never)
         .eq("id", id);
       if (error) throw error;
+      await syncUnitDates(p.unitId || String(before?.unit_id ?? ""), p.startDate, p.endDate);
       void logActivity({
         module: "Client Contracts",
         action: "update",
@@ -2338,27 +2356,48 @@ function ContractFormDialog({
                   </Select>
                 </Field>
               ) : null}
-              <Field label="Start Date">
+              <Field label="Contract start date">
                 <Input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                 />
               </Field>
-              <Field label="End Date">
+              <Field label="Contract end date">
                 <Input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </Field>
-              <Field label="Expiry Date">
-                <Input
-                  type="date"
-                  value={expiryDate}
-                  onChange={(e) => setExpiryDate(e.target.value)}
-                />
-              </Field>
+              {selectedUnit ? (
+                <div className="sm:col-span-2 rounded-lg border border-border/60 bg-muted/30 p-3">
+                  <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Tax info (from selected unit)
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3 text-sm">
+                    <div>
+                      <div className="text-xs text-muted-foreground">PAN</div>
+                      <div className="font-medium">{selectedUnit.panNumber || "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">GST type</div>
+                      <div className="font-medium">
+                        {selectedUnit.gstPayable ? (selectedUnit.gstType || "—") : "Not payable"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">GST number</div>
+                      <div className="font-medium">
+                        {selectedUnit.gstPayable ? (selectedUnit.gstNumber || "—") : "—"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-[11px] text-muted-foreground">
+                    Manage these in Unit Manager. Contract dates entered above will sync back to the unit on save.
+                  </div>
+                </div>
+              ) : null}
               <Field label="Service Type">
                 <Select
                   value={serviceTypeId || "none"}
