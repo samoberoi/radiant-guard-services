@@ -1656,7 +1656,6 @@ function ClientContractsPage() {
                   <>
                     <td className="px-5 py-3 text-muted-foreground" data-col="date">{c.startDate || "—"}</td>
                     <td className="px-5 py-3 text-muted-foreground" data-col="date">{c.endDate || "—"}</td>
-                    <td className="px-5 py-3 text-muted-foreground" data-col="date">{c.expiryDate || "—"}</td>
                   </>
                 ) : (
                   <td className="px-5 py-3 text-muted-foreground" data-col="date">
