@@ -1,48 +1,63 @@
-## Goal
-Make tables, action buttons, and dropdowns visually consistent and production-ready across every admin page — globally, via shared CSS + shared primitives, not page-by-page hacks.
+# Plan — Organisation → Unit → Client Contract cleanup
 
-## Problems being fixed
+Goal: make the 3 modules flow cleanly. Organisation captures only the org profile, the unit owns its contract dates and GST, and the client contract auto-fills from the chosen unit.
 
-1. **Action column misalignment** — Header "ACTIONS" sits far right while icons float left of it; STATUS pill + toggle are on different baselines vs the header label.
-2. **Action button spacing irregular** — gaps differ per row because authors group buttons in nested wrappers; some buttons render as plain `<button>` with no circular bg.
-3. **Status + action overlap on Client Contracts** — "Approve / Reject" text buttons + status pill + date cell overlap because the columns aren't sized and actions aren't constrained to icon-only pills.
-4. **Candidate row CTAs (approve ✓ / reject ✗) look broken** — colored chips touching the status pill with no spacing/sizing.
-5. **First icon under Unit (Attendance/Invoice/etc.)** missing circular background — only some icon buttons get the global treatment because the CSS selector requires `[data-col="actions"]`.
-6. **Hover contrast bug in dropdowns** — Select/Command/DropdownMenu items use blue hover bg but inner text keeps its dark color → unreadable. Need globally white text + white icons on `[data-highlighted]` / `[data-state=checked]`.
-7. **Action icon hover contrast** — when hover bg darkens, icon stays dark; need to force light icon color on hover.
+## 1. Organisation Manager (`admin.customers.customer-manager.tsx`)
 
-## Changes
+- Remove **Contract start date** and **Contract end date** fields from the create/edit form, the table column, and the CSV export.
+- Remove the entire **GSTINs** section (the multi-row `customer_gst_numbers` editor and its save logic).
+- Keep the columns `contract_start_date`, `contract_end_date` in `customers` and the `customer_gst_numbers` table in the DB for now (no data loss); just stop reading/writing them from the UI.
+- Update `useCustomers` (`src/lib/admin-data.ts`) so the form no longer requires those fields; default them to `null` on save.
 
-### A. `src/styles.css` — global table + action rules
-- Tighten `.ios-table [data-col="actions"]`:
-  - Set header cell (`thead th[data-col="actions"]`) to `text-align: right; padding-right: 20px;` and force the inner sort button to right-align so the "ACTIONS" label sits directly above the icons.
-  - Constrain column `width: 168px`, `gap: 4px`, and add `justify-content: flex-end` on the inner flex wrapper.
-  - Replace the `div { display: contents }` trick with `:where(div, span) { display: contents }` scoped to the actions cell so deeply nested wrappers all flatten.
-- Make the circular-pill rule apply to ALL icon-only action buttons in tables, not just `[data-col="actions"]`:
-  - New selector: `.ios-table tbody td button:where(:has(> svg:only-child)), .ios-table tbody td a:where(:has(> svg:only-child))` → 32×32 circle, `bg: white`, `border: 1px solid var(--border)`, `color: var(--muted-foreground)`.
-  - Hover state: `bg: var(--foreground); color: white;` and force `svg { color: inherit }` so the icon flips to light on dark hover.
-  - Variant-preserving: skip elements with `[data-variant]` or `[data-no-pill]` so colored CTAs (approve green / reject red) keep their look but still get sized to 32×32 circle.
-- Add a status-column width rule `[data-col="status"] { width: 132px; text-align: left }` and a `[data-col="approval"] { width: 150px }` so Approval pills + Start date stop overlapping on Client Contracts.
-- Header alignment: every `.ios-table thead th[data-col="actions"] button` → `justify-content: flex-end; width: 100%`.
+## 2. Unit Manager (`admin.customers.unit-manager.tsx`)
 
-### B. `src/components/ui/select.tsx`, `dropdown-menu.tsx`, `command.tsx`
-- Update item classes so the highlighted/active state uses `bg-accent text-white [&_svg]:text-white` (currently `text-accent-foreground` which resolves to dark in some items because authors override text color inline). Add `[&_*]:!text-white` on the highlighted state to override descendant color utilities (the "UN12", "NOMANS" blue labels in the screenshot).
+Restructure the "Add / Edit Unit" dialog so org → branch → unit identity flows top-down:
 
-### C. `src/routes/admin.contracts.client-contracts.tsx`
-- Convert the Approve/Reject/Renew text buttons in the row to icon-only buttons with `title` tooltips (Check / X / RotateCcw icons), so they obey the global 32×32 circular rule and stop overlapping the Start date column.
-- Add `data-col="approval"` to the Approval header/cell and `data-col="actions"` to Actions so the new widths apply.
+1. **Organisation** (required, first field). Dropdown of active organisations.
+2. **Branch** — list filtered to branches belonging to the chosen organisation; disabled until org is selected.
+3. **Unit code** — auto-generated via `nextUnitCode` once org+branch chosen, but still editable.
+4. **Unit name**, **Unit location**, **Status**, **Description**.
 
-### D. `src/routes/admin.employees.tsx` (Candidates tab row)
-- Wrap the green ✓ and red ✗ approve/reject chips as proper icon buttons with `data-variant="success"` / `data-variant="danger"` so they pick up colored circular styling instead of touching the Pending pill.
-- Ensure header row has `data-col="status"` and `data-col="actions"` so columns line up.
+When an organisation is picked, auto-sync read-only-style defaults into the billing/contact fields (billing name, address, city, state, country, PAN) from the customer row, but allow the user to override.
 
-### E. Other tables (Attendance, Invoice, Inventory, Vehicles, Customers/Unit/Branch/State managers, etc.)
-- Audit pass: ensure each table's actions `<th>` has `data-col="actions"` and each first-icon-only cell uses a plain `<button><Icon/></button>` (no extra wrapper classes) so the new global selector picks them up automatically. No per-page restyling needed beyond adding the `data-col` attribute where missing.
+**Additional information section**
+- Remove **Onboarding date** and **Closing date**.
+- Add **Contract start date** and **Contract end date** in their place.
 
-## Verification
-- Reload `/admin/employees`, `/admin/employees` (Candidates tab), `/admin/contracts/client-contracts`, `/admin/attendance`, `/admin/invoice` — confirm:
-  - Action header sits directly above the icon group.
-  - All action icons are equal-sized circles with equal 4–6 px gap.
-  - Hovering an icon flips bg dark / icon white.
-  - Opening any Select/Combobox/DropdownMenu shows white text + white icons on the blue highlighted row (UN12 / NOMANS labels included).
-  - Client Contracts row: Approval pill no longer overlaps Start date; Approve/Reject are icon pills.
+**Business information section**
+- Keep **PAN number**.
+- Replace single GST input with:
+  - `GST payable?` — Yes / No toggle.
+  - If **No** → no further GST inputs; clear `gst_type` and `gst_number`.
+  - If **Yes** → show `GST type` dropdown with: `Regular`, `Composition`, `SEZ Unit`, `SEZ Developer`, `Casual Taxable Person`, `Non-Resident Taxable Person`, then the **GST number** input (15-char validation as today). Note in helper text: "Auto-detection from GSTIN coming later."
+
+DB migration on `units`:
+- Add `contract_start_date date`, `contract_end_date date`, `gst_payable boolean default false`, `gst_type text`.
+- Keep `onboarding_date`, `closing_date`, `gst_number` columns (no drop) — UI just stops surfacing onboarding/closing.
+
+Update `Unit` type, `rowToUnit`, and the insert/update payload in `admin-data.ts` accordingly. CSV export gets the new contract date columns and gst type / payable flag instead of onboarding/closing/gst.
+
+## 3. Client Contracts (`admin.contracts.client-contracts.tsx`)
+
+When a **Unit** is selected in the contract form:
+- Auto-fill **Unit name** (already done).
+- Auto-fill **Contract start date** and **Contract end date** from `units.contract_start_date / contract_end_date` (the new unit-level dates). User can still edit if needed.
+- Only those two date fields are shown in the contract dates area (drop the separate "expiry" UI from the form if it duplicates end date — keep the column in DB).
+
+No schema changes here; just read the new unit columns and prefill `start_date` / `end_date` when the unit selection changes (and the user hasn't already edited).
+
+## Technical notes
+
+- One DB migration adds the 4 new columns on `units` with safe defaults. No table drops, no policy changes.
+- After migration runs, regenerate Supabase types, then update:
+  - `src/lib/admin-data.ts` — `Unit` type, `rowToUnit`, `unitToRow`, CSV mappings.
+  - `src/routes/admin.customers.customer-manager.tsx` — remove form fields, table column, GSTIN section, save logic.
+  - `src/routes/admin.customers.unit-manager.tsx` — restructure dialog, reorder fields, add org→branch cascade, swap dates, new GST UX, sync defaults from org.
+  - `src/routes/admin.contracts.client-contracts.tsx` — on unit-change effect, prefill `start_date` / `end_date` from the fetched unit row.
+- `logActivity` calls remain on every create/update/delete (per Core memory).
+- No business logic outside these three modules is touched.
+
+## Out of scope (explicitly deferred)
+
+- Live GSTIN portal verification — UI is structured so this can plug in later by populating `gst_type` automatically from the entered GSTIN.
+- Dropping deprecated columns (`onboarding_date`, `closing_date`, `customer_gst_numbers`, customer-level contract dates) — leave for a later cleanup migration once stakeholders confirm.
