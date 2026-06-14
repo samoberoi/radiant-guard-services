@@ -560,6 +560,7 @@ function MusterRollPage() {
   const [processingOcr, setProcessingOcr] = useState(false);
   const [uncertainCells, setUncertainCells] = useState<Set<string>>(new Set());
   const [ocrSummary, setOcrSummary] = useState<string | null>(null);
+  const [uploadReadyToContinue, setUploadReadyToContinue] = useState(false);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const runOcr = useServerFn(extractAttendanceFromImage);
 
@@ -575,6 +576,7 @@ function MusterRollPage() {
     setUploadPreview(null);
     setUploadKind(null);
     setOcrSummary(null);
+    setUploadReadyToContinue(false);
     if (!file) return;
     const kind = detectKind(file);
     if (!kind) { toast.error("Unsupported file. Choose an image or Excel/CSV file."); return; }
@@ -600,6 +602,7 @@ function MusterRollPage() {
     if (!codes.length) { toast.error("No attendance codes configured"); return; }
     setProcessingOcr(true);
     setOcrSummary(null);
+    setUploadReadyToContinue(false);
     try {
       const primaryByCandidate = new Map<string, typeof musterRows[number]>();
       for (const mr of musterRows) {
@@ -663,6 +666,7 @@ function MusterRollPage() {
 
       const summary = `${confidentCount} cell${confidentCount === 1 ? "" : "s"} auto-filled · ${uncertainCount} flagged for review${result.unmatched_names.length ? ` · ${result.unmatched_names.length} unmatched row${result.unmatched_names.length === 1 ? "" : "s"}` : ""}`;
       setOcrSummary(summary);
+      setUploadReadyToContinue(true);
       toast.success(summary);
       logActivity({
         module: "Attendance",
@@ -683,6 +687,7 @@ function MusterRollPage() {
     if (!codes.length) { toast.error("No attendance codes configured"); return; }
     setProcessingOcr(true);
     setOcrSummary(null);
+    setUploadReadyToContinue(false);
     try {
       const buf = await uploadFile.arrayBuffer();
       const wb = XLSX.read(buf, { cellDates: true });
@@ -812,6 +817,7 @@ function MusterRollPage() {
 
       const summary = `${filled} cell${filled === 1 ? "" : "s"} imported from ${uploadFile.name}${unmatchedNames.length ? ` · ${unmatchedNames.length} unmatched row${unmatchedNames.length === 1 ? "" : "s"}` : ""}`;
       setOcrSummary(summary);
+      setUploadReadyToContinue(true);
       toast.success(summary);
       logActivity({
         module: "Attendance",
@@ -826,6 +832,10 @@ function MusterRollPage() {
   };
 
   const processUpload = () => {
+    if (uploadReadyToContinue) {
+      setUploadOpen(false);
+      return;
+    }
     if (uploadKind === "excel") return processAttendanceExcel();
     return processAttendanceImage();
   };
