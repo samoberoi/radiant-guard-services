@@ -1519,7 +1519,7 @@ function EmployeesPage() {
               />
             </td>
           )}
-          <td className="px-2.5 py-2.5 align-middle" data-col="status">
+          <td className="w-[140px] min-w-[140px] whitespace-nowrap px-2.5 py-2.5 align-middle" data-col="status">
             <div className="flex flex-col items-end gap-1.5">
               <div className="flex items-center justify-end gap-2">
                 <StatusBadge status={c.status} />
@@ -1578,7 +1578,7 @@ function EmployeesPage() {
             </div>
           </td>
 
-          <td className="px-3 py-2.5 align-middle" data-col="actions">
+          <td className="w-[260px] min-w-[260px] whitespace-nowrap px-3 py-2.5 align-middle" data-col="actions">
             <div className="flex items-center justify-end gap-1">
 
 
@@ -1739,10 +1739,10 @@ function EmployeesPage() {
                   Active
                 </th>
               )}
-              <th className="w-[120px] whitespace-nowrap px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground" data-col="status">
+              <th className="w-[140px] min-w-[140px] whitespace-nowrap px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground" data-col="status">
                 Status
               </th>
-              <th className="w-[220px] whitespace-nowrap px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground" data-col="actions">
+              <th className="w-[260px] min-w-[260px] whitespace-nowrap px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground" data-col="actions">
                 Actions
               </th>
             </tr>
