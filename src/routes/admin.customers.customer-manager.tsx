@@ -178,7 +178,6 @@ function CustomerManagerPage() {
                 <th className="px-5 py-3">Organisation</th>
                 <th className="px-5 py-3">Website</th>
                 <th className="px-5 py-3">Phone</th>
-                <th className="px-5 py-3">Contract start</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
