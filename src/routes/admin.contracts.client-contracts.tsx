@@ -2935,13 +2935,12 @@ function ResourceFormDialog({
   const usedBenefitIds = new Set(benefits.map((b) => b.costComponentId));
   const usedDeductionIds = new Set(deductions.map((b) => b.costComponentId));
   const usedEmployerIds = new Set(employerContributions.map((b) => b.costComponentId));
-  const usedAcross = new Set([...usedBenefitIds, ...usedDeductionIds, ...usedEmployerIds]);
-  const availableBenefits = costComponents.filter((c) => !usedAcross.has(c.id));
+  const availableBenefits = costComponents.filter((c) => !usedBenefitIds.has(c.id));
   const availableDeductions: CostComponentOption[] = [
-    ...costComponents.filter((c) => !usedAcross.has(c.id)),
+    ...costComponents.filter((c) => !usedDeductionIds.has(c.id)),
     ...(usedDeductionIds.has(PT_SYNTHETIC_ID) ? [] : [ptSynthetic]),
   ];
-  const availableEmployer = costComponents.filter((c) => !usedAcross.has(c.id));
+  const availableEmployer = costComponents.filter((c) => !usedEmployerIds.has(c.id));
   const filteredAvailableBenefits = useMemo(() => {
     const q = benefitQuery.trim().toLowerCase();
     if (!q) return availableBenefits;
