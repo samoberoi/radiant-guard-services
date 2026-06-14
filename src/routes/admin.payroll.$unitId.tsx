@@ -684,12 +684,12 @@ function PayrollUnitPage() {
                 <tr>
                   <td className="px-4 py-3" />
                   <td className="px-4 py-3" colSpan={5}>Totals</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{fmtINR(rows.reduce((s, r) => s + (r.wages?.contractGross ?? 0), 0))}</td>
-                  <td className="px-4 py-3 text-right">{fmtINR(totals.earnedGross)}</td>
-                  <td className="px-4 py-3 text-right text-rose-600">− {fmtINR(rows.reduce((s, r) => s + (r.wages ? r.wages.contractGross - r.wages.earnedGross : 0), 0))}</td>
-                  <td className="px-4 py-3 text-right">{fmtINR(totals.deductions)}</td>
-                  <td className="px-4 py-3 text-right text-emerald-700">{fmtINR(totals.net)}</td>
-                  <td className="px-4 py-3 text-right">{fmtINR(totals.employerCost)}</td>
+                  <td className="px-4 py-3 text-left text-muted-foreground">{fmtINR(rows.reduce((s, r) => s + (r.wages?.contractGross ?? 0), 0))}</td>
+                  <td className="px-4 py-3 text-left">{fmtINR(totals.earnedGross)}</td>
+                  <td className="px-4 py-3 text-left text-rose-600">− {fmtINR(rows.reduce((s, r) => s + (r.wages ? r.wages.contractGross - r.wages.earnedGross : 0), 0))}</td>
+                  <td className="px-4 py-3 text-left">{fmtINR(totals.deductions)}</td>
+                  <td className="px-4 py-3 text-left text-emerald-700">{fmtINR(totals.net)}</td>
+                  <td className="px-4 py-3 text-left">{fmtINR(totals.employerCost)}</td>
                 </tr>
               </tfoot>
             )}
