@@ -116,9 +116,16 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
             { type: "text" as const, text: promptText },
             {
               type: "image" as const,
-              image: data.imageDataUrl.startsWith("data:")
-                ? { source: { url: data.imageDataUrl } }
-                : { url: data.imageDataUrl },
+              image: (() => {
+                const m = data.imageDataUrl.match(/^data:[^;]+;base64,(.+)$/);
+                if (!m) return new URL(data.imageDataUrl);
+                const b64 = m[1];
+                const bytes = Uint8Array.from(
+                  atob(b64),
+                  (c) => c.charCodeAt(0),
+                );
+                return bytes;
+              })(),
             },
           ],
         },
