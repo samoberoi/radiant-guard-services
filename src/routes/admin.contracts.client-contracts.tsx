@@ -3533,7 +3533,7 @@ function ResourceFormDialog({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="end">
-                  <Command shouldFilter={false}>
+                  <Command key={deductionOptionsKey} shouldFilter={false}>
                     <CommandInput
                       placeholder="Which deduction would you like to add?"
                       value={deductionQuery}
@@ -3689,7 +3689,7 @@ function ResourceFormDialog({
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-80 p-0" align="end">
-                  <Command shouldFilter={false}>
+                  <Command key={employerOptionsKey} shouldFilter={false}>
                     <CommandInput
                       placeholder="Which contribution would you like to add?"
                       value={employerQuery}
