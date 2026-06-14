@@ -246,7 +246,6 @@ function CustomerManagerPage() {
                         entityLabel="organization"
                         checks={[
                           { table: "units", column: "customer_id", label: "units" },
-                          { table: "customer_gst_numbers", column: "customer_id", label: "GSTINs" },
                         ]}
                         onDelete={() => setDeleting(c)}
                       />
