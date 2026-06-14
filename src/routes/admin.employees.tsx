@@ -1519,9 +1519,9 @@ function EmployeesPage() {
               />
             </td>
           )}
-          <td className="w-[140px] min-w-[140px] whitespace-nowrap px-2.5 py-2.5 align-middle" data-col="status">
-            <div className="flex flex-col items-end gap-1.5">
-              <div className="flex items-center justify-end gap-2">
+          <td className="w-[160px] min-w-[160px] whitespace-nowrap px-2.5 py-2.5 align-middle" data-col="status">
+            <div className="flex min-w-[160px] flex-col items-end gap-1.5">
+              <div className="flex flex-nowrap items-center justify-end gap-2">
                 <StatusBadge status={c.status} />
                 {mode === "employee" && columnsVisible.active && (
                   <Switch
@@ -1578,8 +1578,8 @@ function EmployeesPage() {
             </div>
           </td>
 
-          <td className="w-[260px] min-w-[260px] whitespace-nowrap px-3 py-2.5 align-middle" data-col="actions">
-            <div className="flex items-center justify-end gap-1">
+          <td className="w-[320px] min-w-[320px] whitespace-nowrap px-3 py-2.5 align-middle" data-col="actions">
+            <div className="flex min-w-[320px] flex-nowrap items-center justify-end gap-1.5">
 
 
 
@@ -1638,7 +1638,7 @@ function EmployeesPage() {
                   </Button>
                 </>
               )}
-              <div className="flex items-center gap-1">
+              <div className="flex flex-nowrap items-center gap-1">
                 <Button
                   asChild
                   variant="ghost"
@@ -1689,7 +1689,7 @@ function EmployeesPage() {
         <span className="inline-flex items-center gap-2"><span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">{rows.length}</span><span className="uppercase tracking-[0.14em] text-muted-foreground">Total {rows.length === 1 ? "row" : "rows"}</span></span>
       </div>
       <div className="w-full overflow-x-auto">
-        <table className="ios-table w-full text-sm">
+        <table className="ios-table min-w-[1480px] w-full table-auto text-sm">
 
           <thead className="border-b border-border/60 bg-secondary/40">
             <tr>
@@ -1739,10 +1739,10 @@ function EmployeesPage() {
                   Active
                 </th>
               )}
-              <th className="w-[140px] min-w-[140px] whitespace-nowrap px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground" data-col="status">
+              <th className="w-[160px] min-w-[160px] whitespace-nowrap px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground" data-col="status">
                 Status
               </th>
-              <th className="w-[260px] min-w-[260px] whitespace-nowrap px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground" data-col="actions">
+              <th className="w-[320px] min-w-[320px] whitespace-nowrap px-3 py-3 text-right text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground" data-col="actions">
                 Actions
               </th>
             </tr>
