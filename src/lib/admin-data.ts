@@ -539,7 +539,11 @@ export type Unit = {
   customerId: string | null;
   onboardingDate: string;
   closingDate: string;
+  contractStartDate: string;
+  contractEndDate: string;
   panNumber: string;
+  gstPayable: boolean;
+  gstType: string;
   gstNumber: string;
   billingSalutation: string;
   billingName: string;
