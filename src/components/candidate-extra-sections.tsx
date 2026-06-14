@@ -457,7 +457,6 @@ export function NomineeSection({ form, setSection }: { form: any; setSection: Se
                             <Select
                               value={e.contact || undefined}
                               onValueChange={(v) => update({ contact: v })}
-                              disabled={!enabled}
                             >
                               <SelectTrigger>
                                 <SelectValue placeholder="Select contact" />
@@ -475,7 +474,6 @@ export function NomineeSection({ form, setSection }: { form: any; setSection: Se
                           <div className="flex items-center gap-1">
                             <PercentInput
                               value={e.percent}
-                              disabled={!enabled}
                               onChange={(n) => update({ percent: n })}
                             />
                             <span className="text-xs text-muted-foreground">%</span>
@@ -484,7 +482,6 @@ export function NomineeSection({ form, setSection }: { form: any; setSection: Se
                             variant="ghost"
                             size="icon"
                             className="text-rose-500"
-                            disabled={!enabled}
                             onClick={() => setSlot(s.key, entries.filter((_, j) => j !== i))}
                           >
                             <Trash2 className="h-4 w-4" />
