@@ -344,7 +344,23 @@ function useContracts() {
     },
   });
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: QK });
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: QK });
+    qc.invalidateQueries({ queryKey: ["admin", "units"] });
+  };
+
+  const syncUnitDates = async (unitId: string, startDate: string, endDate: string) => {
+    if (!unitId) return;
+    const patch: Record<string, unknown> = {
+      contract_start_date: startDate || null,
+      contract_end_date: endDate || null,
+    };
+    const { error } = await supabase
+      .from("units" as never)
+      .update(patch as never)
+      .eq("id", unitId);
+    if (error) console.warn("Failed to sync unit contract dates:", error.message);
+  };
 
   type Payload = Omit<ClientContract, "id">;
   const toRow = (p: Payload, opts: { isNew: boolean }) => {
