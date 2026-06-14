@@ -1520,8 +1520,8 @@ function EmployeesPage() {
               />
             </td>
           )}
-          <td className="w-[160px] min-w-[160px] whitespace-nowrap px-2.5 py-2.5 align-middle" data-col="status">
-            <div className="flex min-w-[160px] flex-col items-end gap-1.5">
+          <td className="w-[110px] min-w-[100px] whitespace-nowrap px-2.5 py-2.5 align-middle" data-col="status">
+            <div className="flex flex-col items-end gap-1.5">
               <div className="flex flex-nowrap items-center justify-end gap-2">
                 <StatusBadge status={c.status} />
                 {mode === "employee" && columnsVisible.active && (
