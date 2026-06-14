@@ -1579,8 +1579,8 @@ function EmployeesPage() {
             </div>
           </td>
 
-          <td className="w-[320px] min-w-[320px] whitespace-nowrap px-3 py-2.5 align-middle" data-col="actions">
-            <div className="flex min-w-[320px] flex-nowrap items-center justify-end gap-1.5">
+          <td className="w-[200px] min-w-[180px] whitespace-nowrap px-3 py-2.5 align-middle" data-col="actions">
+            <div className="flex flex-nowrap items-center justify-end gap-1.5">
 
 
 
