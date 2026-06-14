@@ -525,6 +525,7 @@ function useContracts() {
         .update(after as never)
         .eq("id", id);
       if (error) throw error;
+      await syncUnitDates(p.unitId || String(before?.unit_id ?? ""), p.startDate, p.endDate);
       void logActivity({
         module: "Client Contracts",
         action: "update",
