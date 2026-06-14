@@ -854,6 +854,15 @@ function MusterRollPage() {
               })}
             </SelectContent>
           </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setUploadOpen(true); }}
+            disabled={!editable}
+            title={editable ? "Upload an attendance sheet image to auto-fill" : "Sheet locked"}
+          >
+            <Upload className="mr-1.5 h-4 w-4" /> Upload Attendance
+          </Button>
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="mr-1.5 h-4 w-4" /> Print
           </Button>
@@ -862,6 +871,69 @@ function MusterRollPage() {
           </Button>
         </div>
       </div>
+
+      {/* Upload Attendance dialog */}
+      <Dialog open={uploadOpen} onOpenChange={(o) => { setUploadOpen(o); if (!o) { setUploadFile(null); setUploadPreview(null); setOcrSummary(null); } }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Upload Attendance Sheet</DialogTitle>
+            <DialogDescription>
+              Upload a photo or scan of the filled muster. The AI reads each cell and fills the table.
+              Cells it cannot read confidently are left blank and flagged in red so you can correct them manually.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <input
+              ref={uploadInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => onPickUploadFile(e.target.files?.[0] ?? null)}
+            />
+            {!uploadPreview ? (
+              <button
+                type="button"
+                onClick={() => uploadInputRef.current?.click()}
+                className="flex w-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-muted/30 px-6 py-10 text-sm text-muted-foreground hover:border-primary hover:text-primary"
+              >
+                <Upload className="h-6 w-6" />
+                <span>Click to choose an attendance sheet image</span>
+                <span className="text-xs">PNG, JPG, HEIC etc.</span>
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <div className="overflow-hidden rounded-lg border border-border bg-muted/20">
+                  <img src={uploadPreview} alt="Attendance preview" className="max-h-80 w-full object-contain" />
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{uploadFile?.name}</span>
+                  <button
+                    type="button"
+                    className="text-primary hover:underline"
+                    onClick={() => uploadInputRef.current?.click()}
+                  >
+                    Choose a different image
+                  </button>
+                </div>
+              </div>
+            )}
+            {ocrSummary && (
+              <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                {ocrSummary}
+              </div>
+            )}
+            <p className="text-[11px] text-muted-foreground">
+              Allowed codes: {codes.map((c) => c.code).join(", ") || "—"} · Period {periodStart} → {periodEnd}
+            </p>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="ghost" onClick={() => setUploadOpen(false)} disabled={processingOcr}>Close</Button>
+            <Button onClick={processAttendanceImage} disabled={!uploadPreview || processingOcr}>
+              {processingOcr ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Reading…</> : "Process & Fill"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Approval workflow */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-card p-3 print:hidden">
