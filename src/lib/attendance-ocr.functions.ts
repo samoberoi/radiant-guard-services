@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { generateText, Output } from "ai";
+import { createLovableAiGatewayProvider } from "./ai-gateway.server";
 
 const InputSchema = z.object({
   imageDataUrl: z.string().min(20).max(20_000_000),
@@ -40,36 +42,55 @@ export type AttendanceOcrResult = {
   notes: string;
 };
 
+const OutputSchema = z.object({
+  rows: z
+    .array(
+      z.object({
+        candidate_id: z.string().describe("UUID from the employees list"),
+        entry_date: z.string().describe("YYYY-MM-DD date"),
+        code: z
+          .string()
+          .describe(
+            "One of the allowed attendance codes, or empty string if not readable",
+          ),
+        ot_hours: z
+          .number()
+          .min(0)
+          .max(24)
+          .describe("Overtime hours for that day, 0 if none"),
+        confident: z
+          .boolean()
+          .describe(
+            "True only if the cell is clearly legible AND the code is in the allowed list",
+          ),
+      }),
+    )
+    .describe("One row per (employee, date) cell you can clearly read"),
+  unmatched_names: z
+    .array(z.string())
+    .describe(
+      "Names visible on the sheet that did not match any provided employee",
+    ),
+  notes: z
+    .string()
+    .describe("Short free-form note about overall image quality"),
+});
+
 const SYSTEM_PROMPT = `You are an OCR engine that reads a hand-written or printed monthly attendance / muster-roll sheet from India.
-Return ONLY a strict JSON object with this shape:
-{
-  "rows": [
-    { "candidate_id": "<uuid from the employees list>", "entry_date": "YYYY-MM-DD", "code": "<one of the allowed codes or empty>", "ot_hours": <number 0..24>, "confident": <true|false> }
-  ],
-  "unmatched_names": ["names visible on the sheet that did not match any provided employee"],
-  "notes": "short free-form note about overall quality"
-}
+You will be given the exact list of employees (id, name, employee_code, designation) and the exact list of period dates.
 Rules:
-- You will be given the exact list of employees (id, name, employee_code, designation) and the exact list of period dates.
 - Match each visible row on the sheet to one employee in the provided list, by name OR employee_code. Use candidate_id (UUID) in the output, NEVER the name.
 - For each (employee, date) cell you can clearly read, emit one row. Skip cells that are blank on the sheet.
 - "code" MUST be one of the provided attendance code strings (case-sensitive), or "" if you cannot tell. Map common variants (P=present, A=absent, WO=week off, L=leave, OT marker etc.) only when they exactly match a provided code.
 - "ot_hours" is the overtime hours number for that cell, 0 when not applicable. Many sheets list OT on a separate sub-row under each day — attribute it to the same date.
 - Set "confident": false when the cell text is ambiguous, smudged, crossed out, partially visible, or you had to guess. Set true only when the cell is clearly legible AND the code is in the allowed list.
-- Never invent entries for blank cells. Never output a date that is not in the provided period list.
-- Output strict JSON only. No commentary, no markdown.`;
-
-function dataUrlToInlinePart(dataUrl: string) {
-  const m = dataUrl.match(/^data:([^;]+);base64,(.+)$/);
-  if (!m) throw new Error("Invalid data URL");
-  return { inline_data: { mime_type: m[1], data: m[2] } };
-}
+- Never invent entries for blank cells. Never output a date that is not in the provided period list.`;
 
 export const extractAttendanceFromImage = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<AttendanceOcrResult> => {
-    const apiKey = process.env.GEMINI_API_KEY ?? "";
-    if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
+    const key = process.env.LOVABLE_API_KEY;
+    if (!key) throw new Error("LOVABLE_API_KEY not configured");
 
     const employeeList = data.employees
       .map(
@@ -82,58 +103,46 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
 
     const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (only these are valid):\n${dateList}\n\nEmployees (use the UUID as candidate_id):\n${employeeList}\n\nNow read the attached attendance sheet image and produce the JSON.`;
 
-    const parts: Array<Record<string, unknown>> = [
-      { text: promptText },
-      dataUrlToInlinePart(data.imageDataUrl),
-    ];
+    const gateway = createLovableAiGatewayProvider(key);
+    const model = gateway("google/gemini-2.5-pro");
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key=${encodeURIComponent(apiKey)}`;
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: [{ role: "user", parts }],
-        generationConfig: { responseMimeType: "application/json", temperature: 0 },
-      }),
+    const { output } = await generateText({
+      model,
+      system: SYSTEM_PROMPT,
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text" as const, text: promptText },
+            {
+              type: "image_url" as const,
+              image_url: { url: data.imageDataUrl },
+            },
+          ],
+        },
+      ],
+      output: Output.object({ schema: OutputSchema }),
+      temperature: 0,
     });
-
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      throw new Error(`OCR failed (${res.status}): ${txt.slice(0, 300)}`);
-    }
-    const json = (await res.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const content =
-      json.candidates?.[0]?.content?.parts?.map((p) => p?.text ?? "").join("") ?? "{}";
-
-    let parsed: Partial<AttendanceOcrResult> = {};
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      const m = content.match(/\{[\s\S]*\}/);
-      if (m) {
-        try {
-          parsed = JSON.parse(m[0]);
-        } catch {
-          /* noop */
-        }
-      }
-    }
 
     const validIds = new Set(data.employees.map((e) => e.id));
     const validDates = new Set(data.dates);
     const validCodes = new Set(data.codes.map((c) => c.code));
 
-    const rows = Array.isArray(parsed.rows) ? parsed.rows : [];
+    const rows = Array.isArray(output.rows) ? output.rows : [];
     const cleanedRows: AttendanceOcrRow[] = [];
     for (const r of rows) {
-      const candidate_id = String((r as { candidate_id?: unknown }).candidate_id ?? "");
-      const entry_date = String((r as { entry_date?: unknown }).entry_date ?? "");
+      const candidate_id = String(
+        (r as { candidate_id?: unknown }).candidate_id ?? "",
+      );
+      const entry_date = String(
+        (r as { entry_date?: unknown }).entry_date ?? "",
+      );
       const codeRaw = String((r as { code?: unknown }).code ?? "").trim();
       const ot = Number((r as { ot_hours?: unknown }).ot_hours ?? 0);
-      const confidentRaw = Boolean((r as { confident?: unknown }).confident);
+      const confidentRaw = Boolean(
+        (r as { confident?: unknown }).confident,
+      );
 
       if (!validIds.has(candidate_id) || !validDates.has(entry_date)) continue;
       const codeValid = codeRaw === "" || validCodes.has(codeRaw);
@@ -150,13 +159,13 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
       });
     }
 
-    const unmatched = Array.isArray(parsed.unmatched_names)
-      ? parsed.unmatched_names.map((n) => String(n)).slice(0, 50)
+    const unmatched = Array.isArray(output.unmatched_names)
+      ? output.unmatched_names.map((n) => String(n)).slice(0, 50)
       : [];
 
     return {
       rows: cleanedRows,
       unmatched_names: unmatched,
-      notes: String(parsed.notes ?? ""),
+      notes: String(output.notes ?? ""),
     };
   });
