@@ -1089,7 +1089,7 @@ function MusterRollPage() {
       </div>
 
       {/* Upload Attendance dialog */}
-      <Dialog open={uploadOpen} onOpenChange={(o) => { setUploadOpen(o); if (!o) { setUploadFile(null); setUploadPreview(null); setUploadKind(null); setOcrSummary(null); } }}>
+      <Dialog open={uploadOpen} onOpenChange={(o) => { setUploadOpen(o); if (!o) { setUploadFile(null); setUploadPreview(null); setUploadKind(null); setOcrSummary(null); setUploadReadyToContinue(false); } }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Upload Attendance Sheet</DialogTitle>
@@ -1157,8 +1157,8 @@ function MusterRollPage() {
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="ghost" onClick={() => setUploadOpen(false)} disabled={processingOcr}>Close</Button>
-            <Button onClick={processUpload} disabled={!uploadFile || processingOcr}>
-              {processingOcr ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> {uploadKind === "excel" ? "Importing…" : "Reading…"}</> : (uploadKind === "excel" ? "Import & Fill" : "Process & Fill")}
+            <Button onClick={processUpload} disabled={(!uploadFile && !uploadReadyToContinue) || processingOcr}>
+              {processingOcr ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> {uploadKind === "excel" ? "Importing…" : "Reading…"}</> : uploadReadyToContinue ? "Continue" : (uploadKind === "excel" ? "Import & Fill" : "Process & Fill")}
             </Button>
           </div>
         </DialogContent>
