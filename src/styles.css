@@ -310,6 +310,9 @@
     border-collapse: separate;
     border-spacing: 0;
   }
+  .ios-table.table-auto {
+    table-layout: auto;
+  }
   .ios-table thead th {
     position: sticky; top: 0;
     background: color-mix(in oklab, white 80%, transparent);
@@ -381,8 +384,8 @@
     border-color: color-mix(in oklab, var(--accent) 38%, transparent);
   }
   .ios-table [data-col="actions"] {
-    width: 260px;
-    min-width: 260px;
+    width: 320px;
+    min-width: 320px;
     white-space: nowrap;
     text-align: right;
   }
@@ -462,7 +465,7 @@
     justify-content: center;
     flex: 0 0 auto;
   }
-  .ios-table [data-col="status"] { width: 140px; min-width: 140px; white-space: nowrap; }
+  .ios-table [data-col="status"] { width: 160px; min-width: 160px; white-space: nowrap; }
   .ios-table [data-col="approval"] { min-width: 156px; white-space: nowrap; }
   .ios-table [data-col="date"] { width: 108px; }
   .ios-table [data-col="code"] { width: 150px; }
