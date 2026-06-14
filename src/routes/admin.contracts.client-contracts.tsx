@@ -2338,27 +2338,48 @@ function ContractFormDialog({
                   </Select>
                 </Field>
               ) : null}
-              <Field label="Start Date">
+              <Field label="Contract start date">
                 <Input
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                 />
               </Field>
-              <Field label="End Date">
+              <Field label="Contract end date">
                 <Input
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </Field>
-              <Field label="Expiry Date">
-                <Input
-                  type="date"
-                  value={expiryDate}
-                  onChange={(e) => setExpiryDate(e.target.value)}
-                />
-              </Field>
+              {selectedUnit ? (
+                <div className="sm:col-span-2 rounded-lg border border-border/60 bg-muted/30 p-3">
+                  <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Tax info (from selected unit)
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3 text-sm">
+                    <div>
+                      <div className="text-xs text-muted-foreground">PAN</div>
+                      <div className="font-medium">{selectedUnit.panNumber || "—"}</div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">GST type</div>
+                      <div className="font-medium">
+                        {selectedUnit.gstPayable ? (selectedUnit.gstType || "—") : "Not payable"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground">GST number</div>
+                      <div className="font-medium">
+                        {selectedUnit.gstPayable ? (selectedUnit.gstNumber || "—") : "—"}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-[11px] text-muted-foreground">
+                    Manage these in Unit Manager. Contract dates entered above will sync back to the unit on save.
+                  </div>
+                </div>
+              ) : null}
               <Field label="Service Type">
                 <Select
                   value={serviceTypeId || "none"}
