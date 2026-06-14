@@ -498,7 +498,6 @@ export function NomineeSection({ form, setSection }: { form: any; setSection: Se
                   <Button
                     size="sm"
                     variant="outline"
-                    disabled={!enabled}
                     onClick={() => {
                       const remaining = Math.max(0, 100 - total);
                       setSlot(s.key, [...entries, { contact: "", percent: remaining }]);
