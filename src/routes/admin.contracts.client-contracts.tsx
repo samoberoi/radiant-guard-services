@@ -2445,9 +2445,8 @@ function ContractFormDialog({
                     setExpiryDate(e.target.value);
                     expiryManuallySetRef.current = true;
                   }}
-                  min={startDate || undefined}
-                  max={endDate || undefined}
-                />
+                </Input>
+
                 <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                   <span>Auto-set to 6 months after start. Renewal happens every 6 months.</span>
                   {totalRenewalCheckpoints > 0 ? (
