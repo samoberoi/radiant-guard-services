@@ -262,8 +262,8 @@ function POPage() {
         </Button>
       </div>
 
-      {/* Desktop table */}
-      <div className="hidden 2xl:block overflow-x-auto">
+      {/* Desktop table kept hidden so purchase orders use the stacked layout consistently. */}
+      <div className="hidden">
         <table className="ios-table w-full text-sm">
           <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             <tr>
@@ -328,8 +328,8 @@ function POPage() {
         </table>
       </div>
 
-      {/* Mobile stacked cards */}
-      <div className="2xl:hidden space-y-3 p-4">
+      {/* Stacked cards */}
+      <div className="space-y-3">
         {filtered.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
             <FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />
@@ -341,18 +341,18 @@ function POPage() {
             const canEdit = p.status !== "cancelled";
             const canDownload = p.status !== "draft" && p.status !== "cancelled";
             return (
-              <div key={p.id} className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm space-y-3">
+              <div key={p.id} className="space-y-3 rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
                 {/* Header: PO # + status + actions */}
-                <div className="flex items-start justify-between gap-3">
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                   <div className="min-w-0">
-                    <div className="text-sm font-semibold text-foreground truncate">{p.po_number}</div>
+                    <div className="break-all text-sm font-semibold text-foreground">{p.po_number}</div>
                     <div className="mt-1">
                       <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(p.status)}`}>
                         {poStatusLabel(p.status)}
                       </span>
                     </div>
                   </div>
-                  <div className="inline-flex gap-1 shrink-0">
+                  <div className="inline-flex shrink-0 flex-wrap justify-end gap-1">
                     <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="View" onClick={() => { setEditing(p); setOpen(true); }}>
                       <Eye className="h-4 w-4" />
                     </Button>
@@ -378,19 +378,19 @@ function POPage() {
                 </div>
 
                 {/* Supplier */}
-                <div className="flex items-center gap-2 text-sm">
+                <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2 text-sm">
                   <span className="text-muted-foreground shrink-0">Supplier:</span>
-                  <span className="font-medium text-foreground truncate">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</span>
+                  <span className="break-words font-medium text-foreground">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</span>
                 </div>
 
                 {/* Deliver To */}
-                <div className="flex items-center gap-2 text-sm">
+                <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2 text-sm">
                   <span className="text-muted-foreground shrink-0">Deliver To:</span>
-                  <span className="text-foreground truncate">{p.destination_warehouse_id ? warehouseMap.get(p.destination_warehouse_id)?.name ?? "—" : "—"}</span>
+                  <span className="break-words text-foreground">{p.destination_warehouse_id ? warehouseMap.get(p.destination_warehouse_id)?.name ?? "—" : "—"}</span>
                 </div>
 
                 {/* Date */}
-                <div className="flex items-center gap-2 text-sm">
+                <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2 text-sm">
                   <span className="text-muted-foreground shrink-0">Date:</span>
                   <span className="text-foreground">{p.po_date}</span>
                 </div>
