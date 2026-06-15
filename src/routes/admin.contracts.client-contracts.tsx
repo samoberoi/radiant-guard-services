@@ -248,6 +248,7 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
     expiryDate: r.expiry_date ? String(r.expiry_date) : "",
     originalStartDate: r.original_start_date ? String(r.original_start_date) : (r.start_date ? String(r.start_date) : ""),
     renewalCount: typeof r.renewal_count === "number" ? r.renewal_count : parseInt(String(r.renewal_count ?? "0"), 10) || 0,
+    description: String(r.description ?? ""),
     serviceTypeId: r.service_type_id ? String(r.service_type_id) : null,
     payrollWindowId: r.payroll_window_id ? String(r.payroll_window_id) : null,
     billingTypeId: r.billing_type_id ? String(r.billing_type_id) : null,
