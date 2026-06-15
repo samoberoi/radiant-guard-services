@@ -283,7 +283,7 @@ function VendorFormDialog({ open, onOpenChange, title, initial, onSubmit }: { op
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="grid gap-2"><Label>City</Label><Input value={p.city} onChange={(e) => set("city", e.target.value)} /></div>
             <div className="grid gap-2"><Label>State</Label><Input value={p.state} onChange={(e) => set("state", e.target.value)} /></div>
-            <div className="grid gap-2"><Label>Pincode</Label><Input value={p.pincode} onChange={(e) => set("pincode", e.target.value)} /></div>
+            <div className="grid gap-2"><Label>Pincode</Label><Input format="pincode" value={p.pincode} onChange={(e) => set("pincode", e.target.value)} /></div>
           </div>
           <div className="grid gap-2"><Label>Payment Terms</Label><Input value={p.payment_terms} onChange={(e) => set("payment_terms", e.target.value)} placeholder="e.g. Net 30" /></div>
           <div className="grid gap-2"><Label>Notes</Label><Textarea rows={2} value={p.notes} onChange={(e) => set("notes", e.target.value)} /></div>
