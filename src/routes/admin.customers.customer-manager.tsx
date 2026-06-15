@@ -677,7 +677,7 @@ function CustomerFormDialog({
         <DialogHeader>
           <DialogTitle>{editing ? "Edit organization" : "Add organization"}</DialogTitle>
           <DialogDescription>
-            Capture the organisation profile, contract window, and billing/shipping addresses.
+            Capture the organisation profile, contract window, and billing / deployment addresses.
           </DialogDescription>
         </DialogHeader>
 
