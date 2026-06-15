@@ -197,7 +197,7 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
 
     const gateway = createLovableAiGatewayProvider(key);
     // Use Gemini 3 Flash preview — multimodal, ~5-10x faster than 2.5-pro for OCR while keeping strong accuracy on handwritten musters.
-    const model = gateway("google/gemini-3-flash-preview");
+    const model = gateway("google/gemini-2.5-flash");
 
     const { text } = await generateText({
       model,
