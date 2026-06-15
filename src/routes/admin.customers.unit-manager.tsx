@@ -289,7 +289,7 @@ function UnitManagerPage() {
                   { key: "shippingSameAsBilling", header: "Shipping same as billing" },
                   { key: "shippingSameAsOrganisation", header: "Shipping same as organisation" },
                   { key: "shippingContact", header: "Shipping contact" },
-                  { key: "shippingAddress", header: "Shipping address" },
+                  { key: "shippingAddress", header: "Shipping / Deployment address" },
                   { key: "reportingOfficers", header: "Reporting officers" },
                   { key: "emergencyContact", header: "Emergency contact" },
                   { key: "nearbyHospital", header: "Nearby hospital" },
@@ -873,7 +873,7 @@ function UnitFormDialog({
           </Section>
 
           {/* SHIPPING */}
-          <Section title="Shipping information">
+          <Section title="Shipping / Deployment address">
             <div className="mb-3 grid gap-3 sm:grid-cols-2">
               <ToggleRow
                 label="Same as billing"

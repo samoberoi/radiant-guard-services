@@ -650,9 +650,11 @@ function CustomerFormDialog({
     }
   };
 
-  const billingFields: Array<{ key: keyof Omit<Customer, "id">; label: string; placeholder?: string; full?: boolean }> = [
+  const contactFields: Array<{ key: keyof Omit<Customer, "id">; label: string; placeholder?: string; full?: boolean }> = [
     { key: "billingSalutation", label: "Salutation", placeholder: "Mr. / Ms. / Dr." },
     { key: "billingName", label: "Name" },
+  ];
+  const billingFields: Array<{ key: keyof Omit<Customer, "id">; label: string; placeholder?: string; full?: boolean }> = [
     { key: "billingAddress1", label: "Address line 1", full: true },
     { key: "billingAddress2", label: "Address line 2", full: true },
     { key: "billingPincode", label: "Pincode" },
@@ -662,7 +664,7 @@ function CustomerFormDialog({
     { key: "billingCountry", label: "Country" },
     { key: "billingEmail", label: "Email" },
     { key: "billingPhone", label: "Phone" },
-    { key: "billingFax", label: "Fax" },
+    { key: "billingFax", label: "Alternate phone" },
   ];
   const shippingFields = billingFields.map((f) => ({
     ...f,
@@ -675,7 +677,7 @@ function CustomerFormDialog({
         <DialogHeader>
           <DialogTitle>{editing ? "Edit organization" : "Add organization"}</DialogTitle>
           <DialogDescription>
-            Capture the organisation profile, contract window, and billing/shipping addresses.
+            Capture the organisation profile, contract window, and billing / deployment addresses.
           </DialogDescription>
         </DialogHeader>
 
@@ -736,47 +738,6 @@ function CustomerFormDialog({
                 ))}
               </select>
             </Field>
-            <Field label="Description" full>
-              <Textarea
-                value={form.description}
-                onChange={(e) => set("description", e.target.value)}
-                placeholder="Brief overview of the organisation"
-                rows={2}
-              />
-            </Field>
-            <Field label="Logo" full>
-              <div className="flex items-center gap-3">
-                {form.logoUrl ? (
-                  <img
-                    src={form.logoUrl}
-                    alt="Logo"
-                    className="h-12 w-12 rounded-md border border-border bg-card object-contain"
-                  />
-                ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-md border border-dashed border-border text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Logo
-                  </div>
-                )}
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleLogo(e.target.files?.[0] ?? null)}
-                  disabled={uploading}
-                  className="max-w-xs"
-                />
-                {form.logoUrl && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => set("logoUrl", "")}
-                    className="text-muted-foreground"
-                  >
-                    Remove
-                  </Button>
-                )}
-              </div>
-            </Field>
             <Field label="Website">
               <Input
                 value={form.website}
@@ -797,6 +758,19 @@ function CustomerFormDialog({
             </Field>
           </div>
 
+
+          <SectionHeading title="Contact person" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            {contactFields.map((f) => (
+              <Field key={f.key} label={f.label} full={f.full}>
+                <Input
+                  value={(form[f.key] as string) ?? ""}
+                  onChange={(e) => set(f.key, e.target.value as never)}
+                  placeholder={f.placeholder}
+                />
+              </Field>
+            ))}
+          </div>
 
           <SectionHeading title="Billing information" />
           <div className="grid gap-4 sm:grid-cols-2">
@@ -824,7 +798,7 @@ function CustomerFormDialog({
 
           <div>
             <div className="mb-3 flex items-center justify-between gap-3 border-b border-border pb-2">
-              <SectionHeading title="Shipping information" inline />
+              <SectionHeading title="Shipping / Deployment address" inline />
               <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 Same as billing
                 <Switch

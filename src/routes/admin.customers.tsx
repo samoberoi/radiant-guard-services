@@ -250,7 +250,7 @@ function CustomersDashboard() {
               { key: "billingContact", header: "Billing contact" },
               { key: "billingAddress", header: "Billing address" },
               { key: "shippingContact", header: "Shipping contact" },
-              { key: "shippingAddress", header: "Shipping address" },
+              { key: "shippingAddress", header: "Shipping / Deployment address" },
               { key: "reportingOfficers", header: "Reporting officers" },
               { key: "emergencyContact", header: "Emergency contact" },
               { key: "nearbyHospital", header: "Nearby hospital" },
