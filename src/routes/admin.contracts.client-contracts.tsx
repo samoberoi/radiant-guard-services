@@ -2033,6 +2033,9 @@ function ContractFormDialog({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
+  const [originalStartDate, setOriginalStartDate] = useState("");
+  const [renewalCount, setRenewalCount] = useState(0);
+  const expiryManuallySetRef = useRef(false);
   const [description, setDescription] = useState("");
   const [serviceTypeId, setServiceTypeId] = useState<string>("");
   const [payrollWindowId, setPayrollWindowId] = useState<string>("");
