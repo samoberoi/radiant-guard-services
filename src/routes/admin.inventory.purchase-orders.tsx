@@ -262,30 +262,28 @@ function POPage() {
         </Button>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="overflow-x-clip">
-          <table className="ios-table w-full text-sm">
-            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3">PO #</th>
-                <th className="px-5 py-3">Supplier</th>
-                <th className="px-5 py-3">Deliver To</th>
-                <th className="px-5 py-3">Date</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Total Products</th>
-                <th className="px-5 py-3 text-right">Total Quantity</th>
-                <th className="px-5 py-3 text-right">Total Price</th>
-                <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((p) => {
-                const agg = lineAgg.get(p.id) ?? { products: 0, qty: 0 };
-                const canEdit = p.status !== "cancelled";
-
-                
-                const canDownload = p.status !== "draft" && p.status !== "cancelled";
-                return (
+      {/* Desktop table */}
+      <div className="hidden lg:block overflow-x-auto">
+        <table className="ios-table w-full text-sm">
+          <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <tr>
+              <th className="px-5 py-3">PO #</th>
+              <th className="px-5 py-3">Supplier</th>
+              <th className="px-5 py-3">Deliver To</th>
+              <th className="px-5 py-3">Date</th>
+              <th className="px-5 py-3">Status</th>
+              <th className="px-5 py-3 text-right">Total Products</th>
+              <th className="px-5 py-3 text-right">Total Quantity</th>
+              <th className="px-5 py-3 text-right">Total Price</th>
+              <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {filtered.map((p) => {
+              const agg = lineAgg.get(p.id) ?? { products: 0, qty: 0 };
+              const canEdit = p.status !== "cancelled";
+              const canDownload = p.status !== "draft" && p.status !== "cancelled";
+              return (
                 <tr key={p.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs">{p.po_number}</td>
                   <td className="px-5 py-3 font-medium">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</td>
@@ -323,12 +321,99 @@ function POPage() {
                     </div>
                   </td>
                 </tr>
-              );})}
-              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />No purchase orders yet. Click <span className="font-semibold text-foreground">Order from Supplier</span> to create your first PO.</td></tr>}
+              );
+            })}
+            {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />No purchase orders yet. Click <span className="font-semibold text-foreground">Order from Supplier</span> to create your first PO.</td></tr>}
+          </tbody>
+        </table>
+      </div>
 
-            </tbody>
-          </table>
-        </div>
+      {/* Mobile stacked cards */}
+      <div className="lg:hidden space-y-3 p-4">
+        {filtered.length === 0 ? (
+          <div className="py-12 text-center text-sm text-muted-foreground">
+            <FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />
+            No purchase orders yet. Click <span className="font-semibold text-foreground">Order from Supplier</span> to create your first PO.
+          </div>
+        ) : (
+          filtered.map((p) => {
+            const agg = lineAgg.get(p.id) ?? { products: 0, qty: 0 };
+            const canEdit = p.status !== "cancelled";
+            const canDownload = p.status !== "draft" && p.status !== "cancelled";
+            return (
+              <div key={p.id} className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm space-y-3">
+                {/* Header: PO # + status + actions */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-foreground truncate">{p.po_number}</div>
+                    <div className="mt-1">
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(p.status)}`}>
+                        {poStatusLabel(p.status)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="inline-flex gap-1 shrink-0">
+                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="View" onClick={() => { setEditing(p); setOpen(true); }}>
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    {canEdit && (
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Edit" onClick={() => { setEditing(p); setOpen(true); }}>
+                        <Edit2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" title="Delete" onClick={async () => {
+                      const isRaised = p.status !== "draft";
+                      const desc = isRaised
+                        ? `Are you sure? A purchase order has been raised (${p.po_number}). Do you really want to delete?`
+                        : `Delete ${p.po_number}?`;
+                      if (!(await confirmAction({ title: "Delete PO?", description: desc, confirmText: "Delete" }))) return;
+                      try { await deleteMut.mutateAsync(p.id); toast.success("Deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                    }}><Trash2 className="h-4 w-4" /></Button>
+                    {canDownload && (
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Download PO PDF" onClick={async () => {
+                        try { await handleDownloadPO(p); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed to generate PDF"); }
+                      }}><Download className="h-4 w-4" /></Button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Supplier */}
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground shrink-0">Supplier:</span>
+                  <span className="font-medium text-foreground truncate">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</span>
+                </div>
+
+                {/* Deliver To */}
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground shrink-0">Deliver To:</span>
+                  <span className="text-foreground truncate">{p.destination_warehouse_id ? warehouseMap.get(p.destination_warehouse_id)?.name ?? "—" : "—"}</span>
+                </div>
+
+                {/* Date */}
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground shrink-0">Date:</span>
+                  <span className="text-foreground">{p.po_date}</span>
+                </div>
+
+                {/* Totals row */}
+                <div className="flex flex-wrap gap-3 pt-1">
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Products:</span>{" "}
+                    <span className="font-semibold text-foreground">{agg.products}</span>
+                  </div>
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Qty:</span>{" "}
+                    <span className="font-semibold text-foreground">{agg.qty}</span>
+                  </div>
+                  <div className="text-sm">
+                    <span className="text-muted-foreground">Total:</span>{" "}
+                    <span className="font-semibold text-foreground">₹{Number(p.grand_total ?? 0).toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       <POFormDialog
