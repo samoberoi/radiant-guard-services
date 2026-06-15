@@ -254,6 +254,48 @@ function PayrollUnitPage() {
         resources = r ?? [];
       }
 
+      // 3b. Per-employee Additions & Deductions (Control Center catalog).
+      // Pull anything dated within the payroll period and still active.
+      const candidateIds = roster.map((c) => c.id);
+      type PerEmpItem = { name: string; amount: number };
+      const additionsByCandidate = new Map<string, PerEmpItem[]>();
+      const deductionsByCandidate = new Map<string, PerEmpItem[]>();
+      if (candidateIds.length > 0) {
+        const [addsRes, dedsRes] = await Promise.all([
+          supabase
+            .from("additions" as never)
+            .select("candidate_id, addition_name, calculation_type, amount, installments, status")
+            .in("candidate_id", candidateIds)
+            .gte("addition_date", start)
+            .lte("addition_date", end)
+            .eq("status", "active"),
+          supabase
+            .from("deductions" as never)
+            .select("candidate_id, deduction_name, calculation_type, amount, installments, status")
+            .in("candidate_id", candidateIds)
+            .gte("deduction_date", start)
+            .lte("deduction_date", end)
+            .eq("status", "active"),
+        ]);
+        type RawAdd = { candidate_id: string; addition_name: string; calculation_type: string; amount: number | string; installments: number };
+        type RawDed = { candidate_id: string; deduction_name: string; calculation_type: string; amount: number | string; installments: number };
+        for (const a of ((addsRes.data ?? []) as unknown as RawAdd[])) {
+          const inst = Math.max(1, Number(a.installments) || 1);
+          const amt = (Number(a.amount) || 0) / inst;
+          const arr = additionsByCandidate.get(a.candidate_id) ?? [];
+          arr.push({ name: a.addition_name, amount: Math.round(amt * 100) / 100 });
+          additionsByCandidate.set(a.candidate_id, arr);
+        }
+        for (const d of ((dedsRes.data ?? []) as unknown as RawDed[])) {
+          const inst = Math.max(1, Number(d.installments) || 1);
+          const amt = (Number(d.amount) || 0) / inst;
+          const arr = deductionsByCandidate.get(d.candidate_id) ?? [];
+          arr.push({ name: d.deduction_name, amount: Math.round(amt * 100) / 100 });
+          deductionsByCandidate.set(d.candidate_id, arr);
+        }
+      }
+
+
       // Make sure we know the names of any designation_ids referenced by entries
       // that weren't in the roster's primary designation list.
       const allDesigIds = new Set<string>(designationIds);
