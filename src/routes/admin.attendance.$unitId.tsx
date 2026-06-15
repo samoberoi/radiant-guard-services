@@ -97,6 +97,13 @@ function nearlyEqual(a: number | null, b: number | null, epsilon = 0.01) {
   return Math.abs(a - b) <= epsilon;
 }
 
+function isSummaryClose(actual: OcrRowSummary, expected: OcrRowSummary) {
+  const pOk = expected.p_days == null || nearlyEqual(actual.p_days, roundHalf(expected.p_days), 1);
+  const otOk = expected.ot_days == null || nearlyEqual(actual.ot_days, roundHalf(expected.ot_days), 1);
+  const tOk = expected.t_days == null || nearlyEqual(actual.t_days, roundHalf(expected.t_days), 1.5);
+  return { pOk, otOk, tOk, ok: pOk && otOk && tOk };
+}
+
 async function downscaleImage(file: File, maxDim: number, quality: number): Promise<string> {
   const bitmap = await createImageBitmap(file).catch(async () => {
     // Safari/HEIC fallback via <img>
@@ -645,7 +652,7 @@ function MusterRollPage() {
       const validDates = new Set(periodCells.map((c) => c.date));
       const byCandidate = new Map<string, typeof result.rows>();
       const uncertainNext = new Set<string>();
-      const rejectedRowCandidates = new Set<string>();
+      const totalsMismatchCandidates = new Set<string>();
       let confidentCount = 0;
       let uncertainCount = 0;
 
@@ -701,16 +708,13 @@ function MusterRollPage() {
         const expected = summaryByCandidate.get(candidateId);
         if (!expected?.confident) continue;
         const actual = computeImportedSummary(rows);
-        const pOk = expected.p_days == null || nearlyEqual(actual.p_days, roundHalf(expected.p_days));
-        const otOk = expected.ot_days == null || nearlyEqual(actual.ot_days, roundHalf(expected.ot_days));
-        const tOk = expected.t_days == null || nearlyEqual(actual.t_days, roundHalf(expected.t_days));
-        if (!pOk || !otOk || !tOk) {
-          rejectedRowCandidates.add(candidateId);
-          byCandidate.delete(candidateId);
+        const totalsCheck = isSummaryClose(actual, expected);
+        if (!totalsCheck.ok) {
+          totalsMismatchCandidates.add(candidateId);
         }
       }
 
-      for (const candidateId of rejectedRowCandidates) {
+      for (const candidateId of totalsMismatchCandidates) {
         const mr = primaryByCandidate.get(candidateId);
         if (!mr) continue;
         for (const cell of periodCells) {
@@ -759,7 +763,7 @@ function MusterRollPage() {
         return next;
       });
 
-      const summary = `${confidentCount} cell${confidentCount === 1 ? "" : "s"} auto-filled · ${uncertainCount} flagged for review${rejectedRowCandidates.size ? ` · ${rejectedRowCandidates.size} row${rejectedRowCandidates.size === 1 ? "" : "s"} rejected by totals check` : ""}${result.unmatched_names.length ? ` · ${result.unmatched_names.length} unmatched row${result.unmatched_names.length === 1 ? "" : "s"}` : ""}`;
+      const summary = `${confidentCount} cell${confidentCount === 1 ? "" : "s"} auto-filled · ${uncertainCount} flagged for review${totalsMismatchCandidates.size ? ` · ${totalsMismatchCandidates.size} row${totalsMismatchCandidates.size === 1 ? "" : "s"} marked for totals review` : ""}${result.unmatched_names.length ? ` · ${result.unmatched_names.length} unmatched row${result.unmatched_names.length === 1 ? "" : "s"}` : ""}`;
       setOcrSummary(summary);
       setUploadReadyToContinue(true);
       toast.success(summary);
