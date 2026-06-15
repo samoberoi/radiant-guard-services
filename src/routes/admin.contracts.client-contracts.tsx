@@ -2093,6 +2093,9 @@ function ContractFormDialog({
       setStartDate(editing.startDate);
       setEndDate(editing.endDate);
       setExpiryDate(editing.expiryDate);
+      setOriginalStartDate(editing.originalStartDate || editing.startDate || "");
+      setRenewalCount(editing.renewalCount ?? 0);
+      expiryManuallySetRef.current = !!editing.expiryDate;
       setDescription(editing.description);
       setServiceTypeId(editing.serviceTypeId ?? "");
       setPayrollWindowId(editing.payrollWindowId ?? "");
@@ -2107,6 +2110,9 @@ function ContractFormDialog({
       setStartDate("");
       setEndDate("");
       setExpiryDate("");
+      setOriginalStartDate("");
+      setRenewalCount(0);
+      expiryManuallySetRef.current = false;
       setDescription("");
       setServiceTypeId("");
       setPayrollWindowId("");
@@ -2119,8 +2125,24 @@ function ContractFormDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id]);
 
-  // Hydrate existing resources when editing
+  // Auto-derive expiry date = start date + 6 months (unless user manually overrode).
   useEffect(() => {
+    if (!open) return;
+    if (!startDate) return;
+    if (expiryManuallySetRef.current) return;
+    const derived = addMonthsISO(startDate, 6);
+    setExpiryDate((prev) => (prev === derived ? prev : derived));
+  }, [startDate, open]);
+
+  // Total renewal checkpoints over the whole contract span (one every 6 months).
+  const totalRenewalCheckpoints = useMemo(() => {
+    const months = monthsBetweenISO(startDate, endDate);
+    if (months <= 0) return 0;
+    return Math.max(1, Math.floor(months / 6));
+  }, [startDate, endDate]);
+  const currentCheckpoint = Math.min(totalRenewalCheckpoints || 0, (renewalCount ?? 0) + 1);
+
+
     if (open && editing && existingResources.length > 0) {
       setResources(existingResources);
     }
