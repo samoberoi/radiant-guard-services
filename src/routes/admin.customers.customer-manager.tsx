@@ -798,7 +798,7 @@ function CustomerFormDialog({
 
           <div>
             <div className="mb-3 flex items-center justify-between gap-3 border-b border-border pb-2">
-              <SectionHeading title="Shipping information" inline />
+              <SectionHeading title="Shipping / Deployment address" inline />
               <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                 Same as billing
                 <Switch
