@@ -390,6 +390,25 @@ function PayrollUnitPage() {
           ? computeWages(totals, resource, periodDates.length)
           : null;
         const isPrimary = (c.designation_id ?? null) === p.designationId;
+
+        // Fold per-employee additions/deductions onto the primary line only so
+        // we don't double-count across multiple designation lines for one person.
+        if (wages && isPrimary) {
+          const extraAdds = additionsByCandidate.get(c.id) ?? [];
+          const extraDeds = deductionsByCandidate.get(c.id) ?? [];
+          const addAdditions: { name: string; amount: number }[] = extraAdds;
+          (wages as unknown as { additions: { name: string; amount: number }[] }).additions = addAdditions;
+          if (extraDeds.length > 0) {
+            wages.deductions = [...wages.deductions, ...extraDeds];
+          }
+          const addTotal = extraAdds.reduce((s, a) => s + a.amount, 0);
+          const dedTotal = extraDeds.reduce((s, d) => s + d.amount, 0);
+          wages.earnedGross = Math.round((wages.earnedGross + addTotal) * 100) / 100;
+          wages.totalDeductions = Math.round((wages.totalDeductions + dedTotal) * 100) / 100;
+          wages.netPay = Math.round((wages.earnedGross - wages.totalDeductions) * 100) / 100;
+          wages.employerCost = Math.round((wages.earnedGross + wages.totalEmployerContributions) * 100) / 100;
+        }
+
         const cAny = c as unknown as Record<string, unknown>;
         return {
           id: c.id,
