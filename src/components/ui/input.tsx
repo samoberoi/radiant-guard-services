@@ -154,24 +154,167 @@ const NumberInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"inp
 );
 NumberInput.displayName = "NumberInput";
 
-const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
-    if (type === "date") {
-      return <DateInput className={className} {...props} ref={ref} />;
-    }
-    if (type === "number") {
-      return <NumberInput className={className} {...props} ref={ref} />;
-    }
+export type InputFormat =
+  | "pan"
+  | "gstin"
+  | "aadhaar"
+  | "uan"
+  | "esic"
+  | "mobile"
+  | "ifsc"
+  | "pincode";
+
+type FormatSpec = {
+  sanitize: (v: string) => string;
+  validate: (v: string) => boolean;
+  maxLength: number;
+  inputMode: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  placeholder: string;
+  mono: boolean;
+  title: string;
+};
+
+const dgts = (v: string, n: number) => (v ?? "").replace(/\D/g, "").slice(0, n);
+const upr = (v: string, n: number) => (v ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, n);
+
+const FORMAT_SPECS: Record<InputFormat, FormatSpec> = {
+  pan: {
+    sanitize: (v) => upr(v, 10),
+    validate: (v) => /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v),
+    maxLength: 10,
+    inputMode: "text",
+    placeholder: "ABCDE1234F",
+    mono: true,
+    title: "PAN must be 10 chars: 5 letters + 4 digits + 1 letter (e.g. ABCDE1234F)",
+  },
+  gstin: {
+    sanitize: (v) => upr(v, 15),
+    validate: (v) =>
+      /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(v),
+    maxLength: 15,
+    inputMode: "text",
+    placeholder: "22ABCDE1234F1Z5",
+    mono: true,
+    title: "GSTIN must be 15 chars: 2-digit state + 10-char PAN + entity + Z + checksum",
+  },
+  aadhaar: {
+    sanitize: (v) => dgts(v, 12),
+    validate: (v) => /^[2-9]\d{11}$/.test(v),
+    maxLength: 12,
+    inputMode: "numeric",
+    placeholder: "12-digit Aadhaar",
+    mono: true,
+    title: "Aadhaar must be 12 digits (cannot start with 0 or 1)",
+  },
+  uan: {
+    sanitize: (v) => dgts(v, 12),
+    validate: (v) => /^\d{12}$/.test(v),
+    maxLength: 12,
+    inputMode: "numeric",
+    placeholder: "12-digit UAN",
+    mono: true,
+    title: "UAN must be exactly 12 digits",
+  },
+  esic: {
+    sanitize: (v) => dgts(v, 17),
+    validate: (v) => /^\d{17}$/.test(v),
+    maxLength: 17,
+    inputMode: "numeric",
+    placeholder: "17-digit ESIC IP",
+    mono: true,
+    title: "ESIC IP number must be exactly 17 digits",
+  },
+  mobile: {
+    sanitize: (v) => dgts(v, 10),
+    validate: (v) => /^[6-9]\d{9}$/.test(v),
+    maxLength: 10,
+    inputMode: "tel",
+    placeholder: "10-digit mobile",
+    mono: false,
+    title: "Mobile must be 10 digits starting with 6-9",
+  },
+  ifsc: {
+    sanitize: (v) => upr(v, 11),
+    validate: (v) => /^[A-Z]{4}0[A-Z0-9]{6}$/.test(v),
+    maxLength: 11,
+    inputMode: "text",
+    placeholder: "SBIN0001234",
+    mono: true,
+    title: "IFSC must be 11 chars: 4 letters + 0 + 6 alphanumerics",
+  },
+  pincode: {
+    sanitize: (v) => dgts(v, 6),
+    validate: (v) => /^[1-9]\d{5}$/.test(v),
+    maxLength: 6,
+    inputMode: "numeric",
+    placeholder: "6-digit PIN",
+    mono: false,
+    title: "Pincode must be 6 digits (cannot start with 0)",
+  },
+};
+
+type FormattedInputProps = React.ComponentProps<"input"> & { format: InputFormat };
+
+const FormattedInput = React.forwardRef<HTMLInputElement, FormattedInputProps>(
+  ({ className, format, onChange, onBlur, value, placeholder, title, ...props }, ref) => {
+    const spec = FORMAT_SPECS[format];
+    const [touched, setTouched] = React.useState(false);
+    const str = value == null ? "" : String(value);
+    const invalid = touched && str.length > 0 && !spec.validate(str);
+
     return (
       <input
-        type={type}
-        className={cn(baseClasses, className)}
-        ref={ref}
         {...props}
+        ref={ref}
+        type="text"
+        value={value as never}
+        inputMode={spec.inputMode}
+        maxLength={spec.maxLength}
+        placeholder={placeholder ?? spec.placeholder}
+        title={title ?? spec.title}
+        aria-invalid={invalid || undefined}
+        autoCapitalize={spec.mono ? "characters" : undefined}
+        autoCorrect="off"
+        spellCheck={false}
+        onChange={(e) => {
+          const cleaned = spec.sanitize(e.target.value);
+          if (cleaned !== e.target.value) {
+            e.target.value = cleaned;
+          }
+          onChange?.(e);
+        }}
+        onBlur={(e) => {
+          setTouched(true);
+          onBlur?.(e);
+        }}
+        className={cn(
+          baseClasses,
+          spec.mono && "font-mono tracking-wide uppercase",
+          invalid &&
+            "border-destructive focus-visible:border-destructive focus-visible:ring-destructive/20",
+          className,
+        )}
       />
     );
   },
 );
+FormattedInput.displayName = "FormattedInput";
+
+const Input = React.forwardRef<
+  HTMLInputElement,
+  React.ComponentProps<"input"> & { format?: InputFormat }
+>(({ className, type, format, ...props }, ref) => {
+  if (format) {
+    return <FormattedInput className={className} format={format} {...props} ref={ref} />;
+  }
+  if (type === "date") {
+    return <DateInput className={className} {...props} ref={ref} />;
+  }
+  if (type === "number") {
+    return <NumberInput className={className} {...props} ref={ref} />;
+  }
+  return <input type={type} className={cn(baseClasses, className)} ref={ref} {...props} />;
+});
 Input.displayName = "Input";
 
 export { Input };
