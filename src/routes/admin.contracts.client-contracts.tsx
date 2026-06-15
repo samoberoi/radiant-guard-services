@@ -2417,8 +2417,18 @@ function ContractFormDialog({
                 <Input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    expiryManuallySetRef.current = false;
+                  }}
                 />
+                {originalStartDate && originalStartDate !== startDate ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Client onboarded on{" "}
+                    <span className="font-medium text-foreground">{originalStartDate}</span>{" "}
+                    (preserved across renewals).
+                  </p>
+                ) : null}
               </Field>
               <Field label="Contract end date">
                 <Input
@@ -2427,18 +2437,27 @@ function ContractFormDialog({
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </Field>
-              <Field label="Contract renewal / expiry date" className="sm:col-span-2">
+              <Field label="Next renewal / expiry date" className="sm:col-span-2">
                 <Input
                   type="date"
                   value={expiryDate}
-                  onChange={(e) => setExpiryDate(e.target.value)}
+                  onChange={(e) => {
+                    setExpiryDate(e.target.value);
+                    expiryManuallySetRef.current = true;
+                  }}
                   min={startDate || undefined}
                   max={endDate || undefined}
                 />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Renewal happens every 6 months.
-                </p>
+                <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span>Auto-set to 6 months after start. Renewal happens every 6 months.</span>
+                  {totalRenewalCheckpoints > 0 ? (
+                    <span className="font-medium text-foreground">
+                      Checkpoint {currentCheckpoint} of {totalRenewalCheckpoints}
+                    </span>
+                  ) : null}
+                </div>
               </Field>
+
               <Field label="Service Type">
                 <Select
                   value={serviceTypeId || "none"}
