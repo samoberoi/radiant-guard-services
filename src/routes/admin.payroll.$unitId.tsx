@@ -177,10 +177,12 @@ function PayrollUnitPage() {
     queryKey: ["payroll-compute", unitId, start, end],
     queryFn: async () => {
       // 1. Roster: candidates mapped to this unit (primary + secondary).
+      const candidateCols =
+        "id, employee_code, full_name, designation_id, bank_account_holder, bank_account_number, bank_ifsc, bank_name, bank_branch, approved_at, preferred_joining_date, application_date, pan_number";
       const [{ data: primary }, { data: links }] = await Promise.all([
         supabase
           .from("candidates")
-          .select("id, employee_code, full_name, designation_id")
+          .select(candidateCols)
           .eq("unit_id", unitId)
           .eq("is_enabled", true)
           .eq("status", "active"),
@@ -191,7 +193,7 @@ function PayrollUnitPage() {
       if (linkIds.length > 0) {
         const { data } = await supabase
           .from("candidates")
-          .select("id, employee_code, full_name, designation_id")
+          .select(candidateCols)
           .in("id", linkIds)
           .eq("is_enabled", true)
           .eq("status", "active");
@@ -346,6 +348,7 @@ function PayrollUnitPage() {
           ? computeWages(totals, resource, periodDates.length)
           : null;
         const isPrimary = (c.designation_id ?? null) === p.designationId;
+        const cAny = c as unknown as Record<string, unknown>;
         return {
           id: c.id,
           rowKey: pairKey(c.id, p.designationId),
@@ -358,6 +361,17 @@ function PayrollUnitPage() {
           wages,
           resource: resource ?? null,
           hasContract: !!resource,
+          bankAccountHolder: (cAny.bank_account_holder as string) || "",
+          bankAccountNumber: (cAny.bank_account_number as string) || "",
+          bankIfsc: (cAny.bank_ifsc as string) || "",
+          bankName: (cAny.bank_name as string) || "",
+          bankBranch: (cAny.bank_branch as string) || "",
+          dateOfJoining:
+            (cAny.approved_at as string) ||
+            (cAny.preferred_joining_date as string) ||
+            (cAny.application_date as string) ||
+            "",
+          panNumber: (cAny.pan_number as string) || "",
         };
       });
 
