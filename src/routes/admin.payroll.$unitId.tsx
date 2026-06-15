@@ -545,6 +545,7 @@ function PayrollUnitPage() {
       const contractComponents = r.resource?.components ?? [];
       const earnedComponents = w?.components ?? [];
       const earnedDeductions = w?.deductions ?? [];
+      const earnedAdditions = (w as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions ?? [];
 
       const cells: unknown[] = [
         idx + 1, periodMonth, "", clientId, customerName, siteName,
@@ -556,6 +557,7 @@ function PayrollUnitPage() {
         w ? w.baseDays : 0,
         r.totals.tDays, r.totals.otDays, 0,
         ...EARNED_COMPONENT_COLS.map((c) => lookup(earnedComponents, c)),
+        ...ADDITION_COLS.map((c) => lookup(earnedAdditions, c)),
         w ? w.earnedGross : 0,
         ...DEDUCTION_COLS.map((c) => lookup(earnedDeductions, c)),
         w ? w.totalDeductions : 0,
