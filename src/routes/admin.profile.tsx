@@ -692,8 +692,11 @@ function ProfilePage() {
         .from("candidate-files")
         .upload(path, file, { upsert: true, contentType: file.type });
       if (up.error) throw up.error;
-      const { data: pub } = supabase.storage.from("candidate-files").getPublicUrl(path);
-      const url = pub.publicUrl;
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("candidate-files")
+        .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+      if (signErr) throw signErr;
+      const url = signed.signedUrl;
       const upd = await supabase
         .from("candidates")
         .update({ photo_url: url })
