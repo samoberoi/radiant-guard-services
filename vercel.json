@@ -1,7 +1,0 @@
-{
-  "functions": {
-    ".vercel/output/functions/__nitro.func": {
-      "maxDuration": 120
-    }
-  }
-}
