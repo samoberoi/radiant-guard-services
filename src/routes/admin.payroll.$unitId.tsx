@@ -531,6 +531,7 @@ function PayrollUnitPage() {
       ...CONTRACT_COMPONENT_COLS,
       "Rate", "Fixed Duties", "Duties", "Over Time Duties", "Reliever Duties",
       ...EARNED_COMPONENT_COLS,
+      ...ADDITION_COLS,
       "Gross Salary",
       ...DEDUCTION_COLS,
       "Total Deductions", "Net Pay",
