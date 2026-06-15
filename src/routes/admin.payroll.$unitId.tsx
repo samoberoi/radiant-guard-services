@@ -635,7 +635,6 @@ function PayrollUnitPage() {
                 <th className="px-4 py-3 text-left font-medium">OT Hrs</th>
                 <th className="px-4 py-3 text-left font-medium" title="Full contract gross — what would be paid for a full month">Projected</th>
                 <th className="px-4 py-3 text-left font-medium" title="Per-day × T Days based on actual attendance">Earned gross</th>
-                <th className="px-4 py-3 text-left font-medium" title="Projected − Earned (unpaid due to absence)">Shortfall</th>
                 <th className="px-4 py-3 text-left font-medium">Deductions</th>
                 <th className="px-4 py-3 text-left font-medium">Net pay</th>
                 <th className="px-4 py-3 text-left font-medium">Employer cost</th>
@@ -643,14 +642,13 @@ function PayrollUnitPage() {
             </thead>
             <tbody className="divide-y divide-border/50">
               {isLoading ? (
-                <tr><td colSpan={12} className="px-4 py-10 text-center text-muted-foreground">Computing wages…</td></tr>
+                <tr><td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">Computing wages…</td></tr>
               ) : error ? (
-                <tr><td colSpan={12} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
+                <tr><td colSpan={11} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={12} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
+                <tr><td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
               ) : rows.map((r) => {
                 const isHighlighted = highlightCandidate === r.id;
-                const shortfall = r.wages ? Math.round((r.wages.contractGross - r.wages.earnedGross) * 100) / 100 : 0;
                 const isExpanded = expandedRows.has(r.rowKey);
                 return (
                 <>
@@ -679,14 +677,13 @@ function PayrollUnitPage() {
                   <td className="px-4 py-3 text-left">{r.totals.otHours}</td>
                   <td className="px-4 py-3 text-left text-muted-foreground">{r.wages ? fmtINR(r.wages.contractGross) : <span className="text-xs text-amber-600">no contract</span>}</td>
                   <td className="px-4 py-3 text-left font-medium">{r.wages ? fmtINR(r.wages.earnedGross) : "—"}</td>
-                  <td className={`px-4 py-3 text-left ${shortfall > 0 ? "text-rose-600" : "text-muted-foreground"}`}>{r.wages ? (shortfall > 0 ? `− ${fmtINR(shortfall)}` : fmtINR(0)) : "—"}</td>
                   <td className="px-4 py-3 text-left">{r.wages ? fmtINR(r.wages.totalDeductions) : "—"}</td>
                   <td className="px-4 py-3 text-left font-semibold text-emerald-700">{r.wages ? fmtINR(r.wages.netPay) : "—"}</td>
                   <td className="px-4 py-3 text-left">{r.wages ? fmtINR(r.wages.employerCost) : "—"}</td>
                 </tr>
                 {isExpanded && r.wages && r.resource && (
                   <tr key={`${r.rowKey}-detail`} className="bg-secondary/20">
-                    <td colSpan={12} className="px-4 py-0">
+                    <td colSpan={11} className="px-4 py-0">
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs my-3 rounded-lg border border-border/60 overflow-hidden">
                           <tbody>
@@ -771,7 +768,6 @@ function PayrollUnitPage() {
                   <td className="px-4 py-3" colSpan={5}>Totals</td>
                   <td className="px-4 py-3 text-left text-muted-foreground">{fmtINR(rows.reduce((s, r) => s + (r.wages?.contractGross ?? 0), 0))}</td>
                   <td className="px-4 py-3 text-left">{fmtINR(totals.earnedGross)}</td>
-                  <td className="px-4 py-3 text-left text-rose-600">− {fmtINR(rows.reduce((s, r) => s + (r.wages ? r.wages.contractGross - r.wages.earnedGross : 0), 0))}</td>
                   <td className="px-4 py-3 text-left">{fmtINR(totals.deductions)}</td>
                   <td className="px-4 py-3 text-left text-emerald-700">{fmtINR(totals.net)}</td>
                   <td className="px-4 py-3 text-left">{fmtINR(totals.employerCost)}</td>
