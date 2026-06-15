@@ -650,9 +650,11 @@ function CustomerFormDialog({
     }
   };
 
-  const billingFields: Array<{ key: keyof Omit<Customer, "id">; label: string; placeholder?: string; full?: boolean }> = [
+  const contactFields: Array<{ key: keyof Omit<Customer, "id">; label: string; placeholder?: string; full?: boolean }> = [
     { key: "billingSalutation", label: "Salutation", placeholder: "Mr. / Ms. / Dr." },
     { key: "billingName", label: "Name" },
+  ];
+  const billingFields: Array<{ key: keyof Omit<Customer, "id">; label: string; placeholder?: string; full?: boolean }> = [
     { key: "billingAddress1", label: "Address line 1", full: true },
     { key: "billingAddress2", label: "Address line 2", full: true },
     { key: "billingPincode", label: "Pincode" },
@@ -662,7 +664,7 @@ function CustomerFormDialog({
     { key: "billingCountry", label: "Country" },
     { key: "billingEmail", label: "Email" },
     { key: "billingPhone", label: "Phone" },
-    { key: "billingFax", label: "Fax" },
+    { key: "billingFax", label: "Alternate phone" },
   ];
   const shippingFields = billingFields.map((f) => ({
     ...f,
