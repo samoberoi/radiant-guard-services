@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateText } from "ai";
 
 const InputSchema = z.object({
   imageDataUrl: z.string().min(20).max(20_000_000),
@@ -180,9 +179,8 @@ function toDayNumber(value: unknown) {
 export const extractAttendanceFromImage = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<AttendanceOcrResult> => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("LOVABLE_API_KEY not configured");
-    const { createLovableAiGatewayProvider } = await import("./ai-gateway.server");
+    const apiKey = process.env.GEMINI_API_KEY ?? "";
+    if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
 
     const employeeList = data.employees
       .map(
@@ -195,36 +193,37 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
 
     const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (these are the calendar dates of the month — ONLY emit rows for the dates whose day-of-month is actually visible as a column on the sheet; if the printed header stops at day 30, do NOT emit day 31 even though it appears below):\n${dateList}\n\nEmployees (use the UUID as candidate_id, match by name or employee_code only with 100% certainty):\n${employeeList}\n\nReminder: confident=true ONLY when the cell is unambiguous and the code is in the allowed list. When in doubt → confident=false. Also read the right-side row totals (P Days, OT, T Days) for each matched employee and return them in row_summaries. Return ONLY a JSON object in this shape:\n{"rows":[{"candidate_id":"uuid","entry_date":"YYYY-MM-DD","code":"P","ot_hours":0,"confident":true}],"row_summaries":[{"candidate_id":"uuid","p_days":26.5,"ot_days":18.5,"t_days":45,"confident":true}],"unmatched_names":[],"notes":"visible_days=NN"}`;
 
-    const gateway = createLovableAiGatewayProvider(key);
-    // gemini-2.5-flash is multimodal and ~5-10x faster than pro for OCR-style tasks
-    const model = gateway("google/gemini-2.5-flash");
+    const m = data.imageDataUrl.match(/^data:([^;]+);base64,(.+)$/);
+    if (!m) throw new Error("Invalid image data URL");
+    const inlineData = { mime_type: m[1], data: m[2] };
 
-    const { text } = await generateText({
-      model,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text" as const, text: promptText },
-            {
-              type: "image" as const,
-              image: (() => {
-                const m = data.imageDataUrl.match(/^data:[^;]+;base64,(.+)$/);
-                if (!m) return new URL(data.imageDataUrl);
-                const b64 = m[1];
-                const bytes = Uint8Array.from(
-                  atob(b64),
-                  (c) => c.charCodeAt(0),
-                );
-                return bytes;
-              })(),
-            },
-          ],
-        },
-      ],
-      temperature: 0,
+    const model = "gemini-2.5-pro";
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: promptText }, { inline_data: inlineData }],
+          },
+        ],
+        generationConfig: { responseMimeType: "application/json", temperature: 0 },
+      }),
     });
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => "");
+      throw new Error(`Gemini API error ${res.status}: ${txt.slice(0, 300)}`);
+    }
+    const json = (await res.json()) as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
+    const text =
+      json.candidates?.[0]?.content?.parts?.map((p) => p?.text ?? "").join("") ?? "{}";
 
     const output = extractJsonObject(text);
 
