@@ -499,7 +499,6 @@ function PayrollUnitPage() {
 
     const CONTRACT_COMPONENT_COLS = collectUnique((r) => r.resource?.components);
     const EARNED_COMPONENT_COLS = collectUnique((r) => r.wages?.components);
-    const ADDITION_COLS = collectUnique((r) => (r.wages as unknown as { additions?: { name: string }[] } | null)?.additions);
     const DEDUCTION_COLS = collectUnique((r) => r.wages?.deductions);
 
     const lookup = (items: { name: string; amount: number }[] | undefined, label: string) => {
@@ -507,6 +506,11 @@ function PayrollUnitPage() {
       const target = norm(label);
       const hit = items.find((i) => norm(i.name) === target);
       return hit ? hit.amount : 0;
+    };
+
+    const sumAmounts = (items: { name: string; amount: number }[] | undefined) => {
+      if (!items) return 0;
+      return items.reduce((s, i) => s + i.amount, 0);
     };
 
     const escapeCell = (v: unknown): string => {
@@ -531,7 +535,7 @@ function PayrollUnitPage() {
       ...CONTRACT_COMPONENT_COLS,
       "Rate", "Fixed Duties", "Duties", "Over Time Duties", "Reliever Duties",
       ...EARNED_COMPONENT_COLS,
-      ...ADDITION_COLS,
+      "Additions",
       "Gross Salary",
       ...DEDUCTION_COLS,
       "Total Deductions", "Net Pay",
