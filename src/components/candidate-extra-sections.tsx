@@ -147,7 +147,7 @@ export function ComplianceSection({
         {pf && (
           <div className="ml-3 border-l-2 border-primary/30 pl-4">
             <Field label="UAN (Universal Account Number)">
-              <Input value={c.uan ?? ""} inputMode="numeric" maxLength={12} placeholder="12-digit UAN" onChange={(e) => setSection("compliance", { uan: e.target.value.replace(/\D/g, "").slice(0, 12) })} />
+              <Input format="uan" value={c.uan ?? ""} onChange={(e) => setSection("compliance", { uan: e.target.value })} />
             </Field>
           </div>
         )}
