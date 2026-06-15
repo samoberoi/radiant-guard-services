@@ -14,6 +14,7 @@ import {
   type AttendanceEntryLike,
   type ContractResourceLike,
 } from "@/lib/payroll-calc";
+import { downloadCsv } from "@/lib/csv-export";
 
 const searchSchema = z.object({
   start: z.string(),
@@ -324,8 +325,8 @@ function PayrollUnitPage() {
       "Emp ID", "Name", "Designation", "P Days", "PH Days", "OT Hrs", "OT Days", "T Days",
       "Projected Total (Billable)", "Actual Total (Billable)", "Shortfall",
     ];
-    const lines = [headers.join(",")];
-    for (const r of rows) {
+    const columns = headers.map((h) => ({ key: h, header: h }));
+    const dataRows = rows.map((r) => {
       const w = r.wages;
       const projTotal = r.resource
         ? r.resource.components.reduce((s, c) => s + (Number(c.amount) || 0), 0) +
@@ -333,21 +334,22 @@ function PayrollUnitPage() {
         : 0;
       const actualTotal = w?.employerCost ?? 0;
       const shortfall = w ? Math.round((projTotal - actualTotal) * 100) / 100 : "";
-      lines.push(
-        [
-          r.employeeCode, JSON.stringify(r.name), JSON.stringify(r.designation),
-          r.totals.pDays, r.totals.phDays, r.totals.otHours, r.totals.otDays, r.totals.tDays,
-          projTotal, actualTotal, shortfall,
-        ].join(","),
-      );
-    }
-    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `invoice-${unit?.code ?? unitId}-${start}-${end}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+      const cells: Record<string, unknown> = {
+        "Emp ID": r.employeeCode,
+        "Name": r.name,
+        "Designation": r.designation,
+        "P Days": r.totals.pDays,
+        "PH Days": r.totals.phDays,
+        "OT Hrs": r.totals.otHours,
+        "OT Days": r.totals.otDays,
+        "T Days": r.totals.tDays,
+        "Projected Total (Billable)": projTotal,
+        "Actual Total (Billable)": actualTotal,
+        "Shortfall": shortfall,
+      };
+      return cells;
+    });
+    downloadCsv(`invoice-${unit?.code ?? unitId}-${start}-${end}`, dataRows, columns);
   };
 
 
