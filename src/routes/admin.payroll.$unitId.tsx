@@ -177,10 +177,12 @@ function PayrollUnitPage() {
     queryKey: ["payroll-compute", unitId, start, end],
     queryFn: async () => {
       // 1. Roster: candidates mapped to this unit (primary + secondary).
+      const candidateCols =
+        "id, employee_code, full_name, designation_id, bank_account_holder, bank_account_number, bank_ifsc, bank_name, bank_branch, approved_at, preferred_joining_date, application_date, pan_number";
       const [{ data: primary }, { data: links }] = await Promise.all([
         supabase
           .from("candidates")
-          .select("id, employee_code, full_name, designation_id")
+          .select(candidateCols)
           .eq("unit_id", unitId)
           .eq("is_enabled", true)
           .eq("status", "active"),
@@ -191,7 +193,7 @@ function PayrollUnitPage() {
       if (linkIds.length > 0) {
         const { data } = await supabase
           .from("candidates")
-          .select("id, employee_code, full_name, designation_id")
+          .select(candidateCols)
           .in("id", linkIds)
           .eq("is_enabled", true)
           .eq("status", "active");
@@ -346,6 +348,7 @@ function PayrollUnitPage() {
           ? computeWages(totals, resource, periodDates.length)
           : null;
         const isPrimary = (c.designation_id ?? null) === p.designationId;
+        const cAny = c as unknown as Record<string, unknown>;
         return {
           id: c.id,
           rowKey: pairKey(c.id, p.designationId),
@@ -358,6 +361,17 @@ function PayrollUnitPage() {
           wages,
           resource: resource ?? null,
           hasContract: !!resource,
+          bankAccountHolder: (cAny.bank_account_holder as string) || "",
+          bankAccountNumber: (cAny.bank_account_number as string) || "",
+          bankIfsc: (cAny.bank_ifsc as string) || "",
+          bankName: (cAny.bank_name as string) || "",
+          bankBranch: (cAny.bank_branch as string) || "",
+          dateOfJoining:
+            (cAny.approved_at as string) ||
+            (cAny.preferred_joining_date as string) ||
+            (cAny.application_date as string) ||
+            "",
+          panNumber: (cAny.pan_number as string) || "",
         };
       });
 
@@ -401,30 +415,106 @@ function PayrollUnitPage() {
   }, [rows]);
 
   const exportCsv = () => {
-    const headers = [
-      "Emp ID", "Name", "Designation", "P Days", "PH Days", "OT Hrs", "OT Days", "T Days",
-      "Contract Gross (Projected)", "Earned Gross (Actual)", "Shortfall",
-      "Total Deductions", "Net Pay", "Employer Contrib", "Employer Cost",
+    // Wage Register column layout — mirrors the standard payroll export format.
+    const CONTRACT_COMPONENT_COLS = [
+      "Basic", "DA", "HRA", "CCA", "Washing Allowance", "Earnings Leave", "NFH Amount",
+      "Others", "4HRA", "Bonus Amount", "Skill Allowance", "Additional Allowance",
+      "Gratuity Amount", "Casual Leave", "Bonus", "Uniform Allowance", "Additional Allowance",
+      "Paid Holiday", "Exgratia", "Skill Allowance", "Reliever Charges", "Hardship Allowance",
+      "Traveling Allowance", "Fire Allowance", "Sup Allowance", "Fire fighting Allowance",
+      "Technical Allowance", "Conveyance Allowance", "LWW", "LTA", "Education Allowance",
+      "Other Allowance", "Field Allowance", "Extra Duty Allowance", "Incentive", "Site Allowance",
+      "Special Allowance", "Retention Allowance", "Night Allowance", "Driver Allowance",
+      "Ex Service Man Allowance", "Gun Allowance", "Washing Allowance",
     ];
-    const lines = [headers.join(",")];
-    for (const r of rows) {
+    const EARNED_COMPONENT_COLS = [
+      "Basic", "DA", "HRA", "CCA", "Washing Allowance", "Earnings Leave", "NFH Amount",
+      "OverTime Amount", "Others", "4HRA", "Bonus Amount", "Gratuity Amount", "Casual Leave",
+      "Bonus", "Uniform Allowance", "Refund", "Additional Allowance", "Paid Holiday", "Exgratia",
+      "Skill Allowance", "Reliever Charges", "Hardship Allowance", "Traveling Allowance",
+      "Fire Allowance", "Sup Allowance", "Technical Allowance", "Fire fighting Allowance",
+      "Conveyance Allowance", "Other Allowance", "LWW", "LTA", "Education Allowance",
+      "Field Allowance", "Extra Duty Allowance", "Incentive", "Site Allowance",
+      "Special Allowance", "Retention Allowance", "Night Allowance", "Driver Allowance",
+      "Ex Service Man Allowance", "Gun Allowance",
+    ];
+    const DEDUCTION_COLS = [
+      "EPF", "ESI", "Professional Tax", "Labour Welfare Fund", "Uniform", "ID Card",
+      "Recruitment Fees", "GPAIP", "Miscellaneous", "Fine", "General Deduction",
+      "Advance Recovery", "ERP Charges", "Canteen", "Name Plate", "Rent", "Mediclaim",
+      "Security Deposit",
+    ];
+
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const lookup = (items: { name: string; amount: number }[] | undefined, label: string) => {
+      if (!items) return 0;
+      const target = norm(label);
+      const hit = items.find((i) => norm(i.name) === target);
+      return hit ? hit.amount : 0;
+    };
+
+    const escapeCell = (v: unknown): string => {
+      if (v === null || v === undefined) return "";
+      const s = typeof v === "number" ? String(v) : String(v);
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+
+    const periodMonth = (() => {
+      const [y, m] = end.split("-");
+      return `${m}-${y}`;
+    })();
+    const customerName = unit?.customer_name || "";
+    const clientId = unit?.code || "";
+    const siteName = unit?.name || "";
+
+    const headers = [
+      "SI No", "Month", "Agency Branch Name", "Client ID", "Client Name", "Site Name",
+      "Employee ID", "Employee Name", "Designation", "Date Of Joining",
+      "PF No", "ESI No", "UAN",
+      ...CONTRACT_COMPONENT_COLS,
+      "Rate", "Fixed Duties", "Duties", "Over Time Duties", "Reliever Duties",
+      ...EARNED_COMPONENT_COLS,
+      "Gross Salary",
+      ...DEDUCTION_COLS,
+      "Total Deductions", "Net Pay",
+      "Bank Acc No", "Bank IFSC", "Bank Name", "Bank Branch Name", "Bank Account Holder Name",
+      "Approved Date", "Approval Info", "Is payment completed", "Payment date", "Remarks",
+    ];
+
+    const lines = [headers.map(escapeCell).join(",")];
+    rows.forEach((r, idx) => {
       const w = r.wages;
-      const shortfall = w ? Math.round((w.contractGross - w.earnedGross) * 100) / 100 : "";
-      lines.push(
-        [
-          r.employeeCode, JSON.stringify(r.name), JSON.stringify(r.designation),
-          r.totals.pDays, r.totals.phDays, r.totals.otHours, r.totals.otDays, r.totals.tDays,
-          w?.contractGross ?? "", w?.earnedGross ?? "", shortfall,
-          w?.totalDeductions ?? "",
-          w?.netPay ?? "", w?.totalEmployerContributions ?? "", w?.employerCost ?? "",
-        ].join(","),
-      );
-    }
-    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+      const contractComponents = r.resource?.components ?? [];
+      const earnedComponents = w?.components ?? [];
+      const earnedDeductions = w?.deductions ?? [];
+
+      const cells: unknown[] = [
+        idx + 1, periodMonth, "", clientId, customerName, siteName,
+        r.employeeCode, r.name, r.designation,
+        r.dateOfJoining ? r.dateOfJoining.slice(0, 10) : "",
+        "", "", "", // PF No, ESI No, UAN — not captured
+        ...CONTRACT_COMPONENT_COLS.map((c) => lookup(contractComponents, c)),
+        w ? w.perDayRate : 0,
+        w ? w.baseDays : 0,
+        r.totals.tDays, r.totals.otDays, 0,
+        ...EARNED_COMPONENT_COLS.map((c) => lookup(earnedComponents, c)),
+        w ? w.earnedGross : 0,
+        ...DEDUCTION_COLS.map((c) => lookup(earnedDeductions, c)),
+        w ? w.totalDeductions : 0,
+        w ? w.netPay : 0,
+        r.bankAccountNumber, r.bankIfsc, r.bankName, r.bankBranch, r.bankAccountHolder,
+        runStatus === "approved" ? new Date().toISOString().slice(0, 10) : "",
+        "", "No", "", "",
+      ];
+      lines.push(cells.map(escapeCell).join(","));
+    });
+
+    const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `payroll-${unit?.code ?? unitId}-${start}-${end}.csv`;
+    a.download = `wage-register-${unit?.code ?? unitId}-${start}-${end}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
