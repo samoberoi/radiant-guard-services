@@ -2370,7 +2370,7 @@ function ContractFormDialog({
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </Field>
-              <Field label="Contract renewal / expiry date">
+              <Field label="Contract renewal / expiry date" className="sm:col-span-2">
                 <Input
                   type="date"
                   value={expiryDate}
@@ -2379,7 +2379,7 @@ function ContractFormDialog({
                   max={endDate || undefined}
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Next renewal checkpoint (renewal happens every 6 months regardless of total contract duration).
+                  Renewal happens every 6 months.
                 </p>
               </Field>
               <Field label="Service Type">
@@ -2638,9 +2638,9 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className="grid gap-1.5">
+    <div className={cn("grid gap-1.5", className)}>
       <Label className="text-xs font-semibold text-muted-foreground">{label}</Label>
       {children}
     </div>
