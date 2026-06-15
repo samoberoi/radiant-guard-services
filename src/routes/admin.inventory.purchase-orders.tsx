@@ -342,17 +342,42 @@ function POPage() {
             const canDownload = p.status !== "draft" && p.status !== "cancelled";
             return (
               <div key={p.id} className="rounded-xl border border-border/60 bg-card p-3 shadow-sm">
-                {/* Row 1: PO # + status + actions */}
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-                  <div className="min-w-0">
-                    <div className="break-all text-sm font-semibold text-foreground">{p.po_number}</div>
-                    <div className="mt-0.5">
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(p.status)}`}>
-                        {poStatusLabel(p.status)}
-                      </span>
-                    </div>
+                {/* Width-optimized single-row layout */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  {/* Info block — uses all available width */}
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+                    <span className="break-all text-sm font-semibold text-foreground">{p.po_number}</span>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(p.status)}`}>
+                      {poStatusLabel(p.status)}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="text-muted-foreground">Supplier:</span>{" "}
+                      <span className="break-words font-medium text-foreground">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</span>
+                    </span>
+                    <span className="min-w-0">
+                      <span className="text-muted-foreground">Deliver To:</span>{" "}
+                      <span className="break-words text-foreground">{p.destination_warehouse_id ? warehouseMap.get(p.destination_warehouse_id)?.name ?? "—" : "—"}</span>
+                    </span>
+                    <span className="shrink-0">
+                      <span className="text-muted-foreground">Date:</span>{" "}
+                      <span className="text-foreground">{p.po_date}</span>
+                    </span>
+                    <span className="shrink-0">
+                      <span className="text-muted-foreground">Products:</span>{" "}
+                      <span className="font-semibold text-foreground">{agg.products}</span>
+                    </span>
+                    <span className="shrink-0">
+                      <span className="text-muted-foreground">Qty:</span>{" "}
+                      <span className="font-semibold text-foreground">{agg.qty}</span>
+                    </span>
+                    <span className="shrink-0">
+                      <span className="text-muted-foreground">Total:</span>{" "}
+                      <span className="font-semibold text-foreground">₹{Number(p.grand_total ?? 0).toFixed(2)}</span>
+                    </span>
                   </div>
-                  <div className="inline-flex shrink-0 flex-wrap justify-end gap-1">
+
+                  {/* Actions */}
+                  <div className="inline-flex shrink-0 flex-wrap gap-1">
                     <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="View" onClick={() => { setEditing(p); setOpen(true); }}>
                       <Eye className="h-3.5 w-3.5" />
                     </Button>
@@ -374,31 +399,6 @@ function POPage() {
                         try { await handleDownloadPO(p); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed to generate PDF"); }
                       }}><Download className="h-3.5 w-3.5" /></Button>
                     )}
-                  </div>
-                </div>
-
-                {/* Row 2: Supplier | Deliver To */}
-                <div className="mt-1.5 grid grid-cols-2 gap-2 text-xs">
-                  <div className="min-w-0">
-                    <span className="text-muted-foreground">Supplier: </span>
-                    <span className="break-words font-medium text-foreground">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</span>
-                  </div>
-                  <div className="min-w-0">
-                    <span className="text-muted-foreground">Deliver To: </span>
-                    <span className="break-words text-foreground">{p.destination_warehouse_id ? warehouseMap.get(p.destination_warehouse_id)?.name ?? "—" : "—"}</span>
-                  </div>
-                </div>
-
-                {/* Row 3: Date | Totals */}
-                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
-                  <div>
-                    <span className="text-muted-foreground">Date: </span>
-                    <span className="text-foreground">{p.po_date}</span>
-                  </div>
-                  <div className="flex gap-x-3">
-                    <span><span className="text-muted-foreground">Products:</span> <span className="font-semibold text-foreground">{agg.products}</span></span>
-                    <span><span className="text-muted-foreground">Qty:</span> <span className="font-semibold text-foreground">{agg.qty}</span></span>
-                    <span><span className="text-muted-foreground">Total:</span> <span className="font-semibold text-foreground">₹{Number(p.grand_total ?? 0).toFixed(2)}</span></span>
                   </div>
                 </div>
               </div>
