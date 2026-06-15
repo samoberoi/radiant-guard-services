@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BadgeCheck, Briefcase, Building2, Calculator, CalendarCheck, CalendarDays, CalendarRange, ClipboardList, Clock, Coins, FileSignature, HandCoins, Languages, LogOut, Package, Receipt, ReceiptText, Settings, Shield, ShieldCheck } from "lucide-react";
+import { ArrowRight, BadgeCheck, Briefcase, Building2, Calculator, CalendarCheck, CalendarDays, CalendarRange, ClipboardList, Clock, Coins, FileSignature, HandCoins, Languages, LogOut, Package, Receipt, ReceiptText, Settings, Shield, ShieldCheck, TrendingUp, TrendingDown } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/admin/control-center")({
@@ -61,6 +61,18 @@ const tiles: Tile[] = [
     label: "Allowance Manager",
     description: "Define allowance / earning components used in payroll.",
     icon: Coins,
+  },
+  {
+    to: "/admin/addition-type-manager",
+    label: "Addition Type Manager",
+    description: "Define payroll addition categories (bonus, incentive, paid holidays…) shown on employee additions.",
+    icon: TrendingUp,
+  },
+  {
+    to: "/admin/deduction-type-manager",
+    label: "Deduction Type Manager",
+    description: "Define payroll deduction categories (advance, uniform, fines…) shown on employee deductions.",
+    icon: TrendingDown,
   },
   {
     to: "/admin/billing-type-manager",
