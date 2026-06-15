@@ -262,155 +262,77 @@ function POPage() {
         </Button>
       </div>
 
-      {/* Desktop table kept hidden so purchase orders use the stacked layout consistently. */}
-      <div className="hidden">
-        <table className="ios-table w-full text-sm">
-          <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            <tr>
-              <th className="px-5 py-3">PO #</th>
-              <th className="px-5 py-3">Supplier</th>
-              <th className="px-5 py-3">Deliver To</th>
-              <th className="px-5 py-3">Date</th>
-              <th className="px-5 py-3">Status</th>
-              <th className="px-5 py-3 text-right">Total Products</th>
-              <th className="px-5 py-3 text-right">Total Quantity</th>
-              <th className="px-5 py-3 text-right">Total Price</th>
-              <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-border">
-            {filtered.map((p) => {
-              const agg = lineAgg.get(p.id) ?? { products: 0, qty: 0 };
-              const canEdit = p.status !== "cancelled";
-              const canDownload = p.status !== "draft" && p.status !== "cancelled";
-              return (
-                <tr key={p.id} className="hover:bg-secondary/30">
-                  <td className="px-5 py-3 font-mono text-xs">{p.po_number}</td>
-                  <td className="px-5 py-3 font-medium">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</td>
-                  <td className="px-5 py-3">{p.destination_warehouse_id ? warehouseMap.get(p.destination_warehouse_id)?.name ?? "—" : "—"}</td>
-                  <td className="px-5 py-3 text-xs text-muted-foreground">{p.po_date}</td>
-                  <td className="px-5 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(p.status)}`}>{poStatusLabel(p.status)}</span>
-                  </td>
-                  <td className="px-5 py-3 text-right tabular-nums">{agg.products}</td>
-                  <td className="px-5 py-3 text-right tabular-nums">{agg.qty}</td>
-                  <td className="px-5 py-3 text-right tabular-nums font-semibold">{Number(p.grand_total ?? 0).toFixed(2)}</td>
-                  <td className="px-5 py-3 text-right">
-                    <div className="inline-flex gap-1">
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="View" onClick={() => { setEditing(p); setOpen(true); }}>
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      {canEdit && (
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Edit" onClick={() => { setEditing(p); setOpen(true); }}>
-                          <Edit2 className="h-4 w-4" />
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="flex items-center justify-between border-b border-border bg-accent/10 px-5 py-2.5 text-xs font-medium">
+          <span className="inline-flex items-center gap-2">
+            <span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">{filtered.length}</span>
+            <span className="uppercase tracking-[0.14em] text-muted-foreground">Total rows</span>
+          </span>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="ios-table w-full text-sm">
+            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <tr>
+                <th className="px-5 py-3">PO #</th>
+                <th className="px-5 py-3">Supplier</th>
+                <th className="px-5 py-3">Deliver To</th>
+                <th className="px-5 py-3">Date</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3 text-right">Products</th>
+                <th className="px-5 py-3 text-right">Qty</th>
+                <th className="px-5 py-3 text-right">Total</th>
+                <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((p) => {
+                const agg = lineAgg.get(p.id) ?? { products: 0, qty: 0 };
+                const canEdit = p.status !== "cancelled";
+                const canDownload = p.status !== "draft" && p.status !== "cancelled";
+                return (
+                  <tr key={p.id} className="hover:bg-secondary/30">
+                    <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{p.po_number}</td>
+                    <td className="px-5 py-3 font-medium">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</td>
+                    <td className="px-5 py-3">{p.destination_warehouse_id ? warehouseMap.get(p.destination_warehouse_id)?.name ?? "—" : "—"}</td>
+                    <td className="px-5 py-3 text-xs text-muted-foreground tabular-nums">{p.po_date}</td>
+                    <td className="px-5 py-3">
+                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(p.status)}`}>{poStatusLabel(p.status)}</span>
+                    </td>
+                    <td className="px-5 py-3 text-right tabular-nums">{agg.products}</td>
+                    <td className="px-5 py-3 text-right tabular-nums">{agg.qty}</td>
+                    <td className="px-5 py-3 text-right tabular-nums font-semibold">₹{Number(p.grand_total ?? 0).toFixed(2)}</td>
+                    <td className="px-5 py-3 text-right">
+                      <div className="inline-flex gap-1">
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="View" onClick={() => { setEditing(p); setOpen(true); }}>
+                          <Eye className="h-4 w-4" />
                         </Button>
-                      )}
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" title="Delete" onClick={async () => {
-                        const isRaised = p.status !== "draft";
-                        const desc = isRaised
-                          ? `Are you sure? A purchase order has been raised (${p.po_number}). Do you really want to delete?`
-                          : `Delete ${p.po_number}?`;
-                        if (!(await confirmAction({ title: "Delete PO?", description: desc, confirmText: "Delete" }))) return;
-                        try { await deleteMut.mutateAsync(p.id); toast.success("Deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
-                      }}><Trash2 className="h-4 w-4" /></Button>
-                      {canDownload && (
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Download PO PDF" onClick={async () => {
-                          try { await handleDownloadPO(p); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed to generate PDF"); }
-                        }}><Download className="h-4 w-4" /></Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />No purchase orders yet. Click <span className="font-semibold text-foreground">Order from Supplier</span> to create your first PO.</td></tr>}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Stacked table rows */}
-      <div className="space-y-1.5">
-        {filtered.length === 0 ? (
-          <div className="py-12 text-center text-sm text-muted-foreground">
-            <FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />
-            No purchase orders yet. Click <span className="font-semibold text-foreground">Order from Supplier</span> to create your first PO.
-          </div>
-        ) : (
-          <>
-            <div className="hidden px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground md:grid md:grid-cols-[minmax(140px,0.9fr)_minmax(220px,1.45fr)_92px_96px_116px_auto] md:items-center md:gap-3">
-              <span>PO / Status</span>
-              <span>Supplier / Deliver To</span>
-              <span>Date</span>
-              <span className="text-right">Items</span>
-              <span className="text-right">Total</span>
-              <span className="text-right">Actions</span>
-            </div>
-            {filtered.map((p) => {
-              const agg = lineAgg.get(p.id) ?? { products: 0, qty: 0 };
-              const canEdit = p.status !== "cancelled";
-              const canDownload = p.status !== "draft" && p.status !== "cancelled";
-              return (
-                <div key={p.id} className="rounded-lg border border-border/60 bg-card px-3 py-2 shadow-sm transition-colors hover:bg-secondary/20">
-                  <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-2 md:grid-cols-[minmax(140px,0.9fr)_minmax(220px,1.45fr)_92px_96px_116px_auto] md:gap-3">
-                    <div className="min-w-0 space-y-1">
-                      <div className="break-all font-mono text-[13px] font-semibold leading-tight text-foreground">{p.po_number}</div>
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase leading-none tracking-wider ${statusBadgeClass(p.status)}`}>
-                        {poStatusLabel(p.status)}
-                      </span>
-                    </div>
-
-                    <div className="col-span-2 grid min-w-0 grid-cols-1 gap-1 text-xs md:col-span-1">
-                      <div className="grid grid-cols-[62px_minmax(0,1fr)] gap-2">
-                        <span className="text-muted-foreground">Supplier</span>
-                        <span className="min-w-0 break-words font-medium text-foreground">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</span>
+                        {canEdit && (
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Edit" onClick={() => { setEditing(p); setOpen(true); }}>
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" title="Delete" onClick={async () => {
+                          const isRaised = p.status !== "draft";
+                          const desc = isRaised
+                            ? `Are you sure? A purchase order has been raised (${p.po_number}). Do you really want to delete?`
+                            : `Delete ${p.po_number}?`;
+                          if (!(await confirmAction({ title: "Delete PO?", description: desc, confirmText: "Delete" }))) return;
+                          try { await deleteMut.mutateAsync(p.id); toast.success("Deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                        }}><Trash2 className="h-4 w-4" /></Button>
+                        {canDownload && (
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Download PO PDF" onClick={async () => {
+                            try { await handleDownloadPO(p); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed to generate PDF"); }
+                          }}><Download className="h-4 w-4" /></Button>
+                        )}
                       </div>
-                      <div className="grid grid-cols-[62px_minmax(0,1fr)] gap-2">
-                        <span className="text-muted-foreground">Deliver</span>
-                        <span className="min-w-0 break-words text-foreground">{p.destination_warehouse_id ? warehouseMap.get(p.destination_warehouse_id)?.name ?? "—" : "—"}</span>
-                      </div>
-                    </div>
-
-                    <div className="text-xs tabular-nums text-foreground md:text-muted-foreground">
-                      <span className="text-muted-foreground md:hidden">Date </span>{p.po_date}
-                    </div>
-
-                    <div className="text-xs tabular-nums text-foreground md:text-right">
-                      <span className="text-muted-foreground md:hidden">Items </span><span className="font-semibold">{agg.products}</span>
-                      <span className="mx-1 text-muted-foreground">/</span>
-                      <span className="font-semibold">{agg.qty}</span>
-                    </div>
-
-                    <div className="text-sm font-semibold tabular-nums text-foreground md:text-right">₹{Number(p.grand_total ?? 0).toFixed(2)}</div>
-
-                    <div className="inline-flex shrink-0 justify-end gap-1">
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="View" onClick={() => { setEditing(p); setOpen(true); }}>
-                        <Eye className="h-3.5 w-3.5" />
-                      </Button>
-                      {canEdit && (
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Edit" onClick={() => { setEditing(p); setOpen(true); }}>
-                          <Edit2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
-                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0 hover:text-destructive" title="Delete" onClick={async () => {
-                        const isRaised = p.status !== "draft";
-                        const desc = isRaised
-                          ? `Are you sure? A purchase order has been raised (${p.po_number}). Do you really want to delete?`
-                          : `Delete ${p.po_number}?`;
-                        if (!(await confirmAction({ title: "Delete PO?", description: desc, confirmText: "Delete" }))) return;
-                        try { await deleteMut.mutateAsync(p.id); toast.success("Deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
-                      }}><Trash2 className="h-3.5 w-3.5" /></Button>
-                      {canDownload && (
-                        <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Download PO PDF" onClick={async () => {
-                          try { await handleDownloadPO(p); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed to generate PDF"); }
-                        }}><Download className="h-3.5 w-3.5" /></Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />No purchase orders yet. Click <span className="font-semibold text-foreground">Order from Supplier</span> to create your first PO.</td></tr>}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <POFormDialog
