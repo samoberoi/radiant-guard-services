@@ -212,9 +212,14 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
         const result = await generateText({
           model: gateway("google/gemini-2.5-pro"),
           system: SYSTEM_PROMPT,
-          prompt: [
-            { type: "text", text: promptText },
-            { type: "file", mediaType: inlineData.mime_type, data: Buffer.from(inlineData.data, "base64") },
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: promptText },
+                { type: "file", mediaType: inlineData.mime_type, data: Buffer.from(inlineData.data, "base64") },
+              ],
+            },
           ],
           temperature: 0,
         });
