@@ -398,6 +398,8 @@ function useContracts() {
       start_date: p.startDate || null,
       end_date: p.endDate || null,
       expiry_date: p.expiryDate || null,
+      original_start_date: p.originalStartDate || p.startDate || null,
+      renewal_count: p.renewalCount ?? 0,
       description: p.description.trim(),
       service_type_id: p.serviceTypeId,
       payroll_window_id: p.payrollWindowId,
