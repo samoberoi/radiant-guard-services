@@ -329,7 +329,7 @@ function POPage() {
       </div>
 
       {/* Stacked cards */}
-      <div className="space-y-3">
+      <div className="space-y-2">
         {filtered.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
             <FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />
@@ -341,73 +341,64 @@ function POPage() {
             const canEdit = p.status !== "cancelled";
             const canDownload = p.status !== "draft" && p.status !== "cancelled";
             return (
-              <div key={p.id} className="space-y-3 rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
-                {/* Header: PO # + status + actions */}
-                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+              <div key={p.id} className="rounded-xl border border-border/60 bg-card p-3 shadow-sm">
+                {/* Row 1: PO # + status + actions */}
+                <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
                   <div className="min-w-0">
                     <div className="break-all text-sm font-semibold text-foreground">{p.po_number}</div>
-                    <div className="mt-1">
+                    <div className="mt-0.5">
                       <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(p.status)}`}>
                         {poStatusLabel(p.status)}
                       </span>
                     </div>
                   </div>
                   <div className="inline-flex shrink-0 flex-wrap justify-end gap-1">
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="View" onClick={() => { setEditing(p); setOpen(true); }}>
-                      <Eye className="h-4 w-4" />
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="View" onClick={() => { setEditing(p); setOpen(true); }}>
+                      <Eye className="h-3.5 w-3.5" />
                     </Button>
                     {canEdit && (
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Edit" onClick={() => { setEditing(p); setOpen(true); }}>
-                        <Edit2 className="h-4 w-4" />
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Edit" onClick={() => { setEditing(p); setOpen(true); }}>
+                        <Edit2 className="h-3.5 w-3.5" />
                       </Button>
                     )}
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" title="Delete" onClick={async () => {
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 hover:text-destructive" title="Delete" onClick={async () => {
                       const isRaised = p.status !== "draft";
                       const desc = isRaised
                         ? `Are you sure? A purchase order has been raised (${p.po_number}). Do you really want to delete?`
                         : `Delete ${p.po_number}?`;
                       if (!(await confirmAction({ title: "Delete PO?", description: desc, confirmText: "Delete" }))) return;
                       try { await deleteMut.mutateAsync(p.id); toast.success("Deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
-                    }}><Trash2 className="h-4 w-4" /></Button>
+                    }}><Trash2 className="h-3.5 w-3.5" /></Button>
                     {canDownload && (
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Download PO PDF" onClick={async () => {
+                      <Button size="sm" variant="ghost" className="h-7 w-7 p-0" title="Download PO PDF" onClick={async () => {
                         try { await handleDownloadPO(p); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed to generate PDF"); }
-                      }}><Download className="h-4 w-4" /></Button>
+                      }}><Download className="h-3.5 w-3.5" /></Button>
                     )}
                   </div>
                 </div>
 
-                {/* Supplier */}
-                <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2 text-sm">
-                  <span className="text-muted-foreground shrink-0">Supplier:</span>
-                  <span className="break-words font-medium text-foreground">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</span>
-                </div>
-
-                {/* Deliver To */}
-                <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2 text-sm">
-                  <span className="text-muted-foreground shrink-0">Deliver To:</span>
-                  <span className="break-words text-foreground">{p.destination_warehouse_id ? warehouseMap.get(p.destination_warehouse_id)?.name ?? "—" : "—"}</span>
-                </div>
-
-                {/* Date */}
-                <div className="grid grid-cols-[86px_minmax(0,1fr)] gap-2 text-sm">
-                  <span className="text-muted-foreground shrink-0">Date:</span>
-                  <span className="text-foreground">{p.po_date}</span>
-                </div>
-
-                {/* Totals row */}
-                <div className="flex flex-wrap gap-3 pt-1">
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Products:</span>{" "}
-                    <span className="font-semibold text-foreground">{agg.products}</span>
+                {/* Row 2: Supplier | Deliver To */}
+                <div className="mt-1.5 grid grid-cols-2 gap-2 text-xs">
+                  <div className="min-w-0">
+                    <span className="text-muted-foreground">Supplier: </span>
+                    <span className="break-words font-medium text-foreground">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</span>
                   </div>
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Qty:</span>{" "}
-                    <span className="font-semibold text-foreground">{agg.qty}</span>
+                  <div className="min-w-0">
+                    <span className="text-muted-foreground">Deliver To: </span>
+                    <span className="break-words text-foreground">{p.destination_warehouse_id ? warehouseMap.get(p.destination_warehouse_id)?.name ?? "—" : "—"}</span>
                   </div>
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Total:</span>{" "}
-                    <span className="font-semibold text-foreground">₹{Number(p.grand_total ?? 0).toFixed(2)}</span>
+                </div>
+
+                {/* Row 3: Date | Totals */}
+                <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Date: </span>
+                    <span className="text-foreground">{p.po_date}</span>
+                  </div>
+                  <div className="flex gap-x-3">
+                    <span><span className="text-muted-foreground">Products:</span> <span className="font-semibold text-foreground">{agg.products}</span></span>
+                    <span><span className="text-muted-foreground">Qty:</span> <span className="font-semibold text-foreground">{agg.qty}</span></span>
+                    <span><span className="text-muted-foreground">Total:</span> <span className="font-semibold text-foreground">₹{Number(p.grand_total ?? 0).toFixed(2)}</span></span>
                   </div>
                 </div>
               </div>
