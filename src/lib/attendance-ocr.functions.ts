@@ -50,17 +50,17 @@ export type AttendanceOcrResult = {
   notes: string;
 };
 
-const SYSTEM_PROMPT = `You are a STRICT OCR engine reading a hand-written or printed monthly attendance / muster-roll sheet from India.
+const SYSTEM_PROMPT = `You are a FAST, careful OCR engine reading a hand-written or printed monthly attendance / muster-roll sheet from India.
 You will be given the exact list of employees (id, name, employee_code, designation) and the exact list of period dates.
 
 ABSOLUTE RULES:
 1. VISIBLE DAYS ONLY — First, look at the day-number column headers printed on the sheet (e.g. "1 2 3 ... 30"). Note the LARGEST visible day number N. Do NOT emit any row whose entry_date day-of-month is greater than N, even if the period list contains later dates. If the sheet shows 30 days, never emit day 31.
 2. NEVER EXTRAPOLATE — Only emit a row for a cell you can actually SEE filled in on the paper. Empty/blank cells = no row. Do not pattern-fill or assume continuation.
-3. 100% CONFIDENCE THRESHOLD — Set "confident": true ONLY if the handwriting is crystal clear AND unambiguous AND the symbol exactly matches one of the allowed codes. ANY doubt (smudge, overwrite, ambiguous letter, faint pen, partial visibility, looks like it could be two different codes) → "confident": false. When in doubt, mark false.
-4. Match each visible row to one employee in the list by name OR employee_code. Use candidate_id (UUID) in output, NEVER the name. If you cannot match a row to an employee with 100% certainty, add the visible name to unmatched_names and DO NOT guess a candidate_id.
-5. "code" MUST be exactly one of the provided code strings (case-sensitive). P=present, A=absent etc. only when they exactly match a provided code. If unsure, set code to "" and confident to false.
+3. PRACTICAL CONFIDENCE — Extract as much real data as you can from visible cells. Set "confident": true when the code is the most likely reading and not meaningfully ambiguous. If the mark is visible but slightly messy, still extract it. Use "confident": false only when the symbol is genuinely unclear, contradictory, or too faint.
+4. Match each visible row to one employee in the list by name OR employee_code. Use candidate_id (UUID) in output, NEVER the name. Minor spelling differences, line breaks, or handwriting variation are OK if one employee is clearly the same person. If you truly cannot match a row, add the visible name to unmatched_names and DO NOT guess a candidate_id.
+5. "code" MUST correspond to one of the provided code strings. Prefer the closest exact code from the allowed list rather than leaving the cell blank, but only if the written mark clearly points to that code. If still unsure, set code to "" and confident to false.
 6. "ot_hours" is the overtime number for that day cell (OT sub-row under each day belongs to the same date). 0 if blank. If the OT digit is unclear, set confident=false for that cell.
-7. Cross-check each matched employee row against the handwritten/printed totals on the RIGHT side of the same row (P Days, OT, T Days). If the day cells you read do not reconcile with those row totals, that row is NOT reliable.
+7. Cross-check each matched employee row against the handwritten/printed totals on the RIGHT side of the same row (P Days, OT, T Days). Use those totals as a validation hint, but DO NOT discard a clearly visible day cell only because the totals are slightly hard to read or do not fully reconcile.
 8. Return ONLY a single JSON object with exactly these top-level keys: rows, row_summaries, unmatched_names, notes. No markdown fences, no prose.
 9. Each row_summaries item uses keys: candidate_id, p_days, ot_days, t_days, confident.
    - Output numeric DAY values, not text. Examples: "8:4" means 8.5 days, "44:8" means 45 days.
@@ -230,7 +230,7 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
 
     const validIds = new Set(data.employees.map((e) => e.id));
     const validDates = new Set(data.dates);
-    const validCodes = new Set(data.codes.map((c) => c.code));
+    const validCodeMap = new Map(data.codes.map((c) => [c.code.trim().toUpperCase(), c.code]));
 
     const notesStr = String(output.notes ?? "");
     const visibleMatch = notesStr.match(/visible_days\s*=\s*(\d{1,2})/i);
@@ -255,8 +255,8 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
         const dayNum = parseInt(entry_date.slice(8, 10), 10);
         if (Number.isFinite(dayNum) && dayNum > visibleDays) continue;
       }
-      const codeValid = codeRaw === "" || validCodes.has(codeRaw);
-      const code = codeValid ? codeRaw : "";
+      const code = codeRaw === "" ? "" : (validCodeMap.get(codeRaw.toUpperCase()) ?? "");
+      const codeValid = codeRaw === "" || code !== "";
       const ot_hours = Number.isFinite(ot) ? Math.max(0, Math.min(24, ot)) : 0;
       if (!code && ot_hours <= 0) continue;
       cleanedRows.push({
