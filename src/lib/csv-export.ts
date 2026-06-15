@@ -85,6 +85,41 @@ export async function writeXlsx(payload: ExportRequestPayload) {
     );
   }
   const ws = XLSX.utils.aoa_to_sheet(aoa);
+
+  // Auto-fit column widths from max content length per column.
+  const colWidths = columns.map((c, idx) => {
+    let max = String(c.header ?? "").length;
+    for (let r = 1; r < aoa.length; r++) {
+      const cell = aoa[r][idx];
+      const s = cell === null || cell === undefined ? "" : String(cell);
+      for (const line of s.split(/\r?\n/)) {
+        if (line.length > max) max = line.length;
+      }
+    }
+    return { wch: Math.min(Math.max(max + 2, 10), 60) };
+  });
+  (ws as unknown as { ["!cols"]?: unknown })["!cols"] = colWidths;
+  (ws as unknown as { ["!freeze"]?: unknown })["!freeze"] = { xSplit: 0, ySplit: 1 };
+  (ws as unknown as { ["!autofilter"]?: unknown })["!autofilter"] = {
+    ref: XLSX.utils.encode_range({
+      s: { r: 0, c: 0 },
+      e: { r: Math.max(aoa.length - 1, 0), c: Math.max(columns.length - 1, 0) },
+    }),
+  };
+
+  // Bold header cells (rendered by Excel/LibreOffice).
+  for (let c = 0; c < columns.length; c++) {
+    const addr = XLSX.utils.encode_cell({ r: 0, c });
+    const cell = (ws as Record<string, unknown>)[addr] as { s?: unknown } | undefined;
+    if (cell) {
+      cell.s = {
+        font: { bold: true, color: { rgb: "FFFFFF" } },
+        fill: { fgColor: { rgb: "1E293B" }, patternType: "solid" },
+        alignment: { vertical: "center", horizontal: "left", wrapText: true },
+      };
+    }
+  }
+
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
   XLSX.writeFile(wb, `${stripExtension(filename)}-${timestamp()}.xlsx`);
@@ -97,18 +132,80 @@ export async function writePdf(payload: ExportRequestPayload) {
     import("jspdf-autotable"),
   ]);
   const autoTable = (autoTableMod as { default: typeof import("jspdf-autotable").default }).default;
-  const orientation = columns.length > 6 ? "landscape" : "portrait";
-  const doc = new jsPDF({ orientation, unit: "pt", format: "a4" });
-  doc.setFontSize(12);
-  doc.text(stripExtension(filename), 40, 32);
+  const orientation = columns.length > 5 ? "landscape" : "portrait";
+  // Scale page width with column count so wide tables don't get crammed onto A4.
+  const pageWidthPt = orientation === "landscape"
+    ? Math.max(842, Math.min(columns.length * 110, 2400))
+    : Math.max(595, Math.min(columns.length * 110, 1800));
+  const pageHeightPt = orientation === "landscape" ? 595 : 842;
+  const doc = new jsPDF({ orientation, unit: "pt", format: [pageWidthPt, pageHeightPt] });
+
+  const title = stripExtension(filename).replace(/[-_]/g, " ");
+  doc.setFontSize(14);
+  doc.setFont("helvetica", "bold");
+  doc.text(title, 24, 28);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(100);
+  doc.text(
+    `Generated ${new Date().toLocaleString("en-IN")}  •  ${rows.length} row${rows.length === 1 ? "" : "s"}`,
+    24,
+    44,
+  );
+  doc.setTextColor(0);
+
+  const fontSize = columns.length > 14 ? 6 : columns.length > 10 ? 7 : columns.length > 7 ? 8 : 9;
+
+  // Right-align mostly-numeric columns.
+  const columnStyles: Record<number, { halign?: "left" | "right" | "center" }> = {};
+  columns.forEach((c, idx) => {
+    let hits = 0;
+    let total = 0;
+    for (const r of rows) {
+      const v = r[c.key as string];
+      if (v === null || v === undefined || v === "") continue;
+      total++;
+      if (typeof v === "number") hits++;
+      else if (typeof v === "string" && /^-?[\d,]+(\.\d+)?%?$/.test(v.trim())) hits++;
+    }
+    if (total > 0 && hits / total > 0.7) columnStyles[idx] = { halign: "right" };
+  });
+
   autoTable(doc, {
-    startY: 48,
+    startY: 56,
     head: [columns.map((c) => c.header)],
     body: rows.map((r) => columns.map((c) => formatPlainCell(r[c.key as string]))),
-    styles: { fontSize: 8, cellPadding: 4, overflow: "linebreak" },
-    headStyles: { fillColor: [30, 41, 59], textColor: 255 },
+    styles: {
+      fontSize,
+      cellPadding: 4,
+      overflow: "linebreak",
+      valign: "middle",
+      lineColor: [226, 232, 240],
+      lineWidth: 0.25,
+    },
+    headStyles: {
+      fillColor: [30, 41, 59],
+      textColor: 255,
+      fontStyle: "bold",
+      halign: "left",
+    },
+    alternateRowStyles: { fillColor: [248, 250, 252] },
+    columnStyles,
     theme: "striped",
-    margin: { left: 24, right: 24 },
+    margin: { left: 24, right: 24, top: 56, bottom: 36 },
+    tableWidth: "auto",
+    showHead: "everyPage",
+    didDrawPage: (data) => {
+      doc.setFontSize(8);
+      doc.setTextColor(120);
+      doc.text(
+        `Page ${data.pageNumber} of ${doc.getNumberOfPages()}`,
+        doc.internal.pageSize.getWidth() - 24,
+        doc.internal.pageSize.getHeight() - 16,
+        { align: "right" },
+      );
+      doc.setTextColor(0);
+    },
   });
   doc.save(`${stripExtension(filename)}-${timestamp()}.pdf`);
 }
