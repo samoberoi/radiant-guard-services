@@ -276,8 +276,8 @@ function VendorFormDialog({ open, onOpenChange, title, initial, onSubmit }: { op
             <div className="grid gap-2"><Label>Contact Person</Label><Input value={p.contact_person} onChange={(e) => set("contact_person", e.target.value)} /></div>
             <div className="grid gap-2"><Label>Phone</Label><Input value={p.phone} onChange={(e) => set("phone", e.target.value)} /></div>
             <div className="grid gap-2"><Label>Email</Label><Input value={p.email} onChange={(e) => set("email", e.target.value)} /></div>
-            <div className="grid gap-2"><Label>GSTIN</Label><Input value={p.gstin} onChange={(e) => set("gstin", e.target.value.toUpperCase())} /></div>
-            <div className="grid gap-2"><Label>PAN</Label><Input value={p.pan} onChange={(e) => set("pan", e.target.value.toUpperCase())} /></div>
+            <div className="grid gap-2"><Label>GSTIN</Label><Input format="gstin" value={p.gstin} onChange={(e) => set("gstin", e.target.value)} /></div>
+            <div className="grid gap-2"><Label>PAN</Label><Input format="pan" value={p.pan} onChange={(e) => set("pan", e.target.value)} /></div>
           </div>
           <div className="grid gap-2"><Label>Address</Label><Input value={p.address1} onChange={(e) => set("address1", e.target.value)} /></div>
           <div className="grid gap-3 sm:grid-cols-3">
