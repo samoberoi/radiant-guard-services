@@ -759,6 +759,19 @@ function CustomerFormDialog({
           </div>
 
 
+          <SectionHeading title="Contact person" />
+          <div className="grid gap-4 sm:grid-cols-2">
+            {contactFields.map((f) => (
+              <Field key={f.key} label={f.label} full={f.full}>
+                <Input
+                  value={(form[f.key] as string) ?? ""}
+                  onChange={(e) => set(f.key, e.target.value as never)}
+                  placeholder={f.placeholder}
+                />
+              </Field>
+            ))}
+          </div>
+
           <SectionHeading title="Billing information" />
           <div className="grid gap-4 sm:grid-cols-2">
             {billingFields.map((f) => {
