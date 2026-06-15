@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { generateText } from "ai";
 
 const InputSchema = z.object({
   imageDataUrl: z.string().min(20).max(20_000_000),
