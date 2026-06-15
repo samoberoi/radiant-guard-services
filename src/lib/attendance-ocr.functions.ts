@@ -1,5 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
+import { generateText } from "ai";
 import { z } from "zod";
+
+import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
 
 const InputSchema = z.object({
   imageDataUrl: z.string().min(20).max(20_000_000),
@@ -179,8 +182,11 @@ function toDayNumber(value: unknown) {
 export const extractAttendanceFromImage = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => InputSchema.parse(input))
   .handler(async ({ data }): Promise<AttendanceOcrResult> => {
-    const apiKey = process.env.GEMINI_API_KEY ?? "";
-    if (!apiKey) throw new Error("GEMINI_API_KEY not configured");
+    const lovableApiKey = process.env.LOVABLE_API_KEY ?? "";
+    const geminiApiKey = process.env.GEMINI_API_KEY ?? "";
+    if (!lovableApiKey && !geminiApiKey) {
+      throw new Error("Attendance OCR is not configured");
+    }
 
     const employeeList = data.employees
       .map(
@@ -197,33 +203,60 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
     if (!m) throw new Error("Invalid image data URL");
     const inlineData = { mime_type: m[1], data: m[2] };
 
-    const model = "gemini-2.5-pro";
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    let text = "{}";
+    let lastError: unknown = null;
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: promptText }, { inline_data: inlineData }],
-          },
-        ],
-        generationConfig: { responseMimeType: "application/json", temperature: 0 },
-      }),
-    });
-
-    if (!res.ok) {
-      const txt = await res.text().catch(() => "");
-      throw new Error(`Gemini API error ${res.status}: ${txt.slice(0, 300)}`);
+    if (lovableApiKey) {
+      try {
+        const gateway = createLovableAiGatewayProvider(lovableApiKey);
+        const result = await generateText({
+          model: gateway("google/gemini-2.5-pro"),
+          system: SYSTEM_PROMPT,
+          prompt: [
+            { type: "text", text: promptText },
+            { type: "file", mediaType: inlineData.mime_type, data: Buffer.from(inlineData.data, "base64") },
+          ],
+          temperature: 0,
+        });
+        text = result.text || "{}";
+      } catch (error) {
+        lastError = error;
+      }
     }
-    const json = (await res.json()) as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    const text =
-      json.candidates?.[0]?.content?.parts?.map((p) => p?.text ?? "").join("") ?? "{}";
+
+    if (text === "{}" && geminiApiKey) {
+      const model = "gemini-2.5-pro";
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(geminiApiKey)}`;
+
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+          contents: [
+            {
+              role: "user",
+              parts: [{ text: promptText }, { inline_data: inlineData }],
+            },
+          ],
+          generationConfig: { responseMimeType: "application/json", temperature: 0 },
+        }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(`Gemini API error ${res.status}: ${txt.slice(0, 300)}`);
+      }
+      const json = (await res.json()) as {
+        candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+      };
+      text =
+        json.candidates?.[0]?.content?.parts?.map((p) => p?.text ?? "").join("") ?? "{}";
+    }
+
+    if (text === "{}" && lastError) {
+      throw lastError;
+    }
 
     const output = extractJsonObject(text);
 
