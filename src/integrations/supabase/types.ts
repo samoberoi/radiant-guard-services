@@ -3779,6 +3779,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_user_role_key: { Args: never; Returns: string }
       get_admin_user_ids: {
         Args: never
         Returns: {
@@ -3799,6 +3800,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      is_admin_user: { Args: never; Returns: boolean }
       nextval: { Args: { sequence_name: string }; Returns: number }
     }
     Enums: {
