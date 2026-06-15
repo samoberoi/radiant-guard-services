@@ -720,15 +720,6 @@ function UnitFormDialog({
                   />
                 </div>
               </Field>
-              <div className="sm:col-span-2">
-                <Field label="Description">
-                  <Textarea
-                    value={form.description}
-                    onChange={(e) => set("description", e.target.value)}
-                    rows={2}
-                  />
-                </Field>
-              </div>
             </div>
           </Section>
 
@@ -929,7 +920,7 @@ function UnitFormDialog({
             />
           </Section>
 
-          <Section title="Reporting officers">
+          <Section title="Field officer / Operational manager">
             <div className="space-y-2">
               {form.reportingOfficers.map((o, i) => (
                 <div
