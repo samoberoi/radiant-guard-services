@@ -662,6 +662,7 @@ export type Database = {
           gst_option: string
           id: string
           is_internal: boolean
+          original_start_date: string | null
           payroll_window_id: string | null
           promoted_at: string | null
           prospect_code: string | null
@@ -670,6 +671,7 @@ export type Database = {
           rejected_at: string | null
           rejected_by: string | null
           rejection_reason: string
+          renewal_count: number
           service_type_id: string | null
           signed_at: string | null
           signed_pdf_url: string
@@ -694,6 +696,7 @@ export type Database = {
           gst_option?: string
           id?: string
           is_internal?: boolean
+          original_start_date?: string | null
           payroll_window_id?: string | null
           promoted_at?: string | null
           prospect_code?: string | null
@@ -702,6 +705,7 @@ export type Database = {
           rejected_at?: string | null
           rejected_by?: string | null
           rejection_reason?: string
+          renewal_count?: number
           service_type_id?: string | null
           signed_at?: string | null
           signed_pdf_url?: string
@@ -726,6 +730,7 @@ export type Database = {
           gst_option?: string
           id?: string
           is_internal?: boolean
+          original_start_date?: string | null
           payroll_window_id?: string | null
           promoted_at?: string | null
           prospect_code?: string | null
@@ -734,6 +739,7 @@ export type Database = {
           rejected_at?: string | null
           rejected_by?: string | null
           rejection_reason?: string
+          renewal_count?: number
           service_type_id?: string | null
           signed_at?: string | null
           signed_pdf_url?: string

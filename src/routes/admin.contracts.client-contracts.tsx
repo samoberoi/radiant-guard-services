@@ -114,6 +114,8 @@ type ClientContract = {
   startDate: string;
   endDate: string;
   expiryDate: string;
+  originalStartDate: string;
+  renewalCount: number;
   description: string;
   serviceTypeId: string | null;
   payrollWindowId: string | null;
@@ -127,6 +129,31 @@ type ClientContract = {
   createdBy: string | null;
   promotedAt: string | null;
 };
+
+// Add N months to an ISO yyyy-mm-dd date string. Returns "" on empty input.
+function addMonthsISO(iso: string, months: number): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map((n) => parseInt(n, 10));
+  if (!y || !m || !d) return "";
+  const base = new Date(Date.UTC(y, m - 1, d));
+  const targetMonth = base.getUTCMonth() + months;
+  const target = new Date(Date.UTC(base.getUTCFullYear(), targetMonth, 1));
+  // Clamp day to the last day of the target month
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(d, lastDay));
+  return target.toISOString().slice(0, 10);
+}
+
+// Number of whole months between two ISO dates (end - start). Negative if invalid.
+function monthsBetweenISO(startIso: string, endIso: string): number {
+  if (!startIso || !endIso) return 0;
+  const [sy, sm, sd] = startIso.split("-").map((n) => parseInt(n, 10));
+  const [ey, em, ed] = endIso.split("-").map((n) => parseInt(n, 10));
+  if (!sy || !ey) return 0;
+  let months = (ey - sy) * 12 + (em - sm);
+  if (ed < sd) months -= 1;
+  return months;
+}
 
 type ApprovalPickerValue = "approved" | "rejected" | "lost" | null;
 
@@ -219,6 +246,8 @@ function rowToContract(r: Record<string, unknown>): ClientContract {
     startDate: r.start_date ? String(r.start_date) : "",
     endDate: r.end_date ? String(r.end_date) : "",
     expiryDate: r.expiry_date ? String(r.expiry_date) : "",
+    originalStartDate: r.original_start_date ? String(r.original_start_date) : (r.start_date ? String(r.start_date) : ""),
+    renewalCount: typeof r.renewal_count === "number" ? r.renewal_count : parseInt(String(r.renewal_count ?? "0"), 10) || 0,
     description: String(r.description ?? ""),
     serviceTypeId: r.service_type_id ? String(r.service_type_id) : null,
     payrollWindowId: r.payroll_window_id ? String(r.payroll_window_id) : null,
@@ -308,7 +337,7 @@ function useContracts() {
       const { data, error } = await supabase
         .from("client_contracts" as never)
         .select(
-          "id,contract_code,prospect_code,record_type,prospect_stage,promoted_at,unit_id,start_date,end_date,expiry_date,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status,approval_status,rejection_reason,created_by",
+          "id,contract_code,prospect_code,record_type,prospect_stage,promoted_at,unit_id,start_date,end_date,expiry_date,original_start_date,renewal_count,description,service_type_id,payroll_window_id,billing_type_id,esic_branch_id,gst_option,status,approval_status,rejection_reason,created_by",
         )
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -369,6 +398,8 @@ function useContracts() {
       start_date: p.startDate || null,
       end_date: p.endDate || null,
       expiry_date: p.expiryDate || null,
+      original_start_date: p.originalStartDate || p.startDate || null,
+      renewal_count: p.renewalCount ?? 0,
       description: p.description.trim(),
       service_type_id: p.serviceTypeId,
       payroll_window_id: p.payrollWindowId,
@@ -2002,6 +2033,9 @@ function ContractFormDialog({
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
+  const [originalStartDate, setOriginalStartDate] = useState("");
+  const [renewalCount, setRenewalCount] = useState(0);
+  const expiryManuallySetRef = useRef(false);
   const [description, setDescription] = useState("");
   const [serviceTypeId, setServiceTypeId] = useState<string>("");
   const [payrollWindowId, setPayrollWindowId] = useState<string>("");
@@ -2059,6 +2093,9 @@ function ContractFormDialog({
       setStartDate(editing.startDate);
       setEndDate(editing.endDate);
       setExpiryDate(editing.expiryDate);
+      setOriginalStartDate(editing.originalStartDate || editing.startDate || "");
+      setRenewalCount(editing.renewalCount ?? 0);
+      expiryManuallySetRef.current = !!editing.expiryDate;
       setDescription(editing.description);
       setServiceTypeId(editing.serviceTypeId ?? "");
       setPayrollWindowId(editing.payrollWindowId ?? "");
@@ -2073,6 +2110,9 @@ function ContractFormDialog({
       setStartDate("");
       setEndDate("");
       setExpiryDate("");
+      setOriginalStartDate("");
+      setRenewalCount(0);
+      expiryManuallySetRef.current = false;
       setDescription("");
       setServiceTypeId("");
       setPayrollWindowId("");
@@ -2084,6 +2124,23 @@ function ContractFormDialog({
     setResources([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id]);
+
+  // Auto-derive expiry date = start date + 6 months (unless user manually overrode).
+  useEffect(() => {
+    if (!open) return;
+    if (!startDate) return;
+    if (expiryManuallySetRef.current) return;
+    const derived = addMonthsISO(startDate, 6);
+    setExpiryDate((prev) => (prev === derived ? prev : derived));
+  }, [startDate, open]);
+
+  // Total renewal checkpoints over the whole contract span (one every 6 months).
+  const totalRenewalCheckpoints = useMemo(() => {
+    const months = monthsBetweenISO(startDate, endDate);
+    if (months <= 0) return 0;
+    return Math.max(1, Math.floor(months / 6));
+  }, [startDate, endDate]);
+  const currentCheckpoint = Math.min(totalRenewalCheckpoints || 0, (renewalCount ?? 0) + 1);
 
   // Hydrate existing resources when editing
   useEffect(() => {
@@ -2360,8 +2417,18 @@ function ContractFormDialog({
                 <Input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    expiryManuallySetRef.current = false;
+                  }}
                 />
+                {originalStartDate && originalStartDate !== startDate ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Client onboarded on{" "}
+                    <span className="font-medium text-foreground">{originalStartDate}</span>{" "}
+                    (preserved across renewals).
+                  </p>
+                ) : null}
               </Field>
               <Field label="Contract end date">
                 <Input
@@ -2370,18 +2437,27 @@ function ContractFormDialog({
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </Field>
-              <Field label="Contract renewal / expiry date" className="sm:col-span-2">
+              <Field label="Next renewal / expiry date" className="sm:col-span-2">
                 <Input
                   type="date"
                   value={expiryDate}
-                  onChange={(e) => setExpiryDate(e.target.value)}
+                  onChange={(e) => {
+                    setExpiryDate(e.target.value);
+                    expiryManuallySetRef.current = true;
+                  }}
                   min={startDate || undefined}
                   max={endDate || undefined}
                 />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Renewal happens every 6 months.
-                </p>
+                <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span>Auto-set to 6 months after start. Renewal happens every 6 months.</span>
+                  {totalRenewalCheckpoints > 0 ? (
+                    <span className="font-medium text-foreground">
+                      Checkpoint {currentCheckpoint} of {totalRenewalCheckpoints}
+                    </span>
+                  ) : null}
+                </div>
               </Field>
+
               <Field label="Service Type">
                 <Select
                   value={serviceTypeId || "none"}
@@ -2581,6 +2657,8 @@ function ContractFormDialog({
                 startDate,
                 endDate,
                 expiryDate,
+                originalStartDate: originalStartDate || startDate,
+                renewalCount,
                 description,
                 serviceTypeId: serviceTypeId || null,
                 payrollWindowId: payrollWindowId || null,
