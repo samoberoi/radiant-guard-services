@@ -738,47 +738,6 @@ function CustomerFormDialog({
                 ))}
               </select>
             </Field>
-            <Field label="Description" full>
-              <Textarea
-                value={form.description}
-                onChange={(e) => set("description", e.target.value)}
-                placeholder="Brief overview of the organisation"
-                rows={2}
-              />
-            </Field>
-            <Field label="Logo" full>
-              <div className="flex items-center gap-3">
-                {form.logoUrl ? (
-                  <img
-                    src={form.logoUrl}
-                    alt="Logo"
-                    className="h-12 w-12 rounded-md border border-border bg-card object-contain"
-                  />
-                ) : (
-                  <div className="flex h-12 w-12 items-center justify-center rounded-md border border-dashed border-border text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Logo
-                  </div>
-                )}
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => handleLogo(e.target.files?.[0] ?? null)}
-                  disabled={uploading}
-                  className="max-w-xs"
-                />
-                {form.logoUrl && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => set("logoUrl", "")}
-                    className="text-muted-foreground"
-                  >
-                    Remove
-                  </Button>
-                )}
-              </div>
-            </Field>
             <Field label="Website">
               <Input
                 value={form.website}
