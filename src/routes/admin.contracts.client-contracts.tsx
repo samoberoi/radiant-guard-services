@@ -2370,7 +2370,7 @@ function ContractFormDialog({
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </Field>
-              <Field label="Contract renewal / expiry date">
+              <Field label="Contract renewal / expiry date" className="sm:col-span-2">
                 <Input
                   type="date"
                   value={expiryDate}
@@ -2379,7 +2379,7 @@ function ContractFormDialog({
                   max={endDate || undefined}
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Next renewal checkpoint (renewal happens every 6 months regardless of total contract duration).
+                  Renewal happens every 6 months.
                 </p>
               </Field>
               <Field label="Service Type">
