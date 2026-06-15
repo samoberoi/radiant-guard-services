@@ -329,7 +329,7 @@ function POPage() {
       </div>
 
       {/* Mobile stacked cards */}
-      <div className="lg:hidden space-y-3 p-4">
+      <div className="2xl:hidden space-y-3 p-4">
         {filtered.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
             <FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />
