@@ -2142,7 +2142,8 @@ function ContractFormDialog({
   }, [startDate, endDate]);
   const currentCheckpoint = Math.min(totalRenewalCheckpoints || 0, (renewalCount ?? 0) + 1);
 
-
+  // Hydrate existing resources when editing
+  useEffect(() => {
     if (open && editing && existingResources.length > 0) {
       setResources(existingResources);
     }
