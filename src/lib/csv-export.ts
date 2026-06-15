@@ -29,11 +29,19 @@ function escapeCsvCell(value: unknown): string {
   return s;
 }
 
-function formatPlainCell(value: unknown): string {
+// Clean a value for tabular display: strip line breaks/tabs, collapse
+// excessive whitespace so cells stay on a single line and do not look tangled.
+function cleanText(value: unknown): string {
   if (value === null || value === undefined) return "";
-  if (value instanceof Date) return value.toISOString();
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
+  let s: string;
+  if (value instanceof Date) s = value.toLocaleString("en-IN");
+  else if (typeof value === "object") s = JSON.stringify(value);
+  else s = String(value);
+  return s.replace(/\s*[\r\n\t]+\s*/g, " ").replace(/[ ]{2,}/g, " ").trim();
+}
+
+function formatPlainCell(value: unknown): string {
+  return cleanText(value);
 }
 
 function timestamp(): string {
@@ -53,6 +61,25 @@ function stripExtension(name: string): string {
   return name.replace(/\.(csv|xlsx|xls|pdf|json)$/i, "");
 }
 
+// Heuristic: a column is numeric if most non-empty cells parse as numbers.
+function detectNumericColumns(
+  rows: Array<Record<string, unknown>>,
+  columns: ExportColumn[],
+): boolean[] {
+  return columns.map((c) => {
+    let hits = 0;
+    let total = 0;
+    for (const r of rows) {
+      const v = r[c.key as string];
+      if (v === null || v === undefined || v === "") continue;
+      total++;
+      if (typeof v === "number") hits++;
+      else if (typeof v === "string" && /^-?[\d,]+(\.\d+)?%?$/.test(v.trim())) hits++;
+    }
+    return total > 0 && hits / total > 0.6;
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Writers (used by the chooser, or as a fallback)
 // ---------------------------------------------------------------------------
@@ -70,17 +97,26 @@ export function writeCsv(payload: ExportRequestPayload) {
 
 export async function writeXlsx(payload: ExportRequestPayload) {
   const { filename, rows, columns } = payload;
-  const XLSX = await import("xlsx");
+  const XLSX = await import("xlsx-js-style");
+  const numericCols = detectNumericColumns(rows, columns);
+
+  // Build the array-of-arrays, coercing numeric strings to numbers so Excel
+  // right-aligns them and totals work correctly.
   const aoa: unknown[][] = [columns.map((c) => c.header)];
   for (const r of rows) {
     aoa.push(
-      columns.map((c) => {
+      columns.map((c, idx) => {
         const v = r[c.key as string];
         if (v === null || v === undefined) return "";
         if (typeof v === "number" || typeof v === "boolean") return v;
         if (v instanceof Date) return v;
-        if (typeof v === "object") return JSON.stringify(v);
-        return String(v);
+        if (typeof v === "object") return cleanText(v);
+        const s = cleanText(v);
+        if (numericCols[idx] && /^-?[\d,]+(\.\d+)?$/.test(s)) {
+          const n = Number(s.replace(/,/g, ""));
+          if (Number.isFinite(n)) return n;
+        }
+        return s;
       }),
     );
   }
@@ -92,11 +128,10 @@ export async function writeXlsx(payload: ExportRequestPayload) {
     for (let r = 1; r < aoa.length; r++) {
       const cell = aoa[r][idx];
       const s = cell === null || cell === undefined ? "" : String(cell);
-      for (const line of s.split(/\r?\n/)) {
-        if (line.length > max) max = line.length;
-      }
+      if (s.length > max) max = s.length;
     }
-    return { wch: Math.min(Math.max(max + 2, 10), 60) };
+    // Min 12 for readability, max 50 to avoid runaway columns; +2 padding.
+    return { wch: Math.min(Math.max(max + 2, 12), 50) };
   });
   (ws as unknown as { ["!cols"]?: unknown })["!cols"] = colWidths;
   (ws as unknown as { ["!freeze"]?: unknown })["!freeze"] = { xSplit: 0, ySplit: 1 };
@@ -106,19 +141,56 @@ export async function writeXlsx(payload: ExportRequestPayload) {
       e: { r: Math.max(aoa.length - 1, 0), c: Math.max(columns.length - 1, 0) },
     }),
   };
+  (ws as unknown as Record<string, unknown>)["!sheetView"] = { state: "frozen", ySplit: 1 };
 
-  // Bold header cells (rendered by Excel/LibreOffice).
+  const border = {
+    top: { style: "thin", color: { rgb: "E2E8F0" } },
+    bottom: { style: "thin", color: { rgb: "E2E8F0" } },
+    left: { style: "thin", color: { rgb: "E2E8F0" } },
+    right: { style: "thin", color: { rgb: "E2E8F0" } },
+  };
+
+  // Style header row.
   for (let c = 0; c < columns.length; c++) {
     const addr = XLSX.utils.encode_cell({ r: 0, c });
     const cell = (ws as Record<string, unknown>)[addr] as { s?: unknown } | undefined;
     if (cell) {
       cell.s = {
-        font: { bold: true, color: { rgb: "FFFFFF" } },
-        fill: { fgColor: { rgb: "1E293B" }, patternType: "solid" },
-        alignment: { vertical: "center", horizontal: "left", wrapText: true },
+        font: { name: "Calibri", sz: 11, bold: true, color: { rgb: "FFFFFF" } },
+        fill: { patternType: "solid", fgColor: { rgb: "1E293B" } },
+        alignment: { vertical: "center", horizontal: "left", wrapText: false },
+        border,
       };
     }
   }
+
+  // Style body cells.
+  for (let r = 1; r < aoa.length; r++) {
+    const zebra = r % 2 === 0;
+    for (let c = 0; c < columns.length; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      const cell = (ws as Record<string, unknown>)[addr] as { s?: unknown } | undefined;
+      if (!cell) continue;
+      const isNum = numericCols[c];
+      cell.s = {
+        font: { name: "Calibri", sz: 10, color: { rgb: "0F172A" } },
+        alignment: {
+          vertical: "center",
+          horizontal: isNum ? "right" : "left",
+          wrapText: false,
+        },
+        fill: zebra
+          ? { patternType: "solid", fgColor: { rgb: "F8FAFC" } }
+          : { patternType: "none" },
+        border,
+      };
+    }
+  }
+
+  // Standard row height for consistent look.
+  (ws as unknown as Record<string, unknown>)["!rows"] = aoa.map((_, i) =>
+    i === 0 ? { hpt: 22 } : { hpt: 18 },
+  );
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
@@ -132,78 +204,117 @@ export async function writePdf(payload: ExportRequestPayload) {
     import("jspdf-autotable"),
   ]);
   const autoTable = (autoTableMod as { default: typeof import("jspdf-autotable").default }).default;
-  const orientation = columns.length > 5 ? "landscape" : "portrait";
-  // Scale page width with column count so wide tables don't get crammed onto A4.
-  const pageWidthPt = orientation === "landscape"
-    ? Math.max(842, Math.min(columns.length * 110, 2400))
-    : Math.max(595, Math.min(columns.length * 110, 1800));
-  const pageHeightPt = orientation === "landscape" ? 595 : 842;
+
+  // Measure content per column (header + body) to compute proportional widths.
+  const colMetrics = columns.map((c) => {
+    const headerLen = String(c.header ?? "").length;
+    let maxBody = 0;
+    let sumBody = 0;
+    let count = 0;
+    for (const r of rows) {
+      const s = cleanText(r[c.key as string]);
+      if (s.length > maxBody) maxBody = s.length;
+      sumBody += s.length;
+      count++;
+    }
+    const avgBody = count ? sumBody / count : 0;
+    // Weight: lean toward avg so a few very long cells don't dominate.
+    const weight = Math.max(headerLen, Math.min(maxBody, Math.ceil(avgBody * 1.6) + 4));
+    return { headerLen, maxBody, avgBody, weight: Math.max(weight, 4) };
+  });
+  const totalWeight = colMetrics.reduce((s, m) => s + m.weight, 0) || 1;
+
+  // Choose page geometry based on density.
+  const colCount = columns.length;
+  const orientation: "portrait" | "landscape" = colCount > 5 ? "landscape" : "portrait";
+  const baseW = orientation === "landscape" ? 842 : 595;
+  const baseH = orientation === "landscape" ? 595 : 842;
+  // Scale page width with weighted content so very wide tables get room.
+  const targetW = Math.round(totalWeight * 7.5) + 80;
+  const pageWidthPt = Math.max(baseW, Math.min(targetW, 2400));
+  const pageHeightPt = baseH;
   const doc = new jsPDF({ orientation, unit: "pt", format: [pageWidthPt, pageHeightPt] });
 
-  const title = stripExtension(filename).replace(/[-_]/g, " ");
+  const margin = 28;
+  const usableW = pageWidthPt - margin * 2;
+
+  // Distribute usable width by weight, enforcing a sensible min so narrow cols
+  // stay legible.
+  const minCol = 28;
+  const widths = colMetrics.map((m) => Math.max(minCol, (m.weight / totalWeight) * usableW));
+  const sumW = widths.reduce((a, b) => a + b, 0);
+  const scale = usableW / sumW;
+  const finalWidths = widths.map((w) => w * scale);
+
+  const fontSize =
+    colCount > 18 ? 6.5 : colCount > 14 ? 7 : colCount > 10 ? 7.5 : colCount > 7 ? 8 : 9;
+
+  const numericCols = detectNumericColumns(rows, columns);
+  const columnStyles: Record<number, Record<string, unknown>> = {};
+  finalWidths.forEach((w, idx) => {
+    columnStyles[idx] = {
+      cellWidth: w,
+      halign: numericCols[idx] ? "right" : "left",
+      overflow: "linebreak",
+    };
+  });
+
+  const title = stripExtension(filename)
+    .replace(/[-_]/g, " ")
+    .replace(/\b\w/g, (m) => m.toUpperCase());
   doc.setFontSize(14);
   doc.setFont("helvetica", "bold");
-  doc.text(title, 24, 28);
+  doc.text(title, margin, 30);
   doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(100);
   doc.text(
     `Generated ${new Date().toLocaleString("en-IN")}  •  ${rows.length} row${rows.length === 1 ? "" : "s"}`,
-    24,
-    44,
+    margin,
+    46,
   );
   doc.setTextColor(0);
 
-  const fontSize = columns.length > 14 ? 6 : columns.length > 10 ? 7 : columns.length > 7 ? 8 : 9;
-
-  // Right-align mostly-numeric columns.
-  const columnStyles: Record<number, { halign?: "left" | "right" | "center" }> = {};
-  columns.forEach((c, idx) => {
-    let hits = 0;
-    let total = 0;
-    for (const r of rows) {
-      const v = r[c.key as string];
-      if (v === null || v === undefined || v === "") continue;
-      total++;
-      if (typeof v === "number") hits++;
-      else if (typeof v === "string" && /^-?[\d,]+(\.\d+)?%?$/.test(v.trim())) hits++;
-    }
-    if (total > 0 && hits / total > 0.7) columnStyles[idx] = { halign: "right" };
-  });
-
   autoTable(doc, {
-    startY: 56,
+    startY: 60,
     head: [columns.map((c) => c.header)],
-    body: rows.map((r) => columns.map((c) => formatPlainCell(r[c.key as string]))),
+    body: rows.map((r) => columns.map((c) => cleanText(r[c.key as string]))),
     styles: {
+      font: "helvetica",
       fontSize,
-      cellPadding: 4,
+      cellPadding: { top: 3, right: 4, bottom: 3, left: 4 },
       overflow: "linebreak",
       valign: "middle",
       lineColor: [226, 232, 240],
-      lineWidth: 0.25,
+      lineWidth: 0.4,
+      textColor: [15, 23, 42],
     },
     headStyles: {
       fillColor: [30, 41, 59],
       textColor: 255,
       fontStyle: "bold",
       halign: "left",
+      fontSize: fontSize + 0.5,
+      cellPadding: { top: 5, right: 4, bottom: 5, left: 4 },
+      lineWidth: 0,
     },
+    bodyStyles: { fillColor: [255, 255, 255] },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     columnStyles,
-    theme: "striped",
-    margin: { left: 24, right: 24, top: 56, bottom: 36 },
-    tableWidth: "auto",
+    theme: "grid",
+    margin: { left: margin, right: margin, top: 60, bottom: 40 },
+    tableWidth: usableW,
     showHead: "everyPage",
     didDrawPage: (data) => {
       doc.setFontSize(8);
       doc.setTextColor(120);
       doc.text(
         `Page ${data.pageNumber} of ${doc.getNumberOfPages()}`,
-        doc.internal.pageSize.getWidth() - 24,
-        doc.internal.pageSize.getHeight() - 16,
+        doc.internal.pageSize.getWidth() - margin,
+        doc.internal.pageSize.getHeight() - 18,
         { align: "right" },
       );
+      doc.text(title, margin, doc.internal.pageSize.getHeight() - 18);
       doc.setTextColor(0);
     },
   });
