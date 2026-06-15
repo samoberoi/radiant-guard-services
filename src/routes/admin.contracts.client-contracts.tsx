@@ -114,6 +114,8 @@ type ClientContract = {
   startDate: string;
   endDate: string;
   expiryDate: string;
+  originalStartDate: string;
+  renewalCount: number;
   description: string;
   serviceTypeId: string | null;
   payrollWindowId: string | null;
@@ -127,6 +129,31 @@ type ClientContract = {
   createdBy: string | null;
   promotedAt: string | null;
 };
+
+// Add N months to an ISO yyyy-mm-dd date string. Returns "" on empty input.
+function addMonthsISO(iso: string, months: number): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-").map((n) => parseInt(n, 10));
+  if (!y || !m || !d) return "";
+  const base = new Date(Date.UTC(y, m - 1, d));
+  const targetMonth = base.getUTCMonth() + months;
+  const target = new Date(Date.UTC(base.getUTCFullYear(), targetMonth, 1));
+  // Clamp day to the last day of the target month
+  const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(d, lastDay));
+  return target.toISOString().slice(0, 10);
+}
+
+// Number of whole months between two ISO dates (end - start). Negative if invalid.
+function monthsBetweenISO(startIso: string, endIso: string): number {
+  if (!startIso || !endIso) return 0;
+  const [sy, sm, sd] = startIso.split("-").map((n) => parseInt(n, 10));
+  const [ey, em, ed] = endIso.split("-").map((n) => parseInt(n, 10));
+  if (!sy || !ey) return 0;
+  let months = (ey - sy) * 12 + (em - sm);
+  if (ed < sd) months -= 1;
+  return months;
+}
 
 type ApprovalPickerValue = "approved" | "rejected" | "lost" | null;
 
