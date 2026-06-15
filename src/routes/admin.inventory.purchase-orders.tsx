@@ -263,7 +263,7 @@ function POPage() {
       </div>
 
       {/* Desktop table */}
-      <div className="hidden lg:block overflow-x-auto">
+      <div className="hidden 2xl:block overflow-x-auto">
         <table className="ios-table w-full text-sm">
           <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             <tr>
