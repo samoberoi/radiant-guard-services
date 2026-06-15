@@ -1889,14 +1889,14 @@ function EmployeesPage() {
                 <DropdownMenuItem onClick={() => handleExport("summary-csv")} className="gap-2">
                   <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium">Summary (CSV)</span>
+                    <span className="text-sm font-medium">Summary</span>
                     <span className="text-[11px] text-muted-foreground">Visible list columns</span>
                   </div>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport("full-csv")} className="gap-2">
                   <FileSpreadsheet className="h-4 w-4 text-amber-600" />
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium">All details (CSV)</span>
+                    <span className="text-sm font-medium">All details</span>
                     <span className="text-[11px] text-muted-foreground">Every field, flattened</span>
                   </div>
                 </DropdownMenuItem>
