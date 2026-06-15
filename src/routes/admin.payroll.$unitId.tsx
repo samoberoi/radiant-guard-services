@@ -415,37 +415,31 @@ function PayrollUnitPage() {
   }, [rows]);
 
   const exportCsv = () => {
-    // Wage Register column layout — mirrors the standard payroll export format.
-    const CONTRACT_COMPONENT_COLS = [
-      "Basic", "DA", "HRA", "CCA", "Washing Allowance", "Earnings Leave", "NFH Amount",
-      "Others", "4HRA", "Bonus Amount", "Skill Allowance", "Additional Allowance",
-      "Gratuity Amount", "Casual Leave", "Bonus", "Uniform Allowance", "Additional Allowance",
-      "Paid Holiday", "Exgratia", "Skill Allowance", "Reliever Charges", "Hardship Allowance",
-      "Traveling Allowance", "Fire Allowance", "Sup Allowance", "Fire fighting Allowance",
-      "Technical Allowance", "Conveyance Allowance", "LWW", "LTA", "Education Allowance",
-      "Other Allowance", "Field Allowance", "Extra Duty Allowance", "Incentive", "Site Allowance",
-      "Special Allowance", "Retention Allowance", "Night Allowance", "Driver Allowance",
-      "Ex Service Man Allowance", "Gun Allowance", "Washing Allowance",
-    ];
-    const EARNED_COMPONENT_COLS = [
-      "Basic", "DA", "HRA", "CCA", "Washing Allowance", "Earnings Leave", "NFH Amount",
-      "OverTime Amount", "Others", "4HRA", "Bonus Amount", "Gratuity Amount", "Casual Leave",
-      "Bonus", "Uniform Allowance", "Refund", "Additional Allowance", "Paid Holiday", "Exgratia",
-      "Skill Allowance", "Reliever Charges", "Hardship Allowance", "Traveling Allowance",
-      "Fire Allowance", "Sup Allowance", "Technical Allowance", "Fire fighting Allowance",
-      "Conveyance Allowance", "Other Allowance", "LWW", "LTA", "Education Allowance",
-      "Field Allowance", "Extra Duty Allowance", "Incentive", "Site Allowance",
-      "Special Allowance", "Retention Allowance", "Night Allowance", "Driver Allowance",
-      "Ex Service Man Allowance", "Gun Allowance",
-    ];
-    const DEDUCTION_COLS = [
-      "EPF", "ESI", "Professional Tax", "Labour Welfare Fund", "Uniform", "ID Card",
-      "Recruitment Fees", "GPAIP", "Miscellaneous", "Fine", "General Deduction",
-      "Advance Recovery", "ERP Charges", "Canteen", "Name Plate", "Rent", "Mediclaim",
-      "Security Deposit",
-    ];
-
+    // Dynamic Wage Register — columns are derived from the actual contract
+    // components / earned components / deductions present across rows. Empty
+    // categories collapse so the CSV only contains what's truly in use.
     const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+    const collectUnique = (
+      pick: (r: (typeof rows)[number]) => { name: string }[] | undefined,
+    ) => {
+      const seen = new Map<string, string>(); // norm -> display name (first seen)
+      rows.forEach((r) => {
+        const items = pick(r) ?? [];
+        items.forEach((it) => {
+          if (!it?.name) return;
+          const key = norm(it.name);
+          if (!key) return;
+          if (!seen.has(key)) seen.set(key, it.name);
+        });
+      });
+      return Array.from(seen.values());
+    };
+
+    const CONTRACT_COMPONENT_COLS = collectUnique((r) => r.resource?.components);
+    const EARNED_COMPONENT_COLS = collectUnique((r) => r.wages?.components);
+    const DEDUCTION_COLS = collectUnique((r) => r.wages?.deductions);
+
     const lookup = (items: { name: string; amount: number }[] | undefined, label: string) => {
       if (!items) return 0;
       const target = norm(label);
@@ -518,6 +512,7 @@ function PayrollUnitPage() {
     a.click();
     URL.revokeObjectURL(url);
   };
+
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
