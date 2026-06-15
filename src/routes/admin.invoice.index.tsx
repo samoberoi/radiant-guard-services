@@ -421,7 +421,7 @@ function PayrollUnitsPage() {
         </div>
 
         {/* Desktop table */}
-        <div className="hidden md:block overflow-x-clip">
+        <div className="hidden lg:block overflow-x-auto">
           <table className="ios-table min-w-full table-auto">
             <thead className="border-b border-border/60 bg-secondary/40">
               <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
@@ -546,7 +546,7 @@ function PayrollUnitsPage() {
         </div>
 
         {/* Mobile stacked cards */}
-        <div className="md:hidden space-y-3 p-4">
+        <div className="lg:hidden space-y-3 p-4">
           {isLoading ? (
             <div className="py-12 text-center text-sm text-muted-foreground">Loading invoice units…</div>
           ) : error ? (
