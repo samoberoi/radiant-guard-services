@@ -63,6 +63,18 @@ const tiles: Tile[] = [
     icon: Coins,
   },
   {
+    to: "/admin/addition-type-manager",
+    label: "Addition Type Manager",
+    description: "Define payroll addition categories (bonus, incentive, paid holidays…) shown on employee additions.",
+    icon: TrendingUp,
+  },
+  {
+    to: "/admin/deduction-type-manager",
+    label: "Deduction Type Manager",
+    description: "Define payroll deduction categories (advance, uniform, fines…) shown on employee deductions.",
+    icon: TrendingDown,
+  },
+  {
     to: "/admin/billing-type-manager",
     label: "Billing Type Manager",
     description: "Define billing types like Man Hours, Man Days, Man Months, Special.",
