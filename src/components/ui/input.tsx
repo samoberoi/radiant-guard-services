@@ -174,12 +174,41 @@ type FormatSpec = {
   title: string;
 };
 
-const dgts = (v: string, n: number) => (v ?? "").replace(/\D/g, "").slice(0, n);
-const upr = (v: string, n: number) => (v ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, n);
+const L = /[A-Z]/;
+const D = /[0-9]/;
+const ALNUM = /[A-Z0-9]/;
+const NZ_ALNUM = /[1-9A-Z]/;
+const Z_ONLY = /Z/;
+const ZERO_ONLY = /0/;
+const NZ_DIGIT = /[1-9]/;
+const MOB_FIRST = /[6-9]/;
+const AADH_FIRST = /[2-9]/;
+
+// Position-aware sanitiser: walks the input and only keeps chars that match
+// the regex at the *current accepted position*, so a wrong-class character
+// (e.g. a digit where a letter is required) is rejected instead of appended.
+const bySlot = (slots: RegExp[], raw: string): string => {
+  const src = (raw ?? "").toUpperCase();
+  let out = "";
+  for (const ch of src) {
+    if (out.length >= slots.length) break;
+    if (slots[out.length].test(ch)) out += ch;
+  }
+  return out;
+};
+
+const PAN_SLOTS = [L, L, L, L, L, D, D, D, D, L];
+const GSTIN_SLOTS = [D, D, L, L, L, L, L, D, D, D, D, L, NZ_ALNUM, Z_ONLY, ALNUM];
+const IFSC_SLOTS = [L, L, L, L, ZERO_ONLY, ALNUM, ALNUM, ALNUM, ALNUM, ALNUM, ALNUM];
+const MOBILE_SLOTS = [MOB_FIRST, D, D, D, D, D, D, D, D, D];
+const AADHAAR_SLOTS = [AADH_FIRST, D, D, D, D, D, D, D, D, D, D, D];
+const PINCODE_SLOTS = [NZ_DIGIT, D, D, D, D, D];
+const UAN_SLOTS = Array.from({ length: 12 }, () => D);
+const ESIC_SLOTS = Array.from({ length: 17 }, () => D);
 
 const FORMAT_SPECS: Record<InputFormat, FormatSpec> = {
   pan: {
-    sanitize: (v) => upr(v, 10),
+    sanitize: (v) => bySlot(PAN_SLOTS, v),
     validate: (v) => /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(v),
     maxLength: 10,
     inputMode: "text",
@@ -188,7 +217,7 @@ const FORMAT_SPECS: Record<InputFormat, FormatSpec> = {
     title: "PAN must be 10 chars: 5 letters + 4 digits + 1 letter (e.g. ABCDE1234F)",
   },
   gstin: {
-    sanitize: (v) => upr(v, 15),
+    sanitize: (v) => bySlot(GSTIN_SLOTS, v),
     validate: (v) =>
       /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(v),
     maxLength: 15,
@@ -198,7 +227,7 @@ const FORMAT_SPECS: Record<InputFormat, FormatSpec> = {
     title: "GSTIN must be 15 chars: 2-digit state + 10-char PAN + entity + Z + checksum",
   },
   aadhaar: {
-    sanitize: (v) => dgts(v, 12),
+    sanitize: (v) => bySlot(AADHAAR_SLOTS, v),
     validate: (v) => /^[2-9]\d{11}$/.test(v),
     maxLength: 12,
     inputMode: "numeric",
@@ -207,7 +236,7 @@ const FORMAT_SPECS: Record<InputFormat, FormatSpec> = {
     title: "Aadhaar must be 12 digits (cannot start with 0 or 1)",
   },
   uan: {
-    sanitize: (v) => dgts(v, 12),
+    sanitize: (v) => bySlot(UAN_SLOTS, v),
     validate: (v) => /^\d{12}$/.test(v),
     maxLength: 12,
     inputMode: "numeric",
@@ -216,7 +245,7 @@ const FORMAT_SPECS: Record<InputFormat, FormatSpec> = {
     title: "UAN must be exactly 12 digits",
   },
   esic: {
-    sanitize: (v) => dgts(v, 17),
+    sanitize: (v) => bySlot(ESIC_SLOTS, v),
     validate: (v) => /^\d{17}$/.test(v),
     maxLength: 17,
     inputMode: "numeric",
@@ -225,7 +254,7 @@ const FORMAT_SPECS: Record<InputFormat, FormatSpec> = {
     title: "ESIC IP number must be exactly 17 digits",
   },
   mobile: {
-    sanitize: (v) => dgts(v, 10),
+    sanitize: (v) => bySlot(MOBILE_SLOTS, v),
     validate: (v) => /^[6-9]\d{9}$/.test(v),
     maxLength: 10,
     inputMode: "tel",
@@ -234,7 +263,7 @@ const FORMAT_SPECS: Record<InputFormat, FormatSpec> = {
     title: "Mobile must be 10 digits starting with 6-9",
   },
   ifsc: {
-    sanitize: (v) => upr(v, 11),
+    sanitize: (v) => bySlot(IFSC_SLOTS, v),
     validate: (v) => /^[A-Z]{4}0[A-Z0-9]{6}$/.test(v),
     maxLength: 11,
     inputMode: "text",
@@ -243,7 +272,7 @@ const FORMAT_SPECS: Record<InputFormat, FormatSpec> = {
     title: "IFSC must be 11 chars: 4 letters + 0 + 6 alphanumerics",
   },
   pincode: {
-    sanitize: (v) => dgts(v, 6),
+    sanitize: (v) => bySlot(PINCODE_SLOTS, v),
     validate: (v) => /^[1-9]\d{5}$/.test(v),
     maxLength: 6,
     inputMode: "numeric",
