@@ -22,13 +22,18 @@ export function ExportChooser() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const w = window as unknown as { __lovableExportChooserMounted?: boolean };
+    w.__lovableExportChooserMounted = true;
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<ExportRequestPayload>).detail;
       if (!detail) return;
       setPayload(detail);
     };
     window.addEventListener(EXPORT_REQUEST_EVENT, handler as EventListener);
-    return () => window.removeEventListener(EXPORT_REQUEST_EVENT, handler as EventListener);
+    return () => {
+      window.removeEventListener(EXPORT_REQUEST_EVENT, handler as EventListener);
+      w.__lovableExportChooserMounted = false;
+    };
   }, []);
 
   const close = () => {

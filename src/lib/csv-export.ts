@@ -142,10 +142,12 @@ export function downloadCsv<T extends Record<string, unknown>>(
     writeCsv(payload);
     return;
   }
-  const event = new CustomEvent<ExportRequestPayload>(EXPORT_EVENT, { detail: payload });
-  const dispatched = window.dispatchEvent(event);
-  // If no listener consumed it (chooser not mounted), fall back to CSV.
-  if (!dispatched) writeCsv(payload);
+  const w = window as unknown as { __lovableExportChooserMounted?: boolean };
+  if (!w.__lovableExportChooserMounted) {
+    writeCsv(payload);
+    return;
+  }
+  window.dispatchEvent(new CustomEvent<ExportRequestPayload>(EXPORT_EVENT, { detail: payload }));
 }
 
 export const EXPORT_REQUEST_EVENT = EXPORT_EVENT;
