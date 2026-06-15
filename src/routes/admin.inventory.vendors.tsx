@@ -274,16 +274,16 @@ function VendorFormDialog({ open, onOpenChange, title, initial, onSubmit }: { op
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-2"><Label>Name *</Label><Input value={p.name} onChange={(e) => set("name", e.target.value)} /></div>
             <div className="grid gap-2"><Label>Contact Person</Label><Input value={p.contact_person} onChange={(e) => set("contact_person", e.target.value)} /></div>
-            <div className="grid gap-2"><Label>Phone</Label><Input value={p.phone} onChange={(e) => set("phone", e.target.value)} /></div>
+            <div className="grid gap-2"><Label>Phone</Label><Input format="mobile" value={p.phone} onChange={(e) => set("phone", e.target.value)} /></div>
             <div className="grid gap-2"><Label>Email</Label><Input value={p.email} onChange={(e) => set("email", e.target.value)} /></div>
-            <div className="grid gap-2"><Label>GSTIN</Label><Input value={p.gstin} onChange={(e) => set("gstin", e.target.value.toUpperCase())} /></div>
-            <div className="grid gap-2"><Label>PAN</Label><Input value={p.pan} onChange={(e) => set("pan", e.target.value.toUpperCase())} /></div>
+            <div className="grid gap-2"><Label>GSTIN</Label><Input format="gstin" value={p.gstin} onChange={(e) => set("gstin", e.target.value)} /></div>
+            <div className="grid gap-2"><Label>PAN</Label><Input format="pan" value={p.pan} onChange={(e) => set("pan", e.target.value)} /></div>
           </div>
           <div className="grid gap-2"><Label>Address</Label><Input value={p.address1} onChange={(e) => set("address1", e.target.value)} /></div>
           <div className="grid gap-3 sm:grid-cols-3">
             <div className="grid gap-2"><Label>City</Label><Input value={p.city} onChange={(e) => set("city", e.target.value)} /></div>
             <div className="grid gap-2"><Label>State</Label><Input value={p.state} onChange={(e) => set("state", e.target.value)} /></div>
-            <div className="grid gap-2"><Label>Pincode</Label><Input value={p.pincode} onChange={(e) => set("pincode", e.target.value)} /></div>
+            <div className="grid gap-2"><Label>Pincode</Label><Input format="pincode" value={p.pincode} onChange={(e) => set("pincode", e.target.value)} /></div>
           </div>
           <div className="grid gap-2"><Label>Payment Terms</Label><Input value={p.payment_terms} onChange={(e) => set("payment_terms", e.target.value)} placeholder="e.g. Net 30" /></div>
           <div className="grid gap-2"><Label>Notes</Label><Textarea rows={2} value={p.notes} onChange={(e) => set("notes", e.target.value)} /></div>

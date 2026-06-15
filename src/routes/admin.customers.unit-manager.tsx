@@ -758,11 +758,9 @@ function UnitFormDialog({
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="PAN number">
                 <Input
+                  format="pan"
                   value={form.panNumber}
-                  onChange={(e) => set("panNumber", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10))}
-                  placeholder="AAAAA0000A"
-                  maxLength={10}
-                  className="font-mono"
+                  onChange={(e) => set("panNumber", e.target.value)}
                 />
               </Field>
               <Field label="GST payable?">
@@ -795,11 +793,9 @@ function UnitFormDialog({
                   </Field>
                   <Field label="GST number">
                     <Input
+                      format="gstin"
                       value={form.gstNumber}
-                      onChange={(e) => set("gstNumber", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15))}
-                      placeholder="22AAAAA0000A1Z5"
-                      maxLength={15}
-                      className="font-mono"
+                      onChange={(e) => set("gstNumber", e.target.value)}
                     />
                   </Field>
                   <div className="sm:col-span-2 text-xs text-muted-foreground">

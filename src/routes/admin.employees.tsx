@@ -3625,11 +3625,9 @@ function CandidateWizard({
                   </Field>
                   <Field label="PAN Number">
                     <Input
+                      format="pan"
                       value={form.pan_number}
-                      onChange={(e) => set("pan_number", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10))}
-                      placeholder="e.g. ABCDE1234F"
-                      maxLength={10}
-                      className="font-mono uppercase"
+                      onChange={(e) => set("pan_number", e.target.value)}
                     />
                   </Field>
                 </div>
