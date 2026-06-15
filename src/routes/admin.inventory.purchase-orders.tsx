@@ -588,7 +588,7 @@ function POFormDialog({
             <div className="mb-2 flex items-center justify-between">
               <Label className="text-sm font-semibold">Line Items</Label>
               {!readOnly && (
-                <Button size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { item_id: "", size_value: "", ordered_qty: 1, unit_price: 0, tax_percent: 0, notes: "" }])}>
+                <Button size="sm" type="button" onClick={() => setLines((ls) => [...ls, { item_id: "", size_value: "", ordered_qty: 1, unit_price: 0, tax_percent: 0, notes: "" }])}>
                   <Plus className="mr-1 h-3.5 w-3.5" />Add line
                 </Button>
               )}
