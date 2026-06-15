@@ -2719,8 +2719,12 @@ function CandidateWizard({
       .from("candidate-files")
       .upload(path, file, { upsert: true, contentType: file.type });
     if (error) throw error;
-    const { data } = supabase.storage.from("candidate-files").getPublicUrl(path);
-    return data.publicUrl;
+    // Bucket is private — generate a long-lived signed URL (≈10 years)
+    const { data: signed, error: signErr } = await supabase.storage
+      .from("candidate-files")
+      .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+    if (signErr) throw signErr;
+    return signed.signedUrl;
   };
 
   const handleFile = async (file: File | null, slot: "photo" | "signature" | "aadhaar" | "pan") => {

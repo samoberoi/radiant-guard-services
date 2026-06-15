@@ -673,8 +673,12 @@ function AddEntryDialog({
       .from(BUCKET)
       .upload(path, file, { upsert: false, contentType: file.type });
     if (error) throw error;
-    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-    return data.publicUrl;
+    // Bucket is private — generate a long-lived signed URL (≈10 years)
+    const { data: signed, error: signErr } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+    if (signErr) throw signErr;
+    return signed.signedUrl;
   }
 
   async function handleSave() {
