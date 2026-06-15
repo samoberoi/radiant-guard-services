@@ -2638,6 +2638,8 @@ function ContractFormDialog({
                 startDate,
                 endDate,
                 expiryDate,
+                originalStartDate: originalStartDate || startDate,
+                renewalCount,
                 description,
                 serviceTypeId: serviceTypeId || null,
                 payrollWindowId: payrollWindowId || null,
