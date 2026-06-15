@@ -129,6 +129,25 @@ function AdminLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
+  // One-time backfill of stored public URLs → signed URLs after buckets were privatized.
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    const key = "radiant.backfill.signed-urls.v1";
+    if (typeof window === "undefined" || window.localStorage.getItem(key)) return;
+    window.localStorage.setItem(key, "running");
+    (async () => {
+      try {
+        const mod = await import("@/lib/backfill-signed-urls.functions");
+        const res = await mod.backfillSignedUrls();
+        window.localStorage.setItem(key, JSON.stringify({ done: true, at: Date.now(), res }));
+        console.info("[backfill] signed URLs", res);
+      } catch (e) {
+        window.localStorage.removeItem(key);
+        console.error("[backfill] failed", e);
+      }
+    })();
+  }, [isSuperAdmin]);
+
   const pathToModule: { prefix: string; module: string }[] = [
     { prefix: "/admin/customers", module: "organizations" },
     { prefix: "/admin/contracts", module: "contracts" },
