@@ -297,7 +297,7 @@ function SystemLogsPage() {
             disabled={filtered.length === 0}
           >
             <Download className="mr-2 h-4 w-4" />
-            Download CSV
+            Export
           </Button>
         </div>
       </div>

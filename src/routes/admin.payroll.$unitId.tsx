@@ -583,7 +583,7 @@ function PayrollUnitPage() {
           <ChevronLeft className="h-4 w-4" /> Back to payroll units
         </Link>
         <Button variant="outline" size="sm" onClick={exportCsv}>
-          <Download className="mr-1.5 h-4 w-4" /> Export CSV
+          <Download className="mr-1.5 h-4 w-4" /> Export
         </Button>
       </div>
 

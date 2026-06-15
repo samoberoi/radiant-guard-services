@@ -109,7 +109,7 @@ function StockPage() {
         <Button variant="outline" className="h-10 rounded-lg" disabled={!enriched.length} onClick={() => downloadCsv("stock-balances", enriched.map((r) => ({
           location_type: r.location_type, location: r.location_label, item_code: r.item_code, item: r.item_name,
           size: r.size_value, qty: r.qty, unit: r.unit, reorder_level: r.reorder, low_stock: r.low ? "Yes" : "No",
-        })))}><Download className="mr-1.5 h-4 w-4" />Export CSV</Button>
+        })))}><Download className="mr-1.5 h-4 w-4" />Export</Button>
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
