@@ -263,7 +263,7 @@ function POPage() {
       </div>
 
       {/* Desktop table */}
-      <div className="hidden lg:block overflow-x-auto">
+      <div className="hidden 2xl:block overflow-x-auto">
         <table className="ios-table w-full text-sm">
           <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             <tr>
@@ -329,7 +329,7 @@ function POPage() {
       </div>
 
       {/* Mobile stacked cards */}
-      <div className="lg:hidden space-y-3 p-4">
+      <div className="2xl:hidden space-y-3 p-4">
         {filtered.length === 0 ? (
           <div className="py-12 text-center text-sm text-muted-foreground">
             <FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />
