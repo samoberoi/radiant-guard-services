@@ -2379,7 +2379,7 @@ function ContractFormDialog({
                   max={endDate || undefined}
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Next renewal checkpoint (e.g. every 6 months within a 3-year contract).
+                  Next renewal checkpoint (renewal happens every 6 months regardless of total contract duration).
                 </p>
               </Field>
               <Field label="Service Type">
