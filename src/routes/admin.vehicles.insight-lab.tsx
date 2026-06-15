@@ -541,7 +541,7 @@ function InsightLabPage() {
               </span>
             </div>
             <Button variant="outline" size="sm" onClick={exportCsv} disabled={!aggregated.rows.length}>
-              <Download className="mr-1.5 h-3.5 w-3.5" /> Export CSV
+              <Download className="mr-1.5 h-3.5 w-3.5" /> Export
             </Button>
           </div>
 

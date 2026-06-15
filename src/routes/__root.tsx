@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import favicon from "../assets/radiant-logo-v2.png";
 import { Toaster } from "@/components/ui/sonner";
 import { ConfirmProvider } from "@/components/ConfirmProvider";
+import { ExportChooser } from "@/components/ExportChooser";
 
 
 function NotFoundComponent() {
@@ -314,6 +315,7 @@ function RootComponent() {
       <ConfirmProvider>
         <Outlet />
         <Toaster />
+        <ExportChooser />
       </ConfirmProvider>
     </QueryClientProvider>
   );

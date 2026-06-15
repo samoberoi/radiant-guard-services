@@ -26,6 +26,7 @@ import {
   type AttendanceEntryLike,
   type ContractResourceLike,
 } from "@/lib/payroll-calc";
+import { downloadCsv } from "@/lib/csv-export";
 
 const searchSchema = z.object({
   start: z.string(),
@@ -513,13 +514,6 @@ function PayrollUnitPage() {
       return items.reduce((s, i) => s + i.amount, 0);
     };
 
-    const escapeCell = (v: unknown): string => {
-      if (v === null || v === undefined) return "";
-      const s = typeof v === "number" ? String(v) : String(v);
-      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
-      return s;
-    };
-
     const periodMonth = (() => {
       const [y, m] = end.split("-");
       return `${m}-${y}`;
@@ -543,8 +537,8 @@ function PayrollUnitPage() {
       "Approved Date", "Approval Info", "Is payment completed", "Payment date", "Remarks",
     ];
 
-    const lines = [headers.map(escapeCell).join(",")];
-    rows.forEach((r, idx) => {
+    const columns = headers.map((h) => ({ key: h, header: h }));
+    const dataRows = rows.map((r, idx) => {
       const w = r.wages;
       const contractComponents = r.resource?.components ?? [];
       const earnedComponents = w?.components ?? [];
@@ -555,7 +549,7 @@ function PayrollUnitPage() {
         idx + 1, periodMonth, "", clientId, customerName, siteName,
         r.employeeCode, r.name, r.designation,
         r.dateOfJoining ? r.dateOfJoining.slice(0, 10) : "",
-        "", "", "", // PF No, ESI No, UAN — not captured
+        "", "", "",
         ...CONTRACT_COMPONENT_COLS.map((c) => lookup(contractComponents, c)),
         w ? w.perDayRate : 0,
         w ? w.baseDays : 0,
@@ -570,16 +564,12 @@ function PayrollUnitPage() {
         runStatus === "approved" ? new Date().toISOString().slice(0, 10) : "",
         "", "No", "", "",
       ];
-      lines.push(cells.map(escapeCell).join(","));
+      const row: Record<string, unknown> = {};
+      headers.forEach((h, i) => { row[h] = cells[i]; });
+      return row;
     });
 
-    const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `wage-register-${unit?.code ?? unitId}-${start}-${end}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(`wage-register-${unit?.code ?? unitId}-${start}-${end}`, dataRows, columns);
   };
 
 
@@ -593,7 +583,7 @@ function PayrollUnitPage() {
           <ChevronLeft className="h-4 w-4" /> Back to payroll units
         </Link>
         <Button variant="outline" size="sm" onClick={exportCsv}>
-          <Download className="mr-1.5 h-4 w-4" /> Export CSV
+          <Download className="mr-1.5 h-4 w-4" /> Export
         </Button>
       </div>
 
