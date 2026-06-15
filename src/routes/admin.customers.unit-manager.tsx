@@ -793,11 +793,9 @@ function UnitFormDialog({
                   </Field>
                   <Field label="GST number">
                     <Input
+                      format="gstin"
                       value={form.gstNumber}
-                      onChange={(e) => set("gstNumber", e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15))}
-                      placeholder="22AAAAA0000A1Z5"
-                      maxLength={15}
-                      className="font-mono"
+                      onChange={(e) => set("gstNumber", e.target.value)}
                     />
                   </Field>
                   <div className="sm:col-span-2 text-xs text-muted-foreground">
