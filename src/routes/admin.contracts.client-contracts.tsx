@@ -2370,6 +2370,18 @@ function ContractFormDialog({
                   onChange={(e) => setEndDate(e.target.value)}
                 />
               </Field>
+              <Field label="Contract renewal / expiry date">
+                <Input
+                  type="date"
+                  value={expiryDate}
+                  onChange={(e) => setExpiryDate(e.target.value)}
+                  min={startDate || undefined}
+                  max={endDate || undefined}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Next renewal checkpoint (e.g. every 6 months within a 3-year contract).
+                </p>
+              </Field>
               <Field label="Service Type">
                 <Select
                   value={serviceTypeId || "none"}
@@ -2388,18 +2400,9 @@ function ContractFormDialog({
                   </SelectContent>
                 </Select>
               </Field>
-              <div className="sm:col-span-2">
-                <Field label="Description">
-                  <Textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={2}
-                    placeholder="Optional description"
-                  />
-                </Field>
-              </div>
             </div>
           </Section>
+
 
           {/* Payroll Information */}
           <Section title="Payroll Information">
