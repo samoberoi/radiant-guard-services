@@ -499,6 +499,7 @@ function PayrollUnitPage() {
 
     const CONTRACT_COMPONENT_COLS = collectUnique((r) => r.resource?.components);
     const EARNED_COMPONENT_COLS = collectUnique((r) => r.wages?.components);
+    const ADDITION_COLS = collectUnique((r) => (r.wages as unknown as { additions?: { name: string }[] } | null)?.additions);
     const DEDUCTION_COLS = collectUnique((r) => r.wages?.deductions);
 
     const lookup = (items: { name: string; amount: number }[] | undefined, label: string) => {
