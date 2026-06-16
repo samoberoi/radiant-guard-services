@@ -310,6 +310,41 @@ function RootComponent() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const labelTables = (root: ParentNode = document) => {
+      root.querySelectorAll<HTMLTableElement>("table.ios-table").forEach((table) => {
+        const headers = Array.from(table.querySelectorAll<HTMLTableCellElement>("thead th")).map((th) =>
+          (th.textContent ?? "").replace(/\s+/g, " ").trim(),
+        );
+        table.querySelectorAll<HTMLTableRowElement>("tbody tr").forEach((row) => {
+          Array.from(row.children).forEach((cell, index) => {
+            if (!(cell instanceof HTMLTableCellElement)) return;
+            if (cell.colSpan > 1) return;
+            const label = headers[index] ?? "";
+            if (label) cell.setAttribute("data-label", label);
+          });
+        });
+      });
+    };
+
+    labelTables();
+    const tableObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === 1) labelTables(node as Element);
+        });
+        if (mutation.type === "childList" && mutation.target.nodeType === 1) {
+          labelTables(mutation.target as Element);
+        }
+      }
+    });
+    tableObserver.observe(document.body, { childList: true, subtree: true });
+
+    return () => tableObserver.disconnect();
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ConfirmProvider>
