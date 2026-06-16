@@ -71,6 +71,7 @@ type GroupItem = {
   to?: string;
   children?: LeafItem[];
   activePrefixes?: string[];
+  exact?: boolean;
 };
 
 const customersChildren: LeafItem[] = [
@@ -272,18 +273,22 @@ function AdminLayout() {
     !can("invoice");
   const visibleGroups = (() => {
     if (isInventoryOnly) {
-      return inventoryChildren.map<GroupItem>((c) => ({
+      return inventoryChildren.map<GroupItem>((c, idx) => ({
         key: c.to,
         label: c.label,
         icon: c.icon,
         to: c.to,
         activePrefixes: [c.to],
+        exact: idx === 0,
       }));
     }
     return groups.filter((g) => !g.module || can(g.module));
   })();
   const isGroupActive = (g: GroupItem) =>
-    (g.activePrefixes ?? []).some((p) => pathname === p || pathname.startsWith(p + "/"));
+    (g.activePrefixes ?? []).some((p) => {
+      if (g.exact) return pathname === p;
+      return pathname === p || pathname.startsWith(p + "/");
+    });
 
   const sidebarWidth = collapsed ? "lg:w-[72px]" : "lg:w-[244px]";
   const mainPad = collapsed ? "lg:pl-[92px]" : "lg:pl-[264px]";
