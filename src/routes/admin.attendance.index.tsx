@@ -791,7 +791,8 @@ function AttendanceUnitsPage() {
                   </div>
                 </div>
               );
-            </>
+            })}
+          </>
           )}
         </div>
       </div>
