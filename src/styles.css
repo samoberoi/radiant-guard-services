@@ -306,12 +306,12 @@
 
   .ios-table {
     width: 100%;
-    table-layout: fixed;
+    table-layout: auto;
     border-collapse: separate;
     border-spacing: 0;
   }
-  .ios-table.table-auto {
-    table-layout: auto;
+  .ios-table.table-fixed {
+    table-layout: fixed;
   }
   .ios-table thead th {
     position: sticky; top: 0;
