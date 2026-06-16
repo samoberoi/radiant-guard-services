@@ -306,12 +306,14 @@
 
   .ios-table {
     width: 100%;
+    min-width: max-content;
     table-layout: auto;
     border-collapse: separate;
     border-spacing: 0;
+    text-align: left;
   }
   .ios-table.table-fixed {
-    table-layout: fixed;
+    table-layout: auto;
   }
   .ios-table thead th {
     position: sticky; top: 0;
@@ -324,28 +326,32 @@
     color: var(--muted-foreground);
     padding: 12px 14px;
     border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
-    white-space: nowrap;
+    white-space: normal;
     text-align: left !important;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    vertical-align: top;
   }
   .ios-table thead th:first-child { padding-left: 20px; }
   .ios-table thead th:last-child { padding-right: 20px; }
   .ios-table tbody td {
-    min-width: 0;
+    min-width: 96px;
+    max-width: min(360px, 44vw);
     padding: 12px 12px;
     font-size: 13.5px;
     border-bottom: 1px solid color-mix(in oklab, var(--border) 35%, transparent);
-    vertical-align: middle;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    overflow-wrap: normal;
+    vertical-align: top;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    word-break: normal;
     text-align: left !important;
   }
   .ios-table tbody td:first-child { padding-left: 20px; }
   .ios-table tbody td:last-child { padding-right: 20px; overflow: visible; }
-  .ios-table tbody td[data-wrap="false"] { white-space: nowrap; }
+  .ios-table tbody td[data-wrap="false"] { white-space: normal; }
   /* Wrappable cells: allow the content to flow onto multiple lines and
      reveal full text instead of truncating with an ellipsis. */
   .ios-table tbody td[data-wrap="true"] {
@@ -356,6 +362,14 @@
     word-break: break-word;
   }
   .ios-table tbody td > * { min-width: 0; max-width: 100%; }
+  .ios-table :where(th, td, th *, td *) {
+    text-align: left !important;
+  }
+  .ios-table tbody td :where(.truncate) {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
 
   /* Inline pill used inside table cells for things like website / map / tag
      links. Stays as a single rounded capsule even when the surrounding cell
@@ -373,31 +387,32 @@
     font-size: 12px;
     font-weight: 600;
     line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
     transition: background-color .15s ease, border-color .15s ease, color .15s ease;
   }
-  .cell-pill > span { overflow: hidden; text-overflow: ellipsis; }
+  .cell-pill > span { overflow: visible; text-overflow: clip; }
   .cell-pill > svg { flex: 0 0 auto; height: 12px; width: 12px; }
   .cell-pill:hover {
     background: color-mix(in oklab, var(--accent) 18%, white);
     border-color: color-mix(in oklab, var(--accent) 38%, transparent);
   }
   .ios-table [data-col="actions"] {
-    width: 200px;
+    width: auto;
     min-width: 180px;
-    white-space: nowrap;
-    text-align: right !important;
+    white-space: normal;
+    text-align: left !important;
   }
-  /* Action header label must sit flush-right above the icon group. */
+  /* Action cells are left-aligned globally so CTAs stay predictable and visible. */
   .ios-table thead th[data-col="actions"] {
-    text-align: right !important;
+    text-align: left !important;
     padding-right: 20px;
   }
   .ios-table thead th[data-col="actions"] > * {
     display: inline-flex;
-    justify-content: flex-end;
+    justify-content: flex-start;
     width: 100%;
   }
   /* The wrapper div inside an actions cell becomes the flex row. We do NOT
@@ -406,7 +421,8 @@
   .ios-table [data-col="actions"] > div {
     display: inline-flex !important;
     align-items: center;
-    justify-content: flex-end;
+    justify-content: flex-start;
+    flex-wrap: wrap;
     gap: 6px;
     width: 100%;
   }
@@ -466,13 +482,13 @@
     justify-content: center;
     flex: 0 0 auto;
   }
-  .ios-table [data-col="status"] { width: 110px; min-width: 100px; white-space: nowrap; }
-  .ios-table [data-col="approval"] { min-width: 156px; white-space: nowrap; }
+  .ios-table [data-col="status"] { width: auto; min-width: 110px; white-space: normal; text-align: left !important; }
+  .ios-table [data-col="approval"] { min-width: 156px; white-space: normal; }
   .ios-table [data-col="date"] { width: 108px; }
   .ios-table [data-col="code"] { width: 150px; }
   .ios-table [data-col="date"],
   .ios-table [data-col="code"] {
-    white-space: nowrap;
+    white-space: normal;
   }
 
   .ios-table .cell-stack {
@@ -484,9 +500,10 @@
   .ios-table .cell-secondary {
     display: block;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   .ios-table .cell-secondary {
     font-size: 11px;
@@ -499,7 +516,73 @@
 
   /* Globally prevent table cards from creating horizontal page scroll.
      Individual cells/columns may still set their own overflow as needed. */
-  .ios-table-card { overflow-x: clip; }
+  .ios-table-card,
+  [data-table-scroll-shell],
+  :where(.overflow-x-clip, .overflow-hidden):has(> .ios-table) {
+    overflow-x: auto !important;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (max-width: 720px) {
+    .ios-table {
+      min-width: 0;
+      display: block;
+    }
+    .ios-table thead {
+      display: none;
+    }
+    .ios-table tbody {
+      display: grid;
+      gap: 12px;
+      padding: 12px;
+    }
+    .ios-table tbody tr {
+      display: grid;
+      gap: 0;
+      border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+      border-radius: 12px;
+      background: var(--card);
+      overflow: visible;
+    }
+    .ios-table tbody td {
+      display: grid;
+      grid-template-columns: minmax(96px, 38%) minmax(0, 1fr);
+      align-items: start;
+      gap: 10px;
+      min-width: 0;
+      max-width: none;
+      width: 100%;
+      padding: 10px 12px !important;
+      white-space: normal !important;
+      overflow: visible !important;
+      text-align: left !important;
+    }
+    .ios-table tbody td::before {
+      content: attr(data-label);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted-foreground);
+      overflow-wrap: anywhere;
+    }
+    .ios-table tbody td:not([data-label])::before,
+    .ios-table tbody td[data-label=""]::before {
+      content: none;
+    }
+    .ios-table [data-col="actions"],
+    .ios-table [data-col="status"] {
+      min-width: 0;
+      width: 100%;
+      text-align: left !important;
+    }
+    .ios-table [data-col="actions"] > div,
+    .ios-table [data-col="status"] > div {
+      justify-content: flex-start !important;
+      align-items: center;
+    }
+  }
 
   /* Floating pill tooltip is rendered via a portal in __root.tsx so it
      escapes overflow:hidden containers (tables, cards). No CSS pseudo
