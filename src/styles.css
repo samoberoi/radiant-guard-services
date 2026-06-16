@@ -358,8 +358,8 @@
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
-    overflow-wrap: anywhere;
-    word-break: break-word;
+    overflow-wrap: break-word;
+    word-break: normal;
   }
   .ios-table tbody td > * { min-width: 0; max-width: 100%; }
   .ios-table :where(th, td, th *, td *) {
