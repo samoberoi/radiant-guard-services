@@ -676,23 +676,10 @@ function AttendanceUnitsPage() {
               return (
                 <div
                   key={unit.id}
-                  className="group grid grid-cols-1 gap-4 px-5 py-5 transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5 lg:items-start lg:gap-5"
-                  style={{
-                    gridTemplateColumns: undefined,
-                  }}
+                  className="group flex flex-col gap-4 px-5 py-5 transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5 lg:grid lg:items-start lg:gap-5"
+                  style={{ gridTemplateColumns: "minmax(0,2.2fr) minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,2fr) 90px 150px 130px" }}
                 >
-                  <div
-                    className="grid grid-cols-1 gap-4 lg:gap-5"
-                    style={{
-                      // applied via inline style on the wrapper below for lg+
-                    }}
-                  />
-                  {/* Using nested wrapper for grid columns at lg+ */}
-                  <div
-                    className="contents lg:grid lg:items-start lg:gap-5"
-                    style={{ gridTemplateColumns: "minmax(0,2.2fr) minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,2fr) 90px 150px 130px" }}
-                  >
-                  {/* Unit */}
+                  {/* row contents below; on mobile they stack as flex column, on lg+ they fill grid columns */}
                   <div className="flex min-w-0 items-start gap-3">
                     <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-100/80 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
                       <MapPinned className="h-4 w-4" />
