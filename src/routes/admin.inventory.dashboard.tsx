@@ -441,6 +441,59 @@ export function InventoryOwnerDashboard() {
         <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs · ${inr(writeoffCur)} write-offs`} />
       </div>
 
+      {/* Overview — clickable totals across modules */}
+      <div className="space-y-3">
+        <div className="flex items-baseline justify-between px-1">
+          <div className="font-display text-sm font-bold tracking-tight">Overview</div>
+          <div className="text-[11px] text-muted-foreground">Click any tile to open the module</div>
+        </div>
+
+        {/* Master counts */}
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          {can("item_master") && <CountTile to="/admin/inventory/items" label="Products" value={items.length} icon={PackageOpen} accent="text-violet-500" />}
+          {can("vendors") && <CountTile to="/admin/inventory/vendors" label="Vendors" value={vendors.length} icon={ShoppingCart} accent="text-blue-500" />}
+          {can("warehouses") && <CountTile to="/admin/inventory/warehouses" label="Warehouses" value={whs.length} icon={Warehouse} accent="text-amber-500" />}
+          {can("stock_report") && <CountTile to="/admin/inventory/stock" label="Branches" value={branches.length} icon={Building2} accent="text-cyan-500" />}
+        </div>
+
+        {/* Workflow counts with status split */}
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {can("purchase_orders") && (
+            <WorkflowTile to="/admin/inventory/purchase-orders" label="Purchase Orders" value={poSplit.total} icon={FileText} accent="text-blue-500"
+              chips={[{ label: "Open", value: poSplit.open, tone: "amber" }, { label: "Closed", value: poSplit.closed, tone: "emerald" }]} />
+          )}
+          {can("goods_receipts") && (
+            <WorkflowTile to="/admin/inventory/goods-receipts" label="Delivery Challans" value={grnSplit.total} icon={ClipboardList} accent="text-cyan-500"
+              chips={[{ label: "Received", value: grnSplit.received, tone: "amber" }, { label: "Posted", value: grnSplit.posted, tone: "emerald" }]} />
+          )}
+          {can("transfers") && (
+            <WorkflowTile to="/admin/inventory/transfers" label="Transfers" value={transferSplit.total} icon={Truck} accent="text-violet-500"
+              chips={[{ label: "In Transit", value: transferSplit.inTransit, tone: "amber" }, { label: "Ack.", value: transferSplit.ack, tone: "emerald" }]} />
+          )}
+          {can("issuances") && (
+            <WorkflowTile to="/admin/inventory/issuances" label="Issuances" value={issuanceSplit.total} icon={UserPlus} accent="text-teal-500"
+              chips={[{ label: "Issued", value: issuanceSplit.issued, tone: "amber" }, { label: "Ack.", value: issuanceSplit.ack, tone: "emerald" }]} />
+          )}
+          {can("write_offs") && (
+            <WorkflowTile to="/admin/inventory/write-offs" label="Write-offs" value={woSplit.total} icon={ShieldCheck} accent="text-rose-500"
+              chips={[{ label: "Pending", value: woSplit.pending, tone: "amber" }, { label: "Approved", value: woSplit.approved, tone: "emerald" }]} />
+          )}
+          {can("adjustments") && (
+            <WorkflowTile to="/admin/inventory/adjustments" label="Adjustments" value={adjSplit.total} icon={SlidersHorizontal} accent="text-amber-500"
+              chips={[{ label: "Draft", value: adjSplit.draft, tone: "amber" }, { label: "Posted", value: adjSplit.posted, tone: "emerald" }]} />
+          )}
+        </div>
+
+        {/* Money + stock hero */}
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          {can("stock_report") && <HeroTile to="/admin/inventory/stock" label="Total Stock Value" value={inr(stockValue)} icon={Wallet} accent="text-emerald-500" />}
+          {can("stock_report") && <HeroTile to="/admin/inventory/stock" label="Total Stock Qty" value={totalStockQty.toLocaleString("en-IN")} icon={Boxes} accent="text-cyan-500" />}
+          {can("purchase_orders") && <HeroTile to="/admin/inventory/purchase-orders" label={`Procurement Spend · ${RANGE_LABEL[range]}`} value={inr(spendCur)} icon={IndianRupee} tone="text-violet-500" accent="text-violet-500" />}
+          {can("write_offs") && <HeroTile to="/admin/inventory/write-offs" label={`Recovery · ${RANGE_LABEL[range]}`} value={inr(recoveryCur)} icon={Wallet} accent="text-rose-500" />}
+        </div>
+      </div>
+
+
       {/* Holdings — who holds what, click for breakdown */}
       <div className="grid gap-4 lg:grid-cols-3">
         <HoldingsCard
