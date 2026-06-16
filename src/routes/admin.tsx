@@ -248,7 +248,7 @@ function AdminLayout() {
   const groups: GroupItem[] = useMemo(
     () => [
       { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, to: dashboardHref, activePrefixes: ["/admin/dashboard", "/admin/field-dashboard"] },
-      { key: "organizations", label: "Organizations", module: "organizations", icon: Building2, children: customersChildren, activePrefixes: ["/admin/customers"] },
+      { key: "organizations", label: "Organizations", module: "organizations", icon: Building2, to: "/admin/customers", children: customersChildren, activePrefixes: ["/admin/customers"] },
       { key: "contracts", label: "Contracts", module: "contracts", icon: Files, children: contractsChildren, activePrefixes: ["/admin/contracts"] },
       { key: "employees", label: "Employees", module: "employees", icon: UserPlus, to: "/admin/employees", activePrefixes: ["/admin/employees"] },
       { key: "attendance", label: "Attendance", module: "attendance", icon: ClipboardList, to: "/admin/attendance", activePrefixes: ["/admin/attendance"] },
