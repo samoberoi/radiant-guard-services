@@ -649,14 +649,17 @@ function AttendanceUnitsPage() {
           ) : (
             <>
               {/* Desktop header */}
-              <div className="hidden px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground sm:flex sm:flex-row sm:items-center sm:gap-5 bg-secondary/40">
-                <div className="min-w-0 flex-1">Unit</div>
-                <div className="min-w-[140px] max-w-[200px]">Organization</div>
-                <div className="min-w-[140px] max-w-[200px]">Location</div>
-                <div className="min-w-[200px] max-w-[260px]">Security guards</div>
-                <div className="min-w-[80px] text-right">Active</div>
-                <div className="min-w-[140px]">Status</div>
-                <div className="min-w-[120px] text-right">Action</div>
+              <div
+                className="hidden px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground lg:grid lg:items-center lg:gap-5 bg-secondary/40"
+                style={{ gridTemplateColumns: "minmax(0,2.2fr) minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,2fr) 90px 150px 130px" }}
+              >
+                <div className="min-w-0">Unit</div>
+                <div className="min-w-0">Organization</div>
+                <div className="min-w-0">Location</div>
+                <div className="min-w-0">Security guards</div>
+                <div className="text-right">Active</div>
+                <div>Status</div>
+                <div className="text-right">Action</div>
               </div>
               {filtered.map((unit) => {
               const sheet = sheetsByUnit?.get(unit.id) ?? null;
@@ -673,10 +676,11 @@ function AttendanceUnitsPage() {
               return (
                 <div
                   key={unit.id}
-                  className="group flex flex-col gap-4 px-5 py-5 transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5 sm:flex-row sm:items-start sm:gap-5"
+                  className="group flex flex-col gap-4 px-5 py-5 transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5 lg:grid lg:items-start lg:gap-5"
+                  style={{ gridTemplateColumns: "minmax(0,2.2fr) minmax(0,1.4fr) minmax(0,1.4fr) minmax(0,2fr) 90px 150px 130px" }}
                 >
-                  {/* Unit */}
-                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                  {/* row contents below; on mobile they stack as flex column, on lg+ they fill grid columns */}
+                  <div className="flex min-w-0 items-start gap-3">
                     <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-100/80 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
                       <MapPinned className="h-4 w-4" />
                     </div>
@@ -706,53 +710,53 @@ function AttendanceUnitsPage() {
                   </div>
 
                   {/* Organization */}
-                  <div className="sm:min-w-[140px] sm:max-w-[200px]">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:hidden">
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground lg:hidden">
                       Organization
                     </div>
                     <div className="break-words text-sm text-foreground">{unit.customer_name}</div>
                   </div>
 
                   {/* Location */}
-                  <div className="sm:min-w-[140px] sm:max-w-[200px]">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:hidden">
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground lg:hidden">
                       Location
                     </div>
                     <div className="break-words text-sm text-muted-foreground">{unit.location || "—"}</div>
                   </div>
 
                   {/* Security guards */}
-                  <div className="sm:min-w-[200px] sm:max-w-[260px]">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:hidden">
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground lg:hidden">
                       Security guards
                     </div>
                     <EmployeeChips list={unit.security_guards} empty="—" tone="emerald" />
                   </div>
 
                   {/* Active */}
-                  <div className="sm:min-w-[80px] sm:text-right">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:hidden">
+                  <div className="min-w-0 lg:text-right">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground lg:hidden">
                       Active
                     </div>
-                    <div className="text-2xl font-semibold tracking-tight text-foreground">
+                    <div className="text-2xl font-semibold tracking-tight text-foreground leading-none">
                       {unit.active_employee_count}
                     </div>
-                    <div className="text-xs text-muted-foreground">employees</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">employees</div>
                   </div>
 
                   {/* Status */}
-                  <div className="sm:min-w-[140px]">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:hidden">
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground lg:hidden">
                       Status
                     </div>
-                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusBadge.cls}`}>
-                      <statusBadge.Icon className="h-3.5 w-3.5" /> {statusBadge.label}
+                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium whitespace-normal break-words ${statusBadge.cls}`}>
+                      <statusBadge.Icon className="h-3.5 w-3.5 shrink-0" /> {statusBadge.label}
                     </span>
                   </div>
 
                   {/* Action */}
-                  <div className="sm:min-w-[120px] sm:text-right">
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:hidden">
+                  <div className="min-w-0 lg:text-right">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground lg:hidden">
                       Action
                     </div>
                     {sheetStatus === "approved" ? (
