@@ -633,20 +633,44 @@ function MobileGroup({
   }
   return (
     <div>
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        className={cn(
-          "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
-          isGroupActive
-            ? "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)]"
-            : "text-foreground hover:bg-accent/10 hover:text-accent",
-        )}
-      >
-        <Icon className="h-4 w-4" />
-        <span className="flex-1 text-left">{group.label}</span>
-        <ChevronDown className={cn("h-4 w-4 transition-transform", open ? "rotate-0" : "-rotate-90")} />
-      </button>
+      {group.to ? (
+        <div
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+            isGroupActive
+              ? "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)]"
+              : "text-foreground hover:bg-accent/10 hover:text-accent",
+          )}
+        >
+          <Link to={group.to} className="flex flex-1 items-center gap-2.5 min-w-0">
+            <Icon className="h-4 w-4" />
+            <span className="flex-1 truncate text-left">{group.label}</span>
+          </Link>
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((v) => !v); }}
+            aria-label={open ? "Collapse" : "Expand"}
+            className="grid h-7 w-7 place-items-center rounded-md hover:bg-foreground/10"
+          >
+            <ChevronDown className={cn("h-4 w-4 transition-transform", open ? "rotate-0" : "-rotate-90")} />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className={cn(
+            "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
+            isGroupActive
+              ? "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)]"
+              : "text-foreground hover:bg-accent/10 hover:text-accent",
+          )}
+        >
+          <Icon className="h-4 w-4" />
+          <span className="flex-1 text-left">{group.label}</span>
+          <ChevronDown className={cn("h-4 w-4 transition-transform", open ? "rotate-0" : "-rotate-90")} />
+        </button>
+      )}
       {open && (
         <div className="mt-1 space-y-0.5 pl-4">
           {group.children.map((c) => {
