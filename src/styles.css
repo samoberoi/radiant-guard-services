@@ -496,9 +496,10 @@
   .ios-table .cell-secondary {
     display: block;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
   .ios-table .cell-secondary {
     font-size: 11px;
@@ -511,7 +512,73 @@
 
   /* Globally prevent table cards from creating horizontal page scroll.
      Individual cells/columns may still set their own overflow as needed. */
-  .ios-table-card { overflow-x: clip; }
+  .ios-table-card,
+  [data-table-scroll-shell],
+  :where(.overflow-x-clip, .overflow-hidden):has(> .ios-table) {
+    overflow-x: auto !important;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (max-width: 720px) {
+    .ios-table {
+      min-width: 0;
+      display: block;
+    }
+    .ios-table thead {
+      display: none;
+    }
+    .ios-table tbody {
+      display: grid;
+      gap: 12px;
+      padding: 12px;
+    }
+    .ios-table tbody tr {
+      display: grid;
+      gap: 0;
+      border: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+      border-radius: 12px;
+      background: var(--card);
+      overflow: visible;
+    }
+    .ios-table tbody td {
+      display: grid;
+      grid-template-columns: minmax(96px, 38%) minmax(0, 1fr);
+      align-items: start;
+      gap: 10px;
+      min-width: 0;
+      max-width: none;
+      width: 100%;
+      padding: 10px 12px !important;
+      white-space: normal !important;
+      overflow: visible !important;
+      text-align: left !important;
+    }
+    .ios-table tbody td::before {
+      content: attr(data-label);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted-foreground);
+      overflow-wrap: anywhere;
+    }
+    .ios-table tbody td:not([data-label])::before,
+    .ios-table tbody td[data-label=""]::before {
+      content: none;
+    }
+    .ios-table [data-col="actions"],
+    .ios-table [data-col="status"] {
+      min-width: 0;
+      width: 100%;
+      text-align: left !important;
+    }
+    .ios-table [data-col="actions"] > div,
+    .ios-table [data-col="status"] > div {
+      justify-content: flex-start !important;
+      align-items: center;
+    }
+  }
 
   /* Floating pill tooltip is rendered via a portal in __root.tsx so it
      escapes overflow:hidden containers (tables, cards). No CSS pseudo
