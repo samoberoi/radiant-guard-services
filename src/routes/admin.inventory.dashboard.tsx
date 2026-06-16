@@ -4,8 +4,11 @@ import { useMemo, useState } from "react";
 import {
   AlertTriangle, Users, Building2, ShieldCheck, IndianRupee,
   Package, ShoppingCart, TrendingUp, TrendingDown, ArrowRight,
-  Boxes, Truck, Wallet,
+  Boxes, Truck, Wallet, Warehouse, PackageOpen, ClipboardList,
+  SlidersHorizontal, UserPlus, FileText,
 } from "lucide-react";
+import { useCurrentPermissions } from "@/lib/rbac";
+
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend,
@@ -138,6 +141,18 @@ export function InventoryOwnerDashboard() {
     const { data, error } = await supabase.from("inv_warehouses" as never).select("id,name,warehouse_code");
     if (error) throw error; return (data as unknown as { id: string; name: string; warehouse_code: string }[]) ?? [];
   }});
+  const transfersQ = useQuery({ queryKey: ["dash2", "transfers"], queryFn: async () => {
+    const { data, error } = await supabase.from("inv_transfers" as never).select("id,status");
+    if (error) throw error; return (data as unknown as { id: string; status: string }[]) ?? [];
+  }});
+  const issuancesQ = useQuery({ queryKey: ["dash2", "issuances"], queryFn: async () => {
+    const { data, error } = await supabase.from("inv_issuances" as never).select("id,status");
+    if (error) throw error; return (data as unknown as { id: string; status: string }[]) ?? [];
+  }});
+  const adjustmentsQ = useQuery({ queryKey: ["dash2", "adjustments"], queryFn: async () => {
+    const { data, error } = await supabase.from("inv_adjustments" as never).select("id,status");
+    if (error) throw error; return (data as unknown as { id: string; status: string }[]) ?? [];
+  }});
 
   const items = itemsQ.data ?? [];
   const cats = catsQ.data ?? [];
@@ -153,6 +168,43 @@ export function InventoryOwnerDashboard() {
   const grns = grnQ.data ?? [];
   const wos = woQ.data ?? [];
   const whs = whsQ.data ?? [];
+  const transfers = transfersQ.data ?? [];
+  const issuances = issuancesQ.data ?? [];
+  const adjustments = adjustmentsQ.data ?? [];
+  const { can } = useCurrentPermissions();
+
+  const totalStockQty = useMemo(() => balances.reduce((s, b) => s + Math.max(0, Number(b.qty || 0)), 0), [balances]);
+  const recoveryCur = useMemo(() => wos.filter((x) => new Date(x.writeoff_date) >= w.from && new Date(x.writeoff_date) <= w.to).reduce((s, x) => s + Number(x.recovery_amount || 0), 0), [wos, w]);
+  const poSplit = useMemo(() => {
+    const open = pos.filter((p) => ["draft", "approved", "partial", "open", "partially_received"].includes(p.status)).length;
+    const closed = pos.filter((p) => ["received", "closed"].includes(p.status)).length;
+    return { total: pos.length, open, closed };
+  }, [pos]);
+  const grnSplit = useMemo(() => {
+    const received = grns.filter((g) => g.status === "received" || g.status === "draft").length;
+    const posted = grns.filter((g) => g.status === "posted").length;
+    return { total: grns.length, received, posted };
+  }, [grns]);
+  const transferSplit = useMemo(() => {
+    const inTransit = transfers.filter((t) => ["in_transit", "dispatched"].includes(t.status)).length;
+    const ack = transfers.filter((t) => ["acknowledged", "received"].includes(t.status)).length;
+    return { total: transfers.length, inTransit, ack };
+  }, [transfers]);
+  const issuanceSplit = useMemo(() => {
+    const issued = issuances.filter((i) => i.status === "issued").length;
+    const ack = issuances.filter((i) => i.status === "acknowledged").length;
+    return { total: issuances.length, issued, ack };
+  }, [issuances]);
+  const woSplit = useMemo(() => {
+    const pending = wos.filter((x) => x.status === "pending" || x.status === "draft").length;
+    const approved = wos.filter((x) => x.status === "approved").length;
+    return { total: wos.length, pending, approved };
+  }, [wos]);
+  const adjSplit = useMemo(() => {
+    const draft = adjustments.filter((a) => a.status === "draft").length;
+    const posted = adjustments.filter((a) => a.status === "posted").length;
+    return { total: adjustments.length, draft, posted };
+  }, [adjustments]);
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
@@ -388,6 +440,59 @@ export function InventoryOwnerDashboard() {
         <Kpi label="GRNs Posted" value={grnsInPeriod.toString()} delta={delta(grnsInPeriod, grnsPrev)} icon={Truck} tint="from-cyan-500/15 to-cyan-500/0" iconClass="text-cyan-500" />
         <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs · ${inr(writeoffCur)} write-offs`} />
       </div>
+
+      {/* Overview — clickable totals across modules */}
+      <div className="space-y-3">
+        <div className="flex items-baseline justify-between px-1">
+          <div className="font-display text-sm font-bold tracking-tight">Overview</div>
+          <div className="text-[11px] text-muted-foreground">Click any tile to open the module</div>
+        </div>
+
+        {/* Master counts */}
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          {can("item_master") && <CountTile to="/admin/inventory/items" label="Products" value={items.length} icon={PackageOpen} accent="text-violet-500" />}
+          {can("vendors") && <CountTile to="/admin/inventory/vendors" label="Vendors" value={vendors.length} icon={ShoppingCart} accent="text-blue-500" />}
+          {can("warehouses") && <CountTile to="/admin/inventory/warehouses" label="Warehouses" value={whs.length} icon={Warehouse} accent="text-amber-500" />}
+          {can("stock_report") && <CountTile to="/admin/inventory/stock" label="Branches" value={branches.length} icon={Building2} accent="text-cyan-500" />}
+        </div>
+
+        {/* Workflow counts with status split */}
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {can("purchase_orders") && (
+            <WorkflowTile to="/admin/inventory/purchase-orders" label="Purchase Orders" value={poSplit.total} icon={FileText} accent="text-blue-500"
+              chips={[{ label: "Open", value: poSplit.open, tone: "amber" }, { label: "Closed", value: poSplit.closed, tone: "emerald" }]} />
+          )}
+          {can("goods_receipts") && (
+            <WorkflowTile to="/admin/inventory/goods-receipts" label="Delivery Challans" value={grnSplit.total} icon={ClipboardList} accent="text-cyan-500"
+              chips={[{ label: "Received", value: grnSplit.received, tone: "amber" }, { label: "Posted", value: grnSplit.posted, tone: "emerald" }]} />
+          )}
+          {can("transfers") && (
+            <WorkflowTile to="/admin/inventory/transfers" label="Transfers" value={transferSplit.total} icon={Truck} accent="text-violet-500"
+              chips={[{ label: "In Transit", value: transferSplit.inTransit, tone: "amber" }, { label: "Ack.", value: transferSplit.ack, tone: "emerald" }]} />
+          )}
+          {can("issuances") && (
+            <WorkflowTile to="/admin/inventory/issuances" label="Issuances" value={issuanceSplit.total} icon={UserPlus} accent="text-teal-500"
+              chips={[{ label: "Issued", value: issuanceSplit.issued, tone: "amber" }, { label: "Ack.", value: issuanceSplit.ack, tone: "emerald" }]} />
+          )}
+          {can("write_offs") && (
+            <WorkflowTile to="/admin/inventory/write-offs" label="Write-offs" value={woSplit.total} icon={ShieldCheck} accent="text-rose-500"
+              chips={[{ label: "Pending", value: woSplit.pending, tone: "amber" }, { label: "Approved", value: woSplit.approved, tone: "emerald" }]} />
+          )}
+          {can("adjustments") && (
+            <WorkflowTile to="/admin/inventory/adjustments" label="Adjustments" value={adjSplit.total} icon={SlidersHorizontal} accent="text-amber-500"
+              chips={[{ label: "Draft", value: adjSplit.draft, tone: "amber" }, { label: "Posted", value: adjSplit.posted, tone: "emerald" }]} />
+          )}
+        </div>
+
+        {/* Money + stock hero */}
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+          {can("stock_report") && <HeroTile to="/admin/inventory/stock" label="Total Stock Value" value={inr(stockValue)} icon={Wallet} accent="text-emerald-500" />}
+          {can("stock_report") && <HeroTile to="/admin/inventory/stock" label="Total Stock Qty" value={totalStockQty.toLocaleString("en-IN")} icon={Boxes} accent="text-cyan-500" />}
+          {can("purchase_orders") && <HeroTile to="/admin/inventory/purchase-orders" label={`Procurement Spend · ${RANGE_LABEL[range]}`} value={inr(spendCur)} icon={IndianRupee} tone="text-violet-500" accent="text-violet-500" />}
+          {can("write_offs") && <HeroTile to="/admin/inventory/write-offs" label={`Recovery · ${RANGE_LABEL[range]}`} value={inr(recoveryCur)} icon={Wallet} accent="text-rose-500" />}
+        </div>
+      </div>
+
 
       {/* Holdings — who holds what, click for breakdown */}
       <div className="grid gap-4 lg:grid-cols-3">
@@ -749,3 +854,57 @@ function DataTable({ head, children }: { head: string[]; children: React.ReactNo
 function Empty({ children }: { children: React.ReactNode }) {
   return <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">{children}</div>;
 }
+
+function CountTile({ to, label, value, icon: Icon, accent }: { to: string; label: string; value: number; icon: React.ComponentType<{ className?: string }>; accent: string }) {
+  return (
+    <Link to={to} className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-accent/40 hover:bg-accent/5">
+      <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/50 ${accent}`}><Icon className="h-4 w-4" /></div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="font-display text-xl font-bold tabular-nums">{value.toLocaleString("en-IN")}</div>
+      </div>
+      <ArrowRight className="h-4 w-4 text-muted-foreground/40 transition group-hover:translate-x-0.5 group-hover:text-accent" />
+    </Link>
+  );
+}
+
+function HeroTile({ to, label, value, icon: Icon, accent }: { to: string; label: string; value: string; icon: React.ComponentType<{ className?: string }>; accent: string; tone?: string }) {
+  return (
+    <Link to={to} className="group relative overflow-hidden rounded-2xl border border-border bg-card p-4 transition hover:border-accent/40 hover:bg-accent/5">
+      <div className="flex items-start justify-between">
+        <div className="min-w-0">
+          <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
+          <div className="mt-2 font-display text-2xl font-bold tracking-tight">{value}</div>
+        </div>
+        <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/50 ${accent}`}><Icon className="h-4 w-4" /></div>
+      </div>
+    </Link>
+  );
+}
+
+function WorkflowTile({ to, label, value, icon: Icon, accent, chips }: {
+  to: string; label: string; value: number; icon: React.ComponentType<{ className?: string }>; accent: string;
+  chips: { label: string; value: number; tone: "amber" | "emerald" }[];
+}) {
+  const toneCls = (t: "amber" | "emerald") => t === "emerald" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-amber-500/10 text-amber-700 dark:text-amber-400";
+  return (
+    <Link to={to} className="group flex flex-col gap-2 rounded-2xl border border-border bg-card p-4 transition hover:border-accent/40 hover:bg-accent/5">
+      <div className="flex items-center justify-between">
+        <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/50 ${accent}`}><Icon className="h-4 w-4" /></div>
+        <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 transition group-hover:translate-x-0.5 group-hover:text-accent" />
+      </div>
+      <div>
+        <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="font-display text-xl font-bold tabular-nums">{value.toLocaleString("en-IN")}</div>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {chips.map((c) => (
+          <span key={c.label} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${toneCls(c.tone)}`}>
+            {c.label} <span className="tabular-nums">{c.value}</span>
+          </span>
+        ))}
+      </div>
+    </Link>
+  );
+}
+
