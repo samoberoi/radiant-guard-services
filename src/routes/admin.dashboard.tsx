@@ -72,6 +72,7 @@ function DashboardPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-snapshot", year, month],
+    enabled: !showInventoryDashboard,
     queryFn: async () => {
       const sixtyDaysOut = new Date();
       sixtyDaysOut.setDate(sixtyDaysOut.getDate() + 60);
