@@ -18,6 +18,7 @@ import { RadialGauge } from "@/components/charts/RadialGauge";
 import { useCountUp } from "@/hooks/useCountUp";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentPermissions } from "@/lib/rbac";
+import { InventoryOwnerDashboard } from "./admin.inventory.dashboard";
 import {
   fmtINR,
   computeAttendanceTotals,
@@ -52,7 +53,16 @@ function DashboardPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
-  const { can } = useCurrentPermissions();
+  const { can, isLoading: permsLoading } = useCurrentPermissions();
+  const showInventoryDashboard =
+    can("inventory") &&
+    !can("organizations") &&
+    !can("contracts") &&
+    !can("employees") &&
+    !can("vehicles") &&
+    !can("attendance") &&
+    !can("payroll") &&
+    !can("invoice");
 
   const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
   const monthEnd = (() => {
@@ -62,6 +72,7 @@ function DashboardPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-snapshot", year, month],
+    enabled: !permsLoading && !showInventoryDashboard,
     queryFn: async () => {
       const sixtyDaysOut = new Date();
       sixtyDaysOut.setDate(sixtyDaysOut.getDate() + 60);
@@ -462,6 +473,27 @@ function DashboardPage() {
   }, [data, can]);
 
   const showPnL = can("payroll") && can("invoice");
+
+  if (permsLoading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center p-6 text-sm text-muted-foreground">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground/70" />
+      </div>
+    );
+  }
+
+  if (showInventoryDashboard) {
+    return (
+      <div className="space-y-6 p-4 sm:p-6">
+        <PageHeader
+          title="Inventory Dashboard"
+          description="Live inventory overview with stock value, quantities, procurement, transfers, issuances, write-offs, and adjustments."
+          crumbs={[{ label: "Dashboard" }]}
+        />
+        <InventoryOwnerDashboard />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
