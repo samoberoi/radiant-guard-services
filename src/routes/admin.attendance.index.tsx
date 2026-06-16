@@ -793,7 +793,6 @@ function AttendanceUnitsPage() {
                       </Link>
                     )}
                   </div>
-                  </div>
                 </div>
               );
             })}
