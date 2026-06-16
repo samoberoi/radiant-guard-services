@@ -53,7 +53,7 @@ function DashboardPage() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
-  const { can } = useCurrentPermissions();
+  const { can, isLoading: permsLoading } = useCurrentPermissions();
   const showInventoryDashboard =
     can("inventory") &&
     !can("organizations") &&
@@ -72,7 +72,7 @@ function DashboardPage() {
 
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-snapshot", year, month],
-    enabled: !showInventoryDashboard,
+    enabled: !permsLoading && !showInventoryDashboard,
     queryFn: async () => {
       const sixtyDaysOut = new Date();
       sixtyDaysOut.setDate(sixtyDaysOut.getDate() + 60);
@@ -473,6 +473,14 @@ function DashboardPage() {
   }, [data, can]);
 
   const showPnL = can("payroll") && can("invoice");
+
+  if (permsLoading) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center p-6 text-sm text-muted-foreground">
+        <div className="h-5 w-5 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground/70" />
+      </div>
+    );
+  }
 
   if (showInventoryDashboard) {
     return (
