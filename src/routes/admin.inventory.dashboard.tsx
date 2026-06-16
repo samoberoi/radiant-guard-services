@@ -171,7 +171,7 @@ export function InventoryOwnerDashboard() {
   const transfers = transfersQ.data ?? [];
   const issuances = issuancesQ.data ?? [];
   const adjustments = adjustmentsQ.data ?? [];
-  const { can } = useCurrentPermissions();
+  const { canSub } = useCurrentPermissions();
 
   const totalStockQty = useMemo(() => balances.reduce((s, b) => s + Math.max(0, Number(b.qty || 0)), 0), [balances]);
   const recoveryCur = useMemo(() => wos.filter((x) => new Date(x.writeoff_date) >= w.from && new Date(x.writeoff_date) <= w.to).reduce((s, x) => s + Number(x.recovery_amount || 0), 0), [wos, w]);
@@ -450,35 +450,35 @@ export function InventoryOwnerDashboard() {
 
         {/* Master counts */}
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          {can("item_master") && <CountTile to="/admin/inventory/items" label="Products" value={items.length} icon={PackageOpen} accent="text-violet-500" />}
-          {can("vendors") && <CountTile to="/admin/inventory/vendors" label="Vendors" value={vendors.length} icon={ShoppingCart} accent="text-blue-500" />}
-          {can("warehouses") && <CountTile to="/admin/inventory/warehouses" label="Warehouses" value={whs.length} icon={Warehouse} accent="text-amber-500" />}
-          {can("stock_report") && <CountTile to="/admin/inventory/stock" label="Branches" value={branches.length} icon={Building2} accent="text-cyan-500" />}
+          {canSub("inventory", "item_master") && <CountTile to="/admin/inventory/items" label="Products" value={items.length} icon={PackageOpen} accent="text-violet-500" />}
+          {canSub("inventory", "vendors") && <CountTile to="/admin/inventory/vendors" label="Vendors" value={vendors.length} icon={ShoppingCart} accent="text-blue-500" />}
+          {canSub("inventory", "warehouses") && <CountTile to="/admin/inventory/warehouses" label="Warehouses" value={whs.length} icon={Warehouse} accent="text-amber-500" />}
+          {canSub("inventory", "stock_report") && <CountTile to="/admin/inventory/stock" label="Branches" value={branches.length} icon={Building2} accent="text-cyan-500" />}
         </div>
 
         {/* Workflow counts with status split */}
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {can("purchase_orders") && (
+          {canSub("inventory", "purchase_orders") && (
             <WorkflowTile to="/admin/inventory/purchase-orders" label="Purchase Orders" value={poSplit.total} icon={FileText} accent="text-blue-500"
               chips={[{ label: "Open", value: poSplit.open, tone: "amber" }, { label: "Closed", value: poSplit.closed, tone: "emerald" }]} />
           )}
-          {can("goods_receipts") && (
+          {canSub("inventory", "goods_receipts") && (
             <WorkflowTile to="/admin/inventory/goods-receipts" label="Delivery Challans" value={grnSplit.total} icon={ClipboardList} accent="text-cyan-500"
               chips={[{ label: "Received", value: grnSplit.received, tone: "amber" }, { label: "Posted", value: grnSplit.posted, tone: "emerald" }]} />
           )}
-          {can("transfers") && (
+          {canSub("inventory", "transfers") && (
             <WorkflowTile to="/admin/inventory/transfers" label="Transfers" value={transferSplit.total} icon={Truck} accent="text-violet-500"
               chips={[{ label: "In Transit", value: transferSplit.inTransit, tone: "amber" }, { label: "Ack.", value: transferSplit.ack, tone: "emerald" }]} />
           )}
-          {can("issuances") && (
+          {canSub("inventory", "issuances") && (
             <WorkflowTile to="/admin/inventory/issuances" label="Issuances" value={issuanceSplit.total} icon={UserPlus} accent="text-teal-500"
               chips={[{ label: "Issued", value: issuanceSplit.issued, tone: "amber" }, { label: "Ack.", value: issuanceSplit.ack, tone: "emerald" }]} />
           )}
-          {can("write_offs") && (
+          {canSub("inventory", "write_offs") && (
             <WorkflowTile to="/admin/inventory/write-offs" label="Write-offs" value={woSplit.total} icon={ShieldCheck} accent="text-rose-500"
               chips={[{ label: "Pending", value: woSplit.pending, tone: "amber" }, { label: "Approved", value: woSplit.approved, tone: "emerald" }]} />
           )}
-          {can("adjustments") && (
+          {canSub("inventory", "adjustments") && (
             <WorkflowTile to="/admin/inventory/adjustments" label="Adjustments" value={adjSplit.total} icon={SlidersHorizontal} accent="text-amber-500"
               chips={[{ label: "Draft", value: adjSplit.draft, tone: "amber" }, { label: "Posted", value: adjSplit.posted, tone: "emerald" }]} />
           )}
@@ -486,10 +486,10 @@ export function InventoryOwnerDashboard() {
 
         {/* Money + stock hero */}
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          {can("stock_report") && <HeroTile to="/admin/inventory/stock" label="Total Stock Value" value={inr(stockValue)} icon={Wallet} accent="text-emerald-500" />}
-          {can("stock_report") && <HeroTile to="/admin/inventory/stock" label="Total Stock Qty" value={totalStockQty.toLocaleString("en-IN")} icon={Boxes} accent="text-cyan-500" />}
-          {can("purchase_orders") && <HeroTile to="/admin/inventory/purchase-orders" label={`Procurement Spend · ${RANGE_LABEL[range]}`} value={inr(spendCur)} icon={IndianRupee} tone="text-violet-500" accent="text-violet-500" />}
-          {can("write_offs") && <HeroTile to="/admin/inventory/write-offs" label={`Recovery · ${RANGE_LABEL[range]}`} value={inr(recoveryCur)} icon={Wallet} accent="text-rose-500" />}
+          {canSub("inventory", "stock_report") && <HeroTile to="/admin/inventory/stock" label="Total Stock Value" value={inr(stockValue)} icon={Wallet} accent="text-emerald-500" />}
+          {canSub("inventory", "stock_report") && <HeroTile to="/admin/inventory/stock" label="Total Stock Qty" value={totalStockQty.toLocaleString("en-IN")} icon={Boxes} accent="text-cyan-500" />}
+          {canSub("inventory", "purchase_orders") && <HeroTile to="/admin/inventory/purchase-orders" label={`Procurement Spend · ${RANGE_LABEL[range]}`} value={inr(spendCur)} icon={IndianRupee} tone="text-violet-500" accent="text-violet-500" />}
+          {canSub("inventory", "write_offs") && <HeroTile to="/admin/inventory/write-offs" label={`Recovery · ${RANGE_LABEL[range]}`} value={inr(recoveryCur)} icon={Wallet} accent="text-rose-500" />}
         </div>
       </div>
 
