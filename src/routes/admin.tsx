@@ -270,10 +270,18 @@ function AdminLayout() {
     !can("attendance") &&
     !can("payroll") &&
     !can("invoice");
-  const visibleGroups = groups.filter((g) => {
-    if (g.key === "dashboard" && isInventoryOnly) return false;
-    return !g.module || can(g.module);
-  });
+  const visibleGroups = (() => {
+    if (isInventoryOnly) {
+      return inventoryChildren.map<GroupItem>((c) => ({
+        key: c.to,
+        label: c.label,
+        icon: c.icon,
+        to: c.to,
+        activePrefixes: [c.to],
+      }));
+    }
+    return groups.filter((g) => !g.module || can(g.module));
+  })();
   const isGroupActive = (g: GroupItem) =>
     (g.activePrefixes ?? []).some((p) => pathname === p || pathname.startsWith(p + "/"));
 
