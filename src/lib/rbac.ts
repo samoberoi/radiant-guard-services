@@ -113,12 +113,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth, SUPER_ADMIN_PHONE } from "@/lib/auth";
 
 export type PermCheck = (moduleKey: string, action?: PermissionAction) => boolean;
+export type SubPermCheck = (moduleKey: string, subModuleKey: string, action?: PermissionAction) => boolean;
 
 export function useCurrentPermissions(): {
   isLoading: boolean;
   isSuperAdmin: boolean;
   roleKey: string | null;
   can: PermCheck;
+  canSub: SubPermCheck;
 } {
   const { user } = useAuth();
   const phone = user?.phone?.replace(/\D/g, "").slice(-10) ?? "";
@@ -172,10 +174,20 @@ export function useCurrentPermissions(): {
     return false;
   };
 
+  const canSub: SubPermCheck = (moduleKey, subModuleKey, action = "view") => {
+    if (isSuperAdmin) return action === "approve" ? moduleSupportsApprove(moduleKey) : true;
+    if (action === "approve" && !moduleSupportsApprove(moduleKey)) return false;
+    const moduleGrant = map.get(`${moduleKey}::`);
+    if (valueFor(moduleGrant, action)) return true;
+    const subGrant = map.get(`${moduleKey}::${subModuleKey}`);
+    return valueFor(subGrant, action);
+  };
+
   return {
     isLoading: (!isSuperAdmin && (roleQ.isLoading || permsQ.isLoading)),
     isSuperAdmin,
     roleKey,
     can,
+    canSub,
   };
 }
