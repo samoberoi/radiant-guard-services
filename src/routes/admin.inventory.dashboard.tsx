@@ -854,3 +854,57 @@ function DataTable({ head, children }: { head: string[]; children: React.ReactNo
 function Empty({ children }: { children: React.ReactNode }) {
   return <div className="rounded-xl border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">{children}</div>;
 }
+
+function CountTile({ to, label, value, icon: Icon, accent }: { to: string; label: string; value: number; icon: React.ComponentType<{ className?: string }>; accent: string }) {
+  return (
+    <Link to={to} className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-4 transition hover:border-accent/40 hover:bg-accent/5">
+      <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-secondary/50 ${accent}`}><Icon className="h-4 w-4" /></div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="font-display text-xl font-bold tabular-nums">{value.toLocaleString("en-IN")}</div>
+      </div>
+      <ArrowRight className="h-4 w-4 text-muted-foreground/40 transition group-hover:translate-x-0.5 group-hover:text-accent" />
+    </Link>
+  );
+}
+
+function HeroTile({ to, label, value, icon: Icon, accent }: { to: string; label: string; value: string; icon: React.ComponentType<{ className?: string }>; accent: string; tone?: string }) {
+  return (
+    <Link to={to} className="group relative overflow-hidden rounded-2xl border border-border bg-card p-4 transition hover:border-accent/40 hover:bg-accent/5">
+      <div className="flex items-start justify-between">
+        <div className="min-w-0">
+          <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
+          <div className="mt-2 font-display text-2xl font-bold tracking-tight">{value}</div>
+        </div>
+        <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/50 ${accent}`}><Icon className="h-4 w-4" /></div>
+      </div>
+    </Link>
+  );
+}
+
+function WorkflowTile({ to, label, value, icon: Icon, accent, chips }: {
+  to: string; label: string; value: number; icon: React.ComponentType<{ className?: string }>; accent: string;
+  chips: { label: string; value: number; tone: "amber" | "emerald" }[];
+}) {
+  const toneCls = (t: "amber" | "emerald") => t === "emerald" ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400" : "bg-amber-500/10 text-amber-700 dark:text-amber-400";
+  return (
+    <Link to={to} className="group flex flex-col gap-2 rounded-2xl border border-border bg-card p-4 transition hover:border-accent/40 hover:bg-accent/5">
+      <div className="flex items-center justify-between">
+        <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/50 ${accent}`}><Icon className="h-4 w-4" /></div>
+        <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/40 transition group-hover:translate-x-0.5 group-hover:text-accent" />
+      </div>
+      <div>
+        <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="font-display text-xl font-bold tabular-nums">{value.toLocaleString("en-IN")}</div>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {chips.map((c) => (
+          <span key={c.label} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${toneCls(c.tone)}`}>
+            {c.label} <span className="tabular-nums">{c.value}</span>
+          </span>
+        ))}
+      </div>
+    </Link>
+  );
+}
+
