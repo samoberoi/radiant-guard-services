@@ -4,8 +4,11 @@ import { useMemo, useState } from "react";
 import {
   AlertTriangle, Users, Building2, ShieldCheck, IndianRupee,
   Package, ShoppingCart, TrendingUp, TrendingDown, ArrowRight,
-  Boxes, Truck, Wallet,
+  Boxes, Truck, Wallet, Warehouse, PackageOpen, ClipboardList,
+  SlidersHorizontal, UserPlus, FileText,
 } from "lucide-react";
+import { useCurrentPermissions } from "@/lib/rbac";
+
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend,
