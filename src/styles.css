@@ -306,12 +306,12 @@
 
   .ios-table {
     width: 100%;
-    table-layout: fixed;
+    table-layout: auto;
     border-collapse: separate;
     border-spacing: 0;
   }
-  .ios-table.table-auto {
-    table-layout: auto;
+  .ios-table.table-fixed {
+    table-layout: fixed;
   }
   .ios-table thead th {
     position: sticky; top: 0;
@@ -325,7 +325,7 @@
     padding: 12px 14px;
     border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
     white-space: nowrap;
-    text-align: left;
+    text-align: left !important;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -341,6 +341,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     overflow-wrap: normal;
+    text-align: left !important;
   }
   .ios-table tbody td:first-child { padding-left: 20px; }
   .ios-table tbody td:last-child { padding-right: 20px; overflow: visible; }
@@ -387,11 +388,11 @@
     width: 200px;
     min-width: 180px;
     white-space: nowrap;
-    text-align: right;
+    text-align: right !important;
   }
   /* Action header label must sit flush-right above the icon group. */
   .ios-table thead th[data-col="actions"] {
-    text-align: right;
+    text-align: right !important;
     padding-right: 20px;
   }
   .ios-table thead th[data-col="actions"] > * {
