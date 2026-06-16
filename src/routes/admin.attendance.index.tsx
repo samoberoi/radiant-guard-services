@@ -633,138 +633,155 @@ function AttendanceUnitsPage() {
         )}
 
 
-        <div className="overflow-x-auto">
-          <table className="ios-table min-w-full table-auto">
-            <thead className="border-b border-border/60 bg-secondary/40">
-              <tr className="text-left text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                <th className="px-5 py-4 font-medium min-w-[240px]">Unit</th>
-                <th className="px-5 py-4 font-medium min-w-[160px]">Organization</th>
-                <th className="px-5 py-4 font-medium min-w-[160px]">Location</th>
-                <th className="px-5 py-4 font-medium min-w-[220px]">Security guards</th>
-                <th className="px-5 py-4 text-right font-medium">Active</th>
-                <th className="px-5 py-4 font-medium">Status</th>
-                <th className="px-5 py-4 whitespace-nowrap text-right font-medium">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/50">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
-                    Loading attendance units…
-                  </td>
-                </tr>
-              ) : error ? (
-                <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-destructive">
-                    {error instanceof Error ? error.message : "Could not load attendance units right now."}
-                  </td>
-                </tr>
-              ) : filtered.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
-                    {units.length === 0 ? "No units with active contracts yet." : "No units match the current filters."}
-                  </td>
-                </tr>
-              ) : (
-                filtered.map((unit) => {
-                  const sheet = sheetsByUnit?.get(unit.id) ?? null;
-                  const sheetStatus: SheetStatus | "none" = sheet?.status ?? "none";
-                  const statusBadge = (() => {
-                    if (sheetStatus === "approved")
-                      return { label: "Approved", cls: "border-emerald-300/60 bg-emerald-100/70 text-emerald-800", Icon: CheckCircle2 };
-                    if (sheetStatus === "submitted")
-                      return { label: "Awaiting approval", cls: "border-amber-300/60 bg-amber-100/70 text-amber-800", Icon: Clock3 };
-                    if (sheetStatus === "rejected")
-                      return { label: "Rejected — open", cls: "border-rose-300/60 bg-rose-100/70 text-rose-800", Icon: ClipboardList };
-                    return { label: "Open", cls: "border-sky-300/60 bg-sky-100/70 text-sky-800", Icon: ClipboardList };
-                  })();
-                  return (
-                  <tr key={unit.id} className="group transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5">
-                    <td className="px-5 py-4 align-top" style={{ whiteSpace: "normal", overflow: "visible", textOverflow: "clip" }}>
-                      <div className="flex items-start gap-3">
-                        <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-100/80 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
-                          <MapPinned className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-semibold text-foreground break-words leading-snug" style={{ whiteSpace: "normal" }}>{unit.name || unit.code}</div>
-                          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                            <span className="inline-flex whitespace-nowrap rounded-md bg-secondary px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-foreground">
-                              {unit.code || "—"}
-                            </span>
-                            {unit.contract_codes.slice(0, 2).map((cc) => (
-                              <span
-                                key={cc}
-                                className="inline-flex whitespace-nowrap rounded-full border border-accent/20 bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent"
-                              >
-                                {cc}
-                              </span>
-                            ))}
-                            {unit.contract_codes.length > 2 && (
-                              <span className="text-[10px] text-muted-foreground">
-                                +{unit.contract_codes.length - 2}
-                              </span>
-                            )}
-                          </div>
-                        </div>
+        <div className="divide-y divide-border/50">
+          {isLoading ? (
+            <div className="px-5 py-12 text-center text-sm text-muted-foreground">
+              Loading attendance units…
+            </div>
+          ) : error ? (
+            <div className="px-5 py-12 text-center text-sm text-destructive">
+              {error instanceof Error ? error.message : "Could not load attendance units right now."}
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="px-5 py-12 text-center text-sm text-muted-foreground">
+              {units.length === 0 ? "No units with active contracts yet." : "No units match the current filters."}
+            </div>
+          ) : (
+            filtered.map((unit) => {
+              const sheet = sheetsByUnit?.get(unit.id) ?? null;
+              const sheetStatus: SheetStatus | "none" = sheet?.status ?? "none";
+              const statusBadge = (() => {
+                if (sheetStatus === "approved")
+                  return { label: "Approved", cls: "border-emerald-300/60 bg-emerald-100/70 text-emerald-800", Icon: CheckCircle2 };
+                if (sheetStatus === "submitted")
+                  return { label: "Awaiting approval", cls: "border-amber-300/60 bg-amber-100/70 text-amber-800", Icon: Clock3 };
+                if (sheetStatus === "rejected")
+                  return { label: "Rejected — open", cls: "border-rose-300/60 bg-rose-100/70 text-rose-800", Icon: ClipboardList };
+                return { label: "Open", cls: "border-sky-300/60 bg-sky-100/70 text-sky-800", Icon: ClipboardList };
+              })();
+              return (
+                <div
+                  key={unit.id}
+                  className="group flex flex-col gap-4 px-5 py-5 transition-colors hover:bg-amber-50/30 dark:hover:bg-amber-500/5 sm:flex-row sm:items-start sm:gap-5"
+                >
+                  {/* Unit */}
+                  <div className="flex min-w-0 flex-1 items-start gap-3">
+                    <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-sky-100/80 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
+                      <MapPinned className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="break-words text-sm font-semibold leading-snug text-foreground">
+                        {unit.name || unit.code}
                       </div>
-                    </td>
-                    <td className="px-5 py-4 align-top text-sm text-foreground break-words" style={{ whiteSpace: "normal", overflow: "visible", textOverflow: "clip" }}>{unit.customer_name}</td>
-                    <td className="px-5 py-4 align-top text-sm text-muted-foreground break-words" style={{ whiteSpace: "normal", overflow: "visible", textOverflow: "clip" }}>{unit.location || "—"}</td>
-                    <td className="px-5 py-4 align-top">
-                      <EmployeeChips list={unit.security_guards} empty="—" tone="emerald" />
-                    </td>
-                    <td className="px-5 py-4 text-right align-top">
-                      <div className="text-2xl font-semibold tracking-tight text-foreground">
-                        {unit.active_employee_count}
+                      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                        <span className="inline-flex whitespace-nowrap rounded-md bg-secondary px-2 py-0.5 font-mono text-[10px] font-semibold uppercase tracking-wide text-foreground">
+                          {unit.code || "—"}
+                        </span>
+                        {unit.contract_codes.slice(0, 2).map((cc) => (
+                          <span
+                            key={cc}
+                            className="inline-flex whitespace-nowrap rounded-full border border-accent/20 bg-accent/10 px-2 py-0.5 text-[10px] font-medium text-accent"
+                          >
+                            {cc}
+                          </span>
+                        ))}
+                        {unit.contract_codes.length > 2 && (
+                          <span className="text-[10px] text-muted-foreground">
+                            +{unit.contract_codes.length - 2}
+                          </span>
+                        )}
                       </div>
-                      <div className="text-xs text-muted-foreground">employees</div>
-                    </td>
-                    <td className="px-5 py-4 align-top">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusBadge.cls}`}>
-                        <statusBadge.Icon className="h-3.5 w-3.5" /> {statusBadge.label}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-right align-top whitespace-nowrap">
-                      {sheetStatus === "approved" ? (
-                        canApprove ? (
-                          <button
-                            type="button"
-                            data-no-pill
-                            onClick={() => sheet && reopenSheet.mutate(sheet)}
-                            disabled={!sheet || reopenSheet.isPending}
-                            className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:border-amber-400 hover:bg-amber-100 disabled:opacity-60"
-                          >
-                            <RotateCcw className="h-3.5 w-3.5" /> Reopen
-                          </button>
-                        ) : (
-                          <Link
-                            to="/admin/attendance/$unitId"
-                            params={{ unitId: unit.id }}
-                            search={{ month: monthIdx, year }}
-                            data-no-pill
-                            className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-accent/50 hover:text-accent"
-                          >
-                            View roll <ArrowRight className="h-3.5 w-3.5" />
-                          </Link>
-                        )
+                    </div>
+                  </div>
+
+                  {/* Organization */}
+                  <div className="sm:min-w-[140px] sm:max-w-[200px]">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:hidden">
+                      Organization
+                    </div>
+                    <div className="break-words text-sm text-foreground">{unit.customer_name}</div>
+                  </div>
+
+                  {/* Location */}
+                  <div className="sm:min-w-[140px] sm:max-w-[200px]">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:hidden">
+                      Location
+                    </div>
+                    <div className="break-words text-sm text-muted-foreground">{unit.location || "—"}</div>
+                  </div>
+
+                  {/* Security guards */}
+                  <div className="sm:min-w-[200px] sm:max-w-[260px]">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:hidden">
+                      Security guards
+                    </div>
+                    <EmployeeChips list={unit.security_guards} empty="—" tone="emerald" />
+                  </div>
+
+                  {/* Active */}
+                  <div className="sm:min-w-[80px] sm:text-right">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:hidden">
+                      Active
+                    </div>
+                    <div className="text-2xl font-semibold tracking-tight text-foreground">
+                      {unit.active_employee_count}
+                    </div>
+                    <div className="text-xs text-muted-foreground">employees</div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="sm:min-w-[140px]">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:hidden">
+                      Status
+                    </div>
+                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium ${statusBadge.cls}`}>
+                      <statusBadge.Icon className="h-3.5 w-3.5" /> {statusBadge.label}
+                    </span>
+                  </div>
+
+                  {/* Action */}
+                  <div className="sm:min-w-[120px] sm:text-right">
+                    <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground sm:hidden">
+                      Action
+                    </div>
+                    {sheetStatus === "approved" ? (
+                      canApprove ? (
+                        <button
+                          type="button"
+                          data-no-pill
+                          onClick={() => sheet && reopenSheet.mutate(sheet)}
+                          disabled={!sheet || reopenSheet.isPending}
+                          className="inline-flex items-center gap-1.5 rounded-full border border-amber-300/60 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-900 transition hover:border-amber-400 hover:bg-amber-100 disabled:opacity-60"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5" /> Reopen
+                        </button>
                       ) : (
                         <Link
                           to="/admin/attendance/$unitId"
                           params={{ unitId: unit.id }}
                           search={{ month: monthIdx, year }}
                           data-no-pill
-                          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-accent/50 hover:text-accent"
+                          className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1.5 text-xs font-semibold text-muted-foreground transition hover:border-accent/50 hover:text-accent"
                         >
-                          Open roll <ArrowRight className="h-3.5 w-3.5" />
+                          View roll <ArrowRight className="h-3.5 w-3.5" />
                         </Link>
-                      )}
-                    </td>
-                  </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                      )
+                    ) : (
+                      <Link
+                        to="/admin/attendance/$unitId"
+                        params={{ unitId: unit.id }}
+                        search={{ month: monthIdx, year }}
+                        data-no-pill
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background px-3 py-1.5 text-xs font-semibold text-foreground transition hover:border-accent/50 hover:text-accent"
+                      >
+                        Open roll <ArrowRight className="h-3.5 w-3.5" />
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>
