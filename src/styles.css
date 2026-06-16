@@ -362,6 +362,9 @@
     word-break: break-word;
   }
   .ios-table tbody td > * { min-width: 0; max-width: 100%; }
+  .ios-table :where(th, td, th *, td *) {
+    text-align: left !important;
+  }
   .ios-table tbody td :where(.truncate) {
     white-space: normal !important;
     overflow: visible !important;
@@ -384,12 +387,13 @@
     font-size: 12px;
     font-weight: 600;
     line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
     transition: background-color .15s ease, border-color .15s ease, color .15s ease;
   }
-  .cell-pill > span { overflow: hidden; text-overflow: ellipsis; }
+  .cell-pill > span { overflow: visible; text-overflow: clip; }
   .cell-pill > svg { flex: 0 0 auto; height: 12px; width: 12px; }
   .cell-pill:hover {
     background: color-mix(in oklab, var(--accent) 18%, white);
