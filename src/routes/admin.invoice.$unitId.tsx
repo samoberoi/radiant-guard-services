@@ -64,16 +64,36 @@ function PayrollUnitPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("units")
-        .select("id, code, name, customer_id")
+        .select(
+          "id, code, name, customer_id, gst_number, billing_address1, billing_address2, billing_city, billing_district, billing_state, billing_pincode, billing_country",
+        )
         .eq("id", unitId)
         .maybeSingle();
       if (!data) return null;
       const { data: cust } = await supabase
         .from("customers")
-        .select("name")
+        .select(
+          "name, billing_address1, billing_address2, billing_city, billing_district, billing_state, billing_pincode, billing_country",
+        )
         .eq("id", data.customer_id ?? "")
         .maybeSingle();
-      return { ...data, customer_name: cust?.name ?? "" };
+      const { data: gsts } = await supabase
+        .from("customer_gst_numbers")
+        .select("gstin, state_name")
+        .eq("customer_id", data.customer_id ?? "");
+      const stateGstin =
+        (gsts ?? []).find(
+          (g) => (g.state_name ?? "").toLowerCase() === (data.billing_state ?? "").toLowerCase(),
+        )?.gstin ??
+        (gsts ?? [])[0]?.gstin ??
+        data.gst_number ??
+        "";
+      return {
+        ...data,
+        customer_name: cust?.name ?? "",
+        customer: cust ?? null,
+        gstin: stateGstin,
+      };
     },
   });
 
