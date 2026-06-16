@@ -326,95 +326,101 @@ function CustomersDashboard() {
         </div>
       </div>
 
-      {/* Combined organization + unit list */}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="overflow-x-clip">
-          <table className="ios-table w-full text-sm">
-            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3">Organization</th>
-                <th className="px-5 py-3">Unit</th>
-                <th className="px-5 py-3">Branch / Location</th>
-                <th className="px-5 py-3">Contact</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Map</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {rows.map((u) => {
-                const c = u.customerId ? customerById.get(u.customerId) : undefined;
-                return (
-                  <tr key={u.id} className="hover:bg-secondary/30">
-                    <td className="px-5 py-3">
-                      {c ? (
-                        <>
-                          <div className="font-mono text-[11px] font-semibold text-accent">{c.code}</div>
-                          <div className="font-semibold text-foreground">{c.name}</div>
-                          {c.website && (
-                            <a
-                              href={normaliseUrl(c.website)}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-accent"
-                            >
-                              {c.website} <ExternalLink className="h-3 w-3" />
-                            </a>
-                          )}
-                        </>
-                      ) : (
-                        <span className="text-muted-foreground">Unassigned</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="font-mono text-[11px] font-semibold text-accent">{u.code}</div>
-                      <div className="font-semibold text-foreground">{u.name}</div>
-                      {u.gstNumber && (
-                        <div className="text-[11px] text-muted-foreground font-mono">GST {u.gstNumber}</div>
-                      )}
-                    </td>
-                    <td className="px-5 py-3">
-                      <div className="font-medium text-foreground">{branchLabel(u)}</div>
-                      <div className="line-clamp-1 text-xs text-muted-foreground">{u.location || "—"}</div>
-                    </td>
-                    <td className="px-5 py-3 text-xs">
-                      {u.emergencyContactName ? (
-                        <>
-                          <div className="text-foreground">{u.emergencyContactName}</div>
-                          <div className="font-mono text-muted-foreground">{u.emergencyContactMobile || "—"}</div>
-                        </>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3"><StatusBadge status={u.status} /></td>
-                    <td className="px-5 py-3 text-right">
-                      {u.latitude != null && u.longitude != null ? (
+      {/* Combined organization + unit list — stacked card layout (never crops, never scrolls horizontally) */}
+      <div className="space-y-3">
+        {rows.map((u) => {
+          const c = u.customerId ? customerById.get(u.customerId) : undefined;
+          const hasMap = u.latitude != null && u.longitude != null;
+          return (
+            <div
+              key={u.id}
+              className="rounded-2xl border border-border bg-card p-4 transition-colors hover:border-accent/40 hover:bg-accent/5 sm:p-5"
+            >
+              <div className="grid grid-cols-1 gap-x-6 gap-y-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1.4fr)_minmax(0,1.2fr)_minmax(0,1.2fr)_auto]">
+                {/* Organization */}
+                <div className="min-w-0">
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Organization</div>
+                  {c ? (
+                    <div className="min-w-0 space-y-1">
+                      <div className="font-mono text-[11px] font-semibold text-accent">{c.code}</div>
+                      <div className="break-words font-display text-base font-bold leading-tight text-foreground">{c.name}</div>
+                      {c.website && (
                         <a
-                          href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
+                          href={normaliseUrl(c.website)}
                           target="_blank"
                           rel="noreferrer"
-                          className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-accent hover:bg-accent/10"
+                          className="inline-flex max-w-full items-center gap-1 break-all text-xs text-muted-foreground hover:text-accent"
                         >
-                          <MapPin className="h-3 w-3" /> Map
+                          <span className="break-all">{c.website}</span>
+                          <ExternalLink className="h-3 w-3 shrink-0" />
                         </a>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
                       )}
-                    </td>
-                  </tr>
-                );
-              })}
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
-                    <Warehouse className="mx-auto mb-2 h-6 w-6 opacity-50" />
-                    No units match your filters.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Unassigned</span>
+                  )}
+                </div>
+
+                {/* Unit */}
+                <div className="min-w-0">
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Unit</div>
+                  <div className="min-w-0 space-y-1">
+                    <div className="font-mono text-[11px] font-semibold text-accent">{u.code}</div>
+                    <div className="break-words font-display text-base font-bold leading-tight text-foreground">{u.name}</div>
+                    {u.gstNumber && (
+                      <div className="break-all font-mono text-[11px] text-muted-foreground">GST {u.gstNumber}</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Branch / Location */}
+                <div className="min-w-0">
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Branch / Location</div>
+                  <div className="min-w-0 space-y-1">
+                    <div className="break-words text-sm font-semibold text-foreground">{branchLabel(u)}</div>
+                    <div className="break-words text-xs text-muted-foreground">{u.location || "—"}</div>
+                  </div>
+                </div>
+
+                {/* Contact */}
+                <div className="min-w-0">
+                  <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Contact</div>
+                  {u.emergencyContactName ? (
+                    <div className="min-w-0 space-y-1">
+                      <div className="break-words text-sm text-foreground">{u.emergencyContactName}</div>
+                      <div className="break-all font-mono text-xs text-muted-foreground">{u.emergencyContactMobile || "—"}</div>
+                    </div>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">—</span>
+                  )}
+                </div>
+
+                {/* Status + Map */}
+                <div className="flex flex-wrap items-center gap-2 md:col-span-2 xl:col-span-1 xl:flex-col xl:items-end xl:justify-start xl:gap-3">
+                  <StatusBadge status={u.status} />
+                  {hasMap ? (
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${u.latitude},${u.longitude}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-semibold text-accent transition-colors hover:bg-accent/10"
+                    >
+                      <MapPin className="h-3.5 w-3.5" /> Map
+                    </a>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">No map</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        {rows.length === 0 && (
+          <div className="rounded-2xl border border-dashed border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
+            <Warehouse className="mx-auto mb-2 h-6 w-6 opacity-50" />
+            No units match your filters.
+          </div>
+        )}
       </div>
 
       <HierarchyTreeDialog
