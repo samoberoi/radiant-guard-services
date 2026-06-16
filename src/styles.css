@@ -345,7 +345,7 @@
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
     word-break: normal;
     text-align: left !important;
   }
