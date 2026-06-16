@@ -388,11 +388,11 @@
     width: 200px;
     min-width: 180px;
     white-space: nowrap;
-    text-align: right;
+    text-align: right !important;
   }
   /* Action header label must sit flush-right above the icon group. */
   .ios-table thead th[data-col="actions"] {
-    text-align: right;
+    text-align: right !important;
     padding-right: 20px;
   }
   .ios-table thead th[data-col="actions"] > * {
