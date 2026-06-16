@@ -306,12 +306,14 @@
 
   .ios-table {
     width: 100%;
+    min-width: max-content;
     table-layout: auto;
     border-collapse: separate;
     border-spacing: 0;
+    text-align: left;
   }
   .ios-table.table-fixed {
-    table-layout: fixed;
+    table-layout: auto;
   }
   .ios-table thead th {
     position: sticky; top: 0;
@@ -324,28 +326,32 @@
     color: var(--muted-foreground);
     padding: 12px 14px;
     border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
-    white-space: nowrap;
+    white-space: normal;
     text-align: left !important;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    vertical-align: top;
   }
   .ios-table thead th:first-child { padding-left: 20px; }
   .ios-table thead th:last-child { padding-right: 20px; }
   .ios-table tbody td {
-    min-width: 0;
+    min-width: 96px;
+    max-width: min(360px, 44vw);
     padding: 12px 12px;
     font-size: 13.5px;
     border-bottom: 1px solid color-mix(in oklab, var(--border) 35%, transparent);
-    vertical-align: middle;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    overflow-wrap: normal;
+    vertical-align: top;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    overflow-wrap: anywhere;
+    word-break: normal;
     text-align: left !important;
   }
   .ios-table tbody td:first-child { padding-left: 20px; }
   .ios-table tbody td:last-child { padding-right: 20px; overflow: visible; }
-  .ios-table tbody td[data-wrap="false"] { white-space: nowrap; }
+  .ios-table tbody td[data-wrap="false"] { white-space: normal; }
   /* Wrappable cells: allow the content to flow onto multiple lines and
      reveal full text instead of truncating with an ellipsis. */
   .ios-table tbody td[data-wrap="true"] {
@@ -356,6 +362,11 @@
     word-break: break-word;
   }
   .ios-table tbody td > * { min-width: 0; max-width: 100%; }
+  .ios-table tbody td :where(.truncate) {
+    white-space: normal !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+  }
 
   /* Inline pill used inside table cells for things like website / map / tag
      links. Stays as a single rounded capsule even when the surrounding cell
