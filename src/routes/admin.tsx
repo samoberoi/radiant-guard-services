@@ -260,7 +260,20 @@ function AdminLayout() {
     [dashboardHref],
   );
 
-  const visibleGroups = groups.filter((g) => !g.module || can(g.module));
+  const isInventoryOnly =
+    !isSuperAdmin &&
+    can("inventory") &&
+    !can("organizations") &&
+    !can("contracts") &&
+    !can("employees") &&
+    !can("vehicles") &&
+    !can("attendance") &&
+    !can("payroll") &&
+    !can("invoice");
+  const visibleGroups = groups.filter((g) => {
+    if (g.key === "dashboard" && isInventoryOnly) return false;
+    return !g.module || can(g.module);
+  });
   const isGroupActive = (g: GroupItem) =>
     (g.activePrefixes ?? []).some((p) => pathname === p || pathname.startsWith(p + "/"));
 
