@@ -373,6 +373,166 @@ function PayrollUnitPage() {
     downloadCsv(`invoice-${unit?.code ?? unitId}-${start}-${end}`, dataRows, columns);
   };
 
+  const COMPANY_STATE = "Maharashtra"; // company HO state for intra/inter detection
+  const COMPANY_STATE_SHORT = "Maha";
+
+  const exportTallyBilling = async () => {
+    if (!unit) return;
+
+    // Resolve service type name from active client contract for this unit.
+    const { data: contracts } = await supabase
+      .from("client_contracts")
+      .select("service_type_id")
+      .eq("unit_id", unitId)
+      .eq("record_type", "client")
+      .eq("status", "active")
+      .order("start_date", { ascending: false })
+      .limit(1);
+    const serviceTypeId = contracts?.[0]?.service_type_id ?? null;
+    let serviceTypeName = "Security Guard";
+    if (serviceTypeId) {
+      const { data: st } = await supabase
+        .from("service_types")
+        .select("name")
+        .eq("id", serviceTypeId)
+        .maybeSingle();
+      if (st?.name) serviceTypeName = String(st.name);
+    }
+
+    const billingState = unit.billing_state || unit.customer?.billing_state || "";
+    const isIntraState =
+      billingState.trim().toLowerCase() === COMPANY_STATE.toLowerCase();
+    const gstRate = 18;
+    const cgstRate = isIntraState ? 9 : 0;
+    const sgstRate = isIntraState ? 9 : 0;
+    const igstRate = isIntraState ? 0 : gstRate;
+    const salesLedger = isIntraState
+      ? `Sale ${serviceTypeName} Charges ${COMPANY_STATE_SHORT} SGST/CGST ${gstRate}%`
+      : `Sale ${serviceTypeName} Charges ${COMPANY_STATE_SHORT} IGST ${gstRate}%`;
+
+    const monthAbbr = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+    const [ys, ms] = start.split("-").map(Number);
+    const [ye] = end.split("-").map(Number);
+    const fyStart = ms >= 4 ? ys : ys - 1;
+    const fyEnd = fyStart + 1;
+    const stateCode = gstinStateCode(unit.gstin) || "00";
+    const vchNo = `${monthAbbr[ms - 1]}${String(ys).slice(2)}-${String(fyEnd).slice(2)}${(unit.code || "").toUpperCase()}`;
+    const vchDate = end;
+    const partyName = `${unit.customer_name || ""}, ${unit.name || unit.code || ""}`.trim();
+
+    const addr1 = unit.billing_address1 || unit.customer?.billing_address1 || "";
+    const addr2 = unit.billing_address2 || unit.customer?.billing_address2 || "";
+    const addr3 = [
+      unit.billing_city || unit.customer?.billing_city,
+      unit.billing_district || unit.customer?.billing_district,
+      unit.billing_pincode || unit.customer?.billing_pincode,
+    ].filter(Boolean).join(", ");
+    const pincode = unit.billing_pincode || unit.customer?.billing_pincode || "";
+    const country = unit.billing_country || unit.customer?.billing_country || "India";
+
+    const headers = [
+      "Vch No.","Vch Type","Date","GST Registration","Bill to Place","Ship to Place","Reference No.",
+      "Delivery Note No","Delivery Note Date","Order No","Order Date","Party Name","Ledger Group",
+      "Registration Type","GSTIN No","Country","State","Pincode","Address 1","Address 2","Address 3",
+      "Cost Center","Cost Center Amt","Sales Ledger","Item Name","Stock Group","Unit","Maintain Batches",
+      "Applicable From","HSN Description","HSN","IGST Rate","CGST Rate","SGST Rate","CESS Rate",
+      "Tracking No","Order No ","Order Due Date","Godown","Batch","Qty ","Incluse","Rate","Amt",
+      "Additional Ledger","Amount","CGST Ledger","CGST Amt","SGST Ledger","SGST Amt","IGST Ledger",
+      "IGST Amt","CESS Ledger","CESS Amt","Total","Narration","TALLYIMPORTSTATUS",
+    ];
+    const columns = headers.map((h) => ({ key: h, header: h }));
+
+    const billingRows = rows
+      .filter((r) => r.wages && r.resource)
+      .map((r) => {
+        const monthly =
+          (r.resource!.components.reduce((s, c) => s + (Number(c.amount) || 0), 0)) +
+          (r.resource!.employerContributions.reduce((s, c) => s + (Number(c.amount) || 0), 0));
+        const baseDays = r.wages!.baseDays || 30;
+        const perDay = monthly / baseDays;
+        const qty = r.totals.tDays;
+        const amt = Math.round(perDay * qty * 100) / 100;
+        const cgstAmt = Math.round(amt * (cgstRate / 100) * 100) / 100;
+        const sgstAmt = Math.round(amt * (sgstRate / 100) * 100) / 100;
+        const igstAmt = Math.round(amt * (igstRate / 100) * 100) / 100;
+        const total = Math.round((amt + cgstAmt + sgstAmt + igstAmt) * 100) / 100;
+        const itemName = `${serviceTypeName} @${monthly.toFixed(2)} Per Month`;
+        const narration = `${fmtPretty(start)} To ${fmtPretty(end)} Invoice`;
+        const cell: Record<string, unknown> = {
+          "Vch No.": vchNo,
+          "Vch Type": `Sales ${COMPANY_STATE}`,
+          "Date": vchDate,
+          "GST Registration": `${COMPANY_STATE} Registration`,
+          "Bill to Place": "",
+          "Ship to Place": "",
+          "Reference No.": vchNo,
+          "Delivery Note No": "",
+          "Delivery Note Date": "",
+          "Order No": "",
+          "Order Date": "",
+          "Party Name": partyName,
+          "Ledger Group": "Sundry Debtors",
+          "Registration Type": "Regular",
+          "GSTIN No": unit.gstin || "",
+          "Country": country,
+          "State": billingState,
+          "Pincode": pincode,
+          "Address 1": addr1,
+          "Address 2": addr2,
+          "Address 3": addr3,
+          "Cost Center": COMPANY_STATE,
+          "Cost Center Amt": "",
+          "Sales Ledger": salesLedger,
+          "Item Name": itemName,
+          "Stock Group": "Primary",
+          "Unit": "Duty",
+          "Maintain Batches": "Yes",
+          "Applicable From": "01-Jul-2017",
+          "HSN Description": `${serviceTypeName} Services`,
+          "HSN": 998525,
+          "IGST Rate": igstRate || gstRate,
+          "CGST Rate": cgstRate || 9,
+          "SGST Rate": sgstRate || 9,
+          "CESS Rate": "",
+          "Tracking No": "",
+          "Order No ": "",
+          "Order Due Date": "",
+          "Godown": "",
+          "Batch": "",
+          "Qty ": qty,
+          "Incluse": "",
+          "Rate": Math.round(perDay * 1000000) / 1000000,
+          "Amt": amt,
+          "Additional Ledger": "",
+          "Amount": "",
+          "CGST Ledger": isIntraState ? `${COMPANY_STATE} CGST` : "",
+          "CGST Amt": isIntraState ? cgstAmt : "",
+          "SGST Ledger": isIntraState ? `${COMPANY_STATE} SGST` : "",
+          "SGST Amt": isIntraState ? sgstAmt : "",
+          "IGST Ledger": !isIntraState ? `${COMPANY_STATE} IGST` : "",
+          "IGST Amt": !isIntraState ? igstAmt : "",
+          "CESS Ledger": "",
+          "CESS Amt": "",
+          "Total": total,
+          "Narration": narration,
+          "TALLYIMPORTSTATUS": "",
+        };
+        return cell;
+      });
+
+    if (billingRows.length === 0) {
+      // fall back to chooser-based export with empty headers
+      downloadCsv(`Billing File_${end}_${unit.code ?? unitId}`, [{}], columns);
+      return;
+    }
+
+    // Skip the chooser — Tally needs a strict .xlsx format.
+    await writeXlsx({
+      filename: `Billing File_${end}_${(unit.code || unitId).toUpperCase()}_${stateCode}`,
+      rows: billingRows,
+      columns,
+    });
+  };
 
   return (
     <div className="space-y-4 p-4 sm:p-6">
@@ -383,9 +543,14 @@ function PayrollUnitPage() {
         >
           <ChevronLeft className="h-4 w-4" /> Back to invoice units
         </Link>
-        <Button variant="outline" size="sm" onClick={exportCsv}>
-          <Download className="mr-1.5 h-4 w-4" /> Export
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={exportCsv}>
+            <Download className="mr-1.5 h-4 w-4" /> Export
+          </Button>
+          <Button variant="default" size="sm" onClick={exportTallyBilling}>
+            <Download className="mr-1.5 h-4 w-4" /> Tally Billing File (XLSX)
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
