@@ -512,16 +512,16 @@
   .ios-table tbody tr { transition: background-color .15s ease; }
   .ios-table tbody tr:hover { background: color-mix(in oklab, var(--accent) 4%, transparent); }
   .ios-table tbody tr:last-child td { border-bottom: 0; }
-  .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .num { font-variant-numeric: tabular-nums; white-space: normal; overflow-wrap: anywhere; }
 
-  /* Globally prevent table cards from creating horizontal page scroll.
-     Individual cells/columns may still set their own overflow as needed. */
+  /* Globally prevent tables from creating horizontal page scroll.
+     Cells wrap their contents instead of scrolling sideways. */
   .ios-table-card,
   [data-table-scroll-shell],
-  :where(.overflow-x-clip, .overflow-hidden):has(> .ios-table) {
-    overflow-x: auto !important;
+  :where(.overflow-x-clip, .overflow-hidden, .overflow-auto, .overflow-x-auto):has(> .ios-table),
+  :where(.overflow-x-clip, .overflow-hidden, .overflow-auto, .overflow-x-auto):has(.ios-table) {
+    overflow-x: hidden !important;
     overflow-y: visible;
-    -webkit-overflow-scrolling: touch;
   }
 
   @media (max-width: 720px) {
