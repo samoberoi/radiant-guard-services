@@ -647,7 +647,18 @@ function AttendanceUnitsPage() {
               {units.length === 0 ? "No units with active contracts yet." : "No units match the current filters."}
             </div>
           ) : (
-            filtered.map((unit) => {
+            <>
+              {/* Desktop header */}
+              <div className="hidden px-5 py-3 text-left text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground sm:flex sm:flex-row sm:items-center sm:gap-5 bg-secondary/40">
+                <div className="min-w-0 flex-1">Unit</div>
+                <div className="min-w-[140px] max-w-[200px]">Organization</div>
+                <div className="min-w-[140px] max-w-[200px]">Location</div>
+                <div className="min-w-[200px] max-w-[260px]">Security guards</div>
+                <div className="min-w-[80px] text-right">Active</div>
+                <div className="min-w-[140px]">Status</div>
+                <div className="min-w-[120px] text-right">Action</div>
+              </div>
+              {filtered.map((unit) => {
               const sheet = sheetsByUnit?.get(unit.id) ?? null;
               const sheetStatus: SheetStatus | "none" = sheet?.status ?? "none";
               const statusBadge = (() => {
