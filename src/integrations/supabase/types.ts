@@ -3785,6 +3785,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      current_user_mobile: { Args: never; Returns: string }
       current_user_role_key: { Args: never; Returns: string }
       get_admin_user_ids: {
         Args: never
