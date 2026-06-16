@@ -168,6 +168,43 @@ export function InventoryOwnerDashboard() {
   const grns = grnQ.data ?? [];
   const wos = woQ.data ?? [];
   const whs = whsQ.data ?? [];
+  const transfers = transfersQ.data ?? [];
+  const issuances = issuancesQ.data ?? [];
+  const adjustments = adjustmentsQ.data ?? [];
+  const { can } = useCurrentPermissions();
+
+  const totalStockQty = useMemo(() => balances.reduce((s, b) => s + Math.max(0, Number(b.qty || 0)), 0), [balances]);
+  const recoveryCur = useMemo(() => wos.filter((x) => new Date(x.writeoff_date) >= w.from && new Date(x.writeoff_date) <= w.to).reduce((s, x) => s + Number(x.recovery_amount || 0), 0), [wos, w]);
+  const poSplit = useMemo(() => {
+    const open = pos.filter((p) => ["draft", "approved", "partial", "open", "partially_received"].includes(p.status)).length;
+    const closed = pos.filter((p) => ["received", "closed"].includes(p.status)).length;
+    return { total: pos.length, open, closed };
+  }, [pos]);
+  const grnSplit = useMemo(() => {
+    const received = grns.filter((g) => g.status === "received" || g.status === "draft").length;
+    const posted = grns.filter((g) => g.status === "posted").length;
+    return { total: grns.length, received, posted };
+  }, [grns]);
+  const transferSplit = useMemo(() => {
+    const inTransit = transfers.filter((t) => ["in_transit", "dispatched"].includes(t.status)).length;
+    const ack = transfers.filter((t) => ["acknowledged", "received"].includes(t.status)).length;
+    return { total: transfers.length, inTransit, ack };
+  }, [transfers]);
+  const issuanceSplit = useMemo(() => {
+    const issued = issuances.filter((i) => i.status === "issued").length;
+    const ack = issuances.filter((i) => i.status === "acknowledged").length;
+    return { total: issuances.length, issued, ack };
+  }, [issuances]);
+  const woSplit = useMemo(() => {
+    const pending = wos.filter((x) => x.status === "pending" || x.status === "draft").length;
+    const approved = wos.filter((x) => x.status === "approved").length;
+    return { total: wos.length, pending, approved };
+  }, [wos]);
+  const adjSplit = useMemo(() => {
+    const draft = adjustments.filter((a) => a.status === "draft").length;
+    const posted = adjustments.filter((a) => a.status === "posted").length;
+    return { total: adjustments.length, draft, posted };
+  }, [adjustments]);
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
