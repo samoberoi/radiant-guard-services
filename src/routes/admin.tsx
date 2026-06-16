@@ -94,6 +94,7 @@ const vehiclesChildren: LeafItem[] = [
 ];
 
 const inventoryChildren: LeafItem[] = [
+  { to: "/admin/inventory", label: "Inventory Command Center", icon: LayoutDashboard },
   { to: "/admin/inventory/items", label: "Products", icon: PackageOpen },
   { to: "/admin/inventory/vendors", label: "Vendors", icon: ShoppingBag },
   { to: "/admin/inventory/warehouses", label: "Warehouses", icon: Warehouse },
