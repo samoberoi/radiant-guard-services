@@ -325,7 +325,7 @@
     padding: 12px 14px;
     border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
     white-space: nowrap;
-    text-align: left;
+    text-align: left !important;
     overflow: hidden;
     text-overflow: ellipsis;
   }
@@ -341,6 +341,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     overflow-wrap: normal;
+    text-align: left !important;
   }
   .ios-table tbody td:first-child { padding-left: 20px; }
   .ios-table tbody td:last-child { padding-right: 20px; overflow: visible; }
