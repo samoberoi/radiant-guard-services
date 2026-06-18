@@ -1,54 +1,55 @@
-## Goal
-Augment the Inventory hub (`/admin/inventory`) with a comprehensive, fully clickable KPI overview so users can see, at a glance, totals across the whole inventory chain and click any tile to drill into the underlying module.
+# HyperOps Portfolio PDF — Plan
 
-## Where it goes
-- Edit `src/routes/admin.inventory.dashboard.tsx` — `InventoryOwnerDashboard` is already rendered inside `src/routes/admin.inventory.tsx`. New KPI grid is inserted at the very top of that component (above the existing range/category filter strip and current KPI tiles), so the procurement workflow rail and the new overview live on the same page.
+A polished, multi-page PDF (`/mnt/documents/HyperOps_Portfolio.pdf`) presenting the security-guard operations platform as **HyperOps**, branded by **Hyper Revamp**. Generic, client-agnostic — no Radiant Guard naming anywhere.
 
-## New KPI tiles (all clickable → respective module page)
+## Brand & Design System
+- **Identity**: Hyper Revamp logo (top-left) + small "HyperOps" wordmark on every page; footer with `hyperrevamp.com`, contact info pulled from the site.
+- **Palette (Editorial Slate)**: `#FAFAFA` page, `#E5E5E5` rules/dividers, `#1A1A1A` text, `#6366F1` accent (used sparingly for module icons, dividers, callout numbers).
+- **Type**: Inter/Helvetica family via ReportLab built-ins (Helvetica + Helvetica-Bold). Tight tracking on display, generous line height on body.
+- **Grid**: 12-col, 0.6" margins, consistent 24px gutters. Page numbers bottom-right.
 
-Money + stock (top row, larger tiles):
-1. Total Stock Value — `stockValue` (already computed) → `/admin/inventory/stock`
-2. Total Stock Qty — sum of `inv_stock_balances.qty` where qty>0 → `/admin/inventory/stock`
-3. Procurement Spend (range) — `spendCur` (already computed) → `/admin/inventory/purchase-orders`
-4. Recovery Collected (range) — sum of `inv_write_offs.recovery_amount` in range → `/admin/inventory/write-offs`
+## Page Structure (≈14 pages)
+1. **Cover** — Dark/light split, large "HyperOps" wordmark, tagline *"Security Operations, Reimagined."*, Hyper Revamp logo, year.
+2. **Index / Contents** — numbered chapters.
+3. **About HyperOps** — what it is, who it's for (security firms managing guards, units, payroll, inventory, vehicles).
+4. **Problems We Solve** — 4-card grid (manual attendance, payroll errors, asset leakage, fragmented ops).
+5. **Platform Overview** — architecture diagram (org → branches → units → guards) with icons.
+6. **Module Map** — visual grid of all modules grouped: Workforce, Customers & Contracts, Attendance & Payroll, Inventory, Vehicles, Billing, Admin.
+7–12. **Module Deep-Dives** (one page each, 2 modules per page where compact):
+   - Dashboard & Control Center
+   - Organizations / Customers / Branches / Units
+   - Attendance (unit register, codes, OCR)
+   - Payroll (allowances, deductions, PT/LWF/ESIC, payroll runs)
+   - Inventory (PO → GRN → Transfer → Issuance → Write-off chain)
+   - Vehicles (FASTag, insurance, PUC, service, expenses)
+   - Billing & Invoicing
+   - RBAC & System Logs
+   
+   Each page = icon + module name + 3-line description + bulleted features + a **mockup image**.
+13. **Why Hyper Revamp** — capabilities (custom internal platforms, AI integrations, modern stack).
+14. **Contact** — full-bleed accent, contact details + website + "Let's build yours."
 
-Master counts (compact grid):
-5. Products — `inv_items` total → `/admin/inventory/items`
-6. Vendors — `inv_vendors` total → `/admin/inventory/vendors`
-7. Warehouses — `inv_warehouses` total → `/admin/inventory/warehouses`
-8. Branches — `branches` total → `/admin/inventory/stock` (or `/admin/customers/branch-manager` if accessible per RBAC; fallback to stock)
+## Mockups (per module)
+Render real-looking app screenshots using HTML + Puppeteer/Playwright OR direct ReportLab vector mockups. Approach:
+- Build a small **HTML/CSS mockup template** matching the actual app shell (sidebar with HyperOps logo + module name, top-bar, content area with cards/tables/KPIs).
+- Inspect real routes (`admin.dashboard`, `admin.attendance.index`, `admin.payroll.index`, `admin.inventory.dashboard`, `admin.vehicles.tsx`, `admin.customers.tsx`, `admin.invoice.index`, `admin.rbac`, `admin.system-logs`) to mirror layout, columns, KPI tiles.
+- Populate with **dummy data** (e.g., "Acme Facilities", "Unit 14 — Tech Park", guard names like "Rohit S.", numbers like ₹4,82,300).
+- Replace branding: top-left = **HyperOps** wordmark only (no Radiant Guard, no client name).
+- Render each HTML template to PNG at 1600px wide via headless Chromium, then embed in PDF inside a macOS-style window frame (rounded corners + soft shadow) for a premium product-shot look.
 
-Workflow counts with sub-splits (each tile shows main number + 2 small status chips, the whole tile is one link):
-9. Purchase Orders — total + `Open` (`draft|approved|partial`) vs `Closed` (`received|closed`) → `/admin/inventory/purchase-orders`
-10. Delivery Challans (GRNs) — total + `Received` vs `Posted` (derived from `inv_goods_receipts.status`) → `/admin/inventory/goods-receipts`
-11. Internal Transfers — total + `In Transit` vs `Acknowledged` (from `inv_transfers.status`) → `/admin/inventory/transfers`
-12. Issuances — total + `Issued` vs `Acknowledged` (from `inv_issuances.status`) → `/admin/inventory/issuances`
-13. Write-offs — total + `Pending` vs `Approved` → `/admin/inventory/write-offs`
-14. Adjustments — total + `Draft` vs `Posted` (from `inv_adjustments.status`) → `/admin/inventory/adjustments`
+## Generation Pipeline
+1. Fetch `hyperrevamp.com` for contact/about copy.
+2. Save the Hyper Revamp logo from upload to `/tmp/hyperrevamp-logo.png`.
+3. Write `/tmp/mockups/<module>.html` for each module screen.
+4. Use Playwright (already-installed or `npx playwright`) to screenshot each to `/tmp/mockups/<module>.png`.
+5. Frame each PNG with the product-shot script (window chrome + soft shadow on light gradient).
+6. Build the PDF with **ReportLab Platypus** (multi-page flow, header/footer template that stamps logo + page number on every page).
+7. QA: convert PDF → images via `pdftoppm`, view each page, check for overflow, contrast, alignment, missing branding, leftover Radiant Guard text. Iterate until clean.
 
-All tiles respect the existing `range`, `warehouseFilter`, `categoryFilter` where the value is range-sensitive (PO spend, GRN counts, write-off recovery). Master counts are global.
+## Deliverable
+- `/mnt/documents/HyperOps_Portfolio.pdf` (final)
+- Presented via `<presentation-artifact>` tag for download.
 
-## Data additions
-Add three new `useQuery`s (the rest already exist):
-- `inv_transfers` → `id,status,transfer_date`
-- `inv_issuances` → `id,status,issue_date`
-- `inv_adjustments` → `id,status,adjustment_date`
-
-Reuse: `itemsQ`, `vendorsQ`, `whsQ`, `branchesQ`, `poQ`, `grnQ`, `woQ`, `balancesQ`.
-
-## Component
-New `InventoryKpiGrid` rendered at the top of `InventoryOwnerDashboard`:
-- Section heading "Overview".
-- Row 1: 4 hero tiles (`grid-cols-2 lg:grid-cols-4`) with `IndianRupee`, `Boxes`, `ShoppingCart`, `Wallet` icons.
-- Row 2: 4 small master-count tiles (`grid-cols-2 lg:grid-cols-4`).
-- Row 3: 6 workflow tiles (`grid-cols-2 lg:grid-cols-3 xl:grid-cols-6`), each `<Link>`-wrapped with a primary number, the module name, and two small `Badge`s showing the status split.
-
-Styling follows existing dashboard tile conventions (`rounded-2xl border border-border bg-card p-4`, `font-display`, `tabular-nums`, hover `border-accent/40 hover:bg-accent/5`).
-
-## RBAC
-Each tile is wrapped in `can(<module-key>) ? <Link>… : null` using the existing `can()` helper already used in the dashboard, so an inventory-restricted role still sees a coherent grid (mirrors the existing dashboard-tile gating pattern).
-
-## Out of scope
-- No DB migrations.
-- No changes to other roles' dashboards.
-- No new charts — keeps existing spend-over-time, category split, holdings, low-stock and activity sections intact.
+## Out of Scope
+- No changes to the live app code.
+- No real screenshots from the logged-in app (mockups will be visually identical but populated with dummy data, ensuring no client information leaks).
