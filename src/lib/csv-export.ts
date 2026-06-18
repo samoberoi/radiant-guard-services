@@ -158,7 +158,7 @@ export async function writeXlsx(payload: ExportRequestPayload) {
       cell.s = {
         font: { name: "Calibri", sz: 11, bold: true, color: { rgb: "FFFFFF" } },
         fill: { patternType: "solid", fgColor: { rgb: "1E293B" } },
-        alignment: { vertical: "center", horizontal: "left", wrapText: false },
+        alignment: { vertical: "center", horizontal: "left", wrapText: true },
         border,
       };
     }
@@ -171,13 +171,12 @@ export async function writeXlsx(payload: ExportRequestPayload) {
       const addr = XLSX.utils.encode_cell({ r, c });
       const cell = (ws as Record<string, unknown>)[addr] as { s?: unknown } | undefined;
       if (!cell) continue;
-      const isNum = numericCols[c];
       cell.s = {
         font: { name: "Calibri", sz: 10, color: { rgb: "0F172A" } },
         alignment: {
           vertical: "center",
           horizontal: "left",
-          wrapText: false,
+          wrapText: true,
         },
         fill: zebra
           ? { patternType: "solid", fgColor: { rgb: "F8FAFC" } }
@@ -189,8 +188,9 @@ export async function writeXlsx(payload: ExportRequestPayload) {
 
   // Standard row height for consistent look.
   (ws as unknown as Record<string, unknown>)["!rows"] = aoa.map((_, i) =>
-    i === 0 ? { hpt: 22 } : { hpt: 18 },
+    i === 0 ? { hpt: 24 } : { hpt: 20 },
   );
+
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
