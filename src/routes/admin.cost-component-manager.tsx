@@ -514,8 +514,8 @@ function CostComponentDialog({
                   <Input type="number" step="0.01" value={percentage} onChange={(e) => setPercentage(e.target.value)} />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Cap Amount (optional, ₹)</Label>
-                  <Input type="number" value={capAmount} onChange={(e) => setCapAmount(e.target.value)} placeholder="e.g. 15000" />
+                  <Label>Wage Ceiling (optional, ₹)</Label>
+                  <Input type="number" value={capAmount} onChange={(e) => setCapAmount(e.target.value)} placeholder="e.g. 15000 (EPF cap)" />
                 </div>
               </div>
 
