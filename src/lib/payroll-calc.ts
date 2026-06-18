@@ -121,9 +121,15 @@ function applyEsiRule(
 
 export function calculateEsiAmounts(
   earnedGross: number,
-  _earnedComponents: WageComponent[],
+  earnedComponents: WageComponent[],
 ): { base: number; employee: number; employer: number } {
-  const base = Math.max(0, earnedGross);
+  const earnedComponentAmount = (pattern: RegExp) =>
+    earnedComponents
+      .filter((c) => pattern.test(c.name))
+      .reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+  const earnedWashing = earnedComponentAmount(/\bwashing\b/i);
+  const earnedConveyance = earnedComponentAmount(/\bconveyance\b|\bconv\.?\b/i);
+  const base = Math.max(0, earnedGross - earnedWashing - earnedConveyance);
   // Statutory ESIC rule: contributions are rounded UP to the next rupee.
   return {
     base,
@@ -212,8 +218,9 @@ export function computeWages(
     items.map((i) => (/\bepf\b/i.test(i.name) ? { ...i, amount: epfAmount } : i));
 
   // ---- Statutory ESI override ----
-  // Rule: ESI is computed on earned Gross. Employee share = 0.75%,
-  // employer share = 3.25%. Applied to any row whose name contains "ESI".
+  // Rule: ESI is computed on earned Gross minus earned Washing and
+  // Conveyance allowances. Employee share = 0.75%, employer share = 3.25%.
+  // Applied to any row whose name contains "ESI".
   const esi = calculateEsiAmounts(earnedGross, components);
 
   const deductions = applyEsiRule(

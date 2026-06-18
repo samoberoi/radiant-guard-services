@@ -865,7 +865,7 @@ function computePayableDays(base: PayrollDayBase | undefined, ref: Date = new Da
   return daysInMonth;
 }
 
-const ESI_CONTRACT_NOTE = "Calculated in payroll from earned gross";
+const ESI_CONTRACT_NOTE = "Calculated in payroll from earned gross minus washing/conveyance";
 const ESI_COMPONENT_RE = /\besi(c)?\b/i;
 
 function isEsiItem(item: { name?: unknown } | null | undefined): boolean {
@@ -3647,7 +3647,7 @@ function ResourceFormDialog({
                          />
                       ) : (
                         <span className="w-28 text-right text-sm font-semibold text-foreground">
-                          {isEsiItem(b) ? "Payroll" : b.amount.toFixed(2)}
+                          {isEsiItem(b) ? "—" : b.amount.toFixed(2)}
                         </span>
                       )}
                       <Button
@@ -3787,7 +3787,7 @@ function ResourceFormDialog({
                          />
                       ) : (
                         <span className="w-28 text-right text-sm font-semibold text-foreground">
-                          {isEsiItem(b) ? "Payroll" : b.amount.toFixed(2)}
+                          {isEsiItem(b) ? "—" : b.amount.toFixed(2)}
                         </span>
                       )}
                       <Button
@@ -4011,9 +4011,9 @@ function SalaryBreakdownTable({
                       </span>
                     )}
                   </td>
-                  <td className="text-center tabular-nums">{isEsiItem(b) ? "Payroll" : Number(b.amount).toFixed(2)}</td>
+                  <td className="text-center tabular-nums">{isEsiItem(b) ? "—" : Number(b.amount).toFixed(2)}</td>
                   <td />
-                  <td className="text-right tabular-nums">{isEsiItem(b) ? "Payroll" : earnedFor(Number(b.amount)).toFixed(2)}</td>
+                  <td className="text-right tabular-nums">{isEsiItem(b) ? "—" : earnedFor(Number(b.amount)).toFixed(2)}</td>
                 </tr>
               ));
             })()}
@@ -4060,9 +4060,9 @@ function SalaryBreakdownTable({
                       </span>
                     )}
                   </td>
-                  <td className="text-center tabular-nums">{isEsiItem(b) ? "Payroll" : Number(b.amount).toFixed(2)}</td>
+                  <td className="text-center tabular-nums">{isEsiItem(b) ? "—" : Number(b.amount).toFixed(2)}</td>
                   <td />
-                  <td className="text-right tabular-nums">{isEsiItem(b) ? "Payroll" : earnedFor(Number(b.amount)).toFixed(2)}</td>
+                  <td className="text-right tabular-nums">{isEsiItem(b) ? "—" : earnedFor(Number(b.amount)).toFixed(2)}</td>
                 </tr>
               ));
             })()}

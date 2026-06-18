@@ -67,6 +67,8 @@ const ALLOW_QK = ["admin", "cost-components", "allowance-options"] as const;
 const STATES_QK = ["admin", "cost-components", "states"] as const;
 const STATUTORY_ESI_BASE: BaseRef[] = [
   { label: "Earned Gross", operator: "+" },
+  { label: "Washing Allowance", operator: "-" },
+  { label: "Conveyance Allowance", operator: "-" },
 ];
 
 function isEsiName(name: string) {
@@ -94,10 +96,10 @@ function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "b
     return c.amount != null && c.amount > 0 ? `Fixed ₹${c.amount.toLocaleString("en-IN")}` : "Fixed amount (manual entry)";
   }
   const name = (c.name ?? "").toLowerCase();
-  // Statutory ESI: always 0.75% (employee) / 3.25% (employer) of earned gross.
+  // Statutory ESI: always 0.75% (employee) / 3.25% (employer) of earned gross minus earned washing/conveyance.
   if (isEsiName(name)) {
     const pct = c.percentage || 0.75;
-    return `${pct}% of Earned Gross · calculated in payroll`;
+    return `${pct}% of Earned Gross − Washing Allowance − Conveyance Allowance · calculated in payroll`;
   }
   const parts = c.base_components.map((b, i) => (i === 0 ? b.label : `${b.operator === "-" ? "(-) " : "(+) "}${b.label}`));
   const base = parts.length ? parts.join(" ") : "—";
