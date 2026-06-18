@@ -65,6 +65,15 @@ type StateRow = { id: string; name: string };
 const QK = ["admin", "cost-components"] as const;
 const ALLOW_QK = ["admin", "cost-components", "allowance-options"] as const;
 const STATES_QK = ["admin", "cost-components", "states"] as const;
+const STATUTORY_ESI_BASE: BaseRef[] = [
+  { label: "Earned Gross", operator: "+" },
+  { label: "Washing Allowance", operator: "-" },
+  { label: "Conveyance Allowance", operator: "-" },
+];
+
+function isEsiName(name: string) {
+  return /\besi(c)?\b/i.test(name);
+}
 
 function rowToItem(r: Record<string, unknown>): CostComponent {
   return {
@@ -89,7 +98,7 @@ function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "b
   const name = (c.name ?? "").toLowerCase();
   // Statutory ESI: always 0.75% (employee) / 3.25% (employer) of
   // (Earned Gross − Washing Allowance − Conveyance Allowance).
-  if (/\besi(c)?\b/.test(name)) {
+  if (isEsiName(name)) {
     const pct = c.percentage || 0.75;
     return `${pct}% of (Earned Gross (-) Washing Allowance (-) Conveyance Allowance)`;
   }
@@ -123,7 +132,7 @@ function useCostComponents() {
     name: p.name.trim(),
     calc_type: p.calc_type,
     percentage: p.calc_type === "percentage" ? Number(p.percentage) || 0 : 0,
-    base_components: p.calc_type === "percentage" ? p.base_components : [],
+    base_components: p.calc_type === "percentage" ? (isEsiName(p.name) ? STATUTORY_ESI_BASE : p.base_components) : [],
     cap_amount: p.calc_type === "percentage" ? p.cap_amount : null,
     amount: p.calc_type === "fixed" ? p.amount : null,
     state: p.state || "N/A",
