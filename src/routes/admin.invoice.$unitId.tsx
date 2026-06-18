@@ -7,12 +7,17 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  applyEsiToWageComputation,
+  applyPtToWageComputation,
   computeAttendanceTotals,
   computeWages,
   fmtINR,
+  resolvePtAmount,
   type AttendanceCodeLike,
   type AttendanceEntryLike,
   type ContractResourceLike,
+  type PincodeRangeLike,
+  type PtSlabLike,
 } from "@/lib/payroll-calc";
 import { downloadCsv, writeXlsx } from "@/lib/csv-export";
 import { gstinStateCode } from "@/lib/gstin";
@@ -34,9 +39,11 @@ const MONTH_NAMES = [
 ];
 
 const ESI_COMPONENT_RE = /\besi(c)?\b/i;
+const PT_COMPONENT_RE = /\bprofessional\s*tax\b|\bpt\b/i;
 const isEsiItem = (item: { name?: unknown }) => ESI_COMPONENT_RE.test(String(item.name ?? ""));
+const isPtItem = (item: { name?: unknown }) => PT_COMPONENT_RE.test(String(item.name ?? ""));
 const contractTotalAmount = (item: { name?: unknown; amount?: unknown }) =>
-  isEsiItem(item) ? 0 : Number(item.amount) || 0;
+  isEsiItem(item) || isPtItem(item) ? 0 : Number(item.amount) || 0;
 
 function fmtPretty(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
@@ -117,14 +124,40 @@ function PayrollUnitPage() {
     },
   });
 
+  const { data: ptSlabs } = useQuery({
+    queryKey: ["pt_slabs_invoice"],
+    queryFn: async (): Promise<PtSlabLike[]> => {
+      const { data, error } = await supabase
+        .from("professional_tax_slabs")
+        .select("id, state, region_label, salary_min, salary_max, tax_per_month, gender");
+      if (error) throw error;
+      return (data ?? []) as PtSlabLike[];
+    },
+  });
+
+  const { data: pincodeRanges } = useQuery({
+    queryKey: ["pincode_ranges_invoice"],
+    queryFn: async (): Promise<PincodeRangeLike[]> => {
+      const { data, error } = await supabase
+        .from("pincode_ranges")
+        .select("state, region_label, range_start, range_end, is_excluded");
+      if (error) throw error;
+      return (data ?? []) as PincodeRangeLike[];
+    },
+  });
+
+  const unitState = (unit as { billing_state?: string | null } | null | undefined)?.billing_state ?? null;
+  const unitPincode = (unit as { billing_pincode?: string | null } | null | undefined)?.billing_pincode ?? null;
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ["payroll-compute", unitId, start, end],
+    queryKey: ["payroll-compute", unitId, start, end, unitState, unitPincode, (ptSlabs?.length ?? 0), (pincodeRanges?.length ?? 0)],
+    enabled: !!ptSlabs && !!pincodeRanges,
     queryFn: async () => {
       // 1. Roster: candidates mapped to this unit (primary + secondary).
       const [{ data: primary }, { data: links }] = await Promise.all([
         supabase
           .from("candidates")
-          .select("id, employee_code, full_name, designation_id")
+          .select("id, employee_code, full_name, designation_id, gender")
           .eq("unit_id", unitId)
           .eq("is_enabled", true)
           .eq("status", "active"),
@@ -135,7 +168,7 @@ function PayrollUnitPage() {
       if (linkIds.length > 0) {
         const { data } = await supabase
           .from("candidates")
-          .select("id, employee_code, full_name, designation_id")
+          .select("id, employee_code, full_name, designation_id, gender")
           .in("id", linkIds)
           .eq("is_enabled", true)
           .eq("status", "active");
@@ -290,6 +323,19 @@ function PayrollUnitPage() {
           ? computeWages(totals, resource, periodDates.length)
           : null;
         const isPrimary = (c.designation_id ?? null) === p.designationId;
+        const candidateGender = ((c as unknown as { gender?: string | null }).gender ?? "").toString();
+        if (wages && isPrimary) {
+          Object.assign(wages, applyEsiToWageComputation(wages));
+          const pt = resolvePtAmount({
+            state: unitState,
+            pincode: unitPincode,
+            gender: candidateGender,
+            earnedGross: wages.earnedGross,
+            slabs: (ptSlabs ?? []) as PtSlabLike[],
+            ranges: (pincodeRanges ?? []) as PincodeRangeLike[],
+          });
+          Object.assign(wages, applyPtToWageComputation(wages, pt.amount));
+        }
         return {
           id: c.id,
           rowKey: pairKey(c.id, p.designationId),

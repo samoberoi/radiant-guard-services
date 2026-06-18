@@ -159,6 +159,151 @@ export function applyEsiToWageComputation(wages: WageComputation): WageComputati
   };
 }
 
+// ---- Professional Tax (PT) ----
+// PT is resolved per employee from the Professional Tax Manager slabs using:
+//   - Unit billing state (with optional pincode for region disambiguation)
+//   - Candidate gender (fallback "all")
+//   - Earned gross for the period (monthly)
+// The matching slab's tax_per_month becomes that employee's PT for the period.
+
+export type PtSlabLike = {
+  id?: string;
+  state: string;
+  region_label: string;
+  salary_min: number;
+  salary_max: number | null;
+  tax_per_month: number;
+  gender: string;
+};
+
+export type PincodeRangeLike = {
+  state: string;
+  region_label: string;
+  range_start: number;
+  range_end: number;
+  is_excluded: boolean;
+};
+
+const PT_NAME_RE = /\bprofessional\s*tax\b|\bpt\b/i;
+const ptNorm = (s: string) =>
+  s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]/g, "");
+
+export type PtResolveInput = {
+  state?: string | null;
+  pincode?: string | null;
+  gender?: string | null;
+  earnedGross: number;
+  slabs: PtSlabLike[];
+  ranges?: PincodeRangeLike[];
+};
+
+export type PtResolveResult = {
+  amount: number;
+  state: string | null;
+  regionLabel: string | null;
+  slabId: string | null;
+  source: "resolved" | "no_state" | "no_slab" | "no_match";
+};
+
+export function resolvePtAmount(input: PtResolveInput): PtResolveResult {
+  const { state, pincode, gender, earnedGross, slabs, ranges } = input;
+  const stateStr = (state ?? "").trim();
+  if (!stateStr) {
+    return { amount: 0, state: null, regionLabel: null, slabId: null, source: "no_state" };
+  }
+
+  // 1) Narrow to slabs of this state.
+  const stateSlabs = slabs.filter((s) => ptNorm(s.state) === ptNorm(stateStr));
+  if (stateSlabs.length === 0) {
+    return { amount: 0, state: stateStr, regionLabel: null, slabId: null, source: "no_slab" };
+  }
+
+  // 2) Pick region using pincode → range lookup; else most common region in state.
+  let regionLabel: string | null = null;
+  const pinTrim = (pincode ?? "").trim();
+  if (pinTrim.length === 6 && ranges && ranges.length > 0) {
+    const pin = parseInt(pinTrim, 10);
+    if (Number.isFinite(pin)) {
+      const containing = ranges.filter(
+        (r) => ptNorm(r.state) === ptNorm(stateStr) && pin >= r.range_start && pin <= r.range_end,
+      );
+      const candidates: Array<{ region_label: string; span: number }> = [];
+      for (const r of containing) {
+        if (r.is_excluded) continue;
+        const excluded = containing.some(
+          (x) =>
+            x.is_excluded &&
+            ptNorm(x.region_label) === ptNorm(r.region_label),
+        );
+        if (excluded) continue;
+        candidates.push({ region_label: r.region_label, span: r.range_end - r.range_start });
+      }
+      candidates.sort((a, b) => a.span - b.span);
+      if (candidates.length > 0) regionLabel = candidates[0].region_label;
+    }
+  }
+
+  let regionSlabs = regionLabel
+    ? stateSlabs.filter((s) => ptNorm(s.region_label) === ptNorm(regionLabel!))
+    : stateSlabs;
+  if (regionSlabs.length === 0) {
+    // Fallback: "All Pincodes" if present, else any region in the state.
+    const allPincodes = stateSlabs.filter((s) => /all\s*pincodes/i.test(s.region_label));
+    regionSlabs = allPincodes.length > 0 ? allPincodes : stateSlabs;
+    regionLabel = regionSlabs[0]?.region_label ?? regionLabel;
+  }
+
+  // 3) Filter by gender. Try exact match, then "all".
+  const g = (gender ?? "").trim().toLowerCase();
+  let genderSlabs = regionSlabs.filter((s) => s.gender.toLowerCase() === g);
+  if (genderSlabs.length === 0) {
+    genderSlabs = regionSlabs.filter((s) => s.gender.toLowerCase() === "all");
+  }
+  if (genderSlabs.length === 0) {
+    return { amount: 0, state: stateStr, regionLabel, slabId: null, source: "no_match" };
+  }
+
+  // 4) Find slab whose salary range covers earnedGross.
+  const hit = genderSlabs.find(
+    (s) =>
+      earnedGross >= Number(s.salary_min || 0) &&
+      (s.salary_max == null || earnedGross <= Number(s.salary_max)),
+  );
+  if (!hit) {
+    return { amount: 0, state: stateStr, regionLabel, slabId: null, source: "no_match" };
+  }
+  return {
+    amount: Number(hit.tax_per_month) || 0,
+    state: stateStr,
+    regionLabel,
+    slabId: hit.id ?? null,
+    source: "resolved",
+  };
+}
+
+function applyPtRule(items: WageComponent[], amount: number, defaultName: string): WageComponent[] {
+  const hasPt = items.some((i) => PT_NAME_RE.test(i.name));
+  const mapped = items.map((i) =>
+    PT_NAME_RE.test(i.name) ? { ...i, amount } : i,
+  );
+  if (!hasPt && amount > 0) mapped.push({ name: defaultName, amount });
+  return mapped;
+}
+
+export function applyPtToWageComputation(
+  wages: WageComputation,
+  ptAmount: number,
+): WageComputation {
+  const deductions = applyPtRule(wages.deductions, ptAmount, "Professional Tax (PT)");
+  const totalDeductions = deductions.reduce((s, d) => s + d.amount, 0);
+  return {
+    ...wages,
+    deductions,
+    totalDeductions: round2(totalDeductions),
+    netPay: round2(wages.earnedGross - totalDeductions),
+  };
+}
+
 function scaleItems(items: BenefitLike[], ratio: number): WageComponent[] {
   return items.map((i) => ({
     name: i.name,

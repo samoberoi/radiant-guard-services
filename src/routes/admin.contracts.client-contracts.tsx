@@ -3099,7 +3099,7 @@ function ResourceFormDialog({
     baseComponents: [],
     capAmount: null,
     amount: 0,
-    state: "Per state slab",
+    state: "Per state slab (resolved at payroll from unit state, employee gender, earned gross)",
   };
 
   const usedBenefitIds = new Set(benefits.map((b) => b.costComponentId));

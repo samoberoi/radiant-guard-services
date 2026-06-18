@@ -20,12 +20,16 @@ import { useCurrentPermissions } from "@/lib/rbac";
 import { logActivity } from "@/lib/activity-log";
 import {
   applyEsiToWageComputation,
+  applyPtToWageComputation,
   computeAttendanceTotals,
   computeWages,
   fmtINR,
+  resolvePtAmount,
   type AttendanceCodeLike,
   type AttendanceEntryLike,
   type ContractResourceLike,
+  type PincodeRangeLike,
+  type PtSlabLike,
 } from "@/lib/payroll-calc";
 import { downloadCsv } from "@/lib/csv-export";
 
@@ -46,9 +50,11 @@ const MONTH_NAMES = [
 ];
 
 const ESI_COMPONENT_RE = /\besi(c)?\b/i;
+const PT_COMPONENT_RE = /\bprofessional\s*tax\b|\bpt\b/i;
 const isEsiItem = (item: { name?: unknown }) => ESI_COMPONENT_RE.test(String(item.name ?? ""));
+const isPtItem = (item: { name?: unknown }) => PT_COMPONENT_RE.test(String(item.name ?? ""));
 const contractTotalAmount = (item: { name?: unknown; amount?: unknown }) =>
-  isEsiItem(item) ? 0 : Number(item.amount) || 0;
+  isEsiItem(item) || isPtItem(item) ? 0 : Number(item.amount) || 0;
 
 function fmtPretty(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
@@ -82,7 +88,7 @@ function PayrollUnitPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("units")
-        .select("id, code, name, customer_id")
+        .select("id, code, name, customer_id, billing_state, billing_pincode")
         .eq("id", unitId)
         .maybeSingle();
       if (!data) return null;
@@ -92,6 +98,28 @@ function PayrollUnitPage() {
         .eq("id", data.customer_id ?? "")
         .maybeSingle();
       return { ...data, customer_name: cust?.name ?? "" };
+    },
+  });
+
+  const { data: ptSlabs } = useQuery({
+    queryKey: ["pt_slabs_payroll"],
+    queryFn: async (): Promise<PtSlabLike[]> => {
+      const { data, error } = await supabase
+        .from("professional_tax_slabs")
+        .select("id, state, region_label, salary_min, salary_max, tax_per_month, gender");
+      if (error) throw error;
+      return (data ?? []) as PtSlabLike[];
+    },
+  });
+
+  const { data: pincodeRanges } = useQuery({
+    queryKey: ["pincode_ranges_payroll"],
+    queryFn: async (): Promise<PincodeRangeLike[]> => {
+      const { data, error } = await supabase
+        .from("pincode_ranges")
+        .select("state, region_label, range_start, range_end, is_excluded");
+      if (error) throw error;
+      return (data ?? []) as PincodeRangeLike[];
     },
   });
 
@@ -180,12 +208,16 @@ function PayrollUnitPage() {
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
+  const unitState = (unit as { billing_state?: string | null } | null | undefined)?.billing_state ?? null;
+  const unitPincode = (unit as { billing_pincode?: string | null } | null | undefined)?.billing_pincode ?? null;
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ["payroll-compute", unitId, start, end],
+    queryKey: ["payroll-compute", unitId, start, end, unitState, unitPincode, (ptSlabs?.length ?? 0), (pincodeRanges?.length ?? 0)],
+    enabled: !!ptSlabs && !!pincodeRanges,
     queryFn: async () => {
       // 1. Roster: candidates mapped to this unit (primary + secondary).
       const candidateCols =
-        "id, employee_code, full_name, designation_id, bank_account_holder, bank_account_number, bank_ifsc, bank_name, bank_branch, approved_at, preferred_joining_date, application_date, pan_number";
+        "id, employee_code, full_name, designation_id, gender, bank_account_holder, bank_account_number, bank_ifsc, bank_name, bank_branch, approved_at, preferred_joining_date, application_date, pan_number";
       const [{ data: primary }, { data: links }] = await Promise.all([
         supabase
           .from("candidates")
@@ -397,6 +429,7 @@ function PayrollUnitPage() {
           ? computeWages(totals, resource, periodDates.length)
           : null;
         const isPrimary = (c.designation_id ?? null) === p.designationId;
+        const candidateGender = ((c as unknown as { gender?: string | null }).gender ?? "").toString();
 
         // Fold per-employee additions/deductions onto the primary line only so
         // we don't double-count across multiple designation lines for one person.
@@ -413,6 +446,21 @@ function PayrollUnitPage() {
           Object.assign(wages, applyEsiToWageComputation(wages));
         }
 
+        // Resolve Professional Tax for this employee from state/gender/earnedGross slabs.
+        let ptResolved: ReturnType<typeof resolvePtAmount> | null = null;
+        if (wages && isPrimary) {
+          ptResolved = resolvePtAmount({
+            state: unitState,
+            pincode: unitPincode,
+            gender: candidateGender,
+            earnedGross: wages.earnedGross,
+            slabs: (ptSlabs ?? []) as PtSlabLike[],
+            ranges: (pincodeRanges ?? []) as PincodeRangeLike[],
+          });
+          Object.assign(wages, applyPtToWageComputation(wages, ptResolved.amount));
+        }
+
+
         const cAny = c as unknown as Record<string, unknown>;
         return {
           id: c.id,
@@ -426,6 +474,7 @@ function PayrollUnitPage() {
           wages,
           resource: resource ?? null,
           hasContract: !!resource,
+          pt: ptResolved,
           bankAccountHolder: (cAny.bank_account_holder as string) || "",
           bankAccountNumber: (cAny.bank_account_number as string) || "",
           bankIfsc: (cAny.bank_ifsc as string) || "",
@@ -797,6 +846,7 @@ function PayrollUnitPage() {
                             </tr>
                             {r.wages.deductions.filter((d) => Number(d.amount) > 0).map((d) => {
                               const isEsi = /\besi(c)?\b/i.test(d.name);
+                              const isPt = /\bprofessional\s*tax\b|\bpt\b/i.test(d.name);
                               const contract = r.resource!.deductions?.find((x) => x.name === d.name);
                               const contractAmt = contract ? contractTotalAmount(contract) : 0;
                               return (
@@ -808,9 +858,20 @@ function PayrollUnitPage() {
                                         @ 0.75% of Earned Gross − Washing − Conveyance, rounded up
                                       </span>
                                     )}
+                                    {isPt && r.pt && (
+                                      <span className="ml-2 text-[10px] text-muted-foreground">
+                                        {r.pt.source === "resolved"
+                                          ? `Per ${r.pt.state}${r.pt.regionLabel && !/all\s*pincodes/i.test(r.pt.regionLabel) ? ` · ${r.pt.regionLabel}` : ""} slab`
+                                          : r.pt.source === "no_state"
+                                          ? "Unit state not set"
+                                          : r.pt.source === "no_slab"
+                                          ? "No PT slab for unit state"
+                                          : "No matching slab"}
+                                      </span>
+                                    )}
                                   </td>
                                    <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">
-                                     {isEsi ? "—" : contractAmt.toFixed(2)}
+                                     {isEsi || isPt ? "—" : contractAmt.toFixed(2)}
                                    </td>
                                   <td className="px-3 py-2 text-right tabular-nums">{d.amount.toFixed(2)}</td>
                                 </tr>
