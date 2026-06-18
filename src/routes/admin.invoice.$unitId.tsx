@@ -7,12 +7,17 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  applyEsiToWageComputation,
+  applyPtToWageComputation,
   computeAttendanceTotals,
   computeWages,
   fmtINR,
+  resolvePtAmount,
   type AttendanceCodeLike,
   type AttendanceEntryLike,
   type ContractResourceLike,
+  type PincodeRangeLike,
+  type PtSlabLike,
 } from "@/lib/payroll-calc";
 import { downloadCsv, writeXlsx } from "@/lib/csv-export";
 import { gstinStateCode } from "@/lib/gstin";
