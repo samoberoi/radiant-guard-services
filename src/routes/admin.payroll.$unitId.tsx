@@ -502,6 +502,9 @@ function PayrollUnitPage() {
     const EARNED_COMPONENT_COLS = collectUnique((r) => r.wages?.components);
     const DEDUCTION_COLS = collectUnique((r) => r.wages?.deductions);
 
+    const F_CONTRACT_COMPONENT_COLS = CONTRACT_COMPONENT_COLS.map((c) => `F ${c}`);
+    const E_EARNED_COMPONENT_COLS = EARNED_COMPONENT_COLS.map((c) => `E ${c}`);
+
     const lookup = (items: { name: string; amount: number }[] | undefined, label: string) => {
       if (!items) return 0;
       const target = norm(label);
@@ -526,9 +529,9 @@ function PayrollUnitPage() {
       "SI No", "Month", "Agency Branch Name", "Client ID", "Client Name", "Site Name",
       "Employee ID", "Employee Name", "Designation", "Date Of Joining",
       "PF No", "ESI No", "UAN",
-      ...CONTRACT_COMPONENT_COLS,
-      "Fixed Gross Salary", "Fixed Duties", "Duties", "Over Time Duties",
-      ...EARNED_COMPONENT_COLS,
+      ...F_CONTRACT_COMPONENT_COLS,
+      "F Gross Salary", "Fixed Duties", "Duties", "Over Time Duties",
+      ...E_EARNED_COMPONENT_COLS,
       "Additions",
       "E Gross Salary",
       ...DEDUCTION_COLS,
