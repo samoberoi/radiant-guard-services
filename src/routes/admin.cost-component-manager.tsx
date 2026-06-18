@@ -88,8 +88,11 @@ function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "b
   }
   const parts = c.base_components.map((b, i) => (i === 0 ? b.label : `${b.operator === "-" ? "(-) " : "(+) "}${b.label}`));
   const base = parts.length ? parts.join(" ") : "—";
-  const cap = c.cap_amount ? `, upto ₹${c.cap_amount.toLocaleString("en-IN")}` : "";
-  return `${c.percentage}% of ${base}${cap}`;
+  if (c.cap_amount && c.cap_amount > 0) {
+    const flat = Math.round(((c.percentage || 0) / 100) * c.cap_amount);
+    return `${c.percentage}% of (${base}) if ≤ ₹${c.cap_amount.toLocaleString("en-IN")}, else flat ₹${flat.toLocaleString("en-IN")}`;
+  }
+  return `${c.percentage}% of ${base}`;
 }
 
 function useCostComponents() {
@@ -511,8 +514,8 @@ function CostComponentDialog({
                   <Input type="number" step="0.01" value={percentage} onChange={(e) => setPercentage(e.target.value)} />
                 </div>
                 <div className="grid gap-2">
-                  <Label>Cap Amount (optional, ₹)</Label>
-                  <Input type="number" value={capAmount} onChange={(e) => setCapAmount(e.target.value)} placeholder="e.g. 15000" />
+                  <Label>Wage Ceiling (optional, ₹)</Label>
+                  <Input type="number" value={capAmount} onChange={(e) => setCapAmount(e.target.value)} placeholder="e.g. 15000 (EPF cap)" />
                 </div>
               </div>
 
