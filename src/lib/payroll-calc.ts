@@ -100,10 +100,69 @@ export type WageComputation = {
   employerCost: number;
 };
 
+const ESI_NAME_RE = /\besi(c)?\b/i;
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+function applyEsiRule(
+  items: WageComponent[],
+  share: number,
+  defaultName: string,
+): WageComponent[] {
+  const hasEsi = items.some((i) => ESI_NAME_RE.test(i.name));
+  const mapped = items.map((i) =>
+    ESI_NAME_RE.test(i.name) ? { ...i, amount: share } : i,
+  );
+  // Auto-inject statutory ESI row when contract omits it, so export always
+  // reflects the rule: 0.75% / 3.25% of (Earned Gross − Washing − Conveyance).
+  if (!hasEsi && share > 0) mapped.push({ name: defaultName, amount: share });
+  return mapped;
+}
+
+export function calculateEsiAmounts(
+  earnedGross: number,
+  earnedComponents: WageComponent[],
+): { base: number; employee: number; employer: number } {
+  const earnedWashing = earnedComponents
+    .filter((c) => /washing/i.test(c.name))
+    .reduce((s, c) => s + c.amount, 0);
+  const earnedConveyance = earnedComponents
+    .filter((c) => /convey/i.test(c.name))
+    .reduce((s, c) => s + c.amount, 0);
+  const base = Math.max(0, earnedGross - earnedWashing - earnedConveyance);
+  // Statutory ESIC rule: contributions are rounded UP to the next rupee.
+  return {
+    base,
+    employee: base > 0 ? Math.ceil(base * 0.0075) : 0,
+    employer: base > 0 ? Math.ceil(base * 0.0325) : 0,
+  };
+}
+
+export function applyEsiToWageComputation(wages: WageComputation): WageComputation {
+  const esi = calculateEsiAmounts(wages.earnedGross, wages.components);
+  const deductions = applyEsiRule(wages.deductions, esi.employee, "ESI Employee Contribution");
+  const employerContributions = applyEsiRule(
+    wages.employerContributions,
+    esi.employer,
+    "ESI Employer Contribution",
+  );
+  const totalDeductions = deductions.reduce((s, d) => s + d.amount, 0);
+  const totalEmployerContributions = employerContributions.reduce((s, d) => s + d.amount, 0);
+  return {
+    ...wages,
+    deductions,
+    employerContributions,
+    totalDeductions: round2(totalDeductions),
+    totalEmployerContributions: round2(totalEmployerContributions),
+    netPay: round2(wages.earnedGross - totalDeductions),
+    employerCost: round2(wages.earnedGross + totalEmployerContributions),
+  };
+}
+
 function scaleItems(items: BenefitLike[], ratio: number): WageComponent[] {
   return items.map((i) => ({
     name: i.name,
-    amount: Math.round((Number(i.amount) || 0) * ratio * 100) / 100,
+    amount: round2((Number(i.amount) || 0) * ratio),
   }));
 }
 
@@ -138,7 +197,7 @@ export function computeWages(
 
   const components = resource.components.map((c) => ({
     name: c.name,
-    amount: Math.round((Number(c.amount) || 0) * ratio * 100) / 100,
+    amount: round2((Number(c.amount) || 0) * ratio),
   }));
   const benefits = scaleItems(resource.benefits, ratio);
   const deductionsScaled = scaleItems(resource.deductions, ratio);
@@ -163,40 +222,16 @@ export function computeWages(
   // earned Conveyance Allowance). Employee share = 0.75%, employer share
   // = 3.25%. Washing & conveyance allowances are statutorily excluded
   // from ESI wages. Applied to any row whose name contains "ESI".
-  const earnedWashing = components
-    .filter((c) => /washing/i.test(c.name))
-    .reduce((s, c) => s + c.amount, 0);
-  const earnedConveyance = components
-    .filter((c) => /convey/i.test(c.name))
-    .reduce((s, c) => s + c.amount, 0);
-  const esiBase = Math.max(0, earnedGross - earnedWashing - earnedConveyance);
-  // Statutory ESIC rule: contributions are rounded UP to the next rupee.
-  const esiEmployee = esiBase > 0 ? Math.ceil(esiBase * 0.0075) : 0;
-  const esiEmployer = esiBase > 0 ? Math.ceil(esiBase * 0.0325) : 0;
-  const ESI_NAME_RE = /\besi(c)?\b/i;
-  const applyEsiRule = (
-    items: WageComponent[],
-    share: number,
-    defaultName: string,
-  ) => {
-    const hasEsi = items.some((i) => ESI_NAME_RE.test(i.name));
-    const mapped = items.map((i) =>
-      ESI_NAME_RE.test(i.name) ? { ...i, amount: share } : i,
-    );
-    // Auto-inject statutory ESI row when contract omits it, so export always
-    // reflects the rule: 0.75% / 3.25% of (Earned Gross − Washing − Conveyance).
-    if (!hasEsi && share > 0) mapped.push({ name: defaultName, amount: share });
-    return mapped;
-  };
+  const esi = calculateEsiAmounts(earnedGross, components);
 
   const deductions = applyEsiRule(
     applyEpfRule(deductionsScaled),
-    esiEmployee,
+    esi.employee,
     "ESI Employee Contribution",
   );
   const employerContributions = applyEsiRule(
     applyEpfRule(employerContributionsScaled),
-    esiEmployer,
+    esi.employer,
     "ESI Employer Contribution",
   );
 
@@ -206,13 +241,13 @@ export function computeWages(
     0,
   );
 
-  const netPay = Math.round((earnedGross - totalDeductions) * 100) / 100;
+  const netPay = round2(earnedGross - totalDeductions);
   const employerCost =
-    Math.round((earnedGross + totalEmployerContributions) * 100) / 100;
+    round2(earnedGross + totalEmployerContributions);
 
   return {
     contractGross,
-    perDayRate: Math.round(perDayRate * 100) / 100,
+    perDayRate: round2(perDayRate),
     baseDays,
     earnedGross,
     ratio,
@@ -220,8 +255,8 @@ export function computeWages(
     benefits,
     deductions,
     employerContributions,
-    totalDeductions: Math.round(totalDeductions * 100) / 100,
-    totalEmployerContributions: Math.round(totalEmployerContributions * 100) / 100,
+    totalDeductions: round2(totalDeductions),
+    totalEmployerContributions: round2(totalEmployerContributions),
     netPay,
     employerCost,
   };

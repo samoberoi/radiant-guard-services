@@ -65,6 +65,15 @@ type StateRow = { id: string; name: string };
 const QK = ["admin", "cost-components"] as const;
 const ALLOW_QK = ["admin", "cost-components", "allowance-options"] as const;
 const STATES_QK = ["admin", "cost-components", "states"] as const;
+const STATUTORY_ESI_BASE: BaseRef[] = [
+  { label: "Earned Gross", operator: "+" },
+  { label: "Washing Allowance", operator: "-" },
+  { label: "Conveyance Allowance", operator: "-" },
+];
+
+function isEsiName(name: string) {
+  return /\besi(c)?\b/i.test(name);
+}
 
 function rowToItem(r: Record<string, unknown>): CostComponent {
   return {
@@ -89,7 +98,7 @@ function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "b
   const name = (c.name ?? "").toLowerCase();
   // Statutory ESI: always 0.75% (employee) / 3.25% (employer) of
   // (Earned Gross − Washing Allowance − Conveyance Allowance).
-  if (/\besi(c)?\b/.test(name)) {
+  if (isEsiName(name)) {
     const pct = c.percentage || 0.75;
     return `${pct}% of (Earned Gross (-) Washing Allowance (-) Conveyance Allowance)`;
   }
@@ -123,7 +132,7 @@ function useCostComponents() {
     name: p.name.trim(),
     calc_type: p.calc_type,
     percentage: p.calc_type === "percentage" ? Number(p.percentage) || 0 : 0,
-    base_components: p.calc_type === "percentage" ? p.base_components : [],
+    base_components: p.calc_type === "percentage" ? (isEsiName(p.name) ? STATUTORY_ESI_BASE : p.base_components) : [],
     cap_amount: p.calc_type === "percentage" ? p.cap_amount : null,
     amount: p.calc_type === "fixed" ? p.amount : null,
     state: p.state || "N/A",
@@ -464,11 +473,13 @@ function CostComponentDialog({
   });
 
   const stateOptions = useMemo(() => ["N/A", ...states.map((s) => s.name)], [states]);
+  const isEsiComponent = isEsiName(name);
+  const effectiveBaseRefs = isEsiComponent ? STATUTORY_ESI_BASE : baseRefs;
 
   const preview = buildDescription({
     calc_type: calcType,
     percentage: Number(percentage) || 0,
-    base_components: baseRefs,
+    base_components: effectiveBaseRefs,
     cap_amount: capAmount ? Number(capAmount) : null,
     amount: amount ? Number(amount) : null,
     name,
@@ -530,7 +541,15 @@ function CostComponentDialog({
               <div className="grid gap-2">
                 <Label>Base Components</Label>
                 <div className="rounded-lg border border-border p-3">
-                  {baseRefs.length === 0 ? (
+                  {isEsiComponent ? (
+                    <div className="flex flex-wrap gap-2">
+                      {STATUTORY_ESI_BASE.map((b, idx) => (
+                        <div key={`${b.label}-${idx}`} className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/40 px-2 py-1 text-sm font-medium">
+                          {idx === 0 ? b.label : `${b.operator === "-" ? "−" : "+"} ${b.label}`}
+                        </div>
+                      ))}
+                    </div>
+                  ) : baseRefs.length === 0 ? (
                     <div className="text-xs text-muted-foreground">No base added. Pick a component below.</div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
@@ -563,7 +582,7 @@ function CostComponentDialog({
                       ))}
                     </div>
                   )}
-                  {(() => {
+                  {!isEsiComponent && (() => {
                     const used = new Set(baseRefs.map((b) => b.label));
                     const remaining = baseLabels.filter((l) => !used.has(l));
                     if (remaining.length === 0) return null;
