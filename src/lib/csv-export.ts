@@ -122,7 +122,8 @@ export async function writeXlsx(payload: ExportRequestPayload) {
   }
   const ws = XLSX.utils.aoa_to_sheet(aoa);
 
-  // Auto-fit column widths from max content length per column.
+  // Auto-fit column widths from max content length per column. Bumped min to
+  // 14 and padding to +4 so short headers like "PF No" / "UAN" aren't clipped.
   const colWidths = columns.map((c, idx) => {
     let max = String(c.header ?? "").length;
     for (let r = 1; r < aoa.length; r++) {
@@ -130,11 +131,9 @@ export async function writeXlsx(payload: ExportRequestPayload) {
       const s = cell === null || cell === undefined ? "" : String(cell);
       if (s.length > max) max = s.length;
     }
-    // Min 12 for readability, max 50 to avoid runaway columns; +2 padding.
-    return { wch: Math.min(Math.max(max + 2, 12), 50) };
+    return { wch: Math.min(Math.max(max + 4, 14), 60) };
   });
   (ws as unknown as { ["!cols"]?: unknown })["!cols"] = colWidths;
-  (ws as unknown as { ["!freeze"]?: unknown })["!freeze"] = { xSplit: 0, ySplit: 1 };
   (ws as unknown as { ["!autofilter"]?: unknown })["!autofilter"] = {
     ref: XLSX.utils.encode_range({
       s: { r: 0, c: 0 },
@@ -144,53 +143,52 @@ export async function writeXlsx(payload: ExportRequestPayload) {
   (ws as unknown as Record<string, unknown>)["!sheetView"] = { state: "frozen", ySplit: 1 };
 
   const border = {
-    top: { style: "thin", color: { rgb: "E2E8F0" } },
-    bottom: { style: "thin", color: { rgb: "E2E8F0" } },
-    left: { style: "thin", color: { rgb: "E2E8F0" } },
-    right: { style: "thin", color: { rgb: "E2E8F0" } },
+    top: { style: "thin", color: { rgb: "CBD5E1" } },
+    bottom: { style: "thin", color: { rgb: "CBD5E1" } },
+    left: { style: "thin", color: { rgb: "CBD5E1" } },
+    right: { style: "thin", color: { rgb: "CBD5E1" } },
   };
 
-  // Style header row.
+  // Header row — dark navy fill + white bold text, with bgColor set so Excel
+  // and LibreOffice both render the fill (some engines need both fg and bg).
   for (let c = 0; c < columns.length; c++) {
     const addr = XLSX.utils.encode_cell({ r: 0, c });
     const cell = (ws as Record<string, unknown>)[addr] as { s?: unknown } | undefined;
     if (cell) {
       cell.s = {
         font: { name: "Calibri", sz: 11, bold: true, color: { rgb: "FFFFFF" } },
-        fill: { patternType: "solid", fgColor: { rgb: "1E293B" } },
+        fill: { patternType: "solid", fgColor: { rgb: "1E293B" }, bgColor: { rgb: "1E293B" } },
         alignment: { vertical: "center", horizontal: "left", wrapText: true },
         border,
       };
     }
   }
 
-  // Style body cells.
+  // Body cells — explicit dark text + solid white/zebra fill so text is
+  // always visible (previously some engines rendered white-on-white when the
+  // fill pattern resolved to "none").
   for (let r = 1; r < aoa.length; r++) {
     const zebra = r % 2 === 0;
+    const bg = zebra ? "F8FAFC" : "FFFFFF";
     for (let c = 0; c < columns.length; c++) {
       const addr = XLSX.utils.encode_cell({ r, c });
       const cell = (ws as Record<string, unknown>)[addr] as { s?: unknown } | undefined;
       if (!cell) continue;
       cell.s = {
         font: { name: "Calibri", sz: 10, color: { rgb: "0F172A" } },
-        alignment: {
-          vertical: "center",
-          horizontal: "left",
-          wrapText: true,
-        },
-        fill: zebra
-          ? { patternType: "solid", fgColor: { rgb: "F8FAFC" } }
-          : { patternType: "none" },
+        alignment: { vertical: "center", horizontal: "left", wrapText: true },
+        fill: { patternType: "solid", fgColor: { rgb: bg }, bgColor: { rgb: bg } },
         border,
       };
     }
   }
 
-  // Standard row height for consistent look.
+  // Taller header row so wrapped header text is fully visible.
+  const longestHeader = columns.reduce((m, c) => Math.max(m, String(c.header ?? "").length), 0);
+  const headerHeight = longestHeader > 18 ? 42 : 28;
   (ws as unknown as Record<string, unknown>)["!rows"] = aoa.map((_, i) =>
-    i === 0 ? { hpt: 24 } : { hpt: 20 },
+    i === 0 ? { hpt: headerHeight } : { hpt: 20 },
   );
-
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
