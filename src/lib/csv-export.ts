@@ -213,26 +213,44 @@ export async function writePdf(payload: ExportRequestPayload) {
     .replace(/[-_]/g, " ")
     .replace(/\b\w/g, (m) => m.toUpperCase());
 
-  // Estimate max content width per column to decide orientation.
+  // Per-column max content length (header + body), capped so a single huge
+  // value doesn't blow up the page.
   const maxLens = columns.map((c) => {
     let m = cleanText(c.header).length;
     for (const r of rows) {
       const l = cleanText(r[c.key as string]).length;
       if (l > m) m = l;
     }
-    return Math.min(m, 60); // cap to avoid one giant column blowing the layout
+    return Math.min(m, 40);
   });
-  const totalLen = maxLens.reduce((a, b) => a + b, 0) || 1;
-  // Wider tables → landscape. Many columns → also landscape.
-  const orientation: "portrait" | "landscape" =
-    columns.length > 6 || totalLen > 70 ? "landscape" : "portrait";
+  // Per-column WIDEST single word in the header — this is the true minimum
+  // width needed to avoid breaking header text character-by-character.
+  const headerWordLens = columns.map((c) =>
+    cleanText(c.header)
+      .split(/\s+/)
+      .reduce((m, w) => Math.max(m, w.length), 0),
+  );
 
-  // For very wide tables, escalate paper size so each column has enough
-  // room for its header word(s) instead of wrapping character-by-character.
-  // Target ~52pt per column; pick the smallest standard format that fits.
+  // Pick font size + padding based on column count.
+  const fontSize = columns.length > 22 ? 7 : columns.length > 16 ? 8 : columns.length > 10 ? 9 : 10;
+  const cellPadding = columns.length > 16 ? 2.5 : columns.length > 10 ? 3.5 : 4.5;
+  // Helvetica avg char ~0.5em; bold (header) ~0.55em.
+  const charW = fontSize * 0.52;
+  const padX = cellPadding * 2;
+
+  // Desired width per column: enough to fit the widest header word AND a
+  // reasonable amount of body content on one line.
+  const desiredWidths = columns.map((_c, i) => {
+    const headerMin = headerWordLens[i] * charW + padX;
+    const contentTarget = Math.min(maxLens[i], 24) * charW + padX; // 24-char target line
+    return Math.max(headerMin, contentTarget, 38);
+  });
+
   const margin = 28;
-  const targetPerCol = 52;
-  const needed = columns.length * targetPerCol + margin * 2;
+  const neededW = desiredWidths.reduce((a, b) => a + b, 0) + margin * 2;
+
+  // Decide paper format: pick the smallest landscape sheet whose usable
+  // width >= neededW so columns don't get squeezed.
   const LANDSCAPE_FORMATS: Array<{ name: string; w: number }> = [
     { name: "a4", w: 842 },
     { name: "a3", w: 1191 },
@@ -240,15 +258,24 @@ export async function writePdf(payload: ExportRequestPayload) {
     { name: "a1", w: 2384 },
     { name: "a0", w: 3370 },
   ];
+  const orientation: "portrait" | "landscape" =
+    columns.length > 6 || neededW > 560 ? "landscape" : "portrait";
   const format =
     orientation === "landscape"
-      ? (LANDSCAPE_FORMATS.find((f) => f.w >= needed)?.name ?? "a0")
+      ? (LANDSCAPE_FORMATS.find((f) => f.w >= neededW)?.name ?? "a0")
       : "a4";
 
   const doc = new jsPDF({ orientation, unit: "pt", format });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
   const usableW = pageW - margin * 2;
+
+  // Final per-column widths: start from desired, then scale to fit usableW
+  // (scale up to use full page when there's slack, scale down only as a
+  // last resort if we ran out of paper sizes).
+  const desiredTotal = desiredWidths.reduce((a, b) => a + b, 0);
+  const scale = usableW / desiredTotal;
+  const colWidths = desiredWidths.map((w) => w * scale);
 
   // Header
   doc.setFont("helvetica", "bold");
@@ -264,25 +291,10 @@ export async function writePdf(payload: ExportRequestPayload) {
     margin + 20,
   );
 
-  // Compute proportional column widths from content length so wide cells get
-  // proportionally more room. Enforce a small minimum so single-char columns
-  // don't collapse, but never let the per-column minimum exceed what fits.
-  const minColWidth = Math.min(
-    Math.max(44, Math.min(80, usableW / columns.length)),
-    Math.floor(usableW / columns.length),
-  );
-  let rawWidths = maxLens.map((l) => Math.max(minColWidth, (l / totalLen) * usableW));
-  const sum = rawWidths.reduce((a, b) => a + b, 0);
-  // Scale so total = usableW (autotable will use these as relative anyway).
-  rawWidths = rawWidths.map((w) => (w / sum) * usableW);
-
-  const fontSize = columns.length > 18 ? 7 : columns.length > 12 ? 8 : columns.length > 8 ? 9 : 10;
-  const cellPadding = columns.length > 12 ? 2.5 : 4;
-
   const columnStyles: Record<number, Record<string, unknown>> = {};
   columns.forEach((_c, i) => {
     columnStyles[i] = {
-      cellWidth: rawWidths[i],
+      cellWidth: colWidths[i],
       halign: "left",
       valign: "middle",
     };
@@ -298,7 +310,7 @@ export async function writePdf(payload: ExportRequestPayload) {
       font: "helvetica",
       fontSize,
       cellPadding,
-      overflow: "linebreak", // wrap long cells onto multiple lines so data isn't truncated
+      overflow: "linebreak",
       valign: "middle",
       halign: "left",
       lineColor: [226, 232, 240],
@@ -314,7 +326,9 @@ export async function writePdf(payload: ExportRequestPayload) {
       valign: "middle",
       lineColor: [30, 41, 59],
       overflow: "linebreak",
+      cellPadding: { top: cellPadding + 1, bottom: cellPadding + 1, left: cellPadding, right: cellPadding },
     },
+    bodyStyles: { halign: "left", valign: "middle" },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     columnStyles,
     showHead: "everyPage",
@@ -328,6 +342,9 @@ export async function writePdf(payload: ExportRequestPayload) {
       doc.setTextColor(0);
     },
   });
+
+  // Silence unused-var lint for numericCols (kept for future right-align).
+  void numericCols;
 
   doc.save(`${stripExtension(filename)}-${timestamp()}.pdf`);
 }
