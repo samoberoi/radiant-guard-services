@@ -879,11 +879,12 @@ function computeBenefitAmount(
   const benefitsTotal = benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const employerTotal = employerItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   if (/\besi(c)?\b/i.test(String((benefit as { name?: string }).name ?? ""))) {
+    const name = String((benefit as { name?: string }).name ?? "");
     const esi = calculateEsiAmounts(componentsTotal + benefitsTotal, [
       ...wageComponents.map((c) => ({ name: c.name, amount: Number(c.amount) || 0 })),
       ...benefitItems.map((b) => ({ name: b.name, amount: Number(b.amount) || 0 })),
     ]);
-    return /employer/i.test(String((benefit as { name?: string }).name ?? "")) ? esi.employer : esi.employee;
+    return /employer/i.test(name) || (Number(benefit.percentage) || 0) > 1 ? esi.employer : esi.employee;
   }
   const norm = (s: string) => s.trim().toLowerCase();
   const grossOf = (label: string): number => {
