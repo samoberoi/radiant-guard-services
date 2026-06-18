@@ -323,6 +323,19 @@ function PayrollUnitPage() {
           ? computeWages(totals, resource, periodDates.length)
           : null;
         const isPrimary = (c.designation_id ?? null) === p.designationId;
+        const candidateGender = ((c as unknown as { gender?: string | null }).gender ?? "").toString();
+        if (wages && isPrimary) {
+          Object.assign(wages, applyEsiToWageComputation(wages));
+          const pt = resolvePtAmount({
+            state: unitState,
+            pincode: unitPincode,
+            gender: candidateGender,
+            earnedGross: wages.earnedGross,
+            slabs: (ptSlabs ?? []) as PtSlabLike[],
+            ranges: (pincodeRanges ?? []) as PincodeRangeLike[],
+          });
+          Object.assign(wages, applyPtToWageComputation(wages, pt.amount));
+        }
         return {
           id: c.id,
           rowKey: pairKey(c.id, p.designationId),
