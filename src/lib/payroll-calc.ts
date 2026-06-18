@@ -170,8 +170,9 @@ export function computeWages(
     .filter((c) => /convey/i.test(c.name))
     .reduce((s, c) => s + c.amount, 0);
   const esiBase = Math.max(0, earnedGross - earnedWashing - earnedConveyance);
-  const esiEmployee = Math.round(esiBase * 0.0075 * 100) / 100;
-  const esiEmployer = Math.round(esiBase * 0.0325 * 100) / 100;
+  // Statutory ESIC rule: contributions are rounded UP to the next rupee.
+  const esiEmployee = esiBase > 0 ? Math.ceil(esiBase * 0.0075) : 0;
+  const esiEmployer = esiBase > 0 ? Math.ceil(esiBase * 0.0325) : 0;
   const ESI_NAME_RE = /\besi(c)?\b/i;
   const applyEsiRule = (
     items: WageComponent[],
