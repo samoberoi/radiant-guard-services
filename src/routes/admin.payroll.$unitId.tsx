@@ -429,11 +429,14 @@ function PayrollUnitPage() {
           bankName: (cAny.bank_name as string) || "",
           bankBranch: (cAny.bank_branch as string) || "",
           dateOfJoining:
-            (cAny.approved_at as string) ||
             (cAny.preferred_joining_date as string) ||
+            (cAny.approved_at as string) ||
             (cAny.application_date as string) ||
             "",
           panNumber: (cAny.pan_number as string) || "",
+          pfNumber: ((cAny.compliance as Record<string, unknown> | null)?.pf_number as string) || "",
+          esiNumber: ((cAny.compliance as Record<string, unknown> | null)?.esic_number as string) || "",
+          uan: ((cAny.compliance as Record<string, unknown> | null)?.uan as string) || "",
         };
       });
 
