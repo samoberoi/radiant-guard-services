@@ -125,8 +125,8 @@ async function ensureSupabaseSession(phone: string) {
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [isReady, setIsReady] = useState(false);
+  const [user, setUser] = useState<AuthUser | null>(() => read());
+  const [isReady, setIsReady] = useState(() => typeof window === "undefined");
 
   useEffect(() => {
     let active = true;
