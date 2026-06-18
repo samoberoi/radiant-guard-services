@@ -229,10 +229,27 @@ export async function writePdf(payload: ExportRequestPayload) {
   const orientation: "portrait" | "landscape" =
     columns.length > 6 || totalLen > 70 ? "landscape" : "portrait";
 
-  const doc = new jsPDF({ orientation, unit: "pt", format: "a4" });
+  // For very wide tables, escalate paper size so each column has enough
+  // room for its header word(s) instead of wrapping character-by-character.
+  // Target ~52pt per column; pick the smallest standard format that fits.
+  const margin = 28;
+  const targetPerCol = 52;
+  const needed = columns.length * targetPerCol + margin * 2;
+  const LANDSCAPE_FORMATS: Array<{ name: string; w: number }> = [
+    { name: "a4", w: 842 },
+    { name: "a3", w: 1191 },
+    { name: "a2", w: 1684 },
+    { name: "a1", w: 2384 },
+    { name: "a0", w: 3370 },
+  ];
+  const format =
+    orientation === "landscape"
+      ? (LANDSCAPE_FORMATS.find((f) => f.w >= needed)?.name ?? "a0")
+      : "a4";
+
+  const doc = new jsPDF({ orientation, unit: "pt", format });
   const pageW = doc.internal.pageSize.getWidth();
   const pageH = doc.internal.pageSize.getHeight();
-  const margin = 28;
   const usableW = pageW - margin * 2;
 
   // Header
@@ -253,7 +270,7 @@ export async function writePdf(payload: ExportRequestPayload) {
   // proportionally more room. Enforce a small minimum so single-char columns
   // don't collapse, but never let the per-column minimum exceed what fits.
   const minColWidth = Math.min(
-    Math.max(28, Math.min(60, usableW / columns.length)),
+    Math.max(44, Math.min(80, usableW / columns.length)),
     Math.floor(usableW / columns.length),
   );
   let rawWidths = maxLens.map((l) => Math.max(minColWidth, (l / totalLen) * usableW));
