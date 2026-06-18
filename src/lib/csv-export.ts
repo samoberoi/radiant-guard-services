@@ -128,15 +128,25 @@ export async function writeXlsx(payload: ExportRequestPayload) {
   // Build the array-of-arrays, coercing numeric strings to numbers so Excel
   // right-aligns them and totals work correctly.
   const aoa: unknown[][] = [columns.map((c) => c.header)];
+  const textCols = columns.map((c) => isTextIdentifierHeader(String(c.header)));
   for (const r of rows) {
     aoa.push(
       columns.map((c, idx) => {
         const v = r[c.key as string];
         if (v === null || v === undefined) return "";
+        if (textCols[idx]) {
+          // Always render identifier columns as raw text — preserves leading
+          // zeros and prevents scientific notation on long digit strings.
+          if (typeof v === "number") return String(v);
+          return cleanText(v);
+        }
         if (typeof v === "number" || typeof v === "boolean") return v;
         if (v instanceof Date) return v;
         if (typeof v === "object") return cleanText(v);
         const s = cleanText(v);
+        // Long digit runs (account #, UAN, Aadhaar, phone) stay as text even
+        // when the header didn't match the heuristic.
+        if (looksLikeLongNumericId(s)) return s;
         if (numericCols[idx] && /^-?[\d,]+(\.\d+)?$/.test(s)) {
           const n = Number(s.replace(/,/g, ""));
           if (Number.isFinite(n)) return n;
@@ -147,8 +157,8 @@ export async function writeXlsx(payload: ExportRequestPayload) {
   }
   const ws = XLSX.utils.aoa_to_sheet(aoa);
 
-  // Auto-fit column widths from max content length per column. Bumped min to
-  // 14 and padding to +4 so short headers like "PF No" / "UAN" aren't clipped.
+  // Auto-fit column widths from max content length per column. Bumped cap
+  // to 80 so 16-digit account numbers + IFSC + long names fit fully.
   const colWidths = columns.map((c, idx) => {
     let max = String(c.header ?? "").length;
     for (let r = 1; r < aoa.length; r++) {
@@ -156,7 +166,7 @@ export async function writeXlsx(payload: ExportRequestPayload) {
       const s = cell === null || cell === undefined ? "" : String(cell);
       if (s.length > max) max = s.length;
     }
-    return { wch: Math.min(Math.max(max + 4, 14), 60) };
+    return { wch: Math.min(Math.max(max + 4, 14), 80) };
   });
   (ws as unknown as { ["!cols"]?: unknown })["!cols"] = colWidths;
   (ws as unknown as { ["!autofilter"]?: unknown })["!autofilter"] = {
@@ -166,6 +176,22 @@ export async function writeXlsx(payload: ExportRequestPayload) {
     }),
   };
   (ws as unknown as Record<string, unknown>)["!sheetView"] = { state: "frozen", ySplit: 1 };
+
+  // Force identifier cells to text type with "@" format so Excel never
+  // re-parses them as numbers.
+  for (let r = 1; r < aoa.length; r++) {
+    for (let c = 0; c < columns.length; c++) {
+      if (!textCols[c]) continue;
+      const addr = XLSX.utils.encode_cell({ r, c });
+      const cell = (ws as Record<string, unknown>)[addr] as
+        | { t?: string; v?: unknown; z?: string }
+        | undefined;
+      if (!cell) continue;
+      cell.t = "s";
+      cell.v = cell.v === null || cell.v === undefined ? "" : String(cell.v);
+      cell.z = "@";
+    }
+  }
 
   const border = {
     top: { style: "thin", color: { rgb: "CBD5E1" } },
