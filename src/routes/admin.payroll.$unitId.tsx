@@ -19,6 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentPermissions } from "@/lib/rbac";
 import { logActivity } from "@/lib/activity-log";
 import {
+  applyEsiToWageComputation,
   computeAttendanceTotals,
   computeWages,
   fmtINR,
@@ -403,11 +404,8 @@ function PayrollUnitPage() {
             wages.deductions = [...wages.deductions, ...extraDeds];
           }
           const addTotal = extraAdds.reduce((s, a) => s + a.amount, 0);
-          const dedTotal = extraDeds.reduce((s, d) => s + d.amount, 0);
           wages.earnedGross = Math.round((wages.earnedGross + addTotal) * 100) / 100;
-          wages.totalDeductions = Math.round((wages.totalDeductions + dedTotal) * 100) / 100;
-          wages.netPay = Math.round((wages.earnedGross - wages.totalDeductions) * 100) / 100;
-          wages.employerCost = Math.round((wages.earnedGross + wages.totalEmployerContributions) * 100) / 100;
+          Object.assign(wages, applyEsiToWageComputation(wages));
         }
 
         const cAny = c as unknown as Record<string, unknown>;
