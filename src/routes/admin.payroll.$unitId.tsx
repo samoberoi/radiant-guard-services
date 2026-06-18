@@ -527,7 +527,7 @@ function PayrollUnitPage() {
       "Employee ID", "Employee Name", "Designation", "Date Of Joining",
       "PF No", "ESI No", "UAN",
       ...CONTRACT_COMPONENT_COLS,
-      "Rate", "Fixed Duties", "Duties", "Over Time Duties",
+      "Fixed Gross Salary", "Fixed Duties", "Duties", "Over Time Duties",
       ...EARNED_COMPONENT_COLS,
       "Additions",
       "Gross Salary",
