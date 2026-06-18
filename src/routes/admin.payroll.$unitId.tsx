@@ -791,12 +791,22 @@ function PayrollUnitPage() {
                               <td className="px-3 py-2 text-right font-bold">Earned Rs.</td>
                             </tr>
                             {r.wages.deductions.filter((d) => Number(d.amount) > 0).map((d) => {
+                              const isEsi = /\besi(c)?\b/i.test(d.name);
                               const contract = r.resource!.deductions?.find((x) => x.name === d.name);
                               const contractAmt = Number(contract?.amount) || 0;
                               return (
                                 <tr key={`d-${d.name}`} className="border-b border-border/40">
-                                  <td className="px-3 py-2">{d.name}</td>
-                                  <td className="px-3 py-2 text-center tabular-nums">{contractAmt.toFixed(2)}</td>
+                                  <td className="px-3 py-2">
+                                    {d.name}
+                                    {isEsi && (
+                                      <span className="ml-2 text-[10px] text-muted-foreground">
+                                        @ 0.75% of (Earned Gross − Washing − Conveyance), rounded up
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">
+                                    {isEsi ? "—" : contractAmt.toFixed(2)}
+                                  </td>
                                   <td className="px-3 py-2 text-right tabular-nums">{d.amount.toFixed(2)}</td>
                                 </tr>
                               );
@@ -806,7 +816,9 @@ function PayrollUnitPage() {
                             )}
                             <tr className="bg-rose-100 font-semibold dark:bg-rose-500/20">
                               <td className="px-3 py-2 uppercase">Total Deductions Rs.</td>
-                              <td className="px-3 py-2 text-center tabular-nums">{(r.resource.deductions?.reduce((s, d) => s + Number(d.amount), 0) ?? 0).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-center tabular-nums">
+                                {(r.resource.deductions?.filter((d) => !/\besi(c)?\b/i.test(d.name)).reduce((s, d) => s + Number(d.amount), 0) ?? 0).toFixed(2)}
+                              </td>
                               <td className="px-3 py-2 text-right tabular-nums">{r.wages.totalDeductions.toFixed(2)}</td>
                             </tr>
                             <tr className="bg-cyan-100 font-bold dark:bg-cyan-500/20">
