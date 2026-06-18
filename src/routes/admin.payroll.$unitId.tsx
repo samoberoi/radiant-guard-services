@@ -50,9 +50,11 @@ const MONTH_NAMES = [
 ];
 
 const ESI_COMPONENT_RE = /\besi(c)?\b/i;
+const PT_COMPONENT_RE = /\bprofessional\s*tax\b|\bpt\b/i;
 const isEsiItem = (item: { name?: unknown }) => ESI_COMPONENT_RE.test(String(item.name ?? ""));
+const isPtItem = (item: { name?: unknown }) => PT_COMPONENT_RE.test(String(item.name ?? ""));
 const contractTotalAmount = (item: { name?: unknown; amount?: unknown }) =>
-  isEsiItem(item) ? 0 : Number(item.amount) || 0;
+  isEsiItem(item) || isPtItem(item) ? 0 : Number(item.amount) || 0;
 
 function fmtPretty(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
