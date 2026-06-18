@@ -471,6 +471,7 @@ function CostComponentDialog({
     base_components: baseRefs,
     cap_amount: capAmount ? Number(capAmount) : null,
     amount: amount ? Number(amount) : null,
+    name,
   });
 
   return (
