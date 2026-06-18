@@ -530,7 +530,7 @@ function PayrollUnitPage() {
       "Fixed Gross Salary", "Fixed Duties", "Duties", "Over Time Duties",
       ...EARNED_COMPONENT_COLS,
       "Additions",
-      "Gross Salary",
+      "E Gross Salary",
       ...DEDUCTION_COLS,
       "Total Deductions", "Net Pay",
       "Bank Acc No", "Bank IFSC", "Bank Name", "Bank Branch Name", "Bank Account Holder Name",
