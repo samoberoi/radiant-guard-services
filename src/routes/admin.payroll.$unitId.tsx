@@ -844,6 +844,7 @@ function PayrollUnitPage() {
                             </tr>
                             {r.wages.deductions.filter((d) => Number(d.amount) > 0).map((d) => {
                               const isEsi = /\besi(c)?\b/i.test(d.name);
+                              const isPt = /\bprofessional\s*tax\b|\bpt\b/i.test(d.name);
                               const contract = r.resource!.deductions?.find((x) => x.name === d.name);
                               const contractAmt = contract ? contractTotalAmount(contract) : 0;
                               return (
@@ -855,9 +856,20 @@ function PayrollUnitPage() {
                                         @ 0.75% of Earned Gross − Washing − Conveyance, rounded up
                                       </span>
                                     )}
+                                    {isPt && r.pt && (
+                                      <span className="ml-2 text-[10px] text-muted-foreground">
+                                        {r.pt.source === "resolved"
+                                          ? `Per ${r.pt.state}${r.pt.regionLabel && !/all\s*pincodes/i.test(r.pt.regionLabel) ? ` · ${r.pt.regionLabel}` : ""} slab`
+                                          : r.pt.source === "no_state"
+                                          ? "Unit state not set"
+                                          : r.pt.source === "no_slab"
+                                          ? "No PT slab for unit state"
+                                          : "No matching slab"}
+                                      </span>
+                                    )}
                                   </td>
                                    <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">
-                                     {isEsi ? "—" : contractAmt.toFixed(2)}
+                                     {isEsi || isPt ? "—" : contractAmt.toFixed(2)}
                                    </td>
                                   <td className="px-3 py-2 text-right tabular-nums">{d.amount.toFixed(2)}</td>
                                 </tr>
