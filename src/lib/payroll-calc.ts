@@ -141,8 +141,24 @@ export function computeWages(
     amount: Math.round((Number(c.amount) || 0) * ratio * 100) / 100,
   }));
   const benefits = scaleItems(resource.benefits, ratio);
-  const deductions = scaleItems(resource.deductions, ratio);
-  const employerContributions = scaleItems(resource.employerContributions, ratio);
+  const deductionsScaled = scaleItems(resource.deductions, ratio);
+  const employerContributionsScaled = scaleItems(resource.employerContributions, ratio);
+
+  // ---- Statutory EPF override ----
+  // Rule: EPF = 12% of (earned Gross − earned HRA), capped at a ₹15,000
+  // wage ceiling. So if (Gross − HRA) ≤ 15,000 → 12% of (Gross − HRA);
+  // otherwise flat ₹1,800. Applied to any deduction OR employer-contribution
+  // row whose name contains "EPF".
+  const earnedHRA = components
+    .filter((c) => /\bhra\b/i.test(c.name))
+    .reduce((s, c) => s + c.amount, 0);
+  const epfBase = Math.max(0, earnedGross - earnedHRA);
+  const epfAmount =
+    epfBase <= 15000 ? Math.round(epfBase * 0.12 * 100) / 100 : 1800;
+  const applyEpfRule = (items: WageComponent[]) =>
+    items.map((i) => (/\bepf\b/i.test(i.name) ? { ...i, amount: epfAmount } : i));
+  const deductions = applyEpfRule(deductionsScaled);
+  const employerContributions = applyEpfRule(employerContributionsScaled);
 
   const totalDeductions = deductions.reduce((s, d) => s + d.amount, 0);
   const totalEmployerContributions = employerContributions.reduce(
