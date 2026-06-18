@@ -20,12 +20,16 @@ import { useCurrentPermissions } from "@/lib/rbac";
 import { logActivity } from "@/lib/activity-log";
 import {
   applyEsiToWageComputation,
+  applyPtToWageComputation,
   computeAttendanceTotals,
   computeWages,
   fmtINR,
+  resolvePtAmount,
   type AttendanceCodeLike,
   type AttendanceEntryLike,
   type ContractResourceLike,
+  type PincodeRangeLike,
+  type PtSlabLike,
 } from "@/lib/payroll-calc";
 import { downloadCsv } from "@/lib/csv-export";
 
