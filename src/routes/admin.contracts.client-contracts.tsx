@@ -879,10 +879,31 @@ function computeBenefitAmount(
   const benefitsTotal = benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const employerTotal = employerItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   if (/\besi(c)?\b/i.test(String((benefit as { name?: string }).name ?? ""))) {
-    // ESI is statutory and depends on EARNED gross (post-attendance), not the
-    // monthly contract gross. We deliberately keep the contract-level amount
-    // as 0 so payroll alone computes the real figure from earned components.
-    return 0;
+    // ESI base = Gross − Washing Allowance − Conveyance Allowance.
+    // At contract level we use the fixed monthly components; payroll later
+    // recomputes from EARNED components. Rate defaults to 0.75% if missing.
+    const normEsi = (s: string) => s.trim().toLowerCase();
+    const amountOf = (labels: string[]): number => {
+      for (const c of wageComponents) {
+        const nm = normEsi(c.name);
+        if (labels.some((l) => nm === l || nm.includes(l))) {
+          return Number(c.amount) || 0;
+        }
+        const at = allowanceTypes.find((a) => a.id === c.allowanceId);
+        if (at) {
+          const names = [normEsi(at.name), normEsi(at.displayName), normEsi(at.shortName)];
+          if (names.some((n) => labels.some((l) => n === l || n.includes(l)))) {
+            return Number(c.amount) || 0;
+          }
+        }
+      }
+      return 0;
+    };
+    const washing = amountOf(["washing"]);
+    const conveyance = amountOf(["conveyance"]);
+    const base = Math.max(0, componentsTotal - washing - conveyance);
+    const rate = Number(benefit.percentage) || 0.75;
+    return Math.ceil((rate * base) / 100);
   }
   const norm = (s: string) => s.trim().toLowerCase();
   const grossOf = (label: string): number => {

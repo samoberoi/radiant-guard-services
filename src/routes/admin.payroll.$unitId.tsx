@@ -804,9 +804,9 @@ function PayrollUnitPage() {
                                       </span>
                                     )}
                                   </td>
-                                  <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">
-                                    {isEsi ? "—" : contractAmt.toFixed(2)}
-                                  </td>
+                                   <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">
+                                     {contractAmt.toFixed(2)}
+                                   </td>
                                   <td className="px-3 py-2 text-right tabular-nums">{d.amount.toFixed(2)}</td>
                                 </tr>
                               );
@@ -816,9 +816,9 @@ function PayrollUnitPage() {
                             )}
                             <tr className="bg-rose-100 font-semibold dark:bg-rose-500/20">
                               <td className="px-3 py-2 uppercase">Total Deductions Rs.</td>
-                              <td className="px-3 py-2 text-center tabular-nums">
-                                {(r.resource.deductions?.filter((d) => !/\besi(c)?\b/i.test(d.name)).reduce((s, d) => s + Number(d.amount), 0) ?? 0).toFixed(2)}
-                              </td>
+                               <td className="px-3 py-2 text-center tabular-nums">
+                                 {(r.resource.deductions?.reduce((s, d) => s + Number(d.amount), 0) ?? 0).toFixed(2)}
+                               </td>
                               <td className="px-3 py-2 text-right tabular-nums">{r.wages.totalDeductions.toFixed(2)}</td>
                             </tr>
                             <tr className="bg-cyan-100 font-bold dark:bg-cyan-500/20">
