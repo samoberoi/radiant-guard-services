@@ -124,8 +124,34 @@ function PayrollUnitPage() {
     },
   });
 
+  const { data: ptSlabs } = useQuery({
+    queryKey: ["pt_slabs_invoice"],
+    queryFn: async (): Promise<PtSlabLike[]> => {
+      const { data, error } = await supabase
+        .from("professional_tax_slabs")
+        .select("id, state, region_label, salary_min, salary_max, tax_per_month, gender");
+      if (error) throw error;
+      return (data ?? []) as PtSlabLike[];
+    },
+  });
+
+  const { data: pincodeRanges } = useQuery({
+    queryKey: ["pincode_ranges_invoice"],
+    queryFn: async (): Promise<PincodeRangeLike[]> => {
+      const { data, error } = await supabase
+        .from("pincode_ranges")
+        .select("state, region_label, range_start, range_end, is_excluded");
+      if (error) throw error;
+      return (data ?? []) as PincodeRangeLike[];
+    },
+  });
+
+  const unitState = (unit as { billing_state?: string | null } | null | undefined)?.billing_state ?? null;
+  const unitPincode = (unit as { billing_pincode?: string | null } | null | undefined)?.billing_pincode ?? null;
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ["payroll-compute", unitId, start, end],
+    queryKey: ["payroll-compute", unitId, start, end, unitState, unitPincode, (ptSlabs?.length ?? 0), (pincodeRanges?.length ?? 0)],
+    enabled: !!ptSlabs && !!pincodeRanges,
     queryFn: async () => {
       // 1. Roster: candidates mapped to this unit (primary + secondary).
       const [{ data: primary }, { data: links }] = await Promise.all([
