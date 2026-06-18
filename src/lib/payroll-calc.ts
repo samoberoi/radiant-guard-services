@@ -157,8 +157,29 @@ export function computeWages(
     epfBase <= 15000 ? Math.round(epfBase * 0.12 * 100) / 100 : 1800;
   const applyEpfRule = (items: WageComponent[]) =>
     items.map((i) => (/\bepf\b/i.test(i.name) ? { ...i, amount: epfAmount } : i));
-  const deductions = applyEpfRule(deductionsScaled);
-  const employerContributions = applyEpfRule(employerContributionsScaled);
+
+  // ---- Statutory ESI override ----
+  // Rule: ESI is computed on (earned Gross − earned Washing Allowance −
+  // earned Conveyance Allowance). Employee share = 0.75%, employer share
+  // = 3.25%. Washing & conveyance allowances are statutorily excluded
+  // from ESI wages. Applied to any row whose name contains "ESI".
+  const earnedWashing = components
+    .filter((c) => /washing/i.test(c.name))
+    .reduce((s, c) => s + c.amount, 0);
+  const earnedConveyance = components
+    .filter((c) => /convey/i.test(c.name))
+    .reduce((s, c) => s + c.amount, 0);
+  const esiBase = Math.max(0, earnedGross - earnedWashing - earnedConveyance);
+  const esiEmployee = Math.round(esiBase * 0.0075 * 100) / 100;
+  const esiEmployer = Math.round(esiBase * 0.0325 * 100) / 100;
+  const applyEsiRule = (items: WageComponent[], share: number) =>
+    items.map((i) => (/\besi(c)?\b/i.test(i.name) ? { ...i, amount: share } : i));
+
+  const deductions = applyEsiRule(applyEpfRule(deductionsScaled), esiEmployee);
+  const employerContributions = applyEsiRule(
+    applyEpfRule(employerContributionsScaled),
+    esiEmployer,
+  );
 
   const totalDeductions = deductions.reduce((s, d) => s + d.amount, 0);
   const totalEmployerContributions = employerContributions.reduce(
