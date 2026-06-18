@@ -61,21 +61,46 @@ function stripExtension(name: string): string {
   return name.replace(/\.(csv|xlsx|xls|pdf|json)$/i, "");
 }
 
+// Header keys that should ALWAYS be treated as text (identifiers, long
+// numeric codes) — never coerced to Number, which would produce scientific
+// notation like 1.23E+11 for account numbers / UAN / Aadhaar / phone, or
+// drop leading zeros.
+const TEXT_ID_RE = /account|a\/?c|ifsc|uan|\bpf\b|esi|esic|aadhaar|aadhar|\bpan\b|gst|phone|mobile|contact|whatsapp|pincode|pin\s*code|\bzip\b|employee\s*code|emp\s*code|\bcode\b|number|\bno\.?\b|\bid\b/i;
+
+function isTextIdentifierHeader(header: string): boolean {
+  return TEXT_ID_RE.test(header);
+}
+
+// A digit-only string that is long (>=8) or has a leading zero should be
+// kept as text — otherwise Excel turns it into a number and strips leading
+// zeros or shows it in scientific notation.
+function looksLikeLongNumericId(s: string): boolean {
+  const t = s.trim();
+  if (!/^\d+$/.test(t)) return false;
+  return t.length >= 8 || t.startsWith("0");
+}
+
 // Heuristic: a column is numeric if most non-empty cells parse as numbers.
 function detectNumericColumns(
   rows: Array<Record<string, unknown>>,
   columns: ExportColumn[],
 ): boolean[] {
   return columns.map((c) => {
+    if (isTextIdentifierHeader(String(c.header))) return false;
     let hits = 0;
     let total = 0;
+    let longIds = 0;
     for (const r of rows) {
       const v = r[c.key as string];
       if (v === null || v === undefined || v === "") continue;
       total++;
       if (typeof v === "number") hits++;
-      else if (typeof v === "string" && /^-?[\d,]+(\.\d+)?%?$/.test(v.trim())) hits++;
+      else if (typeof v === "string" && /^-?[\d,]+(\.\d+)?%?$/.test(v.trim())) {
+        hits++;
+        if (looksLikeLongNumericId(v)) longIds++;
+      }
     }
+    if (total > 0 && longIds / total > 0.3) return false;
     return total > 0 && hits / total > 0.6;
   });
 }
