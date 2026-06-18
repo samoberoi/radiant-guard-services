@@ -77,6 +77,7 @@ import {
 } from "@/components/ui/command";
 import { useCustomers, useUnits } from "@/lib/admin-data";
 import { cn } from "@/lib/utils";
+import { calculateEsiAmounts } from "@/lib/payroll-calc";
 
 export const Route = createFileRoute("/admin/contracts/client-contracts")({
   component: ClientContractsPage,
@@ -877,6 +878,13 @@ function computeBenefitAmount(
   const componentsTotal = wageComponents.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const benefitsTotal = benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const employerTotal = employerItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  if (/\besi(c)?\b/i.test(String((benefit as { name?: string }).name ?? ""))) {
+    const esi = calculateEsiAmounts(componentsTotal + benefitsTotal, [
+      ...wageComponents.map((c) => ({ name: c.name, amount: Number(c.amount) || 0 })),
+      ...benefitItems.map((b) => ({ name: b.name, amount: Number(b.amount) || 0 })),
+    ]);
+    return /employer/i.test(String((benefit as { name?: string }).name ?? "")) ? esi.employer : esi.employee;
+  }
   const norm = (s: string) => s.trim().toLowerCase();
   const grossOf = (label: string): number => {
     const l = norm(label);
