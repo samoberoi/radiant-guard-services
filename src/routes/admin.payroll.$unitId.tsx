@@ -472,6 +472,7 @@ function PayrollUnitPage() {
           wages,
           resource: resource ?? null,
           hasContract: !!resource,
+          pt: ptResolved,
           bankAccountHolder: (cAny.bank_account_holder as string) || "",
           bankAccountNumber: (cAny.bank_account_number as string) || "",
           bankIfsc: (cAny.bank_ifsc as string) || "",
