@@ -427,6 +427,7 @@ function PayrollUnitPage() {
           ? computeWages(totals, resource, periodDates.length)
           : null;
         const isPrimary = (c.designation_id ?? null) === p.designationId;
+        const candidateGender = ((c as unknown as { gender?: string | null }).gender ?? "").toString();
 
         // Fold per-employee additions/deductions onto the primary line only so
         // we don't double-count across multiple designation lines for one person.
@@ -442,6 +443,21 @@ function PayrollUnitPage() {
           wages.earnedGross = Math.round((wages.earnedGross + addTotal) * 100) / 100;
           Object.assign(wages, applyEsiToWageComputation(wages));
         }
+
+        // Resolve Professional Tax for this employee from state/gender/earnedGross slabs.
+        let ptResolved: ReturnType<typeof resolvePtAmount> | null = null;
+        if (wages && isPrimary) {
+          ptResolved = resolvePtAmount({
+            state: unitState,
+            pincode: unitPincode,
+            gender: candidateGender,
+            earnedGross: wages.earnedGross,
+            slabs: (ptSlabs ?? []) as PtSlabLike[],
+            ranges: (pincodeRanges ?? []) as PincodeRangeLike[],
+          });
+          Object.assign(wages, applyPtToWageComputation(wages, ptResolved.amount));
+        }
+
 
         const cAny = c as unknown as Record<string, unknown>;
         return {
