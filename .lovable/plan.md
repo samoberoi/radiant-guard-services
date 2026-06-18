@@ -1,32 +1,47 @@
-I’ll fix ESI end-to-end with these changes:
+Plan to fix ESI Net end-to-end:
 
-1. **Cost Component Manager**
-   - Keep ESI configured as percentage: `0.75%` employee and `3.25%` employer.
-   - Keep the base as: `Earned Gross`.
-   - Make the label/description clearly payroll attendance-based, not a fixed monthly amount.
+1. **Lock the ESI Net formula globally**
+   - Use the payroll-computed earned values, not contract/fixed gross.
+   - Formula for employee ESI Net:
+     ```text
+     ESI Base = Earned Gross − Earned Washing Allowance − Earned Conveyance Allowance
+     ESI Employee Net = ceil(ESI Base × 0.75%)
+     ```
+   - If Washing Allowance is missing, treat it as `0`.
+   - If Conveyance Allowance is missing, treat it as `0`.
+   - Employer ESI will use the same base with `3.25%`.
 
-2. **Client Contracts > Add/Edit Resource**
-   - When adding `ESI Employee Contribution (Net)` or employer ESI, do **not** calculate/show a fixed amount like `₹145` or `₹146` from monthly gross.
-   - Store ESI resource amount as `0` / attendance-based placeholder, because earned gross is unknown until attendance is computed.
-   - The salary breakdown preview will show ESI as attendance-based instead of a fixed rupee amount.
+2. **Fix the source of the ₹146 issue**
+   - The wrong ₹146 is coming from using a lower earned gross/base path instead of the payroll row’s displayed earned gross of `₹19,895`.
+   - I will make the payroll detail row use the same `r.wages.earnedGross` value that is displayed in the payroll run summary, then subtract earned washing/conveyance from the earned component rows.
+   - For Santosh, if earned gross is `₹19,895` and washing/conveyance are not present:
+     ```text
+     ESI Base = 19,895 − 0 − 0 = 19,895
+     ESI = ceil(19,895 × 0.0075)
+         = ceil(149.2125)
+         = ₹150
+     Total Deduction = EPF + ESI + PT + any other deductions
+     ```
 
-3. **Payroll Compute Wages**
-   - Ensure payroll ignores the saved contract ESI amount completely.
-   - Calculate employee ESI at payroll time only as:
-     `ceil(0.75% × Earned Gross Salary)`
-   - Calculate employer ESI similarly:
-     `ceil(3.25% × same base)`
-   - This will reflect correctly in the row dropdown, totals, payroll export, and invoice/billing views.
+3. **Update every affected screen/export**
+   - Payroll Runs detail dropdown: ESI row will show `—` in the contract column and `₹150` in earned amount for Santosh.
+   - Payroll totals: total deductions will include the corrected ESI value.
+   - Invoice/billing view: use the same shared ESI calculation.
+   - Client Contracts and Cost Component Manager: show the formula as attendance/payroll-based, not a fixed contract amount.
+   - CSV/export paths will continue to use the shared payroll calculation.
 
-4. **Existing Kids Clinic contract data**
-   - Clean/neutralize the old saved ESI amounts inside existing contract resources so the contract screen no longer shows stale `145.04` / `628.52` as if they are fixed values.
-   - For Kids Clinic example, with full May attendance currently showing `T Days = 31.88`, gross `₹19,339`, actual-days base `31`:
-     - Earned Gross = `19,339 / 31 × 31.88 = ₹19,888.49`
-     - ESI base = earned gross
-     - Employee ESI = `ceil(Earned Gross × 0.75%)`
-     - Employer ESI = `ceil(Earned Gross × 3.25%)`
+4. **Clean existing setup data**
+   - Ensure Cost Component Manager ESI rows store the base as:
+     ```text
+     Earned Gross − Washing Allowance − Conveyance Allowance
+     ```
+   - Ensure existing contract resource ESI rows do not store stale fixed values and keep the corrected base metadata.
 
-5. **Verification**
-   - Verify in the database for Kids Clinic and Santosh Vishnu Hajare.
-   - Verify through the payroll calculation path that the dropdown shows earned ESI, not the old contract value.
-   - Check that exports use the same computed amount.
+5. **Verify before reporting back**
+   - Re-run a calculation for Kids Clinic / Santosh Vishnu Hajare using the same active payroll period shown in Payroll Runs.
+   - Confirm the output shows:
+     - Earned Gross: `₹19,895` from payroll row
+     - Washing: `₹0` if missing
+     - Conveyance: `₹0` if missing
+     - Employee ESI Net: `₹150`
+     - Total deductions include `₹150`, not `₹146` or `₹148`.
