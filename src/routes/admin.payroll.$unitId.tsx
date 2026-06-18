@@ -86,7 +86,7 @@ function PayrollUnitPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("units")
-        .select("id, code, name, customer_id")
+        .select("id, code, name, customer_id, billing_state, billing_pincode")
         .eq("id", unitId)
         .maybeSingle();
       if (!data) return null;
@@ -96,6 +96,28 @@ function PayrollUnitPage() {
         .eq("id", data.customer_id ?? "")
         .maybeSingle();
       return { ...data, customer_name: cust?.name ?? "" };
+    },
+  });
+
+  const { data: ptSlabs } = useQuery({
+    queryKey: ["pt_slabs_payroll"],
+    queryFn: async (): Promise<PtSlabLike[]> => {
+      const { data, error } = await supabase
+        .from("professional_tax_slabs")
+        .select("id, state, region_label, salary_min, salary_max, tax_per_month, gender");
+      if (error) throw error;
+      return (data ?? []) as PtSlabLike[];
+    },
+  });
+
+  const { data: pincodeRanges } = useQuery({
+    queryKey: ["pincode_ranges_payroll"],
+    queryFn: async (): Promise<PincodeRangeLike[]> => {
+      const { data, error } = await supabase
+        .from("pincode_ranges")
+        .select("state, region_label, range_start, range_end, is_excluded");
+      if (error) throw error;
+      return (data ?? []) as PincodeRangeLike[];
     },
   });
 
