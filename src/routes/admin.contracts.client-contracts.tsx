@@ -77,7 +77,6 @@ import {
 } from "@/components/ui/command";
 import { useCustomers, useUnits } from "@/lib/admin-data";
 import { cn } from "@/lib/utils";
-import { calculateEsiAmounts } from "@/lib/payroll-calc";
 
 export const Route = createFileRoute("/admin/contracts/client-contracts")({
   component: ClientContractsPage,
@@ -866,6 +865,17 @@ function computePayableDays(base: PayrollDayBase | undefined, ref: Date = new Da
   return daysInMonth;
 }
 
+const ESI_CONTRACT_NOTE = "Calculated in payroll from earned gross";
+const ESI_COMPONENT_RE = /\besi(c)?\b/i;
+
+function isEsiItem(item: { name?: unknown } | null | undefined): boolean {
+  return ESI_COMPONENT_RE.test(String(item?.name ?? ""));
+}
+
+function contractTotalAmount(item: { name?: unknown; amount?: unknown }): number {
+  return isEsiItem(item) ? 0 : Number(item.amount) || 0;
+}
+
 /** Compute benefit amount from a percentage component using the resource's wage components. */
 function computeBenefitAmount(
   benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "amount">,
@@ -878,33 +888,7 @@ function computeBenefitAmount(
   const componentsTotal = wageComponents.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const benefitsTotal = benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const employerTotal = employerItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  if (/\besi(c)?\b/i.test(String((benefit as { name?: string }).name ?? ""))) {
-    // ESI base = Gross − Washing Allowance − Conveyance Allowance.
-    // At contract level we use the fixed monthly components; payroll later
-    // recomputes from EARNED components. Rate defaults to 0.75% if missing.
-    const normEsi = (s: string) => s.trim().toLowerCase();
-    const amountOf = (labels: string[]): number => {
-      for (const c of wageComponents) {
-        const nm = normEsi(c.name);
-        if (labels.some((l) => nm === l || nm.includes(l))) {
-          return Number(c.amount) || 0;
-        }
-        const at = allowanceTypes.find((a) => a.id === c.allowanceId);
-        if (at) {
-          const names = [normEsi(at.name), normEsi(at.displayName), normEsi(at.shortName)];
-          if (names.some((n) => labels.some((l) => n === l || n.includes(l)))) {
-            return Number(c.amount) || 0;
-          }
-        }
-      }
-      return 0;
-    };
-    const washing = amountOf(["washing"]);
-    const conveyance = amountOf(["conveyance"]);
-    const base = Math.max(0, componentsTotal - washing - conveyance);
-    const rate = Number(benefit.percentage) || 0.75;
-    return Math.ceil((rate * base) / 100);
-  }
+  if (isEsiItem(benefit as { name?: unknown })) return 0;
   const norm = (s: string) => s.trim().toLowerCase();
   const grossOf = (label: string): number => {
     const l = norm(label);
@@ -1049,7 +1033,7 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
 
   const sumArr = (arr: unknown): number =>
     Array.isArray(arr)
-      ? (arr as { amount?: number }[]).reduce((s, x) => s + (Number(x?.amount) || 0), 0)
+      ? (arr as { name?: unknown; amount?: unknown }[]).reduce((s, x) => s + contractTotalAmount(x), 0)
       : 0;
 
   // ---- Sheet 1: Summary
@@ -1172,7 +1156,7 @@ async function exportContractToXlsx(contract: ClientContract): Promise<void> {
     const pushSection = (section: string, items: unknown) => {
       if (!Array.isArray(items)) return;
       (items as Array<Record<string, unknown>>).forEach((it) => {
-        const amt = Number(it.amount) || 0;
+        const amt = contractTotalAmount(it);
         breakdownRows.push([
           idx + 1,
           desig,
@@ -3315,8 +3299,8 @@ function ResourceFormDialog({
   };
 
   const totalBenefits = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const totalDeductions = deductions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const totalEmployer = employerContributions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const totalDeductions = deductions.reduce((s, b) => s + contractTotalAmount(b), 0);
+  const totalEmployer = employerContributions.reduce((s, b) => s + contractTotalAmount(b), 0);
 
   const selectedDesignation = designations.find((d) => d.id === designationId);
 
@@ -3648,7 +3632,9 @@ function ResourceFormDialog({
                       </div>
                       <div className="mt-0.5 text-[11px] text-muted-foreground">
                         {b.calcType === "percentage"
-                          ? `${b.percentage}% of ${b.baseComponents.map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`)).join(" ") || "—"}${b.capAmount ? ` · cap ₹${b.capAmount.toLocaleString("en-IN")}` : ""}`
+                          ? isEsiItem(b)
+                            ? `${b.percentage}% · ${ESI_CONTRACT_NOTE}`
+                            : `${b.percentage}% of ${b.baseComponents.map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`)).join(" ") || "—"}${b.capAmount ? ` · cap ₹${b.capAmount.toLocaleString("en-IN")}` : ""}`
                           : "Manual entry"}
                       </div>
                     </div>
@@ -3661,7 +3647,7 @@ function ResourceFormDialog({
                          />
                       ) : (
                         <span className="w-28 text-right text-sm font-semibold text-foreground">
-                          {b.amount.toFixed(2)}
+                          {isEsiItem(b) ? "Payroll" : b.amount.toFixed(2)}
                         </span>
                       )}
                       <Button
@@ -3786,7 +3772,9 @@ function ResourceFormDialog({
                       </div>
                       <div className="mt-0.5 text-[11px] text-muted-foreground">
                         {b.calcType === "percentage"
-                          ? `${b.percentage}% of ${b.baseComponents.map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`)).join(" ") || "—"}${b.capAmount ? ` · cap ₹${b.capAmount.toLocaleString("en-IN")}` : ""}`
+                          ? isEsiItem(b)
+                            ? `${b.percentage}% · ${ESI_CONTRACT_NOTE}`
+                            : `${b.percentage}% of ${b.baseComponents.map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`)).join(" ") || "—"}${b.capAmount ? ` · cap ₹${b.capAmount.toLocaleString("en-IN")}` : ""}`
                           : "Fixed amount"}
                       </div>
                     </div>
@@ -3799,7 +3787,7 @@ function ResourceFormDialog({
                          />
                       ) : (
                         <span className="w-28 text-right text-sm font-semibold text-foreground">
-                          {b.amount.toFixed(2)}
+                          {isEsiItem(b) ? "Payroll" : b.amount.toFixed(2)}
                         </span>
                       )}
                       <Button
@@ -3879,7 +3867,7 @@ function SalaryBreakdownTable({
   const componentsTotal = components.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const benefitsTotal = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const gross = componentsTotal + benefitsTotal;
-  const deductionsTotal = deductions.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const deductionsTotal = deductions.reduce((s, b) => s + contractTotalAmount(b), 0);
 
   const isReliever = (b: BenefitItem) => /reliever/i.test(b.name);
   const isMgmtFee = (b: BenefitItem) => /management\s*fee/i.test(b.name);
@@ -3887,9 +3875,9 @@ function SalaryBreakdownTable({
   const relieverItems = employerContributions.filter(isReliever);
   const mgmtFeeItems = employerContributions.filter(isMgmtFee);
 
-  const coreEmployerTotal = coreEmployer.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const relieverTotal = relieverItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const mgmtFeeTotal = mgmtFeeItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const coreEmployerTotal = coreEmployer.reduce((s, b) => s + contractTotalAmount(b), 0);
+  const relieverTotal = relieverItems.reduce((s, b) => s + contractTotalAmount(b), 0);
+  const mgmtFeeTotal = mgmtFeeItems.reduce((s, b) => s + contractTotalAmount(b), 0);
   const totalCTC = gross + coreEmployerTotal;
   const totalRate = totalCTC + relieverTotal;
   const grandTotal = totalRate + mgmtFeeTotal;
@@ -3999,7 +3987,7 @@ function SalaryBreakdownTable({
               <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
             </tr>
             {(() => {
-              const visibleDeductions = deductions.filter((b) => Number(b.amount) > 0);
+              const visibleDeductions = deductions.filter((b) => Number(b.amount) > 0 || isEsiItem(b));
               if (visibleDeductions.length === 0) {
                 return (
                   <tr>
@@ -4015,17 +4003,17 @@ function SalaryBreakdownTable({
                     {b.name}
                     {b.calcType === "percentage" && (
                       <span className="ml-2 text-[11px] text-muted-foreground">
-                        @ {b.percentage}% of{" "}
-                        {b.baseComponents
-                          .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
-                          .join(" ") || "—"}
-                        {b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}
+                        {isEsiItem(b)
+                          ? `@ ${b.percentage}% · ${ESI_CONTRACT_NOTE}`
+                          : `@ ${b.percentage}% of ${b.baseComponents
+                              .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
+                              .join(" ") || "—"}${b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}`}
                       </span>
                     )}
                   </td>
-                  <td className="text-center tabular-nums">{Number(b.amount).toFixed(2)}</td>
+                  <td className="text-center tabular-nums">{isEsiItem(b) ? "Payroll" : Number(b.amount).toFixed(2)}</td>
                   <td />
-                  <td className="text-right tabular-nums">{earnedFor(Number(b.amount)).toFixed(2)}</td>
+                  <td className="text-right tabular-nums">{isEsiItem(b) ? "Payroll" : earnedFor(Number(b.amount)).toFixed(2)}</td>
                 </tr>
               ));
             })()}
@@ -4048,7 +4036,7 @@ function SalaryBreakdownTable({
               <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
             </tr>
             {(() => {
-              const visibleEmployer = coreEmployer.filter((b) => Number(b.amount) > 0);
+              const visibleEmployer = coreEmployer.filter((b) => Number(b.amount) > 0 || isEsiItem(b));
               if (visibleEmployer.length === 0) {
                 return (
                   <tr>
@@ -4064,17 +4052,17 @@ function SalaryBreakdownTable({
                     {b.name}
                     {b.calcType === "percentage" && (
                       <span className="ml-2 text-[11px] text-muted-foreground">
-                        @ {b.percentage}% of{" "}
-                        {b.baseComponents
-                          .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
-                          .join(" ") || "—"}
-                        {b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}
+                        {isEsiItem(b)
+                          ? `@ ${b.percentage}% · ${ESI_CONTRACT_NOTE}`
+                          : `@ ${b.percentage}% of ${b.baseComponents
+                              .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
+                              .join(" ") || "—"}${b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}`}
                       </span>
                     )}
                   </td>
-                  <td className="text-center tabular-nums">{Number(b.amount).toFixed(2)}</td>
+                  <td className="text-center tabular-nums">{isEsiItem(b) ? "Payroll" : Number(b.amount).toFixed(2)}</td>
                   <td />
-                  <td className="text-right tabular-nums">{earnedFor(Number(b.amount)).toFixed(2)}</td>
+                  <td className="text-right tabular-nums">{isEsiItem(b) ? "Payroll" : earnedFor(Number(b.amount)).toFixed(2)}</td>
                 </tr>
               ));
             })()}

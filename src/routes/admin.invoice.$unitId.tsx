@@ -33,6 +33,11 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+const ESI_COMPONENT_RE = /\besi(c)?\b/i;
+const isEsiItem = (item: { name?: unknown }) => ESI_COMPONENT_RE.test(String(item.name ?? ""));
+const contractTotalAmount = (item: { name?: unknown; amount?: unknown }) =>
+  isEsiItem(item) ? 0 : Number(item.amount) || 0;
+
 function fmtPretty(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
   return `${String(d).padStart(2, "0")} ${MONTH_NAMES[m - 1].slice(0, 3)} ${y}`;
@@ -330,7 +335,7 @@ function PayrollUnitPage() {
         if (!r.wages) return acc;
         const projTotal =
           (r.resource?.components.reduce((s, c) => s + (Number(c.amount) || 0), 0) ?? 0) +
-          (r.resource?.employerContributions.reduce((s, c) => s + (Number(c.amount) || 0), 0) ?? 0);
+          (r.resource?.employerContributions.reduce((s, c) => s + contractTotalAmount(c), 0) ?? 0);
         acc.projectedTotal += projTotal;
         acc.actualTotal += r.wages.employerCost;
         acc.tDays += r.totals.tDays;
@@ -351,7 +356,7 @@ function PayrollUnitPage() {
       const w = r.wages;
       const projTotal = r.resource
         ? r.resource.components.reduce((s, c) => s + (Number(c.amount) || 0), 0) +
-          r.resource.employerContributions.reduce((s, c) => s + (Number(c.amount) || 0), 0)
+          r.resource.employerContributions.reduce((s, c) => s + contractTotalAmount(c), 0)
         : 0;
       const actualTotal = w?.employerCost ?? 0;
       const shortfall = w ? Math.round((projTotal - actualTotal) * 100) / 100 : "";
@@ -447,7 +452,7 @@ function PayrollUnitPage() {
       .map((r) => {
         const monthly =
           (r.resource!.components.reduce((s, c) => s + (Number(c.amount) || 0), 0)) +
-          (r.resource!.employerContributions.reduce((s, c) => s + (Number(c.amount) || 0), 0));
+          (r.resource!.employerContributions.reduce((s, c) => s + contractTotalAmount(c), 0));
         const baseDays = r.wages!.baseDays || 30;
         const perDay = monthly / baseDays;
         const qty = r.totals.tDays;
@@ -603,7 +608,7 @@ function PayrollUnitPage() {
                 const isHighlighted = highlightCandidate === r.id;
                 const projTotal = r.resource
                   ? r.resource.components.reduce((s, c) => s + (Number(c.amount) || 0), 0) +
-                    r.resource.employerContributions.reduce((s, c) => s + (Number(c.amount) || 0), 0)
+                    r.resource.employerContributions.reduce((s, c) => s + contractTotalAmount(c), 0)
                   : 0;
                 const actualTotal = r.wages?.employerCost ?? 0;
                 const shortfall = r.wages ? Math.round((projTotal - actualTotal) * 100) / 100 : 0;
@@ -703,7 +708,7 @@ function SalaryBreakdownPreview({
   const componentsTotal = components.reduce((s, c) => s + c.amount, 0);
   const benefitsTotal = benefits.reduce((s, b) => s + b.amount, 0);
   const gross = componentsTotal + benefitsTotal;
-  const deductionsTotal = deductions.reduce((s, b) => s + b.amount, 0);
+  const deductionsTotal = deductions.reduce((s, b) => s + contractTotalAmount(b), 0);
   const netPayable = gross - deductionsTotal;
 
   const ratio = baseDays > 0 ? tDays / baseDays : 0;
@@ -714,7 +719,7 @@ function SalaryBreakdownPreview({
 
   const visibleComponents = components.filter((c) => c.amount > 0);
   const visibleBenefits = benefits.filter((b) => b.amount > 0);
-  const visibleDeductions = deductions.filter((b) => b.amount > 0);
+  const visibleDeductions = deductions.filter((b) => b.amount > 0 || isEsiItem(b));
 
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
@@ -796,7 +801,7 @@ function SalaryBreakdownPreview({
               visibleDeductions.map((b) => (
                 <tr key={`d-${b.name}`}>
                   <td>{b.name}</td>
-                  <td className="text-center tabular-nums">{b.amount.toFixed(2)}</td>
+                  <td className="text-center tabular-nums">{isEsiItem(b) ? "Payroll" : b.amount.toFixed(2)}</td>
                   <td />
                   <td className="text-right tabular-nums">{earnedDeductionFor(b.name, b.amount).toFixed(2)}</td>
                 </tr>
