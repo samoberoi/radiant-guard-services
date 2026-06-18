@@ -206,12 +206,16 @@ function PayrollUnitPage() {
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
 
+  const unitState = (unit as { billing_state?: string | null } | null | undefined)?.billing_state ?? null;
+  const unitPincode = (unit as { billing_pincode?: string | null } | null | undefined)?.billing_pincode ?? null;
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ["payroll-compute", unitId, start, end],
+    queryKey: ["payroll-compute", unitId, start, end, unitState, unitPincode, (ptSlabs?.length ?? 0), (pincodeRanges?.length ?? 0)],
+    enabled: !!ptSlabs && !!pincodeRanges,
     queryFn: async () => {
       // 1. Roster: candidates mapped to this unit (primary + secondary).
       const candidateCols =
-        "id, employee_code, full_name, designation_id, bank_account_holder, bank_account_number, bank_ifsc, bank_name, bank_branch, approved_at, preferred_joining_date, application_date, pan_number";
+        "id, employee_code, full_name, designation_id, gender, bank_account_holder, bank_account_number, bank_ifsc, bank_name, bank_branch, approved_at, preferred_joining_date, application_date, pan_number";
       const [{ data: primary }, { data: links }] = await Promise.all([
         supabase
           .from("candidates")
