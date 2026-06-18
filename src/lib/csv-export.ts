@@ -176,7 +176,7 @@ export async function writeXlsx(payload: ExportRequestPayload) {
         font: { name: "Calibri", sz: 10, color: { rgb: "0F172A" } },
         alignment: {
           vertical: "center",
-          horizontal: isNum ? "right" : "left",
+          horizontal: "left",
           wrapText: false,
         },
         fill: zebra
@@ -263,7 +263,7 @@ export async function writePdf(payload: ExportRequestPayload) {
   columns.forEach((_c, i) => {
     columnStyles[i] = {
       cellWidth: rawWidths[i],
-      halign: numericCols[i] ? "right" : "left",
+      halign: "left",
     };
   });
 
