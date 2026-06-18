@@ -249,21 +249,27 @@ export async function writePdf(payload: ExportRequestPayload) {
     margin + 20,
   );
 
-  // Compute proportional column widths from content length, respecting min.
-  const minColWidth = Math.max(40, Math.min(70, usableW / columns.length));
+  // Compute proportional column widths from content length so wide cells get
+  // proportionally more room. Enforce a small minimum so single-char columns
+  // don't collapse, but never let the per-column minimum exceed what fits.
+  const minColWidth = Math.min(
+    Math.max(28, Math.min(60, usableW / columns.length)),
+    Math.floor(usableW / columns.length),
+  );
   let rawWidths = maxLens.map((l) => Math.max(minColWidth, (l / totalLen) * usableW));
   const sum = rawWidths.reduce((a, b) => a + b, 0);
   // Scale so total = usableW (autotable will use these as relative anyway).
   rawWidths = rawWidths.map((w) => (w / sum) * usableW);
 
   const fontSize = columns.length > 18 ? 7 : columns.length > 12 ? 8 : columns.length > 8 ? 9 : 10;
-  const cellPadding = columns.length > 12 ? 3 : 4;
+  const cellPadding = columns.length > 12 ? 2.5 : 4;
 
   const columnStyles: Record<number, Record<string, unknown>> = {};
   columns.forEach((_c, i) => {
     columnStyles[i] = {
       cellWidth: rawWidths[i],
       halign: "left",
+      valign: "middle",
     };
   });
 
@@ -279,20 +285,25 @@ export async function writePdf(payload: ExportRequestPayload) {
       cellPadding,
       overflow: "linebreak", // wrap long cells onto multiple lines so data isn't truncated
       valign: "middle",
+      halign: "left",
       lineColor: [226, 232, 240],
       lineWidth: 0.5,
       textColor: [15, 23, 42],
+      minCellHeight: fontSize + 6,
     },
     headStyles: {
       fillColor: [30, 41, 59],
       textColor: [255, 255, 255],
       fontStyle: "bold",
       halign: "left",
+      valign: "middle",
       lineColor: [30, 41, 59],
+      overflow: "linebreak",
     },
     alternateRowStyles: { fillColor: [248, 250, 252] },
     columnStyles,
     showHead: "everyPage",
+
     didDrawPage: () => {
       const page = (doc.internal as unknown as { getNumberOfPages: () => number }).getNumberOfPages();
       doc.setFont("helvetica", "normal");
