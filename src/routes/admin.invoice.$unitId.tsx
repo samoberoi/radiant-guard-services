@@ -801,7 +801,7 @@ function SalaryBreakdownPreview({
               visibleDeductions.map((b) => (
                 <tr key={`d-${b.name}`}>
                   <td>{b.name}</td>
-                  <td className="text-center tabular-nums">{isEsiItem(b) ? "Payroll" : b.amount.toFixed(2)}</td>
+                  <td className="text-center tabular-nums">{isEsiItem(b) ? "—" : b.amount.toFixed(2)}</td>
                   <td />
                   <td className="text-right tabular-nums">{earnedDeductionFor(b.name, b.amount).toFixed(2)}</td>
                 </tr>

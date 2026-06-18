@@ -805,12 +805,12 @@ function PayrollUnitPage() {
                                     {d.name}
                                     {isEsi && (
                                       <span className="ml-2 text-[10px] text-muted-foreground">
-                                        @ 0.75% of Earned Gross, rounded up
+                                        @ 0.75% of Earned Gross − Washing − Conveyance, rounded up
                                       </span>
                                     )}
                                   </td>
                                    <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">
-                                     {isEsi ? "Payroll" : contractAmt.toFixed(2)}
+                                     {isEsi ? "—" : contractAmt.toFixed(2)}
                                    </td>
                                   <td className="px-3 py-2 text-right tabular-nums">{d.amount.toFixed(2)}</td>
                                 </tr>
