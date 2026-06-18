@@ -660,6 +660,9 @@ function PayrollUnitPage() {
             components={r.resource!.components.map((c) => ({ name: c.name, amount: Number(c.amount) || 0 }))}
             benefits={(r.resource!.benefits ?? []).map((b) => ({ name: b.name, amount: Number(b.amount) || 0 }))}
             deductions={(r.resource!.deductions ?? []).map((b) => ({ name: b.name, amount: Number(b.amount) || 0 }))}
+            earnedDeductions={r.wages!.deductions.map((b) => ({ name: b.name, amount: Number(b.amount) || 0 }))}
+            totalEarnedDeductions={r.wages!.totalDeductions}
+            earnedNetPayable={r.wages!.netPay}
           />
         ))}
         {rows.filter((r) => !r.wages).length > 0 && (
@@ -681,6 +684,9 @@ function SalaryBreakdownPreview({
   components,
   benefits,
   deductions,
+  earnedDeductions,
+  totalEarnedDeductions,
+  earnedNetPayable,
 }: {
   employeeName: string;
   employeeCode: string;
@@ -690,6 +696,9 @@ function SalaryBreakdownPreview({
   components: { name: string; amount: number }[];
   benefits: { name: string; amount: number }[];
   deductions: { name: string; amount: number }[];
+  earnedDeductions: { name: string; amount: number }[];
+  totalEarnedDeductions: number;
+  earnedNetPayable: number;
 }) {
   const componentsTotal = components.reduce((s, c) => s + c.amount, 0);
   const benefitsTotal = benefits.reduce((s, b) => s + b.amount, 0);
@@ -700,8 +709,8 @@ function SalaryBreakdownPreview({
   const ratio = baseDays > 0 ? tDays / baseDays : 0;
   const earnedFor = (amount: number) => Math.round(amount * ratio * 100) / 100;
   const earnedGross = earnedFor(gross);
-  const earnedDeductions = earnedFor(deductionsTotal);
-  const earnedNetPayable = earnedFor(netPayable);
+  const earnedDeductionFor = (name: string, amount: number) =>
+    earnedDeductions.find((d) => d.name === name)?.amount ?? earnedFor(amount);
 
   const visibleComponents = components.filter((c) => c.amount > 0);
   const visibleBenefits = benefits.filter((b) => b.amount > 0);
@@ -789,7 +798,7 @@ function SalaryBreakdownPreview({
                   <td>{b.name}</td>
                   <td className="text-center tabular-nums">{b.amount.toFixed(2)}</td>
                   <td />
-                  <td className="text-right tabular-nums">{earnedFor(b.amount).toFixed(2)}</td>
+                  <td className="text-right tabular-nums">{earnedDeductionFor(b.name, b.amount).toFixed(2)}</td>
                 </tr>
               ))
             )}
@@ -797,7 +806,7 @@ function SalaryBreakdownPreview({
               <td className="uppercase">Total Deductions Rs.</td>
               <td className="text-center tabular-nums">{deductionsTotal.toFixed(2)}</td>
               <td />
-              <td className="text-right tabular-nums">{earnedDeductions.toFixed(2)}</td>
+              <td className="text-right tabular-nums">{totalEarnedDeductions.toFixed(2)}</td>
             </tr>
             <tr className="bg-cyan-100 font-bold dark:bg-cyan-500/20">
               <td className="uppercase">Total Amount (Payable) Rs.</td>
