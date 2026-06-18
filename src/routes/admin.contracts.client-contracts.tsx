@@ -879,12 +879,10 @@ function computeBenefitAmount(
   const benefitsTotal = benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const employerTotal = employerItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   if (/\besi(c)?\b/i.test(String((benefit as { name?: string }).name ?? ""))) {
-    const name = String((benefit as { name?: string }).name ?? "");
-    const esi = calculateEsiAmounts(componentsTotal + benefitsTotal, [
-      ...wageComponents.map((c) => ({ name: c.name, amount: Number(c.amount) || 0 })),
-      ...benefitItems.map((b) => ({ name: b.name, amount: Number(b.amount) || 0 })),
-    ]);
-    return /employer/i.test(name) || (Number(benefit.percentage) || 0) > 1 ? esi.employer : esi.employee;
+    // ESI is statutory and depends on EARNED gross (post-attendance), not the
+    // monthly contract gross. We deliberately keep the contract-level amount
+    // as 0 so payroll alone computes the real figure from earned components.
+    return 0;
   }
   const norm = (s: string) => s.trim().toLowerCase();
   const grossOf = (label: string): number => {
