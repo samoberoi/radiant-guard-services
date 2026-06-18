@@ -100,10 +100,69 @@ export type WageComputation = {
   employerCost: number;
 };
 
+const ESI_NAME_RE = /\besi(c)?\b/i;
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+function applyEsiRule(
+  items: WageComponent[],
+  share: number,
+  defaultName: string,
+): WageComponent[] {
+  const hasEsi = items.some((i) => ESI_NAME_RE.test(i.name));
+  const mapped = items.map((i) =>
+    ESI_NAME_RE.test(i.name) ? { ...i, amount: share } : i,
+  );
+  // Auto-inject statutory ESI row when contract omits it, so export always
+  // reflects the rule: 0.75% / 3.25% of (Earned Gross − Washing − Conveyance).
+  if (!hasEsi && share > 0) mapped.push({ name: defaultName, amount: share });
+  return mapped;
+}
+
+export function calculateEsiAmounts(
+  earnedGross: number,
+  earnedComponents: WageComponent[],
+): { base: number; employee: number; employer: number } {
+  const earnedWashing = earnedComponents
+    .filter((c) => /washing/i.test(c.name))
+    .reduce((s, c) => s + c.amount, 0);
+  const earnedConveyance = earnedComponents
+    .filter((c) => /convey/i.test(c.name))
+    .reduce((s, c) => s + c.amount, 0);
+  const base = Math.max(0, earnedGross - earnedWashing - earnedConveyance);
+  // Statutory ESIC rule: contributions are rounded UP to the next rupee.
+  return {
+    base,
+    employee: base > 0 ? Math.ceil(base * 0.0075) : 0,
+    employer: base > 0 ? Math.ceil(base * 0.0325) : 0,
+  };
+}
+
+export function applyEsiToWageComputation(wages: WageComputation): WageComputation {
+  const esi = calculateEsiAmounts(wages.earnedGross, wages.components);
+  const deductions = applyEsiRule(wages.deductions, esi.employee, "ESI Employee Contribution");
+  const employerContributions = applyEsiRule(
+    wages.employerContributions,
+    esi.employer,
+    "ESI Employer Contribution",
+  );
+  const totalDeductions = deductions.reduce((s, d) => s + d.amount, 0);
+  const totalEmployerContributions = employerContributions.reduce((s, d) => s + d.amount, 0);
+  return {
+    ...wages,
+    deductions,
+    employerContributions,
+    totalDeductions: round2(totalDeductions),
+    totalEmployerContributions: round2(totalEmployerContributions),
+    netPay: round2(wages.earnedGross - totalDeductions),
+    employerCost: round2(wages.earnedGross + totalEmployerContributions),
+  };
+}
+
 function scaleItems(items: BenefitLike[], ratio: number): WageComponent[] {
   return items.map((i) => ({
     name: i.name,
-    amount: Math.round((Number(i.amount) || 0) * ratio * 100) / 100,
+    amount: round2((Number(i.amount) || 0) * ratio),
   }));
 }
 
@@ -138,7 +197,7 @@ export function computeWages(
 
   const components = resource.components.map((c) => ({
     name: c.name,
-    amount: Math.round((Number(c.amount) || 0) * ratio * 100) / 100,
+    amount: round2((Number(c.amount) || 0) * ratio),
   }));
   const benefits = scaleItems(resource.benefits, ratio);
   const deductionsScaled = scaleItems(resource.deductions, ratio);
