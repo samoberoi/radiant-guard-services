@@ -554,7 +554,7 @@ function PayrollUnitPage() {
         r.dateOfJoining ? r.dateOfJoining.slice(0, 10) : "",
         "", "", "",
         ...CONTRACT_COMPONENT_COLS.map((c) => lookup(contractComponents, c)),
-        w ? w.perDayRate : 0,
+        w ? w.contractGross : 0,
         w ? w.baseDays : 0,
         r.totals.tDays, r.totals.otDays,
         ...EARNED_COMPONENT_COLS.map((c) => lookup(earnedComponents, c)),
