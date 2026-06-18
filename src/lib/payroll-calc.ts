@@ -114,22 +114,16 @@ function applyEsiRule(
     ESI_NAME_RE.test(i.name) ? { ...i, amount: share } : i,
   );
   // Auto-inject statutory ESI row when contract omits it, so export always
-  // reflects the rule: 0.75% / 3.25% of (Earned Gross − Washing − Conveyance).
+  // reflects the rule: 0.75% / 3.25% of Earned Gross.
   if (!hasEsi && share > 0) mapped.push({ name: defaultName, amount: share });
   return mapped;
 }
 
 export function calculateEsiAmounts(
   earnedGross: number,
-  earnedComponents: WageComponent[],
+  _earnedComponents: WageComponent[],
 ): { base: number; employee: number; employer: number } {
-  const earnedWashing = earnedComponents
-    .filter((c) => /washing/i.test(c.name))
-    .reduce((s, c) => s + c.amount, 0);
-  const earnedConveyance = earnedComponents
-    .filter((c) => /convey/i.test(c.name))
-    .reduce((s, c) => s + c.amount, 0);
-  const base = Math.max(0, earnedGross - earnedWashing - earnedConveyance);
+  const base = Math.max(0, earnedGross);
   // Statutory ESIC rule: contributions are rounded UP to the next rupee.
   return {
     base,
@@ -218,10 +212,8 @@ export function computeWages(
     items.map((i) => (/\bepf\b/i.test(i.name) ? { ...i, amount: epfAmount } : i));
 
   // ---- Statutory ESI override ----
-  // Rule: ESI is computed on (earned Gross − earned Washing Allowance −
-  // earned Conveyance Allowance). Employee share = 0.75%, employer share
-  // = 3.25%. Washing & conveyance allowances are statutorily excluded
-  // from ESI wages. Applied to any row whose name contains "ESI".
+  // Rule: ESI is computed on earned Gross. Employee share = 0.75%,
+  // employer share = 3.25%. Applied to any row whose name contains "ESI".
   const esi = calculateEsiAmounts(earnedGross, components);
 
   const deductions = applyEsiRule(

@@ -45,6 +45,11 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+const ESI_COMPONENT_RE = /\besi(c)?\b/i;
+const isEsiItem = (item: { name?: unknown }) => ESI_COMPONENT_RE.test(String(item.name ?? ""));
+const contractTotalAmount = (item: { name?: unknown; amount?: unknown }) =>
+  isEsiItem(item) ? 0 : Number(item.amount) || 0;
+
 function fmtPretty(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
   return `${String(d).padStart(2, "0")} ${MONTH_NAMES[m - 1].slice(0, 3)} ${y}`;
@@ -793,19 +798,19 @@ function PayrollUnitPage() {
                             {r.wages.deductions.filter((d) => Number(d.amount) > 0).map((d) => {
                               const isEsi = /\besi(c)?\b/i.test(d.name);
                               const contract = r.resource!.deductions?.find((x) => x.name === d.name);
-                              const contractAmt = Number(contract?.amount) || 0;
+                              const contractAmt = contract ? contractTotalAmount(contract) : 0;
                               return (
                                 <tr key={`d-${d.name}`} className="border-b border-border/40">
                                   <td className="px-3 py-2">
                                     {d.name}
                                     {isEsi && (
                                       <span className="ml-2 text-[10px] text-muted-foreground">
-                                        @ 0.75% of (Earned Gross − Washing − Conveyance), rounded up
+                                        @ 0.75% of Earned Gross, rounded up
                                       </span>
                                     )}
                                   </td>
                                    <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">
-                                     {contractAmt.toFixed(2)}
+                                     {isEsi ? "Payroll" : contractAmt.toFixed(2)}
                                    </td>
                                   <td className="px-3 py-2 text-right tabular-nums">{d.amount.toFixed(2)}</td>
                                 </tr>
@@ -817,13 +822,13 @@ function PayrollUnitPage() {
                             <tr className="bg-rose-100 font-semibold dark:bg-rose-500/20">
                               <td className="px-3 py-2 uppercase">Total Deductions Rs.</td>
                                <td className="px-3 py-2 text-center tabular-nums">
-                                 {(r.resource.deductions?.reduce((s, d) => s + Number(d.amount), 0) ?? 0).toFixed(2)}
+                                 {(r.resource.deductions?.reduce((s, d) => s + contractTotalAmount(d), 0) ?? 0).toFixed(2)}
                                </td>
                               <td className="px-3 py-2 text-right tabular-nums">{r.wages.totalDeductions.toFixed(2)}</td>
                             </tr>
                             <tr className="bg-cyan-100 font-bold dark:bg-cyan-500/20">
                               <td className="px-3 py-2 uppercase">Total Amount (Payable) Rs.</td>
-                              <td className="px-3 py-2 text-center tabular-nums">{((r.resource.components.reduce((s, c) => s + Number(c.amount), 0) + (r.resource.benefits?.reduce((s, b) => s + Number(b.amount), 0) ?? 0)) - (r.resource.deductions?.reduce((s, d) => s + Number(d.amount), 0) ?? 0)).toFixed(2)}</td>
+                              <td className="px-3 py-2 text-center tabular-nums">{((r.resource.components.reduce((s, c) => s + Number(c.amount), 0) + (r.resource.benefits?.reduce((s, b) => s + Number(b.amount), 0) ?? 0)) - (r.resource.deductions?.reduce((s, d) => s + contractTotalAmount(d), 0) ?? 0)).toFixed(2)}</td>
                               <td className="px-3 py-2 text-right tabular-nums">{r.wages.netPay.toFixed(2)}</td>
                             </tr>
                           </tbody>
