@@ -263,7 +263,7 @@ export async function writePdf(payload: ExportRequestPayload) {
   columns.forEach((_c, i) => {
     columnStyles[i] = {
       cellWidth: rawWidths[i],
-      halign: numericCols[i] ? "right" : "left",
+      halign: "left",
     };
   });
 
