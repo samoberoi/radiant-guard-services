@@ -804,9 +804,9 @@ function PayrollUnitPage() {
                                       </span>
                                     )}
                                   </td>
-                                  <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">
-                                    {isEsi ? "—" : contractAmt.toFixed(2)}
-                                  </td>
+                                   <td className="px-3 py-2 text-center tabular-nums text-muted-foreground">
+                                     {contractAmt.toFixed(2)}
+                                   </td>
                                   <td className="px-3 py-2 text-right tabular-nums">{d.amount.toFixed(2)}</td>
                                 </tr>
                               );
