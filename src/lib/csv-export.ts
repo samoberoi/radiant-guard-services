@@ -270,7 +270,7 @@ export async function writePdf(payload: ExportRequestPayload) {
   // proportionally more room. Enforce a small minimum so single-char columns
   // don't collapse, but never let the per-column minimum exceed what fits.
   const minColWidth = Math.min(
-    Math.max(28, Math.min(60, usableW / columns.length)),
+    Math.max(44, Math.min(80, usableW / columns.length)),
     Math.floor(usableW / columns.length),
   );
   let rawWidths = maxLens.map((l) => Math.max(minColWidth, (l / totalLen) * usableW));
