@@ -172,13 +172,31 @@ export function computeWages(
   const esiBase = Math.max(0, earnedGross - earnedWashing - earnedConveyance);
   const esiEmployee = Math.round(esiBase * 0.0075 * 100) / 100;
   const esiEmployer = Math.round(esiBase * 0.0325 * 100) / 100;
-  const applyEsiRule = (items: WageComponent[], share: number) =>
-    items.map((i) => (/\besi(c)?\b/i.test(i.name) ? { ...i, amount: share } : i));
+  const ESI_NAME_RE = /\besi(c)?\b/i;
+  const applyEsiRule = (
+    items: WageComponent[],
+    share: number,
+    defaultName: string,
+  ) => {
+    const hasEsi = items.some((i) => ESI_NAME_RE.test(i.name));
+    const mapped = items.map((i) =>
+      ESI_NAME_RE.test(i.name) ? { ...i, amount: share } : i,
+    );
+    // Auto-inject statutory ESI row when contract omits it, so export always
+    // reflects the rule: 0.75% / 3.25% of (Earned Gross − Washing − Conveyance).
+    if (!hasEsi && share > 0) mapped.push({ name: defaultName, amount: share });
+    return mapped;
+  };
 
-  const deductions = applyEsiRule(applyEpfRule(deductionsScaled), esiEmployee);
+  const deductions = applyEsiRule(
+    applyEpfRule(deductionsScaled),
+    esiEmployee,
+    "ESI Employee Contribution",
+  );
   const employerContributions = applyEsiRule(
     applyEpfRule(employerContributionsScaled),
     esiEmployer,
+    "ESI Employer Contribution",
   );
 
   const totalDeductions = deductions.reduce((s, d) => s + d.amount, 0);

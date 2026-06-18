@@ -82,9 +82,16 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
   };
 }
 
-function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "amount">): string {
+function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "amount"> & { name?: string }): string {
   if (c.calc_type === "fixed") {
     return c.amount != null && c.amount > 0 ? `Fixed ₹${c.amount.toLocaleString("en-IN")}` : "Fixed amount (manual entry)";
+  }
+  const name = (c.name ?? "").toLowerCase();
+  // Statutory ESI: always 0.75% (employee) / 3.25% (employer) of
+  // (Earned Gross − Washing Allowance − Conveyance Allowance).
+  if (/\besi(c)?\b/.test(name)) {
+    const pct = c.percentage || 0.75;
+    return `${pct}% of (Earned Gross (-) Washing Allowance (-) Conveyance Allowance)`;
   }
   const parts = c.base_components.map((b, i) => (i === 0 ? b.label : `${b.operator === "-" ? "(-) " : "(+) "}${b.label}`));
   const base = parts.length ? parts.join(" ") : "—";
@@ -464,6 +471,7 @@ function CostComponentDialog({
     base_components: baseRefs,
     cap_amount: capAmount ? Number(capAmount) : null,
     amount: amount ? Number(amount) : null,
+    name,
   });
 
   return (
