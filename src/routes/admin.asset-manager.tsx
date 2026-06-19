@@ -241,6 +241,7 @@ function AssetManagerPage() {
                 <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Category</th>
                 <th className="px-5 py-3">Description</th>
+                <th className="px-5 py-3">Unit Price</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
