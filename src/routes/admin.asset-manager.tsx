@@ -382,6 +382,7 @@ function AssetFormDialog({
   const [category, setCategory] = useState("General");
   const [description, setDescription] = useState("");
   const [enabled, setEnabled] = useState(true);
+  const [unitPrice, setUnitPrice] = useState<string>("0");
   const [saving, setSaving] = useState(false);
 
   useResetOnOpen(open, () => {
@@ -389,6 +390,7 @@ function AssetFormDialog({
     setCategory(initial?.category ?? "General");
     setDescription(initial?.description ?? "");
     setEnabled(initial?.enabled ?? true);
+    setUnitPrice(initial?.unitPrice != null ? String(initial.unitPrice) : "0");
   });
 
   return (
