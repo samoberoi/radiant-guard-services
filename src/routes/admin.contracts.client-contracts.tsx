@@ -50,6 +50,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  useDialogDirty,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -3059,6 +3060,7 @@ function ResourceFormDialog({
   const [employerQuery, setEmployerQuery] = useState("");
   const [resourceBaselineSnapshot, setResourceBaselineSnapshot] = useState("");
   const dialogContentRef = useRef<HTMLDivElement | null>(null);
+  const { markDirty, markPristine } = useDialogDirty();
 
   const preserveDialogScroll = (update: () => void) => {
     const scrollTop = dialogContentRef.current?.scrollTop ?? 0;
