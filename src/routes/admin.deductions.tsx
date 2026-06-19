@@ -553,7 +553,7 @@ function DeductionForm() {
         </button>
         <button
           type="button"
-          onClick={() => { if (candidateId && typeId && amount) setStep("constraints"); }}
+          onClick={() => { if (candidateIds.length > 0 && typeId && amount) setStep("constraints"); }}
           className={`px-3 py-2 text-sm font-medium ${step === "constraints" ? "border-b-2 border-primary text-foreground" : "text-muted-foreground"}`}
         >
           Deduction Constraints
@@ -568,9 +568,9 @@ function DeductionForm() {
             <Label>* Employee</Label>
             <EmployeeCombobox
               employees={emps.data ?? []}
-              value={candidateId}
-              onChange={setCandidateId}
-              placeholder="Select employee"
+              value={candidateIds}
+              onChange={setCandidateIds}
+              placeholder="Select employees"
             />
           </div>
           <div className="grid gap-1.5">
@@ -637,7 +637,7 @@ function DeductionForm() {
 
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate({ to: "/admin/deductions", search: { mode: "list" } })} disabled={saving}>Cancel</Button>
-          <Button type="button" disabled={!candidateId || !typeId || !amount} onClick={() => setStep("constraints")}>Next step</Button>
+          <Button type="button" disabled={candidateIds.length === 0 || !typeId || !amount} onClick={() => setStep("constraints")}>Next step</Button>
         </div>
       </div>
       )}
