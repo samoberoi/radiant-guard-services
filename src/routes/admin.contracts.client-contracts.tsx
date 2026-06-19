@@ -2109,7 +2109,6 @@ function ContractFormDialog({
   const [saving, setSaving] = useState(false);
   const [resources, setResources] = useState<ContractResource[]>([]);
   const [savedResourcesSnapshot, setSavedResourcesSnapshot] = useState("[]");
-  const [resourceSaveNonce, setResourceSaveNonce] = useState(0);
   const [resourceDialog, setResourceDialog] = useState<{
     open: boolean;
     index: number | null;
@@ -2123,7 +2122,6 @@ function ContractFormDialog({
   );
   const resourcesSnapshot = useMemo(() => serializeContractResources(resources), [resources]);
   const qc = useQueryClient();
-  const { markDirty, markPristine } = useDialogDirty();
 
   const auditQ = useQuery({
     queryKey: ["contract-audit", editing?.id],
@@ -2193,8 +2191,6 @@ function ContractFormDialog({
     }
     setResources([]);
     setSavedResourcesSnapshot("[]");
-    setResourceSaveNonce(0);
-    markPristine();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id]);
 
@@ -2224,14 +2220,8 @@ function ContractFormDialog({
     if (resourcesSnapshot === snapshot && savedResourcesSnapshot === snapshot) return;
     setResources(clonedResources);
     setSavedResourcesSnapshot(snapshot);
-    markPristine();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id, existingResources.length, existingResourcesSnapshot, resources.length, resourcesSnapshot, savedResourcesSnapshot]);
-
-  useEffect(() => {
-    if (!open || resourceSaveNonce === 0) return;
-    markDirty();
-  }, [open, resourceSaveNonce, markDirty]);
 
   const selectedUnit = units.find((u) => u.id === unitId);
   const selectedOrg = selectedUnit?.customerId
@@ -2267,7 +2257,6 @@ function ContractFormDialog({
   const billingDates = selectedWindow
     ? `${selectedWindow.windowStartDay} – ${selectedWindow.windowEndDay}`
     : "—";
-  const resourcesDirty = resourcesSnapshot !== savedResourcesSnapshot;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
