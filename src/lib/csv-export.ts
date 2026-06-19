@@ -262,7 +262,9 @@ export async function writeXlsx(payload: ExportRequestPayload) {
 }
 
 export async function writePdf(payload: ExportRequestPayload) {
-  const { filename, rows, columns } = payload;
+  const filename = payload.pdfFilename ?? payload.filename;
+  const columns = payload.pdfColumns ?? payload.columns;
+  const rows = payload.pdfRows ?? payload.rows;
   const [jspdfMod, autotableMod] = await Promise.all([
     import("jspdf"),
     import("jspdf-autotable"),
