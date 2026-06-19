@@ -334,6 +334,25 @@ function PayrollUnitPage() {
         }
       }
 
+      // 3c. Asset catalog — used to surface assigned asset names and value
+      // (Unit Price × count) per employee in the payroll export.
+      const assetIdsSet = new Set<string>();
+      for (const c of roster) {
+        const ids = ((c as unknown as { assigned_asset_ids?: string[] | null }).assigned_asset_ids ?? []) as string[];
+        for (const id of ids) if (id) assetIdsSet.add(id);
+      }
+      const assetMap = new Map<string, { name: string; unitPrice: number }>();
+      if (assetIdsSet.size > 0) {
+        const { data: assetRows } = await supabase
+          .from("assets" as never)
+          .select("id, name, unit_price")
+          .in("id", Array.from(assetIdsSet));
+        for (const a of ((assetRows ?? []) as unknown as Array<{ id: string; name: string; unit_price: number | string | null }>)) {
+          assetMap.set(a.id, { name: a.name, unitPrice: Number(a.unit_price) || 0 });
+        }
+      }
+
+
 
       // Make sure we know the names of any designation_ids referenced by entries
       // that weren't in the roster's primary designation list.
