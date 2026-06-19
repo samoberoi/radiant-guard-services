@@ -508,6 +508,16 @@ function PayrollUnitPage() {
           pfNumber: ((cAny.compliance as Record<string, unknown> | null)?.pf_number as string) || "",
           esiNumber: ((cAny.compliance as Record<string, unknown> | null)?.esic_number as string) || "",
           uan: ((cAny.compliance as Record<string, unknown> | null)?.uan as string) || "",
+          assignedAssets: (() => {
+            const ids = ((cAny.assigned_asset_ids as string[] | null) ?? []) as string[];
+            const items = ids
+              .map((id) => assetMap.get(id))
+              .filter((a): a is { name: string; unitPrice: number } => !!a);
+            return {
+              names: items.map((a) => a.name),
+              totalValue: items.reduce((s, a) => s + (Number(a.unitPrice) || 0), 0),
+            };
+          })(),
         };
       });
 
