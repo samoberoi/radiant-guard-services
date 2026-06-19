@@ -450,7 +450,7 @@ function AssetFormDialog({
             disabled={saving}
             onClick={async () => {
               setSaving(true);
-              const err = await onSubmit({ name, category, description, enabled });
+              const err = await onSubmit({ name, category, description, enabled, unitPrice: Number(unitPrice) || 0 });
               setSaving(false);
               if (err) toast.error(err);
               else onOpenChange(false);
