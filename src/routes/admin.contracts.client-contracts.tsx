@@ -2122,7 +2122,6 @@ function ContractFormDialog({
     [existingResources],
   );
   const qc = useQueryClient();
-  const { markDirty, markPristine } = useDialogDirty();
 
   const auditQ = useQuery({
     queryKey: ["contract-audit", editing?.id],
@@ -2192,7 +2191,6 @@ function ContractFormDialog({
     }
     setResources([]);
     setSavedResourcesSnapshot("[]");
-    markPristine();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id]);
 
@@ -2222,18 +2220,10 @@ function ContractFormDialog({
       const prevSnapshot = serializeContractResources(prev);
       if (prev.length > 0 && prevSnapshot !== savedResourcesSnapshot) return prev;
       setSavedResourcesSnapshot(snapshot);
-      markPristine();
       return clonedResources;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id, existingResources.length, existingResourcesSnapshot]);
-
-  useEffect(() => {
-    if (!open) return;
-    if (serializeContractResources(resources) !== savedResourcesSnapshot) {
-      markDirty();
-    }
-  }, [open, resources, savedResourcesSnapshot, markDirty]);
 
   const selectedUnit = units.find((u) => u.id === unitId);
   const selectedOrg = selectedUnit?.customerId
@@ -2269,6 +2259,7 @@ function ContractFormDialog({
   const billingDates = selectedWindow
     ? `${selectedWindow.windowStartDay} – ${selectedWindow.windowEndDay}`
     : "—";
+  const resourcesDirty = serializeContractResources(resources) !== savedResourcesSnapshot;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
