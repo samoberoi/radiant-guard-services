@@ -290,7 +290,7 @@ function AssetManagerPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     No assets found.
                   </td>
                 </tr>
