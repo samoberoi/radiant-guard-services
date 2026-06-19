@@ -50,7 +50,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  useDialogDirty,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -2763,7 +2762,6 @@ function ContractFormDialog({
                 if (err) toast.error(err);
                 else {
                   setSavedResourcesSnapshot(serializeContractResources(resourcesToSave));
-                  markPristine();
                   onOpenChange(false);
                 }
               } finally {
@@ -2788,7 +2786,6 @@ function ContractFormDialog({
                 ? resources.map((x, i) => (i === resourceDialog.index ? stagedResource : x))
                 : [...resources, stagedResource];
             setResources(nextResources);
-            markDirty();
             setResourceDialog({ open: false, index: null, initial: null });
             toast.message("Resource staged — click Save Changes to confirm");
           }}
