@@ -233,6 +233,10 @@ function cloneContractResource(resource: ContractResource): ContractResource {
   };
 }
 
+function serializeContractResources(resources: ContractResource[]): string {
+  return JSON.stringify(resources.map(cloneContractResource));
+}
+
 type PayrollDayBase = {
   id: string;
   name: string;
