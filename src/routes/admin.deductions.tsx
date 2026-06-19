@@ -475,37 +475,55 @@ function DeductionForm() {
 
   const saveMut = useMutation({
     mutationFn: async () => {
-      if (!candidateId) throw new Error("Select an employee");
+      if (candidateIds.length === 0) throw new Error("Select at least one employee");
       if (!typeId) throw new Error("Select a deduction type");
       const amt = Number(amount);
       if (!Number.isFinite(amt) || amt < 0) throw new Error("Enter a valid amount");
       const inst = Math.max(1, parseInt(installments, 10) || 1);
-      const payload = {
-        candidate_id: candidateId,
-        deduction_type_id: typeId,
-        deduction_date: date,
-        deduction_name: autoName,
-        calculation_type: calc,
-        amount: amt,
-        installments: inst,
-        description: description.trim(),
-        status,
-        min_duty: Math.max(0, Number(minDuty) || 0),
-        max_duty: Math.max(0, Number(maxDuty) || 0),
-      };
+      const typePart = type?.name || "Deduction";
       if (isEdit && search.id) {
+        const payload = {
+          candidate_id: candidateIds[0],
+          deduction_type_id: typeId,
+          deduction_date: date,
+          deduction_name: autoName,
+          calculation_type: calc,
+          amount: amt,
+          installments: inst,
+          description: description.trim(),
+          status,
+          min_duty: Math.max(0, Number(minDuty) || 0),
+          max_duty: Math.max(0, Number(maxDuty) || 0),
+        };
         const { error } = await supabase.from("deductions" as never).update(payload as never).eq("id", search.id);
         if (error) throw error;
         void logActivity({ module: "Deductions", action: "update", entityType: "deductions", entityId: search.id, entityLabel: autoName });
       } else {
-        const { error } = await supabase.from("deductions" as never).insert(payload as never);
+        const rows = candidateIds.map((cid) => {
+          const e = (emps.data ?? []).find((x) => x.id === cid);
+          const codePart = e?.employee_code || e?.full_name || "EMP";
+          return {
+            candidate_id: cid,
+            deduction_type_id: typeId,
+            deduction_date: date,
+            deduction_name: `${codePart} - ${typePart} - ${date}`,
+            calculation_type: calc,
+            amount: amt,
+            installments: inst,
+            description: description.trim(),
+            status,
+            min_duty: Math.max(0, Number(minDuty) || 0),
+            max_duty: Math.max(0, Number(maxDuty) || 0),
+          };
+        });
+        const { error } = await supabase.from("deductions" as never).insert(rows as never);
         if (error) throw error;
-        void logActivity({ module: "Deductions", action: "create", entityType: "deductions", entityLabel: autoName });
+        void logActivity({ module: "Deductions", action: "create", entityType: "deductions", entityLabel: `${rows.length} deduction(s)` });
       }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK_DED });
-      toast.success(isEdit ? "Deduction updated" : "Deduction created");
+      toast.success(isEdit ? "Deduction updated" : "Deductions created");
       navigate({ to: "/admin/deductions", search: { mode: "list" } });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
