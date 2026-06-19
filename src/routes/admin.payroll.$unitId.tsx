@@ -49,6 +49,17 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+// Ledger names for one-off additions/deductions are stored as
+// "<code> - <name> - <date>" (e.g. "41084 - Uniform - 2026-05-01").
+// For display and exports we only want the middle "<name>" segment.
+function cleanLedgerName(raw: string | null | undefined): string {
+  const s = String(raw ?? "").trim();
+  if (!s) return "";
+  const parts = s.split(/\s+-\s+/);
+  if (parts.length >= 3) return parts[1].trim() || s;
+  return s;
+}
+
 const ESI_COMPONENT_RE = /\besi(c)?\b/i;
 const PT_COMPONENT_RE = /\bprofessional\s*tax\b|\bpt\b/i;
 const isEsiItem = (item: { name?: unknown }) => ESI_COMPONENT_RE.test(String(item.name ?? ""));
