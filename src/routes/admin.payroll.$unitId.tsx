@@ -524,9 +524,9 @@ function PayrollUnitPage() {
             const ids = ((cAny.assigned_asset_ids as string[] | null) ?? []) as string[];
             const items = ids
               .map((id) => assetMap.get(id))
-              .filter((a): a is { name: string } => !!a);
+              .filter((a): a is { name: string; price: number } => !!a);
             return {
-              names: items.map((a) => a.name),
+              items: items.map((a) => ({ name: a.name, price: a.price })),
             };
           })(),
         };
