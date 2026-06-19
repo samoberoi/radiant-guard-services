@@ -2109,6 +2109,7 @@ function ContractFormDialog({
   const [saving, setSaving] = useState(false);
   const [resources, setResources] = useState<ContractResource[]>([]);
   const [savedResourcesSnapshot, setSavedResourcesSnapshot] = useState("[]");
+  const [hasStagedResourceChanges, setHasStagedResourceChanges] = useState(false);
   const [resourceDialog, setResourceDialog] = useState<{
     open: boolean;
     index: number | null;
@@ -2191,6 +2192,7 @@ function ContractFormDialog({
     }
     setResources([]);
     setSavedResourcesSnapshot("[]");
+    setHasStagedResourceChanges(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id]);
 
@@ -2220,6 +2222,7 @@ function ContractFormDialog({
     if (resourcesSnapshot === snapshot && savedResourcesSnapshot === snapshot) return;
     setResources(clonedResources);
     setSavedResourcesSnapshot(snapshot);
+    setHasStagedResourceChanges(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id, existingResources.length, existingResourcesSnapshot, resources.length, resourcesSnapshot, savedResourcesSnapshot]);
 
