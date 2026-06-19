@@ -205,6 +205,33 @@ type ContractResource = {
   employerContributions: BenefitItem[];
 };
 
+function cloneBenefitItem(item: BenefitItem): BenefitItem {
+  return {
+    ...item,
+    percentage: Number(item.percentage) || 0,
+    amount: Number(item.amount) || 0,
+    baseComponents: (item.baseComponents ?? []).map((b) => ({ ...b })),
+    capAmount: item.capAmount == null ? null : Number(item.capAmount),
+  };
+}
+
+function cloneContractResource(resource: ContractResource): ContractResource {
+  return {
+    id: resource.id,
+    designationId: resource.designationId,
+    serviceTypeId: resource.serviceTypeId,
+    quantity: Number(resource.quantity) || 1,
+    components: (resource.components ?? []).map((c) => ({
+      ...c,
+      amount: Number(c.amount) || 0,
+    })),
+    payrollDayBaseId: resource.payrollDayBaseId ?? null,
+    benefits: (resource.benefits ?? []).map(cloneBenefitItem),
+    deductions: (resource.deductions ?? []).map(cloneBenefitItem),
+    employerContributions: (resource.employerContributions ?? []).map(cloneBenefitItem),
+  };
+}
+
 type PayrollDayBase = {
   id: string;
   name: string;
@@ -928,6 +955,7 @@ function computeBenefitAmount(
 }
 
 async function persistResources(contractId: string, resources: ContractResource[]) {
+  const normalizedResources = resources.map(cloneContractResource);
   const prev = await supabase
     .from("contract_resources" as never)
     .select("designation_id,service_type_id,quantity,components,benefits,deductions,employer_contributions,payroll_day_base_id,sort_order")
@@ -939,7 +967,7 @@ async function persistResources(contractId: string, resources: ContractResource[
     .delete()
     .eq("contract_id", contractId);
   if (del.error) throw del.error;
-  if (resources.length === 0) {
+  if (normalizedResources.length === 0) {
     void logActivity({
       module: "Contract Resources",
       action: "update",
@@ -950,7 +978,7 @@ async function persistResources(contractId: string, resources: ContractResource[
     });
     return;
   }
-  const rows = resources.map((r, idx) => ({
+  const rows = normalizedResources.map((r, idx) => ({
     contract_id: contractId,
     designation_id: r.designationId || null,
     service_type_id: r.serviceTypeId || null,
@@ -963,8 +991,25 @@ async function persistResources(contractId: string, resources: ContractResource[
     deductions: r.deductions,
     employer_contributions: r.employerContributions,
   }));
-  const ins = await supabase.from("contract_resources" as never).insert(rows as never);
+  const ins = await supabase
+    .from("contract_resources" as never)
+    .insert(rows as never)
+    .select("designation_id,service_type_id,quantity,components,benefits,deductions,employer_contributions,payroll_day_base_id,sort_order");
   if (ins.error) throw ins.error;
+  const savedRows = ((ins.data ?? []) as Record<string, unknown>[]).sort(
+    (a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0),
+  );
+  if (savedRows.length !== rows.length) {
+    throw new Error("Could not verify saved resources. Please try again.");
+  }
+  rows.forEach((row, idx) => {
+    const saved = savedRows[idx];
+    const expectedDeductions = JSON.stringify(row.deductions ?? []);
+    const savedDeductions = JSON.stringify(Array.isArray(saved?.deductions) ? saved.deductions : []);
+    if (expectedDeductions !== savedDeductions) {
+      throw new Error("Resource deductions were not saved correctly. Please try again.");
+    }
+  });
   void logActivity({
     module: "Contract Resources",
     action: "update",
@@ -2157,9 +2202,8 @@ function ContractFormDialog({
 
   // Hydrate existing resources when editing
   useEffect(() => {
-    if (open && editing && existingResources.length > 0) {
-      setResources(existingResources);
-    }
+    if (!open || !editing || existingResources.length === 0) return;
+    setResources((prev) => (prev.length === 0 ? existingResources.map(cloneContractResource) : prev));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id, existingResources.length]);
 
@@ -2634,14 +2678,14 @@ function ContractFormDialog({
               setResourceDialog({
                 open: true,
                 index: idx,
-                initial: resources[idx],
+                initial: cloneContractResource(resources[idx]),
               })
             }
             onCopy={(idx) =>
               setResourceDialog({
                 open: true,
                 index: null,
-                initial: { ...resources[idx], id: undefined },
+                initial: { ...cloneContractResource(resources[idx]), id: undefined },
               })
             }
             onDelete={(idx) =>
@@ -2685,7 +2729,17 @@ function ContractFormDialog({
                 createdBy: editing?.createdBy ?? null,
                 promotedAt: editing?.promotedAt ?? null,
               }, approvalValue, editing);
-              const err = await onSubmit(payload, resources);
+              const ok = await confirmAction({
+                title: editing ? "Save contract changes?" : "Create contract?",
+                description: "This will save the contract and all staged resource changes everywhere.",
+                confirmText: editing ? "Save Changes" : "Create Contract",
+                cancelText: "Review Again",
+              });
+              if (!ok) {
+                setSaving(false);
+                return;
+              }
+              const err = await onSubmit(payload, resources.map(cloneContractResource));
               setSaving(false);
               if (err) toast.error(err);
               else onOpenChange(false);
@@ -2702,10 +2756,11 @@ function ContractFormDialog({
             setResourceDialog((s) => ({ ...s, open: o }))
           }
           onSubmit={(r) => {
+            const stagedResource = cloneContractResource(r);
             const nextResources =
               resourceDialog.index !== null
-                ? resources.map((x, i) => (i === resourceDialog.index ? r : x))
-                : [...resources, r];
+                ? resources.map((x, i) => (i === resourceDialog.index ? stagedResource : x))
+                : [...resources, stagedResource];
             setResources(nextResources);
             setResourceDialog({ open: false, index: null, initial: null });
             toast.message("Resource staged — click Save Changes to confirm");
