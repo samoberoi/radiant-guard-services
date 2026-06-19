@@ -2109,6 +2109,7 @@ function ContractFormDialog({
   const [saving, setSaving] = useState(false);
   const [resources, setResources] = useState<ContractResource[]>([]);
   const [savedResourcesSnapshot, setSavedResourcesSnapshot] = useState("[]");
+  const [hasStagedResourceChanges, setHasStagedResourceChanges] = useState(false);
   const [resourceDialog, setResourceDialog] = useState<{
     open: boolean;
     index: number | null;
@@ -2191,6 +2192,7 @@ function ContractFormDialog({
     }
     setResources([]);
     setSavedResourcesSnapshot("[]");
+    setHasStagedResourceChanges(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id]);
 
@@ -2220,6 +2222,7 @@ function ContractFormDialog({
     if (resourcesSnapshot === snapshot && savedResourcesSnapshot === snapshot) return;
     setResources(clonedResources);
     setSavedResourcesSnapshot(snapshot);
+    setHasStagedResourceChanges(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id, existingResources.length, existingResourcesSnapshot, resources.length, resourcesSnapshot, savedResourcesSnapshot]);
 
@@ -2257,7 +2260,7 @@ function ContractFormDialog({
   const billingDates = selectedWindow
     ? `${selectedWindow.windowStartDay} – ${selectedWindow.windowEndDay}`
     : "—";
-  const resourcesDirty = resourcesSnapshot !== savedResourcesSnapshot;
+  const resourceSaveBypassEnabled = hasStagedResourceChanges || resourcesSnapshot !== savedResourcesSnapshot;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -2717,7 +2720,7 @@ function ContractFormDialog({
           </Button>
           <Button
             disabled={saving}
-            data-force-enabled={resourcesDirty ? "true" : undefined}
+            data-force-enabled={resourceSaveBypassEnabled ? "true" : undefined}
             onClick={async () => {
               if (!unitId) {
                 toast.error("Please select a unit");
@@ -2762,6 +2765,7 @@ function ContractFormDialog({
                 if (err) toast.error(err);
                 else {
                   setSavedResourcesSnapshot(serializeContractResources(resourcesToSave));
+                  setHasStagedResourceChanges(false);
                   onOpenChange(false);
                 }
               } finally {
@@ -2786,6 +2790,7 @@ function ContractFormDialog({
                 ? resources.map((x, i) => (i === resourceDialog.index ? stagedResource : x))
                 : [...resources, stagedResource];
             setResources(nextResources);
+            setHasStagedResourceChanges(true);
             setResourceDialog({ open: false, index: null, initial: null });
             toast.message("Resource staged — click Save Changes to confirm");
           }}
