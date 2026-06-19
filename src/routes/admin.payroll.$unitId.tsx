@@ -729,7 +729,7 @@ function PayrollUnitPage() {
         w ? w.baseDays : 0,
         r.totals.tDays, r.totals.otDays,
         ...EARNED_COMPONENT_COLS.map((c) => lookup(earnedComponents, c)),
-        ...ADDITION_COLS.map((c) => lookup(earnedAdditions, c)),
+        ...ADDITION_COLS.map((c) => lookupAdditionByAbbr(earnedAdditions, c)),
         sumAmounts(earnedAdditions),
         w ? w.earnedGross : 0,
         ...DEDUCTION_COLS.map((c) => lookup(earnedDeductions, c)),
