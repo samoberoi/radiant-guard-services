@@ -2718,6 +2718,7 @@ function ContractFormDialog({
           </Button>
           <Button
             disabled={saving}
+            data-force-enabled={resourcesDirty ? "true" : undefined}
             onClick={async () => {
               if (!unitId) {
                 toast.error("Please select a unit");
