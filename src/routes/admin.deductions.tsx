@@ -70,17 +70,25 @@ function EmployeeCombobox({
   placeholder,
 }: {
   employees: Emp[];
-  value: string;
-  onChange: (val: string) => void;
+  value: string[];
+  onChange: (val: string[]) => void;
   placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const selected = employees.find((e) => e.id === value);
-  const display = selected
-    ? `${selected.employee_code ? selected.employee_code + " - " : ""}${selected.full_name}`
-    : placeholder ?? "Select employee";
+  const selectedMap = useMemo(() => new Set(value), [value]);
+
+  const display = useMemo(() => {
+    if (value.length === 0) return placeholder ?? "Select employees";
+    if (value.length === 1) {
+      const e = employees.find((x) => x.id === value[0]);
+      return e
+        ? `${e.employee_code ? e.employee_code + " - " : ""}${e.full_name}`
+        : placeholder ?? "Select employees";
+    }
+    return `${value.length} employees selected`;
+  }, [value, employees, placeholder]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return employees;
@@ -93,6 +101,15 @@ function EmployeeCombobox({
     );
   }, [employees, search]);
 
+  const toggle = (id: string) => {
+    const next = new Set(value);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onChange(Array.from(next));
+  };
+
+  const clearAll = () => onChange([]);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -103,7 +120,20 @@ function EmployeeCombobox({
           className="w-full justify-between font-normal"
         >
           <span className="truncate">{display}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <div className="flex items-center gap-1">
+            {value.length > 0 && (
+              <span
+                className="inline-flex h-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearAll();
+                }}
+              >
+                {value.length}
+              </span>
+            )}
+            <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
+          </div>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
@@ -116,22 +146,25 @@ function EmployeeCombobox({
           <CommandList>
             <CommandEmpty>No employee found.</CommandEmpty>
             <CommandGroup>
-              {filtered.map((e) => (
-                <CommandItem
-                  key={e.id}
-                  value={e.id}
-                  onSelect={() => {
-                    onChange(e.id);
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                >
-                  <span className="truncate">
-                    {e.employee_code ? `${e.employee_code} - ` : ""}
-                    {e.full_name}
-                  </span>
-                </CommandItem>
-              ))}
+              {filtered.map((e) => {
+                const isSelected = selectedMap.has(e.id);
+                return (
+                  <CommandItem
+                    key={e.id}
+                    value={e.id}
+                    onSelect={() => toggle(e.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <div className={cn("flex h-4 w-4 items-center justify-center rounded border", isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-transparent")}>
+                      {isSelected && <Check className="h-3 w-3" />}
+                    </div>
+                    <span className="truncate">
+                      {e.employee_code ? `${e.employee_code} - ` : ""}
+                      {e.full_name}
+                    </span>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>
