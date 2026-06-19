@@ -2260,6 +2260,7 @@ function ContractFormDialog({
   const billingDates = selectedWindow
     ? `${selectedWindow.windowStartDay} – ${selectedWindow.windowEndDay}`
     : "—";
+  const resourceSaveBypassEnabled = hasStagedResourceChanges || resourcesSnapshot !== savedResourcesSnapshot;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -2719,7 +2720,7 @@ function ContractFormDialog({
           </Button>
           <Button
             disabled={saving}
-            data-force-enabled={resourcesDirty ? "true" : undefined}
+            data-force-enabled={resourceSaveBypassEnabled ? "true" : undefined}
             onClick={async () => {
               if (!unitId) {
                 toast.error("Please select a unit");
@@ -2764,8 +2765,7 @@ function ContractFormDialog({
                 if (err) toast.error(err);
                 else {
                   setSavedResourcesSnapshot(serializeContractResources(resourcesToSave));
-                  setResourceSaveNonce(0);
-                  markPristine();
+                  setHasStagedResourceChanges(false);
                   onOpenChange(false);
                 }
               } finally {
@@ -2790,7 +2790,7 @@ function ContractFormDialog({
                 ? resources.map((x, i) => (i === resourceDialog.index ? stagedResource : x))
                 : [...resources, stagedResource];
             setResources(nextResources);
-            setResourceSaveNonce((n) => n + 1);
+            setHasStagedResourceChanges(true);
             setResourceDialog({ open: false, index: null, initial: null });
             toast.message("Resource staged — click Save Changes to confirm");
           }}
