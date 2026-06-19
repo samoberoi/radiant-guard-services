@@ -15,6 +15,21 @@ export type ExportRequestPayload = {
   filename: string;
   rows: Array<Record<string, unknown>>;
   columns: ExportColumn[];
+  // Optional per-format overrides used by the chooser.
+  labels?: {
+    xlsx?: { title?: string; desc?: string };
+    pdf?: { title?: string; desc?: string };
+  };
+  pdfColumns?: ExportColumn[];
+  pdfRows?: Array<Record<string, unknown>>;
+  pdfFilename?: string;
+  mis?: {
+    filename: string;
+    rows: Array<Record<string, unknown>>;
+    columns: ExportColumn[];
+    title?: string;
+    desc?: string;
+  };
 };
 
 const EXPORT_EVENT = "lovable:export-request";
