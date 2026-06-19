@@ -261,6 +261,7 @@ function AssetManagerPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3 text-foreground/90">{i.description || "—"}</td>
+                  <td className="px-5 py-3 tabular-nums text-foreground/90">{i.unitPrice ? `₹${i.unitPrice.toLocaleString("en-IN")}` : "—"}</td>
                   <td className="px-5 py-3">
                     <Switch
                       checked={i.enabled}
