@@ -955,6 +955,7 @@ function computeBenefitAmount(
 }
 
 async function persistResources(contractId: string, resources: ContractResource[]) {
+  const normalizedResources = resources.map(cloneContractResource);
   const prev = await supabase
     .from("contract_resources" as never)
     .select("designation_id,service_type_id,quantity,components,benefits,deductions,employer_contributions,payroll_day_base_id,sort_order")
@@ -966,7 +967,7 @@ async function persistResources(contractId: string, resources: ContractResource[
     .delete()
     .eq("contract_id", contractId);
   if (del.error) throw del.error;
-  if (resources.length === 0) {
+  if (normalizedResources.length === 0) {
     void logActivity({
       module: "Contract Resources",
       action: "update",
@@ -977,7 +978,7 @@ async function persistResources(contractId: string, resources: ContractResource[
     });
     return;
   }
-  const rows = resources.map((r, idx) => ({
+  const rows = normalizedResources.map((r, idx) => ({
     contract_id: contractId,
     designation_id: r.designationId || null,
     service_type_id: r.serviceTypeId || null,
@@ -990,8 +991,25 @@ async function persistResources(contractId: string, resources: ContractResource[
     deductions: r.deductions,
     employer_contributions: r.employerContributions,
   }));
-  const ins = await supabase.from("contract_resources" as never).insert(rows as never);
+  const ins = await supabase
+    .from("contract_resources" as never)
+    .insert(rows as never)
+    .select("designation_id,service_type_id,quantity,components,benefits,deductions,employer_contributions,payroll_day_base_id,sort_order");
   if (ins.error) throw ins.error;
+  const savedRows = ((ins.data ?? []) as Record<string, unknown>[]).sort(
+    (a, b) => Number(a.sort_order ?? 0) - Number(b.sort_order ?? 0),
+  );
+  if (savedRows.length !== rows.length) {
+    throw new Error("Could not verify saved resources. Please try again.");
+  }
+  rows.forEach((row, idx) => {
+    const saved = savedRows[idx];
+    const expectedDeductions = JSON.stringify(row.deductions ?? []);
+    const savedDeductions = JSON.stringify(Array.isArray(saved?.deductions) ? saved.deductions : []);
+    if (expectedDeductions !== savedDeductions) {
+      throw new Error("Resource deductions were not saved correctly. Please try again.");
+    }
+  });
   void logActivity({
     module: "Contract Resources",
     action: "update",
