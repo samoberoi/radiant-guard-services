@@ -2202,9 +2202,8 @@ function ContractFormDialog({
 
   // Hydrate existing resources when editing
   useEffect(() => {
-    if (open && editing && existingResources.length > 0) {
-      setResources(existingResources);
-    }
+    if (!open || !editing || existingResources.length === 0) return;
+    setResources((prev) => (prev.length === 0 ? existingResources.map(cloneContractResource) : prev));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id, existingResources.length]);
 
