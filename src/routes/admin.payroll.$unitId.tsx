@@ -656,7 +656,7 @@ function PayrollUnitPage() {
       const earnedComponents = w?.components ?? [];
       const earnedDeductions = w?.deductions ?? [];
       const earnedAdditions = (w as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions ?? [];
-      const assets = r.assignedAssets ?? { names: [], totalValue: 0 };
+      const assets = r.assignedAssets ?? { names: [] };
 
       const cells: unknown[] = [
         idx + 1, periodMonth, "", clientId, customerName, siteName,
@@ -675,7 +675,6 @@ function PayrollUnitPage() {
         w ? Math.round(w.totalDeductions) : 0,
         w ? Math.round(w.netPay) : 0,
         assets.names.join(", "),
-        assets.totalValue || 0,
         r.bankAccountNumber, r.bankIfsc, r.bankName, r.bankBranch, r.bankAccountHolder,
         runStatus === "approved" ? new Date().toISOString().slice(0, 10) : "",
         "", "No", "", "",
