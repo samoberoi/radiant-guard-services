@@ -76,7 +76,7 @@ function useAssets() {
     queryFn: async (): Promise<Asset[]> => {
       const { data, error } = await supabase
         .from("assets" as never)
-        .select("id,name,category,description,enabled")
+        .select("id,name,category,description,enabled,unit_price")
         .order("category", { ascending: true })
         .order("name", { ascending: true });
       if (error) throw error;
@@ -91,6 +91,7 @@ function useAssets() {
     category: p.category.trim() || "General",
     description: p.description.trim(),
     enabled: p.enabled,
+    unit_price: Number(p.unitPrice) || 0,
   });
 
   const addMut = useMutation({
