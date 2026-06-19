@@ -2756,10 +2756,11 @@ function ContractFormDialog({
             setResourceDialog((s) => ({ ...s, open: o }))
           }
           onSubmit={(r) => {
+            const stagedResource = cloneContractResource(r);
             const nextResources =
               resourceDialog.index !== null
-                ? resources.map((x, i) => (i === resourceDialog.index ? r : x))
-                : [...resources, r];
+                ? resources.map((x, i) => (i === resourceDialog.index ? stagedResource : x))
+                : [...resources, stagedResource];
             setResources(nextResources);
             setResourceDialog({ open: false, index: null, initial: null });
             toast.message("Resource staged — click Save Changes to confirm");
