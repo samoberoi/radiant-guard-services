@@ -2678,14 +2678,14 @@ function ContractFormDialog({
               setResourceDialog({
                 open: true,
                 index: idx,
-                initial: resources[idx],
+                initial: cloneContractResource(resources[idx]),
               })
             }
             onCopy={(idx) =>
               setResourceDialog({
                 open: true,
                 index: null,
-                initial: { ...resources[idx], id: undefined },
+                initial: { ...cloneContractResource(resources[idx]), id: undefined },
               })
             }
             onDelete={(idx) =>
@@ -2729,7 +2729,17 @@ function ContractFormDialog({
                 createdBy: editing?.createdBy ?? null,
                 promotedAt: editing?.promotedAt ?? null,
               }, approvalValue, editing);
-              const err = await onSubmit(payload, resources);
+              const ok = await confirmAction({
+                title: editing ? "Save contract changes?" : "Create contract?",
+                description: "This will save the contract and all staged resource changes everywhere.",
+                confirmText: editing ? "Save Changes" : "Create Contract",
+                cancelText: "Review Again",
+              });
+              if (!ok) {
+                setSaving(false);
+                return;
+              }
+              const err = await onSubmit(payload, resources.map(cloneContractResource));
               setSaving(false);
               if (err) toast.error(err);
               else onOpenChange(false);
