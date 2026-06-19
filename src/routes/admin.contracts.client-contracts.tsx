@@ -2728,7 +2728,6 @@ function ContractFormDialog({
                 toast.error("Please select a unit");
                 return;
               }
-              setSaving(true);
               const payload = applyApprovalPickerToPayload({
                 contractCode,
                 prospectCode,
@@ -2753,19 +2752,27 @@ function ContractFormDialog({
                 promotedAt: editing?.promotedAt ?? null,
               }, approvalValue, editing);
               const ok = await confirmAction({
-                title: editing ? "Save contract changes?" : "Create contract?",
-                description: "This will save the contract and all staged resource changes everywhere.",
-                confirmText: editing ? "Save Changes" : "Create Contract",
+                title: editing ? "Confirm changes?" : "Create contract?",
+                description: editing
+                  ? "Are you sure you want to confirm and save these contract changes? The updated resource amounts will be used across payroll and related screens."
+                  : "This will create the contract and save all resource details.",
+                confirmText: editing ? "Yes, Save Changes" : "Create Contract",
                 cancelText: "Review Again",
               });
-              if (!ok) {
+              if (!ok) return;
+              setSaving(true);
+              try {
+                const resourcesToSave = resources.map(cloneContractResource);
+                const err = await onSubmit(payload, resourcesToSave);
+                if (err) toast.error(err);
+                else {
+                  setSavedResourcesSnapshot(serializeContractResources(resourcesToSave));
+                  markPristine();
+                  onOpenChange(false);
+                }
+              } finally {
                 setSaving(false);
-                return;
               }
-              const err = await onSubmit(payload, resources.map(cloneContractResource));
-              setSaving(false);
-              if (err) toast.error(err);
-              else onOpenChange(false);
             }}
           >
             {saving ? "Saving…" : editing ? "Save Changes" : "Create Contract"}
@@ -2785,6 +2792,7 @@ function ContractFormDialog({
                 ? resources.map((x, i) => (i === resourceDialog.index ? stagedResource : x))
                 : [...resources, stagedResource];
             setResources(nextResources);
+            markDirty();
             setResourceDialog({ open: false, index: null, initial: null });
             toast.message("Resource staged — click Save Changes to confirm");
           }}
