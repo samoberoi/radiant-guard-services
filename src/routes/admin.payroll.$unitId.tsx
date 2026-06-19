@@ -596,29 +596,51 @@ function PayrollUnitPage() {
     const CONTRACT_COMPONENT_COLS = collectUnique((r) => r.resource?.components);
     const EARNED_COMPONENT_COLS = collectUnique((r) => r.wages?.components);
     const DEDUCTION_COLS = collectUnique((r) => r.wages?.deductions);
-    const ADDITION_COLS = collectUnique((r) =>
-      (r.wages as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions,
-    );
-
     // Short label / initialism used as the column header for additions so
     // the export shows e.g. "PH" for Paid Holiday instead of the generic
-    // word "Additions". Falls back to first letters of each word.
-    const ABBR_MAP: Record<string, string> = {
-      paidholiday: "PH",
-      paidholidays: "PH",
-      ph: "PH",
-      bonus: "BON",
-      incentive: "INC",
-      arrears: "ARR",
-      advance: "ADV",
-    };
+    // word "Additions". Substring-matched against the raw addition name so
+    // server-generated names like "41084 - Paid Holidays - 2026-05-01" still
+    // resolve to "PH" instead of a random "4-PH" from initials.
     const abbreviate = (name: string) => {
-      const key = name.toLowerCase().replace(/[^a-z0-9]/g, "");
-      if (ABBR_MAP[key]) return ABBR_MAP[key];
-      const words = name.trim().split(/\s+/).filter(Boolean);
+      const lower = name.toLowerCase();
+      if (/paid\s*holiday/.test(lower)) return "PH";
+      if (/\bbonus\b/.test(lower)) return "BON";
+      if (/\bincentive\b/.test(lower)) return "INC";
+      if (/\barrear/.test(lower)) return "ARR";
+      if (/\badvance\b/.test(lower)) return "ADV";
+      // Strip leading employee codes / trailing dates so the initialism
+      // reflects the human-meaningful part of the name only.
+      const cleaned = name
+        .replace(/\b\d{4,}\b/g, " ")
+        .replace(/\b\d{4}-\d{2}-\d{2}\b/g, " ")
+        .replace(/[-_]+/g, " ")
+        .trim();
+      const words = cleaned.split(/\s+/).filter(Boolean);
+      if (words.length === 0) return name.slice(0, 3).toUpperCase();
       if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
       return words.map((w) => w[0]).join("").toUpperCase().slice(0, 4);
     };
+
+    // Group additions across the roster by their abbreviated label so each
+    // addition type (PH, BON, INC, …) collapses into ONE column even when
+    // the underlying rows have unique per-employee names.
+    const ADDITION_COLS: string[] = (() => {
+      const seen = new Set<string>();
+      const out: string[] = [];
+      rows.forEach((r) => {
+        const items =
+          (r.wages as unknown as { additions?: { name: string; amount: number }[] } | null)
+            ?.additions ?? [];
+        items.forEach((it) => {
+          if (!it?.name) return;
+          const abbr = abbreviate(it.name);
+          if (!abbr || seen.has(abbr)) return;
+          seen.add(abbr);
+          out.push(abbr);
+        });
+      });
+      return out;
+    })();
 
     const F_CONTRACT_COMPONENT_COLS = CONTRACT_COMPONENT_COLS.map((c) => `F ${c}`);
     const E_EARNED_COMPONENT_COLS = EARNED_COMPONENT_COLS.map((c) => `E ${c}`);
@@ -628,6 +650,17 @@ function PayrollUnitPage() {
       const target = norm(label);
       const hit = items.find((i) => norm(i.name) === target);
       return hit ? hit.amount : 0;
+    };
+
+    // For additions: sum all items whose abbreviated label matches the column.
+    const lookupAdditionByAbbr = (
+      items: { name: string; amount: number }[] | undefined,
+      abbr: string,
+    ) => {
+      if (!items) return 0;
+      return items
+        .filter((i) => abbreviate(i.name) === abbr)
+        .reduce((s, i) => s + (Number(i.amount) || 0), 0);
     };
 
     const sumAmounts = (items: { name: string; amount: number }[] | undefined) => {
@@ -643,7 +676,7 @@ function PayrollUnitPage() {
     const clientId = unit?.code || "";
     const siteName = unit?.name || "";
 
-    const ADDITION_HEADERS = ADDITION_COLS.map((c) => `+ ${abbreviate(c)}`);
+    const ADDITION_HEADERS = ADDITION_COLS.map((c) => `+ ${c}`);
 
     // Build a stable, de-duplicated list of asset names across the roster.
     // Each asset becomes its own column whose cell value is the unit price
@@ -696,7 +729,7 @@ function PayrollUnitPage() {
         w ? w.baseDays : 0,
         r.totals.tDays, r.totals.otDays,
         ...EARNED_COMPONENT_COLS.map((c) => lookup(earnedComponents, c)),
-        ...ADDITION_COLS.map((c) => lookup(earnedAdditions, c)),
+        ...ADDITION_COLS.map((c) => lookupAdditionByAbbr(earnedAdditions, c)),
         sumAmounts(earnedAdditions),
         w ? w.earnedGross : 0,
         ...DEDUCTION_COLS.map((c) => lookup(earnedDeductions, c)),
