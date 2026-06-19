@@ -205,6 +205,33 @@ type ContractResource = {
   employerContributions: BenefitItem[];
 };
 
+function cloneBenefitItem(item: BenefitItem): BenefitItem {
+  return {
+    ...item,
+    percentage: Number(item.percentage) || 0,
+    amount: Number(item.amount) || 0,
+    baseComponents: (item.baseComponents ?? []).map((b) => ({ ...b })),
+    capAmount: item.capAmount == null ? null : Number(item.capAmount),
+  };
+}
+
+function cloneContractResource(resource: ContractResource): ContractResource {
+  return {
+    id: resource.id,
+    designationId: resource.designationId,
+    serviceTypeId: resource.serviceTypeId,
+    quantity: Number(resource.quantity) || 1,
+    components: (resource.components ?? []).map((c) => ({
+      ...c,
+      amount: Number(c.amount) || 0,
+    })),
+    payrollDayBaseId: resource.payrollDayBaseId ?? null,
+    benefits: (resource.benefits ?? []).map(cloneBenefitItem),
+    deductions: (resource.deductions ?? []).map(cloneBenefitItem),
+    employerContributions: (resource.employerContributions ?? []).map(cloneBenefitItem),
+  };
+}
+
 type PayrollDayBase = {
   id: string;
   name: string;
