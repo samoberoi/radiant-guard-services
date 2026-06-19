@@ -2117,6 +2117,10 @@ function ContractFormDialog({
   }>({ open: false, index: null, initial: null });
 
   const existingResources = useContractResources(editing?.id ?? null);
+  const existingResourcesSnapshot = useMemo(
+    () => serializeContractResources(existingResources),
+    [existingResources],
+  );
   const qc = useQueryClient();
   const { markDirty, markPristine } = useDialogDirty();
 
@@ -2215,13 +2219,14 @@ function ContractFormDialog({
     const clonedResources = existingResources.map(cloneContractResource);
     const snapshot = serializeContractResources(clonedResources);
     setResources((prev) => {
-      if (prev.length > 0) return prev;
+      const prevSnapshot = serializeContractResources(prev);
+      if (prev.length > 0 && prevSnapshot !== savedResourcesSnapshot) return prev;
       setSavedResourcesSnapshot(snapshot);
       markPristine();
       return clonedResources;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editing?.id, existingResources.length]);
+  }, [open, editing?.id, existingResources.length, existingResourcesSnapshot]);
 
   useEffect(() => {
     if (!open) return;
