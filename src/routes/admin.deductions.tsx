@@ -430,7 +430,7 @@ function DeductionForm() {
     },
   });
 
-  const [candidateId, setCandidateId] = useState("");
+  const [candidateIds, setCandidateIds] = useState<string[]>([]);
   const [typeId, setTypeId] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [calc, setCalc] = useState<CalcType>("lumpsum");
@@ -446,7 +446,7 @@ function DeductionForm() {
 
   if (isEdit && existing.data && !hydrated) {
     const d = existing.data;
-    setCandidateId(d.candidate_id);
+    setCandidateIds([d.candidate_id]);
     setTypeId(d.deduction_type_id);
     setDate(d.deduction_date);
     setCalc(d.calculation_type);
@@ -459,15 +459,19 @@ function DeductionForm() {
     setHydrated(true);
   }
 
-  const emp = useMemo(() => (emps.data ?? []).find((e) => e.id === candidateId), [emps.data, candidateId]);
+  const firstEmp = useMemo(() => (emps.data ?? []).find((e) => e.id === candidateIds[0]), [emps.data, candidateIds]);
   const type = useMemo(() => (types.data ?? []).find((t) => t.id === typeId), [types.data, typeId]);
 
   // Auto-generated deduction name: "{emp_code} - {type} - {date}"
   const autoName = useMemo(() => {
-    const codePart = emp?.employee_code || emp?.full_name || "EMP";
+    if (candidateIds.length > 1) {
+      const typePart = type?.name || "Deduction";
+      return `Multiple employees - ${typePart} - ${date}`;
+    }
+    const codePart = firstEmp?.employee_code || firstEmp?.full_name || "EMP";
     const typePart = type?.name || "Deduction";
     return `${codePart} - ${typePart} - ${date}`;
-  }, [emp, type, date]);
+  }, [firstEmp, type, date, candidateIds.length]);
 
   const saveMut = useMutation({
     mutationFn: async () => {
