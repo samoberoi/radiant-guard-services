@@ -3056,6 +3056,7 @@ function ResourceFormDialog({
   const [deductionQuery, setDeductionQuery] = useState("");
   const [employerPickerOpen, setEmployerPickerOpen] = useState(false);
   const [employerQuery, setEmployerQuery] = useState("");
+  const [resourceBaselineSnapshot, setResourceBaselineSnapshot] = useState("");
   const dialogContentRef = useRef<HTMLDivElement | null>(null);
 
   const preserveDialogScroll = (update: () => void) => {
@@ -3073,42 +3074,64 @@ function ResourceFormDialog({
   useEffect(() => {
     if (!open) return;
     if (initial) {
+      const nextComponents = (() => {
+        const validIds = new Set(allowanceTypes.map((a) => a.id));
+        return initial.components
+          .filter((c) => validIds.has(c.allowanceId))
+          .map((c) => ({ ...c }));
+      })();
+      const nextBenefits = initial.benefits.map(cloneBenefitItem);
+      const nextDeductions = (initial.deductions ?? []).map(cloneBenefitItem);
+      const nextEmployerContributions = (initial.employerContributions ?? []).map(cloneBenefitItem);
       setDesignationId(initial.designationId);
       setServiceTypeId(initial.serviceTypeId);
       setQuantity(String(initial.quantity));
-      {
-        const validIds = new Set(allowanceTypes.map((a) => a.id));
-        setComponents(
-          initial.components
-            .filter((c) => validIds.has(c.allowanceId))
-            .map((c) => ({ ...c })),
-        );
-      }
+      setComponents(nextComponents);
       setPayrollDayBaseId(initial.payrollDayBaseId ?? "");
-      setBenefits(initial.benefits.map((b) => ({ ...b })));
-      setDeductions((initial.deductions ?? []).map((b) => ({ ...b })));
-      setEmployerContributions((initial.employerContributions ?? []).map((b) => ({ ...b })));
+      setBenefits(nextBenefits);
+      setDeductions(nextDeductions);
+      setEmployerContributions(nextEmployerContributions);
+      setResourceBaselineSnapshot(serializeContractResources([{ ...initial, components: nextComponents, benefits: nextBenefits, deductions: nextDeductions, employerContributions: nextEmployerContributions }]));
     } else {
+      const nextComponents = allowanceTypes
+        .filter((a) => a.isDefault)
+        .map((a) => ({
+          allowanceId: a.id,
+          name: a.shortName || a.displayName,
+          amount: 0,
+        }));
       setDesignationId("");
       setServiceTypeId("");
       setQuantity("1");
       // Pre-load defaults from allowance types
-      setComponents(
-        allowanceTypes
-          .filter((a) => a.isDefault)
-          .map((a) => ({
-            allowanceId: a.id,
-            name: a.shortName || a.displayName,
-            amount: 0,
-          })),
-      );
+      setComponents(nextComponents);
       setPayrollDayBaseId("");
       setBenefits([]);
       setDeductions([]);
       setEmployerContributions([]);
+      setResourceBaselineSnapshot(serializeContractResources([{ designationId: "", serviceTypeId: "", quantity: 1, components: nextComponents, payrollDayBaseId: null, benefits: [], deductions: [], employerContributions: [] }]));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initial, allowanceTypes.length]);
+
+  const currentResourceSnapshot = useMemo(
+    () =>
+      serializeContractResources([
+        {
+          id: initial?.id,
+          designationId,
+          serviceTypeId,
+          quantity: Number.parseInt(quantity, 10) || 1,
+          components,
+          payrollDayBaseId: payrollDayBaseId || null,
+          benefits,
+          deductions,
+          employerContributions,
+        },
+      ]),
+    [benefits, components, deductions, designationId, employerContributions, initial?.id, payrollDayBaseId, quantity, serviceTypeId],
+  );
+  const resourceHasChanges = resourceBaselineSnapshot !== "" && currentResourceSnapshot !== resourceBaselineSnapshot;
 
   const gross = components.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const usedIds = new Set(components.map((c) => c.allowanceId));
