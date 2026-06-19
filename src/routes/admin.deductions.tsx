@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Coins, Download, Edit2, Plus, Search, Trash2, ChevronLeft, ChevronsUpDown } from "lucide-react";
+import { Coins, Download, Edit2, Plus, Search, Trash2, ChevronLeft, ChevronsUpDown, Check, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { cn } from "@/lib/utils";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
@@ -70,17 +71,25 @@ function EmployeeCombobox({
   placeholder,
 }: {
   employees: Emp[];
-  value: string;
-  onChange: (val: string) => void;
+  value: string[];
+  onChange: (val: string[]) => void;
   placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const selected = employees.find((e) => e.id === value);
-  const display = selected
-    ? `${selected.employee_code ? selected.employee_code + " - " : ""}${selected.full_name}`
-    : placeholder ?? "Select employee";
+  const selectedMap = useMemo(() => new Set(value), [value]);
+
+  const display = useMemo(() => {
+    if (value.length === 0) return placeholder ?? "Select employees";
+    if (value.length === 1) {
+      const e = employees.find((x) => x.id === value[0]);
+      return e
+        ? `${e.employee_code ? e.employee_code + " - " : ""}${e.full_name}`
+        : placeholder ?? "Select employees";
+    }
+    return `${value.length} employees selected`;
+  }, [value, employees, placeholder]);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return employees;
@@ -93,6 +102,15 @@ function EmployeeCombobox({
     );
   }, [employees, search]);
 
+  const toggle = (id: string) => {
+    const next = new Set(value);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    onChange(Array.from(next));
+  };
+
+  const clearAll = () => onChange([]);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -103,7 +121,20 @@ function EmployeeCombobox({
           className="w-full justify-between font-normal"
         >
           <span className="truncate">{display}</span>
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          <div className="flex items-center gap-1">
+            {value.length > 0 && (
+              <span
+                className="inline-flex h-5 items-center justify-center rounded-full bg-primary px-1.5 text-[10px] font-bold text-primary-foreground"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  clearAll();
+                }}
+              >
+                {value.length}
+              </span>
+            )}
+            <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
+          </div>
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
@@ -116,22 +147,25 @@ function EmployeeCombobox({
           <CommandList>
             <CommandEmpty>No employee found.</CommandEmpty>
             <CommandGroup>
-              {filtered.map((e) => (
-                <CommandItem
-                  key={e.id}
-                  value={e.id}
-                  onSelect={() => {
-                    onChange(e.id);
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                >
-                  <span className="truncate">
-                    {e.employee_code ? `${e.employee_code} - ` : ""}
-                    {e.full_name}
-                  </span>
-                </CommandItem>
-              ))}
+              {filtered.map((e) => {
+                const isSelected = selectedMap.has(e.id);
+                return (
+                  <CommandItem
+                    key={e.id}
+                    value={e.id}
+                    onSelect={() => toggle(e.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <div className={cn("flex h-4 w-4 items-center justify-center rounded border", isSelected ? "border-primary bg-primary text-primary-foreground" : "border-border bg-transparent")}>
+                      {isSelected && <Check className="h-3 w-3" />}
+                    </div>
+                    <span className="truncate">
+                      {e.employee_code ? `${e.employee_code} - ` : ""}
+                      {e.full_name}
+                    </span>
+                  </CommandItem>
+                );
+              })}
             </CommandGroup>
           </CommandList>
         </Command>
@@ -396,7 +430,7 @@ function DeductionForm() {
     },
   });
 
-  const [candidateId, setCandidateId] = useState("");
+  const [candidateIds, setCandidateIds] = useState<string[]>([]);
   const [typeId, setTypeId] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [calc, setCalc] = useState<CalcType>("lumpsum");
@@ -412,7 +446,7 @@ function DeductionForm() {
 
   if (isEdit && existing.data && !hydrated) {
     const d = existing.data;
-    setCandidateId(d.candidate_id);
+    setCandidateIds([d.candidate_id]);
     setTypeId(d.deduction_type_id);
     setDate(d.deduction_date);
     setCalc(d.calculation_type);
@@ -425,49 +459,71 @@ function DeductionForm() {
     setHydrated(true);
   }
 
-  const emp = useMemo(() => (emps.data ?? []).find((e) => e.id === candidateId), [emps.data, candidateId]);
+  const firstEmp = useMemo(() => (emps.data ?? []).find((e) => e.id === candidateIds[0]), [emps.data, candidateIds]);
   const type = useMemo(() => (types.data ?? []).find((t) => t.id === typeId), [types.data, typeId]);
 
   // Auto-generated deduction name: "{emp_code} - {type} - {date}"
   const autoName = useMemo(() => {
-    const codePart = emp?.employee_code || emp?.full_name || "EMP";
+    if (candidateIds.length > 1) {
+      const typePart = type?.name || "Deduction";
+      return `Multiple employees - ${typePart} - ${date}`;
+    }
+    const codePart = firstEmp?.employee_code || firstEmp?.full_name || "EMP";
     const typePart = type?.name || "Deduction";
     return `${codePart} - ${typePart} - ${date}`;
-  }, [emp, type, date]);
+  }, [firstEmp, type, date, candidateIds.length]);
 
   const saveMut = useMutation({
     mutationFn: async () => {
-      if (!candidateId) throw new Error("Select an employee");
+      if (candidateIds.length === 0) throw new Error("Select at least one employee");
       if (!typeId) throw new Error("Select a deduction type");
       const amt = Number(amount);
       if (!Number.isFinite(amt) || amt < 0) throw new Error("Enter a valid amount");
       const inst = Math.max(1, parseInt(installments, 10) || 1);
-      const payload = {
-        candidate_id: candidateId,
-        deduction_type_id: typeId,
-        deduction_date: date,
-        deduction_name: autoName,
-        calculation_type: calc,
-        amount: amt,
-        installments: inst,
-        description: description.trim(),
-        status,
-        min_duty: Math.max(0, Number(minDuty) || 0),
-        max_duty: Math.max(0, Number(maxDuty) || 0),
-      };
+      const typePart = type?.name || "Deduction";
       if (isEdit && search.id) {
+        const payload = {
+          candidate_id: candidateIds[0],
+          deduction_type_id: typeId,
+          deduction_date: date,
+          deduction_name: autoName,
+          calculation_type: calc,
+          amount: amt,
+          installments: inst,
+          description: description.trim(),
+          status,
+          min_duty: Math.max(0, Number(minDuty) || 0),
+          max_duty: Math.max(0, Number(maxDuty) || 0),
+        };
         const { error } = await supabase.from("deductions" as never).update(payload as never).eq("id", search.id);
         if (error) throw error;
         void logActivity({ module: "Deductions", action: "update", entityType: "deductions", entityId: search.id, entityLabel: autoName });
       } else {
-        const { error } = await supabase.from("deductions" as never).insert(payload as never);
+        const rows = candidateIds.map((cid) => {
+          const e = (emps.data ?? []).find((x) => x.id === cid);
+          const codePart = e?.employee_code || e?.full_name || "EMP";
+          return {
+            candidate_id: cid,
+            deduction_type_id: typeId,
+            deduction_date: date,
+            deduction_name: `${codePart} - ${typePart} - ${date}`,
+            calculation_type: calc,
+            amount: amt,
+            installments: inst,
+            description: description.trim(),
+            status,
+            min_duty: Math.max(0, Number(minDuty) || 0),
+            max_duty: Math.max(0, Number(maxDuty) || 0),
+          };
+        });
+        const { error } = await supabase.from("deductions" as never).insert(rows as never);
         if (error) throw error;
-        void logActivity({ module: "Deductions", action: "create", entityType: "deductions", entityLabel: autoName });
+        void logActivity({ module: "Deductions", action: "create", entityType: "deductions", entityLabel: `${rows.length} deduction(s)` });
       }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QK_DED });
-      toast.success(isEdit ? "Deduction updated" : "Deduction created");
+      toast.success(isEdit ? "Deduction updated" : "Deductions created");
       navigate({ to: "/admin/deductions", search: { mode: "list" } });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
@@ -497,7 +553,7 @@ function DeductionForm() {
         </button>
         <button
           type="button"
-          onClick={() => { if (candidateId && typeId && amount) setStep("constraints"); }}
+          onClick={() => { if (candidateIds.length > 0 && typeId && amount) setStep("constraints"); }}
           className={`px-3 py-2 text-sm font-medium ${step === "constraints" ? "border-b-2 border-primary text-foreground" : "text-muted-foreground"}`}
         >
           Deduction Constraints
@@ -512,9 +568,9 @@ function DeductionForm() {
             <Label>* Employee</Label>
             <EmployeeCombobox
               employees={emps.data ?? []}
-              value={candidateId}
-              onChange={setCandidateId}
-              placeholder="Select employee"
+              value={candidateIds}
+              onChange={setCandidateIds}
+              placeholder="Select employees"
             />
           </div>
           <div className="grid gap-1.5">
@@ -581,7 +637,7 @@ function DeductionForm() {
 
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate({ to: "/admin/deductions", search: { mode: "list" } })} disabled={saving}>Cancel</Button>
-          <Button type="button" disabled={!candidateId || !typeId || !amount} onClick={() => setStep("constraints")}>Next step</Button>
+          <Button type="button" disabled={candidateIds.length === 0 || !typeId || !amount} onClick={() => setStep("constraints")}>Next step</Button>
         </div>
       </div>
       )}
