@@ -217,7 +217,7 @@ function PayrollUnitPage() {
     queryFn: async () => {
       // 1. Roster: candidates mapped to this unit (primary + secondary).
       const candidateCols =
-        "id, employee_code, full_name, designation_id, gender, bank_account_holder, bank_account_number, bank_ifsc, bank_name, bank_branch, approved_at, preferred_joining_date, application_date, pan_number, compliance, assigned_asset_ids";
+        "id, employee_code, full_name, designation_id, gender, bank_account_holder, bank_account_number, bank_ifsc, bank_name, bank_branch, approved_at, preferred_joining_date, application_date, pan_number, compliance";
       const [{ data: primary }, { data: links }] = await Promise.all([
         supabase
           .from("candidates")
@@ -333,26 +333,6 @@ function PayrollUnitPage() {
           deductionsByCandidate.set(d.candidate_id, arr);
         }
       }
-
-      // 3c. Asset catalog — used to surface assigned asset names and value
-      // (Unit Price × count) per employee in the payroll export.
-      const assetIdsSet = new Set<string>();
-      for (const c of roster) {
-        const ids = ((c as unknown as { assigned_asset_ids?: string[] | null }).assigned_asset_ids ?? []) as string[];
-        for (const id of ids) if (id) assetIdsSet.add(id);
-      }
-      const assetMap = new Map<string, { name: string; unitPrice: number }>();
-      if (assetIdsSet.size > 0) {
-        const { data: assetRows } = await supabase
-          .from("assets" as never)
-          .select("id, name, unit_price")
-          .in("id", Array.from(assetIdsSet));
-        for (const a of ((assetRows ?? []) as unknown as Array<{ id: string; name: string; unit_price: number | string | null }>)) {
-          assetMap.set(a.id, { name: a.name, unitPrice: Number(a.unit_price) || 0 });
-        }
-      }
-
-
 
       // Make sure we know the names of any designation_ids referenced by entries
       // that weren't in the roster's primary designation list.
@@ -508,16 +488,6 @@ function PayrollUnitPage() {
           pfNumber: ((cAny.compliance as Record<string, unknown> | null)?.pf_number as string) || "",
           esiNumber: ((cAny.compliance as Record<string, unknown> | null)?.esic_number as string) || "",
           uan: ((cAny.compliance as Record<string, unknown> | null)?.uan as string) || "",
-          assignedAssets: (() => {
-            const ids = ((cAny.assigned_asset_ids as string[] | null) ?? []) as string[];
-            const items = ids
-              .map((id) => assetMap.get(id))
-              .filter((a): a is { name: string; unitPrice: number } => !!a);
-            return {
-              names: items.map((a) => a.name),
-              totalValue: items.reduce((s, a) => s + (Number(a.unitPrice) || 0), 0),
-            };
-          })(),
         };
       });
 
@@ -617,11 +587,6 @@ function PayrollUnitPage() {
       const target = norm(label);
       const hit = items.find((i) => norm(i.name) === target);
       return hit ? hit.amount : 0;
-    };
-
-    const sumAmounts = (items: { name: string; amount: number }[] | undefined) => {
-      if (!items) return 0;
-      return items.reduce((s, i) => s + i.amount, 0);
     };
 
     const periodMonth = (() => {
