@@ -734,9 +734,11 @@ function PayrollUnitPage() {
         >
           <ChevronLeft className="h-4 w-4" /> Back to payroll units
         </Link>
-        <Button variant="outline" size="sm" onClick={exportCsv}>
-          <Download className="mr-1.5 h-4 w-4" /> Export
+        <Button variant="outline" size="sm" onClick={exportCsv} disabled={isLoading || rows.length === 0}>
+          <Download className="mr-1.5 h-4 w-4" />
+          {isLoading ? "Loading…" : "Export"}
         </Button>
+
       </div>
 
       <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
