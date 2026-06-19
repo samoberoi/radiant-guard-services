@@ -2701,26 +2701,14 @@ function ContractFormDialog({
           onOpenChange={(o) =>
             setResourceDialog((s) => ({ ...s, open: o }))
           }
-          onSubmit={async (r) => {
+          onSubmit={(r) => {
             const nextResources =
               resourceDialog.index !== null
                 ? resources.map((x, i) => (i === resourceDialog.index ? r : x))
                 : [...resources, r];
             setResources(nextResources);
             setResourceDialog({ open: false, index: null, initial: null });
-            // Persist immediately when editing an existing contract so the
-            // user doesn't have to click the outer "Save Changes" too.
-            if (editing?.id) {
-              try {
-                await persistResources(editing.id, nextResources);
-                await qc.invalidateQueries({
-                  queryKey: ["admin", "contract-resources", editing.id],
-                });
-                toast.success("Resource saved");
-              } catch (e) {
-                toast.error(e instanceof Error ? e.message : "Could not save resource");
-              }
-            }
+            toast.message("Resource staged — click Save Changes to confirm");
           }}
         />
       </DialogContent>
