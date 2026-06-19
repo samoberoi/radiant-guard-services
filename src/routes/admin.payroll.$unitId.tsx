@@ -334,33 +334,21 @@ function PayrollUnitPage() {
         }
       }
 
-      // 3c. Asset catalog — surface assigned asset names in the payroll export.
+      // 3c. Asset catalog — used to surface assigned asset names and value
+      // (Unit Price × count) per employee in the payroll export.
       const assetIdsSet = new Set<string>();
       for (const c of roster) {
         const ids = ((c as unknown as { assigned_asset_ids?: string[] | null }).assigned_asset_ids ?? []) as string[];
         for (const id of ids) if (id) assetIdsSet.add(id);
       }
-      const assetMap = new Map<string, { name: string; price: number }>();
+      const assetMap = new Map<string, { name: string; unitPrice: number }>();
       if (assetIdsSet.size > 0) {
         const { data: assetRows } = await supabase
           .from("assets" as never)
-          .select("id, name")
+          .select("id, name, unit_price")
           .in("id", Array.from(assetIdsSet));
-        const assetList = ((assetRows ?? []) as unknown as Array<{ id: string; name: string }>);
-        // Pull price from inventory manager (inv_items.standard_cost) by name match.
-        const names = Array.from(new Set(assetList.map((a) => a.name).filter(Boolean)));
-        const priceByName = new Map<string, number>();
-        if (names.length > 0) {
-          const { data: itemRows } = await supabase
-            .from("inv_items" as never)
-            .select("name, standard_cost")
-            .in("name", names);
-          for (const it of ((itemRows ?? []) as unknown as Array<{ name: string; standard_cost: number | null }>)) {
-            priceByName.set(it.name.toLowerCase(), Number(it.standard_cost ?? 0));
-          }
-        }
-        for (const a of assetList) {
-          assetMap.set(a.id, { name: a.name, price: priceByName.get(a.name.toLowerCase()) ?? 0 });
+        for (const a of ((assetRows ?? []) as unknown as Array<{ id: string; name: string; unit_price: number | string | null }>)) {
+          assetMap.set(a.id, { name: a.name, unitPrice: Number(a.unit_price) || 0 });
         }
       }
 
@@ -524,9 +512,10 @@ function PayrollUnitPage() {
             const ids = ((cAny.assigned_asset_ids as string[] | null) ?? []) as string[];
             const items = ids
               .map((id) => assetMap.get(id))
-              .filter((a): a is { name: string; price: number } => !!a);
+              .filter((a): a is { name: string; unitPrice: number } => !!a);
             return {
-              items: items.map((a) => ({ name: a.name, price: a.price })),
+              names: items.map((a) => a.name),
+              totalValue: items.reduce((s, a) => s + (Number(a.unitPrice) || 0), 0),
             };
           })(),
         };
@@ -596,51 +585,29 @@ function PayrollUnitPage() {
     const CONTRACT_COMPONENT_COLS = collectUnique((r) => r.resource?.components);
     const EARNED_COMPONENT_COLS = collectUnique((r) => r.wages?.components);
     const DEDUCTION_COLS = collectUnique((r) => r.wages?.deductions);
+    const ADDITION_COLS = collectUnique((r) =>
+      (r.wages as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions,
+    );
+
     // Short label / initialism used as the column header for additions so
     // the export shows e.g. "PH" for Paid Holiday instead of the generic
-    // word "Additions". Substring-matched against the raw addition name so
-    // server-generated names like "41084 - Paid Holidays - 2026-05-01" still
-    // resolve to "PH" instead of a random "4-PH" from initials.
+    // word "Additions". Falls back to first letters of each word.
+    const ABBR_MAP: Record<string, string> = {
+      paidholiday: "PH",
+      paidholidays: "PH",
+      ph: "PH",
+      bonus: "BON",
+      incentive: "INC",
+      arrears: "ARR",
+      advance: "ADV",
+    };
     const abbreviate = (name: string) => {
-      const lower = name.toLowerCase();
-      if (/paid\s*holiday/.test(lower)) return "PH";
-      if (/\bbonus\b/.test(lower)) return "BON";
-      if (/\bincentive\b/.test(lower)) return "INC";
-      if (/\barrear/.test(lower)) return "ARR";
-      if (/\badvance\b/.test(lower)) return "ADV";
-      // Strip leading employee codes / trailing dates so the initialism
-      // reflects the human-meaningful part of the name only.
-      const cleaned = name
-        .replace(/\b\d{4,}\b/g, " ")
-        .replace(/\b\d{4}-\d{2}-\d{2}\b/g, " ")
-        .replace(/[-_]+/g, " ")
-        .trim();
-      const words = cleaned.split(/\s+/).filter(Boolean);
-      if (words.length === 0) return name.slice(0, 3).toUpperCase();
+      const key = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (ABBR_MAP[key]) return ABBR_MAP[key];
+      const words = name.trim().split(/\s+/).filter(Boolean);
       if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
       return words.map((w) => w[0]).join("").toUpperCase().slice(0, 4);
     };
-
-    // Group additions across the roster by their abbreviated label so each
-    // addition type (PH, BON, INC, …) collapses into ONE column even when
-    // the underlying rows have unique per-employee names.
-    const ADDITION_COLS: string[] = (() => {
-      const seen = new Set<string>();
-      const out: string[] = [];
-      rows.forEach((r) => {
-        const items =
-          (r.wages as unknown as { additions?: { name: string; amount: number }[] } | null)
-            ?.additions ?? [];
-        items.forEach((it) => {
-          if (!it?.name) return;
-          const abbr = abbreviate(it.name);
-          if (!abbr || seen.has(abbr)) return;
-          seen.add(abbr);
-          out.push(abbr);
-        });
-      });
-      return out;
-    })();
 
     const F_CONTRACT_COMPONENT_COLS = CONTRACT_COMPONENT_COLS.map((c) => `F ${c}`);
     const E_EARNED_COMPONENT_COLS = EARNED_COMPONENT_COLS.map((c) => `E ${c}`);
@@ -650,17 +617,6 @@ function PayrollUnitPage() {
       const target = norm(label);
       const hit = items.find((i) => norm(i.name) === target);
       return hit ? hit.amount : 0;
-    };
-
-    // For additions: sum all items whose abbreviated label matches the column.
-    const lookupAdditionByAbbr = (
-      items: { name: string; amount: number }[] | undefined,
-      abbr: string,
-    ) => {
-      if (!items) return 0;
-      return items
-        .filter((i) => abbreviate(i.name) === abbr)
-        .reduce((s, i) => s + (Number(i.amount) || 0), 0);
     };
 
     const sumAmounts = (items: { name: string; amount: number }[] | undefined) => {
@@ -676,18 +632,7 @@ function PayrollUnitPage() {
     const clientId = unit?.code || "";
     const siteName = unit?.name || "";
 
-    const ADDITION_HEADERS = ADDITION_COLS.map((c) => `+ ${c}`);
-
-    // Build a stable, de-duplicated list of asset names across the roster.
-    // Each asset becomes its own column whose cell value is the unit price
-    // (sourced from Inventory Manager) when assigned to that employee.
-    const ASSET_COLS: string[] = Array.from(
-      new Set(
-        rows
-          .flatMap((r) => (r.assignedAssets?.items ?? []).map((a) => a.name))
-          .filter((n): n is string => !!n && n.trim().length > 0),
-      ),
-    ).sort((a, b) => a.localeCompare(b));
+    const ADDITION_HEADERS = ADDITION_COLS.map((c) => `+ ${abbreviate(c)}`);
 
     const headers = [
       "SI No", "Month", "Agency Branch Name", "Client ID", "Client Name", "Site Name",
@@ -701,7 +646,7 @@ function PayrollUnitPage() {
       "E Gross Salary",
       ...DEDUCTION_COLS,
       "Total Deductions", "Net Pay",
-      ...ASSET_COLS,
+      "Assigned Assets", "Asset Value",
       "Bank Acc No", "Bank IFSC", "Bank Name", "Bank Branch Name", "Bank Account Holder Name",
       "Approved Date", "Approval Info", "Is payment completed", "Payment date", "Remarks",
     ];
@@ -713,11 +658,7 @@ function PayrollUnitPage() {
       const earnedComponents = w?.components ?? [];
       const earnedDeductions = w?.deductions ?? [];
       const earnedAdditions = (w as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions ?? [];
-      const assetPriceByName = new Map<string, number>();
-      for (const a of r.assignedAssets?.items ?? []) {
-        // If the same asset is assigned more than once, sum the prices.
-        assetPriceByName.set(a.name, (assetPriceByName.get(a.name) ?? 0) + (a.price ?? 0));
-      }
+      const assets = r.assignedAssets ?? { names: [], totalValue: 0 };
 
       const cells: unknown[] = [
         idx + 1, periodMonth, "", clientId, customerName, siteName,
@@ -729,13 +670,14 @@ function PayrollUnitPage() {
         w ? w.baseDays : 0,
         r.totals.tDays, r.totals.otDays,
         ...EARNED_COMPONENT_COLS.map((c) => lookup(earnedComponents, c)),
-        ...ADDITION_COLS.map((c) => lookupAdditionByAbbr(earnedAdditions, c)),
+        ...ADDITION_COLS.map((c) => lookup(earnedAdditions, c)),
         sumAmounts(earnedAdditions),
         w ? w.earnedGross : 0,
         ...DEDUCTION_COLS.map((c) => lookup(earnedDeductions, c)),
         w ? Math.round(w.totalDeductions) : 0,
         w ? Math.round(w.netPay) : 0,
-        ...ASSET_COLS.map((c) => assetPriceByName.has(c) ? Math.round((assetPriceByName.get(c) ?? 0) * 100) / 100 : ""),
+        assets.names.join(", "),
+        assets.totalValue || 0,
         r.bankAccountNumber, r.bankIfsc, r.bankName, r.bankBranch, r.bankAccountHolder,
         runStatus === "approved" ? new Date().toISOString().slice(0, 10) : "",
         "", "No", "", "",
