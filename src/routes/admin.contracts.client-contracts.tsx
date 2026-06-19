@@ -2213,16 +2213,14 @@ function ContractFormDialog({
   // Hydrate existing resources when editing
   useEffect(() => {
     if (!open || !editing || existingResources.length === 0) return;
+    const currentSnapshot = serializeContractResources(resources);
+    if (resources.length > 0 && currentSnapshot !== savedResourcesSnapshot) return;
     const clonedResources = existingResources.map(cloneContractResource);
     const snapshot = serializeContractResources(clonedResources);
-    setResources((prev) => {
-      const prevSnapshot = serializeContractResources(prev);
-      if (prev.length > 0 && prevSnapshot !== savedResourcesSnapshot) return prev;
-      setSavedResourcesSnapshot(snapshot);
-      return clonedResources;
-    });
+    setResources(clonedResources);
+    setSavedResourcesSnapshot(snapshot);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editing?.id, existingResources.length, existingResourcesSnapshot]);
+  }, [open, editing?.id, existingResources.length, existingResourcesSnapshot, resources, savedResourcesSnapshot]);
 
   const selectedUnit = units.find((u) => u.id === unitId);
   const selectedOrg = selectedUnit?.customerId
