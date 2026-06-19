@@ -422,6 +422,18 @@ function AssetFormDialog({
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional notes" rows={3} />
           </div>
+          <div className="grid gap-2">
+            <Label>Unit Price (₹)</Label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={unitPrice}
+              onChange={(e) => setUnitPrice(e.target.value)}
+              placeholder="0"
+            />
+            <p className="text-xs text-muted-foreground">Used in payroll to value assets assigned to an employee.</p>
+          </div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
             <div>
               <div className="text-sm font-medium">Enabled</div>
