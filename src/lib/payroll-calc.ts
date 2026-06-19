@@ -101,6 +101,7 @@ export type WageComputation = {
 };
 
 const ESI_NAME_RE = /\besi(c)?\b/i;
+const ESI_EARNED_GROSS_CEILING = 21000;
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -113,8 +114,8 @@ function applyEsiRule(
   const mapped = items.map((i) =>
     ESI_NAME_RE.test(i.name) ? { ...i, amount: share } : i,
   );
-  // Auto-inject statutory ESI row when contract omits it, so export always
-  // reflects the rule: 0.75% / 3.25% of Earned Gross.
+  // Auto-inject statutory ESI row when contract omits it and the employee is
+  // eligible, so export reflects the statutory shares without stale contract rows.
   if (!hasEsi && share > 0) mapped.push({ name: defaultName, amount: share });
   return mapped;
 }
@@ -123,6 +124,10 @@ export function calculateEsiAmounts(
   earnedGross: number,
   earnedComponents: WageComponent[],
 ): { base: number; employee: number; employer: number } {
+  if (earnedGross > ESI_EARNED_GROSS_CEILING) {
+    return { base: 0, employee: 0, employer: 0 };
+  }
+
   const earnedComponentAmount = (pattern: RegExp) =>
     earnedComponents
       .filter((c) => pattern.test(c.name))
@@ -130,7 +135,8 @@ export function calculateEsiAmounts(
   const earnedWashing = earnedComponentAmount(/\bwashing\b/i);
   const earnedConveyance = earnedComponentAmount(/\bconveyance\b|\bconv\.?\b/i);
   const base = Math.max(0, earnedGross - earnedWashing - earnedConveyance);
-  // Statutory ESIC rule: contributions are rounded UP to the next rupee.
+  // Statutory ESIC rule: only up to ₹21,000 earned gross; contributions are
+  // rounded UP to the next rupee.
   return {
     base,
     employee: base > 0 ? Math.ceil(base * 0.0075) : 0,
