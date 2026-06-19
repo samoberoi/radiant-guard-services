@@ -2110,6 +2110,7 @@ function ContractFormDialog({
   const [saving, setSaving] = useState(false);
   const [resources, setResources] = useState<ContractResource[]>([]);
   const [savedResourcesSnapshot, setSavedResourcesSnapshot] = useState("[]");
+  const [resourceSaveNonce, setResourceSaveNonce] = useState(0);
   const [resourceDialog, setResourceDialog] = useState<{
     open: boolean;
     index: number | null;
@@ -2123,6 +2124,7 @@ function ContractFormDialog({
   );
   const resourcesSnapshot = useMemo(() => serializeContractResources(resources), [resources]);
   const qc = useQueryClient();
+  const { markDirty, markPristine } = useDialogDirty();
 
   const auditQ = useQuery({
     queryKey: ["contract-audit", editing?.id],
