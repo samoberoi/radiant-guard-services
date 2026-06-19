@@ -632,6 +632,8 @@ function PayrollUnitPage() {
     const clientId = unit?.code || "";
     const siteName = unit?.name || "";
 
+    const ADDITION_HEADERS = ADDITION_COLS.map((c) => `+ ${abbreviate(c)}`);
+
     const headers = [
       "SI No", "Month", "Agency Branch Name", "Client ID", "Client Name", "Site Name",
       "Employee ID", "Employee Name", "Designation", "Date Of Joining",
@@ -639,10 +641,12 @@ function PayrollUnitPage() {
       ...F_CONTRACT_COMPONENT_COLS,
       "F Gross Salary", "Fixed Duties", "Duties", "Over Time Duties",
       ...E_EARNED_COMPONENT_COLS,
-      "Additions",
+      ...ADDITION_HEADERS,
+      "Total Additions",
       "E Gross Salary",
       ...DEDUCTION_COLS,
       "Total Deductions", "Net Pay",
+      "Assigned Assets", "Asset Value",
       "Bank Acc No", "Bank IFSC", "Bank Name", "Bank Branch Name", "Bank Account Holder Name",
       "Approved Date", "Approval Info", "Is payment completed", "Payment date", "Remarks",
     ];
@@ -654,6 +658,7 @@ function PayrollUnitPage() {
       const earnedComponents = w?.components ?? [];
       const earnedDeductions = w?.deductions ?? [];
       const earnedAdditions = (w as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions ?? [];
+      const assets = r.assignedAssets ?? { names: [], totalValue: 0 };
 
       const cells: unknown[] = [
         idx + 1, periodMonth, "", clientId, customerName, siteName,
@@ -665,11 +670,14 @@ function PayrollUnitPage() {
         w ? w.baseDays : 0,
         r.totals.tDays, r.totals.otDays,
         ...EARNED_COMPONENT_COLS.map((c) => lookup(earnedComponents, c)),
+        ...ADDITION_COLS.map((c) => lookup(earnedAdditions, c)),
         sumAmounts(earnedAdditions),
         w ? w.earnedGross : 0,
         ...DEDUCTION_COLS.map((c) => lookup(earnedDeductions, c)),
         w ? Math.round(w.totalDeductions) : 0,
         w ? Math.round(w.netPay) : 0,
+        assets.names.join(", "),
+        assets.totalValue || 0,
         r.bankAccountNumber, r.bankIfsc, r.bankName, r.bankBranch, r.bankAccountHolder,
         runStatus === "approved" ? new Date().toISOString().slice(0, 10) : "",
         "", "No", "", "",
