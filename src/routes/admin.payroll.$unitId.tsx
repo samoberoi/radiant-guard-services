@@ -31,7 +31,7 @@ import {
   type PincodeRangeLike,
   type PtSlabLike,
 } from "@/lib/payroll-calc";
-import { downloadCsv } from "@/lib/csv-export";
+import { downloadCsv, openExport } from "@/lib/csv-export";
 
 const searchSchema = z.object({
   start: z.string(),
