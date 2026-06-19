@@ -63,6 +63,83 @@ function fmtINR(n: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
 }
 
+function EmployeeCombobox({
+  employees,
+  value,
+  onChange,
+  placeholder,
+}: {
+  employees: Emp[];
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const selected = employees.find((e) => e.id === value);
+  const display = selected
+    ? `${selected.employee_code ? selected.employee_code + " - " : ""}${selected.full_name}`
+    : placeholder ?? "Select employee";
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return employees;
+    const q = search.toLowerCase();
+    return employees.filter(
+      (e) =>
+        e.full_name.toLowerCase().includes(q) ||
+        e.employee_code.toLowerCase().includes(q) ||
+        (e.mobile && e.mobile.includes(q))
+    );
+  }, [employees, search]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between font-normal"
+        >
+          <span className="truncate">{display}</span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Search employee..."
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            <CommandEmpty>No employee found.</CommandEmpty>
+            <CommandGroup>
+              {filtered.map((e) => (
+                <CommandItem
+                  key={e.id}
+                  value={e.id}
+                  onSelect={() => {
+                    onChange(e.id);
+                    setOpen(false);
+                    setSearch("");
+                  }}
+                >
+                  <span className="truncate">
+                    {e.employee_code ? `${e.employee_code} - ` : ""}
+                    {e.full_name}
+                  </span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function DeductionsPage() {
   const search = Route.useSearch();
   if (search.mode === "create" || search.mode === "edit") return <DeductionForm />;
