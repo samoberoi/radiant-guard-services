@@ -2708,9 +2708,10 @@ function ContractFormDialog({
                 initial: { ...cloneContractResource(resources[idx]), id: undefined },
               })
             }
-            onDelete={(idx) =>
-              setResources((prev) => prev.filter((_, i) => i !== idx))
-            }
+            onDelete={(idx) => {
+              setResources((prev) => prev.filter((_, i) => i !== idx));
+              setHasStagedResourceChanges(true);
+            }}
           />
         </div>
 
@@ -3940,7 +3941,11 @@ function ResourceFormDialog({
           >
             Cancel
           </Button>
-          <Button type="button" data-force-enabled="true" onClick={handleSubmit}>
+          <Button
+            type="button"
+            data-force-enabled={resourceHasChanges ? "true" : undefined}
+            onClick={handleSubmit}
+          >
             {initial?.id ? "Save Resource" : "Add Resource"}
           </Button>
         </DialogFooter>
