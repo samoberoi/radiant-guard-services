@@ -340,14 +340,27 @@ function PayrollUnitPage() {
         const ids = ((c as unknown as { assigned_asset_ids?: string[] | null }).assigned_asset_ids ?? []) as string[];
         for (const id of ids) if (id) assetIdsSet.add(id);
       }
-      const assetMap = new Map<string, { name: string }>();
+      const assetMap = new Map<string, { name: string; price: number }>();
       if (assetIdsSet.size > 0) {
         const { data: assetRows } = await supabase
           .from("assets" as never)
           .select("id, name")
           .in("id", Array.from(assetIdsSet));
-        for (const a of ((assetRows ?? []) as unknown as Array<{ id: string; name: string }>)) {
-          assetMap.set(a.id, { name: a.name });
+        const assetList = ((assetRows ?? []) as unknown as Array<{ id: string; name: string }>);
+        // Pull price from inventory manager (inv_items.standard_cost) by name match.
+        const names = Array.from(new Set(assetList.map((a) => a.name).filter(Boolean)));
+        const priceByName = new Map<string, number>();
+        if (names.length > 0) {
+          const { data: itemRows } = await supabase
+            .from("inv_items" as never)
+            .select("name, standard_cost")
+            .in("name", names);
+          for (const it of ((itemRows ?? []) as unknown as Array<{ name: string; standard_cost: number | null }>)) {
+            priceByName.set(it.name.toLowerCase(), Number(it.standard_cost ?? 0));
+          }
+        }
+        for (const a of assetList) {
+          assetMap.set(a.id, { name: a.name, price: priceByName.get(a.name.toLowerCase()) ?? 0 });
         }
       }
 
@@ -511,9 +524,9 @@ function PayrollUnitPage() {
             const ids = ((cAny.assigned_asset_ids as string[] | null) ?? []) as string[];
             const items = ids
               .map((id) => assetMap.get(id))
-              .filter((a): a is { name: string } => !!a);
+              .filter((a): a is { name: string; price: number } => !!a);
             return {
-              names: items.map((a) => a.name),
+              items: items.map((a) => ({ name: a.name, price: a.price })),
             };
           })(),
         };
@@ -632,6 +645,17 @@ function PayrollUnitPage() {
 
     const ADDITION_HEADERS = ADDITION_COLS.map((c) => `+ ${abbreviate(c)}`);
 
+    // Build a stable, de-duplicated list of asset names across the roster.
+    // Each asset becomes its own column whose cell value is the unit price
+    // (sourced from Inventory Manager) when assigned to that employee.
+    const ASSET_COLS: string[] = Array.from(
+      new Set(
+        rows
+          .flatMap((r) => (r.assignedAssets?.items ?? []).map((a) => a.name))
+          .filter((n): n is string => !!n && n.trim().length > 0),
+      ),
+    ).sort((a, b) => a.localeCompare(b));
+
     const headers = [
       "SI No", "Month", "Agency Branch Name", "Client ID", "Client Name", "Site Name",
       "Employee ID", "Employee Name", "Designation", "Date Of Joining",
@@ -644,7 +668,7 @@ function PayrollUnitPage() {
       "E Gross Salary",
       ...DEDUCTION_COLS,
       "Total Deductions", "Net Pay",
-      "Assigned Assets",
+      ...ASSET_COLS,
       "Bank Acc No", "Bank IFSC", "Bank Name", "Bank Branch Name", "Bank Account Holder Name",
       "Approved Date", "Approval Info", "Is payment completed", "Payment date", "Remarks",
     ];
@@ -656,7 +680,11 @@ function PayrollUnitPage() {
       const earnedComponents = w?.components ?? [];
       const earnedDeductions = w?.deductions ?? [];
       const earnedAdditions = (w as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions ?? [];
-      const assets = r.assignedAssets ?? { names: [] };
+      const assetPriceByName = new Map<string, number>();
+      for (const a of r.assignedAssets?.items ?? []) {
+        // If the same asset is assigned more than once, sum the prices.
+        assetPriceByName.set(a.name, (assetPriceByName.get(a.name) ?? 0) + (a.price ?? 0));
+      }
 
       const cells: unknown[] = [
         idx + 1, periodMonth, "", clientId, customerName, siteName,
@@ -674,7 +702,7 @@ function PayrollUnitPage() {
         ...DEDUCTION_COLS.map((c) => lookup(earnedDeductions, c)),
         w ? Math.round(w.totalDeductions) : 0,
         w ? Math.round(w.netPay) : 0,
-        assets.names.join(", "),
+        ...ASSET_COLS.map((c) => assetPriceByName.has(c) ? Math.round((assetPriceByName.get(c) ?? 0) * 100) / 100 : ""),
         r.bankAccountNumber, r.bankIfsc, r.bankName, r.bankBranch, r.bankAccountHolder,
         runStatus === "approved" ? new Date().toISOString().slice(0, 10) : "",
         "", "No", "", "",
