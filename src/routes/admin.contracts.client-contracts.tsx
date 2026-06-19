@@ -2773,6 +2773,8 @@ function ContractFormDialog({
                 if (err) toast.error(err);
                 else {
                   setSavedResourcesSnapshot(serializeContractResources(resourcesToSave));
+                  setResourceSaveNonce(0);
+                  markPristine();
                   onOpenChange(false);
                 }
               } finally {
@@ -2797,6 +2799,7 @@ function ContractFormDialog({
                 ? resources.map((x, i) => (i === resourceDialog.index ? stagedResource : x))
                 : [...resources, stagedResource];
             setResources(nextResources);
+            setResourceSaveNonce((n) => n + 1);
             setResourceDialog({ open: false, index: null, initial: null });
             toast.message("Resource staged — click Save Changes to confirm");
           }}
