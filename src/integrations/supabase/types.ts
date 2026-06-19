@@ -133,6 +133,7 @@ export type Database = {
           enabled: boolean
           id: string
           name: string
+          unit_price: number
           updated_at: string
         }
         Insert: {
@@ -142,6 +143,7 @@ export type Database = {
           enabled?: boolean
           id?: string
           name: string
+          unit_price?: number
           updated_at?: string
         }
         Update: {
@@ -151,6 +153,7 @@ export type Database = {
           enabled?: boolean
           id?: string
           name?: string
+          unit_price?: number
           updated_at?: string
         }
         Relationships: []
