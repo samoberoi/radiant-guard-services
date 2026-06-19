@@ -2109,6 +2109,7 @@ function ContractFormDialog({
   const [unitQuery, setUnitQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [resources, setResources] = useState<ContractResource[]>([]);
+  const [savedResourcesSnapshot, setSavedResourcesSnapshot] = useState("[]");
   const [resourceDialog, setResourceDialog] = useState<{
     open: boolean;
     index: number | null;
@@ -2117,6 +2118,7 @@ function ContractFormDialog({
 
   const existingResources = useContractResources(editing?.id ?? null);
   const qc = useQueryClient();
+  const { markDirty, markPristine } = useDialogDirty();
 
   const auditQ = useQuery({
     queryKey: ["contract-audit", editing?.id],
