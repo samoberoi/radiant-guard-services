@@ -4,6 +4,7 @@ import { Coins, Download, Edit2, Plus, Search, Trash2, ChevronLeft, ChevronsUpDo
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { cn } from "@/lib/utils";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
