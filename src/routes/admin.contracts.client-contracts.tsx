@@ -3917,7 +3917,7 @@ function ResourceFormDialog({
           >
             Cancel
           </Button>
-          <Button type="button" onClick={handleSubmit}>
+          <Button type="button" data-force-enabled="true" onClick={handleSubmit}>
             {initial?.id ? "Save Resource" : "Add Resource"}
           </Button>
         </DialogFooter>
