@@ -15,6 +15,21 @@ export type ExportRequestPayload = {
   filename: string;
   rows: Array<Record<string, unknown>>;
   columns: ExportColumn[];
+  // Optional per-format overrides used by the chooser.
+  labels?: {
+    xlsx?: { title?: string; desc?: string };
+    pdf?: { title?: string; desc?: string };
+  };
+  pdfColumns?: ExportColumn[];
+  pdfRows?: Array<Record<string, unknown>>;
+  pdfFilename?: string;
+  mis?: {
+    filename: string;
+    rows: Array<Record<string, unknown>>;
+    columns: ExportColumn[];
+    title?: string;
+    desc?: string;
+  };
 };
 
 const EXPORT_EVENT = "lovable:export-request";
@@ -247,7 +262,9 @@ export async function writeXlsx(payload: ExportRequestPayload) {
 }
 
 export async function writePdf(payload: ExportRequestPayload) {
-  const { filename, rows, columns } = payload;
+  const filename = payload.pdfFilename ?? payload.filename;
+  const columns = payload.pdfColumns ?? payload.columns;
+  const rows = payload.pdfRows ?? payload.rows;
   const [jspdfMod, autotableMod] = await Promise.all([
     import("jspdf"),
     import("jspdf-autotable"),
@@ -438,6 +455,21 @@ export function downloadCsv<T extends Record<string, unknown>>(
 }
 
 export const EXPORT_REQUEST_EVENT = EXPORT_EVENT;
+
+// Open the chooser with a fully-formed payload (supports custom labels,
+// per-format columns, and an optional MIS XLS option).
+export function openExport(payload: ExportRequestPayload) {
+  if (typeof window === "undefined") {
+    writeCsv(payload);
+    return;
+  }
+  const w = window as unknown as { __lovableExportChooserMounted?: boolean };
+  if (!w.__lovableExportChooserMounted) {
+    writeCsv(payload);
+    return;
+  }
+  window.dispatchEvent(new CustomEvent<ExportRequestPayload>(EXPORT_EVENT, { detail: payload }));
+}
 
 // ---------------------------------------------------------------------------
 // Existing tiny helpers kept for compatibility

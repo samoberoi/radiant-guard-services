@@ -31,7 +31,7 @@ import {
   type PincodeRangeLike,
   type PtSlabLike,
 } from "@/lib/payroll-calc";
-import { downloadCsv } from "@/lib/csv-export";
+import { openExport } from "@/lib/csv-export";
 
 const searchSchema = z.object({
   start: z.string(),
@@ -667,7 +667,84 @@ function PayrollUnitPage() {
       return row;
     });
 
-    downloadCsv(`wage-register-${unit?.code ?? unitId}-${start}-${end}`, dataRows, columns);
+    // PDF (Pay Sheet): drop the "F <ContractComponent>" columns — keep
+    // from "F Gross Salary" through the end.
+    const pdfHeaders = headers.filter((h) => !F_CONTRACT_COMPONENT_COLS.includes(h));
+    const pdfColumns = pdfHeaders.map((h) => ({ key: h, header: h }));
+
+    // MIS: per-employee management summary.
+    const misColumns = [
+      { key: "SI No", header: "SI No" },
+      { key: "Month", header: "Month" },
+      { key: "Client ID", header: "Client ID" },
+      { key: "Client Name", header: "Client Name" },
+      { key: "Site Name", header: "Site Name" },
+      { key: "Employee ID", header: "Employee ID" },
+      { key: "Employee Name", header: "Employee Name" },
+      { key: "Designation", header: "Designation" },
+      { key: "Date Of Joining", header: "Date Of Joining" },
+      { key: "Present Days", header: "Present Days" },
+      { key: "Paid Holiday Days", header: "Paid Holiday Days" },
+      { key: "Other Paid Days", header: "Other Paid Days" },
+      { key: "OT Days", header: "OT Days" },
+      { key: "OT Hours", header: "OT Hours" },
+      { key: "Total Duties", header: "Total Duties" },
+      { key: "Fixed Days", header: "Fixed Days" },
+      { key: "Contract Gross", header: "Contract Gross" },
+      { key: "Earned Gross", header: "Earned Gross" },
+      { key: "Total Deductions", header: "Total Deductions" },
+      { key: "Net Pay", header: "Net Pay" },
+      { key: "Employer Contributions", header: "Employer Contributions" },
+      { key: "Employer Cost", header: "Employer Cost" },
+    ];
+    const misRows = rows.map((r, idx) => {
+      const w = r.wages;
+      return {
+        "SI No": idx + 1,
+        "Month": periodMonth,
+        "Client ID": clientId,
+        "Client Name": customerName,
+        "Site Name": siteName,
+        "Employee ID": r.employeeCode,
+        "Employee Name": r.name,
+        "Designation": r.designation,
+        "Date Of Joining": r.dateOfJoining ? r.dateOfJoining.slice(0, 10) : "",
+        "Present Days": r.totals.pDays,
+        "Paid Holiday Days": r.totals.phDays,
+        "Other Paid Days": r.totals.otherPaidDays,
+        "OT Days": r.totals.otDays,
+        "OT Hours": r.totals.otHours,
+        "Total Duties": r.totals.tDays,
+        "Fixed Days": w ? w.baseDays : 0,
+        "Contract Gross": w ? w.contractGross : 0,
+        "Earned Gross": w ? Math.round(w.earnedGross) : 0,
+        "Total Deductions": w ? Math.round(w.totalDeductions) : 0,
+        "Net Pay": w ? Math.round(w.netPay) : 0,
+        "Employer Contributions": w ? Math.round(w.totalEmployerContributions) : 0,
+        "Employer Cost": w ? Math.round(w.employerCost) : 0,
+      };
+    });
+
+    const baseName = `${unit?.code ?? unitId}-${start}-${end}`;
+    openExport({
+      filename: `wage-register-${baseName}`,
+      rows: dataRows,
+      columns,
+      pdfFilename: `pay-sheet-${baseName}`,
+      pdfColumns,
+      pdfRows: dataRows,
+      labels: {
+        xlsx: { title: "Download Wage Register", desc: "Full wage register (Excel)" },
+        pdf: { title: "Download Pay Sheet", desc: "Printable pay sheet (PDF)" },
+      },
+      mis: {
+        filename: `mis-${baseName}`,
+        rows: misRows,
+        columns: misColumns,
+        title: "Download MIS",
+        desc: "Management summary (Excel)",
+      },
+    });
   };
 
 
