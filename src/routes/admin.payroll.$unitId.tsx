@@ -585,6 +585,29 @@ function PayrollUnitPage() {
     const CONTRACT_COMPONENT_COLS = collectUnique((r) => r.resource?.components);
     const EARNED_COMPONENT_COLS = collectUnique((r) => r.wages?.components);
     const DEDUCTION_COLS = collectUnique((r) => r.wages?.deductions);
+    const ADDITION_COLS = collectUnique((r) =>
+      (r.wages as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions,
+    );
+
+    // Short label / initialism used as the column header for additions so
+    // the export shows e.g. "PH" for Paid Holiday instead of the generic
+    // word "Additions". Falls back to first letters of each word.
+    const ABBR_MAP: Record<string, string> = {
+      paidholiday: "PH",
+      paidholidays: "PH",
+      ph: "PH",
+      bonus: "BON",
+      incentive: "INC",
+      arrears: "ARR",
+      advance: "ADV",
+    };
+    const abbreviate = (name: string) => {
+      const key = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (ABBR_MAP[key]) return ABBR_MAP[key];
+      const words = name.trim().split(/\s+/).filter(Boolean);
+      if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
+      return words.map((w) => w[0]).join("").toUpperCase().slice(0, 4);
+    };
 
     const F_CONTRACT_COMPONENT_COLS = CONTRACT_COMPONENT_COLS.map((c) => `F ${c}`);
     const E_EARNED_COMPONENT_COLS = EARNED_COMPONENT_COLS.map((c) => `E ${c}`);
