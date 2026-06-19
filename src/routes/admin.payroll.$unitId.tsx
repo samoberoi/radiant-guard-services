@@ -645,6 +645,17 @@ function PayrollUnitPage() {
 
     const ADDITION_HEADERS = ADDITION_COLS.map((c) => `+ ${abbreviate(c)}`);
 
+    // Build a stable, de-duplicated list of asset names across the roster.
+    // Each asset becomes its own column whose cell value is the unit price
+    // (sourced from Inventory Manager) when assigned to that employee.
+    const ASSET_COLS: string[] = Array.from(
+      new Set(
+        rows
+          .flatMap((r) => (r.assignedAssets?.items ?? []).map((a) => a.name))
+          .filter((n): n is string => !!n && n.trim().length > 0),
+      ),
+    ).sort((a, b) => a.localeCompare(b));
+
     const headers = [
       "SI No", "Month", "Agency Branch Name", "Client ID", "Client Name", "Site Name",
       "Employee ID", "Employee Name", "Designation", "Date Of Joining",
@@ -657,7 +668,7 @@ function PayrollUnitPage() {
       "E Gross Salary",
       ...DEDUCTION_COLS,
       "Total Deductions", "Net Pay",
-      "Assigned Assets",
+      ...ASSET_COLS,
       "Bank Acc No", "Bank IFSC", "Bank Name", "Bank Branch Name", "Bank Account Holder Name",
       "Approved Date", "Approval Info", "Is payment completed", "Payment date", "Remarks",
     ];
@@ -669,7 +680,11 @@ function PayrollUnitPage() {
       const earnedComponents = w?.components ?? [];
       const earnedDeductions = w?.deductions ?? [];
       const earnedAdditions = (w as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions ?? [];
-      const assets = r.assignedAssets ?? { names: [] };
+      const assetPriceByName = new Map<string, number>();
+      for (const a of r.assignedAssets?.items ?? []) {
+        // If the same asset is assigned more than once, sum the prices.
+        assetPriceByName.set(a.name, (assetPriceByName.get(a.name) ?? 0) + (a.price ?? 0));
+      }
 
       const cells: unknown[] = [
         idx + 1, periodMonth, "", clientId, customerName, siteName,
@@ -687,7 +702,7 @@ function PayrollUnitPage() {
         ...DEDUCTION_COLS.map((c) => lookup(earnedDeductions, c)),
         w ? Math.round(w.totalDeductions) : 0,
         w ? Math.round(w.netPay) : 0,
-        assets.names.join(", "),
+        ...ASSET_COLS.map((c) => assetPriceByName.has(c) ? Math.round((assetPriceByName.get(c) ?? 0) * 100) / 100 : ""),
         r.bankAccountNumber, r.bankIfsc, r.bankName, r.bankBranch, r.bankAccountHolder,
         runStatus === "approved" ? new Date().toISOString().slice(0, 10) : "",
         "", "No", "", "",
