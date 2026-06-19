@@ -2187,6 +2187,8 @@ function ContractFormDialog({
       setApprovalValue(null);
     }
     setResources([]);
+    setSavedResourcesSnapshot("[]");
+    markPristine();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id]);
 
@@ -2210,9 +2212,23 @@ function ContractFormDialog({
   // Hydrate existing resources when editing
   useEffect(() => {
     if (!open || !editing || existingResources.length === 0) return;
-    setResources((prev) => (prev.length === 0 ? existingResources.map(cloneContractResource) : prev));
+    const clonedResources = existingResources.map(cloneContractResource);
+    const snapshot = serializeContractResources(clonedResources);
+    setResources((prev) => {
+      if (prev.length > 0) return prev;
+      setSavedResourcesSnapshot(snapshot);
+      markPristine();
+      return clonedResources;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id, existingResources.length]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (serializeContractResources(resources) !== savedResourcesSnapshot) {
+      markDirty();
+    }
+  }, [open, resources, savedResourcesSnapshot, markDirty]);
 
   const selectedUnit = units.find((u) => u.id === unitId);
   const selectedOrg = selectedUnit?.customerId
