@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Coins, Download, Edit2, Plus, Search, Trash2, ChevronLeft, ChevronsUpDown } from "lucide-react";
+import { Coins, Download, Edit2, Plus, Search, Trash2, ChevronLeft, ChevronsUpDown, Check, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
