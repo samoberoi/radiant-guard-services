@@ -49,6 +49,17 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+// Ledger names for one-off additions/deductions are stored as
+// "<code> - <name> - <date>" (e.g. "41084 - Uniform - 2026-05-01").
+// For display and exports we only want the middle "<name>" segment.
+function cleanLedgerName(raw: string | null | undefined): string {
+  const s = String(raw ?? "").trim();
+  if (!s) return "";
+  const parts = s.split(/\s+-\s+/);
+  if (parts.length >= 3) return parts[1].trim() || s;
+  return s;
+}
+
 const ESI_COMPONENT_RE = /\besi(c)?\b/i;
 const PT_COMPONENT_RE = /\bprofessional\s*tax\b|\bpt\b/i;
 const isEsiItem = (item: { name?: unknown }) => ESI_COMPONENT_RE.test(String(item.name ?? ""));
@@ -322,14 +333,14 @@ function PayrollUnitPage() {
           const inst = Math.max(1, Number(a.installments) || 1);
           const amt = (Number(a.amount) || 0) / inst;
           const arr = additionsByCandidate.get(a.candidate_id) ?? [];
-          arr.push({ name: a.addition_name, amount: Math.round(amt * 100) / 100 });
+          arr.push({ name: cleanLedgerName(a.addition_name), amount: Math.round(amt * 100) / 100 });
           additionsByCandidate.set(a.candidate_id, arr);
         }
         for (const d of ((dedsRes.data ?? []) as unknown as RawDed[])) {
           const inst = Math.max(1, Number(d.installments) || 1);
           const amt = (Number(d.amount) || 0) / inst;
           const arr = deductionsByCandidate.get(d.candidate_id) ?? [];
-          arr.push({ name: d.deduction_name, amount: Math.round(amt * 100) / 100 });
+          arr.push({ name: cleanLedgerName(d.deduction_name), amount: Math.round(amt * 100) / 100 });
           deductionsByCandidate.set(d.candidate_id, arr);
         }
       }
