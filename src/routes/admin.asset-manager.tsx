@@ -49,6 +49,7 @@ type Asset = {
   category: string;
   description: string;
   enabled: boolean;
+  unitPrice: number;
 };
 
 const QK = ["admin", "assets"] as const;
@@ -64,6 +65,7 @@ function rowToItem(r: Record<string, unknown>): Asset {
     category: String(r.category ?? "General"),
     description: String(r.description ?? ""),
     enabled: Boolean(r.enabled ?? true),
+    unitPrice: Number(r.unit_price ?? 0) || 0,
   };
 }
 
