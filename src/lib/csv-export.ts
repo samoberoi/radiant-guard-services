@@ -456,6 +456,21 @@ export function downloadCsv<T extends Record<string, unknown>>(
 
 export const EXPORT_REQUEST_EVENT = EXPORT_EVENT;
 
+// Open the chooser with a fully-formed payload (supports custom labels,
+// per-format columns, and an optional MIS XLS option).
+export function openExport(payload: ExportRequestPayload) {
+  if (typeof window === "undefined") {
+    writeCsv(payload);
+    return;
+  }
+  const w = window as unknown as { __lovableExportChooserMounted?: boolean };
+  if (!w.__lovableExportChooserMounted) {
+    writeCsv(payload);
+    return;
+  }
+  window.dispatchEvent(new CustomEvent<ExportRequestPayload>(EXPORT_EVENT, { detail: payload }));
+}
+
 // ---------------------------------------------------------------------------
 // Existing tiny helpers kept for compatibility
 // ---------------------------------------------------------------------------
