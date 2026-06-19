@@ -2066,6 +2066,7 @@ function ContractFormDialog({
   }>({ open: false, index: null, initial: null });
 
   const existingResources = useContractResources(editing?.id ?? null);
+  const qc = useQueryClient();
 
   const auditQ = useQuery({
     queryKey: ["contract-audit", editing?.id],
