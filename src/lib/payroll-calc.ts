@@ -344,9 +344,20 @@ export function computeWages(
     name: c.name,
     amount: round2((Number(c.amount) || 0) * ratio),
   }));
+  // Fixed (non-prorated) deduction/contribution names. These stay at the
+  // contract amount regardless of attendance — e.g. Uniform Charges is a
+  // flat monthly recovery, not pro-rated by days worked.
+  const isFixedItem = (name: string) => /\buniform\b/i.test(name);
+  const scaleItemsRespectingFixed = (items: BenefitLike[]): WageComponent[] =>
+    items.map((i) => ({
+      name: i.name,
+      amount: isFixedItem(i.name)
+        ? round2(Number(i.amount) || 0)
+        : round2((Number(i.amount) || 0) * ratio),
+    }));
   const benefits = scaleItems(resource.benefits, ratio);
-  const deductionsScaled = scaleItems(resource.deductions, ratio);
-  const employerContributionsScaled = scaleItems(resource.employerContributions, ratio);
+  const deductionsScaled = scaleItemsRespectingFixed(resource.deductions);
+  const employerContributionsScaled = scaleItemsRespectingFixed(resource.employerContributions);
 
   // ---- Statutory EPF override ----
   // Rule: EPF = 12% of (earned Gross − earned HRA), capped at a ₹15,000
