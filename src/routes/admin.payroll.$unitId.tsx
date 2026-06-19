@@ -340,14 +340,27 @@ function PayrollUnitPage() {
         const ids = ((c as unknown as { assigned_asset_ids?: string[] | null }).assigned_asset_ids ?? []) as string[];
         for (const id of ids) if (id) assetIdsSet.add(id);
       }
-      const assetMap = new Map<string, { name: string }>();
+      const assetMap = new Map<string, { name: string; price: number }>();
       if (assetIdsSet.size > 0) {
         const { data: assetRows } = await supabase
           .from("assets" as never)
           .select("id, name")
           .in("id", Array.from(assetIdsSet));
-        for (const a of ((assetRows ?? []) as unknown as Array<{ id: string; name: string }>)) {
-          assetMap.set(a.id, { name: a.name });
+        const assetList = ((assetRows ?? []) as unknown as Array<{ id: string; name: string }>);
+        // Pull price from inventory manager (inv_items.standard_cost) by name match.
+        const names = Array.from(new Set(assetList.map((a) => a.name).filter(Boolean)));
+        const priceByName = new Map<string, number>();
+        if (names.length > 0) {
+          const { data: itemRows } = await supabase
+            .from("inv_items" as never)
+            .select("name, standard_cost")
+            .in("name", names);
+          for (const it of ((itemRows ?? []) as unknown as Array<{ name: string; standard_cost: number | null }>)) {
+            priceByName.set(it.name.toLowerCase(), Number(it.standard_cost ?? 0));
+          }
+        }
+        for (const a of assetList) {
+          assetMap.set(a.id, { name: a.name, price: priceByName.get(a.name.toLowerCase()) ?? 0 });
         }
       }
 
