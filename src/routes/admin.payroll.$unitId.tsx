@@ -334,21 +334,20 @@ function PayrollUnitPage() {
         }
       }
 
-      // 3c. Asset catalog — used to surface assigned asset names and value
-      // (Unit Price × count) per employee in the payroll export.
+      // 3c. Asset catalog — surface assigned asset names in the payroll export.
       const assetIdsSet = new Set<string>();
       for (const c of roster) {
         const ids = ((c as unknown as { assigned_asset_ids?: string[] | null }).assigned_asset_ids ?? []) as string[];
         for (const id of ids) if (id) assetIdsSet.add(id);
       }
-      const assetMap = new Map<string, { name: string; unitPrice: number }>();
+      const assetMap = new Map<string, { name: string }>();
       if (assetIdsSet.size > 0) {
         const { data: assetRows } = await supabase
           .from("assets" as never)
-          .select("id, name, unit_price")
+          .select("id, name")
           .in("id", Array.from(assetIdsSet));
-        for (const a of ((assetRows ?? []) as unknown as Array<{ id: string; name: string; unit_price: number | string | null }>)) {
-          assetMap.set(a.id, { name: a.name, unitPrice: Number(a.unit_price) || 0 });
+        for (const a of ((assetRows ?? []) as unknown as Array<{ id: string; name: string }>)) {
+          assetMap.set(a.id, { name: a.name });
         }
       }
 
@@ -512,10 +511,9 @@ function PayrollUnitPage() {
             const ids = ((cAny.assigned_asset_ids as string[] | null) ?? []) as string[];
             const items = ids
               .map((id) => assetMap.get(id))
-              .filter((a): a is { name: string; unitPrice: number } => !!a);
+              .filter((a): a is { name: string } => !!a);
             return {
               names: items.map((a) => a.name),
-              totalValue: items.reduce((s, a) => s + (Number(a.unitPrice) || 0), 0),
             };
           })(),
         };
@@ -646,7 +644,7 @@ function PayrollUnitPage() {
       "E Gross Salary",
       ...DEDUCTION_COLS,
       "Total Deductions", "Net Pay",
-      "Assigned Assets", "Asset Value",
+      "Assigned Assets",
       "Bank Acc No", "Bank IFSC", "Bank Name", "Bank Branch Name", "Bank Account Holder Name",
       "Approved Date", "Approval Info", "Is payment completed", "Payment date", "Remarks",
     ];
@@ -658,7 +656,7 @@ function PayrollUnitPage() {
       const earnedComponents = w?.components ?? [];
       const earnedDeductions = w?.deductions ?? [];
       const earnedAdditions = (w as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions ?? [];
-      const assets = r.assignedAssets ?? { names: [], totalValue: 0 };
+      const assets = r.assignedAssets ?? { names: [] };
 
       const cells: unknown[] = [
         idx + 1, periodMonth, "", clientId, customerName, siteName,
@@ -677,7 +675,6 @@ function PayrollUnitPage() {
         w ? Math.round(w.totalDeductions) : 0,
         w ? Math.round(w.netPay) : 0,
         assets.names.join(", "),
-        assets.totalValue || 0,
         r.bankAccountNumber, r.bankIfsc, r.bankName, r.bankBranch, r.bankAccountHolder,
         runStatus === "approved" ? new Date().toISOString().slice(0, 10) : "",
         "", "No", "", "",
