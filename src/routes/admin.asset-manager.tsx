@@ -49,6 +49,7 @@ type Asset = {
   category: string;
   description: string;
   enabled: boolean;
+  unitPrice: number;
 };
 
 const QK = ["admin", "assets"] as const;
@@ -64,6 +65,7 @@ function rowToItem(r: Record<string, unknown>): Asset {
     category: String(r.category ?? "General"),
     description: String(r.description ?? ""),
     enabled: Boolean(r.enabled ?? true),
+    unitPrice: Number(r.unit_price ?? 0) || 0,
   };
 }
 
@@ -74,7 +76,7 @@ function useAssets() {
     queryFn: async (): Promise<Asset[]> => {
       const { data, error } = await supabase
         .from("assets" as never)
-        .select("id,name,category,description,enabled")
+        .select("id,name,category,description,enabled,unit_price")
         .order("category", { ascending: true })
         .order("name", { ascending: true });
       if (error) throw error;
@@ -89,6 +91,7 @@ function useAssets() {
     category: p.category.trim() || "General",
     description: p.description.trim(),
     enabled: p.enabled,
+    unit_price: Number(p.unitPrice) || 0,
   });
 
   const addMut = useMutation({
@@ -207,12 +210,14 @@ function AssetManagerPage() {
                   name: i.name,
                   category: i.category,
                   description: i.description,
+                  unit_price: i.unitPrice,
                   enabled: i.enabled ? "Yes" : "No",
                 })),
                 [
                   { key: "name", header: "Name" },
                   { key: "category", header: "Category" },
                   { key: "description", header: "Description" },
+                  { key: "unit_price", header: "Unit Price (₹)" },
                   { key: "enabled", header: "Enabled" },
                 ],
               )
@@ -236,6 +241,7 @@ function AssetManagerPage() {
                 <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Category</th>
                 <th className="px-5 py-3">Description</th>
+                <th className="px-5 py-3">Unit Price</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
@@ -255,6 +261,7 @@ function AssetManagerPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3 text-foreground/90">{i.description || "—"}</td>
+                  <td className="px-5 py-3 tabular-nums text-foreground/90">{i.unitPrice ? `₹${i.unitPrice.toLocaleString("en-IN")}` : "—"}</td>
                   <td className="px-5 py-3">
                     <Switch
                       checked={i.enabled}
@@ -283,7 +290,7 @@ function AssetManagerPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     No assets found.
                   </td>
                 </tr>
@@ -375,6 +382,7 @@ function AssetFormDialog({
   const [category, setCategory] = useState("General");
   const [description, setDescription] = useState("");
   const [enabled, setEnabled] = useState(true);
+  const [unitPrice, setUnitPrice] = useState<string>("0");
   const [saving, setSaving] = useState(false);
 
   useResetOnOpen(open, () => {
@@ -382,6 +390,7 @@ function AssetFormDialog({
     setCategory(initial?.category ?? "General");
     setDescription(initial?.description ?? "");
     setEnabled(initial?.enabled ?? true);
+    setUnitPrice(initial?.unitPrice != null ? String(initial.unitPrice) : "0");
   });
 
   return (
@@ -413,6 +422,18 @@ function AssetFormDialog({
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Optional notes" rows={3} />
           </div>
+          <div className="grid gap-2">
+            <Label>Unit Price (₹)</Label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={unitPrice}
+              onChange={(e) => setUnitPrice(e.target.value)}
+              placeholder="0"
+            />
+            <p className="text-xs text-muted-foreground">Used in payroll to value assets assigned to an employee.</p>
+          </div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
             <div>
               <div className="text-sm font-medium">Enabled</div>
@@ -429,7 +450,7 @@ function AssetFormDialog({
             disabled={saving}
             onClick={async () => {
               setSaving(true);
-              const err = await onSubmit({ name, category, description, enabled });
+              const err = await onSubmit({ name, category, description, enabled, unitPrice: Number(unitPrice) || 0 });
               setSaving(false);
               if (err) toast.error(err);
               else onOpenChange(false);

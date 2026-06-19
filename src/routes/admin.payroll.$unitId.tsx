@@ -217,7 +217,7 @@ function PayrollUnitPage() {
     queryFn: async () => {
       // 1. Roster: candidates mapped to this unit (primary + secondary).
       const candidateCols =
-        "id, employee_code, full_name, designation_id, gender, bank_account_holder, bank_account_number, bank_ifsc, bank_name, bank_branch, approved_at, preferred_joining_date, application_date, pan_number";
+        "id, employee_code, full_name, designation_id, gender, bank_account_holder, bank_account_number, bank_ifsc, bank_name, bank_branch, approved_at, preferred_joining_date, application_date, pan_number, compliance, assigned_asset_ids";
       const [{ data: primary }, { data: links }] = await Promise.all([
         supabase
           .from("candidates")
@@ -333,6 +333,25 @@ function PayrollUnitPage() {
           deductionsByCandidate.set(d.candidate_id, arr);
         }
       }
+
+      // 3c. Asset catalog — used to surface assigned asset names and value
+      // (Unit Price × count) per employee in the payroll export.
+      const assetIdsSet = new Set<string>();
+      for (const c of roster) {
+        const ids = ((c as unknown as { assigned_asset_ids?: string[] | null }).assigned_asset_ids ?? []) as string[];
+        for (const id of ids) if (id) assetIdsSet.add(id);
+      }
+      const assetMap = new Map<string, { name: string; unitPrice: number }>();
+      if (assetIdsSet.size > 0) {
+        const { data: assetRows } = await supabase
+          .from("assets" as never)
+          .select("id, name, unit_price")
+          .in("id", Array.from(assetIdsSet));
+        for (const a of ((assetRows ?? []) as unknown as Array<{ id: string; name: string; unit_price: number | string | null }>)) {
+          assetMap.set(a.id, { name: a.name, unitPrice: Number(a.unit_price) || 0 });
+        }
+      }
+
 
 
       // Make sure we know the names of any designation_ids referenced by entries
@@ -489,6 +508,16 @@ function PayrollUnitPage() {
           pfNumber: ((cAny.compliance as Record<string, unknown> | null)?.pf_number as string) || "",
           esiNumber: ((cAny.compliance as Record<string, unknown> | null)?.esic_number as string) || "",
           uan: ((cAny.compliance as Record<string, unknown> | null)?.uan as string) || "",
+          assignedAssets: (() => {
+            const ids = ((cAny.assigned_asset_ids as string[] | null) ?? []) as string[];
+            const items = ids
+              .map((id) => assetMap.get(id))
+              .filter((a): a is { name: string; unitPrice: number } => !!a);
+            return {
+              names: items.map((a) => a.name),
+              totalValue: items.reduce((s, a) => s + (Number(a.unitPrice) || 0), 0),
+            };
+          })(),
         };
       });
 
@@ -556,6 +585,29 @@ function PayrollUnitPage() {
     const CONTRACT_COMPONENT_COLS = collectUnique((r) => r.resource?.components);
     const EARNED_COMPONENT_COLS = collectUnique((r) => r.wages?.components);
     const DEDUCTION_COLS = collectUnique((r) => r.wages?.deductions);
+    const ADDITION_COLS = collectUnique((r) =>
+      (r.wages as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions,
+    );
+
+    // Short label / initialism used as the column header for additions so
+    // the export shows e.g. "PH" for Paid Holiday instead of the generic
+    // word "Additions". Falls back to first letters of each word.
+    const ABBR_MAP: Record<string, string> = {
+      paidholiday: "PH",
+      paidholidays: "PH",
+      ph: "PH",
+      bonus: "BON",
+      incentive: "INC",
+      arrears: "ARR",
+      advance: "ADV",
+    };
+    const abbreviate = (name: string) => {
+      const key = name.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (ABBR_MAP[key]) return ABBR_MAP[key];
+      const words = name.trim().split(/\s+/).filter(Boolean);
+      if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
+      return words.map((w) => w[0]).join("").toUpperCase().slice(0, 4);
+    };
 
     const F_CONTRACT_COMPONENT_COLS = CONTRACT_COMPONENT_COLS.map((c) => `F ${c}`);
     const E_EARNED_COMPONENT_COLS = EARNED_COMPONENT_COLS.map((c) => `E ${c}`);
@@ -580,6 +632,8 @@ function PayrollUnitPage() {
     const clientId = unit?.code || "";
     const siteName = unit?.name || "";
 
+    const ADDITION_HEADERS = ADDITION_COLS.map((c) => `+ ${abbreviate(c)}`);
+
     const headers = [
       "SI No", "Month", "Agency Branch Name", "Client ID", "Client Name", "Site Name",
       "Employee ID", "Employee Name", "Designation", "Date Of Joining",
@@ -587,10 +641,12 @@ function PayrollUnitPage() {
       ...F_CONTRACT_COMPONENT_COLS,
       "F Gross Salary", "Fixed Duties", "Duties", "Over Time Duties",
       ...E_EARNED_COMPONENT_COLS,
-      "Additions",
+      ...ADDITION_HEADERS,
+      "Total Additions",
       "E Gross Salary",
       ...DEDUCTION_COLS,
       "Total Deductions", "Net Pay",
+      "Assigned Assets", "Asset Value",
       "Bank Acc No", "Bank IFSC", "Bank Name", "Bank Branch Name", "Bank Account Holder Name",
       "Approved Date", "Approval Info", "Is payment completed", "Payment date", "Remarks",
     ];
@@ -602,6 +658,7 @@ function PayrollUnitPage() {
       const earnedComponents = w?.components ?? [];
       const earnedDeductions = w?.deductions ?? [];
       const earnedAdditions = (w as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions ?? [];
+      const assets = r.assignedAssets ?? { names: [], totalValue: 0 };
 
       const cells: unknown[] = [
         idx + 1, periodMonth, "", clientId, customerName, siteName,
@@ -613,11 +670,14 @@ function PayrollUnitPage() {
         w ? w.baseDays : 0,
         r.totals.tDays, r.totals.otDays,
         ...EARNED_COMPONENT_COLS.map((c) => lookup(earnedComponents, c)),
+        ...ADDITION_COLS.map((c) => lookup(earnedAdditions, c)),
         sumAmounts(earnedAdditions),
         w ? w.earnedGross : 0,
         ...DEDUCTION_COLS.map((c) => lookup(earnedDeductions, c)),
         w ? Math.round(w.totalDeductions) : 0,
         w ? Math.round(w.netPay) : 0,
+        assets.names.join(", "),
+        assets.totalValue || 0,
         r.bankAccountNumber, r.bankIfsc, r.bankName, r.bankBranch, r.bankAccountHolder,
         runStatus === "approved" ? new Date().toISOString().slice(0, 10) : "",
         "", "No", "", "",
