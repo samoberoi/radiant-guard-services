@@ -433,14 +433,12 @@ function DeductionForm() {
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div className="grid gap-1.5">
             <Label>* Employee</Label>
-            <Select value={candidateId} onValueChange={setCandidateId}>
-              <SelectTrigger><SelectValue placeholder="Select employee" /></SelectTrigger>
-              <SelectContent className="max-h-72">
-                {(emps.data ?? []).map((e) => (
-                  <SelectItem key={e.id} value={e.id}>{e.employee_code ? `${e.employee_code} - ` : ""}{e.full_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <EmployeeCombobox
+              employees={emps.data ?? []}
+              value={candidateId}
+              onChange={setCandidateId}
+              placeholder="Select employee"
+            />
           </div>
           <div className="grid gap-1.5">
             <Label>* Deduction Type</Label>
