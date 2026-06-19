@@ -2120,6 +2120,7 @@ function ContractFormDialog({
     () => serializeContractResources(existingResources),
     [existingResources],
   );
+  const resourcesSnapshot = useMemo(() => serializeContractResources(resources), [resources]);
   const qc = useQueryClient();
 
   const auditQ = useQuery({
@@ -2213,14 +2214,14 @@ function ContractFormDialog({
   // Hydrate existing resources when editing
   useEffect(() => {
     if (!open || !editing || existingResources.length === 0) return;
-    const currentSnapshot = serializeContractResources(resources);
-    if (resources.length > 0 && currentSnapshot !== savedResourcesSnapshot) return;
     const clonedResources = existingResources.map(cloneContractResource);
     const snapshot = serializeContractResources(clonedResources);
+    if (resources.length > 0 && resourcesSnapshot !== savedResourcesSnapshot) return;
+    if (resourcesSnapshot === snapshot && savedResourcesSnapshot === snapshot) return;
     setResources(clonedResources);
     setSavedResourcesSnapshot(snapshot);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editing?.id, existingResources.length, existingResourcesSnapshot, resources, savedResourcesSnapshot]);
+  }, [open, editing?.id, existingResources.length, existingResourcesSnapshot, resources.length, resourcesSnapshot, savedResourcesSnapshot]);
 
   const selectedUnit = units.find((u) => u.id === unitId);
   const selectedOrg = selectedUnit?.customerId
@@ -2256,7 +2257,7 @@ function ContractFormDialog({
   const billingDates = selectedWindow
     ? `${selectedWindow.windowStartDay} – ${selectedWindow.windowEndDay}`
     : "—";
-  const resourcesDirty = serializeContractResources(resources) !== savedResourcesSnapshot;
+  const resourcesDirty = resourcesSnapshot !== savedResourcesSnapshot;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
