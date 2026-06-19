@@ -210,12 +210,14 @@ function AssetManagerPage() {
                   name: i.name,
                   category: i.category,
                   description: i.description,
+                  unit_price: i.unitPrice,
                   enabled: i.enabled ? "Yes" : "No",
                 })),
                 [
                   { key: "name", header: "Name" },
                   { key: "category", header: "Category" },
                   { key: "description", header: "Description" },
+                  { key: "unit_price", header: "Unit Price (₹)" },
                   { key: "enabled", header: "Enabled" },
                 ],
               )
