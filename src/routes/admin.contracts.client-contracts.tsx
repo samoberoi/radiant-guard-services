@@ -232,6 +232,10 @@ function cloneContractResource(resource: ContractResource): ContractResource {
   };
 }
 
+function serializeContractResources(resources: ContractResource[]): string {
+  return JSON.stringify(resources.map(cloneContractResource));
+}
+
 type PayrollDayBase = {
   id: string;
   name: string;
@@ -2104,6 +2108,7 @@ function ContractFormDialog({
   const [unitQuery, setUnitQuery] = useState("");
   const [saving, setSaving] = useState(false);
   const [resources, setResources] = useState<ContractResource[]>([]);
+  const [savedResourcesSnapshot, setSavedResourcesSnapshot] = useState("[]");
   const [resourceDialog, setResourceDialog] = useState<{
     open: boolean;
     index: number | null;
@@ -2111,6 +2116,11 @@ function ContractFormDialog({
   }>({ open: false, index: null, initial: null });
 
   const existingResources = useContractResources(editing?.id ?? null);
+  const existingResourcesSnapshot = useMemo(
+    () => serializeContractResources(existingResources),
+    [existingResources],
+  );
+  const resourcesSnapshot = useMemo(() => serializeContractResources(resources), [resources]);
   const qc = useQueryClient();
 
   const auditQ = useQuery({
@@ -2180,6 +2190,7 @@ function ContractFormDialog({
       setApprovalValue(null);
     }
     setResources([]);
+    setSavedResourcesSnapshot("[]");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editing?.id]);
 
@@ -2203,9 +2214,14 @@ function ContractFormDialog({
   // Hydrate existing resources when editing
   useEffect(() => {
     if (!open || !editing || existingResources.length === 0) return;
-    setResources((prev) => (prev.length === 0 ? existingResources.map(cloneContractResource) : prev));
+    const clonedResources = existingResources.map(cloneContractResource);
+    const snapshot = serializeContractResources(clonedResources);
+    if (resources.length > 0 && resourcesSnapshot !== savedResourcesSnapshot) return;
+    if (resourcesSnapshot === snapshot && savedResourcesSnapshot === snapshot) return;
+    setResources(clonedResources);
+    setSavedResourcesSnapshot(snapshot);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editing?.id, existingResources.length]);
+  }, [open, editing?.id, existingResources.length, existingResourcesSnapshot, resources.length, resourcesSnapshot, savedResourcesSnapshot]);
 
   const selectedUnit = units.find((u) => u.id === unitId);
   const selectedOrg = selectedUnit?.customerId
@@ -2241,6 +2257,7 @@ function ContractFormDialog({
   const billingDates = selectedWindow
     ? `${selectedWindow.windowStartDay} – ${selectedWindow.windowEndDay}`
     : "—";
+  const resourcesDirty = resourcesSnapshot !== savedResourcesSnapshot;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -2700,12 +2717,12 @@ function ContractFormDialog({
           </Button>
           <Button
             disabled={saving}
+            data-force-enabled={resourcesDirty ? "true" : undefined}
             onClick={async () => {
               if (!unitId) {
                 toast.error("Please select a unit");
                 return;
               }
-              setSaving(true);
               const payload = applyApprovalPickerToPayload({
                 contractCode,
                 prospectCode,
@@ -2730,19 +2747,26 @@ function ContractFormDialog({
                 promotedAt: editing?.promotedAt ?? null,
               }, approvalValue, editing);
               const ok = await confirmAction({
-                title: editing ? "Save contract changes?" : "Create contract?",
-                description: "This will save the contract and all staged resource changes everywhere.",
-                confirmText: editing ? "Save Changes" : "Create Contract",
+                title: editing ? "Confirm changes?" : "Create contract?",
+                description: editing
+                  ? "Are you sure you want to confirm and save these contract changes? The updated resource amounts will be used across payroll and related screens."
+                  : "This will create the contract and save all resource details.",
+                confirmText: editing ? "Yes, Save Changes" : "Create Contract",
                 cancelText: "Review Again",
               });
-              if (!ok) {
+              if (!ok) return;
+              setSaving(true);
+              try {
+                const resourcesToSave = resources.map(cloneContractResource);
+                const err = await onSubmit(payload, resourcesToSave);
+                if (err) toast.error(err);
+                else {
+                  setSavedResourcesSnapshot(serializeContractResources(resourcesToSave));
+                  onOpenChange(false);
+                }
+              } finally {
                 setSaving(false);
-                return;
               }
-              const err = await onSubmit(payload, resources.map(cloneContractResource));
-              setSaving(false);
-              if (err) toast.error(err);
-              else onOpenChange(false);
             }}
           >
             {saving ? "Saving…" : editing ? "Save Changes" : "Create Contract"}
