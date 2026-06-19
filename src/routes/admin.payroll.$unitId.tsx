@@ -542,6 +542,14 @@ function PayrollUnitPage() {
   }, [rows]);
 
   const exportCsv = () => {
+    if (isLoading || rows.length === 0) {
+      toast.error(
+        isLoading
+          ? "Payroll is still loading — please wait a moment and try again."
+          : "No payroll data to export for this period.",
+      );
+      return;
+    }
     // Dynamic Wage Register — columns are derived from the actual contract
     // components / earned components / deductions present across rows. Empty
     // categories collapse so the CSV only contains what's truly in use.
@@ -569,10 +577,8 @@ function PayrollUnitPage() {
     const ADDITION_COLS = collectUnique((r) =>
       (r.wages as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions,
     );
+    const EMPLOYER_CONTRIB_COLS = collectUnique((r) => r.wages?.employerContributions);
 
-    // Short label / initialism used as the column header for additions so
-    // the export shows e.g. "PH" for Paid Holiday instead of the generic
-    // word "Additions". Falls back to first letters of each word.
     const ABBR_MAP: Record<string, string> = {
       paidholiday: "PH",
       paidholidays: "PH",
@@ -592,6 +598,7 @@ function PayrollUnitPage() {
 
     const F_CONTRACT_COMPONENT_COLS = CONTRACT_COMPONENT_COLS.map((c) => `F ${c}`);
     const E_EARNED_COMPONENT_COLS = EARNED_COMPONENT_COLS.map((c) => `E ${c}`);
+    const EMP_CONTRIB_LABELS = EMPLOYER_CONTRIB_COLS.map((c) => `Employer ${c}`);
 
     const lookup = (items: { name: string; amount: number }[] | undefined, label: string) => {
       if (!items) return 0;
@@ -672,57 +679,27 @@ function PayrollUnitPage() {
     const pdfHeaders = headers.filter((h) => !F_CONTRACT_COMPONENT_COLS.includes(h));
     const pdfColumns = pdfHeaders.map((h) => ({ key: h, header: h }));
 
-    // MIS: per-employee management summary.
-    const misColumns = [
-      { key: "SI No", header: "SI No" },
-      { key: "Month", header: "Month" },
-      { key: "Client ID", header: "Client ID" },
-      { key: "Client Name", header: "Client Name" },
-      { key: "Site Name", header: "Site Name" },
-      { key: "Employee ID", header: "Employee ID" },
-      { key: "Employee Name", header: "Employee Name" },
-      { key: "Designation", header: "Designation" },
-      { key: "Date Of Joining", header: "Date Of Joining" },
-      { key: "Present Days", header: "Present Days" },
-      { key: "Paid Holiday Days", header: "Paid Holiday Days" },
-      { key: "Other Paid Days", header: "Other Paid Days" },
-      { key: "OT Days", header: "OT Days" },
-      { key: "OT Hours", header: "OT Hours" },
-      { key: "Total Duties", header: "Total Duties" },
-      { key: "Fixed Days", header: "Fixed Days" },
-      { key: "Contract Gross", header: "Contract Gross" },
-      { key: "Earned Gross", header: "Earned Gross" },
-      { key: "Total Deductions", header: "Total Deductions" },
-      { key: "Net Pay", header: "Net Pay" },
-      { key: "Employer Contributions", header: "Employer Contributions" },
-      { key: "Employer Cost", header: "Employer Cost" },
+    // MIS: everything in the wage register PLUS a per-employer-contribution
+    // breakdown and the total employer cost (CTC) — so management can see
+    // the full cost-to-company alongside earnings in one sheet.
+    const misHeaders = [
+      ...headers,
+      ...EMP_CONTRIB_LABELS,
+      "Total Employer Contributions",
+      "Employer Cost (CTC)",
     ];
-    const misRows = rows.map((r, idx) => {
+    const misColumns = misHeaders.map((h) => ({ key: h, header: h }));
+    const misRows = dataRows.map((row, idx) => {
+      const r = rows[idx];
       const w = r.wages;
-      return {
-        "SI No": idx + 1,
-        "Month": periodMonth,
-        "Client ID": clientId,
-        "Client Name": customerName,
-        "Site Name": siteName,
-        "Employee ID": r.employeeCode,
-        "Employee Name": r.name,
-        "Designation": r.designation,
-        "Date Of Joining": r.dateOfJoining ? r.dateOfJoining.slice(0, 10) : "",
-        "Present Days": r.totals.pDays,
-        "Paid Holiday Days": r.totals.phDays,
-        "Other Paid Days": r.totals.otherPaidDays,
-        "OT Days": r.totals.otDays,
-        "OT Hours": r.totals.otHours,
-        "Total Duties": r.totals.tDays,
-        "Fixed Days": w ? w.baseDays : 0,
-        "Contract Gross": w ? w.contractGross : 0,
-        "Earned Gross": w ? Math.round(w.earnedGross) : 0,
-        "Total Deductions": w ? Math.round(w.totalDeductions) : 0,
-        "Net Pay": w ? Math.round(w.netPay) : 0,
-        "Employer Contributions": w ? Math.round(w.totalEmployerContributions) : 0,
-        "Employer Cost": w ? Math.round(w.employerCost) : 0,
-      };
+      const empContribs = w?.employerContributions ?? [];
+      const extra: Record<string, unknown> = {};
+      EMPLOYER_CONTRIB_COLS.forEach((name, i) => {
+        extra[EMP_CONTRIB_LABELS[i]] = Math.round(lookup(empContribs, name));
+      });
+      extra["Total Employer Contributions"] = w ? Math.round(w.totalEmployerContributions) : 0;
+      extra["Employer Cost (CTC)"] = w ? Math.round(w.employerCost) : 0;
+      return { ...row, ...extra };
     });
 
     const baseName = `${unit?.code ?? unitId}-${start}-${end}`;
@@ -742,7 +719,7 @@ function PayrollUnitPage() {
         rows: misRows,
         columns: misColumns,
         title: "Download MIS",
-        desc: "Management summary (Excel)",
+        desc: "Full register + employer cost breakdown (Excel)",
       },
     });
   };
@@ -757,9 +734,11 @@ function PayrollUnitPage() {
         >
           <ChevronLeft className="h-4 w-4" /> Back to payroll units
         </Link>
-        <Button variant="outline" size="sm" onClick={exportCsv}>
-          <Download className="mr-1.5 h-4 w-4" /> Export
+        <Button variant="outline" size="sm" onClick={exportCsv} disabled={isLoading || rows.length === 0}>
+          <Download className="mr-1.5 h-4 w-4" />
+          {isLoading ? "Loading…" : "Export"}
         </Button>
+
       </div>
 
       <div className="rounded-3xl border border-border/70 bg-card p-5 shadow-sm">
