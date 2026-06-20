@@ -371,10 +371,13 @@ export function computeWages(
   // ---- Statutory EPF override ----
   // Employee EPF: statutory 12% of (earned Gross − earned HRA), capped at a
   // ₹15,000 wage ceiling → max ₹1,800.
-  // Employer EPF: uses the CONTRACT's defined employer rate (typically 13%
-  // = 12% PF + 0.5% EDLI + 0.5% admin). Applied to (earned Gross − earned HRA)
-  // but capped against a ₹15,000 wage base, so above-ceiling salaries land
-  // at `employerRate × 15,000` (e.g. 13% → ₹1,950). Not prorated by attendance.
+  // Employer EPF rule:
+  //   • If earned Gross ≥ ₹15,000 → use the CONTRACT's employer EPF amount
+  //     directly (e.g. ₹1,950 for a 13% loading). This is the statutory
+  //     ceiling outcome and matches what the contract resource page shows.
+  //   • If earned Gross < ₹15,000 → calculate at the contract's employer
+  //     EPF rate (typically 13%) applied to (earned Gross − earned HRA).
+  // Fallback employer rate is 12% if the contract didn't configure it.
   const earnedHRA = components
     .filter((c) => /\bhra\b/i.test(c.name))
     .reduce((s, c) => s + c.amount, 0);
@@ -385,8 +388,6 @@ export function computeWages(
   const epfCappedBase = Math.min(epfBase, 15000);
   const employeeEpfAmount = round2(epfCappedBase * 0.12);
 
-  // Derive employer EPF rate from the contract: amount / (contractGross − contractHRA).
-  // Fallback to 12% if contract didn't configure it.
   const contractEpfBase = Math.max(0, contractGross - contractHRA);
   const findEpf = (items: BenefitLike[]) =>
     items.find((i) => /\bepf\b/i.test(i.name));
@@ -395,7 +396,10 @@ export function computeWages(
     contractEpfBase > 0 && contractEmployerEpf > 0
       ? contractEmployerEpf / contractEpfBase
       : 0.12;
-  const employerEpfAmount = round2(epfCappedBase * employerEpfRate);
+  const employerEpfAmount =
+    earnedGross >= 15000
+      ? round2(contractEmployerEpf > 0 ? contractEmployerEpf : 15000 * employerEpfRate)
+      : round2(epfBase * employerEpfRate);
 
   const applyEpfRule = (items: WageComponent[], amount: number) =>
     items.map((i) => (/\bepf\b/i.test(i.name) ? { ...i, amount } : i));
