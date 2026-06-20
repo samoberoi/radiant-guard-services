@@ -689,7 +689,7 @@ function PayrollUnitPage() {
         idx + 1, periodMonth, "", clientId, customerName, siteName,
         r.employeeCode, r.name, r.designation,
         r.dateOfJoining ? r.dateOfJoining.slice(0, 10) : "",
-        r.pfNumber, r.esiNumber, r.uan,
+        r.esiNumber, r.uan,
         ...CONTRACT_COMPONENT_COLS.map((c) => lookup(contractComponents, c)),
         w ? w.contractGross : 0,
         w ? w.baseDays : 0,
