@@ -3978,7 +3978,20 @@ function SalaryBreakdownTable({
   const componentsTotal = components.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const benefitsTotal = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const gross = componentsTotal + benefitsTotal;
-  const deductionsTotal = deductions.reduce((s, b) => s + contractTotalAmount(b), 0);
+
+  // Statutory ESI on the contract (full-month) gross: 0.75% employee /
+  // 3.25% employer of (gross − washing − conveyance), only when gross
+  // ≤ ₹21,000, rounded UP to the next rupee.
+  const washingTotal = components
+    .filter((c) => /\bwashing\b/i.test(c.name))
+    .reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const conveyanceTotal = components
+    .filter((c) => /\bconveyance\b|\bconv\.?\b/i.test(c.name))
+    .reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const esiBase = Math.max(0, gross - washingTotal - conveyanceTotal);
+  const esiEligible = gross > 0 && gross <= 21000 && esiBase > 0;
+  const esiEmployeeAmount = esiEligible ? Math.ceil(esiBase * 0.0075) : 0;
+  const esiEmployerAmount = esiEligible ? Math.ceil(esiBase * 0.0325) : 0;
 
   const isReliever = (b: BenefitItem) => /reliever/i.test(b.name);
   const isMgmtFee = (b: BenefitItem) => /management\s*fee/i.test(b.name);
@@ -3986,7 +3999,14 @@ function SalaryBreakdownTable({
   const relieverItems = employerContributions.filter(isReliever);
   const mgmtFeeItems = employerContributions.filter(isMgmtFee);
 
-  const coreEmployerTotal = coreEmployer.reduce((s, b) => s + contractTotalAmount(b), 0);
+  const hasEsiDeduction = deductions.some(isEsiItem);
+  const hasEsiEmployer = coreEmployer.some(isEsiItem);
+  const deductionsTotal =
+    deductions.reduce((s, b) => s + contractTotalAmount(b), 0) +
+    (hasEsiDeduction ? esiEmployeeAmount : 0);
+  const coreEmployerTotal =
+    coreEmployer.reduce((s, b) => s + contractTotalAmount(b), 0) +
+    (hasEsiEmployer ? esiEmployerAmount : 0);
   const relieverTotal = relieverItems.reduce((s, b) => s + contractTotalAmount(b), 0);
   const mgmtFeeTotal = mgmtFeeItems.reduce((s, b) => s + contractTotalAmount(b), 0);
   const totalCTC = gross + coreEmployerTotal;
