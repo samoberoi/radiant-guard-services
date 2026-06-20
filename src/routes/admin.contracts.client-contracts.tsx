@@ -3773,7 +3773,9 @@ function ResourceFormDialog({
                            onValueChange={(amount) => updateDeductionAmount(b.costComponentId, amount)}
                          />
                       ) : (
+                        <span className="w-28 text-right text-sm font-semibold text-foreground">
                           {isEsiItem(b) ? esiEmployeeAmount.toFixed(2) : b.amount.toFixed(2)}
+                        </span>
                       )}
                       <Button
                         type="button"
