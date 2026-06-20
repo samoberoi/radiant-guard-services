@@ -408,12 +408,12 @@ export function computeWages(
   const esi = calculateEsiAmounts(earnedGross, components);
 
   const deductions = applyEsiRule(
-    applyEpfRule(deductionsScaled),
+    applyEpfRule(deductionsScaled, employeeEpfAmount),
     esi.employee,
     "ESI Employee Contribution",
   );
   const employerContributions = applyEsiRule(
-    applyEpfRule(employerContributionsScaled),
+    applyEpfRule(employerContributionsScaled, employerEpfAmount),
     esi.employer,
     "ESI Employer Contribution",
   );
