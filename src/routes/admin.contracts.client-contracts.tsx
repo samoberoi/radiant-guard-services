@@ -3874,10 +3874,16 @@ function ResourceFormDialog({
                             "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
                             b.calcType === "percentage"
                               ? "bg-accent/15 text-accent"
-                              : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+                              : /management\s*fee/i.test(b.name)
+                                ? "bg-primary/15 text-primary"
+                                : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
                           )}
                         >
-                          {b.calcType === "percentage" ? `${b.percentage}%` : "Fixed"}
+                          {b.calcType === "percentage"
+                            ? `${b.percentage}%`
+                            : /management\s*fee/i.test(b.name)
+                              ? "Prorated"
+                              : "Fixed"}
                         </span>
                       </div>
                       <div className="mt-0.5 text-[11px] text-muted-foreground">
@@ -3885,8 +3891,11 @@ function ResourceFormDialog({
                           ? isEsiItem(b)
                             ? `${b.percentage}% · ${ESI_CONTRACT_NOTE}`
                             : `${b.percentage}% of ${b.baseComponents.map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`)).join(" ") || "—"}${b.capAmount ? ` · cap ₹${b.capAmount.toLocaleString("en-IN")}` : ""}`
-                          : "Fixed amount"}
+                          : /management\s*fee/i.test(b.name)
+                            ? "Prorated by T Days (per-day × actual payable days)"
+                            : "Fixed amount"}
                       </div>
+
                     </div>
                     <div className="flex items-center gap-2">
                       {b.calcType === "fixed" ? (
