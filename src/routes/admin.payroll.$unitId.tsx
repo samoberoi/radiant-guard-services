@@ -671,7 +671,7 @@ function PayrollUnitPage() {
       ...E_EARNED_COMPONENT_COLS,
       ...additionGroups.map((g) => g.header),
       "E Gross Salary",
-      ...DEDUCTION_COLS,
+      ...DEDUCTION_HEADERS,
       "Total Deductions", "Net Pay",
       "Bank Acc No", "Bank IFSC", "Bank Name", "Bank Branch Name", "Bank Account Holder Name",
       "Approved Date", "Approval Info", "Is payment completed", "Payment date", "Remarks",
