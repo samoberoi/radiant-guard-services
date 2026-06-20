@@ -2404,24 +2404,6 @@ function ContractFormDialog({
                           </div>
                           <div className="text-sm">{fmt(approvedAt ?? signedAt)}</div>
                         </div>
-                        <div className="sm:col-span-2 space-y-1">
-                          <div className="text-xs font-semibold text-muted-foreground">
-                            Authorised Signatory Signature
-                          </div>
-                          {sig ? (
-                            <div className="inline-block rounded-lg border bg-muted/30 p-2">
-                              <img
-                                src={sig}
-                                alt="Approval signature"
-                                className="h-32 w-auto object-contain"
-                              />
-                            </div>
-                          ) : (
-                            <div className="text-xs italic text-muted-foreground">
-                              No signature on file.
-                            </div>
-                          )}
-                        </div>
                       </div>
                     )}
                     {status === "rejected" && (
@@ -2459,9 +2441,10 @@ function ContractFormDialog({
                     )}
                     {status === "pending" && (
                       <div className="text-sm italic text-muted-foreground">
-                        Awaiting approval — no signature captured yet.
+                        Awaiting approval.
                       </div>
                     )}
+
                   </div>
                 );
               })()}
