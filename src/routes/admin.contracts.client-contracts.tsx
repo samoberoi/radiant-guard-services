@@ -2378,7 +2378,7 @@ function ContractFormDialog({
                 const rejectedAt = r.rejected_at as string | null;
                 const signedAt = r.signed_at as string | null;
                 const reason = String(r.rejection_reason ?? "");
-                const sig = r.company_signature_data as string | null;
+                
                 const fmt = (iso: string | null) =>
                   iso ? new Date(iso).toLocaleString() : "—";
                 return (
@@ -2403,24 +2403,6 @@ function ContractFormDialog({
                             Approved At
                           </div>
                           <div className="text-sm">{fmt(approvedAt ?? signedAt)}</div>
-                        </div>
-                        <div className="sm:col-span-2 space-y-1">
-                          <div className="text-xs font-semibold text-muted-foreground">
-                            Authorised Signatory Signature
-                          </div>
-                          {sig ? (
-                            <div className="inline-block rounded-lg border bg-muted/30 p-2">
-                              <img
-                                src={sig}
-                                alt="Approval signature"
-                                className="h-32 w-auto object-contain"
-                              />
-                            </div>
-                          ) : (
-                            <div className="text-xs italic text-muted-foreground">
-                              No signature on file.
-                            </div>
-                          )}
                         </div>
                       </div>
                     )}
@@ -2459,9 +2441,10 @@ function ContractFormDialog({
                     )}
                     {status === "pending" && (
                       <div className="text-sm italic text-muted-foreground">
-                        Awaiting approval — no signature captured yet.
+                        Awaiting approval.
                       </div>
                     )}
+
                   </div>
                 );
               })()}

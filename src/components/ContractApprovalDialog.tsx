@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Loader2, FileSignature } from "lucide-react";
+import { Loader2, CheckCircle2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { SignaturePad } from "@/components/SignaturePad";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
 import {
@@ -51,13 +50,11 @@ export function ContractApprovalDialog({
   contract: ApprovalContract | null;
   onDone: () => void;
 }) {
-  const [signature, setSignature] = useState("");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
-      setSignature("");
       setReason("");
       setSaving(false);
     }
@@ -90,10 +87,6 @@ export function ContractApprovalDialog({
   }
 
   async function handleApprove() {
-    if (!signature) {
-      toast.error("Please add your signature before approving.");
-      return;
-    }
     setSaving(true);
     try {
       const uid = await currentUserId();
@@ -145,7 +138,6 @@ export function ContractApprovalDialog({
           approved_by: uid,
           approved_at: nowIso,
           signed_at: nowIso,
-          company_signature_data: signature,
           status: "active",
           rejection_reason: "",
           record_type: "client",
@@ -165,7 +157,7 @@ export function ContractApprovalDialog({
       await notifyCreator(
         "contract_approved",
         `Prospect ${contract!.prospectCode} approved`,
-        `Promoted to client contract ${newContractCode} and signed.`,
+        `Promoted to client contract ${newContractCode}.`,
       );
       toast.success(
         `Prospect ${contract!.prospectCode} approved → Client ${newContractCode}`,
@@ -228,7 +220,7 @@ export function ContractApprovalDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {isApprove ? "Approve & sign prospect" : "Reject prospect"}
+            {isApprove ? "Approve prospect" : "Reject prospect"}
           </DialogTitle>
           <DialogDescription>
             Prospect{" "}
@@ -236,19 +228,12 @@ export function ContractApprovalDialog({
               {label}
             </span>
             {isApprove
-              ? " — sign below to approve, promote it to a client and issue a contract ID."
+              ? " — approve to promote it to a client and issue a contract ID."
               : " — capture a clear reason; the creator will be notified."}
           </DialogDescription>
         </DialogHeader>
 
-        {isApprove ? (
-          <div className="space-y-2 py-2">
-            <Label className="text-xs font-semibold text-muted-foreground">
-              Authorised Signatory Signature
-            </Label>
-            <SignaturePad value={signature} onChange={setSignature} height={180} />
-          </div>
-        ) : (
+        {!isApprove && (
           <div className="space-y-2 py-2">
             <Label className="text-xs font-semibold text-muted-foreground">
               Rejection Reason
@@ -271,10 +256,7 @@ export function ContractApprovalDialog({
             Cancel
           </Button>
           <Button
-            disabled={
-              saving ||
-              (isApprove ? !signature : reason.trim().length < 10)
-            }
+            disabled={saving || (!isApprove && reason.trim().length < 10)}
             onClick={isApprove ? handleApprove : handleReject}
             className={
               isApprove
@@ -289,8 +271,8 @@ export function ContractApprovalDialog({
               </>
             ) : isApprove ? (
               <>
-                <FileSignature className="mr-1.5 h-4 w-4" />
-                Approve, Promote & Sign
+                <CheckCircle2 className="mr-1.5 h-4 w-4" />
+                Approve & Promote
               </>
             ) : (
               "Reject Prospect"
