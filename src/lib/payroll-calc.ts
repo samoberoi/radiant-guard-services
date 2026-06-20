@@ -353,12 +353,12 @@ export function computeWages(
   // Fixed (non-prorated) deduction/contribution names. These stay at the
   // contract amount regardless of attendance — e.g. Uniform Charges is a
   // flat monthly recovery, LWF is a flat statutory monthly contribution.
+  // Management Fee is intentionally NOT fixed — it prorates by T Days
+  // like other earnings/contributions.
   const isFixedItem = (name: string) =>
     /\buniform\b/i.test(name) ||
     /\blwf\b/i.test(name) ||
-    /labour\s*welfare/i.test(name) ||
-    /management\s*fee/i.test(name) ||
-    /\bmgmt\s*fee\b/i.test(name);
+    /labour\s*welfare/i.test(name);
   const scaleItemsRespectingFixed = (items: BenefitLike[]): WageComponent[] =>
     items.map((i) => ({
       name: i.name,
