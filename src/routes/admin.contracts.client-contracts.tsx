@@ -3406,8 +3406,28 @@ function ResourceFormDialog({
   };
 
   const totalBenefits = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const totalDeductions = deductions.reduce((s, b) => s + contractTotalAmount(b), 0);
-  const totalEmployer = employerContributions.reduce((s, b) => s + contractTotalAmount(b), 0);
+
+  // Statutory ESI on the contract (full-month) gross: 0.75% employee /
+  // 3.25% employer of (gross − washing − conveyance), only when gross
+  // ≤ ₹21,000, rounded UP to the next rupee.
+  const _esiComponentsTotal = components.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const _esiBenefitsTotal = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const _esiGross = _esiComponentsTotal + _esiBenefitsTotal;
+  const _esiWashing = components
+    .filter((c) => /\bwashing\b/i.test(c.name))
+    .reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const _esiConveyance = components
+    .filter((c) => /\bconveyance\b|\bconv\.?\b/i.test(c.name))
+    .reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const _esiBase = Math.max(0, _esiGross - _esiWashing - _esiConveyance);
+  const _esiEligible = _esiGross > 0 && _esiGross <= 21000 && _esiBase > 0;
+  const esiEmployeeAmount = _esiEligible ? Math.ceil(_esiBase * 0.0075) : 0;
+  const esiEmployerAmount = _esiEligible ? Math.ceil(_esiBase * 0.0325) : 0;
+
+  const totalDeductions =
+    deductions.reduce((s, b) => s + (isEsiItem(b) ? esiEmployeeAmount : contractTotalAmount(b)), 0);
+  const totalEmployer =
+    employerContributions.reduce((s, b) => s + (isEsiItem(b) ? esiEmployerAmount : contractTotalAmount(b)), 0);
 
   const selectedDesignation = designations.find((d) => d.id === designationId);
 
