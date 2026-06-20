@@ -2378,7 +2378,7 @@ function ContractFormDialog({
                 const rejectedAt = r.rejected_at as string | null;
                 const signedAt = r.signed_at as string | null;
                 const reason = String(r.rejection_reason ?? "");
-                void r.company_signature_data;
+                
                 const fmt = (iso: string | null) =>
                   iso ? new Date(iso).toLocaleString() : "—";
                 return (
