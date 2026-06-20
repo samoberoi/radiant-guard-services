@@ -3914,7 +3914,7 @@ function ResourceFormDialog({
                          />
                       ) : (
                         <span className="w-28 text-right text-sm font-semibold text-foreground">
-                          {isEsiItem(b) ? "—" : b.amount.toFixed(2)}
+                          {isEsiItem(b) ? esiEmployerAmount.toFixed(2) : b.amount.toFixed(2)}
                         </span>
                       )}
                       <Button
