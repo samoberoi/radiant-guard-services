@@ -1,31 +1,46 @@
-## Problem
+## Problems
 
-In the **Resource editor dialog** (opened from Contracts → edit a contract → Resources → ✏️ on a row), clicking the ✕ next to a Deduction (or Benefit / Wage Component / Employer Contribution) updates the list in state, but the **Save Resource** button stays disabled.
+1. **EPF employer shows ₹1,800 in MIS but ₹1,950 in contract.**
+   Reason: payroll-calc forces *every* EPF row (employee + employer) to the statutory **12% × ₹15,000 = ₹1,800** ceiling. Contracts usually load the employer side at **13% (12% PF + 0.5% EDLI + 0.5% admin) = ₹1,950**. The override is wiping out that 13%.
 
-Root cause is in `src/components/ui/dialog.tsx`: the dialog tracks "dirty" only via DOM `input`/`change` events. A Remove (✕) click is neither, so the dialog remains `data-pristine="true"`, and `src/styles.css` (`[data-pristine="true"] button[data-save-intent="true"]`) disables Save Resource. Because the user can't save the inner dialog, the outer **Save Changes** button never gets the `data-force-enabled` flag either, so the chain is stuck.
+2. **LWF employer keeps fluctuating (12.5 → 11/12/13).**
+   Reason: employer LWF is being scaled by the attendance ratio (earned/contract gross). Only `Uniform` is currently treated as a fixed (non-prorated) item; LWF is statutory flat per month and must not move with attendance.
 
-The Add-via-picker path has the same flaw (also a click), and the wage-component amount fields work only because they fire `input`. Editing/removing should behave identically.
+## Fixes — `src/lib/payroll-calc.ts`
 
-## Fix
+### A. Split EPF override into employee vs employer
 
-In `src/routes/admin.contracts.client-contracts.tsx`, inside `ResourceFormDialog`, call the existing `useDialogDirty().markDirty()` helper from every mutation handler so the dialog correctly becomes dirty regardless of input source.
+- **Employee EPF** stays at statutory: `12% of (earned Gross − earned HRA)`, capped so the *base* never exceeds ₹15,000 → max ₹1,800.
+- **Employer EPF** uses the **contract's defined amount** (so 13% → ₹1,950 stays intact), but still:
+  - Capped against a ₹15,000 wage base. If contract employer EPF > `13% × 15,000 = ₹1,950` we cap to that ceiling proportional to the contract's own employer rate (derived as `contractEmployerEPF / (contractGross − contractHRA)`).
+  - **Not prorated** by attendance (treated as a fixed monthly statutory cost, matching what the contract page shows).
+  - If `(earned Gross − earned HRA) ≤ 15,000`, employer share = `employerRate × (earned Gross − earned HRA)`.
+  - If above ceiling, employer share = `employerRate × 15,000` (i.e. the contract's full ₹1,950).
 
-Handlers to wire:
-- Wage components: `addComponent`, `removeComponent`, `updateComponent` (line ~3147 area)
-- Benefits: `addBenefit`, `updateBenefitAmount`, `removeBenefit`
-- Deductions: `addDeduction`, `updateDeductionAmount`, `removeDeduction` (lines 3300–3312)
-- Employer contributions: `addEmployerContribution`, `updateEmployerContributionAmount`, `removeEmployerContribution`
+This makes the MIS employer EPF column reconcile to the contract resource view.
 
-Implementation:
-1. At the top of `ResourceFormDialog`, add `const { markDirty } = useDialogDirty();` and import `useDialogDirty` from `@/components/ui/dialog`.
-2. Call `markDirty()` as the first statement in each of the handlers above (one line each).
-3. Do not touch the initial-hydration `useEffect` that seeds state from `initial` — that already runs before the user interacts and the guard resets on open.
+### B. Make LWF a fixed (non-prorated) item
 
-No changes needed to the outer dialog logic — once Save Resource works, the existing `hasStagedResourceChanges` + `resourcesSnapshot !== savedResourcesSnapshot` path already force-enables **Save Changes** on the contract form.
+Extend `isFixedItem` so the regex matches LWF as well as Uniform:
 
-## Verification
+```ts
+const isFixedItem = (name: string) =>
+  /\buniform\b/i.test(name) || /\blwf\b/i.test(name) || /labour\s*welfare/i.test(name);
+```
 
-- Open a contract → Edit a resource → remove a deduction → **Save Resource** becomes enabled.
-- Same for removing a benefit, wage component, or employer contribution, and for adding any of them via the picker.
-- After saving the resource, the outer **Save Changes** button is enabled and persisting the contract works end-to-end.
-- Editing an amount field (existing behaviour) continues to work.
+Applies to both deductions (employee LWF) and employer contributions (employer LWF), so ₹12.50 stays ₹12.50 every month regardless of P-Days.
+
+## Where it shows up (no UI changes needed)
+
+- Payroll Compute Wages table
+- Wage Register XLS
+- Pay Sheet PDF
+- MIS XLS
+- Contract resources salary breakdown (already reads from the same engine via `computeWages`)
+
+## Out of scope
+
+- No DB / schema changes.
+- ESI rules untouched.
+- PT, Bonus, Gratuity untouched.
+- Half-yearly LWF states (e.g. Karnataka ₹20 / 6 months) are not modeled here — flat monthly contract amount is treated as the source of truth.

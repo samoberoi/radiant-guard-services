@@ -352,8 +352,11 @@ export function computeWages(
   }));
   // Fixed (non-prorated) deduction/contribution names. These stay at the
   // contract amount regardless of attendance — e.g. Uniform Charges is a
-  // flat monthly recovery, not pro-rated by days worked.
-  const isFixedItem = (name: string) => /\buniform\b/i.test(name);
+  // flat monthly recovery, LWF is a flat statutory monthly contribution.
+  const isFixedItem = (name: string) =>
+    /\buniform\b/i.test(name) ||
+    /\blwf\b/i.test(name) ||
+    /labour\s*welfare/i.test(name);
   const scaleItemsRespectingFixed = (items: BenefitLike[]): WageComponent[] =>
     items.map((i) => ({
       name: i.name,
@@ -366,18 +369,37 @@ export function computeWages(
   const employerContributionsScaled = scaleItemsRespectingFixed(resource.employerContributions);
 
   // ---- Statutory EPF override ----
-  // Rule: EPF = 12% of (earned Gross − earned HRA), capped at a ₹15,000
-  // wage ceiling. So if (Gross − HRA) ≤ 15,000 → 12% of (Gross − HRA);
-  // otherwise flat ₹1,800. Applied to any deduction OR employer-contribution
-  // row whose name contains "EPF".
+  // Employee EPF: statutory 12% of (earned Gross − earned HRA), capped at a
+  // ₹15,000 wage ceiling → max ₹1,800.
+  // Employer EPF: uses the CONTRACT's defined employer rate (typically 13%
+  // = 12% PF + 0.5% EDLI + 0.5% admin). Applied to (earned Gross − earned HRA)
+  // but capped against a ₹15,000 wage base, so above-ceiling salaries land
+  // at `employerRate × 15,000` (e.g. 13% → ₹1,950). Not prorated by attendance.
   const earnedHRA = components
     .filter((c) => /\bhra\b/i.test(c.name))
     .reduce((s, c) => s + c.amount, 0);
+  const contractHRA = resource.components
+    .filter((c) => /\bhra\b/i.test(c.name))
+    .reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const epfBase = Math.max(0, earnedGross - earnedHRA);
-  const epfAmount =
-    epfBase <= 15000 ? Math.round(epfBase * 0.12 * 100) / 100 : 1800;
-  const applyEpfRule = (items: WageComponent[]) =>
-    items.map((i) => (/\bepf\b/i.test(i.name) ? { ...i, amount: epfAmount } : i));
+  const epfCappedBase = Math.min(epfBase, 15000);
+  const employeeEpfAmount = round2(epfCappedBase * 0.12);
+
+  // Derive employer EPF rate from the contract: amount / (contractGross − contractHRA).
+  // Fallback to 12% if contract didn't configure it.
+  const contractEpfBase = Math.max(0, contractGross - contractHRA);
+  const findEpf = (items: BenefitLike[]) =>
+    items.find((i) => /\bepf\b/i.test(i.name));
+  const contractEmployerEpf = Number(findEpf(resource.employerContributions)?.amount) || 0;
+  const employerEpfRate =
+    contractEpfBase > 0 && contractEmployerEpf > 0
+      ? contractEmployerEpf / contractEpfBase
+      : 0.12;
+  const employerEpfAmount = round2(epfCappedBase * employerEpfRate);
+
+  const applyEpfRule = (items: WageComponent[], amount: number) =>
+    items.map((i) => (/\bepf\b/i.test(i.name) ? { ...i, amount } : i));
+
 
   // ---- Statutory ESI override ----
   // Rule: ESI is computed on earned Gross minus earned Washing and
@@ -386,12 +408,12 @@ export function computeWages(
   const esi = calculateEsiAmounts(earnedGross, components);
 
   const deductions = applyEsiRule(
-    applyEpfRule(deductionsScaled),
+    applyEpfRule(deductionsScaled, employeeEpfAmount),
     esi.employee,
     "ESI Employee Contribution",
   );
   const employerContributions = applyEsiRule(
-    applyEpfRule(employerContributionsScaled),
+    applyEpfRule(employerContributionsScaled, employerEpfAmount),
     esi.employer,
     "ESI Employer Contribution",
   );
