@@ -665,7 +665,7 @@ function PayrollUnitPage() {
     const headers = [
       "SI No", "Month", "Agency Branch Name", "Client ID", "Client Name", "Site Name",
       "Employee ID", "Employee Name", "Designation", "Date Of Joining",
-      "PF No", "ESI No", "UAN",
+      "ESI No", "UAN",
       ...F_CONTRACT_COMPONENT_COLS,
       "F Gross Salary", "Fixed Duties", "Duties", "Over Time Duties",
       ...E_EARNED_COMPONENT_COLS,
@@ -689,7 +689,7 @@ function PayrollUnitPage() {
         idx + 1, periodMonth, "", clientId, customerName, siteName,
         r.employeeCode, r.name, r.designation,
         r.dateOfJoining ? r.dateOfJoining.slice(0, 10) : "",
-        r.pfNumber, r.esiNumber, r.uan,
+        r.esiNumber, r.uan,
         ...CONTRACT_COMPONENT_COLS.map((c) => lookup(contractComponents, c)),
         w ? w.contractGross : 0,
         w ? w.baseDays : 0,
