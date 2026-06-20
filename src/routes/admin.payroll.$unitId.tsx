@@ -665,7 +665,7 @@ function PayrollUnitPage() {
     const headers = [
       "SI No", "Month", "Agency Branch Name", "Client ID", "Client Name", "Site Name",
       "Employee ID", "Employee Name", "Designation", "Date Of Joining",
-      "PF No", "ESI No", "UAN",
+      "ESI No", "UAN",
       ...F_CONTRACT_COMPONENT_COLS,
       "F Gross Salary", "Fixed Duties", "Duties", "Over Time Duties",
       ...E_EARNED_COMPONENT_COLS,
