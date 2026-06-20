@@ -696,8 +696,13 @@ function PayrollUnitPage() {
       const w = r.wages;
       const empContribs = w?.employerContributions ?? [];
       const extra: Record<string, unknown> = {};
+      // LWF (Labour Welfare Fund) is a flat statutory amount that can be a
+      // fractional rupee value (e.g. ₹12.50). Preserve its exact value;
+      // round other employer contributions to whole rupees as before.
+      const isLwfName = (n: string) => /\blwf\b|labour\s*welfare/i.test(n);
       EMPLOYER_CONTRIB_COLS.forEach((name, i) => {
-        extra[EMP_CONTRIB_LABELS[i]] = Math.round(lookup(empContribs, name));
+        const val = lookup(empContribs, name);
+        extra[EMP_CONTRIB_LABELS[i]] = isLwfName(name) ? val : Math.round(val);
       });
       extra["Total Employer Contributions"] = w ? Math.round(w.totalEmployerContributions) : 0;
       extra["Employer Cost (CTC)"] = w ? Math.round(w.employerCost) : 0;
