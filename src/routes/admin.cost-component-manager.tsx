@@ -93,8 +93,15 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
 
 function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "amount"> & { name?: string }): string {
   if (c.calc_type === "fixed") {
+    const isMgmt = /management\s*fee/i.test(c.name ?? "");
+    if (isMgmt) {
+      return c.amount != null && c.amount > 0
+        ? `₹${c.amount.toLocaleString("en-IN")} · prorated by T Days in payroll`
+        : "Prorated by T Days (manual entry)";
+    }
     return c.amount != null && c.amount > 0 ? `Fixed ₹${c.amount.toLocaleString("en-IN")}` : "Fixed amount (manual entry)";
   }
+
   const name = (c.name ?? "").toLowerCase();
   // Statutory ESI: always 0.75% (employee) / 3.25% (employer) of earned gross minus earned washing/conveyance.
   if (isEsiName(name)) {
