@@ -718,7 +718,7 @@ function PayrollUnitPage() {
     // breakdown and the total employer cost (CTC) — so management can see
     // the full cost-to-company alongside earnings in one sheet.
     const misHeaders = [
-      ...headers,
+      ...headers.filter((h) => h !== "PF No"),
       ...EMP_CONTRIB_LABELS,
       "Total Employer Contributions",
       "Employer Cost (CTC)",
