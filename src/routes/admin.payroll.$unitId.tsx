@@ -598,7 +598,9 @@ function PayrollUnitPage() {
 
     const F_CONTRACT_COMPONENT_COLS = CONTRACT_COMPONENT_COLS.map((c) => `F ${c}`);
     const E_EARNED_COMPONENT_COLS = EARNED_COMPONENT_COLS.map((c) => `E ${c}`);
-    const EMP_CONTRIB_LABELS = EMPLOYER_CONTRIB_COLS.map((c) => `Employer ${c}`);
+    const EMP_CONTRIB_LABELS = EMPLOYER_CONTRIB_COLS.map((c) =>
+      /employer/i.test(c) ? c : `Employer ${c}`,
+    );
 
     const lookup = (items: { name: string; amount: number }[] | undefined, label: string) => {
       if (!items) return 0;
