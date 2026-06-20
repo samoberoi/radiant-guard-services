@@ -598,9 +598,42 @@ function PayrollUnitPage() {
 
     const F_CONTRACT_COMPONENT_COLS = CONTRACT_COMPONENT_COLS.map((c) => `F ${c}`);
     const E_EARNED_COMPONENT_COLS = EARNED_COMPONENT_COLS.map((c) => `E ${c}`);
-    const EMP_CONTRIB_LABELS = EMPLOYER_CONTRIB_COLS.map((c) =>
-      /employer/i.test(c) ? c : `Employer ${c}`,
-    );
+
+    // Friendly header formatters for employee deductions (EE prefix) and
+    // employer contributions (ER prefix). Strip noisy suffixes like
+    // "Employee Contribution", "Employer Contribution", "(Gross - HRA)",
+    // "Net", and normalise EPF→EPFC / ESI→ESIC for the export sheets.
+    const formatDeductionHeader = (name: string): string => {
+      const n = name.toLowerCase();
+      if (/\bepf\b/.test(n)) return "EE EPFC";
+      if (/\besi(c)?\b/.test(n)) return "EE ESIC";
+      if (/professional\s*tax|\bpt\b/.test(n)) return "EE PT";
+      if (/\blwf\b|labour\s*welfare/.test(n)) return "EE LWF";
+      const clean = name
+        .replace(/\(.*?\)/g, "")
+        .replace(/employee\s*contribution/gi, "")
+        .replace(/\bnet\b/gi, "")
+        .trim()
+        .replace(/\s+/g, " ");
+      return `EE ${clean}`;
+    };
+    const formatEmployerHeader = (name: string): string => {
+      const n = name.toLowerCase();
+      if (/\bepf\b/.test(n)) return "ER EPFC";
+      if (/\besi(c)?\b/.test(n)) return "ER ESIC";
+      if (/\blwf\b|labour\s*welfare/.test(n)) return "ER LWF";
+      if (/management\s*fee|\bmgmt\s*fee\b/.test(n)) return "ER Management Fee";
+      const clean = name
+        .replace(/\(.*?\)/g, "")
+        .replace(/employer\s*contribution/gi, "")
+        .replace(/\bnet\b/gi, "")
+        .trim()
+        .replace(/\s+/g, " ");
+      return `ER ${clean}`;
+    };
+
+    const DEDUCTION_HEADERS = DEDUCTION_COLS.map(formatDeductionHeader);
+    const EMP_CONTRIB_LABELS = EMPLOYER_CONTRIB_COLS.map(formatEmployerHeader);
 
     const lookup = (items: { name: string; amount: number }[] | undefined, label: string) => {
       if (!items) return 0;
@@ -638,7 +671,7 @@ function PayrollUnitPage() {
       ...E_EARNED_COMPONENT_COLS,
       ...additionGroups.map((g) => g.header),
       "E Gross Salary",
-      ...DEDUCTION_COLS,
+      ...DEDUCTION_HEADERS,
       "Total Deductions", "Net Pay",
       "Bank Acc No", "Bank IFSC", "Bank Name", "Bank Branch Name", "Bank Account Holder Name",
       "Approved Date", "Approval Info", "Is payment completed", "Payment date", "Remarks",

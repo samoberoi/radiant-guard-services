@@ -356,7 +356,9 @@ export function computeWages(
   const isFixedItem = (name: string) =>
     /\buniform\b/i.test(name) ||
     /\blwf\b/i.test(name) ||
-    /labour\s*welfare/i.test(name);
+    /labour\s*welfare/i.test(name) ||
+    /management\s*fee/i.test(name) ||
+    /\bmgmt\s*fee\b/i.test(name);
   const scaleItemsRespectingFixed = (items: BenefitLike[]): WageComponent[] =>
     items.map((i) => ({
       name: i.name,
