@@ -4142,9 +4142,9 @@ function SalaryBreakdownTable({
                       </span>
                     )}
                   </td>
-                  <td className="text-center tabular-nums">{isEsiItem(b) ? "—" : Number(b.amount).toFixed(2)}</td>
+                  <td className="text-center tabular-nums">{isEsiItem(b) ? esiEmployeeAmount.toFixed(2) : Number(b.amount).toFixed(2)}</td>
                   <td />
-                  <td className="text-right tabular-nums">{isEsiItem(b) ? "—" : earnedFor(Number(b.amount)).toFixed(2)}</td>
+                  <td className="text-right tabular-nums">{isEsiItem(b) ? earnedFor(esiEmployeeAmount).toFixed(2) : earnedFor(Number(b.amount)).toFixed(2)}</td>
                 </tr>
               ));
             })()}
