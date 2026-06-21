@@ -413,8 +413,18 @@ export function computeWages(
       ? round2(contractEmployerEpf > 0 ? contractEmployerEpf : 15000 * employerEpfRate)
       : round2(epfBase * employerEpfRate);
 
-  const applyEpfRule = (items: WageComponent[], amount: number) =>
-    items.map((i) => (/\bepf\b/i.test(i.name) ? { ...i, amount } : i));
+  // Only the FIRST EPF-named row carries the statutory amount; any other
+  // EPF-named rows are zeroed so a contract listing multiple EPF lines
+  // can't double-deduct.
+  const applyEpfRule = (items: WageComponent[], amount: number) => {
+    let placed = false;
+    return items.map((i) => {
+      if (!/\bepf\b/i.test(i.name)) return i;
+      if (placed) return { ...i, amount: 0 };
+      placed = true;
+      return { ...i, amount };
+    });
+  };
 
 
   // ---- Statutory ESI override ----
