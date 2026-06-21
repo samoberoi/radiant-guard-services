@@ -217,6 +217,7 @@ function cloneBenefitItem(item: BenefitItem): BenefitItem {
     amount: Number(item.amount) || 0,
     baseComponents: (item.baseComponents ?? []).map((b) => ({ ...b })),
     capAmount: item.capAmount == null ? null : Number(item.capAmount),
+    capFlatAmount: item.capFlatAmount == null ? null : Number(item.capFlatAmount),
   };
 }
 
