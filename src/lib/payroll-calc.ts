@@ -55,7 +55,7 @@ export function canonicalComponentName(name: string): string {
  * Sum amounts of items whose names canonicalize to the same value.
  * Preserves first-seen order; display name = canonical form.
  */
-export function mergeByCanonicalName<T extends { name: string; amount: number }>(
+export function mergeByCanonicalName<T extends { name: string; amount: number | string | null | undefined }>(
   items: T[] | null | undefined,
 ): { name: string; amount: number }[] {
   if (!items || items.length === 0) return [];
@@ -407,8 +407,17 @@ function benefitAmountFromConfig(
   if (item.calcType !== "percentage") return round2(Number(item.amount) || 0);
 
   const norm = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
-  const earnedByName = new Map(earnedComponents.map((c) => [norm(c.name), Number(c.amount) || 0]));
-  const contractByName = new Map(contractComponents.map((c) => [norm(c.name), Number(c.amount) || 0]));
+  const amountMap = (items: WageComponent[]) => {
+    const map = new Map<string, number>();
+    for (const c of items) {
+      const amount = Number(c.amount) || 0;
+      const keys = new Set([norm(c.name), norm(canonicalComponentName(c.name))].filter(Boolean));
+      keys.forEach((key) => map.set(key, round2((map.get(key) ?? 0) + amount)));
+    }
+    return map;
+  };
+  const earnedByName = amountMap(earnedComponents);
+  const contractByName = amountMap(contractComponents);
   const bases = Array.isArray(item.baseComponents) ? item.baseComponents : [];
   const base = bases.reduce((sum, b) => {
     const key = norm(String(b.label ?? ""));

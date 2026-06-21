@@ -477,7 +477,13 @@ function PayrollUnitPage() {
         // entry so columns and breakdowns are de-duplicated everywhere
         // (table, drawer, Wage Register, Pay Sheet, MIS). Totals are unchanged.
         const mergedResource = resource
-          ? { ...resource, components: mergeByCanonicalName(resource.components) as typeof resource.components }
+          ? {
+              ...resource,
+              components: mergeByCanonicalName(resource.components),
+              benefits: mergeByCanonicalName(resource.benefits),
+              deductions: mergeByCanonicalName(resource.deductions),
+              employerContributions: mergeByCanonicalName(resource.employerContributions),
+            }
           : null;
         if (wages) {
           wages.components = mergeByCanonicalName(wages.components) as typeof wages.components;
