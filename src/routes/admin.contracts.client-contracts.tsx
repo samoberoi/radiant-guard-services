@@ -3475,9 +3475,10 @@ function ResourceFormDialog({
 
   const totalBenefits = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
 
-  // Statutory ESI on the contract (full-month) gross: 0.75% employee /
-  // 3.25% employer of (gross − washing − conveyance), only when gross
-  // ≤ ₹21,000, rounded UP to the next rupee.
+  // Statutory ESI on the contract (full-month) gross. Percentages and the
+  // wage ceiling are driven by the ESI cost components configured in
+  // Control Center → Cost Component Manager (employee & employer entries).
+  // Falls back to statutory defaults (0.75% / 3.25% / ₹21,000) only if not set.
   const _esiComponentsTotal = components.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const _esiBenefitsTotal = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const _esiGross = _esiComponentsTotal + _esiBenefitsTotal;
@@ -3488,11 +3489,21 @@ function ResourceFormDialog({
     .filter((c) => /\bconveyance\b|\bconv\.?\b/i.test(c.name))
     .reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const _esiBase = Math.max(0, _esiGross - _esiWashing - _esiConveyance);
+  const _esiEmpItem = deductions.find(isEsiItem);
+  const _esiErItem = employerContributions.find(isEsiItem);
+  const _esiEmpPct =
+    _esiEmpItem && Number(_esiEmpItem.percentage) > 0 ? Number(_esiEmpItem.percentage) : 0.75;
+  const _esiErPct =
+    _esiErItem && Number(_esiErItem.percentage) > 0 ? Number(_esiErItem.percentage) : 3.25;
+  const _esiCap =
+    (_esiEmpItem && Number(_esiEmpItem.capAmount) > 0 && Number(_esiEmpItem.capAmount)) ||
+    (_esiErItem && Number(_esiErItem.capAmount) > 0 && Number(_esiErItem.capAmount)) ||
+    21000;
   // ESI ceiling applies to ESI wages (gross excluding washing & conveyance),
   // not raw gross — those allowances are statutorily excluded from ESI wages.
-  const _esiEligible = _esiBase > 0 && _esiBase <= 21000;
-  const esiEmployeeAmount = _esiEligible ? Math.ceil(_esiBase * 0.0075) : 0;
-  const esiEmployerAmount = _esiEligible ? Math.ceil(_esiBase * 0.0325) : 0;
+  const _esiEligible = _esiBase > 0 && _esiBase <= _esiCap;
+  const esiEmployeeAmount = _esiEligible ? Math.ceil(_esiBase * (_esiEmpPct / 100)) : 0;
+  const esiEmployerAmount = _esiEligible ? Math.ceil(_esiBase * (_esiErPct / 100)) : 0;
 
   const totalDeductions =
     deductions.reduce((s, b) => s + (isEsiItem(b) ? esiEmployeeAmount : contractTotalAmount(b)), 0);
