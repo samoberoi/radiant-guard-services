@@ -882,6 +882,7 @@ function useCostComponentOptions() {
             ? (r.base_components as { label: string; operator: "+" | "-" }[])
             : [],
           capAmount: r.cap_amount == null ? null : Number(r.cap_amount),
+          capFlatAmount: r.cap_flat_amount == null ? null : Number(r.cap_flat_amount),
           amount: r.amount == null ? null : Number(r.amount),
           state: String(r.state ?? "N/A"),
         }));
