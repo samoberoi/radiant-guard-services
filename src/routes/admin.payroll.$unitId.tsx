@@ -633,8 +633,33 @@ function PayrollUnitPage() {
       return `ER ${clean}`;
     };
 
-    const DEDUCTION_HEADERS = DEDUCTION_COLS.map(formatDeductionHeader);
-    const EMP_CONTRIB_LABELS = EMPLOYER_CONTRIB_COLS.map(formatEmployerHeader);
+    // Group original deduction / employer-contribution names by their
+    // formatted header so multiple raw names that collapse to the same label
+    // (e.g. "EE-EPF NoCap" + "EE-EPF SP Basic" → "EE EPFC", or
+    // "Professional Tax" + "Professional Tax (PT)" → "EE PT") become a
+    // single column whose value is the sum of all matching items.
+    const groupByHeader = (
+      cols: string[],
+      fmt: (name: string) => string,
+    ): { header: string; names: string[] }[] => {
+      const map = new Map<string, string[]>();
+      const order: string[] = [];
+      for (const name of cols) {
+        const h = fmt(name).trim().replace(/\s+/g, " ");
+        if (!h) continue;
+        if (!map.has(h)) { map.set(h, []); order.push(h); }
+        map.get(h)!.push(name);
+      }
+      return order.map((h) => ({ header: h, names: map.get(h)! }));
+    };
+    const DEDUCTION_GROUPS = groupByHeader(DEDUCTION_COLS, formatDeductionHeader);
+    const EMP_CONTRIB_GROUPS = groupByHeader(EMPLOYER_CONTRIB_COLS, formatEmployerHeader);
+    const DEDUCTION_HEADERS = DEDUCTION_GROUPS.map((g) => g.header);
+    const EMP_CONTRIB_LABELS = EMP_CONTRIB_GROUPS.map((g) => g.header);
+    const sumByNames = (
+      items: { name: string; amount: number }[] | undefined,
+      names: string[],
+    ) => names.reduce((s, n) => s + lookup(items, n), 0);
 
     const lookup = (items: { name: string; amount: number }[] | undefined, label: string) => {
       if (!items) return 0;
