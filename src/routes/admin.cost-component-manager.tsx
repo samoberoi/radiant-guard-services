@@ -477,6 +477,7 @@ function CostComponentDialog({
     setPercentage(String(initial?.percentage ?? 0));
     setBaseRefs(initial?.base_components ?? []);
     setCapAmount(initial?.cap_amount != null ? String(initial.cap_amount) : "");
+    setCapFlatAmount(initial?.cap_flat_amount != null ? String(initial.cap_flat_amount) : "");
     setAmount(initial?.amount != null ? String(initial.amount) : "");
     setState(initial?.state ?? "N/A");
     setNotes(initial?.notes ?? "");
