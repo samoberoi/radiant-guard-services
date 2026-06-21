@@ -105,11 +105,7 @@ function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "b
   }
 
   const name = (c.name ?? "").toLowerCase();
-  // Statutory ESI: always 0.75% (employee) / 3.25% (employer) of earned gross minus earned washing/conveyance.
-  if (isEsiName(name)) {
-    const pct = c.percentage || 0.75;
-    return `${pct}% of Earned Gross − Washing Allowance − Conveyance Allowance · calculated in payroll`;
-  }
+  void name;
   const parts = c.base_components.map((b, i) => (i === 0 ? b.label : `${b.operator === "-" ? "(-) " : "(+) "}${b.label}`));
   const base = parts.length ? parts.join(" ") : "—";
   if (c.cap_amount && c.cap_amount > 0) {
