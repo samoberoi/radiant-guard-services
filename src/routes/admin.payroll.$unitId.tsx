@@ -23,6 +23,7 @@ import {
   applyPtToWageComputation,
   computeAttendanceTotals,
   computeWages,
+  mergeByCanonicalName,
   fmtINR,
   resolvePtAmount,
   type AttendanceCodeLike,
