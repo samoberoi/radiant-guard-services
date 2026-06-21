@@ -359,7 +359,7 @@ function PayrollUnitPage() {
           isPrimary,
           totals,
           wages,
-          resource: resource ?? null,
+          resource: mergedResource ?? resource ?? null,
           hasContract: !!resource,
         };
       });
