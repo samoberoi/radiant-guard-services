@@ -630,7 +630,7 @@ function PayrollUnitPage() {
         .replace(/\bnet\b/gi, "")
         .trim()
         .replace(/\s+/g, " ");
-      return `ER ${clean}`;
+      return clean ? `ER ${clean}` : `ER ${name.trim()}`;
     };
 
     // Group original deduction / employer-contribution names by their
