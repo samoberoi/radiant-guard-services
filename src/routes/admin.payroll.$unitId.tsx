@@ -32,6 +32,7 @@ import {
   type PtSlabLike,
 } from "@/lib/payroll-calc";
 import { openExport } from "@/lib/csv-export";
+import { fetchAttendanceEntriesForPeriod } from "@/lib/attendance-fetch";
 
 const searchSchema = z.object({
   start: z.string(),
@@ -262,14 +263,8 @@ function PayrollUnitPage() {
         .in("id", designationIds.length ? designationIds : ["00000000-0000-0000-0000-000000000000"]);
       const desigMap = new Map((designations ?? []).map((d) => [d.id, d.name as string]));
 
-      // 2. Attendance entries (now include designation_id)
-      const { data: entriesRaw } = await supabase
-        .from("attendance_entries")
-        .select("candidate_id, designation_id, entry_date, code, ot_hours")
-        .eq("unit_id", unitId)
-        .gte("entry_date", start)
-        .lte("entry_date", end);
-      const entries = (entriesRaw ?? []) as Array<{
+      // 2. Attendance entries (fetched per day to avoid backend row caps)
+      const entries = await fetchAttendanceEntriesForPeriod({ unitId, start, end }) as Array<{
         candidate_id: string;
         designation_id: string | null;
         entry_date: string;
