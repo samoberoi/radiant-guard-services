@@ -729,10 +729,13 @@ function PayrollUnitPage() {
     const wageRowsWithTotal = [...dataRows, totalsRow(wageHeaders)];
 
     // ---- Pay Sheet (PDF): slim, only essential columns so everything fits ----
+    const STATUTORY_LABELS = ["EE EPF", "EE ESIC", "EE PT", "EE LWF"];
+    const paySheetStatutoryDed = STATUTORY_LABELS.filter((h) => DEDUCTION_HEADERS.includes(h));
     const paySheetHeaders = [
       "SI No", "Employee ID", "Employee Name", "Designation",
       "Fixed Duties", "Duties", "OT Hours", "Over Time Duties",
       "F Gross Salary", "E Gross Salary",
+      ...paySheetStatutoryDed,
       "Total Deductions", "Net Pay",
       "Bank Acc No", "Bank IFSC",
     ];
