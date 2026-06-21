@@ -258,6 +258,7 @@ type CostComponentOption = {
   percentage: number;
   baseComponents: { label: string; operator: "+" | "-" }[];
   capAmount: number | null;
+  capFlatAmount: number | null;
   amount: number | null;
   state: string;
 };
