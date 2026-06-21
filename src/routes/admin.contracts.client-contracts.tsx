@@ -3257,14 +3257,29 @@ function ResourceFormDialog({
 
   const addComponent = (a: AllowanceType) => {
     preserveDialogScroll(() => {
-      setComponents((prev) => [
-        ...prev,
-        {
+      setComponents((prev) => {
+        const next: ResourceComponent = {
           allowanceId: a.id,
           name: a.shortName || a.displayName,
           amount: 0,
-        },
-      ]);
+        };
+        if (a.calcType === "percentage") {
+          // Compute formula against existing components (excluding self by id).
+          next.amount = computeBenefitAmount(
+            {
+              calcType: "percentage",
+              percentage: a.percentage,
+              baseComponents: a.baseComponents,
+              capAmount: a.capAmount,
+              amount: 0,
+            },
+            prev,
+            [],
+            allowanceTypes,
+          );
+        }
+        return [...prev, next];
+      });
       setAllowanceQuery("");
       setAllowancePickerOpen(false);
     });
