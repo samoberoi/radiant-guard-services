@@ -111,9 +111,15 @@ function applyEsiRule(
   defaultName: string,
 ): WageComponent[] {
   const hasEsi = items.some((i) => ESI_NAME_RE.test(i.name));
-  const mapped = items.map((i) =>
-    ESI_NAME_RE.test(i.name) ? { ...i, amount: share } : i,
-  );
+  // Only the FIRST matching row carries the statutory amount; any other
+  // ESI-named rows are zeroed so the contract can't double-count ESI.
+  let placed = false;
+  const mapped = items.map((i) => {
+    if (!ESI_NAME_RE.test(i.name)) return i;
+    if (placed) return { ...i, amount: 0 };
+    placed = true;
+    return { ...i, amount: share };
+  });
   // Auto-inject statutory ESI row when contract omits it and the employee is
   // eligible, so export reflects the statutory shares without stale contract rows.
   if (!hasEsi && share > 0) mapped.push({ name: defaultName, amount: share });
@@ -289,9 +295,13 @@ export function resolvePtAmount(input: PtResolveInput): PtResolveResult {
 
 function applyPtRule(items: WageComponent[], amount: number, defaultName: string): WageComponent[] {
   const hasPt = items.some((i) => PT_NAME_RE.test(i.name));
-  const mapped = items.map((i) =>
-    PT_NAME_RE.test(i.name) ? { ...i, amount } : i,
-  );
+  let placed = false;
+  const mapped = items.map((i) => {
+    if (!PT_NAME_RE.test(i.name)) return i;
+    if (placed) return { ...i, amount: 0 };
+    placed = true;
+    return { ...i, amount };
+  });
   if (!hasPt && amount > 0) mapped.push({ name: defaultName, amount });
   return mapped;
 }
@@ -403,8 +413,18 @@ export function computeWages(
       ? round2(contractEmployerEpf > 0 ? contractEmployerEpf : 15000 * employerEpfRate)
       : round2(epfBase * employerEpfRate);
 
-  const applyEpfRule = (items: WageComponent[], amount: number) =>
-    items.map((i) => (/\bepf\b/i.test(i.name) ? { ...i, amount } : i));
+  // Only the FIRST EPF-named row carries the statutory amount; any other
+  // EPF-named rows are zeroed so a contract listing multiple EPF lines
+  // can't double-deduct.
+  const applyEpfRule = (items: WageComponent[], amount: number) => {
+    let placed = false;
+    return items.map((i) => {
+      if (!/\bepf\b/i.test(i.name)) return i;
+      if (placed) return { ...i, amount: 0 };
+      placed = true;
+      return { ...i, amount };
+    });
+  };
 
 
   // ---- Statutory ESI override ----

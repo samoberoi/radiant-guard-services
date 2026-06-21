@@ -616,7 +616,7 @@ function PayrollUnitPage() {
         .replace(/\bnet\b/gi, "")
         .trim()
         .replace(/\s+/g, " ");
-      return `EE ${clean}`;
+      return clean ? `EE ${clean}` : `EE ${name.trim()}`;
     };
     const formatEmployerHeader = (name: string): string => {
       const n = name.toLowerCase();
@@ -630,11 +630,36 @@ function PayrollUnitPage() {
         .replace(/\bnet\b/gi, "")
         .trim()
         .replace(/\s+/g, " ");
-      return `ER ${clean}`;
+      return clean ? `ER ${clean}` : `ER ${name.trim()}`;
     };
 
-    const DEDUCTION_HEADERS = DEDUCTION_COLS.map(formatDeductionHeader);
-    const EMP_CONTRIB_LABELS = EMPLOYER_CONTRIB_COLS.map(formatEmployerHeader);
+    // Group original deduction / employer-contribution names by their
+    // formatted header so multiple raw names that collapse to the same label
+    // (e.g. "EE-EPF NoCap" + "EE-EPF SP Basic" → "EE EPFC", or
+    // "Professional Tax" + "Professional Tax (PT)" → "EE PT") become a
+    // single column whose value is the sum of all matching items.
+    const groupByHeader = (
+      cols: string[],
+      fmt: (name: string) => string,
+    ): { header: string; names: string[] }[] => {
+      const map = new Map<string, string[]>();
+      const order: string[] = [];
+      for (const name of cols) {
+        const h = fmt(name).trim().replace(/\s+/g, " ");
+        if (!h) continue;
+        if (!map.has(h)) { map.set(h, []); order.push(h); }
+        map.get(h)!.push(name);
+      }
+      return order.map((h) => ({ header: h, names: map.get(h)! }));
+    };
+    const DEDUCTION_GROUPS = groupByHeader(DEDUCTION_COLS, formatDeductionHeader);
+    const EMP_CONTRIB_GROUPS = groupByHeader(EMPLOYER_CONTRIB_COLS, formatEmployerHeader);
+    const DEDUCTION_HEADERS = DEDUCTION_GROUPS.map((g) => g.header);
+    const EMP_CONTRIB_LABELS = EMP_CONTRIB_GROUPS.map((g) => g.header);
+    const sumByNames = (
+      items: { name: string; amount: number }[] | undefined,
+      names: string[],
+    ) => names.reduce((s, n) => s + lookup(items, n), 0);
 
     const lookup = (items: { name: string; amount: number }[] | undefined, label: string) => {
       if (!items) return 0;
@@ -703,7 +728,7 @@ function PayrollUnitPage() {
         ...EARNED_COMPONENT_COLS.map((c) => lookup(earnedComponents, c)),
         ...additionGroups.map((g) => additionAmount(earnedAdditions, g.names)),
         w ? w.earnedGross : 0,
-        ...DEDUCTION_COLS.map((c) => lookup(earnedDeductions, c)),
+        ...DEDUCTION_GROUPS.map((g) => sumByNames(earnedDeductions, g.names)),
         w ? Math.round(w.totalDeductions) : 0,
         w ? Math.round(w.netPay) : 0,
         r.bankAccountNumber, r.bankIfsc, r.bankName, r.bankBranch, r.bankAccountHolder,
@@ -738,9 +763,10 @@ function PayrollUnitPage() {
       // fractional rupee value (e.g. ₹12.50). Preserve its exact value;
       // round other employer contributions to whole rupees as before.
       const isLwfName = (n: string) => /\blwf\b|labour\s*welfare/i.test(n);
-      EMPLOYER_CONTRIB_COLS.forEach((name, i) => {
-        const val = lookup(empContribs, name);
-        extra[EMP_CONTRIB_LABELS[i]] = isLwfName(name) ? val : Math.round(val);
+      EMP_CONTRIB_GROUPS.forEach((g) => {
+        const val = sumByNames(empContribs, g.names);
+        const anyLwf = g.names.some(isLwfName);
+        extra[g.header] = anyLwf ? val : Math.round(val);
       });
       extra["Total Employer Contributions"] = w ? Math.round(w.totalEmployerContributions) : 0;
       extra["Employer Cost (CTC)"] = w ? Math.round(w.employerCost) : 0;
