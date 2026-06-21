@@ -154,14 +154,20 @@ function PayrollUnitPage() {
   const canApprove = can("payroll", "approve");
 
   type RunStatus = "draft" | "submitted" | "approved" | "rejected";
-  type RunRow = { id: string; status: RunStatus; rejection_reason: string | null };
+  type RunRow = {
+    id: string;
+    status: RunStatus;
+    rejection_reason: string | null;
+    approved_at: string | null;
+    submitted_at: string | null;
+  };
   const runQK = ["payroll-run", unitId, start, end];
   const { data: run } = useQuery({
     queryKey: runQK,
     queryFn: async (): Promise<RunRow | null> => {
       const { data, error } = await supabase
         .from("payroll_runs" as never)
-        .select("id, status, rejection_reason")
+        .select("id, status, rejection_reason, approved_at, submitted_at")
         .eq("unit_id", unitId)
         .eq("period_start", start)
         .eq("period_end", end)
