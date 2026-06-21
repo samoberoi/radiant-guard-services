@@ -52,6 +52,7 @@ type CostComponent = {
   percentage: number;
   base_components: BaseRef[];
   cap_amount: number | null;
+  cap_flat_amount: number | null;
   amount: number | null;
   state: string;
   notes: string;
