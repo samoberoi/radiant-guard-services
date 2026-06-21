@@ -93,7 +93,7 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
   };
 }
 
-function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "amount"> & { name?: string }): string {
+function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "cap_flat_amount" | "amount"> & { name?: string }): string {
   if (c.calc_type === "fixed") {
     const isMgmt = /management\s*fee/i.test(c.name ?? "");
     if (isMgmt) {
@@ -113,7 +113,9 @@ function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "b
   const parts = c.base_components.map((b, i) => (i === 0 ? b.label : `${b.operator === "-" ? "(-) " : "(+) "}${b.label}`));
   const base = parts.length ? parts.join(" ") : "—";
   if (c.cap_amount && c.cap_amount > 0) {
-    const flat = Math.round(((c.percentage || 0) / 100) * c.cap_amount);
+    const flat = c.cap_flat_amount != null && c.cap_flat_amount > 0
+      ? c.cap_flat_amount
+      : Math.round(((c.percentage || 0) / 100) * c.cap_amount);
     return `${c.percentage}% of (${base}) if ≤ ₹${c.cap_amount.toLocaleString("en-IN")}, else flat ₹${flat.toLocaleString("en-IN")}`;
   }
   return `${c.percentage}% of ${base}`;
