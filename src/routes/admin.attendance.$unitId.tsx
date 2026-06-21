@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { classifyAttendanceEmployee, matchesAttendanceScope, type AttendanceScopeAssignment, type AttendanceUnitContext } from "@/lib/attendance";
+import { fetchAttendanceEntriesForPeriod } from "@/lib/attendance-fetch";
 import { cn } from "@/lib/utils";
 import { useCurrentPermissions } from "@/lib/rbac";
 
@@ -445,30 +446,11 @@ function MusterRollPage() {
 
   const codeMap = useMemo(() => new Map(codes.map((c) => [c.code, c])), [codes]);
 
-  const entriesQK = ["attendance-entries-v3", unitId, periodStart, periodEnd];
+  const entriesQK = ["attendance-entries-v4", unitId, periodStart, periodEnd];
   const { data: entries = [] } = useQuery({
     queryKey: entriesQK,
     queryFn: async () => {
-      const pageSize = 1000;
-      const allRows: EntryRow[] = [];
-
-      for (let from = 0; ; from += pageSize) {
-        const { data, error } = await supabase
-          .from("attendance_entries")
-          .select("candidate_id, designation_id, entry_date, code, ot_hours")
-          .eq("unit_id", unitId)
-          .gte("entry_date", periodStart)
-          .lte("entry_date", periodEnd)
-          .order("entry_date", { ascending: true })
-          .range(from, from + pageSize - 1);
-        if (error) throw error;
-
-        const rows = (data ?? []) as EntryRow[];
-        allRows.push(...rows);
-        if (rows.length < pageSize) break;
-      }
-
-      return allRows;
+      return fetchAttendanceEntriesForPeriod({ unitId, start: periodStart, end: periodEnd }) as Promise<EntryRow[]>;
     },
     enabled: Boolean(unitId),
   });
