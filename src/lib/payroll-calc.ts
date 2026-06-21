@@ -3,9 +3,8 @@
 // Wage formulas mirror the attendance page derivations: a candidate's earned
 // gross for a period is `per-day × T Days`, where per-day is derived from the
 // contract resource's monthly gross divided by the configured payroll-day
-// base. All component / deduction / employer-contribution amounts in the
-// contract resource are scaled by the same ratio so the breakdown reconciles
-// to the earned gross.
+// base. Percentage deductions/contributions are recalculated from their
+// configured contract base components, while fixed statutory rows stay fixed.
 
 export type AttendanceEntryLike = {
   candidate_id: string;
@@ -68,8 +67,24 @@ export function computeAttendanceTotals(
   return { pDays, otHours, otDays, phDays, otherPaidDays, tDays };
 }
 
-export type WageComponent = { name: string; amount: number };
-export type BenefitLike = { name: string; amount: number | string | null };
+export type WageComponent = {
+  name: string;
+  amount: number;
+  calcType?: "percentage" | "fixed" | string;
+  percentage?: number | string | null;
+  baseComponents?: { label: string; operator: "+" | "-" }[];
+  capAmount?: number | string | null;
+  capFlatAmount?: number | string | null;
+};
+export type BenefitLike = {
+  name: string;
+  amount: number | string | null;
+  calcType?: "percentage" | "fixed" | string;
+  percentage?: number | string | null;
+  baseComponents?: { label: string; operator: "+" | "-" }[];
+  capAmount?: number | string | null;
+  capFlatAmount?: number | string | null;
+};
 
 export type ContractResourceLike = {
   designationId: string;
@@ -102,6 +117,7 @@ export type WageComputation = {
 
 const ESI_NAME_RE = /\besi(c)?\b/i;
 const ESI_EARNED_GROSS_CEILING = 21000;
+const EPF_NAME_RE = /\bepf\b/i;
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
@@ -129,11 +145,8 @@ function applyEsiRule(
 export function calculateEsiAmounts(
   earnedGross: number,
   earnedComponents: WageComponent[],
+  options: { employeePct?: number; employerPct?: number; ceiling?: number } = {},
 ): { base: number; employee: number; employer: number } {
-  if (earnedGross > ESI_EARNED_GROSS_CEILING) {
-    return { base: 0, employee: 0, employer: 0 };
-  }
-
   const earnedComponentAmount = (pattern: RegExp) =>
     earnedComponents
       .filter((c) => pattern.test(c.name))
@@ -141,17 +154,33 @@ export function calculateEsiAmounts(
   const earnedWashing = earnedComponentAmount(/\bwashing\b/i);
   const earnedConveyance = earnedComponentAmount(/\bconveyance\b|\bconv\.?\b/i);
   const base = Math.max(0, earnedGross - earnedWashing - earnedConveyance);
+  const ceiling = options.ceiling && options.ceiling > 0 ? options.ceiling : ESI_EARNED_GROSS_CEILING;
+  if (base > ceiling) {
+    return { base, employee: 0, employer: 0 };
+  }
   // Statutory ESIC rule: only up to ₹21,000 earned gross; contributions are
   // rounded UP to the next rupee.
+  const employeePct = options.employeePct && options.employeePct > 0 ? options.employeePct : 0.75;
+  const employerPct = options.employerPct && options.employerPct > 0 ? options.employerPct : 3.25;
   return {
     base,
-    employee: base > 0 ? Math.ceil(base * 0.0075) : 0,
-    employer: base > 0 ? Math.ceil(base * 0.0325) : 0,
+    employee: base > 0 ? Math.ceil(base * (employeePct / 100)) : 0,
+    employer: base > 0 ? Math.ceil(base * (employerPct / 100)) : 0,
   };
 }
 
 export function applyEsiToWageComputation(wages: WageComputation): WageComputation {
-  const esi = calculateEsiAmounts(wages.earnedGross, wages.components);
+  const firstEsi = (items: WageComponent[]) => items.find((i) => ESI_NAME_RE.test(i.name));
+  const employeeEsi = firstEsi(wages.deductions);
+  const employerEsi = firstEsi(wages.employerContributions);
+  const esi = calculateEsiAmounts(wages.earnedGross, wages.components, {
+    employeePct: Number(employeeEsi?.percentage) || 0.75,
+    employerPct: Number(employerEsi?.percentage) || 3.25,
+    ceiling:
+      Number(employeeEsi?.capAmount) ||
+      Number(employerEsi?.capAmount) ||
+      ESI_EARNED_GROSS_CEILING,
+  });
   const deductions = applyEsiRule(wages.deductions, esi.employee, "ESI Employee Contribution");
   const employerContributions = applyEsiRule(
     wages.employerContributions,
@@ -322,9 +351,39 @@ export function applyPtToWageComputation(
 
 function scaleItems(items: BenefitLike[], ratio: number): WageComponent[] {
   return items.map((i) => ({
+    ...i,
     name: i.name,
     amount: round2((Number(i.amount) || 0) * ratio),
   }));
+}
+
+function benefitAmountFromConfig(
+  item: BenefitLike | undefined,
+  earnedComponents: WageComponent[],
+  contractComponents: WageComponent[],
+  ratio: number,
+): number {
+  if (!item) return 0;
+  if (item.calcType !== "percentage") return round2(Number(item.amount) || 0);
+
+  const norm = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  const earnedByName = new Map(earnedComponents.map((c) => [norm(c.name), Number(c.amount) || 0]));
+  const contractByName = new Map(contractComponents.map((c) => [norm(c.name), Number(c.amount) || 0]));
+  const bases = Array.isArray(item.baseComponents) ? item.baseComponents : [];
+  const base = bases.reduce((sum, b) => {
+    const key = norm(String(b.label ?? ""));
+    const contractValue = contractByName.get(key) ?? 0;
+    const earnedValue = earnedByName.get(key) ?? round2(contractValue * ratio);
+    return b.operator === "-" ? sum - earnedValue : sum + earnedValue;
+  }, 0);
+  let amount = (Number(item.percentage) || 0) * Math.max(0, base) / 100;
+  const capAmount = Number(item.capAmount) || 0;
+  if (capAmount > 0 && base > capAmount) {
+    amount = Number(item.capFlatAmount) > 0
+      ? Number(item.capFlatAmount) || 0
+      : (Number(item.percentage) || 0) * capAmount / 100;
+  }
+  return round2(amount);
 }
 
 export function computeWages(
@@ -357,6 +416,7 @@ export function computeWages(
   const ratio = contractGross > 0 ? earnedGross / contractGross : 0;
 
   const components = resource.components.map((c) => ({
+    ...c,
     name: c.name,
     amount: round2((Number(c.amount) || 0) * ratio),
   }));
@@ -371,6 +431,7 @@ export function computeWages(
     /labour\s*welfare/i.test(name);
   const scaleItemsRespectingFixed = (items: BenefitLike[]): WageComponent[] =>
     items.map((i) => ({
+      ...i,
       name: i.name,
       amount: isFixedItem(i.name)
         ? round2(Number(i.amount) || 0)
@@ -380,38 +441,22 @@ export function computeWages(
   const deductionsScaled = scaleItemsRespectingFixed(resource.deductions);
   const employerContributionsScaled = scaleItemsRespectingFixed(resource.employerContributions);
 
-  // ---- Statutory EPF override ----
-  // Employee EPF: statutory 12% of (earned Gross − earned HRA), capped at a
-  // ₹15,000 wage ceiling → max ₹1,800.
-  // Employer EPF rule:
-  //   • If earned Gross ≥ ₹15,000 → use the CONTRACT's employer EPF amount
-  //     directly (e.g. ₹1,950 for a 13% loading). This is the statutory
-  //     ceiling outcome and matches what the contract resource page shows.
-  //   • If earned Gross < ₹15,000 → calculate at the contract's employer
-  //     EPF rate (typically 13%) applied to (earned Gross − earned HRA).
-  // Fallback employer rate is 12% if the contract didn't configure it.
-  const earnedHRA = components
-    .filter((c) => /\bhra\b/i.test(c.name))
-    .reduce((s, c) => s + c.amount, 0);
-  const contractHRA = resource.components
-    .filter((c) => /\bhra\b/i.test(c.name))
-    .reduce((s, c) => s + (Number(c.amount) || 0), 0);
-  const epfBase = Math.max(0, earnedGross - earnedHRA);
-  const epfCappedBase = Math.min(epfBase, 15000);
-  const employeeEpfAmount = round2(epfCappedBase * 0.12);
-
-  const contractEpfBase = Math.max(0, contractGross - contractHRA);
   const findEpf = (items: BenefitLike[]) =>
-    items.find((i) => /\bepf\b/i.test(i.name));
-  const contractEmployerEpf = Number(findEpf(resource.employerContributions)?.amount) || 0;
-  const employerEpfRate =
-    contractEpfBase > 0 && contractEmployerEpf > 0
-      ? contractEmployerEpf / contractEpfBase
-      : 0.12;
-  const employerEpfAmount =
-    earnedGross >= 15000
-      ? round2(contractEmployerEpf > 0 ? contractEmployerEpf : 15000 * employerEpfRate)
-      : round2(epfBase * employerEpfRate);
+    items.find((i) => EPF_NAME_RE.test(i.name));
+  const employeeEpfItem = findEpf(resource.deductions);
+  const employerEpfItem = findEpf(resource.employerContributions);
+  const employeeEpfAmount = benefitAmountFromConfig(
+    employeeEpfItem,
+    components,
+    resource.components,
+    ratio,
+  );
+  const employerEpfAmount = benefitAmountFromConfig(
+    employerEpfItem,
+    components,
+    resource.components,
+    ratio,
+  );
 
   // Only the FIRST EPF-named row carries the statutory amount; any other
   // EPF-named rows are zeroed so a contract listing multiple EPF lines
@@ -419,7 +464,7 @@ export function computeWages(
   const applyEpfRule = (items: WageComponent[], amount: number) => {
     let placed = false;
     return items.map((i) => {
-      if (!/\bepf\b/i.test(i.name)) return i;
+      if (!EPF_NAME_RE.test(i.name)) return i;
       if (placed) return { ...i, amount: 0 };
       placed = true;
       return { ...i, amount };
@@ -431,7 +476,17 @@ export function computeWages(
   // Rule: ESI is computed on earned Gross minus earned Washing and
   // Conveyance allowances. Employee share = 0.75%, employer share = 3.25%.
   // Applied to any row whose name contains "ESI".
-  const esi = calculateEsiAmounts(earnedGross, components);
+  const findEsi = (items: BenefitLike[]) => items.find((i) => ESI_NAME_RE.test(i.name));
+  const employeeEsiItem = findEsi(resource.deductions);
+  const employerEsiItem = findEsi(resource.employerContributions);
+  const esi = calculateEsiAmounts(earnedGross, components, {
+    employeePct: Number(employeeEsiItem?.percentage) || 0.75,
+    employerPct: Number(employerEsiItem?.percentage) || 3.25,
+    ceiling:
+      Number(employeeEsiItem?.capAmount) ||
+      Number(employerEsiItem?.capAmount) ||
+      ESI_EARNED_GROSS_CEILING,
+  });
 
   const deductions = applyEsiRule(
     applyEpfRule(deductionsScaled, employeeEpfAmount),
