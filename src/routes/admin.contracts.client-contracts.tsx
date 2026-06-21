@@ -3488,7 +3488,9 @@ function ResourceFormDialog({
     .filter((c) => /\bconveyance\b|\bconv\.?\b/i.test(c.name))
     .reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const _esiBase = Math.max(0, _esiGross - _esiWashing - _esiConveyance);
-  const _esiEligible = _esiGross > 0 && _esiGross <= 21000 && _esiBase > 0;
+  // ESI ceiling applies to ESI wages (gross excluding washing & conveyance),
+  // not raw gross — those allowances are statutorily excluded from ESI wages.
+  const _esiEligible = _esiBase > 0 && _esiBase <= 21000;
   const esiEmployeeAmount = _esiEligible ? Math.ceil(_esiBase * 0.0075) : 0;
   const esiEmployerAmount = _esiEligible ? Math.ceil(_esiBase * 0.0325) : 0;
 
