@@ -445,7 +445,7 @@ function MusterRollPage() {
 
   const codeMap = useMemo(() => new Map(codes.map((c) => [c.code, c])), [codes]);
 
-  const entriesQK = ["attendance-entries-v2", unitId, periodStart, periodEnd];
+  const entriesQK = ["attendance-entries-v3", unitId, periodStart, periodEnd];
   const { data: entries = [] } = useQuery({
     queryKey: entriesQK,
     queryFn: async () => {
