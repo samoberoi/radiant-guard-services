@@ -11,6 +11,7 @@ import {
   applyPtToWageComputation,
   computeAttendanceTotals,
   computeWages,
+  mergeByCanonicalName,
   fmtINR,
   resolvePtAmount,
   type AttendanceCodeLike,
@@ -331,6 +332,23 @@ function PayrollUnitPage() {
           });
           Object.assign(wages, applyPtToWageComputation(wages, pt.amount));
         }
+        // Merge split components (e.g. "HRA 5%" + "HRA 15%" -> "HRA") across
+        // contract config and computed wages so invoice tables/exports show
+        // a single column per canonical component. Totals are unchanged.
+        const mergedResource = resource
+          ? {
+              ...resource,
+              components: mergeByCanonicalName(resource.components),
+              benefits: mergeByCanonicalName(resource.benefits ?? []),
+              deductions: mergeByCanonicalName(resource.deductions ?? []),
+              employerContributions: mergeByCanonicalName(resource.employerContributions ?? []),
+            }
+          : null;
+        if (wages) {
+          wages.components = mergeByCanonicalName(wages.components) as typeof wages.components;
+          wages.deductions = mergeByCanonicalName(wages.deductions) as typeof wages.deductions;
+          wages.employerContributions = mergeByCanonicalName(wages.employerContributions) as typeof wages.employerContributions;
+        }
         return {
           id: c.id,
           rowKey: pairKey(c.id, p.designationId),
@@ -341,7 +359,7 @@ function PayrollUnitPage() {
           isPrimary,
           totals,
           wages,
-          resource: resource ?? null,
+          resource: mergedResource ?? resource ?? null,
           hasContract: !!resource,
         };
       });
