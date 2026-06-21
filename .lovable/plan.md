@@ -1,82 +1,51 @@
 ## Goal
 
-Onboard **FPL Technologies Private Limited** into the system end-to-end using the rate card PDF + the two master Excel sheets — no overwrites, halt on any duplicate.
+Take the uploaded `Employee_Master_Data` sheet (filtered to `UNIT NAME = FPL TECHNOLOGIES PRIVATE LIMITED`, 64 rows) and make sure every populated cell lands on the matching `candidates` row in the database. Existing non-empty values stay; only blanks get filled.
 
-## What's already in the DB (verified)
+## What I already verified
 
-- No customer / unit / contract matching FPL or "One Card" — clean slate.
-- All 8 designations from the PDF already exist EXCEPT one: **Sr. Receptionist** (only "Receptionist" / "Receptionist 28989" exist).
-- All required cost components exist (PF, ESI, PT, Bonus, Gratuity, LWF-MH, GB Levy, Reliever, Management Fee, Uniform, LWW, NFH).
-- Pune branch exists (`PUNE`). Payroll day base "Fixed 26 Days" exists.
+- 64 FPL rows in the upload; 67 candidates currently on the FPL Pune unit (the 3 extras = Ankit Tyagi, Sumit Kumar Mahunta, Madan Mohan added during attendance import — they aren't in this sheet, so they're left untouched).
+- Match key per row: `AADHAR NO` first, fall back to `EMPLOYEE ID` → `candidates.other_info->>'legacy_employee_id'` (added on initial import), then mobile.
+- Most identity, bank, address, PF/ESIC fields are already filled (verified against a sample). Gaps are concentrated in: city/district, emergency contacts, blood group, education, birthplace, identification marks, secondary phone, agency-branch/zone tags, EPF number, ESIC subcode.
 
-## Plan
+## Field map (Excel → candidate row)
 
-### 1. Create one missing designation
-- `Sr. Receptionist` (code `SR REC`) — used by page 6 of the rate card.
+Plain columns (only written if current DB value is null/empty):
 
-### 2. Create the customer
-- **Name:** FPL Technologies Private Limited
-- Status: active. PAN/GSTIN left blank (not in the PDF). Onboarding date: 01/01/2025.
+| Excel column | DB target |
+|---|---|
+| PHONE | `mobile` |
+| SECONDARY PHONE | `alt_mobile` |
+| EMAIL / PERSONNEL EMAIL ID | `email` (personnel preferred if both) |
+| GENDER, DOB, MARITAL STATUS, RELIGION, CATEGORY, BIRTH PLACE | `gender`, `date_of_birth`, `marital_status`, `religion`, `caste_category`, `birthplace` |
+| LANGUAGES | `languages` (jsonb array, split on comma) |
+| PRESENT/PERMANENT ADDRESS 1/2, CITY, DISTRICT, STATE, COUNTRY, PINCODE, POLICE STATION | matching `present_*` / `permanent_*` columns + `present_police_station` / `permanent_police_station` |
+| AADHAR NO, PAN NO | `aadhaar_number`, `pan_number` |
+| BANK NAME, BRANCH, A/C, IFSC, ACCOUNT HOLDER | `bank_name`, `bank_branch`, `bank_account_number`, `bank_ifsc`, `bank_account_holder` |
+| EMERGENCY CONTACT NAME / NO / RELATIONSHIP | `emergency_contact_name` / `_mobile` / `_relation` |
+| HEIGHT, WEIGHT, CHEST | `physical_health` jsonb (`height_cm`, `weight_kg`, `chest_cm`) |
+| PF DEDUCT, UAN, EPF NO, ESI DEDUCT, ESIC NO, ESIC DISPENSARY, ESIC BRANCH, ESIC SUBCODE, PREVIOUS ESIC NO, PT DEDUCT | `compliance` jsonb (`pf_deduct`, `uan`, `epf_number`, `esi_deduct`, `esic_number`, `esic_dispensary`, `esic_branch`, `esic_subcode`, `previous_esic_number`, `pt_deduct`) |
+| FATHER / MOTHER / SPOUSE NAME, REFERENCE NAME + ADDRESS 1/2 | `references` jsonb (add only missing relations) |
 
-### 3. Create one Unit under the customer
-- **Name:** FPL Technologies — Pune
-- Branch: PUNE. Billing state: Maharashtra. Site address from employee rows (Pune). Linked to customer above.
+Fields that don't have a dedicated column go into `other_info` jsonb (merged, never overwritten):
 
-### 4. Create one Client Contract on that unit
-- Period: **01/01/2025 → 30/06/2025**
-- Payroll day base: Fixed 26 Days (matches "26 days earned" in PDF)
-- Status: active, approval_status: approved, record_type: client.
-- 8 contract resources (one per designation), each with full breakdown copied verbatim from the PDF (earned-for-26-days figures):
+`client_employee_id`, `zone_id`, `zone_name`, `agency_branch_id`, `agency_branch_name`, `unit_short_name`, `gross_salary_legacy`, `net_salary_legacy`, `is_verified`, `is_active_legacy`, `education_level`, `vaccination_status`, `blood_group`, `identification_mark_1`, `identification_mark_2`, `is_immigrant_worker`, `ex_service_man`, `details_of_service`, `driving_license_type`, `driving_license_number`, `voter_id`, `paycard_number`, `secondary_bank_account`, `secondary_bank_ifsc`, `accident_insurance_no`, `health_insurance_no`, `classification`, `created_by_legacy`, `created_at_legacy`, `legacy_employee_id`, `legacy_employee_candidate_id`.
 
-  | Designation | Basic | Spl | HRA | Wash | Skill/Edu | Conv | Site | Uniform | LWW | NFH | Gross | PF emp | PT | PF er | WC | Bonus | Gratuity | LWF | GB Levy | Reliever | Mgmt Fee |
-  |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-  | Admin Executive | 11632 | 3614 | 762.30 (5%) | 100 | 10585.57 | 3000 | 2000 | 300 | 609.84 | 152.46 | 32756.17 | 1829.52 | 200 | 1981.98 | 200 | 1269.99 | 733.33 | 12.50 | 0 | — | 2586.78 |
-  | Security Supervisor | 13866 | 3614 | 2622 (15%) | 1000 | 0 (Edu) | 1800 | 2000 | 300 | 699.20 | 174.80 | 26076 | 2098 | 200 | 2272.40 | 200 | 1456.08 | 699.20 | 12.50 | 524.40 | 5207.81 | 2551.39 |
-  | Bouncer (6 days) | (per PDF p.3) | … | … | … | … | … | … | … | … | … | … | … | … | … | … | … | … | 12.50 | 524.40 | — | 3367.00 |
-  | Security Guard | 13266 | … | … | … | … | … | … | … | … | … | … | … | … | … | … | … | … | 12.50 | 506.40 | 4726.05 | 2315.37 |
-  | Receptionist | 11632 | 3614 | 762.30 | 100 | … | … | … | 300 | … | … | … | … | 200 | … | 200 | 1269.99 | 733.33 | 12.50 | 0 | — | 1775.79 |
-  | Sr. Receptionist | 11632 | … | … | … | … | … | … | … | … | … | … | … | 200 | … | 200 | 1269.99 | 733.33 | 12.50 | 0 | — | 1915.79 |
-  | BMS Operator | 11632 | 3614 | … | … | … | … | … | … | … | … | … | … | 200 | … | 200 | 1269.99 | 733.33 | 12.50 | 0 | — | 2195.79 |
-  | Office Assistant | 11632 | 3614 | 762.30 | … | … | … | … | 300 | … | … | … | … | 200 | … | 200 | 1269.99 | 733.33 | 12.50 | 0 | — | (per PDF p.8) |
+Plus, if `EX-SERVICE MAN = YES`, set `is_ex_service = true` (only if currently null/false).
 
-  (I'll fill the remaining numbers from PDF pages 3, 4, 7 and 8 exactly during build — the table above shows the structure I'll commit, not a reduced version.)
+## Safety rules
 
-### 5. Import the 64 FPL employees as candidates
-- Filter: `UNIT NAME = 'FPL TECHNOLOGIES PRIVATE LIMITED'`.
-- One row per candidate with status `active`. Map every available master column:
-  - identity: full_name, gender, DOB, mobile, alt_mobile, email, marital_status, religion, caste_category, blood_group, height/weight/chest, languages, father/mother/spouse names, reference, emergency contact, birthplace.
-  - identifiers: aadhaar_number, PAN, voter ID, UAN, EPF no, ESIC no, ESIC branch/dispensary/subcode.
-  - addresses: present + permanent (incl. police station, pincode, same_as_permanent flag).
-  - bank: name, branch, A/C, IFSC, holder, secondary A/C+IFSC.
-  - flags: pf_deduct, esi_deduct, pt_deduct, ex-service, vaccination, immigrant.
-  - designation_id resolved from the `DESIGNATION` column (Security Guard, Security Supervisor, BMS OPREATOR → existing `BMS OPREATOR`, Bouncer, Office Assistant, Admin Executive).
-- Deploy each candidate to the FPL Pune unit (`candidate_units` insert with active range starting 01/01/2025 or DOJ if later).
-- All inserted with `created_by` = system; the `set_employee_code` trigger will assign `EMP-###` automatically on active.
+1. **No overwrites.** For every column the update is `SET col = COALESCE(NULLIF(col,''), <excel>)`. For jsonb (`compliance`, `physical_health`, `other_info`, `references`, `languages`), I merge missing keys only — existing keys keep their current value.
+2. **Match guard.** Skip a row if no candidate is found by aadhaar/legacy id/mobile, and report it back instead of creating a new candidate.
+3. **No new candidates, no new units, no contract changes.** Only the existing 64 FPL candidate rows are touched.
+4. **Activity log.** One `logActivity` entry per touched candidate ("FPL master refresh — filled N blank fields") so the System Logs page records the change.
+5. **Dry-run summary first.** Before writing, I print a per-row diff (which fields will be filled). If nothing surprising, the same script does the writes in one transaction.
 
-### 6. Import family members
-- Filter the family Excel by the 64 FPL `EMPLOYEE ID`s.
-- Insert into the dependents table (per `candidate-extra-sections` schema) linked by candidate id with relationship, DOB, address, resides_with flag.
+## Deliverable
 
-### 7. Duplicate guard (your "stop and ask" rule)
-Before each write block I'll SELECT for collisions:
-- Customer: name match (case-insensitive).
-- Unit: name match within customer.
-- Contract: active contract on same unit + same date range.
-- Candidate: aadhaar_number match (primary key for dedup), then PAN, then mobile.
-- Family member: (candidate_id, name, relationship) match.
+- A migration-free data load via `supabase--insert` (UPDATEs only) that processes all 64 rows.
+- A short report at the end: rows updated, fields filled per category, and any rows that couldn't be matched.
 
-If ANY collision is found, I stop, list the conflicts, and ask you how to proceed (skip / rename / abort) — no overwriting.
+## Open question
 
-### 8. Sync guarantee
-All writes go through the same Lovable Cloud tables the existing UI reads from — contract pages, payroll, MIS, wage register, and pay sheet exports will pick the new data up automatically via `computeWages` (no engine change needed; the contract resource breakdown drives every export).
-
-## Technical details
-
-- One migration to insert the `Sr. Receptionist` designation (schema-safe insert into existing table).
-- One bulk data load via `supabase--insert` for everything else (customer → unit → contract → 8 resources → 64 candidates → candidate_units → family rows), wrapped so duplicate-check SELECTs run first and the load stops cleanly on collision.
-- All amounts entered as numbers; the per-resource components are stored in the existing `components` / `deductions` / `employer_contributions` jsonb columns matching the format used by `admin.contracts.client-contracts.tsx`.
-- Contract `payroll_day_base_id` = "Fixed 26 Days"; ESI rows left at 0 (the engine auto-applies the statutory rule when earned gross is in scope).
-
-## Ask before I build
-
-The PDF's "Bouncer" page lists "Total Payable Days: 6" (vs 26 elsewhere). I'll treat that as a one-off coverage scenario and still register the Bouncer resource with the **monthly** structure (so the engine prorates correctly per attendance). Tell me if you'd rather lock Bouncer to 6 days flat.
+The Excel `EMAIL` column is the system-generated `<empid>@radiantguards.com`; the `PERSONNEL EMAIL ID` column is the real personal email (mostly blank in this sheet). I'll prefer `PERSONNEL EMAIL ID` when present; otherwise keep the existing DB email. Tell me if you'd rather force the radiantguards.com address everywhere.
