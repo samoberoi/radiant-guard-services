@@ -1,37 +1,71 @@
 ## Goal
-Collapse split earning/deduction/contribution columns like `HRA 5%` and `HRA 15%` into a single `HRA` column on the payroll screen and in all three exports (Wage Register, Pay Sheet, MIS). Values stay accurate by summing the underlying per-employee amounts (which are already prorated by attendance).
+End-to-end audit and fix of payroll computation + the four surfaces (on-screen table, breakdown drawer, Wage Register XLSX, Pay Sheet PDF, MIS XLSX) so every number is derived from contract config + attendance, AND every table is collapsed to one column per canonical component (no `HRA 5%`/`HRA 15%`/`ESIC 3.25%` splits).
 
-## Approach
+## Column-simplification rule (applies everywhere)
+For every earning, deduction, and employer-contribution column in every table/export:
+- Canonicalize the name by stripping trailing percentages and numeric qualifiers: `HRA`, `HRA 5%`, `HRA 15 %`, `HRA (10%)`, `HRA-5` → all become `HRA`.
+- Sum the prorated amounts of every variant into the single canonical column.
+- The TOTAL row sums the merged column directly.
+- Applies to: earned components (HRA, DA, Special, Conveyance, Washing, LWW…), deductions (EPF, ESIC, PT, LWF, Uniform…), employer contributions (ER EPF, ER ESIC, ER LWF, Bonus, Gratuity, Mgmt Fee…), and any future component the user adds.
 
-1. **Add a canonicalizer in `src/lib/payroll-calc.ts`**
-   - New helper `canonicalComponentName(name)` that strips any trailing percentage / numeric qualifier:
-     - `HRA 5%` → `HRA`
-     - `HRA 15 %` → `HRA`
-     - `Conveyance 10%` → `Conveyance`
-     - `Washing (5%)` → `Washing`
-   - Regex roughly: trim, then remove a trailing ` [\(\[]?\d+(\.\d+)?\s*%[\)\]]?$`. Idempotent and safe on names without a suffix.
-   - Export it so the route can reuse the exact same rule everywhere.
+This rule is enforced in one place (`mergeByCanonicalName` in `src/lib/payroll-calc.ts`) and consumed by the route once, so every surface stays in sync automatically.
 
-2. **Aggregate per-row in `src/routes/admin.payroll.$unitId.tsx`**
-   - Add `mergeByCanonicalName(items)` that walks `[{name, amount}]`, groups by `canonicalComponentName(name)`, sums amounts, and returns a deduped list. The first occurrence's display name (canonical form) wins.
-   - Apply it to `wages.components`, `wages.deductions`, and the employer-contributions list **after** `computeWages` but **before** building column headers and row values, so a single normalized shape feeds the table, breakdown, and all exports.
-   - Earned-gross stays unchanged (it is already the sum of the originals, so merging line items doesn't change totals).
+## What I'll audit (in order)
 
-3. **Column generation (already dynamic) automatically follows**
-   - `EARNED_COMPONENT_COLS = collectUnique(r => r.wages?.components)` will now collect canonical names only → one `HRA`, one `Conveyance`, etc.
-   - `keepNonZero` continues to drop fully-zero columns.
-   - Deduction groups (EPF/ESIC/PT/LWF) are unaffected — they're already merged by `deductionGroups`.
+### 1. Source of truth — contract → resource → component
+- Re-read `contract_resources` rows and verify the route loader maps each cost component / benefit / deduction / employer contribution with `calcType`, `percentage`, `baseComponents`, `capAmount`, `capFlatAmount`, and `payroll_day_base_id` intact (no field silently dropped).
+- Confirm `payroll_day_bases` row resolves correctly — drives `baseDays`, which is what makes the "1,800 vs 2,025.60" class of bugs go away.
 
-4. **On-screen breakdown drawer**
-   - The expandable row that lists each component currently iterates `r.wages.components`. After step 2 it iterates the merged list, so the user sees `HRA 1,250.00` instead of `HRA 5% 312.50` + `HRA 15% 937.50`.
+### 2. Earned values (proration)
+- For every cost component: earned = `contractAmount × T Days ÷ baseDays`.
+- Fixed-flagged items (`Uniform`, `LWF`) stay at contract amount, do not prorate.
+- Management Fee DOES prorate (per user description).
+- Percentage-based benefits recompute against their earned base components, not the contract base.
 
-5. **Three exports (Wage Register XLSX, Pay Sheet PDF, MIS XLSX)**
-   - All three already read from the same `earnedComponentCols` / row-builder. Because step 2 normalizes the data at the source, every export ends up with a single merged column per base name. No per-export changes needed beyond what step 2 produces.
-   - TOTAL row sums merged columns the same way as before.
+### 3. Statutory deductions
+- **EPF**: 12% of (Basic + DA + Special Allowance per contract config's `baseComponents`), wage-ceiling from `capAmount`/`capFlatAmount`. Verify the ₹2,025.60 case holds for everyone, no stray ₹1,800 cap anywhere.
+- **ESIC**: 0.75%/3.25% on (earned gross − earned washing − earned conveyance), ceiling ₹21,000 earned gross, ceil-to-rupee. First ESI row only; later ESI rows zeroed.
+- **PT**: resolved from `professional_tax_slabs` by state + pincode region + gender + earned gross, with gender fallback to "all".
+- **LWF**: flat per state from `labour_welfare_funds`, never prorated.
 
-6. **Verification**
-   - Run a quick check script against the FPL May 2026 run: for each employee, sum of merged `HRA` equals the sum of original `HRA 5%` + `HRA 15%`; same for any other split component. Earned Gross, Total Deductions, Net Pay, Employer Cost are unchanged.
+### 4. Employer contributions
+- ER EPF, ER ESIC, ER LWF, Management Fee, Bonus, Gratuity, Leave Encashment — each recomputed from its own config (percentage of declared base, or fixed).
+- Total Employer Contributions = sum of merged employer-contribution list.
+- Employer Cost (CTC) = Earned Gross + Total Employer Contributions.
+
+### 5. Single source feeds all surfaces
+- On-screen table, expandable breakdown drawer, Wage Register XLSX, Pay Sheet PDF, MIS XLSX all read from one merged-and-computed `wages` object per row — no per-export recalculation.
+- Re-verify canonical merge collapses every `*%` variant in all five surfaces.
+- TOTAL row sums merged columns directly.
+
+### 6. Edge cases to assert
+- Zero attendance → all earned 0, deductions 0, net 0, ER cost 0.
+- Missing contract → row labeled "no contract", no NaN in exports.
+- Extra additions (bonus from Additions module) → folded into earned gross before ESI/PT recompute, then PT re-resolved.
+- Multiple designation lines per candidate → primary line carries additions/deductions; secondary does not double-count.
+- Earned gross > ESI ceiling → ESI 0 for both ER and EE.
+- Contract gross 0 → ratio 0, no division-by-zero.
+
+### 7. Verification harness
+- Write a one-off node script that loads the latest payroll run (FPL May-2026), iterates every row, and re-derives EPF/ESI/PT/LWF + every cost component + employer contributions from raw DB rows, then diffs against `computeWages` output. Any mismatch logs employee code + component name.
+- Run the script, fix divergences, re-run until 0 mismatches.
+- Open the unit via Playwright, expand 3 rows (full / partial / zero attendance), screenshot the drawer, and confirm the three file exports match totals.
+
+## Technical changes anticipated
+- Tighten `mergeByCanonicalName` regex so it catches every variant (`HRA 5%`, `ESIC 3.25 %`, `LWW-4`, `Conveyance (10%)`) and is applied to ALL four item lists in one place in the route.
+- Patches in `src/lib/payroll-calc.ts` around (a) component-base matching after canonicalization for EPF/ESI/Bonus bases, (b) cap-flat overrides, (c) fixed-vs-prorated classification.
+- Header-builders in `src/routes/admin.payroll.$unitId.tsx` use the canonical name as the column header so no `5%` / `15%` headers can appear.
+- Same column-collapse logic applied to `src/routes/admin.invoice.$unitId.tsx`.
+- No DB schema changes.
+
+## One thing I need from you to anchor the audit
+Pick ONE employee in the current FPL unit whose numbers still look wrong, and paste:
+- Employee code + designation
+- The wrong value and which column
+- What the correct value should be and how it's derived
+
+If you'd rather I just run the verification harness and report what diverges, say "skip — just run the audit" and I'll proceed without it.
 
 ## Out of scope
-- No changes to contract/cost-component configuration. The split components stay as configured; the merge happens only in the payroll view/exports.
-- No changes to EPF/ESIC/PT/LWF logic (already single columns and untouched by the prior fix).
+- Changes to contract authoring UI (cost components manager, allowance manager).
+- New report types.
