@@ -471,7 +471,11 @@ function CostComponentDialog({
     setName(initial?.name ?? "");
     setCalcType(initial?.calc_type ?? "percentage");
     setPercentage(String(initial?.percentage ?? 0));
-    setBaseRefs(initial?.base_components ?? []);
+    const initialBase = initial?.base_components ?? [];
+    // Migrate legacy "Earned Gross" label → "Gross" (no such component exists).
+    setBaseRefs(
+      initialBase.map((b) => (b.label === "Earned Gross" ? { ...b, label: "Gross" } : b)),
+    );
     setCapAmount(initial?.cap_amount != null ? String(initial.cap_amount) : "");
     setCapFlatAmount(initial?.cap_flat_amount != null ? String(initial.cap_flat_amount) : "");
     setAmount(initial?.amount != null ? String(initial.amount) : "");
@@ -482,13 +486,11 @@ function CostComponentDialog({
   });
 
   const stateOptions = useMemo(() => ["N/A", ...states.map((s) => s.name)], [states]);
-  const isEsiComponent = isEsiName(name);
-  const effectiveBaseRefs = isEsiComponent ? STATUTORY_ESI_BASE : baseRefs;
 
   const preview = buildDescription({
     calc_type: calcType,
     percentage: Number(percentage) || 0,
-    base_components: effectiveBaseRefs,
+    base_components: baseRefs,
     cap_amount: capAmount ? Number(capAmount) : null,
     cap_flat_amount: capFlatAmount ? Number(capFlatAmount) : null,
     amount: amount ? Number(amount) : null,
