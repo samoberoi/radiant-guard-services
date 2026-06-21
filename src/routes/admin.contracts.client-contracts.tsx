@@ -3148,6 +3148,36 @@ function ResourceFormDialog({
     );
   }, [allowanceQuery, availableExtras]);
 
+  // Recompute formula-based wage components (e.g. HRA = 5% of Basic + DA)
+  // whenever any other component changes. Skips self-reference and no-ops
+  // when the amount is unchanged so React doesn't re-render in a loop.
+  useEffect(() => {
+    setComponents((prev) => {
+      let changed = false;
+      const next = prev.map((c) => {
+        const at = allowanceTypes.find((a) => a.id === c.allowanceId);
+        if (!at || at.calcType !== "percentage") return c;
+        const others = prev.filter((x) => x.allowanceId !== c.allowanceId);
+        const newAmt = computeBenefitAmount(
+          {
+            calcType: "percentage",
+            percentage: at.percentage,
+            baseComponents: at.baseComponents,
+            capAmount: at.capAmount,
+            amount: 0,
+          },
+          others,
+          [],
+          allowanceTypes,
+        );
+        if (Math.abs((Number(c.amount) || 0) - newAmt) < 0.005) return c;
+        changed = true;
+        return { ...c, amount: newAmt };
+      });
+      return changed ? next : prev;
+    });
+  }, [components, allowanceTypes]);
+
   // Recompute percentage benefits whenever wage components change
   useEffect(() => {
     setBenefits((prev) =>
