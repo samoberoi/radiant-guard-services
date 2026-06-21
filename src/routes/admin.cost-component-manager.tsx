@@ -52,6 +52,7 @@ type CostComponent = {
   percentage: number;
   base_components: BaseRef[];
   cap_amount: number | null;
+  cap_flat_amount: number | null;
   amount: number | null;
   state: string;
   notes: string;
@@ -83,6 +84,7 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
     percentage: Number(r.percentage ?? 0),
     base_components: Array.isArray(r.base_components) ? (r.base_components as BaseRef[]) : [],
     cap_amount: r.cap_amount == null ? null : Number(r.cap_amount),
+    cap_flat_amount: r.cap_flat_amount == null ? null : Number(r.cap_flat_amount),
     amount: r.amount == null ? null : Number(r.amount),
     state: String(r.state ?? "N/A"),
     notes: String(r.notes ?? ""),
@@ -91,7 +93,7 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
   };
 }
 
-function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "amount"> & { name?: string }): string {
+function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "cap_flat_amount" | "amount"> & { name?: string }): string {
   if (c.calc_type === "fixed") {
     const isMgmt = /management\s*fee/i.test(c.name ?? "");
     if (isMgmt) {
@@ -111,7 +113,9 @@ function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "b
   const parts = c.base_components.map((b, i) => (i === 0 ? b.label : `${b.operator === "-" ? "(-) " : "(+) "}${b.label}`));
   const base = parts.length ? parts.join(" ") : "—";
   if (c.cap_amount && c.cap_amount > 0) {
-    const flat = Math.round(((c.percentage || 0) / 100) * c.cap_amount);
+    const flat = c.cap_flat_amount != null && c.cap_flat_amount > 0
+      ? c.cap_flat_amount
+      : Math.round(((c.percentage || 0) / 100) * c.cap_amount);
     return `${c.percentage}% of (${base}) if ≤ ₹${c.cap_amount.toLocaleString("en-IN")}, else flat ₹${flat.toLocaleString("en-IN")}`;
   }
   return `${c.percentage}% of ${base}`;
@@ -140,6 +144,7 @@ function useCostComponents() {
     percentage: p.calc_type === "percentage" ? Number(p.percentage) || 0 : 0,
     base_components: p.calc_type === "percentage" ? (isEsiName(p.name) ? STATUTORY_ESI_BASE : p.base_components) : [],
     cap_amount: p.calc_type === "percentage" ? p.cap_amount : null,
+    cap_flat_amount: p.calc_type === "percentage" ? p.cap_flat_amount : null,
     amount: p.calc_type === "fixed" ? p.amount : null,
     state: p.state || "N/A",
     notes: p.notes,
@@ -458,6 +463,7 @@ function CostComponentDialog({
   const [percentage, setPercentage] = useState<string>("0");
   const [baseRefs, setBaseRefs] = useState<BaseRef[]>([]);
   const [capAmount, setCapAmount] = useState<string>("");
+  const [capFlatAmount, setCapFlatAmount] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [state, setState] = useState<string>("N/A");
   const [notes, setNotes] = useState("");
@@ -471,6 +477,7 @@ function CostComponentDialog({
     setPercentage(String(initial?.percentage ?? 0));
     setBaseRefs(initial?.base_components ?? []);
     setCapAmount(initial?.cap_amount != null ? String(initial.cap_amount) : "");
+    setCapFlatAmount(initial?.cap_flat_amount != null ? String(initial.cap_flat_amount) : "");
     setAmount(initial?.amount != null ? String(initial.amount) : "");
     setState(initial?.state ?? "N/A");
     setNotes(initial?.notes ?? "");
@@ -487,6 +494,7 @@ function CostComponentDialog({
     percentage: Number(percentage) || 0,
     base_components: effectiveBaseRefs,
     cap_amount: capAmount ? Number(capAmount) : null,
+    cap_flat_amount: capFlatAmount ? Number(capFlatAmount) : null,
     amount: amount ? Number(amount) : null,
     name,
   });
@@ -533,7 +541,7 @@ function CostComponentDialog({
 
           {calcType === "percentage" ? (
             <>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="grid gap-2">
                   <Label>Percentage (%)</Label>
                   <Input type="number" step="0.01" value={percentage} onChange={(e) => setPercentage(e.target.value)} />
@@ -541,6 +549,19 @@ function CostComponentDialog({
                 <div className="grid gap-2">
                   <Label>Wage Ceiling (optional, ₹)</Label>
                   <Input type="number" value={capAmount} onChange={(e) => setCapAmount(e.target.value)} placeholder="e.g. 15000 (EPF cap)" />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Flat Amount Above Ceiling (₹)</Label>
+                  <Input
+                    type="number"
+                    value={capFlatAmount}
+                    onChange={(e) => setCapFlatAmount(e.target.value)}
+                    placeholder={
+                      capAmount && Number(capAmount) > 0
+                        ? `Auto: ${Math.round(((Number(percentage) || 0) / 100) * Number(capAmount))}`
+                        : "Manual override"
+                    }
+                  />
                 </div>
               </div>
 
@@ -648,6 +669,7 @@ function CostComponentDialog({
                 percentage: Number(percentage) || 0,
                 base_components: baseRefs,
                 cap_amount: capAmount ? Number(capAmount) : null,
+                cap_flat_amount: capFlatAmount ? Number(capFlatAmount) : null,
                 amount: amount ? Number(amount) : null,
                 state: state || "N/A",
                 notes,

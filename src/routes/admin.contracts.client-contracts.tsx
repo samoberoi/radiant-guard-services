@@ -193,6 +193,7 @@ type BenefitItem = {
   percentage: number;
   baseComponents: { label: string; operator: "+" | "-" }[];
   capAmount: number | null;
+  capFlatAmount: number | null;
   amount: number; // computed (percentage) or manual (fixed)
   state: string;
 };
@@ -216,6 +217,7 @@ function cloneBenefitItem(item: BenefitItem): BenefitItem {
     amount: Number(item.amount) || 0,
     baseComponents: (item.baseComponents ?? []).map((b) => ({ ...b })),
     capAmount: item.capAmount == null ? null : Number(item.capAmount),
+    capFlatAmount: item.capFlatAmount == null ? null : Number(item.capFlatAmount),
   };
 }
 
@@ -256,6 +258,7 @@ type CostComponentOption = {
   percentage: number;
   baseComponents: { label: string; operator: "+" | "-" }[];
   capAmount: number | null;
+  capFlatAmount: number | null;
   amount: number | null;
   state: string;
 };
@@ -864,7 +867,7 @@ function useCostComponentOptions() {
     queryFn: async (): Promise<CostComponentOption[]> => {
       const { data, error } = await supabase
         .from("cost_components" as never)
-        .select("id,name,calc_type,percentage,base_components,cap_amount,amount,state,enabled,sort_order")
+        .select("id,name,calc_type,percentage,base_components,cap_amount,cap_flat_amount,amount,state,enabled,sort_order")
         .order("sort_order")
         .order("name");
       if (error) throw error;
@@ -879,6 +882,7 @@ function useCostComponentOptions() {
             ? (r.base_components as { label: string; operator: "+" | "-" }[])
             : [],
           capAmount: r.cap_amount == null ? null : Number(r.cap_amount),
+          capFlatAmount: r.cap_flat_amount == null ? null : Number(r.cap_flat_amount),
           amount: r.amount == null ? null : Number(r.amount),
           state: String(r.state ?? "N/A"),
         }));
@@ -919,7 +923,7 @@ function contractTotalAmount(item: { name?: unknown; amount?: unknown }): number
 
 /** Compute benefit amount from a percentage component using the resource's wage components. */
 function computeBenefitAmount(
-  benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "amount">,
+  benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "capFlatAmount" | "amount">,
   wageComponents: ResourceComponent[],
   benefitItems: BenefitItem[] = [],
   allowanceTypes: AllowanceType[] = [],
@@ -963,7 +967,10 @@ function computeBenefitAmount(
   }, 0);
   let amt = (Number(benefit.percentage) || 0) * base / 100;
   if (benefit.capAmount != null && benefit.capAmount > 0 && base > benefit.capAmount) {
-    amt = (Number(benefit.percentage) || 0) * benefit.capAmount / 100;
+    amt =
+      benefit.capFlatAmount != null && benefit.capFlatAmount > 0
+        ? Number(benefit.capFlatAmount)
+        : (Number(benefit.percentage) || 0) * benefit.capAmount / 100;
   }
   return Math.round(amt * 100) / 100;
 }
@@ -3164,6 +3171,7 @@ function ResourceFormDialog({
             percentage: at.percentage,
             baseComponents: at.baseComponents,
             capAmount: at.capAmount,
+            capFlatAmount: null,
             amount: 0,
           },
           others,
@@ -3228,6 +3236,7 @@ function ResourceFormDialog({
     percentage: 0,
     baseComponents: [],
     capAmount: null,
+    capFlatAmount: null,
     amount: 0,
     state: "Per state slab (resolved at payroll from unit state, employee gender, earned gross)",
   };
@@ -3301,6 +3310,7 @@ function ResourceFormDialog({
               percentage: a.percentage,
               baseComponents: a.baseComponents,
               capAmount: a.capAmount,
+              capFlatAmount: null,
               amount: 0,
             },
             prev,
@@ -3323,6 +3333,7 @@ function ResourceFormDialog({
       percentage: c.percentage,
       baseComponents: c.baseComponents,
       capAmount: c.capAmount,
+      capFlatAmount: c.capFlatAmount,
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
     };
@@ -3352,6 +3363,7 @@ function ResourceFormDialog({
       percentage: c.percentage,
       baseComponents: c.baseComponents,
       capAmount: c.capAmount,
+      capFlatAmount: c.capFlatAmount,
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
     };
@@ -3381,6 +3393,7 @@ function ResourceFormDialog({
       percentage: c.percentage,
       baseComponents: c.baseComponents,
       capAmount: c.capAmount,
+      capFlatAmount: c.capFlatAmount,
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
     };
