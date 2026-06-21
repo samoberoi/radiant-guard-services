@@ -463,6 +463,7 @@ function CostComponentDialog({
   const [percentage, setPercentage] = useState<string>("0");
   const [baseRefs, setBaseRefs] = useState<BaseRef[]>([]);
   const [capAmount, setCapAmount] = useState<string>("");
+  const [capFlatAmount, setCapFlatAmount] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [state, setState] = useState<string>("N/A");
   const [notes, setNotes] = useState("");
