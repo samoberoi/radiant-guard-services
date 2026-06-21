@@ -51,7 +51,7 @@ export async function fetchAttendanceEntriesForPeriod(params: {
       const { data, error } = await query;
       if (error) throw error;
 
-      const page = (data ?? []) as AttendanceEntryFetchRow[];
+      const page = ((data ?? []) as unknown) as AttendanceEntryFetchRow[];
       rows.push(...page);
       if (page.length < pageSize) break;
     }
