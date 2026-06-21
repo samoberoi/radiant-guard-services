@@ -27,6 +27,7 @@ import {
   type AttendanceEntryLike,
   type ContractResourceLike,
 } from "@/lib/payroll-calc";
+import { fetchAttendanceEntriesForPeriod } from "@/lib/attendance-fetch";
 
 export const Route = createFileRoute("/admin/dashboard")({
   component: DashboardPage,
@@ -169,7 +170,6 @@ function DashboardPage() {
       const emptyUuid = "00000000-0000-0000-0000-000000000000";
       const [
         { data: resourcesRaw },
-        { data: attendanceRaw },
         { data: codesRaw },
         { data: primaryRoster },
         { data: roleLinks },
@@ -181,14 +181,6 @@ function DashboardPage() {
                 "contract_id, designation_id, quantity, components, benefits, deductions, employer_contributions, payroll_day_base_id",
               )
               .in("contract_id", contractIds)
-          : Promise.resolve({ data: [] as Record<string, unknown>[] }),
-        unitIdsInScope.length
-          ? supabase
-              .from("attendance_entries")
-              .select("unit_id, candidate_id, designation_id, entry_date, code, ot_hours")
-              .in("unit_id", unitIdsInScope)
-              .gte("entry_date", monthStart)
-              .lte("entry_date", monthEnd)
           : Promise.resolve({ data: [] as Record<string, unknown>[] }),
         supabase
           .from("attendance_codes")
@@ -229,7 +221,7 @@ function DashboardPage() {
         ot_hours: number | string | null;
       };
       const resources = (resourcesRaw ?? []) as ResourceRow[];
-      const attendance = (attendanceRaw ?? []) as AttRow[];
+      const attendance = await fetchAttendanceEntriesForPeriod({ unitIds: unitIdsInScope, start: monthStart, end: monthEnd, includeUnitId: true }) as AttRow[];
       const codes = (codesRaw ?? []) as AttendanceCodeLike[];
       const primaryCands = (primaryRoster ?? []) as Array<{
         id: string; full_name: string | null; designation_id: string | null; unit_id: string | null;
