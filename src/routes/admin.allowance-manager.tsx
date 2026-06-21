@@ -1,17 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Coins, Download, Edit2, Plus, Search, Trash2 } from "lucide-react";
+import { Coins, Download, Edit2, Plus, Search, Trash2, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
-import { confirmAction } from "@/components/ConfirmProvider";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +41,9 @@ export const Route = createFileRoute("/admin/allowance-manager")({
   component: AllowanceManagerPage,
 });
 
+type Operator = "+" | "-";
+type BaseRef = { label: string; operator: Operator };
+
 type Allowance = {
   id: string;
   name: string;
@@ -43,9 +52,16 @@ type Allowance = {
   short_name: string;
   is_default: boolean;
   enabled: boolean;
+  calc_type: "fixed" | "percentage";
+  percentage: number;
+  base_components: BaseRef[];
+  cap_amount: number | null;
 };
 
 const QK = ["admin", "allowance-types"] as const;
+
+// Built-in base tokens that always make sense as formula references.
+const BUILTIN_BASES = ["Basic", "DA", "Gross", "CTC"];
 
 function rowToItem(r: Record<string, unknown>): Allowance {
   return {
@@ -56,7 +72,19 @@ function rowToItem(r: Record<string, unknown>): Allowance {
     short_name: String(r.short_name ?? ""),
     is_default: Boolean(r.is_default ?? false),
     enabled: Boolean(r.enabled ?? true),
+    calc_type: (String(r.calc_type ?? "fixed") as "fixed" | "percentage"),
+    percentage: Number(r.percentage ?? 0),
+    base_components: Array.isArray(r.base_components) ? (r.base_components as BaseRef[]) : [],
+    cap_amount: r.cap_amount == null ? null : Number(r.cap_amount),
   };
+}
+
+function buildFormulaPreview(a: Pick<Allowance, "calc_type" | "percentage" | "base_components" | "cap_amount">): string {
+  if (a.calc_type === "fixed") return "Manual amount entered per contract";
+  const parts = a.base_components.map((b, i) => (i === 0 ? b.label : `${b.operator === "-" ? "− " : "+ "}${b.label}`));
+  const base = parts.length ? parts.join(" ") : "—";
+  const tail = a.cap_amount && a.cap_amount > 0 ? ` (capped at ₹${a.cap_amount.toLocaleString("en-IN")})` : "";
+  return `${a.percentage || 0}% of ${base}${tail}`;
 }
 
 function useAllowances() {
@@ -66,7 +94,7 @@ function useAllowances() {
     queryFn: async (): Promise<Allowance[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,earning_type,display_name,short_name,is_default,enabled")
+        .select("id,name,earning_type,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount")
         .order("name", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
@@ -82,6 +110,10 @@ function useAllowances() {
     short_name: p.short_name.trim(),
     is_default: p.is_default,
     enabled: p.enabled,
+    calc_type: p.calc_type,
+    percentage: p.calc_type === "percentage" ? Number(p.percentage) || 0 : 0,
+    base_components: p.calc_type === "percentage" ? p.base_components : [],
+    cap_amount: p.calc_type === "percentage" ? p.cap_amount : null,
   });
 
   const addMut = useMutation({
@@ -89,31 +121,25 @@ function useAllowances() {
       if (!p.name.trim()) throw new Error("Name is required");
       const { error } = await supabase.from("allowance_types" as never).insert(toRow(p) as never);
       if (error) throw error;
-    void logActivity({ module: "Allowance Manager", action: "create", entityType: "allowance_types", entityLabel: String((p as Record<string, unknown>).display_name ?? ""), details: p as Record<string, unknown> });
+      void logActivity({ module: "Allowance Manager", action: "create", entityType: "allowance_types", entityLabel: String((p as Record<string, unknown>).display_name ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
 
   const updateMut = useMutation({
     mutationFn: async ({ id, p }: { id: string; p: Payload }) => {
-      const { error } = await supabase
-        .from("allowance_types" as never)
-        .update(toRow(p) as never)
-        .eq("id", id);
+      const { error } = await supabase.from("allowance_types" as never).update(toRow(p) as never).eq("id", id);
       if (error) throw error;
-    void logActivity({ module: "Allowance Manager", action: "update", entityType: "allowance_types", entityId: id, entityLabel: String((p as Record<string, unknown>).display_name ?? ""), details: p as Record<string, unknown> });
+      void logActivity({ module: "Allowance Manager", action: "update", entityType: "allowance_types", entityId: id, entityLabel: String((p as Record<string, unknown>).display_name ?? ""), details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
   });
 
   const toggleMut = useMutation({
     mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
-      const { error } = await supabase
-        .from("allowance_types" as never)
-        .update({ enabled } as never)
-        .eq("id", id);
+      const { error } = await supabase.from("allowance_types" as never).update({ enabled } as never).eq("id", id);
       if (error) throw error;
-    void logActivity({ module: "Allowance Manager", action: enabled ? "enable" : "disable", entityType: "allowance_types", entityId: id, details: { enabled } });
+      void logActivity({ module: "Allowance Manager", action: enabled ? "enable" : "disable", entityType: "allowance_types", entityId: id, details: { enabled } });
     },
     onSuccess: invalidate,
   });
@@ -122,7 +148,7 @@ function useAllowances() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("allowance_types" as never).delete().eq("id", id);
       if (error) throw error;
-    void logActivity({ module: "Allowance Manager", action: "delete", entityType: "allowance_types", entityId: id });
+      void logActivity({ module: "Allowance Manager", action: "delete", entityType: "allowance_types", entityId: id });
     },
     onSuccess: invalidate,
   });
@@ -149,11 +175,22 @@ function AllowanceManagerPage() {
     );
   }, [items, query]);
 
+  // Labels usable as formula bases: built-ins + every other allowance's short/display name.
+  const labelsFor = (current: Allowance | null): string[] => {
+    const set = new Set<string>(BUILTIN_BASES);
+    for (const a of items) {
+      if (current && a.id === current.id) continue;
+      const lbl = a.short_name || a.display_name || a.name;
+      if (lbl) set.add(lbl);
+    }
+    return Array.from(set);
+  };
+
   return (
     <div>
       <PageHeader
         title="Allowance Manager"
-        description="Define allowance / earning components used in payroll."
+        description="Define allowance / earning components. Each one can be a fixed amount or a formula like 5% of Basic + Special Allowance."
         crumbs={[{ label: "Control Center", to: "/admin/control-center" }, { label: "Allowance Manager" }]}
       />
 
@@ -186,6 +223,7 @@ function AllowanceManagerPage() {
                   earning_type: i.earning_type,
                   display_name: i.display_name,
                   short_name: i.short_name,
+                  formula: buildFormulaPreview(i),
                   is_default: i.is_default ? "Yes" : "No",
                   enabled: i.enabled ? "Yes" : "No",
                 })),
@@ -194,6 +232,7 @@ function AllowanceManagerPage() {
                   { key: "earning_type", header: "Earning Type" },
                   { key: "display_name", header: "Display Name" },
                   { key: "short_name", header: "Short Name" },
+                  { key: "formula", header: "Formula" },
                   { key: "is_default", header: "Default" },
                   { key: "enabled", header: "Enabled" },
                 ],
@@ -217,8 +256,8 @@ function AllowanceManagerPage() {
               <tr>
                 <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Earning Type</th>
-                <th className="px-5 py-3">Display Name</th>
-                <th className="px-5 py-3">Short Name</th>
+                <th className="px-5 py-3">Short</th>
+                <th className="px-5 py-3">Formula</th>
                 <th className="px-5 py-3">Default</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
@@ -234,8 +273,17 @@ function AllowanceManagerPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3 text-foreground/90">{i.earning_type || "—"}</td>
-                  <td className="px-5 py-3 text-foreground/90">{i.display_name || "—"}</td>
                   <td className="px-5 py-3 text-foreground/90">{i.short_name || "—"}</td>
+                  <td className="px-5 py-3 text-foreground/80">
+                    {i.calc_type === "percentage" ? (
+                      <span className="inline-flex items-center gap-2">
+                        <span className="rounded-md bg-accent/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-accent">Formula</span>
+                        {buildFormulaPreview(i)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">Manual</span>
+                    )}
+                  </td>
                   <td className="px-5 py-3">
                     <span
                       className={
@@ -302,6 +350,7 @@ function AllowanceManagerPage() {
         open={addOpen}
         onOpenChange={setAddOpen}
         title="Add New Allowance Type"
+        baseLabels={labelsFor(null)}
         onSubmit={async (p) => {
           try {
             await addMut.mutateAsync(p);
@@ -316,6 +365,7 @@ function AllowanceManagerPage() {
       <AllowanceFormDialog
         open={!!editing}
         initial={editing}
+        baseLabels={labelsFor(editing)}
         onOpenChange={(o) => !o && setEditing(null)}
         title="Edit Allowance Type"
         onSubmit={async (p) => {
@@ -368,12 +418,14 @@ function AllowanceFormDialog({
   onOpenChange,
   title,
   initial,
+  baseLabels,
   onSubmit,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   title: string;
   initial?: Allowance | null;
+  baseLabels: string[];
   onSubmit: (p: Omit<Allowance, "id">) => Promise<string | null>;
 }) {
   const [name, setName] = useState("");
@@ -382,6 +434,10 @@ function AllowanceFormDialog({
   const [shortName, setShortName] = useState("");
   const [isDefault, setIsDefault] = useState(false);
   const [enabled, setEnabled] = useState(true);
+  const [calcType, setCalcType] = useState<"fixed" | "percentage">("fixed");
+  const [percentage, setPercentage] = useState<string>("0");
+  const [baseRefs, setBaseRefs] = useState<BaseRef[]>([]);
+  const [capAmount, setCapAmount] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   useResetOnOpen(open, () => {
@@ -391,11 +447,22 @@ function AllowanceFormDialog({
     setShortName(initial?.short_name ?? "");
     setIsDefault(initial?.is_default ?? false);
     setEnabled(initial?.enabled ?? true);
+    setCalcType(initial?.calc_type ?? "fixed");
+    setPercentage(String(initial?.percentage ?? 0));
+    setBaseRefs(initial?.base_components ?? []);
+    setCapAmount(initial?.cap_amount != null ? String(initial.cap_amount) : "");
+  });
+
+  const preview = buildFormulaPreview({
+    calc_type: calcType,
+    percentage: Number(percentage) || 0,
+    base_components: baseRefs,
+    cap_amount: capAmount ? Number(capAmount) : null,
   });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>Used as an earning component in payroll.</DialogDescription>
@@ -431,6 +498,99 @@ function AllowanceFormDialog({
               />
             </div>
           </div>
+
+          <div className="grid gap-2">
+            <Label>Calculation Type</Label>
+            <Select value={calcType} onValueChange={(v) => setCalcType(v as "fixed" | "percentage")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="fixed">Manual amount (entered per contract)</SelectItem>
+                <SelectItem value="percentage">Formula — % of other components</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {calcType === "percentage" && (
+            <div className="rounded-lg border border-border bg-secondary/20 p-3 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-2">
+                  <Label>Percentage (%)</Label>
+                  <Input type="number" step="0.01" value={percentage} onChange={(e) => setPercentage(e.target.value)} placeholder="e.g. 5" />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Wage Ceiling (optional, ₹)</Label>
+                  <Input type="number" value={capAmount} onChange={(e) => setCapAmount(e.target.value)} placeholder="e.g. 15000" />
+                </div>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Base Components</Label>
+                <div className="rounded-lg border border-border bg-card p-3">
+                  {baseRefs.length === 0 ? (
+                    <div className="text-xs text-muted-foreground">No base added. Pick a component below.</div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {baseRefs.map((b, idx) => (
+                        <div key={`${b.label}-${idx}`} className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/40 pl-1 pr-1">
+                          <Select
+                            value={b.operator}
+                            onValueChange={(v) => {
+                              const next = [...baseRefs];
+                              next[idx] = { ...b, operator: v as Operator };
+                              setBaseRefs(next);
+                            }}
+                          >
+                            <SelectTrigger className="h-7 w-12 border-0 bg-transparent px-1 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="+">+</SelectItem>
+                              <SelectItem value="-">−</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <span className="text-sm font-medium">{b.label}</span>
+                          <button
+                            type="button"
+                            className="rounded p-0.5 text-muted-foreground hover:text-destructive"
+                            onClick={() => setBaseRefs(baseRefs.filter((_, i) => i !== idx))}
+                            aria-label="Remove"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {(() => {
+                    const used = new Set(baseRefs.map((b) => b.label.toLowerCase()));
+                    const remaining = baseLabels.filter((l) => !used.has(l.toLowerCase()));
+                    if (remaining.length === 0) return null;
+                    return (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        {remaining.map((lbl) => (
+                          <button
+                            key={lbl}
+                            type="button"
+                            className="rounded-md border border-border bg-card px-2 py-1 text-xs hover:bg-accent/10 hover:text-accent"
+                            onClick={() => setBaseRefs([...baseRefs, { label: lbl, operator: "+" }])}
+                          >
+                            + {lbl}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Pick built-in totals (Basic, DA, Gross, CTC) or other allowances. The amount is auto-calculated on each contract when this allowance is added.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-dashed border-border bg-card px-3 py-2 text-sm">
+                <span className="text-xs uppercase tracking-wider text-muted-foreground">Preview · </span>
+                <span className="font-medium text-foreground">{preview}</span>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
             <div>
               <div className="text-sm font-medium">Default</div>
@@ -461,6 +621,10 @@ function AllowanceFormDialog({
                 short_name: shortName,
                 is_default: isDefault,
                 enabled,
+                calc_type: calcType,
+                percentage: Number(percentage) || 0,
+                base_components: baseRefs,
+                cap_amount: capAmount ? Number(capAmount) : null,
               });
               setSaving(false);
               if (err) toast.error(err);
