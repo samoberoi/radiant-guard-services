@@ -494,6 +494,7 @@ function CostComponentDialog({
     percentage: Number(percentage) || 0,
     base_components: effectiveBaseRefs,
     cap_amount: capAmount ? Number(capAmount) : null,
+    cap_flat_amount: capFlatAmount ? Number(capFlatAmount) : null,
     amount: amount ? Number(amount) : null,
     name,
   });
