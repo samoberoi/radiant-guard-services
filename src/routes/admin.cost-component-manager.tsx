@@ -142,7 +142,7 @@ function useCostComponents() {
     name: p.name.trim(),
     calc_type: p.calc_type,
     percentage: p.calc_type === "percentage" ? Number(p.percentage) || 0 : 0,
-    base_components: p.calc_type === "percentage" ? (isEsiName(p.name) ? STATUTORY_ESI_BASE : p.base_components) : [],
+    base_components: p.calc_type === "percentage" ? p.base_components : [],
     cap_amount: p.calc_type === "percentage" ? p.cap_amount : null,
     cap_flat_amount: p.calc_type === "percentage" ? p.cap_flat_amount : null,
     amount: p.calc_type === "fixed" ? p.amount : null,
