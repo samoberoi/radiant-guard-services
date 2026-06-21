@@ -3333,6 +3333,7 @@ function ResourceFormDialog({
       percentage: c.percentage,
       baseComponents: c.baseComponents,
       capAmount: c.capAmount,
+      capFlatAmount: c.capFlatAmount,
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
     };
