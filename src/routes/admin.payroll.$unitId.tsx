@@ -616,7 +616,7 @@ function PayrollUnitPage() {
         .replace(/\bnet\b/gi, "")
         .trim()
         .replace(/\s+/g, " ");
-      return `EE ${clean}`;
+      return clean ? `EE ${clean}` : `EE ${name.trim()}`;
     };
     const formatEmployerHeader = (name: string): string => {
       const n = name.toLowerCase();
