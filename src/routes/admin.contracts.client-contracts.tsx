@@ -911,7 +911,7 @@ function computePayableDays(base: PayrollDayBase | undefined, ref: Date = new Da
 }
 
 const ESI_CONTRACT_NOTE = "Calculated in payroll from earned gross minus washing/conveyance";
-const ESI_COMPONENT_RE = /\besi(c)?\b/i;
+const ESI_COMPONENT_RE = /\b(?:e[er]\s*)?esi(c)?\b/i;
 
 function isEsiItem(item: { name?: unknown } | null | undefined): boolean {
   return ESI_COMPONENT_RE.test(String(item?.name ?? ""));
