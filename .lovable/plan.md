@@ -1,33 +1,37 @@
-I found the FPL unit (`FPL Technologies — Pune`) and its real approved attendance period (`2026-05-01` to `2026-05-31`) with 55 active employees and 1,705 attendance entries. I also reviewed the payroll export code for Wage Register, Pay Sheet, and MIS.
+## Goal
+Collapse split earning/deduction/contribution columns like `HRA 5%` and `HRA 15%` into a single `HRA` column on the payroll screen and in all three exports (Wage Register, Pay Sheet, MIS). Values stay accurate by summing the underlying per-employee amounts (which are already prorated by attendance).
 
-Plan:
+## Approach
 
-1. Create one shared payroll export builder inside the payroll page
-   - Generate Wage Register, Pay Sheet, and MIS from the exact same computed row data used by the visible payroll table.
-   - Avoid separate/duplicated export logic that can drift from on-screen totals.
+1. **Add a canonicalizer in `src/lib/payroll-calc.ts`**
+   - New helper `canonicalComponentName(name)` that strips any trailing percentage / numeric qualifier:
+     - `HRA 5%` → `HRA`
+     - `HRA 15 %` → `HRA`
+     - `Conveyance 10%` → `Conveyance`
+     - `Washing (5%)` → `Washing`
+   - Regex roughly: trim, then remove a trailing ` [\(\[]?\d+(\.\d+)?\s*%[\)\]]?$`. Idempotent and safe on names without a suffix.
+   - Export it so the route can reuse the exact same rule everywhere.
 
-2. Fix column generation end-to-end
-   - Remove blank export columns.
-   - Remove zero-only columns unless they are required statutory/summary columns.
-   - Merge duplicate statutory columns like EE EPFC, EE PT, EE ESIC, ER EPFC, ER ESIC into one clean column each.
-   - Keep only necessary payroll columns for Wage Register, Pay Sheet, and MIS.
+2. **Aggregate per-row in `src/routes/admin.payroll.$unitId.tsx`**
+   - Add `mergeByCanonicalName(items)` that walks `[{name, amount}]`, groups by `canonicalComponentName(name)`, sums amounts, and returns a deduped list. The first occurrence's display name (canonical form) wins.
+   - Apply it to `wages.components`, `wages.deductions`, and the employer-contributions list **after** `computeWages` but **before** building column headers and row values, so a single normalized shape feeds the table, breakdown, and all exports.
+   - Earned-gross stays unchanged (it is already the sum of the originals, so merging line items doesn't change totals).
 
-3. Fix calculation parity
-   - Ensure exported `T Days`, `OT Hours`, `OT Duties`, gross, earned component totals, deductions, net pay, employer contributions, and CTC exactly match the payroll page.
-   - Stop rounding individual columns inconsistently where it causes totals to mismatch.
-   - Add reconciliation checks before export so calculated totals equal row totals.
+3. **Column generation (already dynamic) automatically follows**
+   - `EARNED_COMPONENT_COLS = collectUnique(r => r.wages?.components)` will now collect canonical names only → one `HRA`, one `Conveyance`, etc.
+   - `keepNonZero` continues to drop fully-zero columns.
+   - Deduction groups (EPF/ESIC/PT/LWF) are unaffected — they're already merged by `deductionGroups`.
 
-4. Improve export visibility/readability
-   - Wage Register and MIS Excel files: auto-fit widths, freeze header, keep identifier columns as text, make numeric columns readable.
-   - Pay Sheet PDF: use only the necessary columns so everything remains visible and not crushed.
-   - Add totals row at the bottom of Wage Register, Pay Sheet, and MIS for real verification.
+4. **On-screen breakdown drawer**
+   - The expandable row that lists each component currently iterates `r.wages.components`. After step 2 it iterates the merged list, so the user sees `HRA 1,250.00` instead of `HRA 5% 312.50` + `HRA 15% 937.50`.
 
-5. Verify with FPL real data
-   - Use the FPL May 2026 attendance/payroll data to compare exported rows against the payroll screen totals.
-   - Check sample employees plus grand totals across all three exports.
-   - Verify there are no duplicate headers, no blank headers, and no unwanted zero-only columns.
+5. **Three exports (Wage Register XLSX, Pay Sheet PDF, MIS XLSX)**
+   - All three already read from the same `earnedComponentCols` / row-builder. Because step 2 normalizes the data at the source, every export ends up with a single merged column per base name. No per-export changes needed beyond what step 2 produces.
+   - TOTAL row sums merged columns the same way as before.
 
-Technical notes:
-- Main file to update: `src/routes/admin.payroll.$unitId.tsx`.
-- Export writer file may need a small update in `src/lib/csv-export.ts` for better totals/format support if required.
-- No database schema change is needed.
+6. **Verification**
+   - Run a quick check script against the FPL May 2026 run: for each employee, sum of merged `HRA` equals the sum of original `HRA 5%` + `HRA 15%`; same for any other split component. Earned Gross, Total Deductions, Net Pay, Employer Cost are unchanged.
+
+## Out of scope
+- No changes to contract/cost-component configuration. The split components stay as configured; the merge happens only in the payroll view/exports.
+- No changes to EPF/ESIC/PT/LWF logic (already single columns and untouched by the prior fix).
