@@ -967,7 +967,10 @@ function computeBenefitAmount(
   }, 0);
   let amt = (Number(benefit.percentage) || 0) * base / 100;
   if (benefit.capAmount != null && benefit.capAmount > 0 && base > benefit.capAmount) {
-    amt = (Number(benefit.percentage) || 0) * benefit.capAmount / 100;
+    amt =
+      benefit.capFlatAmount != null && benefit.capFlatAmount > 0
+        ? Number(benefit.capFlatAmount)
+        : (Number(benefit.percentage) || 0) * benefit.capAmount / 100;
   }
   return Math.round(amt * 100) / 100;
 }
