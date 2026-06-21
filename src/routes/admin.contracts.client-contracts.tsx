@@ -3310,6 +3310,7 @@ function ResourceFormDialog({
               percentage: a.percentage,
               baseComponents: a.baseComponents,
               capAmount: a.capAmount,
+              capFlatAmount: null,
               amount: 0,
             },
             prev,
