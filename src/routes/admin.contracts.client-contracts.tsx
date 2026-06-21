@@ -923,7 +923,7 @@ function contractTotalAmount(item: { name?: unknown; amount?: unknown }): number
 
 /** Compute benefit amount from a percentage component using the resource's wage components. */
 function computeBenefitAmount(
-  benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "amount">,
+  benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "capFlatAmount" | "amount">,
   wageComponents: ResourceComponent[],
   benefitItems: BenefitItem[] = [],
   allowanceTypes: AllowanceType[] = [],
