@@ -174,6 +174,10 @@ type AllowanceType = {
   displayName: string;
   shortName: string;
   isDefault: boolean;
+  calcType: "fixed" | "percentage";
+  percentage: number;
+  baseComponents: { label: string; operator: "+" | "-" }[];
+  capAmount: number | null;
 };
 
 type ResourceComponent = {
@@ -774,7 +778,7 @@ function useAllowanceTypes() {
     queryFn: async (): Promise<AllowanceType[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,display_name,short_name,is_default,enabled,created_at")
+        .select("id,name,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,created_at")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data as unknown as Record<string, unknown>[])
@@ -785,6 +789,12 @@ function useAllowanceTypes() {
           displayName: String(r.display_name ?? r.name),
           shortName: String(r.short_name ?? ""),
           isDefault: Boolean(r.is_default),
+          calcType: (String(r.calc_type ?? "fixed") as "fixed" | "percentage"),
+          percentage: Number(r.percentage ?? 0),
+          baseComponents: Array.isArray(r.base_components)
+            ? (r.base_components as { label: string; operator: "+" | "-" }[])
+            : [],
+          capAmount: r.cap_amount == null ? null : Number(r.cap_amount),
         }));
     },
   });
@@ -3138,6 +3148,36 @@ function ResourceFormDialog({
     );
   }, [allowanceQuery, availableExtras]);
 
+  // Recompute formula-based wage components (e.g. HRA = 5% of Basic + DA)
+  // whenever any other component changes. Skips self-reference and no-ops
+  // when the amount is unchanged so React doesn't re-render in a loop.
+  useEffect(() => {
+    setComponents((prev) => {
+      let changed = false;
+      const next = prev.map((c) => {
+        const at = allowanceTypes.find((a) => a.id === c.allowanceId);
+        if (!at || at.calcType !== "percentage") return c;
+        const others = prev.filter((x) => x.allowanceId !== c.allowanceId);
+        const newAmt = computeBenefitAmount(
+          {
+            calcType: "percentage",
+            percentage: at.percentage,
+            baseComponents: at.baseComponents,
+            capAmount: at.capAmount,
+            amount: 0,
+          },
+          others,
+          [],
+          allowanceTypes,
+        );
+        if (Math.abs((Number(c.amount) || 0) - newAmt) < 0.005) return c;
+        changed = true;
+        return { ...c, amount: newAmt };
+      });
+      return changed ? next : prev;
+    });
+  }, [components, allowanceTypes]);
+
   // Recompute percentage benefits whenever wage components change
   useEffect(() => {
     setBenefits((prev) =>
@@ -3247,14 +3287,29 @@ function ResourceFormDialog({
 
   const addComponent = (a: AllowanceType) => {
     preserveDialogScroll(() => {
-      setComponents((prev) => [
-        ...prev,
-        {
+      setComponents((prev) => {
+        const next: ResourceComponent = {
           allowanceId: a.id,
           name: a.shortName || a.displayName,
           amount: 0,
-        },
-      ]);
+        };
+        if (a.calcType === "percentage") {
+          // Compute formula against existing components (excluding self by id).
+          next.amount = computeBenefitAmount(
+            {
+              calcType: "percentage",
+              percentage: a.percentage,
+              baseComponents: a.baseComponents,
+              capAmount: a.capAmount,
+              amount: 0,
+            },
+            prev,
+            [],
+            allowanceTypes,
+          );
+        }
+        return [...prev, next];
+      });
       setAllowanceQuery("");
       setAllowancePickerOpen(false);
     });

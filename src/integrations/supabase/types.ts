@@ -91,6 +91,9 @@ export type Database = {
       }
       allowance_types: {
         Row: {
+          base_components: Json
+          calc_type: string
+          cap_amount: number | null
           created_at: string
           display_name: string
           earning_type: string
@@ -98,10 +101,14 @@ export type Database = {
           id: string
           is_default: boolean
           name: string
+          percentage: number
           short_name: string
           updated_at: string
         }
         Insert: {
+          base_components?: Json
+          calc_type?: string
+          cap_amount?: number | null
           created_at?: string
           display_name?: string
           earning_type?: string
@@ -109,10 +116,14 @@ export type Database = {
           id?: string
           is_default?: boolean
           name: string
+          percentage?: number
           short_name?: string
           updated_at?: string
         }
         Update: {
+          base_components?: Json
+          calc_type?: string
+          cap_amount?: number | null
           created_at?: string
           display_name?: string
           earning_type?: string
@@ -120,6 +131,7 @@ export type Database = {
           id?: string
           is_default?: boolean
           name?: string
+          percentage?: number
           short_name?: string
           updated_at?: string
         }
