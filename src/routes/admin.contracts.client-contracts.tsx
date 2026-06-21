@@ -3236,6 +3236,7 @@ function ResourceFormDialog({
     percentage: 0,
     baseComponents: [],
     capAmount: null,
+    capFlatAmount: null,
     amount: 0,
     state: "Per state slab (resolved at payroll from unit state, employee gender, earned gross)",
   };
