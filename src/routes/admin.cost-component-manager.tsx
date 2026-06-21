@@ -67,7 +67,7 @@ const QK = ["admin", "cost-components"] as const;
 const ALLOW_QK = ["admin", "cost-components", "allowance-options"] as const;
 const STATES_QK = ["admin", "cost-components", "states"] as const;
 const STATUTORY_ESI_BASE: BaseRef[] = [
-  { label: "Earned Gross", operator: "+" },
+  { label: "Gross", operator: "+" },
   { label: "Washing Allowance", operator: "-" },
   { label: "Conveyance Allowance", operator: "-" },
 ];
@@ -105,11 +105,7 @@ function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "b
   }
 
   const name = (c.name ?? "").toLowerCase();
-  // Statutory ESI: always 0.75% (employee) / 3.25% (employer) of earned gross minus earned washing/conveyance.
-  if (isEsiName(name)) {
-    const pct = c.percentage || 0.75;
-    return `${pct}% of Earned Gross − Washing Allowance − Conveyance Allowance · calculated in payroll`;
-  }
+  void name;
   const parts = c.base_components.map((b, i) => (i === 0 ? b.label : `${b.operator === "-" ? "(-) " : "(+) "}${b.label}`));
   const base = parts.length ? parts.join(" ") : "—";
   if (c.cap_amount && c.cap_amount > 0) {
@@ -142,7 +138,7 @@ function useCostComponents() {
     name: p.name.trim(),
     calc_type: p.calc_type,
     percentage: p.calc_type === "percentage" ? Number(p.percentage) || 0 : 0,
-    base_components: p.calc_type === "percentage" ? (isEsiName(p.name) ? STATUTORY_ESI_BASE : p.base_components) : [],
+    base_components: p.calc_type === "percentage" ? p.base_components : [],
     cap_amount: p.calc_type === "percentage" ? p.cap_amount : null,
     cap_flat_amount: p.calc_type === "percentage" ? p.cap_flat_amount : null,
     amount: p.calc_type === "fixed" ? p.amount : null,
@@ -475,7 +471,11 @@ function CostComponentDialog({
     setName(initial?.name ?? "");
     setCalcType(initial?.calc_type ?? "percentage");
     setPercentage(String(initial?.percentage ?? 0));
-    setBaseRefs(initial?.base_components ?? []);
+    const initialBase = initial?.base_components ?? [];
+    // Migrate legacy "Earned Gross" label → "Gross" (no such component exists).
+    setBaseRefs(
+      initialBase.map((b) => (b.label === "Earned Gross" ? { ...b, label: "Gross" } : b)),
+    );
     setCapAmount(initial?.cap_amount != null ? String(initial.cap_amount) : "");
     setCapFlatAmount(initial?.cap_flat_amount != null ? String(initial.cap_flat_amount) : "");
     setAmount(initial?.amount != null ? String(initial.amount) : "");
@@ -486,13 +486,11 @@ function CostComponentDialog({
   });
 
   const stateOptions = useMemo(() => ["N/A", ...states.map((s) => s.name)], [states]);
-  const isEsiComponent = isEsiName(name);
-  const effectiveBaseRefs = isEsiComponent ? STATUTORY_ESI_BASE : baseRefs;
 
   const preview = buildDescription({
     calc_type: calcType,
     percentage: Number(percentage) || 0,
-    base_components: effectiveBaseRefs,
+    base_components: baseRefs,
     cap_amount: capAmount ? Number(capAmount) : null,
     cap_flat_amount: capFlatAmount ? Number(capFlatAmount) : null,
     amount: amount ? Number(amount) : null,
@@ -568,15 +566,7 @@ function CostComponentDialog({
               <div className="grid gap-2">
                 <Label>Base Components</Label>
                 <div className="rounded-lg border border-border p-3">
-                  {isEsiComponent ? (
-                    <div className="flex flex-wrap gap-2">
-                      {STATUTORY_ESI_BASE.map((b, idx) => (
-                        <div key={`${b.label}-${idx}`} className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/40 px-2 py-1 text-sm font-medium">
-                          {idx === 0 ? b.label : `${b.operator === "-" ? "−" : "+"} ${b.label}`}
-                        </div>
-                      ))}
-                    </div>
-                  ) : baseRefs.length === 0 ? (
+                  {baseRefs.length === 0 ? (
                     <div className="text-xs text-muted-foreground">No base added. Pick a component below.</div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
@@ -609,7 +599,7 @@ function CostComponentDialog({
                       ))}
                     </div>
                   )}
-                  {!isEsiComponent && (() => {
+                  {(() => {
                     const used = new Set(baseRefs.map((b) => b.label));
                     const remaining = baseLabels.filter((l) => !used.has(l));
                     if (remaining.length === 0) return null;
