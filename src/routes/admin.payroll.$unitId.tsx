@@ -551,93 +551,55 @@ function PayrollUnitPage() {
       );
       return;
     }
-    // Dynamic Wage Register — columns are derived from the actual contract
-    // components / earned components / deductions present across rows. Empty
-    // categories collapse so the CSV only contains what's truly in use.
+
+    // ---- helpers ----
     const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+    const lookup = (items: { name: string; amount: number }[] | undefined, label: string) => {
+      if (!items) return 0;
+      const target = norm(label);
+      const hit = items.find((i) => norm(i.name) === target);
+      return hit ? Number(hit.amount) || 0 : 0;
+    };
+    const sumByNames = (
+      items: { name: string; amount: number }[] | undefined,
+      names: string[],
+    ) => names.reduce((s, n) => s + lookup(items, n), 0);
 
     const collectUnique = (
       pick: (r: (typeof rows)[number]) => { name: string }[] | undefined,
     ) => {
-      const seen = new Map<string, string>(); // norm -> display name (first seen)
+      const seen = new Map<string, string>();
       rows.forEach((r) => {
-        const items = pick(r) ?? [];
-        items.forEach((it) => {
+        (pick(r) ?? []).forEach((it) => {
           if (!it?.name) return;
           const key = norm(it.name);
-          if (!key) return;
-          if (!seen.has(key)) seen.set(key, it.name);
+          if (!key || seen.has(key)) return;
+          seen.set(key, it.name);
         });
       });
       return Array.from(seen.values());
     };
 
-    const CONTRACT_COMPONENT_COLS = collectUnique((r) => r.resource?.components);
-    const EARNED_COMPONENT_COLS = collectUnique((r) => r.wages?.components);
-    const DEDUCTION_COLS = collectUnique((r) => r.wages?.deductions);
-    const ADDITION_COLS = collectUnique((r) =>
-      (r.wages as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions,
-    );
-    const EMPLOYER_CONTRIB_COLS = collectUnique((r) => r.wages?.employerContributions);
-
-    const ABBR_MAP: Record<string, string> = {
-      paidholiday: "PH",
-      paidholidays: "PH",
-      ph: "PH",
-      bonus: "BON",
-      incentive: "INC",
-      arrears: "ARR",
-      advance: "ADV",
-    };
-    const abbreviate = (name: string) => {
-      const key = name.toLowerCase().replace(/[^a-z0-9]/g, "");
-      if (ABBR_MAP[key]) return ABBR_MAP[key];
-      const words = name.trim().split(/\s+/).filter(Boolean);
-      if (words.length === 1) return words[0].slice(0, 3).toUpperCase();
-      return words.map((w) => w[0]).join("").toUpperCase().slice(0, 4);
-    };
-
-    const F_CONTRACT_COMPONENT_COLS = CONTRACT_COMPONENT_COLS.map((c) => `F ${c}`);
-    const E_EARNED_COMPONENT_COLS = EARNED_COMPONENT_COLS.map((c) => `E ${c}`);
-
-    // Friendly header formatters for employee deductions (EE prefix) and
-    // employer contributions (ER prefix). Strip noisy suffixes like
-    // "Employee Contribution", "Employer Contribution", "(Gross - HRA)",
-    // "Net", and normalise EPF→EPFC / ESI→ESIC for the export sheets.
     const formatDeductionHeader = (name: string): string => {
       const n = name.toLowerCase();
-      if (/\bepf\b/.test(n)) return "EE EPFC";
+      if (/\bepf\b/.test(n)) return "EE EPF";
       if (/\besi(c)?\b/.test(n)) return "EE ESIC";
       if (/professional\s*tax|\bpt\b/.test(n)) return "EE PT";
       if (/\blwf\b|labour\s*welfare/.test(n)) return "EE LWF";
-      const clean = name
-        .replace(/\(.*?\)/g, "")
-        .replace(/employee\s*contribution/gi, "")
-        .replace(/\bnet\b/gi, "")
-        .trim()
-        .replace(/\s+/g, " ");
+      const clean = name.replace(/\(.*?\)/g, "").replace(/employee\s*contribution/gi, "").replace(/\bnet\b/gi, "").trim().replace(/\s+/g, " ");
       return clean ? `EE ${clean}` : `EE ${name.trim()}`;
     };
     const formatEmployerHeader = (name: string): string => {
       const n = name.toLowerCase();
-      if (/\bepf\b/.test(n)) return "ER EPFC";
+      if (/\bepf\b/.test(n)) return "ER EPF";
       if (/\besi(c)?\b/.test(n)) return "ER ESIC";
       if (/\blwf\b|labour\s*welfare/.test(n)) return "ER LWF";
       if (/management\s*fee|\bmgmt\s*fee\b/.test(n)) return "ER Management Fee";
-      const clean = name
-        .replace(/\(.*?\)/g, "")
-        .replace(/employer\s*contribution/gi, "")
-        .replace(/\bnet\b/gi, "")
-        .trim()
-        .replace(/\s+/g, " ");
+      const clean = name.replace(/\(.*?\)/g, "").replace(/employer\s*contribution/gi, "").replace(/\bnet\b/gi, "").trim().replace(/\s+/g, " ");
       return clean ? `ER ${clean}` : `ER ${name.trim()}`;
     };
 
-    // Group original deduction / employer-contribution names by their
-    // formatted header so multiple raw names that collapse to the same label
-    // (e.g. "EE-EPF NoCap" + "EE-EPF SP Basic" → "EE EPFC", or
-    // "Professional Tax" + "Professional Tax (PT)" → "EE PT") become a
-    // single column whose value is the sum of all matching items.
     const groupByHeader = (
       cols: string[],
       fmt: (name: string) => string,
@@ -652,21 +614,34 @@ function PayrollUnitPage() {
       }
       return order.map((h) => ({ header: h, names: map.get(h)! }));
     };
+
+    // ---- collect columns ----
+    const CONTRACT_COMPONENT_COLS = collectUnique((r) => r.resource?.components);
+    const EARNED_COMPONENT_COLS = collectUnique((r) => r.wages?.components);
+    const DEDUCTION_COLS = collectUnique((r) => r.wages?.deductions);
+    const ADDITION_COLS = collectUnique((r) =>
+      (r.wages as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions,
+    );
+    const EMPLOYER_CONTRIB_COLS = collectUnique((r) => r.wages?.employerContributions);
     const DEDUCTION_GROUPS = groupByHeader(DEDUCTION_COLS, formatDeductionHeader);
     const EMP_CONTRIB_GROUPS = groupByHeader(EMPLOYER_CONTRIB_COLS, formatEmployerHeader);
-    const DEDUCTION_HEADERS = DEDUCTION_GROUPS.map((g) => g.header);
-    const EMP_CONTRIB_LABELS = EMP_CONTRIB_GROUPS.map((g) => g.header);
-    const sumByNames = (
-      items: { name: string; amount: number }[] | undefined,
-      names: string[],
-    ) => names.reduce((s, n) => s + lookup(items, n), 0);
 
-    const lookup = (items: { name: string; amount: number }[] | undefined, label: string) => {
-      if (!items) return 0;
-      const target = norm(label);
-      const hit = items.find((i) => norm(i.name) === target);
-      return hit ? hit.amount : 0;
-    };
+    // Drop component columns that are zero/blank across every row.
+    const keepNonZero = (
+      names: string[],
+      get: (r: (typeof rows)[number], name: string) => number,
+    ) => names.filter((n) => rows.some((r) => Math.abs(get(r, n)) > 0.005));
+
+    const contractComponentCols = keepNonZero(CONTRACT_COMPONENT_COLS, (r, n) => lookup(r.resource?.components, n));
+    const earnedComponentCols = keepNonZero(EARNED_COMPONENT_COLS, (r, n) => lookup(r.wages?.components, n));
+    const additionCols = keepNonZero(ADDITION_COLS, (r, n) => lookup((r.wages as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions, n));
+    const deductionGroups = DEDUCTION_GROUPS.filter((g) => rows.some((r) => Math.abs(sumByNames(r.wages?.deductions, g.names)) > 0.005));
+    const empContribGroups = EMP_CONTRIB_GROUPS.filter((g) => rows.some((r) => Math.abs(sumByNames(r.wages?.employerContributions, g.names)) > 0.005));
+
+    const F_CONTRACT_COMPONENT_COLS = contractComponentCols.map((c) => `F ${c}`);
+    const E_EARNED_COMPONENT_COLS = earnedComponentCols.map((c) => `E ${c}`);
+    const DEDUCTION_HEADERS = deductionGroups.map((g) => g.header);
+    const EMP_CONTRIB_LABELS = empContribGroups.map((g) => g.header);
 
     const periodMonth = (() => {
       const [y, m] = end.split("-");
@@ -676,40 +651,30 @@ function PayrollUnitPage() {
     const clientId = unit?.code || "";
     const siteName = unit?.name || "";
 
-    const additionGroups = ADDITION_COLS.map((name) => ({ header: name, names: [name] }));
-    const additionAmount = (items: { name: string; amount: number }[] | undefined, names: string[]) =>
-      names.reduce((sum, name) => sum + lookup(items, name), 0);
+    const approvedDate = run?.approved_at ? run.approved_at.slice(0, 10) : "";
+    const approvalInfo =
+      runStatus === "approved" ? "Approved"
+      : runStatus === "submitted" ? "Submitted — awaiting approval"
+      : runStatus === "rejected" ? `Rejected: ${run?.rejection_reason ?? ""}`.trim()
+      : "Draft";
 
-    // Suppress unused-var lint for the abbreviate helper (kept for future use).
-    void abbreviate;
-
-    const headers = [
-      "SI No", "Month", "Agency Branch Name", "Client ID", "Client Name", "Site Name",
+    // ---- Wage Register headers (shared baseline) ----
+    const wageHeaders = [
+      "SI No", "Month", "Client ID", "Client Name", "Site Name",
       "Employee ID", "Employee Name", "Designation", "Date Of Joining",
-      "ESI No", "UAN",
+      "ESI No", "UAN", "PAN",
       ...F_CONTRACT_COMPONENT_COLS,
       "F Gross Salary", "Fixed Duties", "Duties", "OT Hours", "Over Time Duties",
       ...E_EARNED_COMPONENT_COLS,
-      ...additionGroups.map((g) => g.header),
+      ...additionCols,
       "E Gross Salary",
       ...DEDUCTION_HEADERS,
       "Total Deductions", "Net Pay",
-      "Bank Acc No", "Bank IFSC", "Bank Name", "Bank Branch Name", "Bank Account Holder Name",
-      "Approved Date", "Approval Info", "Is payment completed", "Payment date", "Remarks",
+      "Bank Acc No", "Bank IFSC", "Bank Name", "Bank Branch", "Bank Account Holder",
+      "Approved Date", "Approval Info",
     ];
 
-    const approvedDate = run?.approved_at ? run.approved_at.slice(0, 10) : "";
-    const approvalInfo =
-      runStatus === "approved"
-        ? "Approved"
-        : runStatus === "submitted"
-        ? "Submitted — awaiting approval"
-        : runStatus === "rejected"
-        ? `Rejected: ${run?.rejection_reason ?? ""}`.trim()
-        : "Draft";
-
-    const columns = headers.map((h) => ({ key: h, header: h }));
-    const dataRows = rows.map((r, idx) => {
+    const buildWageRow = (r: (typeof rows)[number], idx: number): Record<string, unknown> => {
       const w = r.wages;
       const contractComponents = r.resource?.components ?? [];
       const earnedComponents = w?.components ?? [];
@@ -717,77 +682,108 @@ function PayrollUnitPage() {
       const earnedAdditions = (w as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions ?? [];
 
       const cells: unknown[] = [
-        idx + 1, periodMonth, "", clientId, customerName, siteName,
+        idx + 1, periodMonth, clientId, customerName, siteName,
         r.employeeCode, r.name, r.designation,
         r.dateOfJoining ? r.dateOfJoining.slice(0, 10) : "",
-        r.esiNumber, r.uan,
-        ...CONTRACT_COMPONENT_COLS.map((c) => lookup(contractComponents, c)),
-        w ? w.contractGross : 0,
+        r.esiNumber, r.uan, r.panNumber,
+        ...contractComponentCols.map((c) => round2(lookup(contractComponents, c))),
+        w ? round2(w.contractGross) : 0,
         w ? w.baseDays : 0,
         r.totals.tDays, r.totals.otHours, r.totals.otDays,
-        ...EARNED_COMPONENT_COLS.map((c) => lookup(earnedComponents, c)),
-        ...additionGroups.map((g) => additionAmount(earnedAdditions, g.names)),
-        w ? w.earnedGross : 0,
-        ...DEDUCTION_GROUPS.map((g) => sumByNames(earnedDeductions, g.names)),
-        w ? Math.round(w.totalDeductions) : 0,
-        w ? Math.round(w.netPay) : 0,
+        ...earnedComponentCols.map((c) => round2(lookup(earnedComponents, c))),
+        ...additionCols.map((c) => round2(lookup(earnedAdditions, c))),
+        w ? round2(w.earnedGross) : 0,
+        ...deductionGroups.map((g) => round2(sumByNames(earnedDeductions, g.names))),
+        w ? round2(w.totalDeductions) : 0,
+        w ? round2(w.netPay) : 0,
         r.bankAccountNumber, r.bankIfsc, r.bankName, r.bankBranch, r.bankAccountHolder,
-        approvedDate, approvalInfo, "No", "", "",
+        approvedDate, approvalInfo,
       ];
       const row: Record<string, unknown> = {};
-      headers.forEach((h, i) => { row[h] = cells[i]; });
+      wageHeaders.forEach((h, i) => { row[h] = cells[i]; });
       return row;
-    });
+    };
 
-    // PDF (Pay Sheet): drop the "F <ContractComponent>" columns — keep
-    // from "F Gross Salary" through the end.
-    const pdfHeaders = headers.filter((h) => !F_CONTRACT_COMPONENT_COLS.includes(h));
-    const pdfColumns = pdfHeaders.map((h) => ({ key: h, header: h }));
+    const dataRows = rows.map((r, idx) => buildWageRow(r, idx));
 
-    // MIS: everything in the wage register PLUS a per-employer-contribution
-    // breakdown and the total employer cost (CTC) — so management can see
-    // the full cost-to-company alongside earnings in one sheet.
+    // ---- Totals row (numeric columns only) ----
+    const numericHeaderSet = new Set<string>([
+      ...F_CONTRACT_COMPONENT_COLS, "F Gross Salary", "Fixed Duties", "Duties", "OT Hours", "Over Time Duties",
+      ...E_EARNED_COMPONENT_COLS, ...additionCols, "E Gross Salary",
+      ...DEDUCTION_HEADERS, "Total Deductions", "Net Pay",
+    ]);
+    const totalsRow = (headers: string[]): Record<string, unknown> => {
+      const out: Record<string, unknown> = {};
+      headers.forEach((h) => { out[h] = ""; });
+      out["SI No"] = "";
+      out["Employee Name"] = "TOTAL";
+      headers.forEach((h) => {
+        if (!numericHeaderSet.has(h)) return;
+        const sum = dataRows.reduce((s, r) => s + (Number(r[h]) || 0), 0);
+        out[h] = round2(sum);
+      });
+      return out;
+    };
+
+    const wageColumns = wageHeaders.map((h) => ({ key: h, header: h }));
+    const wageRowsWithTotal = [...dataRows, totalsRow(wageHeaders)];
+
+    // ---- Pay Sheet (PDF): slim, only essential columns so everything fits ----
+    const paySheetHeaders = [
+      "SI No", "Employee ID", "Employee Name", "Designation",
+      "Fixed Duties", "Duties", "OT Hours", "Over Time Duties",
+      "F Gross Salary", "E Gross Salary",
+      "Total Deductions", "Net Pay",
+      "Bank Acc No", "Bank IFSC",
+    ];
+    const paySheetColumns = paySheetHeaders.map((h) => ({ key: h, header: h }));
+    const paySheetRows = [...dataRows, totalsRow(paySheetHeaders)];
+
+    // ---- MIS: Wage Register + employer-contribution breakdown + CTC ----
     const misHeaders = [
-      ...headers.filter((h) => h !== "PF No"),
+      ...wageHeaders,
       ...EMP_CONTRIB_LABELS,
       "Total Employer Contributions",
       "Employer Cost (CTC)",
     ];
-    const misColumns = misHeaders.map((h) => ({ key: h, header: h }));
-    const misRows = dataRows.map((row, idx) => {
+    const isLwfName = (n: string) => /\blwf\b|labour\s*welfare/i.test(n);
+    const misDataRows = dataRows.map((row, idx) => {
       const r = rows[idx];
       const w = r.wages;
       const empContribs = w?.employerContributions ?? [];
       const extra: Record<string, unknown> = {};
-      // LWF (Labour Welfare Fund) is a flat statutory amount that can be a
-      // fractional rupee value (e.g. ₹12.50). Preserve its exact value;
-      // round other employer contributions to whole rupees as before.
-      const isLwfName = (n: string) => /\blwf\b|labour\s*welfare/i.test(n);
-      EMP_CONTRIB_GROUPS.forEach((g) => {
+      empContribGroups.forEach((g) => {
         const val = sumByNames(empContribs, g.names);
-        const anyLwf = g.names.some(isLwfName);
-        extra[g.header] = anyLwf ? val : Math.round(val);
+        extra[g.header] = g.names.some(isLwfName) ? round2(val) : round2(val);
       });
-      extra["Total Employer Contributions"] = w ? Math.round(w.totalEmployerContributions) : 0;
-      extra["Employer Cost (CTC)"] = w ? Math.round(w.employerCost) : 0;
+      extra["Total Employer Contributions"] = w ? round2(w.totalEmployerContributions) : 0;
+      extra["Employer Cost (CTC)"] = w ? round2(w.employerCost) : 0;
       return { ...row, ...extra };
     });
+    const misNumericExtras = [...EMP_CONTRIB_LABELS, "Total Employer Contributions", "Employer Cost (CTC)"];
+    misNumericExtras.forEach((h) => numericHeaderSet.add(h));
+    const misTotals: Record<string, unknown> = { ...totalsRow(wageHeaders) };
+    misNumericExtras.forEach((h) => {
+      misTotals[h] = round2(misDataRows.reduce((s, r) => s + (Number(r[h]) || 0), 0));
+    });
+    const misColumns = misHeaders.map((h) => ({ key: h, header: h }));
+    const misRowsWithTotal = [...misDataRows, misTotals];
 
     const baseName = `${unit?.code ?? unitId}-${start}-${end}`;
     openExport({
       filename: `wage-register-${baseName}`,
-      rows: dataRows,
-      columns,
+      rows: wageRowsWithTotal,
+      columns: wageColumns,
       pdfFilename: `pay-sheet-${baseName}`,
-      pdfColumns,
-      pdfRows: dataRows,
+      pdfColumns: paySheetColumns,
+      pdfRows: paySheetRows,
       labels: {
         xlsx: { title: "Download Wage Register", desc: "Full wage register (Excel)" },
         pdf: { title: "Download Pay Sheet", desc: "Printable pay sheet (PDF)" },
       },
       mis: {
         filename: `mis-${baseName}`,
-        rows: misRows,
+        rows: misRowsWithTotal,
         columns: misColumns,
         title: "Download MIS",
         desc: "Full register + employer cost breakdown (Excel)",
