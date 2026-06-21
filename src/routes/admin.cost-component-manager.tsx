@@ -541,7 +541,7 @@ function CostComponentDialog({
 
           {calcType === "percentage" ? (
             <>
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 <div className="grid gap-2">
                   <Label>Percentage (%)</Label>
                   <Input type="number" step="0.01" value={percentage} onChange={(e) => setPercentage(e.target.value)} />
@@ -549,6 +549,19 @@ function CostComponentDialog({
                 <div className="grid gap-2">
                   <Label>Wage Ceiling (optional, ₹)</Label>
                   <Input type="number" value={capAmount} onChange={(e) => setCapAmount(e.target.value)} placeholder="e.g. 15000 (EPF cap)" />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Flat Amount Above Ceiling (₹)</Label>
+                  <Input
+                    type="number"
+                    value={capFlatAmount}
+                    onChange={(e) => setCapFlatAmount(e.target.value)}
+                    placeholder={
+                      capAmount && Number(capAmount) > 0
+                        ? `Auto: ${Math.round(((Number(percentage) || 0) / 100) * Number(capAmount))}`
+                        : "Manual override"
+                    }
+                  />
                 </div>
               </div>
 
