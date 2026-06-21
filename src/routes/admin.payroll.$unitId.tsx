@@ -728,7 +728,7 @@ function PayrollUnitPage() {
         ...EARNED_COMPONENT_COLS.map((c) => lookup(earnedComponents, c)),
         ...additionGroups.map((g) => additionAmount(earnedAdditions, g.names)),
         w ? w.earnedGross : 0,
-        ...DEDUCTION_COLS.map((c) => lookup(earnedDeductions, c)),
+        ...DEDUCTION_GROUPS.map((g) => sumByNames(earnedDeductions, g.names)),
         w ? Math.round(w.totalDeductions) : 0,
         w ? Math.round(w.netPay) : 0,
         r.bankAccountNumber, r.bankIfsc, r.bankName, r.bankBranch, r.bankAccountHolder,
