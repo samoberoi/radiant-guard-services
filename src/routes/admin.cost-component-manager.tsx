@@ -84,6 +84,7 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
     percentage: Number(r.percentage ?? 0),
     base_components: Array.isArray(r.base_components) ? (r.base_components as BaseRef[]) : [],
     cap_amount: r.cap_amount == null ? null : Number(r.cap_amount),
+    cap_flat_amount: r.cap_flat_amount == null ? null : Number(r.cap_flat_amount),
     amount: r.amount == null ? null : Number(r.amount),
     state: String(r.state ?? "N/A"),
     notes: String(r.notes ?? ""),
