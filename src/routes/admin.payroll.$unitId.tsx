@@ -763,9 +763,10 @@ function PayrollUnitPage() {
       // fractional rupee value (e.g. ₹12.50). Preserve its exact value;
       // round other employer contributions to whole rupees as before.
       const isLwfName = (n: string) => /\blwf\b|labour\s*welfare/i.test(n);
-      EMPLOYER_CONTRIB_COLS.forEach((name, i) => {
-        const val = lookup(empContribs, name);
-        extra[EMP_CONTRIB_LABELS[i]] = isLwfName(name) ? val : Math.round(val);
+      EMP_CONTRIB_GROUPS.forEach((g) => {
+        const val = sumByNames(empContribs, g.names);
+        const anyLwf = g.names.some(isLwfName);
+        extra[g.header] = anyLwf ? val : Math.round(val);
       });
       extra["Total Employer Contributions"] = w ? Math.round(w.totalEmployerContributions) : 0;
       extra["Employer Cost (CTC)"] = w ? Math.round(w.employerCost) : 0;
