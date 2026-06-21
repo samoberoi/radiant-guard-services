@@ -67,7 +67,7 @@ const QK = ["admin", "cost-components"] as const;
 const ALLOW_QK = ["admin", "cost-components", "allowance-options"] as const;
 const STATES_QK = ["admin", "cost-components", "states"] as const;
 const STATUTORY_ESI_BASE: BaseRef[] = [
-  { label: "Earned Gross", operator: "+" },
+  { label: "Gross", operator: "+" },
   { label: "Washing Allowance", operator: "-" },
   { label: "Conveyance Allowance", operator: "-" },
 ];
