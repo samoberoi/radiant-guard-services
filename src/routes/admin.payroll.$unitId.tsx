@@ -154,14 +154,20 @@ function PayrollUnitPage() {
   const canApprove = can("payroll", "approve");
 
   type RunStatus = "draft" | "submitted" | "approved" | "rejected";
-  type RunRow = { id: string; status: RunStatus; rejection_reason: string | null };
+  type RunRow = {
+    id: string;
+    status: RunStatus;
+    rejection_reason: string | null;
+    approved_at: string | null;
+    submitted_at: string | null;
+  };
   const runQK = ["payroll-run", unitId, start, end];
   const { data: run } = useQuery({
     queryKey: runQK,
     queryFn: async (): Promise<RunRow | null> => {
       const { data, error } = await supabase
         .from("payroll_runs" as never)
-        .select("id, status, rejection_reason")
+        .select("id, status, rejection_reason, approved_at, submitted_at")
         .eq("unit_id", unitId)
         .eq("period_start", start)
         .eq("period_end", end)
@@ -645,24 +651,19 @@ function PayrollUnitPage() {
     const clientId = unit?.code || "";
     const siteName = unit?.name || "";
 
-    const additionGroups = Array.from(
-      ADDITION_COLS.reduce((map, name) => {
-        const header = abbreviate(name);
-        const names = map.get(header) ?? [];
-        names.push(name);
-        map.set(header, names);
-        return map;
-      }, new Map<string, string[]>()).entries(),
-    ).map(([header, names]) => ({ header, names }));
+    const additionGroups = ADDITION_COLS.map((name) => ({ header: name, names: [name] }));
     const additionAmount = (items: { name: string; amount: number }[] | undefined, names: string[]) =>
       names.reduce((sum, name) => sum + lookup(items, name), 0);
+
+    // Suppress unused-var lint for the abbreviate helper (kept for future use).
+    void abbreviate;
 
     const headers = [
       "SI No", "Month", "Agency Branch Name", "Client ID", "Client Name", "Site Name",
       "Employee ID", "Employee Name", "Designation", "Date Of Joining",
       "ESI No", "UAN",
       ...F_CONTRACT_COMPONENT_COLS,
-      "F Gross Salary", "Fixed Duties", "Duties", "Over Time Duties",
+      "F Gross Salary", "Fixed Duties", "Duties", "OT Hours", "Over Time Duties",
       ...E_EARNED_COMPONENT_COLS,
       ...additionGroups.map((g) => g.header),
       "E Gross Salary",
@@ -671,6 +672,16 @@ function PayrollUnitPage() {
       "Bank Acc No", "Bank IFSC", "Bank Name", "Bank Branch Name", "Bank Account Holder Name",
       "Approved Date", "Approval Info", "Is payment completed", "Payment date", "Remarks",
     ];
+
+    const approvedDate = run?.approved_at ? run.approved_at.slice(0, 10) : "";
+    const approvalInfo =
+      runStatus === "approved"
+        ? "Approved"
+        : runStatus === "submitted"
+        ? "Submitted — awaiting approval"
+        : runStatus === "rejected"
+        ? `Rejected: ${run?.rejection_reason ?? ""}`.trim()
+        : "Draft";
 
     const columns = headers.map((h) => ({ key: h, header: h }));
     const dataRows = rows.map((r, idx) => {
@@ -688,7 +699,7 @@ function PayrollUnitPage() {
         ...CONTRACT_COMPONENT_COLS.map((c) => lookup(contractComponents, c)),
         w ? w.contractGross : 0,
         w ? w.baseDays : 0,
-        r.totals.tDays, r.totals.otDays,
+        r.totals.tDays, r.totals.otHours, r.totals.otDays,
         ...EARNED_COMPONENT_COLS.map((c) => lookup(earnedComponents, c)),
         ...additionGroups.map((g) => additionAmount(earnedAdditions, g.names)),
         w ? w.earnedGross : 0,
@@ -696,8 +707,7 @@ function PayrollUnitPage() {
         w ? Math.round(w.totalDeductions) : 0,
         w ? Math.round(w.netPay) : 0,
         r.bankAccountNumber, r.bankIfsc, r.bankName, r.bankBranch, r.bankAccountHolder,
-        runStatus === "approved" ? new Date().toISOString().slice(0, 10) : "",
-        "", "No", "", "",
+        approvedDate, approvalInfo, "No", "", "",
       ];
       const row: Record<string, unknown> = {};
       headers.forEach((h, i) => { row[h] = cells[i]; });
