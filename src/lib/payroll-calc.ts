@@ -30,6 +30,46 @@ export type AttendanceTotals = {
 
 export const UNIT_DUTY_HOURS = 8;
 
+/**
+ * Strip trailing percentage / numeric qualifiers from a component name so
+ * variants like "HRA 5%", "HRA 15 %", "HRA (10%)" all collapse to "HRA".
+ * Idempotent and safe on names without a suffix.
+ */
+export function canonicalComponentName(name: string): string {
+  const raw = String(name ?? "").trim();
+  if (!raw) return raw;
+  // Remove trailing "[(]?<num>[%]?[)]?" segments, possibly repeated.
+  let out = raw;
+  for (let i = 0; i < 3; i++) {
+    const next = out
+      .replace(/[\s\-_]*[\(\[]?\s*\d+(?:\.\d+)?\s*%\s*[\)\]]?\s*$/g, "")
+      .replace(/[\s\-_]+\d+(?:\.\d+)?\s*$/g, "")
+      .trim();
+    if (next === out) break;
+    out = next;
+  }
+  return out || raw;
+}
+
+/**
+ * Sum amounts of items whose names canonicalize to the same value.
+ * Preserves first-seen order; display name = canonical form.
+ */
+export function mergeByCanonicalName<T extends { name: string; amount: number }>(
+  items: T[] | null | undefined,
+): { name: string; amount: number }[] {
+  if (!items || items.length === 0) return [];
+  const map = new Map<string, { name: string; amount: number }>();
+  for (const it of items) {
+    const key = canonicalComponentName(it.name);
+    if (!key) continue;
+    const prev = map.get(key);
+    if (prev) prev.amount = Math.round((prev.amount + (Number(it.amount) || 0)) * 100) / 100;
+    else map.set(key, { name: key, amount: Math.round((Number(it.amount) || 0) * 100) / 100 });
+  }
+  return Array.from(map.values());
+}
+
 export function computeAttendanceTotals(
   candidateId: string,
   periodDates: string[],
