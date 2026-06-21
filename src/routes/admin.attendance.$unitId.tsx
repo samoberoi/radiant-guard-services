@@ -454,7 +454,9 @@ function MusterRollPage() {
         .select("candidate_id, designation_id, entry_date, code, ot_hours")
         .eq("unit_id", unitId)
         .gte("entry_date", periodStart)
-        .lte("entry_date", periodEnd);
+        .lte("entry_date", periodEnd)
+        .order("entry_date", { ascending: true })
+        .range(0, 9999);
       if (error) throw error;
       return (data ?? []) as EntryRow[];
     },
