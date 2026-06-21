@@ -473,6 +473,22 @@ function PayrollUnitPage() {
         }
 
 
+        // Collapse variants like "HRA 5%" / "HRA 15%" into a single "HRA"
+        // entry so columns and breakdowns are de-duplicated everywhere
+        // (table, drawer, Wage Register, Pay Sheet, MIS). Totals are unchanged.
+        const mergedResource = resource
+          ? { ...resource, components: mergeByCanonicalName(resource.components) as typeof resource.components }
+          : null;
+        if (wages) {
+          wages.components = mergeByCanonicalName(wages.components) as typeof wages.components;
+          wages.deductions = mergeByCanonicalName(wages.deductions) as typeof wages.deductions;
+          wages.employerContributions = mergeByCanonicalName(wages.employerContributions) as typeof wages.employerContributions;
+          const wAny = wages as unknown as { additions?: { name: string; amount: number }[] };
+          if (Array.isArray(wAny.additions)) {
+            wAny.additions = mergeByCanonicalName(wAny.additions);
+          }
+        }
+
         const cAny = c as unknown as Record<string, unknown>;
         return {
           id: c.id,
