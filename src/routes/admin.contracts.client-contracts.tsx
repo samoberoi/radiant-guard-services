@@ -1023,11 +1023,24 @@ async function persistResources(contractId: string, resources: ContractResource[
   if (savedRows.length !== rows.length) {
     throw new Error("Could not verify saved resources. Please try again.");
   }
+  const normalizeForCompare = (arr: unknown): string => {
+    const list = Array.isArray(arr) ? arr : [];
+    return JSON.stringify(
+      list.map((it) => {
+        const o = (it ?? {}) as Record<string, unknown>;
+        return Object.keys(o)
+          .sort()
+          .reduce<Record<string, unknown>>((acc, k) => {
+            const v = o[k];
+            acc[k] = typeof v === "number" ? Number(v) : v;
+            return acc;
+          }, {});
+      }),
+    );
+  };
   rows.forEach((row, idx) => {
     const saved = savedRows[idx];
-    const expectedDeductions = JSON.stringify(row.deductions ?? []);
-    const savedDeductions = JSON.stringify(Array.isArray(saved?.deductions) ? saved.deductions : []);
-    if (expectedDeductions !== savedDeductions) {
+    if (normalizeForCompare(row.deductions) !== normalizeForCompare(saved?.deductions)) {
       throw new Error("Resource deductions were not saved correctly. Please try again.");
     }
   });
