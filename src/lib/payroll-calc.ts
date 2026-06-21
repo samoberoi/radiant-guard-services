@@ -377,11 +377,11 @@ function benefitAmountFromConfig(
     return b.operator === "-" ? sum - earnedValue : sum + earnedValue;
   }, 0);
   let amount = (Number(item.percentage) || 0) * Math.max(0, base) / 100;
-  const earnedCap = (Number(item.capAmount) || 0) * ratio;
-  if (earnedCap > 0 && base > earnedCap) {
+  const capAmount = Number(item.capAmount) || 0;
+  if (capAmount > 0 && base > capAmount) {
     amount = Number(item.capFlatAmount) > 0
-      ? (Number(item.capFlatAmount) || 0) * ratio
-      : (Number(item.percentage) || 0) * earnedCap / 100;
+      ? Number(item.capFlatAmount) || 0
+      : (Number(item.percentage) || 0) * capAmount / 100;
   }
   return round2(amount);
 }
