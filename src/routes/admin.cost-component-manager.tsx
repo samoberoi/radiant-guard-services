@@ -109,10 +109,14 @@ function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "b
   const parts = c.base_components.map((b, i) => (i === 0 ? b.label : `${b.operator === "-" ? "(-) " : "(+) "}${b.label}`));
   const base = parts.length ? parts.join(" ") : "—";
   if (c.cap_amount && c.cap_amount > 0) {
-    const flat = c.cap_flat_amount != null && c.cap_flat_amount > 0
-      ? c.cap_flat_amount
-      : Math.round(((c.percentage || 0) / 100) * c.cap_amount);
-    return `${c.percentage}% of (${base}) if ≤ ₹${c.cap_amount.toLocaleString("en-IN")}, else flat ₹${flat.toLocaleString("en-IN")}`;
+    if (c.cap_flat_amount == null) {
+      const flat = Math.round(((c.percentage || 0) / 100) * c.cap_amount);
+      return `${c.percentage}% of (${base}) if ≤ ₹${c.cap_amount.toLocaleString("en-IN")}, else flat ₹${flat.toLocaleString("en-IN")}`;
+    }
+    if (c.cap_flat_amount <= 0) {
+      return `${c.percentage}% of (${base}) only if ≤ ₹${c.cap_amount.toLocaleString("en-IN")}, else ₹0`;
+    }
+    return `${c.percentage}% of (${base}) if ≤ ₹${c.cap_amount.toLocaleString("en-IN")}, else flat ₹${c.cap_flat_amount.toLocaleString("en-IN")}`;
   }
   return `${c.percentage}% of ${base}`;
 }
