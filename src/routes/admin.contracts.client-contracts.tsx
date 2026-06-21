@@ -4089,9 +4089,11 @@ function SalaryBreakdownTable({
   const benefitsTotal = benefits.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const gross = componentsTotal + benefitsTotal;
 
-  // Statutory ESI on the contract (full-month) gross: 0.75% employee /
-  // 3.25% employer of (gross − washing − conveyance), only when gross
-  // ≤ ₹21,000, rounded UP to the next rupee.
+  // Statutory ESI: percentages and the wage ceiling come from the ESI
+  // cost components configured in Control Center → Cost Component Manager
+  // (employee & employer entries). Falls back to statutory defaults
+  // (0.75% / 3.25% / ₹21,000) only if not configured. The ceiling applies
+  // to ESI wages (gross excluding washing & conveyance), NOT raw gross.
   const washingTotal = components
     .filter((c) => /\bwashing\b/i.test(c.name))
     .reduce((s, c) => s + (Number(c.amount) || 0), 0);
@@ -4099,9 +4101,19 @@ function SalaryBreakdownTable({
     .filter((c) => /\bconveyance\b|\bconv\.?\b/i.test(c.name))
     .reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const esiBase = Math.max(0, gross - washingTotal - conveyanceTotal);
-  const esiEligible = gross > 0 && gross <= 21000 && esiBase > 0;
-  const esiEmployeeAmount = esiEligible ? Math.ceil(esiBase * 0.0075) : 0;
-  const esiEmployerAmount = esiEligible ? Math.ceil(esiBase * 0.0325) : 0;
+  const esiEmpItem = deductions.find(isEsiItem);
+  const esiErItem = employerContributions.find(isEsiItem);
+  const esiEmpPct =
+    esiEmpItem && Number(esiEmpItem.percentage) > 0 ? Number(esiEmpItem.percentage) : 0.75;
+  const esiErPct =
+    esiErItem && Number(esiErItem.percentage) > 0 ? Number(esiErItem.percentage) : 3.25;
+  const esiCap =
+    (esiEmpItem && Number(esiEmpItem.capAmount) > 0 && Number(esiEmpItem.capAmount)) ||
+    (esiErItem && Number(esiErItem.capAmount) > 0 && Number(esiErItem.capAmount)) ||
+    21000;
+  const esiEligible = esiBase > 0 && esiBase <= esiCap;
+  const esiEmployeeAmount = esiEligible ? Math.ceil(esiBase * (esiEmpPct / 100)) : 0;
+  const esiEmployerAmount = esiEligible ? Math.ceil(esiBase * (esiErPct / 100)) : 0;
 
   const isReliever = (b: BenefitItem) => /reliever/i.test(b.name);
   const isMgmtFee = (b: BenefitItem) => /management\s*fee/i.test(b.name);
