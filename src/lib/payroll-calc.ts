@@ -295,9 +295,13 @@ export function resolvePtAmount(input: PtResolveInput): PtResolveResult {
 
 function applyPtRule(items: WageComponent[], amount: number, defaultName: string): WageComponent[] {
   const hasPt = items.some((i) => PT_NAME_RE.test(i.name));
-  const mapped = items.map((i) =>
-    PT_NAME_RE.test(i.name) ? { ...i, amount } : i,
-  );
+  let placed = false;
+  const mapped = items.map((i) => {
+    if (!PT_NAME_RE.test(i.name)) return i;
+    if (placed) return { ...i, amount: 0 };
+    placed = true;
+    return { ...i, amount };
+  });
   if (!hasPt && amount > 0) mapped.push({ name: defaultName, amount });
   return mapped;
 }
