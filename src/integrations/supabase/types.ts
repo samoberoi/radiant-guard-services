@@ -94,6 +94,7 @@ export type Database = {
           base_components: Json
           calc_type: string
           cap_amount: number | null
+          cap_flat_amount: number | null
           created_at: string
           display_name: string
           earning_type: string
@@ -109,6 +110,7 @@ export type Database = {
           base_components?: Json
           calc_type?: string
           cap_amount?: number | null
+          cap_flat_amount?: number | null
           created_at?: string
           display_name?: string
           earning_type?: string
@@ -124,6 +126,7 @@ export type Database = {
           base_components?: Json
           calc_type?: string
           cap_amount?: number | null
+          cap_flat_amount?: number | null
           created_at?: string
           display_name?: string
           earning_type?: string
@@ -905,6 +908,7 @@ export type Database = {
           base_components: Json
           calc_type: string
           cap_amount: number | null
+          cap_flat_amount: number | null
           created_at: string
           enabled: boolean
           id: string
@@ -920,6 +924,7 @@ export type Database = {
           base_components?: Json
           calc_type?: string
           cap_amount?: number | null
+          cap_flat_amount?: number | null
           created_at?: string
           enabled?: boolean
           id?: string
@@ -935,6 +940,7 @@ export type Database = {
           base_components?: Json
           calc_type?: string
           cap_amount?: number | null
+          cap_flat_amount?: number | null
           created_at?: string
           enabled?: boolean
           id?: string
