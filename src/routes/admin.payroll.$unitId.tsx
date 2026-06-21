@@ -500,7 +500,7 @@ function PayrollUnitPage() {
           isPrimary,
           totals,
           wages,
-          resource: resource ?? null,
+          resource: mergedResource ?? null,
           hasContract: !!resource,
           pt: ptResolved,
           bankAccountHolder: (cAny.bank_account_holder as string) || "",
