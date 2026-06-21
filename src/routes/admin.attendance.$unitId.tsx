@@ -1704,6 +1704,31 @@ function MusterRollPage() {
                   ];
                 })
               )}
+              {!isLoading && !rosterError && musterRows.length > 0 && (() => {
+                const grand = musterRows.reduce(
+                  (acc, mr) => {
+                    const t = computeTotalsForRow(mr.key);
+                    acc.pDays += t.pDays;
+                    acc.otHours += t.otHours;
+                    acc.phDays += t.phDays;
+                    acc.tDays += t.tDays;
+                    return acc;
+                  },
+                  { pDays: 0, otHours: 0, phDays: 0, tDays: 0 },
+                );
+                const r2 = (n: number) => Math.round(n * 100) / 100;
+                return (
+                  <tr className="bg-slate-100 font-bold">
+                    <td className="border border-slate-400 p-1 text-right" colSpan={5 + dayCount}>
+                      Grand Total
+                    </td>
+                    <td className="border border-slate-400 p-1">{r2(grand.pDays)}</td>
+                    <td className="border border-slate-400 p-1">{r2(grand.otHours)}</td>
+                    <td className="border border-slate-400 p-1">{r2(grand.phDays)}</td>
+                    <td className="border border-slate-400 p-1">{r2(grand.tDays)}</td>
+                  </tr>
+                );
+              })()}
             </tbody>
           </table>
         </div>
