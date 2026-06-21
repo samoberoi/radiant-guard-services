@@ -174,6 +174,10 @@ type AllowanceType = {
   displayName: string;
   shortName: string;
   isDefault: boolean;
+  calcType: "fixed" | "percentage";
+  percentage: number;
+  baseComponents: { label: string; operator: "+" | "-" }[];
+  capAmount: number | null;
 };
 
 type ResourceComponent = {
@@ -774,7 +778,7 @@ function useAllowanceTypes() {
     queryFn: async (): Promise<AllowanceType[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,display_name,short_name,is_default,enabled,created_at")
+        .select("id,name,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,created_at")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data as unknown as Record<string, unknown>[])
@@ -785,6 +789,12 @@ function useAllowanceTypes() {
           displayName: String(r.display_name ?? r.name),
           shortName: String(r.short_name ?? ""),
           isDefault: Boolean(r.is_default),
+          calcType: (String(r.calc_type ?? "fixed") as "fixed" | "percentage"),
+          percentage: Number(r.percentage ?? 0),
+          baseComponents: Array.isArray(r.base_components)
+            ? (r.base_components as { label: string; operator: "+" | "-" }[])
+            : [],
+          capAmount: r.cap_amount == null ? null : Number(r.cap_amount),
         }));
     },
   });
