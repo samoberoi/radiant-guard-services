@@ -193,6 +193,7 @@ type BenefitItem = {
   percentage: number;
   baseComponents: { label: string; operator: "+" | "-" }[];
   capAmount: number | null;
+  capFlatAmount: number | null;
   amount: number; // computed (percentage) or manual (fixed)
   state: string;
 };
