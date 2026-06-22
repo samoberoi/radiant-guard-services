@@ -1,71 +1,65 @@
 ## Goal
-End-to-end audit and fix of payroll computation + the four surfaces (on-screen table, breakdown drawer, Wage Register XLSX, Pay Sheet PDF, MIS XLSX) so every number is derived from contract config + attendance, AND every table is collapsed to one column per canonical component (no `HRA 5%`/`HRA 15%`/`ESIC 3.25%` splits).
 
-## Column-simplification rule (applies everywhere)
-For every earning, deduction, and employer-contribution column in every table/export:
-- Canonicalize the name by stripping trailing percentages and numeric qualifiers: `HRA`, `HRA 5%`, `HRA 15 %`, `HRA (10%)`, `HRA-5` → all become `HRA`.
-- Sum the prorated amounts of every variant into the single canonical column.
-- The TOTAL row sums the merged column directly.
-- Applies to: earned components (HRA, DA, Special, Conveyance, Washing, LWW…), deductions (EPF, ESIC, PT, LWF, Uniform…), employer contributions (ER EPF, ER ESIC, ER LWF, Bonus, Gratuity, Mgmt Fee…), and any future component the user adds.
+Add a new **Assets** module in the left nav that mirrors the look and feel of Vehicles. It manages immovable assets (predominantly houses owned by the company), with three sub-modules: Asset Inventory, Loan Manager, Expense Manager. Grant access to Super Admin (implicit), Leadership, and Transport.
 
-This rule is enforced in one place (`mergeByCanonicalName` in `src/lib/payroll-calc.ts`) and consumed by the route once, so every surface stays in sync automatically.
+## Sub-modules
 
-## What I'll audit (in order)
+1. **Asset Inventory** – list/add/edit/delete houses.
+2. **Loan Manager** – ongoing loan(s) per asset (lender, sanctioned amount, outstanding, EMI, tenure, start/end, interest rate, account no.).
+3. **Expense Manager** – recurring/one-off expenses against an asset (maintenance, society, property tax, repair, utilities, etc.) with amount, date, payment mode, vendor, notes, receipt upload.
 
-### 1. Source of truth — contract → resource → component
-- Re-read `contract_resources` rows and verify the route loader maps each cost component / benefit / deduction / employer contribution with `calcType`, `percentage`, `baseComponents`, `capAmount`, `capFlatAmount`, and `payroll_day_base_id` intact (no field silently dropped).
-- Confirm `payroll_day_bases` row resolves correctly — drives `baseDays`, which is what makes the "1,800 vs 2,025.60" class of bugs go away.
+*No Service Manager, no FastTag, no PUC* (per request).
 
-### 2. Earned values (proration)
-- For every cost component: earned = `contractAmount × T Days ÷ baseDays`.
-- Fixed-flagged items (`Uniform`, `LWF`) stay at contract amount, do not prorate.
-- Management Fee DOES prorate (per user description).
-- Percentage-based benefits recompute against their earned base components, not the contract base.
+## Asset fields (House)
 
-### 3. Statutory deductions
-- **EPF**: 12% of (Basic + DA + Special Allowance per contract config's `baseComponents`), wage-ceiling from `capAmount`/`capFlatAmount`. Verify the ₹2,025.60 case holds for everyone, no stray ₹1,800 cap anywhere.
-- **ESIC**: 0.75%/3.25% on (earned gross − earned washing − earned conveyance), ceiling ₹21,000 earned gross, ceil-to-rupee. First ESI row only; later ESI rows zeroed.
-- **PT**: resolved from `professional_tax_slabs` by state + pincode region + gender + earned gross, with gender fallback to "all".
-- **LWF**: flat per state from `labour_welfare_funds`, never prorated.
+- House Number / Name
+- Owner (Company entity)
+- Address (line 1, line 2)
+- City, State, Pincode
+- Size / Configuration (1BHK / 2BHK / 3BHK / 4BHK / Other) + Carpet Area (sq.ft, optional)
+- Purchase Date, Purchase Value
+- Current Estimated Value (optional)
+- Property Tax ID (optional)
+- Notes
+- Enabled (soft-disable like vehicles)
 
-### 4. Employer contributions
-- ER EPF, ER ESIC, ER LWF, Management Fee, Bonus, Gratuity, Leave Encashment — each recomputed from its own config (percentage of declared base, or fixed).
-- Total Employer Contributions = sum of merged employer-contribution list.
-- Employer Cost (CTC) = Earned Gross + Total Employer Contributions.
+## Database (migration)
 
-### 5. Single source feeds all surfaces
-- On-screen table, expandable breakdown drawer, Wage Register XLSX, Pay Sheet PDF, MIS XLSX all read from one merged-and-computed `wages` object per row — no per-export recalculation.
-- Re-verify canonical merge collapses every `*%` variant in all five surfaces.
-- TOTAL row sums merged columns directly.
+Three new public tables, each with the standard four-step shape (CREATE → GRANT → ENABLE RLS → CREATE POLICY) and an `updated_at` trigger.
 
-### 6. Edge cases to assert
-- Zero attendance → all earned 0, deductions 0, net 0, ER cost 0.
-- Missing contract → row labeled "no contract", no NaN in exports.
-- Extra additions (bonus from Additions module) → folded into earned gross before ESI/PT recompute, then PT re-resolved.
-- Multiple designation lines per candidate → primary line carries additions/deductions; secondary does not double-count.
-- Earned gross > ESI ceiling → ESI 0 for both ER and EE.
-- Contract gross 0 → ratio 0, no division-by-zero.
+- `assets` – columns above plus id/created_at/updated_at/enabled.
+- `asset_loans` – `asset_id` FK, lender_name, account_no, sanctioned_amount, outstanding_amount, emi_amount, interest_rate, tenure_months, start_date, end_date, status (active/closed), notes, enabled.
+- `asset_expenses` – `asset_id` FK, expense_date, category (Maintenance/Society/Property Tax/Repair/Utilities/Insurance/Other), amount, payment_mode (Cash/UPI/Bank/Card/Other), vendor_name, notes, receipt_url, enabled.
 
-### 7. Verification harness
-- Write a one-off node script that loads the latest payroll run (FPL May-2026), iterates every row, and re-derives EPF/ESI/PT/LWF + every cost component + employer contributions from raw DB rows, then diffs against `computeWages` output. Any mismatch logs employee code + component name.
-- Run the script, fix divergences, re-run until 0 mismatches.
-- Open the unit via Playwright, expand 3 rows (full / partial / zero attendance), screenshot the drawer, and confirm the three file exports match totals.
+RLS: `SELECT/INSERT/UPDATE/DELETE` granted to `authenticated` (mirrors existing `vehicles` table). Policies allow any signed-in user; app-level RBAC governs visibility (same model as vehicles).
 
-## Technical changes anticipated
-- Tighten `mergeByCanonicalName` regex so it catches every variant (`HRA 5%`, `ESIC 3.25 %`, `LWW-4`, `Conveyance (10%)`) and is applied to ALL four item lists in one place in the route.
-- Patches in `src/lib/payroll-calc.ts` around (a) component-base matching after canonicalization for EPF/ESI/Bonus bases, (b) cap-flat overrides, (c) fixed-vs-prorated classification.
-- Header-builders in `src/routes/admin.payroll.$unitId.tsx` use the canonical name as the column header so no `5%` / `15%` headers can appear.
-- Same column-collapse logic applied to `src/routes/admin.invoice.$unitId.tsx`.
-- No DB schema changes.
+## Routes (mirror vehicle look & feel)
 
-## One thing I need from you to anchor the audit
-Pick ONE employee in the current FPL unit whose numbers still look wrong, and paste:
-- Employee code + designation
-- The wrong value and which column
-- What the correct value should be and how it's derived
+- `src/routes/admin.assets.tsx` – layout + dashboard (KPIs: Total Assets, Loans Active, Loan Outstanding ₹, Expense MTD ₹, Loan Closing ≤60d).
+- `src/routes/admin.assets.inventory.tsx` – list, add, edit, delete (modelled on `admin.vehicles.inventory.tsx`).
+- `src/routes/admin.assets.loans.tsx` – Loan Manager table (modelled on `admin.vehicles.insurances.tsx`).
+- `src/routes/admin.assets.expense-manager.tsx` – modelled on `admin.vehicles.expense-manager.tsx`, scoped to assets.
 
-If you'd rather I just run the verification harness and report what diverges, say "skip — just run the audit" and I'll proceed without it.
+## Left sidebar (`src/routes/admin.tsx`)
 
-## Out of scope
-- Changes to contract authoring UI (cost components manager, allowance manager).
-- New report types.
+Add `assetsChildren` and a new group between Vehicles and Control Center:
+
+- Asset Inventory · Loan Manager · Expense Manager
+
+Plus `pathToModule` entry `{ prefix: "/admin/assets", module: "assets" }` and include `assets` in the `order` / `pathFor` redirect map.
+
+## RBAC registry (`src/lib/rbac-modules.ts`)
+
+Add module `assets` with sub-modules `asset_inventory`, `loan_manager`, `expense_manager`. Icon: `Home`.
+
+## Role permissions (data insert)
+
+For module_key `assets` × each sub-module, insert full-access rows for `leadership` and `transport` (`can_view/edit/delete = true`, `can_approve = false`). Super Admin is implicitly all-access.
+
+## Index redirect (`src/routes/index.tsx`)
+
+Add `assets` to `ORDER` and `PATH_FOR` so users with only Assets access land on `/admin/assets/inventory`.
+
+---
+
+I will create the migration first (you approve), then write the routes, sidebar, RBAC, and seed permissions in one batch.
