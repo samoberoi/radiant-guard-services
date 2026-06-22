@@ -46,7 +46,7 @@ export function canonicalComponentName(name: string): string {
     const next = out
       .replace(/[\s\-_]*[\(\[]?\s*\d+(?:\.\d+)?\s*%\s*[\)\]]?\s*$/gi, "")
       .replace(/[\s\-_]+\d+(?:\.\d+)?\s*$/g, "")
-      .replace(/[\s\-_]*[\(\[]?\s*(ctc|employer|employee|employer\s*share|employee\s*share|ee|er)\s*[\)\]]?\s*$/gi, "")
+      .replace(/[\s\-_]*[\(\[]?\s*(ctc)\s*[\)\]]?\s*$/gi, "")
       .trim();
     if (next === out) break;
     out = next;
