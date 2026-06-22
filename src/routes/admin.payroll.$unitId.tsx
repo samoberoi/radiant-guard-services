@@ -606,7 +606,7 @@ function PayrollUnitPage() {
 
     const formatDeductionHeader = (name: string): string => {
       const n = name.toLowerCase();
-      if (/\bepf\b/.test(n)) return "EE EPF";
+      if (/\b(e)?pf\b/.test(n)) return "EE EPF";
       if (/\besi(c)?\b/.test(n)) return "EE ESIC";
       if (/professional\s*tax|\bpt\b/.test(n)) return "EE PT";
       if (/\blwf\b|labour\s*welfare/.test(n)) return "EE LWF";
@@ -615,7 +615,7 @@ function PayrollUnitPage() {
     };
     const formatEmployerHeader = (name: string): string => {
       const n = name.toLowerCase();
-      if (/\bepf\b/.test(n)) return "ER EPF";
+      if (/\b(e)?pf\b/.test(n)) return "ER EPF";
       if (/\besi(c)?\b/.test(n)) return "ER ESIC";
       if (/\blwf\b|labour\s*welfare/.test(n)) return "ER LWF";
       if (/management\s*fee|\bmgmt\s*fee\b/.test(n)) return "ER Management Fee";
