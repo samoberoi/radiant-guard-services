@@ -44,6 +44,7 @@ import { Route as AdminCompanyDocumentsRouteImport } from './routes/admin.compan
 import { Route as AdminBillingTypeManagerRouteImport } from './routes/admin.billing-type-manager'
 import { Route as AdminAttendanceCodeManagerRouteImport } from './routes/admin.attendance-code-manager'
 import { Route as AdminAttendanceRouteImport } from './routes/admin.attendance'
+import { Route as AdminAssetsRouteImport } from './routes/admin.assets'
 import { Route as AdminAssetManagerRouteImport } from './routes/admin.asset-manager'
 import { Route as AdminAllowanceManagerRouteImport } from './routes/admin.allowance-manager'
 import { Route as AdminAdditionsRouteImport } from './routes/admin.additions'
@@ -78,6 +79,9 @@ import { Route as AdminCustomersCustomerManagerRouteImport } from './routes/admi
 import { Route as AdminCustomersBranchManagerRouteImport } from './routes/admin.customers.branch-manager'
 import { Route as AdminContractsClientContractsRouteImport } from './routes/admin.contracts.client-contracts'
 import { Route as AdminAttendanceUnitIdRouteImport } from './routes/admin.attendance.$unitId'
+import { Route as AdminAssetsLoanManagerRouteImport } from './routes/admin.assets.loan-manager'
+import { Route as AdminAssetsInventoryRouteImport } from './routes/admin.assets.inventory'
+import { Route as AdminAssetsExpenseManagerRouteImport } from './routes/admin.assets.expense-manager'
 import { Route as AdminCandidatesIdDetailsRouteImport } from './routes/admin.candidates.$id.details'
 
 const WelcomeRoute = WelcomeRouteImport.update({
@@ -258,6 +262,11 @@ const AdminAttendanceCodeManagerRoute =
 const AdminAttendanceRoute = AdminAttendanceRouteImport.update({
   id: '/attendance',
   path: '/attendance',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAssetsRoute = AdminAssetsRouteImport.update({
+  id: '/assets',
+  path: '/assets',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminAssetManagerRoute = AdminAssetManagerRouteImport.update({
@@ -442,6 +451,22 @@ const AdminAttendanceUnitIdRoute = AdminAttendanceUnitIdRouteImport.update({
   path: '/$unitId',
   getParentRoute: () => AdminAttendanceRoute,
 } as any)
+const AdminAssetsLoanManagerRoute = AdminAssetsLoanManagerRouteImport.update({
+  id: '/loan-manager',
+  path: '/loan-manager',
+  getParentRoute: () => AdminAssetsRoute,
+} as any)
+const AdminAssetsInventoryRoute = AdminAssetsInventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => AdminAssetsRoute,
+} as any)
+const AdminAssetsExpenseManagerRoute =
+  AdminAssetsExpenseManagerRouteImport.update({
+    id: '/expense-manager',
+    path: '/expense-manager',
+    getParentRoute: () => AdminAssetsRoute,
+  } as any)
 const AdminCandidatesIdDetailsRoute =
   AdminCandidatesIdDetailsRouteImport.update({
     id: '/candidates/$id/details',
@@ -458,6 +483,7 @@ export interface FileRoutesByFullPath {
   '/admin/additions': typeof AdminAdditionsRoute
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
   '/admin/asset-manager': typeof AdminAssetManagerRoute
+  '/admin/assets': typeof AdminAssetsRouteWithChildren
   '/admin/attendance': typeof AdminAttendanceRouteWithChildren
   '/admin/attendance-code-manager': typeof AdminAttendanceCodeManagerRoute
   '/admin/billing-type-manager': typeof AdminBillingTypeManagerRoute
@@ -489,6 +515,9 @@ export interface FileRoutesByFullPath {
   '/admin/service-type-manager': typeof AdminServiceTypeManagerRoute
   '/admin/system-logs': typeof AdminSystemLogsRoute
   '/admin/vehicles': typeof AdminVehiclesRouteWithChildren
+  '/admin/assets/expense-manager': typeof AdminAssetsExpenseManagerRoute
+  '/admin/assets/inventory': typeof AdminAssetsInventoryRoute
+  '/admin/assets/loan-manager': typeof AdminAssetsLoanManagerRoute
   '/admin/attendance/$unitId': typeof AdminAttendanceUnitIdRoute
   '/admin/contracts/client-contracts': typeof AdminContractsClientContractsRoute
   '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
@@ -530,6 +559,7 @@ export interface FileRoutesByTo {
   '/admin/additions': typeof AdminAdditionsRoute
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
   '/admin/asset-manager': typeof AdminAssetManagerRoute
+  '/admin/assets': typeof AdminAssetsRouteWithChildren
   '/admin/attendance-code-manager': typeof AdminAttendanceCodeManagerRoute
   '/admin/billing-type-manager': typeof AdminBillingTypeManagerRoute
   '/admin/company-documents': typeof AdminCompanyDocumentsRoute
@@ -558,6 +588,9 @@ export interface FileRoutesByTo {
   '/admin/service-type-manager': typeof AdminServiceTypeManagerRoute
   '/admin/system-logs': typeof AdminSystemLogsRoute
   '/admin/vehicles': typeof AdminVehiclesRouteWithChildren
+  '/admin/assets/expense-manager': typeof AdminAssetsExpenseManagerRoute
+  '/admin/assets/inventory': typeof AdminAssetsInventoryRoute
+  '/admin/assets/loan-manager': typeof AdminAssetsLoanManagerRoute
   '/admin/attendance/$unitId': typeof AdminAttendanceUnitIdRoute
   '/admin/contracts/client-contracts': typeof AdminContractsClientContractsRoute
   '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
@@ -600,6 +633,7 @@ export interface FileRoutesById {
   '/admin/additions': typeof AdminAdditionsRoute
   '/admin/allowance-manager': typeof AdminAllowanceManagerRoute
   '/admin/asset-manager': typeof AdminAssetManagerRoute
+  '/admin/assets': typeof AdminAssetsRouteWithChildren
   '/admin/attendance': typeof AdminAttendanceRouteWithChildren
   '/admin/attendance-code-manager': typeof AdminAttendanceCodeManagerRoute
   '/admin/billing-type-manager': typeof AdminBillingTypeManagerRoute
@@ -631,6 +665,9 @@ export interface FileRoutesById {
   '/admin/service-type-manager': typeof AdminServiceTypeManagerRoute
   '/admin/system-logs': typeof AdminSystemLogsRoute
   '/admin/vehicles': typeof AdminVehiclesRouteWithChildren
+  '/admin/assets/expense-manager': typeof AdminAssetsExpenseManagerRoute
+  '/admin/assets/inventory': typeof AdminAssetsInventoryRoute
+  '/admin/assets/loan-manager': typeof AdminAssetsLoanManagerRoute
   '/admin/attendance/$unitId': typeof AdminAttendanceUnitIdRoute
   '/admin/contracts/client-contracts': typeof AdminContractsClientContractsRoute
   '/admin/customers/branch-manager': typeof AdminCustomersBranchManagerRoute
@@ -674,6 +711,7 @@ export interface FileRouteTypes {
     | '/admin/additions'
     | '/admin/allowance-manager'
     | '/admin/asset-manager'
+    | '/admin/assets'
     | '/admin/attendance'
     | '/admin/attendance-code-manager'
     | '/admin/billing-type-manager'
@@ -705,6 +743,9 @@ export interface FileRouteTypes {
     | '/admin/service-type-manager'
     | '/admin/system-logs'
     | '/admin/vehicles'
+    | '/admin/assets/expense-manager'
+    | '/admin/assets/inventory'
+    | '/admin/assets/loan-manager'
     | '/admin/attendance/$unitId'
     | '/admin/contracts/client-contracts'
     | '/admin/customers/branch-manager'
@@ -746,6 +787,7 @@ export interface FileRouteTypes {
     | '/admin/additions'
     | '/admin/allowance-manager'
     | '/admin/asset-manager'
+    | '/admin/assets'
     | '/admin/attendance-code-manager'
     | '/admin/billing-type-manager'
     | '/admin/company-documents'
@@ -774,6 +816,9 @@ export interface FileRouteTypes {
     | '/admin/service-type-manager'
     | '/admin/system-logs'
     | '/admin/vehicles'
+    | '/admin/assets/expense-manager'
+    | '/admin/assets/inventory'
+    | '/admin/assets/loan-manager'
     | '/admin/attendance/$unitId'
     | '/admin/contracts/client-contracts'
     | '/admin/customers/branch-manager'
@@ -815,6 +860,7 @@ export interface FileRouteTypes {
     | '/admin/additions'
     | '/admin/allowance-manager'
     | '/admin/asset-manager'
+    | '/admin/assets'
     | '/admin/attendance'
     | '/admin/attendance-code-manager'
     | '/admin/billing-type-manager'
@@ -846,6 +892,9 @@ export interface FileRouteTypes {
     | '/admin/service-type-manager'
     | '/admin/system-logs'
     | '/admin/vehicles'
+    | '/admin/assets/expense-manager'
+    | '/admin/assets/inventory'
+    | '/admin/assets/loan-manager'
     | '/admin/attendance/$unitId'
     | '/admin/contracts/client-contracts'
     | '/admin/customers/branch-manager'
@@ -1133,6 +1182,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAttendanceRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/assets': {
+      id: '/admin/assets'
+      path: '/assets'
+      fullPath: '/admin/assets'
+      preLoaderRoute: typeof AdminAssetsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/asset-manager': {
       id: '/admin/asset-manager'
       path: '/asset-manager'
@@ -1371,6 +1427,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAttendanceUnitIdRouteImport
       parentRoute: typeof AdminAttendanceRoute
     }
+    '/admin/assets/loan-manager': {
+      id: '/admin/assets/loan-manager'
+      path: '/loan-manager'
+      fullPath: '/admin/assets/loan-manager'
+      preLoaderRoute: typeof AdminAssetsLoanManagerRouteImport
+      parentRoute: typeof AdminAssetsRoute
+    }
+    '/admin/assets/inventory': {
+      id: '/admin/assets/inventory'
+      path: '/inventory'
+      fullPath: '/admin/assets/inventory'
+      preLoaderRoute: typeof AdminAssetsInventoryRouteImport
+      parentRoute: typeof AdminAssetsRoute
+    }
+    '/admin/assets/expense-manager': {
+      id: '/admin/assets/expense-manager'
+      path: '/expense-manager'
+      fullPath: '/admin/assets/expense-manager'
+      preLoaderRoute: typeof AdminAssetsExpenseManagerRouteImport
+      parentRoute: typeof AdminAssetsRoute
+    }
     '/admin/candidates/$id/details': {
       id: '/admin/candidates/$id/details'
       path: '/candidates/$id/details'
@@ -1380,6 +1457,22 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AdminAssetsRouteChildren {
+  AdminAssetsExpenseManagerRoute: typeof AdminAssetsExpenseManagerRoute
+  AdminAssetsInventoryRoute: typeof AdminAssetsInventoryRoute
+  AdminAssetsLoanManagerRoute: typeof AdminAssetsLoanManagerRoute
+}
+
+const AdminAssetsRouteChildren: AdminAssetsRouteChildren = {
+  AdminAssetsExpenseManagerRoute: AdminAssetsExpenseManagerRoute,
+  AdminAssetsInventoryRoute: AdminAssetsInventoryRoute,
+  AdminAssetsLoanManagerRoute: AdminAssetsLoanManagerRoute,
+}
+
+const AdminAssetsRouteWithChildren = AdminAssetsRoute._addFileChildren(
+  AdminAssetsRouteChildren,
+)
 
 interface AdminAttendanceRouteChildren {
   AdminAttendanceUnitIdRoute: typeof AdminAttendanceUnitIdRoute
@@ -1504,6 +1597,7 @@ interface AdminRouteChildren {
   AdminAdditionsRoute: typeof AdminAdditionsRoute
   AdminAllowanceManagerRoute: typeof AdminAllowanceManagerRoute
   AdminAssetManagerRoute: typeof AdminAssetManagerRoute
+  AdminAssetsRoute: typeof AdminAssetsRouteWithChildren
   AdminAttendanceRoute: typeof AdminAttendanceRouteWithChildren
   AdminAttendanceCodeManagerRoute: typeof AdminAttendanceCodeManagerRoute
   AdminBillingTypeManagerRoute: typeof AdminBillingTypeManagerRoute
@@ -1544,6 +1638,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAdditionsRoute: AdminAdditionsRoute,
   AdminAllowanceManagerRoute: AdminAllowanceManagerRoute,
   AdminAssetManagerRoute: AdminAssetManagerRoute,
+  AdminAssetsRoute: AdminAssetsRouteWithChildren,
   AdminAttendanceRoute: AdminAttendanceRouteWithChildren,
   AdminAttendanceCodeManagerRoute: AdminAttendanceCodeManagerRoute,
   AdminBillingTypeManagerRoute: AdminBillingTypeManagerRoute,

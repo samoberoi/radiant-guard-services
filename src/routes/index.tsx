@@ -7,12 +7,13 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-const ORDER = ["organizations","contracts","employees","vehicles","inventory","attendance","payroll","control_center","notification_center","rbac"] as const;
+const ORDER = ["organizations","contracts","employees","vehicles","assets","inventory","attendance","payroll","control_center","notification_center","rbac"] as const;
 const PATH_FOR: Record<string,string> = {
   organizations: "/admin/customers",
   contracts: "/admin/contracts/client-contracts",
   employees: "/admin/employees",
   vehicles: "/admin/vehicles",
+  assets: "/admin/assets",
   inventory: "/admin/inventory",
   attendance: "/admin/attendance",
   payroll: "/admin/payroll",
