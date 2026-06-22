@@ -606,7 +606,7 @@ function PayrollUnitPage() {
 
     const formatDeductionHeader = (name: string): string => {
       const n = name.toLowerCase();
-      if (/\bepf\b/.test(n)) return "EE EPF";
+      if (/\b(e)?pf\b/.test(n)) return "EE EPF";
       if (/\besi(c)?\b/.test(n)) return "EE ESIC";
       if (/professional\s*tax|\bpt\b/.test(n)) return "EE PT";
       if (/\blwf\b|labour\s*welfare/.test(n)) return "EE LWF";
@@ -615,7 +615,7 @@ function PayrollUnitPage() {
     };
     const formatEmployerHeader = (name: string): string => {
       const n = name.toLowerCase();
-      if (/\bepf\b/.test(n)) return "ER EPF";
+      if (/\b(e)?pf\b/.test(n)) return "ER EPF";
       if (/\besi(c)?\b/.test(n)) return "ER ESIC";
       if (/\blwf\b|labour\s*welfare/.test(n)) return "ER LWF";
       if (/management\s*fee|\bmgmt\s*fee\b/.test(n)) return "ER Management Fee";
@@ -646,8 +646,35 @@ function PayrollUnitPage() {
       (r.wages as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions,
     );
     const EMPLOYER_CONTRIB_COLS = collectUnique((r) => r.wages?.employerContributions);
-    const DEDUCTION_GROUPS = groupByHeader(DEDUCTION_COLS, formatDeductionHeader);
-    const EMP_CONTRIB_GROUPS = groupByHeader(EMPLOYER_CONTRIB_COLS, formatEmployerHeader);
+    const DEDUCTION_GROUPS_RAW = groupByHeader(DEDUCTION_COLS, formatDeductionHeader);
+    const EMP_CONTRIB_GROUPS_RAW = groupByHeader(EMPLOYER_CONTRIB_COLS, formatEmployerHeader);
+
+    // Standard statutory columns: always present in fixed order so every
+    // client's MIS / Wage Register has the same shape, even when a row's
+    // value is zero or the contract does not configure that line.
+    const STANDARD_DEDUCTION_HEADERS = ["EE EPF", "EE ESIC", "EE PT", "EE LWF"];
+    const STANDARD_EMP_CONTRIB_HEADERS = ["ER EPF", "ER ESIC", "ER LWF"];
+
+    const ensureStandardGroups = (
+      raw: { header: string; names: string[] }[],
+      standard: string[],
+    ): { header: string; names: string[] }[] => {
+      const byHeader = new Map(raw.map((g) => [g.header, g] as const));
+      const ordered: { header: string; names: string[] }[] = [];
+      for (const h of standard) {
+        const hit = byHeader.get(h);
+        ordered.push(hit ?? { header: h, names: [] });
+        byHeader.delete(h);
+      }
+      // Non-standard (custom) groups follow, in original discovery order,
+      // and are kept only when at least one row has a non-zero value.
+      for (const g of raw) {
+        if (!byHeader.has(g.header)) continue;
+        ordered.push(g);
+        byHeader.delete(g.header);
+      }
+      return ordered;
+    };
 
     // Drop component columns that are zero/blank across every row.
     const keepNonZero = (
@@ -658,8 +685,19 @@ function PayrollUnitPage() {
     const contractComponentCols = keepNonZero(CONTRACT_COMPONENT_COLS, (r, n) => lookup(r.resource?.components, n));
     const earnedComponentCols = keepNonZero(EARNED_COMPONENT_COLS, (r, n) => lookup(r.wages?.components, n));
     const additionCols = keepNonZero(ADDITION_COLS, (r, n) => lookup((r.wages as unknown as { additions?: { name: string; amount: number }[] } | null)?.additions, n));
-    const deductionGroups = DEDUCTION_GROUPS.filter((g) => rows.some((r) => Math.abs(sumByNames(r.wages?.deductions, g.names)) > 0.005));
-    const empContribGroups = EMP_CONTRIB_GROUPS.filter((g) => rows.some((r) => Math.abs(sumByNames(r.wages?.employerContributions, g.names)) > 0.005));
+
+    const deductionGroupsAll = ensureStandardGroups(DEDUCTION_GROUPS_RAW, STANDARD_DEDUCTION_HEADERS);
+    const empContribGroupsAll = ensureStandardGroups(EMP_CONTRIB_GROUPS_RAW, STANDARD_EMP_CONTRIB_HEADERS);
+    const isStandardDed = (h: string) => STANDARD_DEDUCTION_HEADERS.includes(h);
+    const isStandardEmp = (h: string) => STANDARD_EMP_CONTRIB_HEADERS.includes(h);
+    // Standard statutory headers always present; custom headers kept only
+    // when at least one row has a non-zero amount.
+    const deductionGroups = deductionGroupsAll.filter(
+      (g) => isStandardDed(g.header) || rows.some((r) => Math.abs(sumByNames(r.wages?.deductions, g.names)) > 0.005),
+    );
+    const empContribGroups = empContribGroupsAll.filter(
+      (g) => isStandardEmp(g.header) || rows.some((r) => Math.abs(sumByNames(r.wages?.employerContributions, g.names)) > 0.005),
+    );
 
     const F_CONTRACT_COMPONENT_COLS = contractComponentCols.map((c) => `F ${c}`);
     const E_EARNED_COMPONENT_COLS = earnedComponentCols.map((c) => `E ${c}`);
