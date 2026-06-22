@@ -3130,6 +3130,190 @@ export type Database = {
         }
         Relationships: []
       }
+      properties: {
+        Row: {
+          address1: string | null
+          address2: string | null
+          carpet_area_sqft: number | null
+          city: string | null
+          configuration: string | null
+          created_at: string
+          current_value: number | null
+          enabled: boolean
+          house_number: string
+          id: string
+          name: string | null
+          notes: string | null
+          owner: string | null
+          pincode: string | null
+          property_tax_id: string | null
+          purchase_date: string | null
+          purchase_value: number | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          address1?: string | null
+          address2?: string | null
+          carpet_area_sqft?: number | null
+          city?: string | null
+          configuration?: string | null
+          created_at?: string
+          current_value?: number | null
+          enabled?: boolean
+          house_number: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          owner?: string | null
+          pincode?: string | null
+          property_tax_id?: string | null
+          purchase_date?: string | null
+          purchase_value?: number | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address1?: string | null
+          address2?: string | null
+          carpet_area_sqft?: number | null
+          city?: string | null
+          configuration?: string | null
+          created_at?: string
+          current_value?: number | null
+          enabled?: boolean
+          house_number?: string
+          id?: string
+          name?: string | null
+          notes?: string | null
+          owner?: string | null
+          pincode?: string | null
+          property_tax_id?: string | null
+          purchase_date?: string | null
+          purchase_value?: number | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      property_expenses: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          enabled: boolean
+          expense_date: string
+          id: string
+          notes: string | null
+          payment_mode: string | null
+          property_id: string
+          receipt_url: string | null
+          updated_at: string
+          vendor_name: string | null
+        }
+        Insert: {
+          amount?: number
+          category: string
+          created_at?: string
+          enabled?: boolean
+          expense_date: string
+          id?: string
+          notes?: string | null
+          payment_mode?: string | null
+          property_id: string
+          receipt_url?: string | null
+          updated_at?: string
+          vendor_name?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          enabled?: boolean
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          payment_mode?: string | null
+          property_id?: string
+          receipt_url?: string | null
+          updated_at?: string
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_expenses_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_loans: {
+        Row: {
+          created_at: string
+          emi_amount: number | null
+          enabled: boolean
+          end_date: string | null
+          id: string
+          interest_rate: number | null
+          lender_name: string
+          loan_account_number: string | null
+          notes: string | null
+          outstanding_amount: number | null
+          property_id: string
+          sanctioned_amount: number | null
+          start_date: string | null
+          status: string
+          tenure_months: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          emi_amount?: number | null
+          enabled?: boolean
+          end_date?: string | null
+          id?: string
+          interest_rate?: number | null
+          lender_name: string
+          loan_account_number?: string | null
+          notes?: string | null
+          outstanding_amount?: number | null
+          property_id: string
+          sanctioned_amount?: number | null
+          start_date?: string | null
+          status?: string
+          tenure_months?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          emi_amount?: number | null
+          enabled?: boolean
+          end_date?: string | null
+          id?: string
+          interest_rate?: number | null
+          lender_name?: string
+          loan_account_number?: string | null
+          notes?: string | null
+          outstanding_amount?: number | null
+          property_id?: string
+          sanctioned_amount?: number | null
+          start_date?: string | null
+          status?: string
+          tenure_months?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_loans_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       role_permissions: {
         Row: {
           can_approve: boolean

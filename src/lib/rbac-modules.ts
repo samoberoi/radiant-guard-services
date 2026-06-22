@@ -100,6 +100,17 @@ export const RBAC_MODULES: ModuleDef[] = [
     ],
   },
   {
+    key: "assets",
+    label: "Assets",
+    path: "/admin/assets",
+    icon: Building2,
+    subModules: [
+      { key: "asset_inventory", label: "Asset Inventory", path: "/admin/assets/inventory",        icon: Building2 },
+      { key: "loan_manager",    label: "Loan Manager",    path: "/admin/assets/loan-manager",     icon: HandCoins },
+      { key: "expense_manager", label: "Expense Manager", path: "/admin/assets/expense-manager",  icon: ReceiptText },
+    ],
+  },
+  {
     key: "inventory",
     label: "Inventory",
     path: "/admin/inventory",

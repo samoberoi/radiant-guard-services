@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import {
+  Banknote,
   Bell,
   Building2,
   Boxes,
@@ -18,6 +19,7 @@ import {
   FileText,
   Files,
   Fuel,
+  Home,
   LayoutDashboard,
   LogOut,
   Car,
@@ -25,6 +27,7 @@ import {
   MapPin,
   Menu,
   PackageOpen,
+  Receipt,
   ShieldCheck,
   ShoppingBag,
   SlidersHorizontal,
@@ -94,6 +97,13 @@ const vehiclesChildren: LeafItem[] = [
   { to: "/admin/vehicles/expense-manager", label: "Expense Manager", icon: Fuel },
 ];
 
+const assetsChildren: LeafItem[] = [
+  { to: "/admin/assets/inventory", label: "Asset Inventory", icon: Home },
+  { to: "/admin/assets/loan-manager", label: "Loan Manager", icon: Banknote },
+  { to: "/admin/assets/expense-manager", label: "Expense Manager", icon: Receipt },
+];
+
+
 const inventoryChildren: LeafItem[] = [
   { to: "/admin/inventory", label: "Inventory Command Center", icon: LayoutDashboard },
   { to: "/admin/inventory/items", label: "Products", icon: PackageOpen },
@@ -159,6 +169,7 @@ function AdminLayout() {
     { prefix: "/admin/deduction-type-manager", module: "control_center" },
     { prefix: "/admin/addition-type-manager", module: "control_center" },
     { prefix: "/admin/vehicles", module: "vehicles" },
+    { prefix: "/admin/assets", module: "assets" },
     { prefix: "/admin/inventory", module: "inventory" },
     { prefix: "/admin/attendance", module: "attendance" },
     { prefix: "/admin/payroll", module: "payroll" },
@@ -186,7 +197,7 @@ function AdminLayout() {
   ];
   const firstAllowedPath = () => {
     const order = [
-      "organizations","contracts","employees","vehicles","inventory","attendance",
+      "organizations","contracts","employees","vehicles","assets","inventory","attendance",
       "payroll","invoice","control_center","notification_center","rbac",
     ];
     const pathFor: Record<string, string> = {
@@ -194,6 +205,7 @@ function AdminLayout() {
       contracts: "/admin/contracts/client-contracts",
       employees: "/admin/employees",
       vehicles: "/admin/vehicles/inventory",
+      assets: "/admin/assets/inventory",
       inventory: "/admin/inventory",
       attendance: "/admin/attendance",
       payroll: "/admin/payroll",
@@ -256,6 +268,7 @@ function AdminLayout() {
       { key: "invoice", label: "Invoice", module: "invoice", icon: CreditCard, to: "/admin/invoice", activePrefixes: ["/admin/invoice"] },
       { key: "inventory", label: "Inventory", module: "inventory", icon: Boxes, children: inventoryChildren, activePrefixes: ["/admin/inventory"] },
       { key: "vehicles", label: "Vehicles", module: "vehicles", icon: Car, children: vehiclesChildren, activePrefixes: ["/admin/vehicles"] },
+      { key: "assets", label: "Assets", module: "assets", icon: Home, children: assetsChildren, activePrefixes: ["/admin/assets"] },
       { key: "control", label: "Control Center", module: "control_center", icon: SlidersHorizontal, to: "/admin/control-center", activePrefixes: ["/admin/control-center"] },
     ],
     [dashboardHref],
@@ -268,6 +281,7 @@ function AdminLayout() {
     !can("contracts") &&
     !can("employees") &&
     !can("vehicles") &&
+    !can("assets") &&
     !can("attendance") &&
     !can("payroll") &&
     !can("invoice");
