@@ -167,22 +167,19 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 function applyEsiRule(
   items: WageComponent[],
   share: number,
-  defaultName: string,
+  _defaultName: string,
 ): WageComponent[] {
-  const hasEsi = items.some((i) => ESI_NAME_RE.test(i.name));
   // Only the FIRST matching row carries the statutory amount; any other
   // ESI-named rows are zeroed so the contract can't double-count ESI.
+  // If the contract has no ESI row, do NOT auto-inject — the contract is
+  // the source of truth for whether ESI applies to this resource.
   let placed = false;
-  const mapped = items.map((i) => {
+  return items.map((i) => {
     if (!ESI_NAME_RE.test(i.name)) return i;
     if (placed) return { ...i, amount: 0 };
     placed = true;
     return { ...i, amount: share };
   });
-  // Auto-inject statutory ESI row when contract omits it and the employee is
-  // eligible, so export reflects the statutory shares without stale contract rows.
-  if (!hasEsi && share > 0) mapped.push({ name: defaultName, amount: share });
-  return mapped;
 }
 
 export function calculateEsiAmounts(
