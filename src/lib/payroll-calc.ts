@@ -38,12 +38,15 @@ export const UNIT_DUTY_HOURS = 8;
 export function canonicalComponentName(name: string): string {
   const raw = String(name ?? "").trim();
   if (!raw) return raw;
-  // Remove trailing "[(]?<num>[%]?[)]?" segments, possibly repeated.
+  // Remove trailing "[(]?<num>[%]?[)]?" segments and trailing tag words like
+  // "CTC", "Employer", "Employee", "EE", "ER" so variants such as
+  // "Reliever Charges CTC" and "Reliever Charges" collapse to one column.
   let out = raw;
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 4; i++) {
     const next = out
-      .replace(/[\s\-_]*[\(\[]?\s*\d+(?:\.\d+)?\s*%\s*[\)\]]?\s*$/g, "")
+      .replace(/[\s\-_]*[\(\[]?\s*\d+(?:\.\d+)?\s*%\s*[\)\]]?\s*$/gi, "")
       .replace(/[\s\-_]+\d+(?:\.\d+)?\s*$/g, "")
+      .replace(/[\s\-_]*[\(\[]?\s*(ctc)\s*[\)\]]?\s*$/gi, "")
       .trim();
     if (next === out) break;
     out = next;
