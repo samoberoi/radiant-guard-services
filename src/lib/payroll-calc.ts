@@ -460,15 +460,45 @@ export function computeWages(
   }
   if (baseDays <= 0) baseDays = 30;
 
+  // ---- New earning model (matches vendor wage register) ----
+  // 1. Per-component base earnings prorate ONLY by present days:
+  //        componentAmount × P / baseDays
+  //    PH and OT no longer inflate every component.
+  // 2. PH is paid as ONE separate line = (contractGross / baseDays) × PH_count.
+  // 3. OT is paid as ONE separate line = (Basic+DA) / (baseDays × 8) × 2 × OT_hours.
+  // 4. earnedGross = scaled components + PH line + OT line.
+  // Verified against FPL May-2026 register (e.g. Sambhaji Mastake: 21 P ×
+  // 26076/26 = 21,061.85 base + 1 PH × 1003.31 + 8 OT × (Basic+DA 12,888 /
+  // 208) × 2 = 991.38  →  Gross 23,056).
   const perDayRate = contractGross / baseDays;
-  const earnedGross = Math.round(perDayRate * totals.tDays * 100) / 100;
-  const ratio = contractGross > 0 ? earnedGross / contractGross : 0;
+  const phCount = Math.round(totals.phDays / 2);
+  const basePaidDays = totals.pDays + totals.otherPaidDays;
+  const baseRatio = baseDays > 0 ? basePaidDays / baseDays : 0;
 
-  const components = resource.components.map((c) => ({
+  const components: WageComponent[] = resource.components.map((c) => ({
     ...c,
     name: c.name,
-    amount: round2((Number(c.amount) || 0) * ratio),
+    amount: round2((Number(c.amount) || 0) * baseRatio),
   }));
+
+  const phAmount = round2(perDayRate * phCount);
+  if (phAmount > 0) {
+    components.push({ name: "Paid Holiday", amount: phAmount, calcType: "fixed" });
+  }
+
+  const basicDaContract = resource.components
+    .filter((c) => /^(basic|da|d\.a\.|dearness)\b/i.test(canonicalComponentName(c.name)))
+    .reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const otHourlyRate = basicDaContract / (baseDays * 8);
+  const otAmount = round2(otHourlyRate * 2 * totals.otHours);
+  if (otAmount > 0) {
+    components.push({ name: "Overtime", amount: otAmount, calcType: "fixed" });
+  }
+
+  const earnedGross = round2(
+    components.reduce((s, c) => s + (Number(c.amount) || 0), 0),
+  );
+  const ratio = contractGross > 0 ? earnedGross / contractGross : 0;
   // Fixed (non-prorated) deduction/contribution names. These stay at the
   // contract amount regardless of attendance — e.g. Uniform Charges is a
   // flat monthly recovery, LWF is a flat statutory monthly contribution.
