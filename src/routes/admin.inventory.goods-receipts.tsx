@@ -838,7 +838,8 @@ function FieldOfficerGRNFormDialog({ open, onOpenChange, candidateId, userId, pe
       const grn_number = fmtNumber("GRN", n);
       const { data: ins, error } = await supabase.from("inv_goods_receipts" as never).insert({
         grn_number, po_id: null, vendor_id: null, warehouse_id: null,
-        transfer_id: null, demand_id: selected.demand_id, branch_id: null,
+        transfer_id: null, demand_id: selected.demand_id,
+        branch_id: selected.source_type === "branch" ? selected.source_id : null,
         kind: "issuance",
         receipt_date: receiptDate, vendor_invoice_number: "", vendor_challan_number: "",
         vehicle_number: "", notes: notes || `Receipt against issuance ${selected.issuance_number}`,
@@ -884,7 +885,9 @@ function FieldOfficerGRNFormDialog({ open, onOpenChange, candidateId, userId, pe
       toast.success(`Challan ${grn_number} posted — added to your inventory`);
       onSaved(); onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
+      const msg = e instanceof Error ? e.message : (e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : JSON.stringify(e));
+      console.error("FO challan post failed", e);
+      toast.error(msg || "Failed");
     } finally {
       setSaving(false);
     }
