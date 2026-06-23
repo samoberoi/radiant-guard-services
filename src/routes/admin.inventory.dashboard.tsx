@@ -205,7 +205,10 @@ export function InventoryOwnerDashboard() {
   const vendors = scope.isScoped ? [] : vendorsRaw;
   const rateCards = scope.isScoped ? [] : rateCardsRaw;
   const pos = scope.isScoped ? [] : posRaw;
-  const grns = scope.isScoped ? [] : grnsRaw;
+  const grns = useMemo(() => {
+    if (!scope.isScoped || !scope.branchId) return grnsRaw;
+    return grnsRaw.filter((g) => g.branch_id === scope.branchId);
+  }, [grnsRaw, scope.isScoped, scope.branchId]);
   const whs = scope.isScoped ? [] : whsRaw;
   const branches = useMemo(
     () => (scope.isScoped && scope.branchId ? branchesRaw.filter((b) => b.id === scope.branchId) : branchesRaw),
