@@ -25,6 +25,7 @@ const ENTITY = "inv_demands";
 type Demand = {
   id: string; demand_number: string; branch_id: string; demand_date: string;
   status: string; notes: string; requester_id: string | null;
+  fulfillment_source?: "warehouse" | "branch";
 };
 type Branch = { id: string; name: string; code: string };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
