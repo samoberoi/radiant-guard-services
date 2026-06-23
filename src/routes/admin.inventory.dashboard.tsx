@@ -196,11 +196,6 @@ export function InventoryOwnerDashboard() {
     const approved = wos.filter((x) => x.status === "approved").length;
     return { total: wos.length, pending, approved };
   }, [wos]);
-  const adjSplit = useMemo(() => {
-    const draft = adjustments.filter((a) => a.status === "draft").length;
-    const posted = adjustments.filter((a) => a.status === "posted").length;
-    return { total: adjustments.length, draft, posted };
-  }, [adjustments]);
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
