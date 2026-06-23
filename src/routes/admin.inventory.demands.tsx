@@ -186,6 +186,8 @@ function DemandsPage() {
         onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}
         initial={editing}
         branchId={scope.branchId ?? ""}
+        branchLabel={scope.branchLabel}
+        isFieldOfficer={role.isFieldOfficer}
         items={items}
         onSaved={invalidate}
       />
@@ -194,9 +196,9 @@ function DemandsPage() {
   );
 }
 
-function DemandFormDialog({ open, onOpenChange, initial, branchId, items, onSaved }: {
+function DemandFormDialog({ open, onOpenChange, initial, branchId, branchLabel, isFieldOfficer, items, onSaved }: {
   open: boolean; onOpenChange: (o: boolean) => void; initial: Demand | null;
-  branchId: string; items: Item[]; onSaved: () => void;
+  branchId: string; branchLabel: string; isFieldOfficer: boolean; items: Item[]; onSaved: () => void;
 }) {
   const [demandDate, setDemandDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
