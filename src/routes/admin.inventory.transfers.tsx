@@ -295,7 +295,8 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
       const it = itemMap.get(first.item_id);
       toast.error(`Insufficient stock for ${it?.name ?? "item"}${first.size_value ? ` (${first.size_value})` : ""}: only ${availableFor(first)} available, ${first.dispatched_qty} requested`);
       return;
-    }
+    if (!(await confirmAction({ title: "Initiate this transfer?", description: "Stock will be deducted from the source warehouse and the demand will move to In Transit.", confirmText: "Initiate Transfer" }))) return;
+
 
     setSaving(true);
     try {
