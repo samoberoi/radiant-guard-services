@@ -236,7 +236,7 @@ export function InventoryOwnerDashboard() {
 
 
   const totalStockQty = useMemo(() => balances.reduce((s, b) => s + Math.max(0, Number(b.qty || 0)), 0), [balances]);
-  const recoveryCur = useMemo(() => wos.filter((x) => new Date(x.writeoff_date) >= w.from && new Date(x.writeoff_date) <= w.to).reduce((s, x) => s + Number(x.recovery_amount || 0), 0), [wos, w]);
+  
   const poSplit = useMemo(() => {
     const open = pos.filter((p) => ["draft", "approved", "partial", "open", "partially_received"].includes(p.status)).length;
     const closed = pos.filter((p) => ["received", "closed"].includes(p.status)).length;
