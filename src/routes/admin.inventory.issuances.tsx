@@ -437,7 +437,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
         } as never).eq("id", id);
         // Post OUT only — stock leaves source on issue.
         // The IN movement is posted when the receiver acknowledges (delivery challan / OTP).
-        const movs = lines.map((l) => ({
+        const movs = activeLines.map((l) => ({
           movement_type: `ISSUE_${meta.dest.toUpperCase()}_OUT`,
           location_type: meta.source as LocationType, location_id: sourceId,
           item_id: l.item_id, size_value: l.size_value, qty_change: -l.qty,
@@ -446,7 +446,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
         await postMovements(movs);
         // Bump demand fulfilment if this was raised against a demand.
         if (demandId) {
-          await bumpDemandFulfilled(demandId, lines);
+          await bumpDemandFulfilled(demandId, activeLines);
         }
         if (otp) toast.message(`OTP for receiver: ${otp}`, { description: "Share with the guard — they'll enter it on their profile to confirm receipt." });
       }
