@@ -26,10 +26,13 @@ type Transfer = {
   id: string; transfer_number: string; transfer_date: string; status: string;
   source_type: string; source_id: string; destination_type: string; destination_id: string;
   vehicle_number: string; driver_name: string; driver_phone: string; notes: string;
+  demand_id: string | null;
 };
 type Warehouse = { id: string; name: string };
 type Branch = { id: string; name: string; code: string };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
+type Demand = { id: string; demand_number: string; branch_id: string; status: string };
+type DemandLine = { id: string; demand_id: string; item_id: string; size_value: string; requested_qty: number };
 type Line = { id?: string; item_id: string; size_value: string; dispatched_qty: number; received_qty: number; variance_reason: string };
 
 function TransfersPage() {
