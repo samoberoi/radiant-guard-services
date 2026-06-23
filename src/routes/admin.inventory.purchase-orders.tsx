@@ -596,10 +596,26 @@ function POFormDialog({
                 <SelectContent>{vendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2"><Label>Deliver To Warehouse</Label>
-              <Select value={warehouseId} onValueChange={setWarehouseId} disabled={readOnly}>
-                <SelectTrigger><SelectValue placeholder="Which warehouse needs the stock?" /></SelectTrigger>
-                <SelectContent>{warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
+            <div className="grid gap-2"><Label>Ordering From</Label>
+              <Select value={orderingFrom} onValueChange={setOrderingFrom} disabled={readOnly}>
+                <SelectTrigger><SelectValue placeholder="Pick warehouse or branch" /></SelectTrigger>
+                <SelectContent className="max-h-[320px]">
+                  {warehouses.length > 0 && <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Warehouses</div>}
+                  {warehouses.map((w) => <SelectItem key={`fw-${w.id}`} value={encLoc("wh", w.id)}>{w.name}</SelectItem>)}
+                  {branches.length > 0 && <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Branches</div>}
+                  {branches.map((b) => <SelectItem key={`fb-${b.id}`} value={encLoc("br", b.id)}>{b.name}{b.code ? ` (${b.code})` : ""}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2"><Label>Deliver To</Label>
+              <Select value={deliverTo} onValueChange={setDeliverTo} disabled={readOnly}>
+                <SelectTrigger><SelectValue placeholder="Pick warehouse or branch" /></SelectTrigger>
+                <SelectContent className="max-h-[320px]">
+                  {warehouses.length > 0 && <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Warehouses</div>}
+                  {warehouses.map((w) => <SelectItem key={`tw-${w.id}`} value={encLoc("wh", w.id)}>{w.name}</SelectItem>)}
+                  {branches.length > 0 && <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Branches</div>}
+                  {branches.map((b) => <SelectItem key={`tb-${b.id}`} value={encLoc("br", b.id)}>{b.name}{b.code ? ` (${b.code})` : ""}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2"><Label>PO Date</Label><Input type="date" value={poDate} onChange={(e) => setPoDate(e.target.value)} disabled={readOnly} /></div>
