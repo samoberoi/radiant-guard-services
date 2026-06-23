@@ -198,6 +198,28 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const isDraft = !initial || initial.status === "draft";
   const isDispatched = initial?.status === "dispatched" || initial?.status === "in_transit";
+
+  // Available stock at the source warehouse, keyed by `${item_id}|${size_value}`
+  const { data: stockMap = new Map<string, number>() } = useQuery({
+    queryKey: ["inv", "stock-balances", sourceType, sourceId],
+    enabled: !!sourceId && isDraft,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_stock_balances" as never)
+        .select("item_id,size_value,qty")
+        .eq("location_type", sourceType)
+        .eq("location_id", sourceId);
+      if (error) throw error;
+      const m = new Map<string, number>();
+      for (const r of (data as unknown as { item_id: string; size_value: string | null; qty: number }[]) ?? []) {
+        m.set(`${r.item_id}|${r.size_value ?? ""}`, Number(r.qty ?? 0));
+      }
+      return m;
+    },
+  });
+  const availableFor = (l: Line) => stockMap.get(`${l.item_id}|${l.size_value ?? ""}`) ?? 0;
+  const overDispatchLines = lines.filter((l) => l.dispatched_qty > availableFor(l));
+
   const isReceived = initial?.status === "acknowledged";
 
   async function loadDemand(id: string) {
