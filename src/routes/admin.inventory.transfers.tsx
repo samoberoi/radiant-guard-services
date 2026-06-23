@@ -323,7 +323,8 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                 <SelectContent>
                   {demands.map((d) => {
                     const br = branches.find((b) => b.id === d.branch_id);
-                    return <SelectItem key={d.id} value={d.id}>{d.demand_number} → {br ? `${br.code} ${br.name}` : "Branch"}</SelectItem>;
+                    const label = br ? [br.code, br.name].filter(Boolean).join(" – ") : "Branch";
+                    return <SelectItem key={d.id} value={d.id}>{d.demand_number} → {label}</SelectItem>;
                   })}
                 </SelectContent>
               </Select>
@@ -341,7 +342,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
             <div className="rounded-xl border border-border p-3">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">To (Branch)</div>
               <div className="flex h-10 items-center rounded-md border border-input bg-muted/30 px-3 text-sm">
-                {(() => { const br = branches.find((b) => b.id === destId); return br ? `${br.code} – ${br.name}` : "—"; })()}
+                {(() => { const br = branches.find((b) => b.id === destId); if (!br) return "—"; return [br.code, br.name].filter(Boolean).join(" – "); })()}
               </div>
             </div>
           </div>
