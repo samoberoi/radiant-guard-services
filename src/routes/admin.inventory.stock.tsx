@@ -77,27 +77,47 @@ function StockPage() {
 
   // FO list filtered by selected branch (via employee_scope_assignments)
   const fosForBranch = useMemo(() => {
-    if (typeFilter !== "branch" || specificFilter === "all") return fieldOfficers;
+    if (effectiveTypeFilter !== "branch" || effectiveSpecificFilter === "all") return fieldOfficers;
     const ids = new Set(
       scopeAssignments
-        .filter((a) => a.scope_type === "branch" && a.scope_id === specificFilter)
+        .filter((a) => a.scope_type === "branch" && a.scope_id === effectiveSpecificFilter)
         .map((a) => a.candidate_id),
     );
     return fieldOfficers.filter((f) => ids.has(f.id));
-  }, [typeFilter, specificFilter, scopeAssignments, fieldOfficers]);
+  }, [effectiveTypeFilter, effectiveSpecificFilter, scopeAssignments, fieldOfficers]);
+
+  // For a branch-scoped user, the FO whitelist is the set of field officers mapped to their branch.
+  const allowedFoIds = useMemo(() => {
+    if (!scope.isScoped || !scope.branchId) return null;
+    return new Set(
+      scopeAssignments
+        .filter((a) => a.scope_type === "branch" && a.scope_id === scope.branchId)
+        .map((a) => a.candidate_id),
+    );
+  }, [scope.isScoped, scope.branchId, scopeAssignments]);
 
   const enriched = useMemo(() => {
     return balances
       .filter((b) => Number(b.qty) !== 0)
       .filter((b) => {
-        // If a specific field officer is picked, only show that FO's rows
+        // Branch-scoped user: hard-limit to their branch + FOs mapped to it.
+        if (scope.isScoped) {
+          if (b.location_type === "branch" && b.location_id === scope.branchId) {
+            // allowed
+          } else if (b.location_type === "field_officer" && allowedFoIds?.has(b.location_id)) {
+            // allowed
+          } else {
+            return false;
+          }
+        }
         if (foFilter !== "all") {
           return b.location_type === "field_officer" && b.location_id === foFilter;
         }
-        // Otherwise filter by location type/specific
-        if (b.location_type !== "warehouse" && b.location_type !== "branch") return false;
-        if (typeFilter !== "all" && b.location_type !== typeFilter) return false;
-        if (specificFilter !== "all" && b.location_id !== specificFilter) return false;
+        if (!scope.isScoped) {
+          if (b.location_type !== "warehouse" && b.location_type !== "branch") return false;
+          if (effectiveTypeFilter !== "all" && b.location_type !== effectiveTypeFilter) return false;
+          if (effectiveSpecificFilter !== "all" && b.location_id !== effectiveSpecificFilter) return false;
+        }
         return true;
       })
       .map((b) => {
@@ -118,12 +138,13 @@ function StockPage() {
         return r.item_name.toLowerCase().includes(t) || r.item_code.toLowerCase().includes(t) || r.location_label.toLowerCase().includes(t);
       })
       .sort((a, b) => a.item_name.localeCompare(b.item_name));
-  }, [balances, itemMap, typeFilter, specificFilter, foFilter, q, whMap, brMap, cMap]);
+  }, [balances, itemMap, effectiveTypeFilter, effectiveSpecificFilter, foFilter, q, whMap, brMap, cMap, scope.isScoped, scope.branchId, allowedFoIds]);
 
   const lowCount = enriched.filter((r) => r.low).length;
   const totalQty = enriched.reduce((s, r) => s + Number(r.qty), 0);
 
-  const specificOptions = typeFilter === "warehouse" ? warehouses : typeFilter === "branch" ? branches : [];
+  const specificOptions = effectiveTypeFilter === "warehouse" ? warehouses : effectiveTypeFilter === "branch" ? branches : [];
+
 
   return (
     <div>
