@@ -351,6 +351,7 @@ function POPage() {
         initial={editing}
         vendors={vendors}
         warehouses={warehouses}
+        branches={branches}
         items={items}
         itemSizes={itemSizes}
         rateCards={rateCards}
