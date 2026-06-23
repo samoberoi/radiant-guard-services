@@ -185,7 +185,7 @@ export function InventoryOwnerDashboard() {
   const desigs = desigQ.data ?? [];
   const branchesRaw = branchesQ.data ?? [];
   const grnsRaw = grnQ.data ?? [];
-  const wosRaw = woQ.data ?? [];
+  
   const whsRaw = whsQ.data ?? [];
   const transfersRaw = transfersQ.data ?? [];
   const issuancesRaw = issuancesQ.data ?? [];
