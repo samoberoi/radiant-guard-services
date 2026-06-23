@@ -139,7 +139,12 @@ function AdminLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { can, canSub, isLoading: permsLoading, isSuperAdmin, roleKey } = useCurrentPermissions();
   const dashboardHref =
-    roleKey === "field_officer" && !isSuperAdmin ? "/admin/field-dashboard" : "/admin/dashboard";
+    roleKey === "guard" && !isSuperAdmin
+      ? "/admin/my-inventory"
+      : roleKey === "field_officer" && !isSuperAdmin
+        ? "/admin/field-dashboard"
+        : "/admin/dashboard";
+
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
