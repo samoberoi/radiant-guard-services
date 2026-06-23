@@ -117,17 +117,19 @@ export const RBAC_MODULES: ModuleDef[] = [
     icon: Boxes,
     subModules: [
       
-      { key: "item_master",       label: "Products",       path: "/admin/inventory/items",           icon: PackageOpen },
+      { key: "item_master",       label: "Products",          path: "/admin/inventory/items",           icon: PackageOpen },
       { key: "vendors",           label: "Vendors",           path: "/admin/inventory/vendors",         icon: ShoppingBag },
       { key: "warehouses",        label: "Warehouses",        path: "/admin/inventory/warehouses",      icon: Warehouse },
       { key: "purchase_orders",   label: "Purchase Orders",   path: "/admin/inventory/purchase-orders", icon: FileText },
       { key: "goods_receipts",    label: "Delivery Challans", path: "/admin/inventory/goods-receipts",  icon: ClipboardList },
+      { key: "demands",           label: "Demands",           path: "/admin/inventory/demands",         icon: ClipboardList },
       { key: "transfers",         label: "Transfers",         path: "/admin/inventory/transfers",       icon: Boxes },
       { key: "issuances",         label: "Issuances",         path: "/admin/inventory/issuances",       icon: UserPlus },
       { key: "write_offs",        label: "Write-offs",        path: "/admin/inventory/write-offs",      icon: ShieldCheck },
-      
+
       { key: "stock_report",      label: "Stock Report",      path: "/admin/inventory/stock",           icon: Wallet },
       { key: "rate_cards",        label: "Vendor Rate Cards", path: "/admin/inventory/rate-cards",      icon: FileText },
+
       
     ],
   },
