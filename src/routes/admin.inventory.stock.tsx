@@ -63,10 +63,17 @@ function StockPage() {
     return "—";
   };
 
+  const scope = useUserBranchScope();
   const [q, setQ] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | "warehouse" | "branch">("all");
-  const [specificFilter, setSpecificFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilterRaw] = useState<"all" | "warehouse" | "branch">("all");
+  const [specificFilter, setSpecificFilterRaw] = useState<string>("all");
   const [foFilter, setFoFilter] = useState<string>("all");
+  // When the user is locked to a single branch, force the filters.
+  const effectiveTypeFilter = scope.isScoped ? "branch" : typeFilter;
+  const effectiveSpecificFilter = scope.isScoped ? (scope.branchId ?? "all") : specificFilter;
+  const setTypeFilter = scope.isScoped ? () => {} : setTypeFilterRaw;
+  const setSpecificFilter = scope.isScoped ? () => {} : setSpecificFilterRaw;
+
 
   // FO list filtered by selected branch (via employee_scope_assignments)
   const fosForBranch = useMemo(() => {
