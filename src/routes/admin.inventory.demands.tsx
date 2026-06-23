@@ -33,8 +33,9 @@ type Line = { id?: string; item_id: string; size_value: string; requested_qty: n
 function DemandsPage() {
   const qc = useQueryClient();
   const scope = useUserBranchScope();
+  const role = useCurrentUserRole();
 
-  const { data: demands = [] } = useQuery({
+  const { data: demandsRaw = [] } = useQuery({
     queryKey: ["inv", "demands"],
     queryFn: async () => {
       const { data, error } = await supabase.from("inv_demands" as never).select("*").order("created_at", { ascending: false });
@@ -42,6 +43,12 @@ function DemandsPage() {
       return (data as unknown as Demand[]) ?? [];
     },
   });
+  const demands = useMemo(
+    () => (role.isFieldOfficer && role.userId
+      ? demandsRaw.filter((d) => d.requester_id === role.userId)
+      : demandsRaw),
+    [demandsRaw, role.isFieldOfficer, role.userId],
+  );
   const { data: branches = [] } = useQuery({
     queryKey: ["branches-list"],
     queryFn: async () => {
