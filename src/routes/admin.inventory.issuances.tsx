@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType } from "@/lib/inv-helpers";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
 import { useAuth, SUPER_ADMIN_PHONE } from "@/lib/auth";
+import { useCurrentUserRole } from "@/lib/use-current-user-role";
 
 
 
@@ -28,12 +29,18 @@ type Issuance = {
   id: string; issuance_number: string; issuance_type: string; issuance_date: string; status: string;
   source_type: string; source_id: string; destination_type: string; destination_id: string;
   ack_method: string; notes: string;
+  demand_id?: string | null;
 };
 type Warehouse = { id: string; name: string };
 type Branch = { id: string; name: string };
 type Candidate = { id: string; full_name: string; employee_code: string; role_key: string; unit_id: string | null; reports_to: string | null };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
 type Line = { id?: string; item_id: string; size_value: string; qty: number; condition: string; notes: string };
+type OpenDemand = {
+  id: string; demand_number: string; branch_id: string; requester_candidate_id: string | null;
+  requester_id: string | null; fulfillment_source: string; status: string;
+};
+
 
 function IssuancesPage() {
   const qc = useQueryClient();
@@ -82,6 +89,7 @@ function IssuancesPage() {
   const { user } = useAuth();
   const myPhone = user?.phone?.replace(/\D/g, "").slice(-10) ?? "";
   const isSuperAdmin = myPhone === SUPER_ADMIN_PHONE;
+  const role = useCurrentUserRole();
   const { data: me = null } = useQuery({
     queryKey: ["candidate-by-phone", myPhone],
     enabled: !!myPhone && !isSuperAdmin,
@@ -92,6 +100,25 @@ function IssuancesPage() {
     },
   });
   const isFieldOfficer = !isSuperAdmin && me?.role_key === "field_officer";
+  const isBranchManager = role.isBranchManager;
+  const scope = useUserBranchScope();
+
+  // Open demands targeting this branch (for BM to fulfil via an issuance).
+  const { data: openDemands = [] } = useQuery({
+    queryKey: ["inv", "open-demands-for-branch", scope.branchId],
+    enabled: !!scope.branchId && isBranchManager,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_demands" as never)
+        .select("id,demand_number,branch_id,requester_candidate_id,requester_id,fulfillment_source,status")
+        .eq("branch_id", scope.branchId!)
+        .eq("fulfillment_source", "branch")
+        .eq("status", "submitted")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data as unknown as OpenDemand[]) ?? [];
+    },
+  });
+
 
   const fos = useMemo(() => candidates.filter((c) => /field|fo|supervisor|officer/i.test(c.role_key)), [candidates]);
   const guards = useMemo(() => candidates.filter((c) => !/field|fo|supervisor|officer|manager|head/i.test(c.role_key)), [candidates]);
@@ -111,7 +138,6 @@ function IssuancesPage() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<Issuance | null>(null);
 
-  const scope = useUserBranchScope();
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     let list = issuances;
@@ -197,7 +223,7 @@ function IssuancesPage() {
         </div>
       </div>
 
-      <IssuanceDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setActive(null); }} initial={active} warehouses={warehouses} branches={branches} fos={fos} guards={guards} candidates={candidates} items={items} onSaved={invalidate} me={me} isFieldOfficer={isFieldOfficer} />
+      <IssuanceDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setActive(null); }} initial={active} warehouses={warehouses} branches={branches} fos={fos} guards={guards} candidates={candidates} items={items} onSaved={invalidate} me={me} isFieldOfficer={isFieldOfficer} isBranchManager={isBranchManager} branchScopeId={scope.branchId} openDemands={openDemands} />
     </div>
   );
 }
@@ -210,14 +236,18 @@ const ISSUANCE_TYPES = [
   { key: "warehouse_to_guard", label: "Warehouse → Guard", source: "warehouse", dest: "guard" },
 ] as const;
 
-function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos, guards, candidates, items, onSaved, me, isFieldOfficer }: {
+function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos, guards, candidates, items, onSaved, me, isFieldOfficer, isBranchManager, branchScopeId, openDemands }: {
   open: boolean; onOpenChange: (o: boolean) => void; initial: Issuance | null;
   warehouses: Warehouse[]; branches: Branch[]; fos: Candidate[]; guards: Candidate[]; candidates: Candidate[]; items: Item[];
   onSaved: () => void;
   me: Candidate | null;
   isFieldOfficer: boolean;
+  isBranchManager: boolean;
+  branchScopeId: string | null;
+  openDemands: OpenDemand[];
 }) {
-  const [type, setType] = useState<string>(isFieldOfficer ? "fo_to_guard" : "branch_to_guard");
+  const defaultType = isFieldOfficer ? "fo_to_guard" : "branch_to_guard";
+  const [type, setType] = useState<string>(defaultType);
   const [sourceId, setSourceId] = useState("");
   const [destId, setDestId] = useState("");
   const [issDate, setIssDate] = useState(new Date().toISOString().slice(0, 10));
@@ -225,14 +255,15 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [saving, setSaving] = useState(false);
+  const [demandId, setDemandId] = useState<string>("");
 
   const meta = ISSUANCE_TYPES.find((t) => t.key === type)!;
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  const candById = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
   const isDraft = !initial || initial.status === "draft";
   const isIssued = initial?.status === "issued";
 
-  // When FO is the user: filter the destination guards to those reporting to them
-  // (or sharing the same unit).
+  // FO scoping for guards
   const foScopedGuards = useMemo(() => {
     if (!isFieldOfficer || !me) return guards;
     return guards.filter((g) => g.reports_to === me.id || (me.unit_id && g.unit_id === me.unit_id));
@@ -251,9 +282,11 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
   }
 
   useResetOnOpen(open, async () => {
+    setDemandId("");
     if (initial) {
       setType(initial.issuance_type); setSourceId(initial.source_id); setDestId(initial.destination_id);
       setIssDate(initial.issuance_date); setAckMethod(initial.ack_method || "otp"); setNotes(initial.notes);
+      setDemandId(initial.demand_id ?? "");
       const { data } = await supabase.from("inv_issuance_lines" as never).select("*").eq("issuance_id", initial.id).order("sort_order");
       setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => ({
         id: String(r.id),
@@ -267,12 +300,52 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
       setType("fo_to_guard"); setSourceId(me.id); setDestId("");
       setIssDate(new Date().toISOString().slice(0, 10));
       setAckMethod("otp"); setNotes(""); setLines([]);
+    } else if (isBranchManager && branchScopeId) {
+      setType("branch_to_guard"); setSourceId(branchScopeId); setDestId("");
+      setIssDate(new Date().toISOString().slice(0, 10));
+      setAckMethod("otp"); setNotes(""); setLines([]);
     } else {
       setType("branch_to_guard"); setSourceId(""); setDestId("");
       setIssDate(new Date().toISOString().slice(0, 10));
       setAckMethod("otp"); setNotes(""); setLines([]);
     }
   });
+
+  async function onPickDemand(did: string) {
+    setDemandId(did);
+    if (!did) return;
+    const d = openDemands.find((x) => x.id === did);
+    if (!d) return;
+    // Determine requester role for type selection.
+    const reqCand = d.requester_candidate_id ? candById.get(d.requester_candidate_id) : null;
+    const isFoReq = reqCand && /field|fo|supervisor|officer/i.test(reqCand.role_key);
+    if (isFoReq && reqCand) {
+      setType("branch_to_fo");
+      setDestId(reqCand.id);
+      setAckMethod("signature"); // FO acknowledges via delivery challan, not OTP
+    } else if (reqCand) {
+      setType("branch_to_guard");
+      setDestId(reqCand.id);
+      setAckMethod("otp");
+    } else {
+      // No mapped candidate — fall back to manual destination.
+      setType("branch_to_guard");
+      setDestId("");
+    }
+    setSourceId(branchScopeId ?? d.branch_id);
+    // Prefill lines from demand.
+    const { data: dls } = await supabase.from("inv_demand_lines" as never)
+      .select("item_id,size_value,requested_qty,fulfilled_qty")
+      .eq("demand_id", did).order("sort_order");
+    const rows = (dls as unknown as { item_id: string; size_value: string | null; requested_qty: number; fulfilled_qty: number }[]) ?? [];
+    setLines(rows.map((r) => ({
+      item_id: r.item_id,
+      size_value: r.size_value ?? "",
+      qty: Math.max(0, Number(r.requested_qty ?? 0) - Number(r.fulfilled_qty ?? 0)),
+      condition: "new",
+      notes: "",
+    })));
+  }
 
 
   async function saveOrIssue(target: "draft" | "issue") {
@@ -290,6 +363,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
           issuance_type: type, source_type: meta.source, source_id: sourceId,
           destination_type: meta.dest, destination_id: destId,
           issuance_date: issDate, ack_method: ackMethod, notes,
+          demand_id: demandId || null,
         } as never).eq("id", initial.id);
         await supabase.from("inv_issuance_lines" as never).delete().eq("issuance_id", initial.id);
         await supabase.from("inv_issuance_lines" as never).insert(linesPayload.map((l) => ({ ...l, issuance_id: initial.id })) as never);
@@ -300,6 +374,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
           issuance_number: number, issuance_type: type, source_type: meta.source, source_id: sourceId,
           destination_type: meta.dest, destination_id: destId,
           issuance_date: issDate, status: "draft", ack_method: ackMethod, notes,
+          demand_id: demandId || null,
         } as never).select("id").single();
         if (error) throw error;
         id = (ins as unknown as { id: string }).id;
@@ -315,18 +390,25 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
           status: "issued", issued_by: user?.id ?? null, issued_at: new Date().toISOString(),
           otp_code: otp,
         } as never).eq("id", id);
-        // Post movements: out from source, in to destination
-        const movs = lines.flatMap((l) => [
-          { movement_type: `ISSUE_${meta.dest.toUpperCase()}_OUT`, location_type: meta.source as LocationType, location_id: sourceId, item_id: l.item_id, size_value: l.size_value, qty_change: -l.qty, reference_type: "issuance", reference_id: id! },
-          { movement_type: `ISSUE_${meta.dest.toUpperCase()}_IN`, location_type: meta.dest as LocationType, location_id: destId, item_id: l.item_id, size_value: l.size_value, qty_change: l.qty, reference_type: "issuance", reference_id: id! },
-        ]);
+        // Post OUT only — stock leaves source on issue.
+        // The IN movement is posted when the receiver acknowledges (delivery challan / OTP).
+        const movs = lines.map((l) => ({
+          movement_type: `ISSUE_${meta.dest.toUpperCase()}_OUT`,
+          location_type: meta.source as LocationType, location_id: sourceId,
+          item_id: l.item_id, size_value: l.size_value, qty_change: -l.qty,
+          reference_type: "issuance", reference_id: id!,
+        }));
         await postMovements(movs);
+        // Bump demand fulfilment if this was raised against a demand.
+        if (demandId) {
+          await bumpDemandFulfilled(demandId, lines);
+        }
         if (otp) toast.message(`OTP for receiver: ${otp}`, { description: "Share with the guard — they'll enter it on their profile to confirm receipt." });
       }
 
 
       void logActivity({ module: MODULE, action: target === "issue" ? "issue" : (initial ? "update" : "create"), entityType: ENTITY, entityId: id, entityLabel: initial?.issuance_number ?? "Issuance" });
-      toast.success(target === "issue" ? "Issued — stock moved" : "Saved");
+      toast.success(target === "issue" ? "Issued — stock dispatched from source. Awaiting acknowledgement." : "Saved");
       onSaved(); onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -337,18 +419,30 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
 
   async function acknowledge() {
     if (!initial) return;
-    if (!(await confirmAction({ title: "Confirm acknowledgement?", description: "Mark this issuance as acknowledged by the receiver.", confirmText: "Acknowledge" }))) return;
+    if (!(await confirmAction({ title: "Confirm delivery challan?", description: "Confirm receipt of the listed items. Stock will be added to your inventory.", confirmText: "Confirm Receipt" }))) return;
     try {
+      const { data: { user } } = await supabase.auth.getUser();
       await supabase.from("inv_issuances" as never).update({
         status: "acknowledged", acknowledged_at: new Date().toISOString(),
+        received_at: new Date().toISOString(), received_by: user?.id ?? null,
       } as never).eq("id", initial.id);
+      // Post IN movements to destination now.
+      const movs = lines.map((l) => ({
+        movement_type: `ISSUE_${initial.destination_type.toUpperCase()}_IN`,
+        location_type: initial.destination_type as LocationType,
+        location_id: initial.destination_id,
+        item_id: l.item_id, size_value: l.size_value, qty_change: l.qty,
+        reference_type: "issuance", reference_id: initial.id,
+      }));
+      await postMovements(movs);
       void logActivity({ module: MODULE, action: "acknowledge", entityType: ENTITY, entityId: initial.id, entityLabel: initial.issuance_number });
-      toast.success("Acknowledged");
+      toast.success("Receipt confirmed — stock added");
       onSaved(); onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
     }
   }
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -359,7 +453,21 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
-          {!isFieldOfficer && (
+          {isBranchManager && isDraft && !initial && openDemands.length > 0 && (
+            <div className="grid gap-2">
+              <Label>Against Demand <span className="font-normal text-muted-foreground">(optional — auto-fills items & receiver)</span></Label>
+              <Select value={demandId} onValueChange={onPickDemand}>
+                <SelectTrigger><SelectValue placeholder="Pick a pending demand to fulfil…" /></SelectTrigger>
+                <SelectContent>
+                  {openDemands.map((d) => {
+                    const c = d.requester_candidate_id ? candById.get(d.requester_candidate_id) : null;
+                    return <SelectItem key={d.id} value={d.id}>{d.demand_number}{c ? ` — ${c.full_name} (${c.role_key})` : ""}</SelectItem>;
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {!isFieldOfficer && !isBranchManager && (
             <div className="grid gap-2"><Label>Type</Label>
               <Select value={type} onValueChange={(v) => { setType(v); setSourceId(""); setDestId(""); }} disabled={!isDraft}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
@@ -367,9 +475,25 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
               </Select>
             </div>
           )}
+          {isBranchManager && (
+            <div className="grid gap-2"><Label>Type</Label>
+              <Select value={type} onValueChange={(v) => { setType(v); setDestId(""); }} disabled={!isDraft || !!demandId}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="branch_to_guard">Branch → Guard</SelectItem>
+                  <SelectItem value="branch_to_fo">Branch → Field Officer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
-            {!isFieldOfficer && (
+            {isBranchManager && (
+              <div className="grid gap-2"><Label>From (Branch)</Label>
+                <Input value={branches.find((b) => b.id === sourceId)?.name ?? ""} disabled />
+              </div>
+            )}
+            {!isFieldOfficer && !isBranchManager && (
               <div className="grid gap-2"><Label>From ({meta.source.replace("_", " ")})</Label>
                 <Select value={sourceId} onValueChange={setSourceId} disabled={!isDraft}>
                   <SelectTrigger><SelectValue placeholder="Pick" /></SelectTrigger>
@@ -382,9 +506,9 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
                 <Input value={me ? `${me.full_name} (${me.employee_code ?? ""})` : ""} disabled />
               </div>
             )}
-            <div className="grid gap-2"><Label>Guard</Label>
-              <Select value={destId} onValueChange={setDestId} disabled={!isDraft}>
-                <SelectTrigger><SelectValue placeholder={isFieldOfficer && destOptions().length === 0 ? "No guards assigned to you" : "Pick guard"} /></SelectTrigger>
+            <div className="grid gap-2"><Label>{meta.dest === "field_officer" ? "Field Officer" : "Guard"}</Label>
+              <Select value={destId} onValueChange={setDestId} disabled={!isDraft || !!demandId}>
+                <SelectTrigger><SelectValue placeholder={isFieldOfficer && destOptions().length === 0 ? "No guards assigned to you" : `Pick ${meta.dest === "field_officer" ? "field officer" : "guard"}`} /></SelectTrigger>
                 <SelectContent>{destOptions().map((o) => <SelectItem key={o.id} value={o.id}>{"full_name" in o ? `${o.full_name} (${o.employee_code})` : (o as { name: string }).name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -393,14 +517,15 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
               <Select value={ackMethod} onValueChange={setAckMethod} disabled={initial?.status === "acknowledged"}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="otp">OTP</SelectItem>
-                  <SelectItem value="signature">Signature</SelectItem>
+                  <SelectItem value="otp">OTP (guard)</SelectItem>
+                  <SelectItem value="signature">Delivery Challan (field officer)</SelectItem>
                   <SelectItem value="photo">Photo</SelectItem>
                   <SelectItem value="thumbprint">Thumbprint</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
+
 
 
           <div>
@@ -459,7 +584,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
           {isDraft && <Button variant="outline" onClick={() => saveOrIssue("draft")} disabled={saving}>Save Draft</Button>}
           {isDraft && <Button onClick={() => saveOrIssue("issue")} disabled={saving}>{saving ? "Issuing…" : "Issue Now"}</Button>}
-          {isIssued && initial?.ack_method !== "otp" && <Button onClick={acknowledge} disabled={saving}>Mark Acknowledged</Button>}
+          {isIssued && initial?.ack_method !== "otp" && <Button onClick={acknowledge} disabled={saving}>Confirm Delivery Challan</Button>}
           {isIssued && initial?.ack_method === "otp" && <span className="self-center text-xs text-muted-foreground">Waiting for guard to enter OTP</span>}
 
         </DialogFooter>
@@ -468,7 +593,28 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
   );
 }
 
+async function bumpDemandFulfilled(demandId: string, lines: Line[]) {
+  // Increment fulfilled_qty on matching demand lines, and mark demand fulfilled
+  // when every line is satisfied.
+  const { data: dls } = await supabase.from("inv_demand_lines" as never)
+    .select("id,item_id,size_value,requested_qty,fulfilled_qty")
+    .eq("demand_id", demandId);
+  const rows = (dls as unknown as { id: string; item_id: string; size_value: string | null; requested_qty: number; fulfilled_qty: number }[]) ?? [];
+  for (const l of lines) {
+    const match = rows.find((r) => r.item_id === l.item_id && (r.size_value ?? "") === (l.size_value ?? ""));
+    if (!match) continue;
+    const next = Math.min(Number(match.requested_qty ?? 0), Number(match.fulfilled_qty ?? 0) + l.qty);
+    await supabase.from("inv_demand_lines" as never).update({ fulfilled_qty: next } as never).eq("id", match.id);
+    match.fulfilled_qty = next;
+  }
+  const allDone = rows.every((r) => Number(r.fulfilled_qty ?? 0) >= Number(r.requested_qty ?? 0));
+  await supabase.from("inv_demands" as never)
+    .update({ status: allDone ? "fulfilled" : "partial" } as never)
+    .eq("id", demandId);
+}
+
 function useResetOnOpen(open: boolean, reset: () => void) {
   const [last, setLast] = useState(false);
   if (open !== last) { setLast(open); if (open) reset(); }
 }
+

@@ -3,8 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, SUPER_ADMIN_PHONE } from "@/lib/auth";
 
 /**
- * Returns the current user's auth uid, role_key, and convenience flags.
- * Used for row-level filtering on the client (RLS is broader: branch-scoped).
+ * Returns the current user's auth uid, role_key, candidate id, and convenience flags.
  */
 export function useCurrentUserRole() {
   const { user } = useAuth();
@@ -24,17 +23,21 @@ export function useCurrentUserRole() {
       return {
         userId: authUser?.id ?? null,
         roleKey: (cand?.role_key as string | undefined) ?? null,
+        candidateId: (cand?.id as string | undefined) ?? null,
       };
     },
   });
 
   const userId = q.data?.userId ?? null;
   const roleKey = q.data?.roleKey ?? null;
+  const candidateId = q.data?.candidateId ?? null;
   return {
     isLoading: q.isLoading,
     userId,
     roleKey,
+    candidateId,
     isSuperAdmin,
     isFieldOfficer: !isSuperAdmin && roleKey === "field_officer",
+    isBranchManager: !isSuperAdmin && roleKey === "branch_manager",
   };
 }

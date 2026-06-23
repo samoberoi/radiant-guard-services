@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { statusBadgeClass } from "@/lib/inv-helpers";
+import { statusBadgeClass, postMovements, type LocationType } from "@/lib/inv-helpers";
 
 export const Route = createFileRoute("/admin/my-inventory")({ component: MyInventoryPage });
 
@@ -43,7 +43,8 @@ function MyInventoryPage() {
     enabled: !!me?.id,
     queryFn: async () => {
       const { data, error } = await supabase.from("inv_issuances" as never)
-        .select("*").eq("destination_id", me!.id).eq("destination_type", "guard")
+        .select("*").eq("destination_id", me!.id)
+        .in("destination_type", ["guard", "field_officer"])
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data as unknown as Issuance[]) ?? [];
@@ -107,17 +108,31 @@ function MyInventoryPage() {
 
   const ackMut = useMutation({
     mutationFn: async (i: Issuance) => {
-      const entered = (otpInputs[i.id] ?? "").trim();
-      if (!entered) throw new Error("Enter the OTP shared by your Field Officer");
-      if (entered !== (i.otp_code ?? "")) throw new Error("OTP does not match");
+      if (i.ack_method === "otp") {
+        const entered = (otpInputs[i.id] ?? "").trim();
+        if (!entered) throw new Error("Enter the OTP shared by your Field Officer");
+        if (entered !== (i.otp_code ?? "")) throw new Error("OTP does not match");
+      }
       const { error } = await supabase.from("inv_issuances" as never).update({
         status: "acknowledged", acknowledged_at: new Date().toISOString(),
-        ack_otp_verified: true, received_at: new Date().toISOString(), received_by: me?.id ?? null,
+        ack_otp_verified: i.ack_method === "otp", received_at: new Date().toISOString(), received_by: me?.id ?? null,
       } as never).eq("id", i.id);
       if (error) throw error;
-      void logActivity({ module: "Inventory Issuances", action: "acknowledge_otp", entityType: "inv_issuances", entityId: i.id, entityLabel: i.issuance_number });
+      // Post IN movements at the receiver's location now that they've confirmed.
+      const issLines = linesByIss.get(i.id) ?? [];
+      if (issLines.length) {
+        await postMovements(issLines.map((l) => ({
+          movement_type: `ISSUE_${i.destination_type.toUpperCase()}_IN`,
+          location_type: i.destination_type as LocationType,
+          location_id: i.destination_id,
+          item_id: l.item_id, size_value: l.size_value ?? "",
+          qty_change: Number(l.qty ?? 0),
+          reference_type: "issuance", reference_id: i.id,
+        })));
+      }
+      void logActivity({ module: "Inventory Issuances", action: i.ack_method === "otp" ? "acknowledge_otp" : "acknowledge", entityType: "inv_issuances", entityId: i.id, entityLabel: i.issuance_number });
     },
-    onSuccess: () => { toast.success("Confirmed receipt"); invalidate(); },
+    onSuccess: () => { toast.success("Confirmed receipt — added to your inventory"); invalidate(); },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -158,7 +173,9 @@ function MyInventoryPage() {
                     <Button onClick={() => ackMut.mutate(i)} disabled={ackMut.isPending}><Check className="mr-1 h-4 w-4" />Confirm Receipt</Button>
                   </div>
                 ) : (
-                  <div className="text-xs text-muted-foreground">Ack method: {i.ack_method}. Your Field Officer will mark this as received.</div>
+                  <div className="flex items-end justify-end">
+                    <Button onClick={() => ackMut.mutate(i)} disabled={ackMut.isPending}><Check className="mr-1 h-4 w-4" />Confirm Delivery Challan</Button>
+                  </div>
                 )}
               </div>
             ))}

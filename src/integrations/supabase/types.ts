@@ -1593,6 +1593,7 @@ export type Database = {
           fulfillment_source: string
           id: string
           notes: string
+          requester_candidate_id: string | null
           requester_id: string | null
           status: string
           submitted_at: string | null
@@ -1608,6 +1609,7 @@ export type Database = {
           fulfillment_source?: string
           id?: string
           notes?: string
+          requester_candidate_id?: string | null
           requester_id?: string | null
           status?: string
           submitted_at?: string | null
@@ -1623,6 +1625,7 @@ export type Database = {
           fulfillment_source?: string
           id?: string
           notes?: string
+          requester_candidate_id?: string | null
           requester_id?: string | null
           status?: string
           submitted_at?: string | null
@@ -1634,6 +1637,13 @@ export type Database = {
             columns: ["branch_id"]
             isOneToOne: false
             referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_demands_requester_candidate_id_fkey"
+            columns: ["requester_candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
             referencedColumns: ["id"]
           },
         ]
@@ -1885,6 +1895,7 @@ export type Database = {
           ack_signature_url: string
           acknowledged_at: string | null
           created_at: string
+          demand_id: string | null
           destination_id: string
           destination_type: string
           id: string
@@ -1909,6 +1920,7 @@ export type Database = {
           ack_signature_url?: string
           acknowledged_at?: string | null
           created_at?: string
+          demand_id?: string | null
           destination_id: string
           destination_type: string
           id?: string
@@ -1933,6 +1945,7 @@ export type Database = {
           ack_signature_url?: string
           acknowledged_at?: string | null
           created_at?: string
+          demand_id?: string | null
           destination_id?: string
           destination_type?: string
           id?: string
@@ -1950,7 +1963,15 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "inv_issuances_demand_id_fkey"
+            columns: ["demand_id"]
+            isOneToOne: false
+            referencedRelation: "inv_demands"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       inv_item_categories: {
         Row: {
