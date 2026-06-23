@@ -219,6 +219,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
   });
   const availableFor = (l: Line) => stockMap.get(`${l.item_id}|${l.size_value ?? ""}`) ?? 0;
   const overDispatchLines = lines.filter((l) => l.dispatched_qty > availableFor(l));
+  const overDemandLines = lines.filter((l) => l.dispatched_qty > l.requested_qty);
 
   const isReceived = initial?.status === "acknowledged";
 
