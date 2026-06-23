@@ -180,14 +180,15 @@ function TransfersPage() {
   );
 }
 
-function TransferDialog({ open, onOpenChange, initial, warehouses, branches, items, onSaved }: {
+function TransferDialog({ open, onOpenChange, initial, warehouses, branches, items, demands, onSaved }: {
   open: boolean; onOpenChange: (o: boolean) => void; initial: Transfer | null;
-  warehouses: Warehouse[]; branches: Branch[]; items: Item[]; onSaved: () => void;
+  warehouses: Warehouse[]; branches: Branch[]; items: Item[]; demands: Demand[]; onSaved: () => void;
 }) {
   const [sourceType, setSourceType] = useState<LocationType>("warehouse");
   const [sourceId, setSourceId] = useState("");
   const [destType, setDestType] = useState<LocationType>("branch");
   const [destId, setDestId] = useState("");
+  const [demandId, setDemandId] = useState<string>("");
   const [transferDate, setTransferDate] = useState(new Date().toISOString().slice(0, 10));
   const [vehicle, setVehicle] = useState("");
   const [driverName, setDriverName] = useState("");
@@ -200,6 +201,25 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
   const isDraft = !initial || initial.status === "draft";
   const isDispatched = initial?.status === "dispatched" || initial?.status === "in_transit";
   const isReceived = initial?.status === "acknowledged";
+
+  async function loadDemand(id: string) {
+    setDemandId(id);
+    if (!id) return;
+    const d = demands.find((x) => x.id === id);
+    if (!d) return;
+    setDestType("branch");
+    setDestId(d.branch_id);
+    const { data, error } = await supabase.from("inv_demand_lines" as never).select("*").eq("demand_id", id).order("sort_order");
+    if (error) { toast.error("Could not load demand lines"); return; }
+    const rows = (data as unknown as DemandLine[]) ?? [];
+    setLines(rows.map((r) => ({
+      item_id: r.item_id,
+      size_value: r.size_value ?? "",
+      dispatched_qty: Number(r.requested_qty ?? 0),
+      received_qty: 0,
+      variance_reason: "",
+    })));
+  }
 
   useResetOnOpen(open, async () => {
     if (initial) {
