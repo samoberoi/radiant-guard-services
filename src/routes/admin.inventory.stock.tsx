@@ -187,7 +187,11 @@ function StockPage() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search item or location…" className="h-10 rounded-lg pl-9" />
           </div>
-          {scope.isScoped ? (
+          {currentUserRole.isFieldOfficer ? (
+            <div className="flex h-10 items-center rounded-lg border border-border bg-secondary/40 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Holder: Own stock
+            </div>
+          ) : scope.isScoped ? (
             <div className="flex h-10 items-center rounded-lg border border-border bg-secondary/40 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Branch: {scope.branchLabel || "—"}
             </div>
@@ -213,13 +217,15 @@ function StockPage() {
             </>
           )}
 
-          <Select value={foFilter} onValueChange={setFoFilter}>
-            <SelectTrigger className="h-10 w-56 rounded-lg"><SelectValue placeholder="Field officer" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All field officers</SelectItem>
-              {fosForBranch.map((f) => <SelectItem key={f.id} value={f.id}>{f.full_name} ({f.employee_code})</SelectItem>)}
-            </SelectContent>
-          </Select>
+          {!currentUserRole.isFieldOfficer && (
+            <Select value={foFilter} onValueChange={setFoFilter}>
+              <SelectTrigger className="h-10 w-56 rounded-lg"><SelectValue placeholder="Field officer" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All field officers</SelectItem>
+                {fosForBranch.map((f) => <SelectItem key={f.id} value={f.id}>{f.full_name} ({f.employee_code})</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         <Button variant="outline" className="h-10 rounded-lg" disabled={!enriched.length} onClick={() => downloadCsv("stock-balances", enriched.map((r) => ({
           location_type: r.location_type, location: r.location_label, item_code: r.item_code, item: r.item_name,
