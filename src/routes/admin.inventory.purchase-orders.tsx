@@ -44,6 +44,7 @@ const ENTITY = "inv_purchase_orders";
 
 type Vendor = { id: string; name: string; vendor_code: string };
 type Warehouse = { id: string; name: string; warehouse_code: string };
+type Branch = { id: string; name: string; code: string };
 type Item = { id: string; name: string; item_code: string; unit: string; is_sized: boolean };
 type ItemSize = { item_id: string; size_value: string; sort_order: number };
 type POLine = { id?: string; item_id: string; size_value: string; ordered_qty: number; unit_price: number; tax_percent: number; notes: string };
@@ -53,6 +54,9 @@ type PO = {
   po_number: string;
   vendor_id: string | null;
   destination_warehouse_id: string | null;
+  destination_branch_id: string | null;
+  source_warehouse_id: string | null;
+  requesting_branch_id: string | null;
   po_date: string;
   expected_date: string | null;
   status: string;
@@ -60,6 +64,15 @@ type PO = {
   tax_total: number;
   grand_total: number;
   notes: string;
+};
+
+// Combined location selector encoding: warehouses vs branches share one Select.
+type LocKind = "wh" | "br";
+const encLoc = (k: LocKind, id: string) => `${k}:${id}`;
+const decLoc = (v: string | null | undefined): { kind: LocKind; id: string } | null => {
+  if (!v) return null;
+  const [k, id] = v.split(":");
+  return (k === "wh" || k === "br") && id ? { kind: k, id } : null;
 };
 
 function POPage() {
