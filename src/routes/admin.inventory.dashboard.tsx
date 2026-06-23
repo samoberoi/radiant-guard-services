@@ -882,3 +882,17 @@ function WorkflowTile({ to, label, value, icon: Icon, accent, chips }: {
   );
 }
 
+
+function ScopeBanner() {
+  const scope = useUserBranchScope();
+  if (!scope.isScoped) return null;
+  return (
+    <div className="flex items-center gap-2 rounded-2xl border border-accent/30 bg-accent/5 px-4 py-2.5 text-sm">
+      <Building2 className="h-4 w-4 text-accent" />
+      <span className="font-medium text-foreground">Branch view:</span>
+      <span className="text-muted-foreground">
+        You are viewing data for <span className="font-semibold text-foreground">{scope.branchLabel || "your assigned branch"}</span> only.
+      </span>
+    </div>
+  );
+}
