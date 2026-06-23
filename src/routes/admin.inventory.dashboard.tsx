@@ -484,13 +484,6 @@ export function InventoryOwnerDashboard() {
           )}
         </div>
 
-        {/* Money + stock hero */}
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          {canSub("inventory", "stock_report") && <HeroTile to="/admin/inventory/stock" label="Total Stock Value" value={inr(stockValue)} icon={Wallet} accent="text-emerald-500" />}
-          {canSub("inventory", "stock_report") && <HeroTile to="/admin/inventory/stock" label="Total Stock Qty" value={totalStockQty.toLocaleString("en-IN")} icon={Boxes} accent="text-cyan-500" />}
-          {canSub("inventory", "purchase_orders") && <HeroTile to="/admin/inventory/purchase-orders" label={`Procurement Spend · ${RANGE_LABEL[range]}`} value={inr(spendCur)} icon={IndianRupee} tone="text-violet-500" accent="text-violet-500" />}
-          {canSub("inventory", "write_offs") && <HeroTile to="/admin/inventory/write-offs" label={`Recovery · ${RANGE_LABEL[range]}`} value={inr(recoveryCur)} icon={Wallet} accent="text-rose-500" />}
-        </div>
       </div>
 
 
