@@ -82,7 +82,7 @@ function POPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inv_purchase_orders" as never)
-        .select("id,po_number,vendor_id,destination_warehouse_id,po_date,expected_date,status,subtotal,tax_total,grand_total,notes")
+        .select("id,po_number,vendor_id,destination_warehouse_id,destination_branch_id,source_warehouse_id,requesting_branch_id,po_date,expected_date,status,subtotal,tax_total,grand_total,notes")
         .eq("po_type", "vendor")
         .order("created_at", { ascending: false });
       if (error) throw error;
