@@ -784,7 +784,7 @@ function useAllowanceTypes() {
     queryFn: async (): Promise<AllowanceType[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,created_at")
+        .select("id,name,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot,created_at")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data as unknown as Record<string, unknown>[])
@@ -801,6 +801,7 @@ function useAllowanceTypes() {
             ? (r.base_components as { label: string; operator: "+" | "-" }[])
             : [],
           capAmount: r.cap_amount == null ? null : Number(r.cap_amount),
+          includeInOt: r.include_in_ot == null ? true : Boolean(r.include_in_ot),
         }));
     },
   });
