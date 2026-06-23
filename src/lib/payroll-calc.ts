@@ -402,6 +402,7 @@ function benefitAmountFromConfig(
   earnedComponents: WageComponent[],
   contractComponents: WageComponent[],
   ratio: number,
+  options: { useContractBase?: boolean } = {},
 ): number {
   if (!item) return 0;
   if (item.calcType !== "percentage") return round2(Number(item.amount) || 0);
@@ -422,8 +423,15 @@ function benefitAmountFromConfig(
   const base = bases.reduce((sum, b) => {
     const key = norm(String(b.label ?? ""));
     const contractValue = contractByName.get(key) ?? 0;
-    const earnedValue = earnedByName.get(key) ?? round2(contractValue * ratio);
-    return b.operator === "-" ? sum - earnedValue : sum + earnedValue;
+    // EPF/PF and similar statutory items are computed on CONTRACT wages,
+    // not earned wages, in standard Indian payroll convention. The vendor
+    // wage register confirms: EE EPFC stays flat regardless of attendance
+    // (Basic+DA contract × 12 %, capped at ₹15 000). Pass useContractBase
+    // for those items; everything else stays on earned wages.
+    const value = options.useContractBase
+      ? contractValue
+      : (earnedByName.get(key) ?? round2(contractValue * ratio));
+    return b.operator === "-" ? sum - value : sum + value;
   }, 0);
   let amount = (Number(item.percentage) || 0) * Math.max(0, base) / 100;
   const capAmount = Number(item.capAmount) || 0;
