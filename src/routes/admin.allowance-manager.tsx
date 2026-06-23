@@ -262,6 +262,7 @@ function AllowanceManagerPage() {
                 <th className="px-5 py-3">Short</th>
                 <th className="px-5 py-3">Formula</th>
                 <th className="px-5 py-3">Default</th>
+                <th className="px-5 py-3">In OT</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
