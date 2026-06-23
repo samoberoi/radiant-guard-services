@@ -260,50 +260,6 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
     }
   });
 
-  function srcOptions() { return sourceType === "warehouse" ? warehouses : branches; }
-  function dstOptions() { return destType === "warehouse" ? warehouses : branches; }
-
-  async function saveDraft() {
-    if (!sourceId || !destId) { toast.error("Pick source and destination"); return; }
-    if (!lines.length || lines.some((l) => !l.item_id || l.dispatched_qty <= 0)) { toast.error("Add lines with item + qty"); return; }
-    setSaving(true);
-    try {
-      const linesPayload = lines.map((l, idx) => ({
-        item_id: l.item_id, size_value: l.size_value,
-        dispatched_qty: l.dispatched_qty, received_qty: 0, sort_order: idx,
-      }));
-      if (initial) {
-        await supabase.from("inv_transfers" as never).update({
-          source_type: sourceType, source_id: sourceId,
-          destination_type: destType, destination_id: destId,
-          demand_id: demandId || null,
-          transfer_date: transferDate, vehicle_number: vehicle, driver_name: driverName, driver_phone: driverPhone, notes,
-        } as never).eq("id", initial.id);
-        await supabase.from("inv_transfer_lines" as never).delete().eq("transfer_id", initial.id);
-        await supabase.from("inv_transfer_lines" as never).insert(linesPayload.map((l) => ({ ...l, transfer_id: initial.id })) as never);
-      } else {
-        const n = await nextSeq("inv_transfer_number_seq");
-        const number = fmtNumber("TR", n);
-        const { data: ins, error } = await supabase.from("inv_transfers" as never).insert({
-          transfer_number: number, source_type: sourceType, source_id: sourceId,
-          destination_type: destType, destination_id: destId,
-          demand_id: demandId || null,
-          transfer_date: transferDate, status: "draft",
-          vehicle_number: vehicle, driver_name: driverName, driver_phone: driverPhone, notes,
-        } as never).select("id").single();
-        if (error) throw error;
-        const tid = (ins as unknown as { id: string }).id;
-        await supabase.from("inv_transfer_lines" as never).insert(linesPayload.map((l) => ({ ...l, transfer_id: tid })) as never);
-      }
-      void logActivity({ module: MODULE, action: initial ? "update" : "create", entityType: ENTITY, entityLabel: initial?.transfer_number ?? "Transfer" });
-      toast.success("Draft saved");
-      onSaved(); onOpenChange(false);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   async function initiateTransfer() {
     if (!demandId) { toast.error("Pick a demand to transfer against"); return; }
