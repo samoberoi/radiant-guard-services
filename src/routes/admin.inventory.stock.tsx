@@ -129,27 +129,42 @@ function StockPage() {
           );
         }
 
-        // Branch manager / branch-scoped user: hard-limit to their branch + FOs mapped to it.
+        // Helper: for a guard row, resolve the FO they report to (if any).
+        const guardFoId = (b.location_type === "guard" || b.location_type === "security_guard")
+          ? (cMap.get(b.location_id)?.reports_to ?? null)
+          : null;
+        const guardBranchId = guardFoId ? candidateBranchMap.get(guardFoId) ?? null : null;
+
+        // Branch manager / branch-scoped user: hard-limit to their branch + FOs mapped to it + guards under those FOs.
         if (scope.isScoped) {
           if (b.location_type === "branch" && b.location_id === scope.branchId) {
             // allowed
           } else if (b.location_type === "field_officer" && allowedFoIds?.has(b.location_id)) {
+            // allowed
+          } else if ((b.location_type === "guard" || b.location_type === "security_guard")
+                     && guardFoId && allowedFoIds?.has(guardFoId)) {
             // allowed
           } else {
             return false;
           }
         }
         if (foFilter !== "all") {
-          return b.location_type === "field_officer" && b.location_id === foFilter;
+          return (b.location_type === "field_officer" && b.location_id === foFilter)
+            || ((b.location_type === "guard" || b.location_type === "security_guard") && guardFoId === foFilter);
         }
         if (!scope.isScoped) {
-          if (b.location_type !== "warehouse" && b.location_type !== "branch" && b.location_type !== "field_officer") return false;
+          if (b.location_type !== "warehouse" && b.location_type !== "branch"
+              && b.location_type !== "field_officer"
+              && b.location_type !== "guard" && b.location_type !== "security_guard") return false;
           if (effectiveTypeFilter === "warehouse" && b.location_type !== "warehouse") return false;
           if (effectiveTypeFilter === "branch") {
-            if (b.location_type !== "branch" && b.location_type !== "field_officer") return false;
+            if (b.location_type !== "branch" && b.location_type !== "field_officer"
+                && b.location_type !== "guard" && b.location_type !== "security_guard") return false;
             if (effectiveSpecificFilter !== "all") {
               if (b.location_type === "branch" && b.location_id !== effectiveSpecificFilter) return false;
               if (b.location_type === "field_officer" && candidateBranchMap.get(b.location_id) !== effectiveSpecificFilter) return false;
+              if ((b.location_type === "guard" || b.location_type === "security_guard")
+                  && guardBranchId !== effectiveSpecificFilter) return false;
             }
           }
           if (effectiveTypeFilter === "warehouse" && effectiveSpecificFilter !== "all" && b.location_id !== effectiveSpecificFilter) return false;
