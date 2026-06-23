@@ -59,15 +59,6 @@ function StockPage() {
     () => candidates.filter((c) => c.role_key === "field_officer").sort((a, b) => a.full_name.localeCompare(b.full_name)),
     [candidates],
   );
-  const currentHolderLabel = currentUserRole.candidateId ? locName("field_officer", currentUserRole.candidateId) : "Own stock";
-  const currentFoGuardIds = useMemo(() => {
-    if (!currentUserRole.isFieldOfficer || !currentUserRole.candidateId) return new Set<string>();
-    return new Set(
-      candidates
-        .filter((c) => (c.role_key === "guard" || c.role_key === "security_guard") && c.reports_to === currentUserRole.candidateId)
-        .map((c) => c.id),
-    );
-  }, [candidates, currentUserRole.isFieldOfficer, currentUserRole.candidateId]);
 
   const candidateBranchMap = useMemo(() => {
     const unitBranchMap = new Map(units.filter((u) => u.branch_id).map((u) => [u.id, u.branch_id as string]));
@@ -85,7 +76,7 @@ function StockPage() {
   const locName = (type: string, id: string) => {
     if (type === "warehouse") return whMap.get(id) ?? "—";
     if (type === "branch") return brMap.get(id) ?? "—";
-    if (type === "field_officer" || type === "guard") {
+    if (type === "field_officer" || type === "guard" || type === "security_guard") {
       const c = cMap.get(id);
       return c ? `${c.full_name} (${c.employee_code})` : "—";
     }
@@ -95,6 +86,15 @@ function StockPage() {
 
   const scope = useUserBranchScope();
   const currentUserRole = useCurrentUserRole();
+  const currentHolderLabel = currentUserRole.candidateId ? locName("field_officer", currentUserRole.candidateId) : "Own stock";
+  const currentFoGuardIds = useMemo(() => {
+    if (!currentUserRole.isFieldOfficer || !currentUserRole.candidateId) return new Set<string>();
+    return new Set(
+      candidates
+        .filter((c) => (c.role_key === "guard" || c.role_key === "security_guard") && c.reports_to === currentUserRole.candidateId)
+        .map((c) => c.id),
+    );
+  }, [candidates, currentUserRole.isFieldOfficer, currentUserRole.candidateId]);
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilterRaw] = useState<"all" | "warehouse" | "branch">("all");
   const [specificFilter, setSpecificFilterRaw] = useState<string>("all");
