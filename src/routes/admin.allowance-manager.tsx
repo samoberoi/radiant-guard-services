@@ -77,6 +77,7 @@ function rowToItem(r: Record<string, unknown>): Allowance {
     percentage: Number(r.percentage ?? 0),
     base_components: Array.isArray(r.base_components) ? (r.base_components as BaseRef[]) : [],
     cap_amount: r.cap_amount == null ? null : Number(r.cap_amount),
+    include_in_ot: r.include_in_ot == null ? true : Boolean(r.include_in_ot),
   };
 }
 
