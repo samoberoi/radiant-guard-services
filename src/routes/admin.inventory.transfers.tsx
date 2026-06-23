@@ -307,6 +307,11 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
         item_id: l.item_id, size_value: l.size_value, qty_change: -l.dispatched_qty,
         reference_type: "transfer", reference_id: initial.id,
       })));
+      // If this transfer fulfills a demand, mark the demand in_transit
+      if (initial.demand_id || demandId) {
+        const did = (initial.demand_id ?? demandId) as string;
+        await supabase.from("inv_demands" as never).update({ status: "in_transit" } as never).eq("id", did);
+      }
       void logActivity({ module: MODULE, action: "dispatch", entityType: ENTITY, entityId: initial.id, entityLabel: initial.transfer_number });
       toast.success("Dispatched");
       onSaved(); onOpenChange(false);
@@ -316,6 +321,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
       setSaving(false);
     }
   }
+
 
   async function receive() {
     if (!initial) return;
