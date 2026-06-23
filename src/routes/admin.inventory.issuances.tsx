@@ -246,12 +246,11 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
   branchScopeId: string | null;
   openDemands: OpenDemand[];
 }) {
-  const defaultType = isFieldOfficer ? "fo_to_guard" : "branch_to_guard";
+  const defaultType = isFieldOfficer ? "fo_to_guard" : "branch_to_fo";
   const [type, setType] = useState<string>(defaultType);
   const [sourceId, setSourceId] = useState("");
   const [destId, setDestId] = useState("");
   const [issDate, setIssDate] = useState(new Date().toISOString().slice(0, 10));
-  const [ackMethod, setAckMethod] = useState("otp");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [saving, setSaving] = useState(false);
@@ -262,12 +261,34 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
   const candById = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
   const isDraft = !initial || initial.status === "draft";
   const isIssued = initial?.status === "issued";
+  // Ack method is automatic: OTP when receiver is a guard, signature (delivery challan) when FO.
+  const ackMethod = meta.dest === "guard" ? "otp" : "signature";
 
   // FO scoping for guards
   const foScopedGuards = useMemo(() => {
     if (!isFieldOfficer || !me) return guards;
     return guards.filter((g) => g.reports_to === me.id || (me.unit_id && g.unit_id === me.unit_id));
   }, [guards, isFieldOfficer, me]);
+
+  // Available stock at the source location
+  const { data: stockMap = new Map<string, number>() } = useQuery({
+    queryKey: ["inv", "stock-balances", meta.source, sourceId],
+    enabled: !!sourceId && isDraft,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_stock_balances" as never)
+        .select("item_id,size_value,qty")
+        .eq("location_type", meta.source)
+        .eq("location_id", sourceId);
+      if (error) throw error;
+      const m = new Map<string, number>();
+      for (const r of (data as unknown as { item_id: string; size_value: string | null; qty: number }[]) ?? []) {
+        m.set(`${r.item_id}|${r.size_value ?? ""}`, Number(r.qty ?? 0));
+      }
+      return m;
+    },
+  });
+  const availableFor = (l: Line) => stockMap.get(`${l.item_id}|${l.size_value ?? ""}`) ?? 0;
 
   function sourceOptions() {
     if (meta.source === "warehouse") return warehouses;
@@ -285,29 +306,40 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
     setDemandId("");
     if (initial) {
       setType(initial.issuance_type); setSourceId(initial.source_id); setDestId(initial.destination_id);
-      setIssDate(initial.issuance_date); setAckMethod(initial.ack_method || "otp"); setNotes(initial.notes);
+      setIssDate(initial.issuance_date); setNotes(initial.notes);
       setDemandId(initial.demand_id ?? "");
       const { data } = await supabase.from("inv_issuance_lines" as never).select("*").eq("issuance_id", initial.id).order("sort_order");
-      setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => ({
-        id: String(r.id),
-        item_id: String(r.item_id),
-        size_value: String(r.size_value ?? ""),
-        qty: Number(r.qty ?? 0),
-        condition: String(r.condition ?? "new"),
-        notes: String(r.notes ?? ""),
-      })));
+      // Pull demand lines to surface "Requested" qty for context.
+      const reqMap = new Map<string, number>();
+      if (initial.demand_id) {
+        const { data: dl } = await supabase.from("inv_demand_lines" as never).select("item_id,size_value,requested_qty").eq("demand_id", initial.demand_id);
+        for (const r of (dl as unknown as { item_id: string; size_value: string; requested_qty: number }[]) ?? []) {
+          reqMap.set(`${r.item_id}|${r.size_value ?? ""}`, Number(r.requested_qty ?? 0));
+        }
+      }
+      setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => {
+        const itemId = String(r.item_id);
+        const sz = String(r.size_value ?? "");
+        return {
+          id: String(r.id),
+          item_id: itemId,
+          size_value: sz,
+          qty: Number(r.qty ?? 0),
+          requested_qty: reqMap.get(`${itemId}|${sz}`) ?? Number(r.qty ?? 0),
+        };
+      }));
     } else if (isFieldOfficer && me) {
       setType("fo_to_guard"); setSourceId(me.id); setDestId("");
       setIssDate(new Date().toISOString().slice(0, 10));
-      setAckMethod("otp"); setNotes(""); setLines([]);
+      setNotes(""); setLines([]);
     } else if (isBranchManager && branchScopeId) {
-      setType("branch_to_guard"); setSourceId(branchScopeId); setDestId("");
+      setType("branch_to_fo"); setSourceId(branchScopeId); setDestId("");
       setIssDate(new Date().toISOString().slice(0, 10));
-      setAckMethod("otp"); setNotes(""); setLines([]);
+      setNotes(""); setLines([]);
     } else {
-      setType("branch_to_guard"); setSourceId(""); setDestId("");
+      setType("warehouse_to_fo"); setSourceId(""); setDestId("");
       setIssDate(new Date().toISOString().slice(0, 10));
-      setAckMethod("otp"); setNotes(""); setLines([]);
+      setNotes(""); setLines([]);
     }
   });
 
@@ -316,36 +348,34 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
     if (!did) return;
     const d = openDemands.find((x) => x.id === did);
     if (!d) return;
-    // Determine requester role for type selection.
     const reqCand = d.requester_candidate_id ? candById.get(d.requester_candidate_id) : null;
     const isFoReq = reqCand && /field|fo|supervisor|officer/i.test(reqCand.role_key);
     if (isFoReq && reqCand) {
       setType("branch_to_fo");
       setDestId(reqCand.id);
-      setAckMethod("signature"); // FO acknowledges via delivery challan, not OTP
     } else if (reqCand) {
       setType("branch_to_guard");
       setDestId(reqCand.id);
-      setAckMethod("otp");
     } else {
-      // No mapped candidate — fall back to manual destination.
-      setType("branch_to_guard");
+      setType("branch_to_fo");
       setDestId("");
     }
     setSourceId(branchScopeId ?? d.branch_id);
-    // Prefill lines from demand.
     const { data: dls } = await supabase.from("inv_demand_lines" as never)
       .select("item_id,size_value,requested_qty,fulfilled_qty")
       .eq("demand_id", did).order("sort_order");
     const rows = (dls as unknown as { item_id: string; size_value: string | null; requested_qty: number; fulfilled_qty: number }[]) ?? [];
-    setLines(rows.map((r) => ({
-      item_id: r.item_id,
-      size_value: r.size_value ?? "",
-      qty: Math.max(0, Number(r.requested_qty ?? 0) - Number(r.fulfilled_qty ?? 0)),
-      condition: "new",
-      notes: "",
-    })));
+    setLines(rows.map((r) => {
+      const remaining = Math.max(0, Number(r.requested_qty ?? 0) - Number(r.fulfilled_qty ?? 0));
+      return {
+        item_id: r.item_id,
+        size_value: r.size_value ?? "",
+        qty: remaining,
+        requested_qty: remaining,
+      };
+    }));
   }
+
 
 
   async function saveOrIssue(target: "draft" | "issue") {
