@@ -125,7 +125,7 @@ export const RBAC_MODULES: ModuleDef[] = [
       { key: "transfers",         label: "Transfers",         path: "/admin/inventory/transfers",       icon: Boxes },
       { key: "issuances",         label: "Issuances",         path: "/admin/inventory/issuances",       icon: UserPlus },
       { key: "write_offs",        label: "Write-offs",        path: "/admin/inventory/write-offs",      icon: ShieldCheck },
-      { key: "adjustments",       label: "Adjustments",       path: "/admin/inventory/adjustments",     icon: SlidersHorizontal },
+      
       { key: "stock_report",      label: "Stock Report",      path: "/admin/inventory/stock",           icon: Wallet },
       { key: "rate_cards",        label: "Supplier Rate Cards", path: "/admin/inventory/rate-cards",      icon: FileText },
       
