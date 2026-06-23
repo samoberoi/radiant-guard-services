@@ -394,10 +394,11 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
 
   async function saveOrIssue(target: "draft" | "issue") {
     if (!sourceId || !destId) { toast.error("Pick source and destination"); return; }
-    if (!lines.length || lines.some((l) => !l.item_id || l.qty <= 0)) { toast.error("Add items with qty"); return; }
+    const activeLines = isFreeIssue ? lines.filter((l) => l.qty > 0) : lines;
+    if (!activeLines.length || activeLines.some((l) => !l.item_id || l.qty <= 0)) { toast.error("Add items with qty"); return; }
     setSaving(true);
     try {
-      const linesPayload = lines.map((l, idx) => ({
+      const linesPayload = activeLines.map((l, idx) => ({
         item_id: l.item_id, size_value: l.size_value, qty: l.qty,
         condition: "new", notes: "", sort_order: idx,
       }));
