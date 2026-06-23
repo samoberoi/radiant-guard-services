@@ -41,6 +41,13 @@ function StockPage() {
       return (data as unknown as { candidate_id: string; scope_type: string; scope_id: string }[]) ?? [];
     },
   });
+  const { data: units = [] } = useQuery({
+    queryKey: ["units-branch-map-stock-page"],
+    queryFn: async () => {
+      const { data } = await supabase.from("units" as never).select("id,branch_id");
+      return (data as unknown as { id: string; branch_id: string | null }[]) ?? [];
+    },
+  });
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const whMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w.name])), [warehouses]);
@@ -51,6 +58,19 @@ function StockPage() {
     () => candidates.filter((c) => c.role_key === "field_officer").sort((a, b) => a.full_name.localeCompare(b.full_name)),
     [candidates],
   );
+
+  const candidateBranchMap = useMemo(() => {
+    const unitBranchMap = new Map(units.filter((u) => u.branch_id).map((u) => [u.id, u.branch_id as string]));
+    const map = new Map<string, string>();
+    for (const assignment of scopeAssignments) {
+      if (assignment.scope_type === "branch") map.set(assignment.candidate_id, assignment.scope_id);
+      if (assignment.scope_type === "unit") {
+        const branchId = unitBranchMap.get(assignment.scope_id);
+        if (branchId && !map.has(assignment.candidate_id)) map.set(assignment.candidate_id, branchId);
+      }
+    }
+    return map;
+  }, [scopeAssignments, units]);
 
   const locName = (type: string, id: string) => {
     if (type === "warehouse") return whMap.get(id) ?? "—";
@@ -78,23 +98,14 @@ function StockPage() {
   // FO list filtered by selected branch (via employee_scope_assignments)
   const fosForBranch = useMemo(() => {
     if (effectiveTypeFilter !== "branch" || effectiveSpecificFilter === "all") return fieldOfficers;
-    const ids = new Set(
-      scopeAssignments
-        .filter((a) => a.scope_type === "branch" && a.scope_id === effectiveSpecificFilter)
-        .map((a) => a.candidate_id),
-    );
-    return fieldOfficers.filter((f) => ids.has(f.id));
-  }, [effectiveTypeFilter, effectiveSpecificFilter, scopeAssignments, fieldOfficers]);
+    return fieldOfficers.filter((f) => candidateBranchMap.get(f.id) === effectiveSpecificFilter);
+  }, [effectiveTypeFilter, effectiveSpecificFilter, candidateBranchMap, fieldOfficers]);
 
   // For a branch-scoped user, the FO whitelist is the set of field officers mapped to their branch.
   const allowedFoIds = useMemo(() => {
     if (!scope.isScoped || !scope.branchId) return null;
-    return new Set(
-      scopeAssignments
-        .filter((a) => a.scope_type === "branch" && a.scope_id === scope.branchId)
-        .map((a) => a.candidate_id),
-    );
-  }, [scope.isScoped, scope.branchId, scopeAssignments]);
+    return new Set(fieldOfficers.filter((f) => candidateBranchMap.get(f.id) === scope.branchId).map((f) => f.id));
+  }, [scope.isScoped, scope.branchId, fieldOfficers, candidateBranchMap]);
 
   const enriched = useMemo(() => {
     return balances
@@ -114,9 +125,17 @@ function StockPage() {
           return b.location_type === "field_officer" && b.location_id === foFilter;
         }
         if (!scope.isScoped) {
-          if (b.location_type !== "warehouse" && b.location_type !== "branch") return false;
-          if (effectiveTypeFilter !== "all" && b.location_type !== effectiveTypeFilter) return false;
-          if (effectiveSpecificFilter !== "all" && b.location_id !== effectiveSpecificFilter) return false;
+          if (b.location_type !== "warehouse" && b.location_type !== "branch" && b.location_type !== "field_officer") return false;
+          if (effectiveTypeFilter === "warehouse" && b.location_type !== "warehouse") return false;
+          if (effectiveTypeFilter === "branch") {
+            if (b.location_type !== "branch" && b.location_type !== "field_officer") return false;
+            if (effectiveSpecificFilter !== "all") {
+              if (b.location_type === "branch" && b.location_id !== effectiveSpecificFilter) return false;
+              if (b.location_type === "field_officer" && candidateBranchMap.get(b.location_id) !== effectiveSpecificFilter) return false;
+            }
+          }
+          if (effectiveTypeFilter === "warehouse" && effectiveSpecificFilter !== "all" && b.location_id !== effectiveSpecificFilter) return false;
+          if (effectiveTypeFilter === "all" && effectiveSpecificFilter !== "all" && b.location_id !== effectiveSpecificFilter) return false;
         }
         return true;
       })
@@ -138,7 +157,7 @@ function StockPage() {
         return r.item_name.toLowerCase().includes(t) || r.item_code.toLowerCase().includes(t) || r.location_label.toLowerCase().includes(t);
       })
       .sort((a, b) => a.item_name.localeCompare(b.item_name));
-  }, [balances, itemMap, effectiveTypeFilter, effectiveSpecificFilter, foFilter, q, whMap, brMap, cMap, scope.isScoped, scope.branchId, allowedFoIds]);
+  }, [balances, itemMap, effectiveTypeFilter, effectiveSpecificFilter, foFilter, q, whMap, brMap, cMap, scope.isScoped, scope.branchId, allowedFoIds, candidateBranchMap]);
 
   const lowCount = enriched.filter((r) => r.low).length;
   const totalQty = enriched.reduce((s, r) => s + Number(r.qty), 0);
