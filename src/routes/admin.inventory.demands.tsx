@@ -203,6 +203,7 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, branchLabel, 
   const [demandDate, setDemandDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
+  const [source, setSource] = useState<"warehouse" | "branch">("warehouse");
   const [saving, setSaving] = useState(false);
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
