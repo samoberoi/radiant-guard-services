@@ -292,6 +292,14 @@ function AdditionList() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <BulkUploadDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        types={types.data ?? []}
+        emps={emps.data ?? []}
+        onDone={() => qc.invalidateQueries({ queryKey: QK_ADD })}
+      />
     </div>
   );
 }
