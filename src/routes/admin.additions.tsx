@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
-import { TrendingUp, Download, Edit2, Plus, Search, Trash2, ChevronLeft, Upload, FileSpreadsheet } from "lucide-react";
+import { TrendingUp, Download, Edit2, Plus, Search, Trash2, ChevronLeft } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -18,10 +18,6 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
-import * as XLSX from "xlsx";
 import { z } from "zod";
 
 const searchSchema = z.object({
@@ -123,7 +119,6 @@ function AdditionList() {
 
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | Status>("active");
-  const [bulkOpen, setBulkOpen] = useState(false);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -180,9 +175,6 @@ function AdditionList() {
         <div className="flex gap-2">
           <Button onClick={() => navigate({ to: "/admin/additions", search: { mode: "create" } })} className="h-10 rounded-lg">
             <Plus className="mr-1.5 h-4 w-4" /> Add Addition
-          </Button>
-          <Button variant="outline" className="h-10 rounded-lg" onClick={() => setBulkOpen(true)}>
-            <Upload className="mr-1.5 h-4 w-4" /> Bulk Upload
           </Button>
           <Button variant="outline" disabled={filtered.length === 0} className="h-10 rounded-lg"
             onClick={() => downloadCsv(
@@ -293,13 +285,6 @@ function AdditionList() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <BulkUploadDialog
-        open={bulkOpen}
-        onOpenChange={setBulkOpen}
-        types={types.data ?? []}
-        emps={emps.data ?? []}
-        onDone={() => qc.invalidateQueries({ queryKey: QK_ADD })}
-      />
     </div>
   );
 }
