@@ -506,19 +506,27 @@ export function computeWages(
     components.push({ name: "Paid Holiday", amount: phAmount, calcType: "fixed" });
   }
 
-  // Overtime — vendor convention used across all clients:
-  //   OT base   = contract gross MINUS Uniform Allowance component(s)
-  //   OT rate   = OT base / (baseDays × 8)        (single rate, ×1)
-  //   OT amount = OT rate × OT hours
-  // Statutory double-rate is intentionally NOT applied; the vendor wage
-  // register pays single-rate on (Gross − Uniform). Reconciles to ₹0.01
-  // against FPL May-2026 register.
-  const uniformContract = resource.components
-    .filter((c) => /\buniform\b/i.test(canonicalComponentName(c.name)))
+  // Overtime base = contract gross MINUS any components flagged as
+  // Include in OT Calculation = false (configured in Allowance Manager and
+  // carried per-contract). Legacy fallback: if no component carries the
+  // flag, exclude Uniform-named components (matches pre-flag behaviour).
+  const anyOtFlagSet = resource.components.some(
+    (c) => c.includeInOt === false || c.includeInOt === true,
+  );
+  const excludedFromOt = resource.components
+    .filter((c) =>
+      anyOtFlagSet
+        ? c.includeInOt === false
+        : /\buniform\b/i.test(canonicalComponentName(c.name)),
+    )
     .reduce((s, c) => s + (Number(c.amount) || 0), 0);
-  const otBase = Math.max(0, contractGross - uniformContract);
-  const otHourlyRate = baseDays > 0 ? otBase / (baseDays * 8) : 0;
+  const otBase = Math.max(0, contractGross - excludedFromOt);
+  // Per-duty OT rate (new payroll spec); hour-based path uses
+  // perDuty / UNIT_DUTY_HOURS so existing hour-driven attendance still works.
+  const perDutyOt = baseDays > 0 ? otBase / baseDays : 0;
+  const otHourlyRate = perDutyOt / UNIT_DUTY_HOURS;
   const otAmount = round2(otHourlyRate * totals.otHours);
+  const otDuties = totals.otDays;
   if (otAmount > 0) {
     components.push({ name: "Overtime", amount: otAmount, calcType: "fixed" });
   }
