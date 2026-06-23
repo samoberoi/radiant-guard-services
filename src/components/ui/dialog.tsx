@@ -155,7 +155,7 @@ const DialogContent = React.forwardRef<
     setPristine(true);
     // Note: action words like "add"/"import" are intentionally excluded because
     // dialogs also contain secondary controls such as "Add component" pickers.
-    const SAVE_RX = /^(save|update|create|submit|confirm|apply|generate|send|approve|sign|next|continue|finish|done)\b/i;
+    const SAVE_RX = /^(save|update|create|submit|confirm|apply|generate|send|approve|sign|next|continue|finish|done|post)\b/i;
 
     const markDirty = (e: Event) => {
       // Programmatic value changes (React-driven prefill) shouldn't dirty.
@@ -168,6 +168,12 @@ const DialogContent = React.forwardRef<
     const markPristine = () => {
       dirtyCtx.reset();
       setPristine(true);
+    };
+    const closeDialog = () => {
+      markPristine();
+      requestAnimationFrame(() => {
+        contentElement.querySelector<HTMLButtonElement>('[data-dialog-close]')?.click();
+      });
     };
     dirtyCtx.markDirty = () => {
       if (!dirtyCtx.dirtyRef.current) {
@@ -182,6 +188,7 @@ const DialogContent = React.forwardRef<
       ) as HTMLButtonElement | null;
       if (!btn) return;
       const txt = (btn.textContent || "").trim();
+      if (txt === "Close" || txt === "Cancel") closeDialog();
       if (btn.type === "submit" || SAVE_RX.test(txt)) markPristine();
     };
 
