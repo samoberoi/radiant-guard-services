@@ -119,11 +119,16 @@ function GRNPage() {
   const [open, setOpen] = useState(false);
   const [viewing, setViewing] = useState<GRN | null>(null);
 
+  const scope = useUserBranchScope();
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    // Delivery Challans / Goods Receipts are warehouse-level events.
+    // A branch-scoped user does not own any warehouse, so their list is empty.
+    if (scope.isScoped) return [];
     if (!q) return grns;
     return grns.filter((g) => g.grn_number.toLowerCase().includes(q) || (g.vendor_invoice_number ?? "").toLowerCase().includes(q));
-  }, [grns, query]);
+  }, [grns, query, scope.isScoped]);
+
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["inv", "grns"] });
