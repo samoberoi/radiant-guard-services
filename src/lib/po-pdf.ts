@@ -45,21 +45,21 @@ const COMPANY = {
 };
 
 const TERMS: string[] = [
-  "The Supplier represents and warrants that it has the right to and shall sell the Goods free of any charge, lien or other encumbrance.",
-  "The Supplier shall ensure that the Goods shall be of satisfactory quality and fit for usage and consumption by the Purchaser and that the goods supplied shall be free from defects in design, material and workmanship;",
-  "The Supplier shall keep the purchaser indemnified in full against all costs, expenses, damages and losses (whether direct or indirect), including any interest, penalties, and legal and other professional fees and expenses awarded against or incurred or paid by the purchaser as a result of or in connection with any act that causes loos to the Purchaser due to the negligence of the Supplier.",
-  "The Supplier shall make full disclosures to the purchases regarding its registration as a business entity, MSME status, statutory as well as GST compliances. The Supplier shall furnish the updated documents in relation to the aforementioned. The Supplier shall understand and admit that all such requisite disclosures made to the Purchases are true and to the best of their knowledge.",
-  "In case of non-adherence to the above clause, the Purchaser shall not entertain the MSME status of the concerned supplier.",
+  "The Vendor represents and warrants that it has the right to and shall sell the Goods free of any charge, lien or other encumbrance.",
+  "The Vendor shall ensure that the Goods shall be of satisfactory quality and fit for usage and consumption by the Purchaser and that the goods supplied shall be free from defects in design, material and workmanship;",
+  "The Vendor shall keep the purchaser indemnified in full against all costs, expenses, damages and losses (whether direct or indirect), including any interest, penalties, and legal and other professional fees and expenses awarded against or incurred or paid by the purchaser as a result of or in connection with any act that causes loos to the Purchaser due to the negligence of the Vendor.",
+  "The Vendor shall make full disclosures to the purchases regarding its registration as a business entity, MSME status, statutory as well as GST compliances. The Vendor shall furnish the updated documents in relation to the aforementioned. The Vendor shall understand and admit that all such requisite disclosures made to the Purchases are true and to the best of their knowledge.",
+  "In case of non-adherence to the above clause, the Purchaser shall not entertain the MSME status of the concerned vendor.",
   "The purchaser reserves the right at any time before or after delivery to inspect and test the Goods in concern.",
   "Timely payments shall be made by the purchaser subject to timely submission of invoice.",
-  "Similarly, GST shall be paid by the Purchaser only in case the Supplier is fully compliant to the statutory GST norms.",
+  "Similarly, GST shall be paid by the Purchaser only in case the Vendor is fully compliant to the statutory GST norms.",
   "The purchaser shall pay correctly rendered invoices within 45 days from the date of receiving the invoice. In case of any observations or objections w.r.t. the period of payment, the date of invoice shall be taken as the beginning of the 45-day credit period.",
-  "The purchaser may terminate the Contract in whole or in part at any time and for any reason whatsoever by giving the Supplier at least one month's written notice.",
-  "Neither party shall be liable for any failure or delay in performing its obligations under the Contract to the extent that such failure or delay is caused by a Force Majeure Event provided that the Supplier shall use best endeavors to cure such Force Majeure Event and resume performance under the Contract.",
+  "The purchaser may terminate the Contract in whole or in part at any time and for any reason whatsoever by giving the Vendor at least one month's written notice.",
+  "Neither party shall be liable for any failure or delay in performing its obligations under the Contract to the extent that such failure or delay is caused by a Force Majeure Event provided that the Vendor shall use best endeavors to cure such Force Majeure Event and resume performance under the Contract.",
   "The Contract shall be governed by and construed in accordance with the Laws of India.",
   "The parties shall opt for Arbitration as their preferred mode of dispute resolution where in the Legal Manager of the purchaser shall act as the sole arbitrator.",
   "The parties irrevocably submit to the exclusive jurisdiction of the courts of Pune, in case the dispute is not resolved through arbitration and involves litigation.",
-  "In the event of the Supplier not signing the supply agreement, the acceptance of this Purchase order shall be deemed to have the same effect as of a valid executed contract.",
+  "In the event of the Vendor not signing the supply agreement, the acceptance of this Purchase order shall be deemed to have the same effect as of a valid executed contract.",
 ];
 
 function fmtDateDMY(iso: string): string {
@@ -148,21 +148,21 @@ export async function generatePOPdf(data: POPdfData): Promise<jsPDF> {
   y += 18;
   doc.setFont("helvetica", "normal").setFontSize(10);
   const v = data.vendor;
-  const supplierAddress = v
+  const vendorAddress = v
     ? [v.address1, v.address2, [v.city, v.state, v.pincode].filter(Boolean).join(" - "), v.country]
         .filter((s) => s && s.trim()).join(", ")
     : "";
 
   const leftCol: [string, string][] = [
     [`Date : ${fmtDateDMY(data.po_date)}`, ""],
-    [`Supplier ID : ${v?.vendor_code ?? ""}`, ""],
-    [`Supplier Name : ${v?.name ?? ""}`, ""],
-    [`Supplier GST/UIN : ${v?.gstin ?? ""}`, ""],
+    [`Vendor ID : ${v?.vendor_code ?? ""}`, ""],
+    [`Vendor Name : ${v?.name ?? ""}`, ""],
+    [`Vendor GST/UIN : ${v?.gstin ?? ""}`, ""],
   ];
   const rightCol: string[] = [
     `Purchase Order No : ${data.po_number}`,
-    `Supplier Phone : ${v?.phone ?? ""}`,
-    `Supplier Email : ${v?.email ?? ""}`,
+    `Vendor Phone : ${v?.phone ?? ""}`,
+    `Vendor Email : ${v?.email ?? ""}`,
     "",
   ];
   for (let i = 0; i < leftCol.length; i++) {
@@ -170,7 +170,7 @@ export async function generatePOPdf(data: POPdfData): Promise<jsPDF> {
     if (rightCol[i]) doc.text(rightCol[i], W - M, y, { align: "right" });
     y += 14;
   }
-  doc.text(`Supplier Address : ${supplierAddress}`, M, y, { maxWidth: W - 2 * M });
+  doc.text(`Vendor Address : ${vendorAddress}`, M, y, { maxWidth: W - 2 * M });
   y += 18;
   if (data.remarks && data.remarks.trim()) {
     doc.text(`Remarks : ${data.remarks}`, M, y, { maxWidth: W - 2 * M });
