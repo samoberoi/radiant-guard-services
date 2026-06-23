@@ -15,6 +15,25 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const NET_DAY_OPTIONS = ["0", "7", "15", "30", "45", "60", "75", "90", "120"];
+function parsePaymentTerms(s: string): { mode: "single" | "window"; from: string; to: string } {
+  const t = (s ?? "").trim();
+  if (!t) return { mode: "single", from: "30", to: "45" };
+  const win = t.match(/^Net\s+(\d+)\s*[-–to]+\s*(\d+)$/i);
+  if (win) return { mode: "window", from: win[1], to: win[2] };
+  const single = t.match(/^Net\s+(\d+)$/i);
+  if (single) return { mode: "single", from: single[1], to: single[1] };
+  if (/due\s*on\s*receipt/i.test(t)) return { mode: "single", from: "0", to: "0" };
+  return { mode: "single", from: "30", to: "45" };
+}
+function formatPaymentTerms(mode: "single" | "window", from: string, to: string): string {
+  if (mode === "single") return from === "0" ? "Due on receipt" : `Net ${from}`;
+  return `Net ${from}-${to}`;
+}
+const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$/;
+const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 
 export const Route = createFileRoute("/admin/inventory/vendors")({ component: VendorsPage });
 
