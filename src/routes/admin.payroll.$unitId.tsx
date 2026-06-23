@@ -389,15 +389,18 @@ function PayrollUnitPage() {
         resourceByDesignation.set(did, {
           designationId: did,
           components: Array.isArray(r.components)
-            ? (r.components as { name: string; amount: number }[]).map((c) => ({
+            ? (r.components as { name: string; amount: number; includeInOt?: boolean }[]).map((c) => ({
                 name: String(c.name ?? ""),
                 amount: Number(c.amount) || 0,
+                includeInOt: c.includeInOt,
               }))
             : [],
           benefits: Array.isArray(r.benefits) ? (r.benefits as { name: string; amount: number }[]) : [],
-          deductions: Array.isArray(r.deductions) ? (r.deductions as { name: string; amount: number }[]) : [],
+          deductions: Array.isArray(r.deductions)
+            ? (r.deductions as { name: string; amount: number; deductionCalcType?: "earned_salary" | "fixed_amount" }[])
+            : [],
           employerContributions: Array.isArray(r.employer_contributions)
-            ? (r.employer_contributions as { name: string; amount: number }[])
+            ? (r.employer_contributions as { name: string; amount: number; deductionCalcType?: "earned_salary" | "fixed_amount" }[])
             : [],
           payrollDayBase: r.payroll_day_base_id
             ? pdbMap.get(String(r.payroll_day_base_id)) ?? null
