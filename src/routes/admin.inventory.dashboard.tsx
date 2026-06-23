@@ -429,7 +429,7 @@ export function InventoryOwnerDashboard() {
         <Kpi label={`Spend · ${RANGE_LABEL[range]}`} value={inr(spendCur)} delta={delta(spendCur, spendPrev)} icon={IndianRupee} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" />
         <Kpi label="POs Raised" value={posInPeriod.toString()} delta={delta(posInPeriod, posPrev)} icon={ShoppingCart} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" />
         <Kpi label="GRNs Posted" value={grnsInPeriod.toString()} delta={delta(grnsInPeriod, grnsPrev)} icon={Truck} tint="from-cyan-500/15 to-cyan-500/0" iconClass="text-cyan-500" />
-        <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs · ${inr(writeoffCur)} write-offs`} />
+        <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs · ${inr(writeoffCur)} write-offs`} to="/admin/inventory/stock" />
       </div>
 
       {/* Overview — clickable totals across modules */}
