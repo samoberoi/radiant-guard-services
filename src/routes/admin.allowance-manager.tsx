@@ -96,7 +96,7 @@ function useAllowances() {
     queryFn: async (): Promise<Allowance[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,earning_type,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount")
+        .select("id,name,earning_type,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot")
         .order("name", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
