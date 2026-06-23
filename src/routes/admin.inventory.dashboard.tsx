@@ -675,25 +675,6 @@ export function InventoryOwnerDashboard() {
       </div>
 
 
-      {/* Activity */}
-      <Panel title="Recent Activity" subtitle="Latest POs, GRNs, write-offs">
-        {recent.length === 0 ? <Empty>No activity yet.</Empty> : (
-          <div className="space-y-1">
-            {recent.map((e, i) => (
-              <Link key={i} to={e.href} className="flex items-center gap-3 rounded-lg p-2 hover:bg-secondary/40 transition">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary/50">
-                  {e.type === "PO" ? <ShoppingCart className="h-4 w-4 text-blue-500" /> : e.type === "GRN" ? <Truck className="h-4 w-4 text-cyan-500" /> : <Package className="h-4 w-4 text-amber-500" />}
-                </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium">{e.label}</div>
-                  <div className="text-xs text-muted-foreground">{e.type} · {new Date(e.ts).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}</div>
-                </div>
-                {e.value && <div className="text-sm font-semibold tabular-nums">{e.value}</div>}
-              </Link>
-            ))}
-          </div>
-        )}
-      </Panel>
     </div>
   );
 }
