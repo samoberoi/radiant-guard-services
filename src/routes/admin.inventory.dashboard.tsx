@@ -290,7 +290,31 @@ export function InventoryOwnerDashboard() {
   const balPasses = (b: Balance) => {
     if (!itemPasses(b.item_id)) return false;
     if (warehouseFilter === "all") return true;
-    return b.location_type === "warehouse" ? b.location_id === warehouseFilter : true;
+    if (warehouseFilter.startsWith("branch:")) {
+      return b.location_type === "branch" && b.location_id === warehouseFilter.slice(7);
+    }
+    return b.location_type === "warehouse" && b.location_id === warehouseFilter;
+  };
+
+  // In-transit transfers (dispatched but not yet received) still belong to
+  // the organisation — count them toward stock value so the KPI matches
+  // what the warehouse actually shipped.
+  const transferLines = transferLinesQ.data ?? [];
+  const inTransitTransferIds = useMemo(
+    () => new Set(transfers.filter((t) => ["in_transit", "dispatched"].includes(t.status)).map((t) => t.id)),
+    [transfers],
+  );
+  const transferById = useMemo(() => new Map(transfers.map((t) => [t.id, t])), [transfers]);
+  const transferLinePasses = (l: { transfer_id: string; item_id: string }) => {
+    if (!itemPasses(l.item_id)) return false;
+    if (warehouseFilter === "all") return true;
+    const t = transferById.get(l.transfer_id);
+    if (!t) return false;
+    if (warehouseFilter.startsWith("branch:")) {
+      const id = warehouseFilter.slice(7);
+      return (t.source_type === "branch" && t.source_id === id) || (t.destination_type === "branch" && t.destination_id === id);
+    }
+    return (t.source_type === "warehouse" && t.source_id === warehouseFilter) || (t.destination_type === "warehouse" && t.destination_id === warehouseFilter);
   };
 
   // ===== KPIs =====
@@ -302,8 +326,16 @@ export function InventoryOwnerDashboard() {
       if (!it) continue;
       v += Number(b.qty) * Number(it.standard_cost || 0);
     }
+    for (const l of transferLines) {
+      if (!inTransitTransferIds.has(l.transfer_id)) continue;
+      if (!transferLinePasses(l)) continue;
+      const it = itemMap.get(l.item_id);
+      if (!it) continue;
+      const outstanding = Math.max(0, Number(l.dispatched_qty || 0) - Number(l.received_qty || 0));
+      v += outstanding * Number(it.standard_cost || 0);
+    }
     return v;
-  }, [balances, itemMap, categoryFilter, warehouseFilter]);
+  }, [balances, itemMap, categoryFilter, warehouseFilter, transferLines, inTransitTransferIds, transferById]);
 
   const inPeriod = (d: string | Date) => {
     const x = new Date(d);
