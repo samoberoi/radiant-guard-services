@@ -198,6 +198,28 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const isDraft = !initial || initial.status === "draft";
   const isDispatched = initial?.status === "dispatched" || initial?.status === "in_transit";
+
+  // Available stock at the source warehouse, keyed by `${item_id}|${size_value}`
+  const { data: stockMap = new Map<string, number>() } = useQuery({
+    queryKey: ["inv", "stock-balances", sourceType, sourceId],
+    enabled: !!sourceId && isDraft,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_stock_balances" as never)
+        .select("item_id,size_value,qty")
+        .eq("location_type", sourceType)
+        .eq("location_id", sourceId);
+      if (error) throw error;
+      const m = new Map<string, number>();
+      for (const r of (data as unknown as { item_id: string; size_value: string | null; qty: number }[]) ?? []) {
+        m.set(`${r.item_id}|${r.size_value ?? ""}`, Number(r.qty ?? 0));
+      }
+      return m;
+    },
+  });
+  const availableFor = (l: Line) => stockMap.get(`${l.item_id}|${l.size_value ?? ""}`) ?? 0;
+  const overDispatchLines = lines.filter((l) => l.dispatched_qty > availableFor(l));
+
   const isReceived = initial?.status === "acknowledged";
 
   async function loadDemand(id: string) {
@@ -268,7 +290,15 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
     if (!lines.length || lines.some((l) => l.dispatched_qty <= 0)) {
       toast.error("Enter dispatched quantity for each line"); return;
     }
+    if (overDispatchLines.length) {
+      const first = overDispatchLines[0];
+      const it = itemMap.get(first.item_id);
+      toast.error(`Insufficient stock for ${it?.name ?? "item"}${first.size_value ? ` (${first.size_value})` : ""}: only ${availableFor(first)} available, ${first.dispatched_qty} requested`);
+      return;
+    }
     if (!(await confirmAction({ title: "Initiate this transfer?", description: "Stock will be deducted from the source warehouse and the demand will move to In Transit.", confirmText: "Initiate Transfer" }))) return;
+
+
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -363,6 +393,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                     <th className="px-3 py-2">Item</th>
                     <th className="px-3 py-2 w-16">Size</th>
                     <th className="px-3 py-2 w-24 text-right">Demanded</th>
+                    {isDraft && <th className="px-3 py-2 w-24 text-right">Available</th>}
                     <th className="px-3 py-2 w-24 text-right">Dispatched</th>
                     {isDispatched && <th className="px-3 py-2 w-24 text-right">Received</th>}
                     {isDispatched && <th className="px-3 py-2">Variance Reason</th>}
@@ -371,14 +402,17 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                 <tbody className="divide-y divide-border">
                   {lines.map((l, idx) => {
                     const it = itemMap.get(l.item_id);
+                    const avail = availableFor(l);
+                    const over = isDraft && l.dispatched_qty > avail;
                     return (
-                      <tr key={idx}>
+                      <tr key={idx} className={over ? "bg-destructive/5" : undefined}>
                         <td className="px-3 py-2 font-medium">{it?.name ?? "—"}</td>
                         <td className="px-3 py-2 text-muted-foreground">{l.size_value || "—"}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{l.requested_qty}</td>
+                        {isDraft && <td className={`px-3 py-2 text-right tabular-nums ${avail <= 0 ? "text-destructive" : "text-muted-foreground"}`}>{sourceId ? avail : "—"}</td>}
                         <td className="px-2 py-1.5">
                           {isDraft
-                            ? <Input type="number" min={0} className="h-9 text-right" value={l.dispatched_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, dispatched_qty: Number(e.target.value) || 0 } : x))} />
+                            ? <Input type="number" min={0} max={avail} className={`h-9 text-right ${over ? "border-destructive text-destructive" : ""}`} value={l.dispatched_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, dispatched_qty: Number(e.target.value) || 0 } : x))} />
                             : <div className="text-right tabular-nums">{l.dispatched_qty}</div>}
                         </td>
                         {isDispatched && <td className="px-2 py-1.5 text-right tabular-nums">{l.received_qty}</td>}
@@ -386,7 +420,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                       </tr>
                     );
                   })}
-                  {!lines.length && <tr><td colSpan={isDispatched ? 6 : 4} className="px-3 py-6 text-center text-xs text-muted-foreground">{isDraft ? "Pick a demand above to load items." : "No lines."}</td></tr>}
+                  {!lines.length && <tr><td colSpan={isDispatched ? 6 : (isDraft ? 5 : 4)} className="px-3 py-6 text-center text-xs text-muted-foreground">{isDraft ? "Pick a demand above to load items." : "No lines."}</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -397,7 +431,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
-          {isDraft && <Button onClick={initiateTransfer} disabled={saving || !demandId}>{saving ? "Initiating…" : "Initiate Transfer"}</Button>}
+          {isDraft && <Button onClick={initiateTransfer} disabled={saving || !demandId || !sourceId || overDispatchLines.length > 0}>{saving ? "Initiating…" : overDispatchLines.length > 0 ? "Insufficient stock" : "Initiate Transfer"}</Button>}
         </DialogFooter>
 
       </DialogContent>
