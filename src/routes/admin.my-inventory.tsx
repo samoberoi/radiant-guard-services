@@ -173,7 +173,9 @@ function MyInventoryPage() {
                     <Button onClick={() => ackMut.mutate(i)} disabled={ackMut.isPending}><Check className="mr-1 h-4 w-4" />Confirm Receipt</Button>
                   </div>
                 ) : (
-                  <div className="text-xs text-muted-foreground">Ack method: {i.ack_method}. Your Field Officer will mark this as received.</div>
+                  <div className="flex items-end justify-end">
+                    <Button onClick={() => ackMut.mutate(i)} disabled={ackMut.isPending}><Check className="mr-1 h-4 w-4" />Confirm Delivery Challan</Button>
+                  </div>
                 )}
               </div>
             ))}
