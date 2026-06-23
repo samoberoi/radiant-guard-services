@@ -108,17 +108,17 @@ const assetsChildren: LeafItem[] = [
 
 const inventoryChildren: LeafItem[] = [
   { to: "/admin/inventory", label: "Inventory Command Center", icon: LayoutDashboard },
-  { to: "/admin/inventory/items", label: "Products", icon: PackageOpen },
-  { to: "/admin/inventory/vendors", label: "Vendors", icon: ShoppingBag },
-  { to: "/admin/inventory/warehouses", label: "Warehouses", icon: Warehouse },
-  { to: "/admin/inventory/purchase-orders", label: "Purchase Orders", icon: FileText },
-  { to: "/admin/inventory/demands", label: "Demands", icon: Inbox },
-  { to: "/admin/inventory/goods-receipts", label: "Delivery Challans", icon: ClipboardList },
-  { to: "/admin/inventory/transfers", label: "Transfers", icon: Boxes },
-  { to: "/admin/inventory/issuances", label: "Issuances", icon: UserPlus },
-  { to: "/admin/inventory/write-offs", label: "Write-offs", icon: ShieldCheck },
-  { to: "/admin/inventory/stock", label: "Stock Report", icon: Wallet },
-  { to: "/admin/inventory/rate-cards", label: "Vendor Rate Cards", icon: FileText },
+  { to: "/admin/inventory/items", label: "Products", icon: PackageOpen, sub: "item_master" },
+  { to: "/admin/inventory/vendors", label: "Vendors", icon: ShoppingBag, sub: "vendors" },
+  { to: "/admin/inventory/warehouses", label: "Warehouses", icon: Warehouse, sub: "warehouses" },
+  { to: "/admin/inventory/purchase-orders", label: "Purchase Orders", icon: FileText, sub: "purchase_orders" },
+  { to: "/admin/inventory/demands", label: "Demands", icon: Inbox, sub: "demands" },
+  { to: "/admin/inventory/goods-receipts", label: "Delivery Challans", icon: ClipboardList, sub: "goods_receipts" },
+  { to: "/admin/inventory/transfers", label: "Transfers", icon: Boxes, sub: "transfers" },
+  { to: "/admin/inventory/issuances", label: "Issuances", icon: UserPlus, sub: "issuances" },
+  { to: "/admin/inventory/write-offs", label: "Write-offs", icon: ShieldCheck, sub: "write_offs" },
+  { to: "/admin/inventory/stock", label: "Stock Report", icon: Wallet, sub: "stock_report" },
+  { to: "/admin/inventory/rate-cards", label: "Vendor Rate Cards", icon: FileText, sub: "rate_cards" },
 ];
 
 const payrollChildren: LeafItem[] = [
