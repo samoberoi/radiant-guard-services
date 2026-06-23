@@ -113,7 +113,6 @@ function GRNPage() {
 
   const vMap = useMemo(() => new Map(vendors.map((v) => [v.id, v.name])), [vendors]);
   const wMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w.name])), [warehouses]);
-  const poMap = useMemo(() => new Map(pos.map((p) => [p.id, p])), [pos]);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [viewing, setViewing] = useState<GRN | null>(null);
@@ -442,7 +441,6 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
 }
 
 function GRNViewDialog({ open, onOpenChange, grn }: { open: boolean; onOpenChange: (o: boolean) => void; grn: GRN | null }) {
-  const { markPristine } = useDialogDirty();
   const { data: lines = [] } = useQuery({
     queryKey: ["inv", "grn-lines", grn?.id],
     enabled: !!grn,
@@ -462,11 +460,13 @@ function GRNViewDialog({ open, onOpenChange, grn }: { open: boolean; onOpenChang
           <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm">
             <span className="text-muted-foreground">Vendor invoice attached</span>
             <Button size="sm" variant="outline" onClick={async () => {
+              const invoiceWindow = window.open("about:blank", "_blank");
+              if (invoiceWindow) invoiceWindow.opener = null;
               const filePath = grn.vendor_invoice_url!.replace(/^\/+/, "").replace(/^vendor-invoices\//, "");
               const { data, error } = await supabase.storage.from("vendor-invoices").createSignedUrl(filePath, 300);
-              if (error || !data?.signedUrl) { toast.error("Could not open invoice"); return; }
-              const popup = window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-              if (!popup) window.location.href = data.signedUrl;
+              if (error || !data?.signedUrl) { invoiceWindow?.close(); toast.error("Could not open invoice"); return; }
+              if (invoiceWindow) invoiceWindow.location.href = data.signedUrl;
+              else window.location.href = data.signedUrl;
             }}><FileText className="h-4 w-4" />View Invoice</Button>
           </div>
         )}
@@ -491,7 +491,7 @@ function GRNViewDialog({ open, onOpenChange, grn }: { open: boolean; onOpenChang
             </tbody>
           </table>
         </div>
-        <DialogFooter><Button variant="outline" onClick={() => { markPristine(); onOpenChange(false); }}>Close</Button></DialogFooter>
+        <DialogFooter><CloseDialogButton onClose={() => onOpenChange(false)} /></DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -507,4 +507,9 @@ function CancelBtn({ saving, onClose }: { saving: boolean; onClose: () => void }
   return (
     <Button variant="outline" disabled={saving} onClick={() => { markPristine(); onClose(); }}>Cancel</Button>
   );
+}
+
+function CloseDialogButton({ onClose }: { onClose: () => void }) {
+  const { markPristine } = useDialogDirty();
+  return <Button variant="outline" onClick={() => { markPristine(); onClose(); }}>Close</Button>;
 }
