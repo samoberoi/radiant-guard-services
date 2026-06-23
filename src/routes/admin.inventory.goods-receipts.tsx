@@ -838,7 +838,8 @@ function FieldOfficerGRNFormDialog({ open, onOpenChange, candidateId, userId, pe
       const grn_number = fmtNumber("GRN", n);
       const { data: ins, error } = await supabase.from("inv_goods_receipts" as never).insert({
         grn_number, po_id: null, vendor_id: null, warehouse_id: null,
-        transfer_id: null, demand_id: selected.demand_id, branch_id: null,
+        transfer_id: null, demand_id: selected.demand_id,
+        branch_id: selected.source_type === "branch" ? selected.source_id : null,
         kind: "issuance",
         receipt_date: receiptDate, vendor_invoice_number: "", vendor_challan_number: "",
         vehicle_number: "", notes: notes || `Receipt against issuance ${selected.issuance_number}`,
