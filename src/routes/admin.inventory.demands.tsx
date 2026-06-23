@@ -295,7 +295,7 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, branchLabel, 
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{initial ? `Edit Demand ${initial.demand_number}` : "New Demand"}</DialogTitle>
-          <DialogDescription>{isFieldOfficer ? "Request stock from your branch or the central warehouse." : "Ask the warehouse for the items you need. Submitting sends it for fulfillment."}</DialogDescription>
+          <DialogDescription>{isFieldOfficer ? "Request stock from the central warehouse or any branch." : "Ask the warehouse for the items you need. Submitting sends it for fulfillment."}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
@@ -307,11 +307,13 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, branchLabel, 
             {isFieldOfficer && (
               <div className="grid gap-2">
                 <Label>Request From</Label>
-                <Select value={source} onValueChange={(v) => setSource(v as "warehouse" | "branch")}>
-                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                <Select value={source} onValueChange={(v) => setSource(v)}>
+                  <SelectTrigger className="h-10"><SelectValue placeholder="Choose source" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="warehouse">Central Warehouse</SelectItem>
-                    <SelectItem value="branch">{branchLabel || "My Branch"}</SelectItem>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={b.id}>{b.name}{b.code ? ` (${b.code})` : ""}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
