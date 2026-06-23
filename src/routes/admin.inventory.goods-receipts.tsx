@@ -374,12 +374,11 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
               <SelectContent>{pos.map((p) => <SelectItem key={p.id} value={p.id}>{p.po_number}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="grid gap-4 sm:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2"><Label>Receipt Date</Label><Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} /></div>
             <div className="grid gap-2"><Label>Vendor Invoice #</Label><Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} /></div>
-            <div className="grid gap-2"><Label>Challan #</Label><Input value={challanNo} onChange={(e) => setChallanNo(e.target.value)} /></div>
-            <div className="grid gap-2"><Label>Vehicle #</Label><Input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} /></div>
           </div>
+
 
           {lines.length > 0 && (
             <div className="overflow-x-clip rounded-xl border border-border">
