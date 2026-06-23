@@ -35,7 +35,7 @@ type Warehouse = { id: string; name: string };
 type Branch = { id: string; name: string };
 type Candidate = { id: string; full_name: string; employee_code: string; role_key: string; unit_id: string | null; reports_to: string | null };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
-type Line = { id?: string; item_id: string; size_value: string; qty: number; condition: string; notes: string };
+type Line = { id?: string; item_id: string; size_value: string; qty: number; requested_qty: number };
 type OpenDemand = {
   id: string; demand_number: string; branch_id: string; requester_candidate_id: string | null;
   requester_id: string | null; fulfillment_source: string; status: string;
