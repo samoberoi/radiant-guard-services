@@ -15,6 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType } from "@/lib/inv-helpers";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+import { useAuth, SUPER_ADMIN_PHONE } from "@/lib/auth";
+
 
 
 export const Route = createFileRoute("/admin/inventory/issuances")({ component: IssuancesPage });
@@ -29,7 +31,7 @@ type Issuance = {
 };
 type Warehouse = { id: string; name: string };
 type Branch = { id: string; name: string };
-type Candidate = { id: string; full_name: string; employee_code: string; role_key: string };
+type Candidate = { id: string; full_name: string; employee_code: string; role_key: string; unit_id: string | null; reports_to: string | null };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
 type Line = { id?: string; item_id: string; size_value: string; qty: number; condition: string; notes: string };
 
@@ -62,11 +64,12 @@ function IssuancesPage() {
   const { data: candidates = [] } = useQuery({
     queryKey: ["candidates-active-min"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("candidates" as never).select("id,full_name,employee_code,role_key").eq("status", "active").order("full_name");
+      const { data, error } = await supabase.from("candidates" as never).select("id,full_name,employee_code,role_key,unit_id,reports_to").eq("status", "active").order("full_name");
       if (error) throw error;
       return (data as unknown as Candidate[]) ?? [];
     },
   });
+
   const { data: items = [] } = useQuery({
     queryKey: ["inv", "items-list"],
     queryFn: async () => {
@@ -76,11 +79,26 @@ function IssuancesPage() {
     },
   });
 
+  const { user } = useAuth();
+  const myPhone = user?.phone?.replace(/\D/g, "").slice(-10) ?? "";
+  const isSuperAdmin = myPhone === SUPER_ADMIN_PHONE;
+  const { data: me = null } = useQuery({
+    queryKey: ["candidate-by-phone", myPhone],
+    enabled: !!myPhone && !isSuperAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("candidates" as never).select("id,full_name,employee_code,role_key,unit_id,reports_to").eq("mobile", myPhone).maybeSingle();
+      if (error) throw error;
+      return (data as unknown as Candidate) ?? null;
+    },
+  });
+  const isFieldOfficer = !isSuperAdmin && me?.role_key === "field_officer";
+
   const fos = useMemo(() => candidates.filter((c) => /field|fo|supervisor|officer/i.test(c.role_key)), [candidates]);
   const guards = useMemo(() => candidates.filter((c) => !/field|fo|supervisor|officer|manager|head/i.test(c.role_key)), [candidates]);
   const candMap = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
   const whMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w.name])), [warehouses]);
   const brMap = useMemo(() => new Map(branches.map((b) => [b.id, b.name])), [branches]);
+
 
   const locName = (type: string, id: string): string => {
     if (type === "warehouse") return whMap.get(id) ?? "—";
@@ -179,7 +197,7 @@ function IssuancesPage() {
         </div>
       </div>
 
-      <IssuanceDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setActive(null); }} initial={active} warehouses={warehouses} branches={branches} fos={fos} guards={guards} candidates={candidates} items={items} onSaved={invalidate} />
+      <IssuanceDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setActive(null); }} initial={active} warehouses={warehouses} branches={branches} fos={fos} guards={guards} candidates={candidates} items={items} onSaved={invalidate} me={me} isFieldOfficer={isFieldOfficer} />
     </div>
   );
 }
@@ -192,16 +210,18 @@ const ISSUANCE_TYPES = [
   { key: "warehouse_to_guard", label: "Warehouse → Guard", source: "warehouse", dest: "guard" },
 ] as const;
 
-function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos, guards, candidates, items, onSaved }: {
+function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos, guards, candidates, items, onSaved, me, isFieldOfficer }: {
   open: boolean; onOpenChange: (o: boolean) => void; initial: Issuance | null;
   warehouses: Warehouse[]; branches: Branch[]; fos: Candidate[]; guards: Candidate[]; candidates: Candidate[]; items: Item[];
   onSaved: () => void;
+  me: Candidate | null;
+  isFieldOfficer: boolean;
 }) {
-  const [type, setType] = useState<string>("branch_to_guard");
+  const [type, setType] = useState<string>(isFieldOfficer ? "fo_to_guard" : "branch_to_guard");
   const [sourceId, setSourceId] = useState("");
   const [destId, setDestId] = useState("");
   const [issDate, setIssDate] = useState(new Date().toISOString().slice(0, 10));
-  const [ackMethod, setAckMethod] = useState("signature");
+  const [ackMethod, setAckMethod] = useState("otp");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [saving, setSaving] = useState(false);
@@ -211,6 +231,13 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
   const isDraft = !initial || initial.status === "draft";
   const isIssued = initial?.status === "issued";
 
+  // When FO is the user: filter the destination guards to those reporting to them
+  // (or sharing the same unit).
+  const foScopedGuards = useMemo(() => {
+    if (!isFieldOfficer || !me) return guards;
+    return guards.filter((g) => g.reports_to === me.id || (me.unit_id && g.unit_id === me.unit_id));
+  }, [guards, isFieldOfficer, me]);
+
   function sourceOptions() {
     if (meta.source === "warehouse") return warehouses;
     if (meta.source === "branch") return branches;
@@ -219,14 +246,14 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
   }
   function destOptions() {
     if (meta.dest === "field_officer") return fos;
-    if (meta.dest === "guard") return guards;
+    if (meta.dest === "guard") return isFieldOfficer ? foScopedGuards : guards;
     return [];
   }
 
   useResetOnOpen(open, async () => {
     if (initial) {
       setType(initial.issuance_type); setSourceId(initial.source_id); setDestId(initial.destination_id);
-      setIssDate(initial.issuance_date); setAckMethod(initial.ack_method || "signature"); setNotes(initial.notes);
+      setIssDate(initial.issuance_date); setAckMethod(initial.ack_method || "otp"); setNotes(initial.notes);
       const { data } = await supabase.from("inv_issuance_lines" as never).select("*").eq("issuance_id", initial.id).order("sort_order");
       setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => ({
         id: String(r.id),
@@ -236,12 +263,17 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
         condition: String(r.condition ?? "new"),
         notes: String(r.notes ?? ""),
       })));
+    } else if (isFieldOfficer && me) {
+      setType("fo_to_guard"); setSourceId(me.id); setDestId("");
+      setIssDate(new Date().toISOString().slice(0, 10));
+      setAckMethod("otp"); setNotes(""); setLines([]);
     } else {
       setType("branch_to_guard"); setSourceId(""); setDestId("");
       setIssDate(new Date().toISOString().slice(0, 10));
-      setAckMethod("signature"); setNotes(""); setLines([]);
+      setAckMethod("otp"); setNotes(""); setLines([]);
     }
   });
+
 
   async function saveOrIssue(target: "draft" | "issue") {
     if (!sourceId || !destId) { toast.error("Pick source and destination"); return; }
@@ -276,8 +308,12 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
 
       if (target === "issue" && id) {
         const { data: { user } } = await supabase.auth.getUser();
+        const otp = ackMethod === "otp"
+          ? String(Math.floor(100000 + Math.random() * 900000))
+          : null;
         await supabase.from("inv_issuances" as never).update({
           status: "issued", issued_by: user?.id ?? null, issued_at: new Date().toISOString(),
+          otp_code: otp,
         } as never).eq("id", id);
         // Post movements: out from source, in to destination
         const movs = lines.flatMap((l) => [
@@ -285,7 +321,9 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
           { movement_type: `ISSUE_${meta.dest.toUpperCase()}_IN`, location_type: meta.dest as LocationType, location_id: destId, item_id: l.item_id, size_value: l.size_value, qty_change: l.qty, reference_type: "issuance", reference_id: id! },
         ]);
         await postMovements(movs);
+        if (otp) toast.message(`OTP for receiver: ${otp}`, { description: "Share with the guard — they'll enter it on their profile to confirm receipt." });
       }
+
 
       void logActivity({ module: MODULE, action: target === "issue" ? "issue" : (initial ? "update" : "create"), entityType: ENTITY, entityId: id, entityLabel: initial?.issuance_number ?? "Issuance" });
       toast.success(target === "issue" ? "Issued — stock moved" : "Saved");
@@ -321,23 +359,32 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
-          <div className="grid gap-2"><Label>Type</Label>
-            <Select value={type} onValueChange={(v) => { setType(v); setSourceId(""); setDestId(""); }} disabled={!isDraft}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{ISSUANCE_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2"><Label>From ({meta.source.replace("_", " ")})</Label>
-              <Select value={sourceId} onValueChange={setSourceId} disabled={!isDraft}>
-                <SelectTrigger><SelectValue placeholder="Pick" /></SelectTrigger>
-                <SelectContent>{sourceOptions().map((o) => <SelectItem key={o.id} value={o.id}>{"full_name" in o ? `${o.full_name} (${o.employee_code})` : o.name}</SelectItem>)}</SelectContent>
+          {!isFieldOfficer && (
+            <div className="grid gap-2"><Label>Type</Label>
+              <Select value={type} onValueChange={(v) => { setType(v); setSourceId(""); setDestId(""); }} disabled={!isDraft}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>{ISSUANCE_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2"><Label>To ({meta.dest.replace("_", " ")})</Label>
+          )}
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {!isFieldOfficer && (
+              <div className="grid gap-2"><Label>From ({meta.source.replace("_", " ")})</Label>
+                <Select value={sourceId} onValueChange={setSourceId} disabled={!isDraft}>
+                  <SelectTrigger><SelectValue placeholder="Pick" /></SelectTrigger>
+                  <SelectContent>{sourceOptions().map((o) => <SelectItem key={o.id} value={o.id}>{"full_name" in o ? `${o.full_name} (${o.employee_code})` : o.name}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
+            {isFieldOfficer && (
+              <div className="grid gap-2"><Label>From (Field Officer)</Label>
+                <Input value={me ? `${me.full_name} (${me.employee_code ?? ""})` : ""} disabled />
+              </div>
+            )}
+            <div className="grid gap-2"><Label>Guard</Label>
               <Select value={destId} onValueChange={setDestId} disabled={!isDraft}>
-                <SelectTrigger><SelectValue placeholder="Pick" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={isFieldOfficer && destOptions().length === 0 ? "No guards assigned to you" : "Pick guard"} /></SelectTrigger>
                 <SelectContent>{destOptions().map((o) => <SelectItem key={o.id} value={o.id}>{"full_name" in o ? `${o.full_name} (${o.employee_code})` : (o as { name: string }).name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -346,14 +393,15 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
               <Select value={ackMethod} onValueChange={setAckMethod} disabled={initial?.status === "acknowledged"}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="otp">OTP</SelectItem>
                   <SelectItem value="signature">Signature</SelectItem>
                   <SelectItem value="photo">Photo</SelectItem>
-                  <SelectItem value="otp">OTP</SelectItem>
                   <SelectItem value="thumbprint">Thumbprint</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
+
 
           <div>
             <div className="mb-2 flex items-center justify-between">
@@ -411,7 +459,9 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
           {isDraft && <Button variant="outline" onClick={() => saveOrIssue("draft")} disabled={saving}>Save Draft</Button>}
           {isDraft && <Button onClick={() => saveOrIssue("issue")} disabled={saving}>{saving ? "Issuing…" : "Issue Now"}</Button>}
-          {isIssued && <Button onClick={acknowledge} disabled={saving}>Mark Acknowledged</Button>}
+          {isIssued && initial?.ack_method !== "otp" && <Button onClick={acknowledge} disabled={saving}>Mark Acknowledged</Button>}
+          {isIssued && initial?.ack_method === "otp" && <span className="self-center text-xs text-muted-foreground">Waiting for guard to enter OTP</span>}
+
         </DialogFooter>
       </DialogContent>
     </Dialog>

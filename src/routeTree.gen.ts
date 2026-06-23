@@ -24,6 +24,7 @@ import { Route as AdminPayrollDaysManagerRouteImport } from './routes/admin.payr
 import { Route as AdminPayrollRouteImport } from './routes/admin.payroll'
 import { Route as AdminOffboardingReasonManagerRouteImport } from './routes/admin.offboarding-reason-manager'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminMyInventoryRouteImport } from './routes/admin.my-inventory'
 import { Route as AdminLwfManagerRouteImport } from './routes/admin.lwf-manager'
 import { Route as AdminLanguageManagerRouteImport } from './routes/admin.language-manager'
 import { Route as AdminInvoiceRouteImport } from './routes/admin.invoice'
@@ -158,6 +159,11 @@ const AdminOffboardingReasonManagerRoute =
 const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMyInventoryRoute = AdminMyInventoryRouteImport.update({
+  id: '/my-inventory',
+  path: '/my-inventory',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminLwfManagerRoute = AdminLwfManagerRouteImport.update({
@@ -497,6 +503,7 @@ export interface FileRoutesByFullPath {
   '/admin/invoice': typeof AdminInvoiceRouteWithChildren
   '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
+  '/admin/my-inventory': typeof AdminMyInventoryRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offboarding-reason-manager': typeof AdminOffboardingReasonManagerRoute
   '/admin/payroll': typeof AdminPayrollRouteWithChildren
@@ -570,6 +577,7 @@ export interface FileRoutesByTo {
   '/admin/inventory': typeof AdminInventoryRouteWithChildren
   '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
+  '/admin/my-inventory': typeof AdminMyInventoryRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offboarding-reason-manager': typeof AdminOffboardingReasonManagerRoute
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
@@ -645,6 +653,7 @@ export interface FileRoutesById {
   '/admin/invoice': typeof AdminInvoiceRouteWithChildren
   '/admin/language-manager': typeof AdminLanguageManagerRoute
   '/admin/lwf-manager': typeof AdminLwfManagerRoute
+  '/admin/my-inventory': typeof AdminMyInventoryRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offboarding-reason-manager': typeof AdminOffboardingReasonManagerRoute
   '/admin/payroll': typeof AdminPayrollRouteWithChildren
@@ -722,6 +731,7 @@ export interface FileRouteTypes {
     | '/admin/invoice'
     | '/admin/language-manager'
     | '/admin/lwf-manager'
+    | '/admin/my-inventory'
     | '/admin/notifications'
     | '/admin/offboarding-reason-manager'
     | '/admin/payroll'
@@ -795,6 +805,7 @@ export interface FileRouteTypes {
     | '/admin/inventory'
     | '/admin/language-manager'
     | '/admin/lwf-manager'
+    | '/admin/my-inventory'
     | '/admin/notifications'
     | '/admin/offboarding-reason-manager'
     | '/admin/payroll-days-manager'
@@ -869,6 +880,7 @@ export interface FileRouteTypes {
     | '/admin/invoice'
     | '/admin/language-manager'
     | '/admin/lwf-manager'
+    | '/admin/my-inventory'
     | '/admin/notifications'
     | '/admin/offboarding-reason-manager'
     | '/admin/payroll'
@@ -1027,6 +1039,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/admin/notifications'
       preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/my-inventory': {
+      id: '/admin/my-inventory'
+      path: '/my-inventory'
+      fullPath: '/admin/my-inventory'
+      preLoaderRoute: typeof AdminMyInventoryRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/lwf-manager': {
@@ -1596,6 +1615,7 @@ interface AdminRouteChildren {
   AdminInvoiceRoute: typeof AdminInvoiceRouteWithChildren
   AdminLanguageManagerRoute: typeof AdminLanguageManagerRoute
   AdminLwfManagerRoute: typeof AdminLwfManagerRoute
+  AdminMyInventoryRoute: typeof AdminMyInventoryRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminOffboardingReasonManagerRoute: typeof AdminOffboardingReasonManagerRoute
   AdminPayrollRoute: typeof AdminPayrollRouteWithChildren
@@ -1637,6 +1657,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminInvoiceRoute: AdminInvoiceRouteWithChildren,
   AdminLanguageManagerRoute: AdminLanguageManagerRoute,
   AdminLwfManagerRoute: AdminLwfManagerRoute,
+  AdminMyInventoryRoute: AdminMyInventoryRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminOffboardingReasonManagerRoute: AdminOffboardingReasonManagerRoute,
   AdminPayrollRoute: AdminPayrollRouteWithChildren,

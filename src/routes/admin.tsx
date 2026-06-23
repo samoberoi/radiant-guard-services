@@ -116,10 +116,11 @@ const inventoryChildren: LeafItem[] = [
   { to: "/admin/inventory/goods-receipts", label: "Delivery Challans", icon: ClipboardList, sub: "goods_receipts" },
   { to: "/admin/inventory/transfers", label: "Transfers", icon: Boxes, sub: "transfers" },
   { to: "/admin/inventory/issuances", label: "Issuances", icon: UserPlus, sub: "issuances" },
-  
+
   { to: "/admin/inventory/stock", label: "Stock Report", icon: Wallet, sub: "stock_report" },
   { to: "/admin/inventory/rate-cards", label: "Vendor Rate Cards", icon: FileText, sub: "rate_cards" },
 ];
+
 
 const payrollChildren: LeafItem[] = [
   { to: "/admin/payroll", label: "Payroll Runs", icon: Wallet },
@@ -138,7 +139,12 @@ function AdminLayout() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { can, canSub, isLoading: permsLoading, isSuperAdmin, roleKey } = useCurrentPermissions();
   const dashboardHref =
-    roleKey === "field_officer" && !isSuperAdmin ? "/admin/field-dashboard" : "/admin/dashboard";
+    roleKey === "guard" && !isSuperAdmin
+      ? "/admin/my-inventory"
+      : roleKey === "field_officer" && !isSuperAdmin
+        ? "/admin/field-dashboard"
+        : "/admin/dashboard";
+
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
@@ -221,6 +227,17 @@ function AdminLayout() {
   };
   useEffect(() => {
     if (!isReady || permsLoading || !user) return;
+    // Guards have no module-based permissions; route them to their My Inventory page.
+    if (roleKey === "guard" && !isSuperAdmin) {
+      if (
+        pathname !== "/admin/my-inventory" &&
+        pathname !== "/admin/profile" &&
+        !pathname.startsWith("/admin/my-inventory/")
+      ) {
+        navigate({ to: "/admin/my-inventory", replace: true });
+      }
+      return;
+    }
     const hit = pathToModule.find((p) => pathname === p.prefix || pathname.startsWith(p.prefix + "/"));
     if (!hit) return;
     if (!can(hit.module)) {
@@ -236,7 +253,8 @@ function AdminLayout() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, permsLoading, isSuperAdmin, isReady]);
+  }, [pathname, permsLoading, isSuperAdmin, isReady, roleKey]);
+
 
   useEffect(() => {
     if (!isReady) return;
@@ -295,14 +313,23 @@ function AdminLayout() {
     !can("payroll") &&
     !can("invoice");
   const filteredInventoryChildren = useMemo(
-    () =>
-      isSuperAdmin
-        ? inventoryChildren
-        : inventoryChildren.filter((c) => !c.sub || canSub("inventory", c.sub)),
+    () => {
+      if (isSuperAdmin) return inventoryChildren;
+      const list = inventoryChildren.filter((c) => !c.sub || canSub("inventory", c.sub));
+      // Field officers do not see the Inventory Command Center dashboard.
+      if (roleKey === "field_officer") return list.filter((c) => c.to !== "/admin/inventory");
+      return list;
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [isSuperAdmin, permsLoading, roleKey],
   );
+  const isGuard = !isSuperAdmin && roleKey === "guard";
+  const guardGroups: GroupItem[] = useMemo(() => [
+    { key: "my-inventory", label: "My Inventory", icon: Boxes, to: "/admin/my-inventory", activePrefixes: ["/admin/my-inventory"] },
+    { key: "profile", label: "My Profile", icon: Users, to: "/admin/profile", activePrefixes: ["/admin/profile"] },
+  ], []);
   const visibleGroups = (() => {
+    if (isGuard) return guardGroups;
     if (isInventoryOnly) {
       return filteredInventoryChildren.map<GroupItem>((c, idx) => ({
         key: c.to,
@@ -317,6 +344,7 @@ function AdminLayout() {
       .filter((g) => !g.module || can(g.module))
       .map((g) => (g.key === "inventory" ? { ...g, children: filteredInventoryChildren } : g));
   })();
+
   const isGroupActive = (g: GroupItem) =>
     (g.activePrefixes ?? []).some((p) => {
       if (g.exact) return pathname === p;
