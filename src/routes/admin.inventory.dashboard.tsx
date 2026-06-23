@@ -587,10 +587,6 @@ export function InventoryOwnerDashboard() {
             <WorkflowTile to="/admin/inventory/issuances" label="Issuances" value={issuanceSplit.total} icon={UserPlus} accent="text-teal-500"
               chips={[{ label: "Issued", value: issuanceSplit.issued, tone: "amber" }, { label: "Ack.", value: issuanceSplit.ack, tone: "emerald" }]} />
           )}
-          {canSub("inventory", "write_offs") && (
-            <WorkflowTile to="/admin/inventory/write-offs" label="Write-offs" value={woSplit.total} icon={ShieldCheck} accent="text-rose-500"
-              chips={[{ label: "Pending", value: woSplit.pending, tone: "amber" }, { label: "Approved", value: woSplit.approved, tone: "emerald" }]} />
-          )}
         </div>
 
       </div>
