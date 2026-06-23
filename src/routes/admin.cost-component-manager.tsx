@@ -58,6 +58,7 @@ type CostComponent = {
   notes: string;
   enabled: boolean;
   sort_order: number;
+  deduction_calc_type: "earned_salary" | "fixed_amount";
 };
 
 type AllowanceRow = { id: string; name: string; display_name: string; short_name: string };
