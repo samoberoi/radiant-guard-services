@@ -479,7 +479,7 @@ function DashboardPage() {
       <div className="space-y-6 p-4 sm:p-6">
         <PageHeader
           title="Inventory Dashboard"
-          description="Live inventory overview with stock value, quantities, procurement, transfers, issuances, write-offs, and adjustments."
+          description="Live inventory overview with stock value, quantities, procurement, transfers, issuances, and write-offs."
           crumbs={[{ label: "Dashboard" }]}
         />
         <InventoryOwnerDashboard />

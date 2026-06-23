@@ -149,10 +149,6 @@ export function InventoryOwnerDashboard() {
     const { data, error } = await supabase.from("inv_issuances" as never).select("id,status");
     if (error) throw error; return (data as unknown as { id: string; status: string }[]) ?? [];
   }});
-  const adjustmentsQ = useQuery({ queryKey: ["dash2", "adjustments"], queryFn: async () => {
-    const { data, error } = await supabase.from("inv_adjustments" as never).select("id,status");
-    if (error) throw error; return (data as unknown as { id: string; status: string }[]) ?? [];
-  }});
 
   const items = itemsQ.data ?? [];
   const cats = catsQ.data ?? [];
@@ -170,7 +166,7 @@ export function InventoryOwnerDashboard() {
   const whs = whsQ.data ?? [];
   const transfers = transfersQ.data ?? [];
   const issuances = issuancesQ.data ?? [];
-  const adjustments = adjustmentsQ.data ?? [];
+  
   const { canSub } = useCurrentPermissions();
 
   const totalStockQty = useMemo(() => balances.reduce((s, b) => s + Math.max(0, Number(b.qty || 0)), 0), [balances]);
@@ -200,11 +196,6 @@ export function InventoryOwnerDashboard() {
     const approved = wos.filter((x) => x.status === "approved").length;
     return { total: wos.length, pending, approved };
   }, [wos]);
-  const adjSplit = useMemo(() => {
-    const draft = adjustments.filter((a) => a.status === "draft").length;
-    const posted = adjustments.filter((a) => a.status === "posted").length;
-    return { total: adjustments.length, draft, posted };
-  }, [adjustments]);
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
@@ -477,10 +468,6 @@ export function InventoryOwnerDashboard() {
           {canSub("inventory", "write_offs") && (
             <WorkflowTile to="/admin/inventory/write-offs" label="Write-offs" value={woSplit.total} icon={ShieldCheck} accent="text-rose-500"
               chips={[{ label: "Pending", value: woSplit.pending, tone: "amber" }, { label: "Approved", value: woSplit.approved, tone: "emerald" }]} />
-          )}
-          {canSub("inventory", "adjustments") && (
-            <WorkflowTile to="/admin/inventory/adjustments" label="Adjustments" value={adjSplit.total} icon={SlidersHorizontal} accent="text-amber-500"
-              chips={[{ label: "Draft", value: adjSplit.draft, tone: "amber" }, { label: "Posted", value: adjSplit.posted, tone: "emerald" }]} />
           )}
         </div>
 
