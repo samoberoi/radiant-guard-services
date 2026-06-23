@@ -336,7 +336,7 @@ export function InventoryOwnerDashboard() {
   const grnsInPeriod = useMemo(() => grns.filter((g) => inPeriod(g.receipt_date)).length, [grns, w]);
   const grnsPrev = useMemo(() => grns.filter((g) => inPrevPeriod(g.receipt_date)).length, [grns, w]);
   const openPOs = pos.filter((p) => ["draft", "approved", "partial"].includes(p.status)).length;
-  const writeoffCur = useMemo(() => wos.filter((x) => inPeriod(x.writeoff_date)).reduce((s, x) => s + Number(x.recovery_amount || 0), 0), [wos, w]);
+  
 
   // Low stock
   const lowStock = useMemo(() => {
