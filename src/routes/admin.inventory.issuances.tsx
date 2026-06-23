@@ -479,7 +479,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{initial ? `Issuance ${initial.issuance_number}` : "New Issuance"}</DialogTitle>
-          <DialogDescription>{initial?.status === "acknowledged" ? "Acknowledged." : isIssued ? "Issued — waiting for acknowledgement." : "Build and issue."}</DialogDescription>
+          <DialogDescription>{initial?.status === "acknowledged" ? "Completed." : isIssued ? "Issued — waiting for acknowledgement." : "Build and issue."}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
