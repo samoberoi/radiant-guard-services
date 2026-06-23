@@ -227,6 +227,17 @@ function AdminLayout() {
   };
   useEffect(() => {
     if (!isReady || permsLoading || !user) return;
+    // Guards have no module-based permissions; route them to their My Inventory page.
+    if (roleKey === "guard" && !isSuperAdmin) {
+      if (
+        pathname !== "/admin/my-inventory" &&
+        pathname !== "/admin/profile" &&
+        !pathname.startsWith("/admin/my-inventory/")
+      ) {
+        navigate({ to: "/admin/my-inventory", replace: true });
+      }
+      return;
+    }
     const hit = pathToModule.find((p) => pathname === p.prefix || pathname.startsWith(p.prefix + "/"));
     if (!hit) return;
     if (!can(hit.module)) {
@@ -242,7 +253,8 @@ function AdminLayout() {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pathname, permsLoading, isSuperAdmin, isReady]);
+  }, [pathname, permsLoading, isSuperAdmin, isReady, roleKey]);
+
 
   useEffect(() => {
     if (!isReady) return;
