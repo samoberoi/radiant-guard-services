@@ -268,10 +268,7 @@ function AllowanceManagerPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {/* OT column rendered inline below */}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
+
               {filtered.map((i) => (
                 <tr key={i.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-medium text-foreground">
