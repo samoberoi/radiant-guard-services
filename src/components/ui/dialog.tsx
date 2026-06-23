@@ -155,7 +155,7 @@ const DialogContent = React.forwardRef<
     setPristine(true);
     // Note: action words like "add"/"import" are intentionally excluded because
     // dialogs also contain secondary controls such as "Add component" pickers.
-    const SAVE_RX = /^(save|update|create|submit|confirm|apply|generate|send|approve|sign|next|continue|finish|done|post)\b/i;
+    const SAVE_RX = /^(save|update|create|submit|confirm|apply|generate|send|approve|sign|next|continue|finish|done)\b/i;
 
     const markDirty = (e: Event) => {
       // Programmatic value changes (React-driven prefill) shouldn't dirty.
