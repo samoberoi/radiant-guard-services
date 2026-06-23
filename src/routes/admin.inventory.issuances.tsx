@@ -575,23 +575,24 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
                   <tr>
                     <th className="px-3 py-2">Item</th>
                     <th className="px-3 py-2 w-16">Size</th>
-                    <th className="px-3 py-2 w-24 text-right">Requested</th>
+                    {!isFreeIssue && <th className="px-3 py-2 w-24 text-right">Requested</th>}
                     {isDraft && <th className="px-3 py-2 w-24 text-right">In Stock</th>}
                     <th className="px-3 py-2 w-24 text-right">Issued</th>
+                    {isDraft && isFreeIssue && <th className="px-3 py-2 w-10" />}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {lines.map((l, idx) => {
                     const it = itemMap.get(l.item_id);
                     const avail = availableFor(l);
-                    const cap = Math.min(l.requested_qty, avail);
-                    const over = isDraft && (l.qty > avail || l.qty > l.requested_qty);
+                    const cap = isFreeIssue ? avail : Math.min(l.requested_qty, avail);
+                    const over = isDraft && (l.qty > avail || (!isFreeIssue && l.qty > l.requested_qty));
                     return (
                       <tr key={idx} className={over ? "bg-destructive/5" : undefined}>
                         <td className="px-3 py-2 font-medium">{it?.name ?? "—"}</td>
                         <td className="px-3 py-2 text-muted-foreground">{l.size_value || "—"}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{l.requested_qty}</td>
-                        {isDraft && <td className={`px-3 py-2 text-right tabular-nums ${!sourceId ? "text-muted-foreground" : avail <= 0 ? "text-destructive" : avail < l.requested_qty ? "text-amber-600" : "text-muted-foreground"}`}>{sourceId ? avail : "—"}</td>}
+                        {!isFreeIssue && <td className="px-3 py-2 text-right tabular-nums">{l.requested_qty}</td>}
+                        {isDraft && <td className={`px-3 py-2 text-right tabular-nums ${!sourceId ? "text-muted-foreground" : avail <= 0 ? "text-destructive" : (!isFreeIssue && avail < l.requested_qty) ? "text-amber-600" : "text-muted-foreground"}`}>{sourceId ? avail : "—"}</td>}
                         <td className="px-2 py-1.5">
                           {isDraft
                             ? <Input
@@ -604,17 +605,22 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
                                 onChange={(e) => {
                                   const raw = Number(e.target.value) || 0;
                                   let v = Math.max(0, raw);
-                                  if (v > l.requested_qty) { v = l.requested_qty; toast.error(`Issued cannot exceed requested (${l.requested_qty})`); }
+                                  if (!isFreeIssue && v > l.requested_qty) { v = l.requested_qty; toast.error(`Issued cannot exceed requested (${l.requested_qty})`); }
                                   if (sourceId && v > avail) { v = avail; toast.error(`Only ${avail} in stock for ${it?.name ?? "item"}`); }
                                   setLines((ls) => ls.map((x, i) => i === idx ? { ...x, qty: v } : x));
                                 }}
                               />
                             : <div className="text-right tabular-nums">{l.qty}</div>}
                         </td>
+                        {isDraft && isFreeIssue && (
+                          <td className="px-2 py-1.5 text-right">
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => setLines((ls) => ls.filter((_, i) => i !== idx))}><X className="h-4 w-4" /></Button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
-                  {!lines.length && <tr><td colSpan={isDraft ? 5 : 4} className="px-3 py-6 text-center text-xs text-muted-foreground">{isBranchManager ? "Pick a demand above to load items." : "No lines."}</td></tr>}
+                  {!lines.length && <tr><td colSpan={isDraft ? (isFreeIssue ? 5 : 5) : 4} className="px-3 py-6 text-center text-xs text-muted-foreground">{isBranchManager ? "Pick a demand above to load items." : isFreeIssue && !sourceId ? "Select source to load your stock." : isFreeIssue ? "You have no stock to issue." : "No lines."}</td></tr>}
                 </tbody>
               </table>
             </div>
