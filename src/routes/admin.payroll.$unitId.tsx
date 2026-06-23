@@ -1007,7 +1007,8 @@ function PayrollUnitPage() {
                               <td className="px-3 py-2 text-right font-bold">Earned Rs.</td>
                             </tr>
                             {r.resource.components.filter((c) => Number(c.amount) > 0).map((c) => {
-                              const ratio = r.wages!.baseDays > 0 ? r.totals.tDays / r.wages!.baseDays : 0;
+                              const basePaidDays = r.totals.pDays + r.totals.otherPaidDays;
+                              const ratio = r.wages!.baseDays > 0 ? basePaidDays / r.wages!.baseDays : 0;
                               const earned = Math.round(Number(c.amount) * ratio * 100) / 100;
                               return (
                                 <tr key={`c-${c.name}`} className="border-b border-border/40">
@@ -1018,7 +1019,8 @@ function PayrollUnitPage() {
                               );
                             })}
                             {r.resource.benefits?.filter((b) => Number(b.amount) > 0).map((b) => {
-                              const ratio = r.wages!.baseDays > 0 ? r.totals.tDays / r.wages!.baseDays : 0;
+                              const basePaidDays = r.totals.pDays + r.totals.otherPaidDays;
+                              const ratio = r.wages!.baseDays > 0 ? basePaidDays / r.wages!.baseDays : 0;
                               const earned = Math.round(Number(b.amount) * ratio * 100) / 100;
                               return (
                                 <tr key={`b-${b.name}`} className="border-b border-border/40">
