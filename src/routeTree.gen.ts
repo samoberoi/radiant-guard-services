@@ -34,7 +34,6 @@ import { Route as AdminEsicBranchManagerRouteImport } from './routes/admin.esic-
 import { Route as AdminEmployeesRouteImport } from './routes/admin.employees'
 import { Route as AdminDutyManagerRouteImport } from './routes/admin.duty-manager'
 import { Route as AdminDesignationManagerRouteImport } from './routes/admin.designation-manager'
-import { Route as AdminDemandsRouteImport } from './routes/admin.demands'
 import { Route as AdminDeductionsRouteImport } from './routes/admin.deductions'
 import { Route as AdminDeductionTypeManagerRouteImport } from './routes/admin.deduction-type-manager'
 import { Route as AdminDashboardRouteImport } from './routes/admin.dashboard'
@@ -72,6 +71,7 @@ import { Route as AdminInventoryPurchaseOrdersRouteImport } from './routes/admin
 import { Route as AdminInventoryItemsRouteImport } from './routes/admin.inventory.items'
 import { Route as AdminInventoryIssuancesRouteImport } from './routes/admin.inventory.issuances'
 import { Route as AdminInventoryGoodsReceiptsRouteImport } from './routes/admin.inventory.goods-receipts'
+import { Route as AdminInventoryDemandsRouteImport } from './routes/admin.inventory.demands'
 import { Route as AdminInventoryDashboardRouteImport } from './routes/admin.inventory.dashboard'
 import { Route as AdminCustomersUnitManagerRouteImport } from './routes/admin.customers.unit-manager'
 import { Route as AdminCustomersStateManagerRouteImport } from './routes/admin.customers.state-manager'
@@ -209,11 +209,6 @@ const AdminDutyManagerRoute = AdminDutyManagerRouteImport.update({
 const AdminDesignationManagerRoute = AdminDesignationManagerRouteImport.update({
   id: '/designation-manager',
   path: '/designation-manager',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AdminDemandsRoute = AdminDemandsRouteImport.update({
-  id: '/demands',
-  path: '/demands',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminDeductionsRoute = AdminDeductionsRouteImport.update({
@@ -410,6 +405,11 @@ const AdminInventoryGoodsReceiptsRoute =
     path: '/goods-receipts',
     getParentRoute: () => AdminInventoryRoute,
   } as any)
+const AdminInventoryDemandsRoute = AdminInventoryDemandsRouteImport.update({
+  id: '/demands',
+  path: '/demands',
+  getParentRoute: () => AdminInventoryRoute,
+} as any)
 const AdminInventoryDashboardRoute = AdminInventoryDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -493,7 +493,6 @@ export interface FileRoutesByFullPath {
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/deduction-type-manager': typeof AdminDeductionTypeManagerRoute
   '/admin/deductions': typeof AdminDeductionsRoute
-  '/admin/demands': typeof AdminDemandsRoute
   '/admin/designation-manager': typeof AdminDesignationManagerRoute
   '/admin/duty-manager': typeof AdminDutyManagerRoute
   '/admin/employees': typeof AdminEmployeesRoute
@@ -525,6 +524,7 @@ export interface FileRoutesByFullPath {
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
   '/admin/inventory/dashboard': typeof AdminInventoryDashboardRoute
+  '/admin/inventory/demands': typeof AdminInventoryDemandsRoute
   '/admin/inventory/goods-receipts': typeof AdminInventoryGoodsReceiptsRoute
   '/admin/inventory/issuances': typeof AdminInventoryIssuancesRoute
   '/admin/inventory/items': typeof AdminInventoryItemsRoute
@@ -568,7 +568,6 @@ export interface FileRoutesByTo {
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/deduction-type-manager': typeof AdminDeductionTypeManagerRoute
   '/admin/deductions': typeof AdminDeductionsRoute
-  '/admin/demands': typeof AdminDemandsRoute
   '/admin/designation-manager': typeof AdminDesignationManagerRoute
   '/admin/duty-manager': typeof AdminDutyManagerRoute
   '/admin/employees': typeof AdminEmployeesRoute
@@ -598,6 +597,7 @@ export interface FileRoutesByTo {
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
   '/admin/inventory/dashboard': typeof AdminInventoryDashboardRoute
+  '/admin/inventory/demands': typeof AdminInventoryDemandsRoute
   '/admin/inventory/goods-receipts': typeof AdminInventoryGoodsReceiptsRoute
   '/admin/inventory/issuances': typeof AdminInventoryIssuancesRoute
   '/admin/inventory/items': typeof AdminInventoryItemsRoute
@@ -643,7 +643,6 @@ export interface FileRoutesById {
   '/admin/dashboard': typeof AdminDashboardRoute
   '/admin/deduction-type-manager': typeof AdminDeductionTypeManagerRoute
   '/admin/deductions': typeof AdminDeductionsRoute
-  '/admin/demands': typeof AdminDemandsRoute
   '/admin/designation-manager': typeof AdminDesignationManagerRoute
   '/admin/duty-manager': typeof AdminDutyManagerRoute
   '/admin/employees': typeof AdminEmployeesRoute
@@ -675,6 +674,7 @@ export interface FileRoutesById {
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
   '/admin/inventory/dashboard': typeof AdminInventoryDashboardRoute
+  '/admin/inventory/demands': typeof AdminInventoryDemandsRoute
   '/admin/inventory/goods-receipts': typeof AdminInventoryGoodsReceiptsRoute
   '/admin/inventory/issuances': typeof AdminInventoryIssuancesRoute
   '/admin/inventory/items': typeof AdminInventoryItemsRoute
@@ -721,7 +721,6 @@ export interface FileRouteTypes {
     | '/admin/dashboard'
     | '/admin/deduction-type-manager'
     | '/admin/deductions'
-    | '/admin/demands'
     | '/admin/designation-manager'
     | '/admin/duty-manager'
     | '/admin/employees'
@@ -753,6 +752,7 @@ export interface FileRouteTypes {
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
     | '/admin/inventory/dashboard'
+    | '/admin/inventory/demands'
     | '/admin/inventory/goods-receipts'
     | '/admin/inventory/issuances'
     | '/admin/inventory/items'
@@ -796,7 +796,6 @@ export interface FileRouteTypes {
     | '/admin/dashboard'
     | '/admin/deduction-type-manager'
     | '/admin/deductions'
-    | '/admin/demands'
     | '/admin/designation-manager'
     | '/admin/duty-manager'
     | '/admin/employees'
@@ -826,6 +825,7 @@ export interface FileRouteTypes {
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
     | '/admin/inventory/dashboard'
+    | '/admin/inventory/demands'
     | '/admin/inventory/goods-receipts'
     | '/admin/inventory/issuances'
     | '/admin/inventory/items'
@@ -870,7 +870,6 @@ export interface FileRouteTypes {
     | '/admin/dashboard'
     | '/admin/deduction-type-manager'
     | '/admin/deductions'
-    | '/admin/demands'
     | '/admin/designation-manager'
     | '/admin/duty-manager'
     | '/admin/employees'
@@ -902,6 +901,7 @@ export interface FileRouteTypes {
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
     | '/admin/inventory/dashboard'
+    | '/admin/inventory/demands'
     | '/admin/inventory/goods-receipts'
     | '/admin/inventory/issuances'
     | '/admin/inventory/items'
@@ -1109,13 +1109,6 @@ declare module '@tanstack/react-router' {
       path: '/designation-manager'
       fullPath: '/admin/designation-manager'
       preLoaderRoute: typeof AdminDesignationManagerRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/admin/demands': {
-      id: '/admin/demands'
-      path: '/demands'
-      fullPath: '/admin/demands'
-      preLoaderRoute: typeof AdminDemandsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/deductions': {
@@ -1377,6 +1370,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInventoryGoodsReceiptsRouteImport
       parentRoute: typeof AdminInventoryRoute
     }
+    '/admin/inventory/demands': {
+      id: '/admin/inventory/demands'
+      path: '/demands'
+      fullPath: '/admin/inventory/demands'
+      preLoaderRoute: typeof AdminInventoryDemandsRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
     '/admin/inventory/dashboard': {
       id: '/admin/inventory/dashboard'
       path: '/dashboard'
@@ -1507,6 +1507,7 @@ const AdminCustomersRouteWithChildren = AdminCustomersRoute._addFileChildren(
 
 interface AdminInventoryRouteChildren {
   AdminInventoryDashboardRoute: typeof AdminInventoryDashboardRoute
+  AdminInventoryDemandsRoute: typeof AdminInventoryDemandsRoute
   AdminInventoryGoodsReceiptsRoute: typeof AdminInventoryGoodsReceiptsRoute
   AdminInventoryIssuancesRoute: typeof AdminInventoryIssuancesRoute
   AdminInventoryItemsRoute: typeof AdminInventoryItemsRoute
@@ -1521,6 +1522,7 @@ interface AdminInventoryRouteChildren {
 
 const AdminInventoryRouteChildren: AdminInventoryRouteChildren = {
   AdminInventoryDashboardRoute: AdminInventoryDashboardRoute,
+  AdminInventoryDemandsRoute: AdminInventoryDemandsRoute,
   AdminInventoryGoodsReceiptsRoute: AdminInventoryGoodsReceiptsRoute,
   AdminInventoryIssuancesRoute: AdminInventoryIssuancesRoute,
   AdminInventoryItemsRoute: AdminInventoryItemsRoute,
@@ -1605,7 +1607,6 @@ interface AdminRouteChildren {
   AdminDashboardRoute: typeof AdminDashboardRoute
   AdminDeductionTypeManagerRoute: typeof AdminDeductionTypeManagerRoute
   AdminDeductionsRoute: typeof AdminDeductionsRoute
-  AdminDemandsRoute: typeof AdminDemandsRoute
   AdminDesignationManagerRoute: typeof AdminDesignationManagerRoute
   AdminDutyManagerRoute: typeof AdminDutyManagerRoute
   AdminEmployeesRoute: typeof AdminEmployeesRoute
@@ -1647,7 +1648,6 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminDashboardRoute: AdminDashboardRoute,
   AdminDeductionTypeManagerRoute: AdminDeductionTypeManagerRoute,
   AdminDeductionsRoute: AdminDeductionsRoute,
-  AdminDemandsRoute: AdminDemandsRoute,
   AdminDesignationManagerRoute: AdminDesignationManagerRoute,
   AdminDutyManagerRoute: AdminDutyManagerRoute,
   AdminEmployeesRoute: AdminEmployeesRoute,
