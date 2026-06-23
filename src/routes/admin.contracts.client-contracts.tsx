@@ -264,6 +264,7 @@ type CostComponentOption = {
   capFlatAmount: number | null;
   amount: number | null;
   state: string;
+  deductionCalcType: "earned_salary" | "fixed_amount";
 };
 
 const QK = ["admin", "client-contracts"] as const;
