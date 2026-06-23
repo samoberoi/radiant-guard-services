@@ -180,6 +180,9 @@ function AdditionList() {
           <Button onClick={() => navigate({ to: "/admin/additions", search: { mode: "create" } })} className="h-10 rounded-lg">
             <Plus className="mr-1.5 h-4 w-4" /> Add Addition
           </Button>
+          <Button variant="outline" className="h-10 rounded-lg" onClick={() => setBulkOpen(true)}>
+            <Upload className="mr-1.5 h-4 w-4" /> Bulk Upload
+          </Button>
           <Button variant="outline" disabled={filtered.length === 0} className="h-10 rounded-lg"
             onClick={() => downloadCsv(
               "additions",
