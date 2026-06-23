@@ -446,7 +446,11 @@ export function computeWages(
   );
 
   // Resolve base days from payroll-day-base method.
-  let baseDays = periodDayCount;
+  // Default base = 26 (vendor convention for contract-labour wage registers)
+  // rather than calendar days, so contracts without an explicit Payroll Day
+  // Base still match the standard register format.
+  const FALLBACK_BASE_DAYS = 26;
+  let baseDays = FALLBACK_BASE_DAYS;
   const pdb = resource.payrollDayBase;
   if (pdb) {
     if (pdb.method === "fixed_days" && pdb.fixedDays && pdb.fixedDays > 0) {
@@ -454,11 +458,13 @@ export function computeWages(
     } else if (pdb.method === "actual_minus_weekly_off") {
       // Rough approximation: assume ~4 weekly offs in the period.
       baseDays = Math.max(periodDayCount - 4, 1);
-    } else {
+    } else if (pdb.method === "actual_days") {
       baseDays = periodDayCount;
+    } else {
+      baseDays = FALLBACK_BASE_DAYS;
     }
   }
-  if (baseDays <= 0) baseDays = 30;
+  if (baseDays <= 0) baseDays = FALLBACK_BASE_DAYS;
 
   // ---- New earning model (matches vendor wage register) ----
   // 1. Per-component base earnings prorate ONLY by present days:
