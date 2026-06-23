@@ -34,12 +34,13 @@ export function useUserBranchScope(): UserBranchScope {
       if (cErr) throw cErr;
       if (!cand?.id) return null;
       const roleKey = (cand as { role_key?: string }).role_key ?? "";
+      if (roleKey === "inventory_manager") return null;
+
       const branchScopedRoles = new Set([
         "branch_manager",
         "field_officer",
         "guard",
         "security_guard",
-        "inventory_manager",
       ]);
 
       // 1) Direct branch scope row wins.
