@@ -89,6 +89,14 @@ function POPage() {
       return (data as unknown as PO[]) ?? [];
     },
   });
+  const { data: branches = [] } = useQuery({
+    queryKey: ["inv", "branches-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("branches").select("id,name,code").order("name");
+      if (error) throw error;
+      return (data as unknown as Branch[]) ?? [];
+    },
+  });
   const { data: vendors = [] } = useQuery({
     queryKey: ["inv", "vendors-list"],
     queryFn: async () => {
