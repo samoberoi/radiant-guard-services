@@ -41,7 +41,7 @@ type Cand = { id: string; full_name: string; employee_code: string; role_key: st
 type Branch = { id: string; name: string; code: string };
 type Designation = { id: string; name: string };
 type GRN = { id: string; receipt_date: string; po_id: string | null; vendor_id: string | null; status: string };
-type WriteOff = { id: string; writeoff_date: string; recovery_amount: number; status: string; location_type: string; location_id: string };
+
 type ScopedMovement = { id: string; status: string; source_type: string; source_id: string; destination_type: string; destination_id: string };
 
 type Range = "today" | "7d" | "30d" | "90d" | "mtd" | "ytd";
