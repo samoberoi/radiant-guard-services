@@ -609,6 +609,12 @@ function AllowanceFormDialog({
               <div className="text-xs text-muted-foreground">Show in dropdowns</div>
             </div>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
+          <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+            <div>
+              <div className="text-sm font-medium">Include in OT Calculation</div>
+              <div className="text-xs text-muted-foreground">If off, this allowance is excluded from the OT base amount</div>
+            </div>
+            <Switch checked={includeInOt} onCheckedChange={setIncludeInOt} />
           </div>
         </div>
         <DialogFooter>
@@ -630,6 +636,7 @@ function AllowanceFormDialog({
                 percentage: Number(percentage) || 0,
                 base_components: baseRefs,
                 cap_amount: capAmount ? Number(capAmount) : null,
+                include_in_ot: includeInOt,
               });
               setSaving(false);
               if (err) toast.error(err);
