@@ -8,8 +8,10 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useUserBranchScope } from "@/lib/use-user-branch-scope";
 
 export const Route = createFileRoute("/admin/inventory/stock")({ component: StockPage });
+
 
 type Balance = { location_type: string; location_id: string; item_id: string; size_value: string; qty: number };
 
