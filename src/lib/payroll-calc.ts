@@ -118,6 +118,7 @@ export type WageComponent = {
   baseComponents?: { label: string; operator: "+" | "-" }[];
   capAmount?: number | string | null;
   capFlatAmount?: number | string | null;
+  includeInOt?: boolean | null;
 };
 export type BenefitLike = {
   name: string;
@@ -127,6 +128,7 @@ export type BenefitLike = {
   baseComponents?: { label: string; operator: "+" | "-" }[];
   capAmount?: number | string | null;
   capFlatAmount?: number | string | null;
+  deductionCalcType?: "earned_salary" | "fixed_amount" | null;
 };
 
 export type ContractResourceLike = {
