@@ -345,7 +345,7 @@ function ProfilePage() {
         .select("id,issuance_number,issuance_date,status,issuance_type")
         .eq("destination_id", profile!.id)
         .in("destination_type", ["guard", "security_guard", "field_officer", "candidate", "employee"])
-        .in("status", ["issued", "acknowledged", "completed"])
+        .in("status", ["issued", "completed", "completed"])
         .order("issuance_date", { ascending: false });
       if (iErr) throw iErr;
       const ids = (issuances ?? []).map((r: any) => r.id);
@@ -1409,7 +1409,7 @@ function ProfilePage() {
                           × {it.qty}
                         </span>
                         <Badge
-                          variant={it.status === "acknowledged" ? "default" : "outline"}
+                          variant={it.status === "completed" ? "default" : "outline"}
                           className="capitalize"
                         >
                           {it.status}

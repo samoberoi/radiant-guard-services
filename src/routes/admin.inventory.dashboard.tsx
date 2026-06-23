@@ -252,12 +252,12 @@ export function InventoryOwnerDashboard() {
   }, [grns]);
   const transferSplit = useMemo(() => {
     const inTransit = transfers.filter((t) => ["in_transit", "dispatched"].includes(t.status)).length;
-    const ack = transfers.filter((t) => ["acknowledged", "received"].includes(t.status)).length;
+    const ack = transfers.filter((t) => ["completed", "received"].includes(t.status)).length;
     return { total: transfers.length, inTransit, ack };
   }, [transfers]);
   const issuanceSplit = useMemo(() => {
     const issued = issuances.filter((i) => i.status === "issued").length;
-    const ack = issuances.filter((i) => i.status === "acknowledged").length;
+    const ack = issuances.filter((i) => i.status === "completed").length;
     return { total: issuances.length, issued, ack };
   }, [issuances]);
 

@@ -685,7 +685,7 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, o
 
       // Mark transfer acknowledged and update fulfilled qty on demand lines
       await supabase.from("inv_transfers" as never).update({
-        status: "acknowledged",
+        status: "completed",
         received_by: user?.id ?? null, received_at: new Date().toISOString(),
       } as never).eq("id", selectedTransfer.id);
       // Update transfer line received_qty
@@ -877,7 +877,7 @@ function FieldOfficerGRNFormDialog({ open, onOpenChange, candidateId, userId, pe
 
       // Mark issuance acknowledged
       await supabase.from("inv_issuances" as never).update({
-        status: "acknowledged", acknowledged_at: new Date().toISOString(),
+        status: "completed", acknowledged_at: new Date().toISOString(),
         received_at: new Date().toISOString(), received_by: candidateId,
       } as never).eq("id", selected.id);
 
