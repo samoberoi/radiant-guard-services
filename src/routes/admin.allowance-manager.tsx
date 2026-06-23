@@ -116,6 +116,7 @@ function useAllowances() {
     percentage: p.calc_type === "percentage" ? Number(p.percentage) || 0 : 0,
     base_components: p.calc_type === "percentage" ? p.base_components : [],
     cap_amount: p.calc_type === "percentage" ? p.cap_amount : null,
+    include_in_ot: p.include_in_ot,
   });
 
   const addMut = useMutation({
