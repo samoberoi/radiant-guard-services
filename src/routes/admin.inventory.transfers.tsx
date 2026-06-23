@@ -219,6 +219,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
   });
   const availableFor = (l: Line) => stockMap.get(`${l.item_id}|${l.size_value ?? ""}`) ?? 0;
   const overDispatchLines = lines.filter((l) => l.dispatched_qty > availableFor(l));
+  const overDemandLines = lines.filter((l) => l.dispatched_qty > l.requested_qty);
 
   const isReceived = initial?.status === "acknowledged";
 
@@ -290,10 +291,16 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
     if (!lines.length || lines.some((l) => l.dispatched_qty <= 0)) {
       toast.error("Enter dispatched quantity for each line"); return;
     }
+    if (overDemandLines.length) {
+      const first = overDemandLines[0];
+      const it = itemMap.get(first.item_id);
+      toast.error(`Dispatched cannot exceed demanded for ${it?.name ?? "item"}: demanded ${first.requested_qty}, entered ${first.dispatched_qty}`);
+      return;
+    }
     if (overDispatchLines.length) {
       const first = overDispatchLines[0];
       const it = itemMap.get(first.item_id);
-      toast.error(`Insufficient stock for ${it?.name ?? "item"}${first.size_value ? ` (${first.size_value})` : ""}: only ${availableFor(first)} available, ${first.dispatched_qty} requested`);
+      toast.error(`Insufficient stock for ${it?.name ?? "item"}${first.size_value ? ` (${first.size_value})` : ""}: only ${availableFor(first)} in stock, ${first.dispatched_qty} requested`);
       return;
     }
     if (!(await confirmAction({ title: "Initiate this transfer?", description: "Stock will be deducted from the source warehouse and the demand will move to In Transit.", confirmText: "Initiate Transfer" }))) return;
@@ -393,7 +400,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                     <th className="px-3 py-2">Item</th>
                     <th className="px-3 py-2 w-16">Size</th>
                     <th className="px-3 py-2 w-24 text-right">Demanded</th>
-                    {isDraft && <th className="px-3 py-2 w-24 text-right">Available</th>}
+                    {isDraft && <th className="px-3 py-2 w-24 text-right">In Stock</th>}
                     <th className="px-3 py-2 w-24 text-right">Dispatched</th>
                     {isDispatched && <th className="px-3 py-2 w-24 text-right">Received</th>}
                     {isDispatched && <th className="px-3 py-2">Variance Reason</th>}
@@ -403,16 +410,31 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                   {lines.map((l, idx) => {
                     const it = itemMap.get(l.item_id);
                     const avail = availableFor(l);
-                    const over = isDraft && l.dispatched_qty > avail;
+                    const cap = Math.min(l.requested_qty, avail);
+                    const over = isDraft && (l.dispatched_qty > avail || l.dispatched_qty > l.requested_qty);
                     return (
                       <tr key={idx} className={over ? "bg-destructive/5" : undefined}>
                         <td className="px-3 py-2 font-medium">{it?.name ?? "—"}</td>
                         <td className="px-3 py-2 text-muted-foreground">{l.size_value || "—"}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{l.requested_qty}</td>
-                        {isDraft && <td className={`px-3 py-2 text-right tabular-nums ${avail <= 0 ? "text-destructive" : "text-muted-foreground"}`}>{sourceId ? avail : "—"}</td>}
+                        {isDraft && <td className={`px-3 py-2 text-right tabular-nums ${!sourceId ? "text-muted-foreground" : avail <= 0 ? "text-destructive" : avail < l.requested_qty ? "text-amber-600" : "text-muted-foreground"}`}>{sourceId ? avail : "—"}</td>}
                         <td className="px-2 py-1.5">
                           {isDraft
-                            ? <Input type="number" min={0} max={avail} className={`h-9 text-right ${over ? "border-destructive text-destructive" : ""}`} value={l.dispatched_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, dispatched_qty: Number(e.target.value) || 0 } : x))} />
+                            ? <Input
+                                type="number"
+                                min={0}
+                                max={cap}
+                                disabled={!sourceId}
+                                className={`h-9 text-right ${over ? "border-destructive text-destructive" : ""}`}
+                                value={l.dispatched_qty}
+                                onChange={(e) => {
+                                  const raw = Number(e.target.value) || 0;
+                                  let v = Math.max(0, raw);
+                                  if (v > l.requested_qty) { v = l.requested_qty; toast.error(`Dispatched cannot exceed demanded (${l.requested_qty})`); }
+                                  if (sourceId && v > avail) { v = avail; toast.error(`Only ${avail} in stock for ${it?.name ?? "item"}`); }
+                                  setLines((ls) => ls.map((x, i) => i === idx ? { ...x, dispatched_qty: v } : x));
+                                }}
+                              />
                             : <div className="text-right tabular-nums">{l.dispatched_qty}</div>}
                         </td>
                         {isDispatched && <td className="px-2 py-1.5 text-right tabular-nums">{l.received_qty}</td>}
@@ -431,7 +453,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
-          {isDraft && <Button onClick={initiateTransfer} disabled={saving || !demandId || !sourceId || overDispatchLines.length > 0}>{saving ? "Initiating…" : overDispatchLines.length > 0 ? "Insufficient stock" : "Initiate Transfer"}</Button>}
+          {isDraft && <Button onClick={initiateTransfer} disabled={saving || !demandId || !sourceId || overDispatchLines.length > 0 || overDemandLines.length > 0}>{saving ? "Initiating…" : overDispatchLines.length > 0 ? "Insufficient stock" : overDemandLines.length > 0 ? "Exceeds demand" : "Initiate Transfer"}</Button>}
         </DialogFooter>
 
       </DialogContent>
