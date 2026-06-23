@@ -301,6 +301,17 @@ function AllowanceManagerPage() {
                     </span>
                   </td>
                   <td className="px-5 py-3">
+                    <span
+                      className={
+                        i.include_in_ot
+                          ? "inline-flex rounded-md bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-700"
+                          : "inline-flex rounded-md bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground"
+                      }
+                    >
+                      {i.include_in_ot ? "YES" : "NO"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3">
                     <Switch
                       checked={i.enabled}
                       onCheckedChange={(v) =>
