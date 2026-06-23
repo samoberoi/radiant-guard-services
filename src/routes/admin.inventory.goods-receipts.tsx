@@ -614,8 +614,8 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, o
         demand_id: selectedTransfer.demand_id,
         branch_id: branchId,
         kind: "transfer",
-        receipt_date: receiptDate, vendor_invoice_number: "", vendor_challan_number: challanNo,
-        vehicle_number: vehicleNo, notes, status: "received",
+        receipt_date: receiptDate, vendor_invoice_number: "", vendor_challan_number: "",
+        vehicle_number: "", notes, status: "received",
         received_by: user?.id ?? null, received_at: new Date().toISOString(),
       } as never).select("id").single();
       if (error) throw error;
@@ -706,10 +706,9 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, o
               </SelectContent>
             </Select>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="grid gap-2"><Label>Receipt Date</Label><Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} /></div>
-            <div className="grid gap-2"><Label>Challan #</Label><Input value={challanNo} onChange={(e) => setChallanNo(e.target.value)} placeholder="Driver/courier challan" /></div>
-            <div className="grid gap-2"><Label>Vehicle #</Label><Input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} /></div>
+          <div className="grid gap-2">
+            <Label>Receipt Date</Label>
+            <Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} />
           </div>
 
           {lines.length > 0 && (
