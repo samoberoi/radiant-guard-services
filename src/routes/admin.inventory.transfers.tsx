@@ -26,10 +26,13 @@ type Transfer = {
   id: string; transfer_number: string; transfer_date: string; status: string;
   source_type: string; source_id: string; destination_type: string; destination_id: string;
   vehicle_number: string; driver_name: string; driver_phone: string; notes: string;
+  demand_id: string | null;
 };
 type Warehouse = { id: string; name: string };
 type Branch = { id: string; name: string; code: string };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
+type Demand = { id: string; demand_number: string; branch_id: string; status: string };
+type DemandLine = { id: string; demand_id: string; item_id: string; size_value: string; requested_qty: number };
 type Line = { id?: string; item_id: string; size_value: string; dispatched_qty: number; received_qty: number; variance_reason: string };
 
 function TransfersPage() {
@@ -64,6 +67,14 @@ function TransfersPage() {
       const { data, error } = await supabase.from("inv_items" as never).select("id,name,item_code,is_sized").eq("enabled", true).order("name");
       if (error) throw error;
       return (data as unknown as Item[]) ?? [];
+    },
+  });
+  const { data: openDemands = [] } = useQuery({
+    queryKey: ["inv", "demands-open"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_demands" as never).select("id,demand_number,branch_id,status").in("status", ["submitted"]).order("demand_date", { ascending: false });
+      if (error) throw error;
+      return (data as unknown as Demand[]) ?? [];
     },
   });
 
@@ -164,19 +175,20 @@ function TransfersPage() {
         </div>
       </div>
 
-      <TransferDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setActive(null); }} initial={active} warehouses={warehouses} branches={branches} items={items} onSaved={invalidate} />
+      <TransferDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setActive(null); }} initial={active} warehouses={warehouses} branches={branches} items={items} demands={openDemands} onSaved={invalidate} />
     </div>
   );
 }
 
-function TransferDialog({ open, onOpenChange, initial, warehouses, branches, items, onSaved }: {
+function TransferDialog({ open, onOpenChange, initial, warehouses, branches, items, demands, onSaved }: {
   open: boolean; onOpenChange: (o: boolean) => void; initial: Transfer | null;
-  warehouses: Warehouse[]; branches: Branch[]; items: Item[]; onSaved: () => void;
+  warehouses: Warehouse[]; branches: Branch[]; items: Item[]; demands: Demand[]; onSaved: () => void;
 }) {
   const [sourceType, setSourceType] = useState<LocationType>("warehouse");
   const [sourceId, setSourceId] = useState("");
   const [destType, setDestType] = useState<LocationType>("branch");
   const [destId, setDestId] = useState("");
+  const [demandId, setDemandId] = useState<string>("");
   const [transferDate, setTransferDate] = useState(new Date().toISOString().slice(0, 10));
   const [vehicle, setVehicle] = useState("");
   const [driverName, setDriverName] = useState("");
@@ -190,12 +202,32 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
   const isDispatched = initial?.status === "dispatched" || initial?.status === "in_transit";
   const isReceived = initial?.status === "acknowledged";
 
+  async function loadDemand(id: string) {
+    setDemandId(id);
+    if (!id) return;
+    const d = demands.find((x) => x.id === id);
+    if (!d) return;
+    setDestType("branch");
+    setDestId(d.branch_id);
+    const { data, error } = await supabase.from("inv_demand_lines" as never).select("*").eq("demand_id", id).order("sort_order");
+    if (error) { toast.error("Could not load demand lines"); return; }
+    const rows = (data as unknown as DemandLine[]) ?? [];
+    setLines(rows.map((r) => ({
+      item_id: r.item_id,
+      size_value: r.size_value ?? "",
+      dispatched_qty: Number(r.requested_qty ?? 0),
+      received_qty: 0,
+      variance_reason: "",
+    })));
+  }
+
   useResetOnOpen(open, async () => {
     if (initial) {
       setSourceType(initial.source_type as LocationType);
       setSourceId(initial.source_id);
       setDestType(initial.destination_type as LocationType);
       setDestId(initial.destination_id);
+      setDemandId(initial.demand_id ?? "");
       setTransferDate(initial.transfer_date);
       setVehicle(initial.vehicle_number); setDriverName(initial.driver_name); setDriverPhone(initial.driver_phone);
       setNotes(initial.notes);
@@ -210,6 +242,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
       })));
     } else {
       setSourceType("warehouse"); setSourceId(""); setDestType("branch"); setDestId("");
+      setDemandId("");
       setTransferDate(new Date().toISOString().slice(0, 10));
       setVehicle(""); setDriverName(""); setDriverPhone(""); setNotes(""); setLines([]);
     }
@@ -231,6 +264,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
         await supabase.from("inv_transfers" as never).update({
           source_type: sourceType, source_id: sourceId,
           destination_type: destType, destination_id: destId,
+          demand_id: demandId || null,
           transfer_date: transferDate, vehicle_number: vehicle, driver_name: driverName, driver_phone: driverPhone, notes,
         } as never).eq("id", initial.id);
         await supabase.from("inv_transfer_lines" as never).delete().eq("transfer_id", initial.id);
@@ -241,6 +275,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
         const { data: ins, error } = await supabase.from("inv_transfers" as never).insert({
           transfer_number: number, source_type: sourceType, source_id: sourceId,
           destination_type: destType, destination_id: destId,
+          demand_id: demandId || null,
           transfer_date: transferDate, status: "draft",
           vehicle_number: vehicle, driver_name: driverName, driver_phone: driverPhone, notes,
         } as never).select("id").single();
@@ -272,6 +307,11 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
         item_id: l.item_id, size_value: l.size_value, qty_change: -l.dispatched_qty,
         reference_type: "transfer", reference_id: initial.id,
       })));
+      // If this transfer fulfills a demand, mark the demand in_transit
+      if (initial.demand_id || demandId) {
+        const did = (initial.demand_id ?? demandId) as string;
+        await supabase.from("inv_demands" as never).update({ status: "in_transit" } as never).eq("id", did);
+      }
       void logActivity({ module: MODULE, action: "dispatch", entityType: ENTITY, entityId: initial.id, entityLabel: initial.transfer_number });
       toast.success("Dispatched");
       onSaved(); onOpenChange(false);
@@ -281,6 +321,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
       setSaving(false);
     }
   }
+
 
   async function receive() {
     if (!initial) return;
@@ -331,6 +372,22 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
+          {isDraft && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Against Demand (optional)</div>
+              <Select value={demandId || "__none__"} onValueChange={(v) => v === "__none__" ? setDemandId("") : loadDemand(v)}>
+                <SelectTrigger><SelectValue placeholder="Pick a submitted branch demand" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None (manual transfer) —</SelectItem>
+                  {demands.map((d) => {
+                    const br = branches.find((b) => b.id === d.branch_id);
+                    return <SelectItem key={d.id} value={d.id}>{d.demand_number} → {br ? `${br.code} ${br.name}` : "Branch"}</SelectItem>;
+                  })}
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-[11px] text-muted-foreground">Selecting a demand prefills the destination branch and the requested item lines.</p>
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl border border-border p-3">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">From</div>

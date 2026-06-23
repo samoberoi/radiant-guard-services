@@ -13,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, useDialogDirty } from "@/components/ui/dialog";
-import { nextSeq, fmtNumber, postMovements, statusBadgeClass } from "@/lib/inv-helpers";
+import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType } from "@/lib/inv-helpers";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
 
 
@@ -24,19 +24,25 @@ const ENTITY = "inv_goods_receipts";
 
 type GRN = {
   id: string; grn_number: string; receipt_date: string; status: string;
-  po_id: string | null; vendor_id: string | null; warehouse_id: string;
+  po_id: string | null; vendor_id: string | null; warehouse_id: string | null;
   vendor_invoice_number: string; vendor_challan_number: string; vehicle_number: string; notes: string;
   vendor_invoice_url?: string | null;
+  transfer_id?: string | null; demand_id?: string | null; branch_id?: string | null; kind?: string;
 };
 type PO = { id: string; po_number: string; vendor_id: string | null; destination_warehouse_id: string | null; status: string };
 type POLine = { id: string; item_id: string; size_value: string; ordered_qty: number; received_qty: number };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
 type Vendor = { id: string; name: string };
 type Warehouse = { id: string; name: string };
-type Line = { id?: string; po_line_id: string | null; item_id: string; size_value: string; ordered_qty: number; received_qty: number; accepted_qty: number; rejected_qty: number; rejection_reason: string };
+type Transfer = { id: string; transfer_number: string; source_type: string; source_id: string; destination_type: string; destination_id: string; demand_id: string | null };
+type TransferLine = { id: string; transfer_id: string; item_id: string; size_value: string; dispatched_qty: number };
+type Line = { id?: string; po_line_id: string | null; transfer_line_id?: string | null; item_id: string; size_value: string; ordered_qty: number; received_qty: number; accepted_qty: number; rejected_qty: number; rejection_reason: string };
 
 function GRNPage() {
   const qc = useQueryClient();
+  const scope = useUserBranchScope();
+  const adminMode = !scope.isScoped;
+
   const { data: grns = [] } = useQuery({
     queryKey: ["inv", "grns"],
     queryFn: async () => {
@@ -47,6 +53,7 @@ function GRNPage() {
   });
   const { data: pos = [] } = useQuery({
     queryKey: ["inv", "pos-open"],
+    enabled: adminMode,
     queryFn: async () => {
       const { data, error } = await supabase.from("inv_purchase_orders" as never).select("id,po_number,vendor_id,destination_warehouse_id,status").in("status", ["open", "partially_received"]).order("po_date", { ascending: false });
       if (error) throw error;
@@ -55,6 +62,7 @@ function GRNPage() {
   });
   const { data: vendors = [] } = useQuery({
     queryKey: ["inv", "vendors-list"],
+    enabled: adminMode,
     queryFn: async () => {
       const { data, error } = await supabase.from("inv_vendors" as never).select("id,name").eq("enabled", true);
       if (error) throw error;
@@ -63,10 +71,34 @@ function GRNPage() {
   });
   const { data: warehouses = [] } = useQuery({
     queryKey: ["inv", "warehouses-list"],
+    enabled: adminMode,
     queryFn: async () => {
       const { data, error } = await supabase.from("inv_warehouses" as never).select("id,name").eq("enabled", true);
       if (error) throw error;
       return (data as unknown as Warehouse[]) ?? [];
+    },
+  });
+  const { data: incomingTransfers = [] } = useQuery({
+    queryKey: ["inv", "transfers-incoming", scope.branchId],
+    enabled: !!scope.branchId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_transfers" as never)
+        .select("id,transfer_number,source_type,source_id,destination_type,destination_id,demand_id,status")
+        .eq("destination_type", "branch")
+        .eq("destination_id", scope.branchId as string)
+        .eq("status", "in_transit")
+        .order("transfer_date", { ascending: false });
+      if (error) throw error;
+      return (data as unknown as Transfer[]) ?? [];
+    },
+  });
+  const { data: items = [] } = useQuery({
+    queryKey: ["inv", "items-list-grn"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_items" as never).select("id,name,item_code,is_sized,standard_cost").order("name");
+      if (error) throw error;
+      return (data as unknown as (Item & { standard_cost?: number })[]) ?? [];
     },
   });
 
@@ -119,15 +151,11 @@ function GRNPage() {
   const [open, setOpen] = useState(false);
   const [viewing, setViewing] = useState<GRN | null>(null);
 
-  const scope = useUserBranchScope();
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    // Delivery Challans / Goods Receipts are warehouse-level events.
-    // A branch-scoped user does not own any warehouse, so their list is empty.
-    if (scope.isScoped) return [];
     if (!q) return grns;
     return grns.filter((g) => g.grn_number.toLowerCase().includes(q) || (g.vendor_invoice_number ?? "").toLowerCase().includes(q));
-  }, [grns, query, scope.isScoped]);
+  }, [grns, query]);
 
 
   const invalidate = () => {
@@ -184,7 +212,7 @@ function GRNPage() {
                 <tr key={g.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs">{g.grn_number}</td>
                   <td className="px-5 py-3">{g.vendor_id ? vMap.get(g.vendor_id) ?? "—" : "—"}</td>
-                  <td className="px-5 py-3">{wMap.get(g.warehouse_id) ?? "—"}</td>
+                  <td className="px-5 py-3">{g.warehouse_id ? (wMap.get(g.warehouse_id) ?? "—") : (g.transfer_id ? "Branch Receipt" : "—")}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{g.receipt_date}</td>
                   <td className="px-5 py-3 text-right tabular-nums">{agg.products}</td>
                   <td className="px-5 py-3 text-right tabular-nums">{agg.qty}</td>
@@ -210,7 +238,18 @@ function GRNPage() {
         </div>
       </div>
 
-      <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} onSaved={invalidate} />
+      {adminMode ? (
+        <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} onSaved={invalidate} />
+      ) : (
+        <BranchGRNFormDialog
+          open={open}
+          onOpenChange={setOpen}
+          branchId={scope.branchId ?? ""}
+          transfers={incomingTransfers}
+          items={items}
+          onSaved={invalidate}
+        />
+      )}
       <GRNViewDialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)} grn={viewing} />
     </div>
   );
@@ -519,4 +558,198 @@ function CancelBtn({ saving, onClose }: { saving: boolean; onClose: () => void }
 function CloseDialogButton({ onClose }: { onClose: () => void }) {
   const { markPristine } = useDialogDirty();
   return <Button variant="outline" onClick={() => { markPristine(); onClose(); }}>Close</Button>;
+}
+
+function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, onSaved }: {
+  open: boolean; onOpenChange: (o: boolean) => void; branchId: string;
+  transfers: Transfer[]; items: Item[]; onSaved: () => void;
+}) {
+  const [transferId, setTransferId] = useState<string>("");
+  const [receiptDate, setReceiptDate] = useState(new Date().toISOString().slice(0, 10));
+  const [challanNo, setChallanNo] = useState("");
+  const [vehicleNo, setVehicleNo] = useState("");
+  const [notes, setNotes] = useState("");
+  const [lines, setLines] = useState<Line[]>([]);
+  const [saving, setSaving] = useState(false);
+  const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+
+  useResetOnOpen(open, async () => {
+    setTransferId(""); setReceiptDate(new Date().toISOString().slice(0, 10));
+    setChallanNo(""); setVehicleNo(""); setNotes(""); setLines([]);
+  });
+
+  async function loadTransfer(id: string) {
+    setTransferId(id);
+    if (!id) { setLines([]); return; }
+    const { data, error } = await supabase.from("inv_transfer_lines" as never).select("*").eq("transfer_id", id).order("sort_order");
+    if (error) { toast.error("Could not load transfer lines"); return; }
+    const rows = (data as unknown as TransferLine[]) ?? [];
+    setLines(rows.map((r) => ({
+      po_line_id: null,
+      transfer_line_id: r.id,
+      item_id: r.item_id,
+      size_value: r.size_value ?? "",
+      ordered_qty: Number(r.dispatched_qty ?? 0),
+      received_qty: 0,
+      accepted_qty: Number(r.dispatched_qty ?? 0),
+      rejected_qty: 0,
+      rejection_reason: "",
+    })));
+  }
+
+  const selectedTransfer = transfers.find((t) => t.id === transferId);
+
+  async function save() {
+    if (!selectedTransfer) { toast.error("Pick an incoming transfer"); return; }
+    if (!branchId) { toast.error("No branch assigned to your account"); return; }
+    if (!lines.some((l) => l.accepted_qty > 0 || l.rejected_qty > 0)) { toast.error("Enter received quantities"); return; }
+    if (lines.some((l) => (l.accepted_qty + l.rejected_qty) > l.ordered_qty)) { toast.error("Accepted + rejected cannot exceed dispatched"); return; }
+    if (lines.some((l) => l.rejected_qty > 0 && !l.rejection_reason.trim())) { toast.error("Provide a reason for rejected items"); return; }
+    setSaving(true);
+    try {
+      const n = await nextSeq("inv_grn_number_seq");
+      const grn_number = fmtNumber("GRN", n);
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: ins, error } = await supabase.from("inv_goods_receipts" as never).insert({
+        grn_number, po_id: null, vendor_id: null, warehouse_id: null,
+        transfer_id: selectedTransfer.id,
+        demand_id: selectedTransfer.demand_id,
+        branch_id: branchId,
+        kind: "transfer",
+        receipt_date: receiptDate, vendor_invoice_number: "", vendor_challan_number: challanNo,
+        vehicle_number: vehicleNo, notes, status: "received",
+        received_by: user?.id ?? null, received_at: new Date().toISOString(),
+      } as never).select("id").single();
+      if (error) throw error;
+      const grnId = (ins as unknown as { id: string }).id;
+
+      const linesPayload = lines.map((l, idx) => ({
+        grn_id: grnId, po_line_id: null, item_id: l.item_id, size_value: l.size_value,
+        ordered_qty: l.ordered_qty, received_qty: l.accepted_qty + l.rejected_qty,
+        accepted_qty: l.accepted_qty, rejected_qty: l.rejected_qty,
+        rejection_reason: l.rejection_reason, sort_order: idx,
+      }));
+      const { error: lineErr } = await supabase.from("inv_goods_receipt_lines" as never).insert(linesPayload as never);
+      if (lineErr) throw lineErr;
+
+      // Stock IN at branch for accepted quantity
+      await postMovements(lines.filter((l) => l.accepted_qty > 0).map((l) => ({
+        movement_type: "GRN_IN", location_type: "branch", location_id: branchId,
+        item_id: l.item_id, size_value: l.size_value, qty_change: l.accepted_qty,
+        reference_type: "grn", reference_id: grnId,
+      })));
+      // Rejected qty goes to scrap (already deducted from warehouse, doesn't enter branch)
+      const rejects = lines.filter((l) => l.rejected_qty > 0).map((l) => ({
+        movement_type: "BRANCH_REJECT" as const,
+        location_type: "scrap" as LocationType,
+        location_id: selectedTransfer.id,
+        item_id: l.item_id, size_value: l.size_value, qty_change: l.rejected_qty,
+        reference_type: "grn", reference_id: grnId,
+        notes: l.rejection_reason,
+      }));
+      if (rejects.length) await postMovements(rejects);
+
+      // Mark transfer acknowledged and update fulfilled qty on demand lines
+      await supabase.from("inv_transfers" as never).update({
+        status: "acknowledged",
+        received_by: user?.id ?? null, received_at: new Date().toISOString(),
+      } as never).eq("id", selectedTransfer.id);
+      // Update transfer line received_qty
+      for (const l of lines) {
+        if (l.transfer_line_id) {
+          await supabase.from("inv_transfer_lines" as never).update({
+            received_qty: l.accepted_qty + l.rejected_qty,
+            variance_reason: l.rejected_qty > 0 ? l.rejection_reason : "",
+          } as never).eq("id", l.transfer_line_id);
+        }
+      }
+
+      // Mark demand fulfilled if all lines accepted, else keep in_transit
+      if (selectedTransfer.demand_id) {
+        // Update each demand line's fulfilled qty
+        const { data: demandLines } = await supabase.from("inv_demand_lines" as never).select("id,item_id,size_value,requested_qty,fulfilled_qty").eq("demand_id", selectedTransfer.demand_id);
+        const dls = (demandLines as unknown as { id: string; item_id: string; size_value: string; requested_qty: number; fulfilled_qty: number }[]) ?? [];
+        for (const dl of dls) {
+          const matched = lines.find((l) => l.item_id === dl.item_id && (l.size_value ?? "") === (dl.size_value ?? ""));
+          if (matched) {
+            await supabase.from("inv_demand_lines" as never).update({
+              fulfilled_qty: Number(dl.fulfilled_qty ?? 0) + matched.accepted_qty,
+            } as never).eq("id", dl.id);
+          }
+        }
+        await supabase.from("inv_demands" as never).update({
+          status: "fulfilled", fulfilled_at: new Date().toISOString(),
+        } as never).eq("id", selectedTransfer.demand_id);
+      }
+
+      void logActivity({ module: "Inventory Delivery Challans", action: "create", entityType: "inv_goods_receipts", entityId: grnId, entityLabel: grn_number });
+      toast.success(`Challan ${grn_number} posted — branch stock updated`);
+      onSaved(); onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>New Delivery Challan</DialogTitle>
+          <DialogDescription>Receive items dispatched from the warehouse against your branch demand.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-2">
+          <div className="grid gap-2"><Label>Incoming Transfer</Label>
+            <Select value={transferId} onValueChange={loadTransfer}>
+              <SelectTrigger><SelectValue placeholder={transfers.length ? "Pick an in-transit transfer" : "No incoming transfers"} /></SelectTrigger>
+              <SelectContent>
+                {transfers.map((t) => <SelectItem key={t.id} value={t.id}>{t.transfer_number}{t.demand_id ? " · against demand" : ""}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-2"><Label>Receipt Date</Label><Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} /></div>
+            <div className="grid gap-2"><Label>Challan #</Label><Input value={challanNo} onChange={(e) => setChallanNo(e.target.value)} placeholder="Driver/courier challan" /></div>
+            <div className="grid gap-2"><Label>Vehicle #</Label><Input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} /></div>
+          </div>
+
+          {lines.length > 0 && (
+            <div className="overflow-x-clip rounded-xl border border-border">
+              <table className="ios-table w-full text-sm">
+                <thead className="bg-secondary/60 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2">Item</th>
+                    <th className="px-3 py-2 w-16">Size</th>
+                    <th className="px-3 py-2 w-20 text-right">Ordered</th>
+                    <th className="px-3 py-2 w-24 text-right">Accepted</th>
+                    <th className="px-3 py-2 w-24 text-right">Rejected</th>
+                    <th className="px-3 py-2">Reject Reason</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {lines.map((l, idx) => (
+                    <tr key={idx}>
+                      <td className="px-3 py-2 font-medium">{itemMap.get(l.item_id)?.name ?? "—"}</td>
+                      <td className="px-3 py-2 text-xs">{l.size_value || "—"}</td>
+                      <td className="px-3 py-2 text-right text-xs text-muted-foreground tabular-nums">{l.ordered_qty}</td>
+                      <td className="px-2 py-1.5"><Input type="number" min={0} max={l.ordered_qty} className="h-9 text-right" value={l.accepted_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, accepted_qty: Number(e.target.value) || 0 } : x))} /></td>
+                      <td className="px-2 py-1.5"><Input type="number" min={0} max={l.ordered_qty} className="h-9 text-right" value={l.rejected_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, rejected_qty: Number(e.target.value) || 0 } : x))} /></td>
+                      <td className="px-2 py-1.5"><Input className="h-9" disabled={!l.rejected_qty} value={l.rejection_reason} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, rejection_reason: e.target.value } : x))} placeholder={l.rejected_qty ? "Why?" : "—"} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="grid gap-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
+        </div>
+        <DialogFooter>
+          <CancelBtn saving={saving} onClose={() => onOpenChange(false)} />
+          <Button onClick={save} disabled={saving || !transferId}>{saving ? "Posting…" : "Post Challan"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
