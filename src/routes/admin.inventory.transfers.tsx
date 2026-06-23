@@ -227,6 +227,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
       setSourceId(initial.source_id);
       setDestType(initial.destination_type as LocationType);
       setDestId(initial.destination_id);
+      setDemandId(initial.demand_id ?? "");
       setTransferDate(initial.transfer_date);
       setVehicle(initial.vehicle_number); setDriverName(initial.driver_name); setDriverPhone(initial.driver_phone);
       setNotes(initial.notes);
@@ -241,6 +242,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
       })));
     } else {
       setSourceType("warehouse"); setSourceId(""); setDestType("branch"); setDestId("");
+      setDemandId("");
       setTransferDate(new Date().toISOString().slice(0, 10));
       setVehicle(""); setDriverName(""); setDriverPhone(""); setNotes(""); setLines([]);
     }
