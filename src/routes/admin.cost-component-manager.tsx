@@ -473,6 +473,8 @@ function CostComponentDialog({
   const [notes, setNotes] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [sortOrder, setSortOrder] = useState<string>("0");
+  const [deductionCalcType, setDeductionCalcType] =
+    useState<"earned_salary" | "fixed_amount">("earned_salary");
   const [saving, setSaving] = useState(false);
 
   useResetOnOpen(open, () => {
