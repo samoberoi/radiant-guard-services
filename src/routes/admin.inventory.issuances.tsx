@@ -290,6 +290,20 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
   });
   const availableFor = (l: Line) => stockMap.get(`${l.item_id}|${l.size_value ?? ""}`) ?? 0;
 
+  // FO → Guard has no demand: auto-load every item the FO has in stock so they can pick qty / remove.
+  const isFreeIssue = type === "fo_to_guard" && !demandId;
+  useEffect(() => {
+    if (!open || initial || !isFreeIssue || !sourceId || stockMap.size === 0 || lines.length > 0) return;
+    const next: Line[] = [];
+    for (const [key, qty] of stockMap.entries()) {
+      if (Number(qty) <= 0) continue;
+      const [item_id, size_value] = key.split("|");
+      next.push({ item_id, size_value: size_value ?? "", qty: 0, requested_qty: Number(qty) });
+    }
+    next.sort((a, b) => (itemMap.get(a.item_id)?.name ?? "").localeCompare(itemMap.get(b.item_id)?.name ?? ""));
+    if (next.length) setLines(next);
+  }, [open, initial, isFreeIssue, sourceId, stockMap, lines.length, itemMap]);
+
   function sourceOptions() {
     if (meta.source === "warehouse") return warehouses;
     if (meta.source === "branch") return branches;
