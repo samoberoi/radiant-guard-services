@@ -440,7 +440,16 @@ function POFormDialog({
   useResetOnOpen(open, async () => {
     if (initial) {
       setVendorId(initial.vendor_id ?? "");
-      setWarehouseId(initial.destination_warehouse_id ?? "");
+      setOrderingFrom(
+        initial.source_warehouse_id ? encLoc("wh", initial.source_warehouse_id)
+        : initial.requesting_branch_id ? encLoc("br", initial.requesting_branch_id)
+        : ""
+      );
+      setDeliverTo(
+        initial.destination_warehouse_id ? encLoc("wh", initial.destination_warehouse_id)
+        : initial.destination_branch_id ? encLoc("br", initial.destination_branch_id)
+        : ""
+      );
       setPoDate(initial.po_date);
       setExpectedDate(initial.expected_date ?? "");
       setNotes(initial.notes);
@@ -457,10 +466,10 @@ function POFormDialog({
         notes: String(r.notes ?? ""),
       })));
     } else {
-      setVendorId(""); setWarehouseId(""); setPoDate(new Date().toISOString().slice(0, 10));
+      setVendorId(""); setOrderingFrom(""); setDeliverTo("");
+      setPoDate(new Date().toISOString().slice(0, 10));
       setExpectedDate(""); setNotes(""); setLines([]); setStatus("open");
     }
-
   });
 
   const totals = useMemo(() => {
