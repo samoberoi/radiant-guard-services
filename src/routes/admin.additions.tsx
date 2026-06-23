@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { TrendingUp, Download, Edit2, Plus, Search, Trash2, ChevronLeft } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { TrendingUp, Download, Edit2, Plus, Search, Trash2, ChevronLeft, Upload, FileSpreadsheet } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -18,6 +18,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import * as XLSX from "xlsx";
 import { z } from "zod";
 
 const searchSchema = z.object({
