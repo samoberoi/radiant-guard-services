@@ -264,8 +264,18 @@ function GRNPage() {
         </div>
       </div>
 
-      {adminMode ? (
+      {adminMode && !role.isFieldOfficer ? (
         <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} onSaved={invalidate} />
+      ) : role.isFieldOfficer ? (
+        <FieldOfficerGRNFormDialog
+          open={open}
+          onOpenChange={setOpen}
+          candidateId={role.candidateId ?? ""}
+          userId={role.userId ?? ""}
+          pendingIssuances={foPendingIssuances}
+          items={items}
+          onSaved={invalidate}
+        />
       ) : (
         <BranchGRNFormDialog
           open={open}
