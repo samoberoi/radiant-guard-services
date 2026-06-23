@@ -485,7 +485,10 @@ function POFormDialog({
   async function save(targetStatus: string) {
 
     if (!vendorId) { toast.error("Vendor required"); return; }
-    if (!warehouseId) { toast.error("Destination warehouse required"); return; }
+    const dFrom = decLoc(orderingFrom);
+    const dTo = decLoc(deliverTo);
+    if (!dFrom) { toast.error("Ordering From is required"); return; }
+    if (!dTo) { toast.error("Deliver To is required"); return; }
     if (!lines.length) { toast.error("Add at least one line"); return; }
     for (const l of lines) {
       if (!l.item_id) { toast.error("Pick an item on every line"); return; }
@@ -493,6 +496,12 @@ function POFormDialog({
       const item = itemMap.get(l.item_id);
       if (item?.is_sized && !l.size_value) { toast.error(`Pick a size for ${item.name}`); return; }
     }
+    const locationFields = {
+      source_warehouse_id: dFrom.kind === "wh" ? dFrom.id : null,
+      requesting_branch_id: dFrom.kind === "br" ? dFrom.id : null,
+      destination_warehouse_id: dTo.kind === "wh" ? dTo.id : null,
+      destination_branch_id: dTo.kind === "br" ? dTo.id : null,
+    };
     setSaving(true);
     try {
       const linesPayload = lines.map((l, idx) => ({
@@ -509,7 +518,7 @@ function POFormDialog({
       if (initial) {
         const { error } = await supabase.from("inv_purchase_orders" as never).update({
           vendor_id: vendorId,
-          destination_warehouse_id: warehouseId,
+          ...locationFields,
           po_date: poDate,
           expected_date: expectedDate || null,
           notes,
@@ -531,7 +540,7 @@ function POFormDialog({
         const { data: ins, error } = await supabase.from("inv_purchase_orders" as never).insert({
           po_number, po_type: "vendor",
           vendor_id: vendorId,
-          destination_warehouse_id: warehouseId,
+          ...locationFields,
           po_date: poDate,
           expected_date: expectedDate || null,
           notes,
