@@ -24,6 +24,7 @@ type GRN = {
   id: string; grn_number: string; receipt_date: string; status: string;
   po_id: string | null; vendor_id: string | null; warehouse_id: string;
   vendor_invoice_number: string; vendor_challan_number: string; vehicle_number: string; notes: string;
+  vendor_invoice_url?: string | null;
 };
 type PO = { id: string; po_number: string; vendor_id: string | null; destination_warehouse_id: string | null; status: string };
 type POLine = { id: string; item_id: string; size_value: string; ordered_qty: number; received_qty: number };
