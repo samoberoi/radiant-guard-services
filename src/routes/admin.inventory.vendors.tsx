@@ -15,6 +15,25 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const NET_DAY_OPTIONS = ["0", "7", "15", "30", "45", "60", "75", "90", "120"];
+function parsePaymentTerms(s: string): { mode: "single" | "window"; from: string; to: string } {
+  const t = (s ?? "").trim();
+  if (!t) return { mode: "single", from: "30", to: "45" };
+  const win = t.match(/^Net\s+(\d+)\s*[-–to]+\s*(\d+)$/i);
+  if (win) return { mode: "window", from: win[1], to: win[2] };
+  const single = t.match(/^Net\s+(\d+)$/i);
+  if (single) return { mode: "single", from: single[1], to: single[1] };
+  if (/due\s*on\s*receipt/i.test(t)) return { mode: "single", from: "0", to: "0" };
+  return { mode: "single", from: "30", to: "45" };
+}
+function formatPaymentTerms(mode: "single" | "window", from: string, to: string): string {
+  if (mode === "single") return from === "0" ? "Due on receipt" : `Net ${from}`;
+  return `Net ${from}-${to}`;
+}
+const GSTIN_RE = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[0-9A-Z]{1}Z[0-9A-Z]{1}$/;
+const PAN_RE = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
 
 export const Route = createFileRoute("/admin/inventory/vendors")({ component: VendorsPage });
 
@@ -104,11 +123,21 @@ function VendorsPage() {
   }, [vendors, query]);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: QK });
-  const toRow = (p: Payload) => ({ ...p, name: p.name.trim() });
+  const validate = (p: Payload) => {
+    if (!p.name.trim()) return "Name is required";
+    const g = p.gstin.trim().toUpperCase();
+    const pn = p.pan.trim().toUpperCase();
+    if (!g) return "GSTIN is required";
+    if (!GSTIN_RE.test(g)) return "GSTIN is invalid (15 chars, e.g. 27ABCDE1234F1Z5)";
+    if (!pn) return "PAN is required";
+    if (!PAN_RE.test(pn)) return "PAN is invalid (10 chars, e.g. ABCDE1234F)";
+    return null;
+  };
+  const toRow = (p: Payload) => ({ ...p, name: p.name.trim(), gstin: p.gstin.trim().toUpperCase(), pan: p.pan.trim().toUpperCase() });
 
   const addMut = useMutation({
     mutationFn: async (p: Payload) => {
-      if (!p.name.trim()) throw new Error("Name is required");
+      const v = validate(p); if (v) throw new Error(v);
       const { data: seq } = await supabase.rpc("nextval" as never, { sequence_name: "inv_vendor_code_seq" } as never);
       const code = `VEN-${String(Number(seq ?? 0) || vendors.length + 1).padStart(3, "0")}`;
       const { error } = await supabase.from("inv_vendors" as never).insert({ ...toRow(p), vendor_code: code } as never);
@@ -119,6 +148,7 @@ function VendorsPage() {
   });
   const updateMut = useMutation({
     mutationFn: async ({ id, p }: { id: string; p: Payload }) => {
+      const v = validate(p); if (v) throw new Error(v);
       const { error } = await supabase.from("inv_vendors" as never).update(toRow(p) as never).eq("id", id);
       if (error) throw error;
       void logActivity({ module: MODULE, action: "update", entityType: ENTITY, entityId: id, entityLabel: p.name });
@@ -276,8 +306,8 @@ function VendorFormDialog({ open, onOpenChange, title, initial, onSubmit }: { op
             <div className="grid gap-2"><Label>Contact Person</Label><Input value={p.contact_person} onChange={(e) => set("contact_person", e.target.value)} /></div>
             <div className="grid gap-2"><Label>Phone</Label><Input format="mobile" value={p.phone} onChange={(e) => set("phone", e.target.value)} /></div>
             <div className="grid gap-2"><Label>Email</Label><Input value={p.email} onChange={(e) => set("email", e.target.value)} /></div>
-            <div className="grid gap-2"><Label>GSTIN</Label><Input format="gstin" value={p.gstin} onChange={(e) => set("gstin", e.target.value)} /></div>
-            <div className="grid gap-2"><Label>PAN</Label><Input format="pan" value={p.pan} onChange={(e) => set("pan", e.target.value)} /></div>
+            <div className="grid gap-2"><Label>GSTIN <span className="text-destructive">*</span></Label><Input format="gstin" value={p.gstin} onChange={(e) => set("gstin", e.target.value.toUpperCase())} placeholder="27ABCDE1234F1Z5" /></div>
+            <div className="grid gap-2"><Label>PAN <span className="text-destructive">*</span></Label><Input format="pan" value={p.pan} onChange={(e) => set("pan", e.target.value.toUpperCase())} placeholder="ABCDE1234F" /></div>
           </div>
           <div className="grid gap-2"><Label>Address</Label><Input value={p.address1} onChange={(e) => set("address1", e.target.value)} /></div>
           <div className="grid gap-3 sm:grid-cols-3">
@@ -285,7 +315,7 @@ function VendorFormDialog({ open, onOpenChange, title, initial, onSubmit }: { op
             <div className="grid gap-2"><Label>State</Label><Input value={p.state} onChange={(e) => set("state", e.target.value)} /></div>
             <div className="grid gap-2"><Label>Pincode</Label><Input format="pincode" value={p.pincode} onChange={(e) => set("pincode", e.target.value)} /></div>
           </div>
-          <div className="grid gap-2"><Label>Payment Terms</Label><Input value={p.payment_terms} onChange={(e) => set("payment_terms", e.target.value)} placeholder="e.g. Net 30" /></div>
+          <PaymentTermsField value={p.payment_terms} onChange={(v) => set("payment_terms", v)} />
           <div className="grid gap-2"><Label>Notes</Label><Textarea rows={2} value={p.notes} onChange={(e) => set("notes", e.target.value)} /></div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2"><div className="text-sm font-medium">Enabled</div><Switch checked={p.enabled} onCheckedChange={(v) => set("enabled", v)} /></div>
         </div>
@@ -300,5 +330,74 @@ function VendorFormDialog({ open, onOpenChange, title, initial, onSubmit }: { op
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function PaymentTermsField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const parsed = parsePaymentTerms(value);
+  const [mode, setMode] = useState<"single" | "window">(parsed.mode);
+  const [from, setFrom] = useState<string>(parsed.from);
+  const [to, setTo] = useState<string>(parsed.to);
+  const [lastValue, setLastValue] = useState<string>(value);
+  if (value !== lastValue) {
+    setLastValue(value);
+    const p = parsePaymentTerms(value);
+    setMode(p.mode); setFrom(p.from); setTo(p.to);
+  }
+  const apply = (m: "single" | "window", f: string, t: string) => {
+    let nf = f, nt = t;
+    if (m === "window" && Number(nt) <= Number(nf)) {
+      const idx = NET_DAY_OPTIONS.indexOf(nf);
+      nt = NET_DAY_OPTIONS[Math.min(idx + 1, NET_DAY_OPTIONS.length - 1)] ?? nf;
+    }
+    setMode(m); setFrom(nf); setTo(nt);
+    const next = formatPaymentTerms(m, nf, nt);
+    setLastValue(next);
+    onChange(next);
+  };
+  return (
+    <div className="grid gap-2 rounded-lg border border-border p-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-semibold">Payment Terms</Label>
+        <div className="flex items-center gap-2 text-xs">
+          <span className={mode === "single" ? "font-semibold text-foreground" : "text-muted-foreground"}>Single</span>
+          <Switch checked={mode === "window"} onCheckedChange={(v) => apply(v ? "window" : "single", from, to)} />
+          <span className={mode === "window" ? "font-semibold text-foreground" : "text-muted-foreground"}>Window</span>
+        </div>
+      </div>
+      {mode === "single" ? (
+        <div className="grid gap-1">
+          <Label className="text-xs text-muted-foreground">Net days</Label>
+          <Select value={from} onValueChange={(v) => apply("single", v, v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {NET_DAY_OPTIONS.map((d) => <SelectItem key={d} value={d}>{d === "0" ? "Due on receipt" : `Net ${d}`}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          <div className="grid gap-1">
+            <Label className="text-xs text-muted-foreground">From (days)</Label>
+            <Select value={from} onValueChange={(v) => apply("window", v, to)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {NET_DAY_OPTIONS.filter((d) => d !== "0").map((d) => <SelectItem key={d} value={d}>Net {d}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-1">
+            <Label className="text-xs text-muted-foreground">To (days)</Label>
+            <Select value={to} onValueChange={(v) => apply("window", from, v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {NET_DAY_OPTIONS.filter((d) => d !== "0" && Number(d) > Number(from)).map((d) => <SelectItem key={d} value={d}>Net {d}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+      <div className="text-[11px] text-muted-foreground">Stored as: <span className="font-mono text-foreground">{formatPaymentTerms(mode, from, to)}</span></div>
+    </div>
   );
 }
