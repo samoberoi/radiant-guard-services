@@ -53,23 +53,30 @@ function GRNPage() {
       return (data as unknown as GRN[]) ?? [];
     },
   });
-  // Field officers should only see delivery challans tied to demands they raised.
-  const { data: myDemandIds = new Set<string>() } = useQuery({
-    queryKey: ["inv", "my-demand-ids", role.userId],
-    enabled: role.isFieldOfficer && !!role.userId,
-    queryFn: async () => {
-      const { data, error } = await supabase.from("inv_demands" as never)
-        .select("id").eq("requester_id", role.userId as string);
-      if (error) throw error;
-      return new Set(((data as unknown as { id: string }[]) ?? []).map((r) => r.id));
-    },
-  });
+  // Field officers should only see delivery challans they themselves posted (against issuances received).
   const grns = useMemo(
     () => (role.isFieldOfficer
-      ? grnsRaw.filter((g) => g.demand_id && myDemandIds.has(g.demand_id))
+      ? grnsRaw.filter((g) => (g as unknown as { received_by?: string | null }).received_by === role.userId)
       : grnsRaw),
-    [grnsRaw, role.isFieldOfficer, myDemandIds],
+    [grnsRaw, role.isFieldOfficer, role.userId],
   );
+
+  // Pending issuances destined to this Field Officer (awaiting their delivery-challan ack)
+  const { data: foPendingIssuances = [] } = useQuery({
+    queryKey: ["inv", "fo-pending-issuances", role.candidateId],
+    enabled: role.isFieldOfficer && !!role.candidateId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_issuances" as never)
+        .select("id,issuance_number,issuance_date,issuance_type,source_type,source_id,destination_type,destination_id,demand_id,status,notes")
+        .eq("destination_type", "field_officer")
+        .eq("destination_id", role.candidateId as string)
+        .eq("status", "issued")
+        .order("issuance_date", { ascending: false });
+      if (error) throw error;
+      return (data as unknown as { id: string; issuance_number: string; issuance_date: string; issuance_type: string; source_type: string; source_id: string; destination_type: string; destination_id: string; demand_id: string | null; status: string; notes: string }[]) ?? [];
+    },
+  });
   const { data: pos = [] } = useQuery({
     queryKey: ["inv", "pos-open"],
     enabled: adminMode,
