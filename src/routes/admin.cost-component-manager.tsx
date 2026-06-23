@@ -153,6 +153,7 @@ function useCostComponents() {
     notes: p.notes,
     enabled: p.enabled,
     sort_order: p.sort_order,
+    deduction_calc_type: p.deduction_calc_type,
   });
 
   const addMut = useMutation({
