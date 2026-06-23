@@ -1590,6 +1590,7 @@ export type Database = {
           demand_date: string
           demand_number: string
           fulfilled_at: string | null
+          fulfillment_source: string
           id: string
           notes: string
           requester_id: string | null
@@ -1604,6 +1605,7 @@ export type Database = {
           demand_date?: string
           demand_number: string
           fulfilled_at?: string | null
+          fulfillment_source?: string
           id?: string
           notes?: string
           requester_id?: string | null
@@ -1618,6 +1620,7 @@ export type Database = {
           demand_date?: string
           demand_number?: string
           fulfilled_at?: string | null
+          fulfillment_source?: string
           id?: string
           notes?: string
           requester_id?: string | null

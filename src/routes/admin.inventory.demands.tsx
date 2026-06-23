@@ -25,6 +25,7 @@ const ENTITY = "inv_demands";
 type Demand = {
   id: string; demand_number: string; branch_id: string; demand_date: string;
   status: string; notes: string; requester_id: string | null;
+  fulfillment_source?: "warehouse" | "branch";
 };
 type Branch = { id: string; name: string; code: string };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
@@ -185,6 +186,8 @@ function DemandsPage() {
         onOpenChange={(o) => { setOpen(o); if (!o) setEditing(null); }}
         initial={editing}
         branchId={scope.branchId ?? ""}
+        branchLabel={scope.branchLabel}
+        isFieldOfficer={role.isFieldOfficer}
         items={items}
         onSaved={invalidate}
       />
@@ -193,13 +196,14 @@ function DemandsPage() {
   );
 }
 
-function DemandFormDialog({ open, onOpenChange, initial, branchId, items, onSaved }: {
+function DemandFormDialog({ open, onOpenChange, initial, branchId, branchLabel, isFieldOfficer, items, onSaved }: {
   open: boolean; onOpenChange: (o: boolean) => void; initial: Demand | null;
-  branchId: string; items: Item[]; onSaved: () => void;
+  branchId: string; branchLabel: string; isFieldOfficer: boolean; items: Item[]; onSaved: () => void;
 }) {
   const [demandDate, setDemandDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
+  const [source, setSource] = useState<"warehouse" | "branch">("warehouse");
   const [saving, setSaving] = useState(false);
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
@@ -208,6 +212,7 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, items, onSave
     if (initial) {
       setDemandDate(initial.demand_date);
       setNotes(initial.notes ?? "");
+      setSource((initial.fulfillment_source as "warehouse" | "branch") ?? "warehouse");
       const { data } = await supabase.from("inv_demand_lines" as never).select("*").eq("demand_id", initial.id).order("sort_order");
       setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => ({
         id: String(r.id),
@@ -220,6 +225,7 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, items, onSave
       setDemandDate(new Date().toISOString().slice(0, 10));
       setNotes("");
       setLines([]);
+      setSource("warehouse");
     }
   });
 
@@ -235,6 +241,7 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, items, onSave
       if (initial) {
         await supabase.from("inv_demands" as never).update({
           demand_date: demandDate, notes,
+          fulfillment_source: source,
           status: submit ? "submitted" : "draft",
           submitted_at: submit ? new Date().toISOString() : null,
         } as never).eq("id", initial.id);
@@ -244,6 +251,7 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, items, onSave
         const number = fmtNumber("DM", n);
         const { data: ins, error } = await supabase.from("inv_demands" as never).insert({
           demand_number: number, branch_id: branchId, demand_date: demandDate, notes,
+          fulfillment_source: source,
           status: submit ? "submitted" : "draft",
           requester_id: user?.id ?? null,
           submitted_at: submit ? new Date().toISOString() : null,
@@ -258,7 +266,7 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, items, onSave
       const { error: linesErr } = await supabase.from("inv_demand_lines" as never).insert(payload as never);
       if (linesErr) throw linesErr;
       void logActivity({ module: MODULE, action: submit ? "post" : (initial ? "update" : "create"), entityType: ENTITY, entityId: id!, entityLabel: initial?.demand_number ?? "Demand" });
-      toast.success(submit ? "Demand submitted to warehouse" : "Draft saved");
+      toast.success(submit ? `Demand submitted to ${source === "branch" ? "branch" : "warehouse"}` : "Draft saved");
       onSaved(); onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -272,13 +280,27 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, items, onSave
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{initial ? `Edit Demand ${initial.demand_number}` : "New Demand"}</DialogTitle>
-          <DialogDescription>Ask the warehouse for the items you need. Submitting sends it for fulfillment.</DialogDescription>
+          <DialogDescription>{isFieldOfficer ? "Request stock from your branch or the central warehouse." : "Ask the warehouse for the items you need. Submitting sends it for fulfillment."}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
-          <div className="grid gap-2 sm:w-1/3">
-            <Label>Demand Date</Label>
-            <Input type="date" value={demandDate} onChange={(e) => setDemandDate(e.target.value)} />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label>Demand Date</Label>
+              <Input type="date" value={demandDate} onChange={(e) => setDemandDate(e.target.value)} />
+            </div>
+            {isFieldOfficer && (
+              <div className="grid gap-2">
+                <Label>Request From</Label>
+                <Select value={source} onValueChange={(v) => setSource(v as "warehouse" | "branch")}>
+                  <SelectTrigger className="h-10"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="warehouse">Central Warehouse</SelectItem>
+                    <SelectItem value="branch">{branchLabel || "My Branch"}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div>
@@ -333,7 +355,7 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, items, onSave
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
           <Button variant="outline" onClick={() => save(false)} disabled={saving}>Save Draft</Button>
-          <Button onClick={() => save(true)} disabled={saving}><Send className="mr-1.5 h-4 w-4" />{saving ? "Submitting…" : "Submit to Warehouse"}</Button>
+          <Button onClick={() => save(true)} disabled={saving}><Send className="mr-1.5 h-4 w-4" />{saving ? "Submitting…" : `Submit to ${source === "branch" ? "Branch" : "Warehouse"}`}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
