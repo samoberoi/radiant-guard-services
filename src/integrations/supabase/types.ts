@@ -4007,6 +4007,7 @@ export type Database = {
         Args: { _id: string; p: Json }
         Returns: undefined
       }
+      current_user_branch_scope_ids: { Args: never; Returns: string[] }
       current_user_mobile: { Args: never; Returns: string }
       current_user_role_key: { Args: never; Returns: string }
       get_admin_user_ids: {

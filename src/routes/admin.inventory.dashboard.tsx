@@ -2,10 +2,9 @@ import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
-  AlertTriangle, Users, Building2, ShieldCheck, IndianRupee,
-  Package, ShoppingCart, TrendingUp, TrendingDown, ArrowRight,
-  Boxes, Truck, Wallet, Warehouse, PackageOpen, ClipboardList,
-  SlidersHorizontal, UserPlus, FileText,
+  AlertTriangle, Users, Building2, ShieldCheck, IndianRupee, ShoppingCart, TrendingUp, TrendingDown,
+  ArrowRight, Boxes, Truck, Wallet, Warehouse, PackageOpen, ClipboardList,
+  UserPlus, FileText,
 } from "lucide-react";
 import { useCurrentPermissions } from "@/lib/rbac";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
@@ -42,7 +41,8 @@ type Cand = { id: string; full_name: string; employee_code: string; role_key: st
 type Branch = { id: string; name: string; code: string };
 type Designation = { id: string; name: string };
 type GRN = { id: string; receipt_date: string; po_id: string | null; vendor_id: string | null; status: string };
-type WriteOff = { id: string; writeoff_date: string; recovery_amount: number; status: string };
+type WriteOff = { id: string; writeoff_date: string; recovery_amount: number; status: string; location_type: string; location_id: string };
+type ScopedMovement = { id: string; status: string; source_type: string; source_id: string; destination_type: string; destination_id: string };
 
 type Range = "today" | "7d" | "30d" | "90d" | "mtd" | "ytd";
 
@@ -156,7 +156,7 @@ export function InventoryOwnerDashboard() {
     if (error) throw error; return (data as unknown as GRN[]) ?? [];
   }});
   const woQ = useQuery({ queryKey: ["dash2", "wo"], queryFn: async () => {
-    const { data, error } = await supabase.from("inv_write_offs" as never).select("id,writeoff_date,recovery_amount,status");
+    const { data, error } = await supabase.from("inv_write_offs" as never).select("id,writeoff_date,recovery_amount,status,location_type,location_id");
     if (error) throw error; return (data as unknown as WriteOff[]) ?? [];
   }});
   const whsQ = useQuery({ queryKey: ["dash2", "whs"], queryFn: async () => {
@@ -164,12 +164,12 @@ export function InventoryOwnerDashboard() {
     if (error) throw error; return (data as unknown as { id: string; name: string; warehouse_code: string }[]) ?? [];
   }});
   const transfersQ = useQuery({ queryKey: ["dash2", "transfers"], queryFn: async () => {
-    const { data, error } = await supabase.from("inv_transfers" as never).select("id,status");
-    if (error) throw error; return (data as unknown as { id: string; status: string }[]) ?? [];
+    const { data, error } = await supabase.from("inv_transfers" as never).select("id,status,source_type,source_id,destination_type,destination_id");
+    if (error) throw error; return (data as unknown as ScopedMovement[]) ?? [];
   }});
   const issuancesQ = useQuery({ queryKey: ["dash2", "issuances"], queryFn: async () => {
-    const { data, error } = await supabase.from("inv_issuances" as never).select("id,status");
-    if (error) throw error; return (data as unknown as { id: string; status: string }[]) ?? [];
+    const { data, error } = await supabase.from("inv_issuances" as never).select("id,status,source_type,source_id,destination_type,destination_id");
+    if (error) throw error; return (data as unknown as ScopedMovement[]) ?? [];
   }});
 
   const itemsRaw = itemsQ.data ?? [];
@@ -188,6 +188,7 @@ export function InventoryOwnerDashboard() {
   const whsRaw = whsQ.data ?? [];
   const transfersRaw = transfersQ.data ?? [];
   const issuancesRaw = issuancesQ.data ?? [];
+  const canUseScopedData = !scope.isScoped || (!!scope.branchId && !scopeAssignmentsQ.isLoading);
 
   // ===== Branch-scope hard-filter =====
   // When the user is locked to a single branch, strip everything that does
@@ -197,7 +198,7 @@ export function InventoryOwnerDashboard() {
     if (!scope.isScoped || !scope.branchId) return balancesRaw;
     return balancesRaw.filter((b) =>
       (b.location_type === "branch" && b.location_id === scope.branchId) ||
-      (b.location_type === "field_officer" && allowedFoIds.has(b.location_id)),
+      ((b.location_type === "field_officer" || b.location_type === "guard") && allowedFoIds.has(b.location_id)),
     );
   }, [balancesRaw, scope.isScoped, scope.branchId, allowedFoIds]);
   const vendors = scope.isScoped ? [] : vendorsRaw;
@@ -209,9 +210,34 @@ export function InventoryOwnerDashboard() {
     () => (scope.isScoped && scope.branchId ? branchesRaw.filter((b) => b.id === scope.branchId) : branchesRaw),
     [branchesRaw, scope.isScoped, scope.branchId],
   );
-  const wos = wosRaw;
-  const transfers = transfersRaw;
-  const issuances = issuancesRaw;
+  const wos = useMemo(() => {
+    if (!scope.isScoped || !scope.branchId) return wosRaw;
+    if (!canUseScopedData) return [];
+    return wosRaw.filter((r) =>
+      (r.location_type === "branch" && r.location_id === scope.branchId) ||
+      ((r.location_type === "field_officer" || r.location_type === "guard") && allowedFoIds.has(r.location_id)),
+    );
+  }, [wosRaw, scope.isScoped, scope.branchId, canUseScopedData, allowedFoIds]);
+  const transfers = useMemo(() => {
+    if (!scope.isScoped || !scope.branchId) return transfersRaw;
+    if (!canUseScopedData) return [];
+    return transfersRaw.filter((t) =>
+      (t.source_type === "branch" && t.source_id === scope.branchId) ||
+      (t.destination_type === "branch" && t.destination_id === scope.branchId) ||
+      ((t.source_type === "field_officer" || t.source_type === "guard") && allowedFoIds.has(t.source_id)) ||
+      ((t.destination_type === "field_officer" || t.destination_type === "guard") && allowedFoIds.has(t.destination_id)),
+    );
+  }, [transfersRaw, scope.isScoped, scope.branchId, canUseScopedData, allowedFoIds]);
+  const issuances = useMemo(() => {
+    if (!scope.isScoped || !scope.branchId) return issuancesRaw;
+    if (!canUseScopedData) return [];
+    return issuancesRaw.filter((i) =>
+      (i.source_type === "branch" && i.source_id === scope.branchId) ||
+      (i.destination_type === "branch" && i.destination_id === scope.branchId) ||
+      ((i.source_type === "field_officer" || i.source_type === "guard") && allowedFoIds.has(i.source_id)) ||
+      ((i.destination_type === "field_officer" || i.destination_type === "guard") && allowedFoIds.has(i.destination_id)),
+    );
+  }, [issuancesRaw, scope.isScoped, scope.branchId, canUseScopedData, allowedFoIds]);
 
   const { canSub } = useCurrentPermissions();
 
@@ -437,10 +463,17 @@ export function InventoryOwnerDashboard() {
   }, [pos, grns, wos, vendorMap]);
 
   const filter = (s: string) => !q || s.toLowerCase().includes(q.toLowerCase());
+  const branchDashboardLoading = scope.isLoading || (scope.isScoped && scopeAssignmentsQ.isLoading);
 
   return (
     <div className="space-y-6">
       <ScopeBanner />
+      {branchDashboardLoading ? (
+        <div className="flex min-h-[32vh] items-center justify-center rounded-2xl border border-border bg-card/60 text-sm text-muted-foreground">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-foreground/20 border-t-foreground/70" />
+        </div>
+      ) : (
+        <>
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/60 p-3 backdrop-blur">
 
@@ -454,7 +487,11 @@ export function InventoryOwnerDashboard() {
           ))}
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {!scope.isScoped && (
+          {scope.isScoped ? (
+            <div className="flex h-9 items-center rounded-lg border border-border bg-secondary/40 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Branch: {scope.branchLabel || branches[0]?.name || "Assigned branch"}
+            </div>
+          ) : (
             <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
               <SelectTrigger className="h-9 w-[200px]"><SelectValue placeholder="Warehouse / Branch" /></SelectTrigger>
               <SelectContent className="max-h-[320px]">
@@ -481,29 +518,37 @@ export function InventoryOwnerDashboard() {
         </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <Kpi label="Stock Value" value={inr(stockValue)} icon={Wallet} tint="from-emerald-500/15 to-emerald-500/0" iconClass="text-emerald-500" hint="On-hand at standard cost" />
-        <Kpi label={`Spend · ${RANGE_LABEL[range]}`} value={inr(spendCur)} delta={delta(spendCur, spendPrev)} icon={IndianRupee} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" />
-        <Kpi label="POs Raised" value={posInPeriod.toString()} delta={delta(posInPeriod, posPrev)} icon={ShoppingCart} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" />
-        <Kpi label="GRNs Posted" value={grnsInPeriod.toString()} delta={delta(grnsInPeriod, grnsPrev)} icon={Truck} tint="from-cyan-500/15 to-cyan-500/0" iconClass="text-cyan-500" />
-        <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs · ${inr(writeoffCur)} write-offs`} to="/admin/inventory/stock" />
-      </div>
+      {scope.isScoped ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Kpi label="Branch Stock Value" value={inr(stockValue)} icon={Wallet} tint="from-emerald-500/15 to-emerald-500/0" iconClass="text-emerald-500" hint="Your branch and mapped field officers only" />
+          <Kpi label="Branch Units" value={branchHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Building2} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" hint="In branch holding" />
+          <Kpi label="Field Officer Units" value={foHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Users} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" hint="Mapped to your branch" />
+          <Kpi label="Guard Units" value={guardHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={ShieldCheck} tint="from-teal-500/15 to-teal-500/0" iconClass="text-teal-500" hint="Under your branch chain" />
+        </div>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <Kpi label="Stock Value" value={inr(stockValue)} icon={Wallet} tint="from-emerald-500/15 to-emerald-500/0" iconClass="text-emerald-500" hint="On-hand at standard cost" />
+          <Kpi label={`Spend · ${RANGE_LABEL[range]}`} value={inr(spendCur)} delta={delta(spendCur, spendPrev)} icon={IndianRupee} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" />
+          <Kpi label="POs Raised" value={posInPeriod.toString()} delta={delta(posInPeriod, posPrev)} icon={ShoppingCart} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" />
+          <Kpi label="GRNs Posted" value={grnsInPeriod.toString()} delta={delta(grnsInPeriod, grnsPrev)} icon={Truck} tint="from-cyan-500/15 to-cyan-500/0" iconClass="text-cyan-500" />
+          <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs · ${inr(writeoffCur)} write-offs`} to="/admin/inventory/stock" />
+        </div>
+      )}
 
       {/* Overview — clickable totals across modules */}
       <div className="space-y-3">
         <div className="flex items-baseline justify-between px-1">
-          <div className="font-display text-sm font-bold tracking-tight">Overview</div>
-          <div className="text-[11px] text-muted-foreground">Click any tile to open the module</div>
+          <div className="font-display text-sm font-bold tracking-tight">{scope.isScoped ? "Branch Overview" : "Overview"}</div>
+          {!scope.isScoped && <div className="text-[11px] text-muted-foreground">Click any tile to open the module</div>}
         </div>
 
         {/* Master counts */}
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {!scope.isScoped && <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           {canSub("inventory", "item_master") && <CountTile to="/admin/inventory/items" label="Products" value={items.length} icon={PackageOpen} accent="text-violet-500" />}
           {canSub("inventory", "vendors") && <CountTile to="/admin/inventory/vendors" label="Vendors" value={vendors.length} icon={ShoppingCart} accent="text-blue-500" />}
           {canSub("inventory", "warehouses") && <CountTile to="/admin/inventory/warehouses" label="Warehouses" value={whs.length} icon={Warehouse} accent="text-amber-500" />}
           {canSub("inventory", "stock_report") && <CountTile to="/admin/customers/branch-manager" label="Branches" value={branches.length} icon={Building2} accent="text-cyan-500" />}
-        </div>
+        </div>}
 
         {/* Workflow counts with status split */}
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -583,7 +628,7 @@ export function InventoryOwnerDashboard() {
 
 
 
-      {/* Charts row */}
+      {!scope.isScoped && <>
       <div className="grid gap-4 lg:grid-cols-3">
         <Panel title="Spend Trend" subtitle={RANGE_LABEL[range]} className="lg:col-span-2">
           <div className="h-64">
@@ -711,8 +756,11 @@ export function InventoryOwnerDashboard() {
           )}
         </Panel>
       </div>
+      </>}
 
 
+        </>
+      )}
     </div>
   );
 }
