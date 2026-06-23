@@ -24,16 +24,19 @@ const ENTITY = "inv_goods_receipts";
 
 type GRN = {
   id: string; grn_number: string; receipt_date: string; status: string;
-  po_id: string | null; vendor_id: string | null; warehouse_id: string;
+  po_id: string | null; vendor_id: string | null; warehouse_id: string | null;
   vendor_invoice_number: string; vendor_challan_number: string; vehicle_number: string; notes: string;
   vendor_invoice_url?: string | null;
+  transfer_id?: string | null; demand_id?: string | null; branch_id?: string | null; kind?: string;
 };
 type PO = { id: string; po_number: string; vendor_id: string | null; destination_warehouse_id: string | null; status: string };
 type POLine = { id: string; item_id: string; size_value: string; ordered_qty: number; received_qty: number };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
 type Vendor = { id: string; name: string };
 type Warehouse = { id: string; name: string };
-type Line = { id?: string; po_line_id: string | null; item_id: string; size_value: string; ordered_qty: number; received_qty: number; accepted_qty: number; rejected_qty: number; rejection_reason: string };
+type Transfer = { id: string; transfer_number: string; source_type: string; source_id: string; destination_type: string; destination_id: string; demand_id: string | null };
+type TransferLine = { id: string; transfer_id: string; item_id: string; size_value: string; dispatched_qty: number };
+type Line = { id?: string; po_line_id: string | null; transfer_line_id?: string | null; item_id: string; size_value: string; ordered_qty: number; received_qty: number; accepted_qty: number; rejected_qty: number; rejection_reason: string };
 
 function GRNPage() {
   const qc = useQueryClient();
