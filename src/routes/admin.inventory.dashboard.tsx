@@ -167,6 +167,11 @@ export function InventoryOwnerDashboard() {
     const { data, error } = await supabase.from("inv_transfers" as never).select("id,status,source_type,source_id,destination_type,destination_id");
     if (error) throw error; return (data as unknown as ScopedMovement[]) ?? [];
   }});
+  const transferLinesQ = useQuery({ queryKey: ["dash2", "transfer-lines"], queryFn: async () => {
+    const { data, error } = await supabase.from("inv_transfer_lines" as never).select("transfer_id,item_id,size_value,dispatched_qty,received_qty");
+    if (error) throw error;
+    return (data as unknown as { transfer_id: string; item_id: string; size_value: string; dispatched_qty: number; received_qty: number }[]) ?? [];
+  }});
   const issuancesQ = useQuery({ queryKey: ["dash2", "issuances"], queryFn: async () => {
     const { data, error } = await supabase.from("inv_issuances" as never).select("id,status,source_type,source_id,destination_type,destination_id");
     if (error) throw error; return (data as unknown as ScopedMovement[]) ?? [];
