@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, useDialogDirty } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass } from "@/lib/inv-helpers";
 
 export const Route = createFileRoute("/admin/inventory/goods-receipts")({ component: GRNPage });
@@ -412,7 +412,7 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
           <div className="grid gap-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          <CancelBtn saving={saving} onClose={() => onOpenChange(false)} />
           <Button onClick={save} disabled={saving || !poId}>{saving ? "Posting…" : "Post Challan"}</Button>
         </DialogFooter>
       </DialogContent>
@@ -466,4 +466,11 @@ function GRNViewDialog({ open, onOpenChange, grn }: { open: boolean; onOpenChang
 function useResetOnOpen(open: boolean, reset: () => void) {
   const [last, setLast] = useState(false);
   if (open !== last) { setLast(open); if (open) reset(); }
+}
+
+function CancelBtn({ saving, onClose }: { saving: boolean; onClose: () => void }) {
+  const { markPristine } = useDialogDirty();
+  return (
+    <Button variant="outline" disabled={saving} onClick={() => { markPristine(); onClose(); }}>Cancel</Button>
+  );
 }
