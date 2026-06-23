@@ -203,7 +203,7 @@ function IssuancesPage() {
                   <td className="px-5 py-3">{locName(i.source_type, i.source_id)}</td>
                   <td className="px-5 py-3 font-medium">{locName(i.destination_type, i.destination_id)}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{i.issuance_date}</td>
-                  <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(i.status)}`}>{i.status === "acknowledged" ? "completed" : i.status}</span></td>
+                  <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(i.status)}`}>{i.status === "completed" ? "completed" : i.status}</span></td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setActive(i); setOpen(true); }}><Eye className="h-4 w-4" /></Button>
@@ -453,7 +453,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
     try {
       const { data: { user } } = await supabase.auth.getUser();
       await supabase.from("inv_issuances" as never).update({
-        status: "acknowledged", acknowledged_at: new Date().toISOString(),
+        status: "completed", acknowledged_at: new Date().toISOString(),
         received_at: new Date().toISOString(), received_by: user?.id ?? null,
       } as never).eq("id", initial.id);
       // Post IN movements to destination now.
@@ -479,7 +479,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{initial ? `Issuance ${initial.issuance_number}` : "New Issuance"}</DialogTitle>
-          <DialogDescription>{initial?.status === "acknowledged" ? "Completed." : isIssued ? "Issued — waiting for acknowledgement." : "Build and issue."}</DialogDescription>
+          <DialogDescription>{initial?.status === "completed" ? "Completed." : isIssued ? "Issued — waiting for acknowledgement." : "Build and issue."}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
@@ -607,7 +607,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
           </div>
 
 
-          <div className="grid gap-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={initial?.status === "acknowledged"} rows={2} /></div>
+          <div className="grid gap-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={initial?.status === "completed"} rows={2} /></div>
         </div>
 
         <DialogFooter>

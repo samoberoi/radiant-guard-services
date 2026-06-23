@@ -101,6 +101,7 @@ export const STATUS_BADGE: Record<string, string> = {
   dispatched: "bg-amber-500/15 text-amber-700",
   issued: "bg-blue-500/15 text-blue-700",
   acknowledged: "bg-emerald-500/15 text-emerald-700",
+  completed: "bg-emerald-500/15 text-emerald-700",
   approved: "bg-emerald-500/15 text-emerald-700",
   pending: "bg-amber-500/15 text-amber-700",
 };
