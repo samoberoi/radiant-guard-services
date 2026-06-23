@@ -694,7 +694,7 @@ function POFormDialog({
                         <td className="px-2 py-1.5">
                           <Select value={l.item_id} onValueChange={(v) => applyRateToLine(idx, v, l.size_value)} disabled={readOnly}>
                             <SelectTrigger className="h-9"><SelectValue placeholder="Pick item" /></SelectTrigger>
-                            <SelectContent>{items.map((it) => <SelectItem key={it.id} value={it.id}>{it.name}</SelectItem>)}</SelectContent>
+                            <SelectContent>{vendorItems.map((it) => <SelectItem key={it.id} value={it.id}>{it.name}</SelectItem>)}{!vendorItems.length && <div className="px-3 py-2 text-xs text-muted-foreground">No items quoted by this vendor</div>}</SelectContent>
                           </Select>
                         </td>
                         <td className="px-2 py-1.5 align-top">
