@@ -40,6 +40,9 @@ type Line = { id?: string; po_line_id: string | null; transfer_line_id?: string 
 
 function GRNPage() {
   const qc = useQueryClient();
+  const scope = useUserBranchScope();
+  const adminMode = !scope.isScoped;
+
   const { data: grns = [] } = useQuery({
     queryKey: ["inv", "grns"],
     queryFn: async () => {
@@ -50,6 +53,7 @@ function GRNPage() {
   });
   const { data: pos = [] } = useQuery({
     queryKey: ["inv", "pos-open"],
+    enabled: adminMode,
     queryFn: async () => {
       const { data, error } = await supabase.from("inv_purchase_orders" as never).select("id,po_number,vendor_id,destination_warehouse_id,status").in("status", ["open", "partially_received"]).order("po_date", { ascending: false });
       if (error) throw error;
@@ -58,6 +62,7 @@ function GRNPage() {
   });
   const { data: vendors = [] } = useQuery({
     queryKey: ["inv", "vendors-list"],
+    enabled: adminMode,
     queryFn: async () => {
       const { data, error } = await supabase.from("inv_vendors" as never).select("id,name").eq("enabled", true);
       if (error) throw error;
@@ -66,10 +71,34 @@ function GRNPage() {
   });
   const { data: warehouses = [] } = useQuery({
     queryKey: ["inv", "warehouses-list"],
+    enabled: adminMode,
     queryFn: async () => {
       const { data, error } = await supabase.from("inv_warehouses" as never).select("id,name").eq("enabled", true);
       if (error) throw error;
       return (data as unknown as Warehouse[]) ?? [];
+    },
+  });
+  const { data: incomingTransfers = [] } = useQuery({
+    queryKey: ["inv", "transfers-incoming", scope.branchId],
+    enabled: !!scope.branchId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_transfers" as never)
+        .select("id,transfer_number,source_type,source_id,destination_type,destination_id,demand_id,status")
+        .eq("destination_type", "branch")
+        .eq("destination_id", scope.branchId as string)
+        .eq("status", "in_transit")
+        .order("transfer_date", { ascending: false });
+      if (error) throw error;
+      return (data as unknown as Transfer[]) ?? [];
+    },
+  });
+  const { data: items = [] } = useQuery({
+    queryKey: ["inv", "items-list-grn"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_items" as never).select("id,name,item_code,is_sized,standard_cost").order("name");
+      if (error) throw error;
+      return (data as unknown as (Item & { standard_cost?: number })[]) ?? [];
     },
   });
 
