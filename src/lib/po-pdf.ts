@@ -32,6 +32,8 @@ export type POPdfData = {
   po_date: string; // ISO yyyy-mm-dd
   remarks?: string;
   vendor: POPdfVendor | null;
+  ordering_from?: string;
+  deliver_to?: string;
   lines: POPdfLine[];
 };
 
