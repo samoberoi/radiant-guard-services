@@ -1,65 +1,89 @@
-## Goal
 
-Add a new **Assets** module in the left nav that mirrors the look and feel of Vehicles. It manages immovable assets (predominantly houses owned by the company), with three sub-modules: Asset Inventory, Loan Manager, Expense Manager. Grant access to Super Admin (implicit), Leadership, and Transport.
+# Payroll end-to-end alignment
 
-## Sub-modules
+Goal: every contract — Kids Clinic, FPL, and any future client — flows correctly from Control Center → per-employee calculation → on-screen breakdown → Wage Register / Pay Sheet / MIS export, with finance-grade numbers that match the vendor's wage register.
 
-1. **Asset Inventory** – list/add/edit/delete houses.
-2. **Loan Manager** – ongoing loan(s) per asset (lender, sanctioned amount, outstanding, EMI, tenure, start/end, interest rate, account no.).
-3. **Expense Manager** – recurring/one-off expenses against an asset (maintenance, society, property tax, repair, utilities, etc.) with amount, date, payment mode, vendor, notes, receipt upload.
+## 1. Calculation engine (`src/lib/payroll-calc.ts`)
 
-*No Service Manager, no FastTag, no PUC* (per request).
+Single source of truth used by the screen and all exports.
 
-## Asset fields (House)
+### 1a. Day base — default to 26
+- When the contract's Payroll Day Base is set, honour it.
+- When it is **not** set or the method is `actual_days`, fall back to **26**, not calendar days. (Today we fall back to `periodDayCount`, which is why Kids Clinic with no Payroll Day Base shows wrong per-day rates.)
 
-- House Number / Name
-- Owner (Company entity)
-- Address (line 1, line 2)
-- City, State, Pincode
-- Size / Configuration (1BHK / 2BHK / 3BHK / 4BHK / Other) + Carpet Area (sq.ft, optional)
-- Purchase Date, Purchase Value
-- Current Estimated Value (optional)
-- Property Tax ID (optional)
-- Notes
-- Enabled (soft-disable like vehicles)
+### 1b. Earnings proration — keep current model
+```
+componentEarned = contractAmount × (P + otherPaidDays) / baseDays
+Paid Holiday    = (contractGross / baseDays) × PH_count   (separate line)
+```
+This already matches the FPL register row-by-row and stays.
 
-## Database (migration)
+### 1c. Overtime — switch to vendor convention for ALL clients
+Replace the current `(Basic+DA) / (baseDays×8) × 2 × OT_hours` with:
+```
+uniformContract = Σ contract components whose canonical name matches /uniform/i
+otBase          = contractGross − uniformContract
+OT amount       = otBase / (baseDays × 8) × 1 × OT_hours
+```
+- Single rate (×1), not statutory double.
+- Base = full monthly gross minus Uniform Allowance.
+- Same rule for every contract; no per-contract toggle for now.
 
-Three new public tables, each with the standard four-step shape (CREATE → GRANT → ENABLE RLS → CREATE POLICY) and an `updated_at` trigger.
+### 1d. Deductions & employer contributions — already correct, verify
+- Percentage rows recompute from their configured `baseComponents` on the **earned** values (existing `benefitAmountFromConfig`).
+- Fixed rows like Uniform, LWF stay at contract amount.
+- ESI uses statutory 0.75 / 3.25 % on (earned Gross − Washing − Conveyance), ceiling ₹21,000 — unchanged.
+- EPF recomputes off whatever the contract row's base + cap says — unchanged.
+- PT resolves from Professional Tax Manager by state/region/gender/earnedGross — unchanged.
 
-- `assets` – columns above plus id/created_at/updated_at/enabled.
-- `asset_loans` – `asset_id` FK, lender_name, account_no, sanctioned_amount, outstanding_amount, emi_amount, interest_rate, tenure_months, start_date, end_date, status (active/closed), notes, enabled.
-- `asset_expenses` – `asset_id` FK, expense_date, category (Maintenance/Society/Property Tax/Repair/Utilities/Insurance/Other), amount, payment_mode (Cash/UPI/Bank/Card/Other), vendor_name, notes, receipt_url, enabled.
+### 1e. Round trip
+`earnedGross = Σ(scaled components) + Paid Holiday + Overtime`, then `netPay`, `totalEmployerContributions`, `employerCost` all derived from that. No hidden values.
 
-RLS: `SELECT/INSERT/UPDATE/DELETE` granted to `authenticated` (mirrors existing `vehicles` table). Policies allow any signed-in user; app-level RBAC governs visibility (same model as vehicles).
+## 2. Exports (`src/routes/admin.payroll.$unitId.tsx`)
 
-## Routes (mirror vehicle look & feel)
+Keep the current "hide any column whose value is zero across every row" behavior — confirmed in the questions. The fix is making sure non-zero values actually flow through:
 
-- `src/routes/admin.assets.tsx` – layout + dashboard (KPIs: Total Assets, Loans Active, Loan Outstanding ₹, Expense MTD ₹, Loan Closing ≤60d).
-- `src/routes/admin.assets.inventory.tsx` – list, add, edit, delete (modelled on `admin.vehicles.inventory.tsx`).
-- `src/routes/admin.assets.loans.tsx` – Loan Manager table (modelled on `admin.vehicles.insurances.tsx`).
-- `src/routes/admin.assets.expense-manager.tsx` – modelled on `admin.vehicles.expense-manager.tsx`, scoped to assets.
+### 2a. Column source of truth
+- **Contract (F …) columns**: union of every component on every employee's contract for the period. Already correct.
+- **Earned (E …) columns**: union of every component on `wages.components`. Today this misses HRA on Kids Clinic only because the engine is producing zero (wrong day base / wrong proration). Fixing §1a fixes the column.
+- **Deductions (EE …) / Employer (ER …) columns**: union across all rows, header canonicalised (`EE EPF`, `ER ESIC`, etc.). Already correct.
 
-## Left sidebar (`src/routes/admin.tsx`)
+### 2b. Adapt to the contract
+Once §1 lands, Kids Clinic's HRA, EPF/ESIC employee, EPF/ESIC employer, Management Fee, LWF, etc. become non-zero per row and appear automatically in Wage Register and MIS without per-client hard-coding.
 
-Add `assetsChildren` and a new group between Vehicles and Control Center:
+### 2c. Totals & CTC
+- Totals row sums every numeric column.
+- MIS adds: every `ER …` column, `Total Employer Contributions`, `Employer Cost (CTC) = E Gross + Total ER`. Already there; only verifying the underlying numbers are right after §1.
 
-- Asset Inventory · Loan Manager · Expense Manager
+## 3. Verification
 
-Plus `pathToModule` entry `{ prefix: "/admin/assets", module: "assets" }` and include `assets` in the `order` / `pathFor` redirect map.
+For each unit we have data for (Kids Clinic, FPL, and at least one other live unit) for **May 2026**:
 
-## RBAC registry (`src/lib/rbac-modules.ts`)
+1. Fetch contract_resources, attendance_entries, additions, deductions for the period.
+2. Run the new engine in a small node script and produce per-employee:
+   contract gross, base days, P, PH, OT hrs, earned components, PH amount, OT amount, earned gross, EPF EE, ESIC EE, PT, total ded, net, EPF ER, ESIC ER, Mgmt Fee, total ER, CTC.
+3. Spot-check against the vendor sheet (FPL) and against a hand calculation for Kids Clinic (≤5 sample employees). Surface any rows that don't tie to the vendor within ₹1, and report the delta.
+4. Only after the script reconciles, ship the code changes.
 
-Add module `assets` with sub-modules `asset_inventory`, `loan_manager`, `expense_manager`. Icon: `Home`.
+## 4. What is intentionally **not** changing
 
-## Role permissions (data insert)
+- The on-screen Payroll table layout and the per-employee expanded breakdown (only the numbers it shows will change because the engine changed).
+- Additions/Deductions admin pages.
+- Control Center (Cost Components, Allowance Manager, PT/LWF managers).
+- ESI / PT / EPF statutory rules.
 
-For module_key `assets` × each sub-module, insert full-access rows for `leadership` and `transport` (`can_view/edit/delete = true`, `can_approve = false`). Super Admin is implicitly all-access.
+## 5. One open input from you
 
-## Index redirect (`src/routes/index.tsx`)
-
-Add `assets` to `ORDER` and `PATH_FOR` so users with only Assets access land on `/admin/assets/inventory`.
+For Kids Clinic verification, please drop the May-2026 wage register (vendor copy or your gold copy) into chat. If you don't have one, I'll reconcile Kids Clinic against a hand calculation of 5 sample employees using their contract + attendance, and treat FPL as the primary regression reference.
 
 ---
 
-I will create the migration first (you approve), then write the routes, sidebar, RBAC, and seed permissions in one batch.
+### Files I'll touch in build mode
+
+- `src/lib/payroll-calc.ts` — day-base fallback, OT formula.
+- `src/routes/admin.payroll.$unitId.tsx` — no structural change; verify exports after engine fix.
+- A throwaway verification script under `/tmp/` (not committed).
+
+### Risk / rollback
+
+Both changes are localised to `computeWages` and consume the same inputs as today. If the vendor reconciliation reveals a per-client deviation we didn't anticipate, the OT rule and day-base fallback can each be promoted to a contract-level setting without re-architecting anything.

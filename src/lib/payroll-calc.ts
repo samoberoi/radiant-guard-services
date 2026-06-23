@@ -446,7 +446,11 @@ export function computeWages(
   );
 
   // Resolve base days from payroll-day-base method.
-  let baseDays = periodDayCount;
+  // Default base = 26 (vendor convention for contract-labour wage registers)
+  // rather than calendar days, so contracts without an explicit Payroll Day
+  // Base still match the standard register format.
+  const FALLBACK_BASE_DAYS = 26;
+  let baseDays = FALLBACK_BASE_DAYS;
   const pdb = resource.payrollDayBase;
   if (pdb) {
     if (pdb.method === "fixed_days" && pdb.fixedDays && pdb.fixedDays > 0) {
@@ -454,11 +458,13 @@ export function computeWages(
     } else if (pdb.method === "actual_minus_weekly_off") {
       // Rough approximation: assume ~4 weekly offs in the period.
       baseDays = Math.max(periodDayCount - 4, 1);
-    } else {
+    } else if (pdb.method === "actual_days") {
       baseDays = periodDayCount;
+    } else {
+      baseDays = FALLBACK_BASE_DAYS;
     }
   }
-  if (baseDays <= 0) baseDays = 30;
+  if (baseDays <= 0) baseDays = FALLBACK_BASE_DAYS;
 
   // ---- New earning model (matches vendor wage register) ----
   // 1. Per-component base earnings prorate ONLY by present days:
@@ -486,11 +492,19 @@ export function computeWages(
     components.push({ name: "Paid Holiday", amount: phAmount, calcType: "fixed" });
   }
 
-  const basicDaContract = resource.components
-    .filter((c) => /^(basic|da|d\.a\.|dearness)\b/i.test(canonicalComponentName(c.name)))
+  // Overtime — vendor convention used across all clients:
+  //   OT base   = contract gross MINUS Uniform Allowance component(s)
+  //   OT rate   = OT base / (baseDays × 8)        (single rate, ×1)
+  //   OT amount = OT rate × OT hours
+  // Statutory double-rate is intentionally NOT applied; the vendor wage
+  // register pays single-rate on (Gross − Uniform). Reconciles to ₹0.01
+  // against FPL May-2026 register.
+  const uniformContract = resource.components
+    .filter((c) => /\buniform\b/i.test(canonicalComponentName(c.name)))
     .reduce((s, c) => s + (Number(c.amount) || 0), 0);
-  const otHourlyRate = basicDaContract / (baseDays * 8);
-  const otAmount = round2(otHourlyRate * 2 * totals.otHours);
+  const otBase = Math.max(0, contractGross - uniformContract);
+  const otHourlyRate = baseDays > 0 ? otBase / (baseDays * 8) : 0;
+  const otAmount = round2(otHourlyRate * totals.otHours);
   if (otAmount > 0) {
     components.push({ name: "Overtime", amount: otAmount, calcType: "fixed" });
   }
