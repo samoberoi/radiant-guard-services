@@ -3327,6 +3327,7 @@ function ResourceFormDialog({
           allowanceId: a.id,
           name: a.shortName || a.displayName,
           amount: 0,
+          includeInOt: a.includeInOt,
         };
         if (a.calcType === "percentage") {
           // Compute formula against existing components (excluding self by id).
