@@ -396,17 +396,16 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{initial ? `Transfer ${initial.transfer_number}` : "New Transfer"}</DialogTitle>
-          <DialogDescription>{initial?.status === "acknowledged" ? "Completed." : isDispatched ? "In transit — receive to complete." : "Build line items and dispatch."}</DialogDescription>
+          <DialogDescription>{initial?.status === "acknowledged" ? "Completed." : isDispatched ? "Initiated — awaiting delivery challan from branch." : "Pick a branch demand and initiate the transfer. Source inventory will be deducted immediately."}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           {isDraft && (
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Against Demand (optional)</div>
-              <Select value={demandId || "__none__"} onValueChange={(v) => v === "__none__" ? setDemandId("") : loadDemand(v)}>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Against Demand</div>
+              <Select value={demandId} onValueChange={(v) => loadDemand(v)}>
                 <SelectTrigger><SelectValue placeholder="Pick a submitted branch demand" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">— None (manual transfer) —</SelectItem>
                   {demands.map((d) => {
                     const br = branches.find((b) => b.id === d.branch_id);
                     return <SelectItem key={d.id} value={d.id}>{d.demand_number} → {br ? `${br.code} ${br.name}` : "Branch"}</SelectItem>;
@@ -418,50 +417,28 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
           )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl border border-border p-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">From</div>
-              <div className="grid gap-2">
-                <Select value={sourceType} onValueChange={(v) => { setSourceType(v as LocationType); setSourceId(""); }} disabled={!isDraft}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="warehouse">Warehouse</SelectItem>
-                    <SelectItem value="branch">Branch</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={sourceId} onValueChange={setSourceId} disabled={!isDraft}>
-                  <SelectTrigger><SelectValue placeholder="Pick" /></SelectTrigger>
-                  <SelectContent>{srcOptions().map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">From (Warehouse)</div>
+              <Select value={sourceId} onValueChange={setSourceId} disabled={!isDraft}>
+                <SelectTrigger><SelectValue placeholder="Pick warehouse" /></SelectTrigger>
+                <SelectContent>{warehouses.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}</SelectContent>
+              </Select>
             </div>
             <div className="rounded-xl border border-border p-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">To</div>
-              <div className="grid gap-2">
-                <Select value={destType} onValueChange={(v) => { setDestType(v as LocationType); setDestId(""); }} disabled={!isDraft}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="warehouse">Warehouse</SelectItem>
-                    <SelectItem value="branch">Branch</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={destId} onValueChange={setDestId} disabled={!isDraft}>
-                  <SelectTrigger><SelectValue placeholder="Pick" /></SelectTrigger>
-                  <SelectContent>{dstOptions().map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}</SelectContent>
-                </Select>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">To (Branch)</div>
+              <div className="flex h-10 items-center rounded-md border border-input bg-muted/30 px-3 text-sm">
+                {(() => { const br = branches.find((b) => b.id === destId); return br ? `${br.code} – ${br.name}` : "—"; })()}
               </div>
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-4">
-            <div className="grid gap-2"><Label>Date</Label><Input type="date" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} disabled={!isDraft} /></div>
-            <div className="grid gap-2"><Label>Vehicle</Label><Input value={vehicle} onChange={(e) => setVehicle(e.target.value)} disabled={isReceived} /></div>
-            <div className="grid gap-2"><Label>Driver</Label><Input value={driverName} onChange={(e) => setDriverName(e.target.value)} disabled={isReceived} /></div>
-            <div className="grid gap-2"><Label>Driver Phone</Label><Input value={driverPhone} onChange={(e) => setDriverPhone(e.target.value)} disabled={isReceived} /></div>
+          <div className="grid gap-2 sm:w-1/3">
+            <Label>Date</Label>
+            <Input type="date" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} disabled={!isDraft} />
           </div>
 
           <div>
             <div className="mb-2 flex items-center justify-between">
               <Label className="text-sm font-semibold">Items</Label>
-              {isDraft && <Button size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { item_id: "", size_value: "", dispatched_qty: 1, received_qty: 0, variance_reason: "" }])}><Plus className="mr-1 h-3.5 w-3.5" />Add line</Button>}
             </div>
             <div className="overflow-x-clip rounded-xl border border-border">
               <table className="ios-table w-full text-sm">
@@ -469,10 +446,10 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                   <tr>
                     <th className="px-3 py-2">Item</th>
                     <th className="px-3 py-2 w-16">Size</th>
+                    <th className="px-3 py-2 w-24 text-right">Demanded</th>
                     <th className="px-3 py-2 w-24 text-right">Dispatched</th>
                     {isDispatched && <th className="px-3 py-2 w-24 text-right">Received</th>}
                     {isDispatched && <th className="px-3 py-2">Variance Reason</th>}
-                    {isDraft && <th className="px-3 py-2 w-10"></th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -480,25 +457,20 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                     const it = itemMap.get(l.item_id);
                     return (
                       <tr key={idx}>
+                        <td className="px-3 py-2 font-medium">{it?.name ?? "—"}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{l.size_value || "—"}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{l.requested_qty}</td>
                         <td className="px-2 py-1.5">
-                          {isDraft ? (
-                            <Select value={l.item_id} onValueChange={(v) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, item_id: v } : x))}>
-                              <SelectTrigger className="h-9"><SelectValue placeholder="Pick" /></SelectTrigger>
-                              <SelectContent>{items.map((x) => <SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                          ) : <div className="px-1 font-medium">{it?.name ?? "—"}</div>}
+                          {isDraft
+                            ? <Input type="number" min={0} className="h-9 text-right" value={l.dispatched_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, dispatched_qty: Number(e.target.value) || 0 } : x))} />
+                            : <div className="text-right tabular-nums">{l.dispatched_qty}</div>}
                         </td>
-                        <td className="px-2 py-1.5">
-                          <Input className="h-9" disabled={!isDraft || !it?.is_sized} value={l.size_value} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, size_value: e.target.value } : x))} placeholder={it?.is_sized ? "M/L" : "—"} />
-                        </td>
-                        <td className="px-2 py-1.5"><Input type="number" min={0} disabled={!isDraft} className="h-9 text-right" value={l.dispatched_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, dispatched_qty: Number(e.target.value) || 0 } : x))} /></td>
-                        {isDispatched && <td className="px-2 py-1.5"><Input type="number" min={0} max={l.dispatched_qty} className="h-9 text-right" value={l.received_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, received_qty: Number(e.target.value) || 0 } : x))} /></td>}
-                        {isDispatched && <td className="px-2 py-1.5"><Input className="h-9" value={l.variance_reason} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, variance_reason: e.target.value } : x))} placeholder={l.received_qty < l.dispatched_qty ? "Required" : "—"} /></td>}
-                        {isDraft && <td className="px-2 py-1.5"><Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => setLines((ls) => ls.filter((_, i) => i !== idx))}><Trash2 className="h-3.5 w-3.5" /></Button></td>}
+                        {isDispatched && <td className="px-2 py-1.5 text-right tabular-nums">{l.received_qty}</td>}
+                        {isDispatched && <td className="px-2 py-1.5 text-xs text-muted-foreground">{l.variance_reason || "—"}</td>}
                       </tr>
                     );
                   })}
-                  {!lines.length && <tr><td colSpan={6} className="px-3 py-6 text-center text-xs text-muted-foreground">No lines.</td></tr>}
+                  {!lines.length && <tr><td colSpan={isDispatched ? 6 : 4} className="px-3 py-6 text-center text-xs text-muted-foreground">{isDraft ? "Pick a demand above to load items." : "No lines."}</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -509,10 +481,9 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
-          {isDraft && <Button variant="outline" onClick={saveDraft} disabled={saving}>Save Draft</Button>}
-          {isDraft && initial && <Button onClick={dispatch} disabled={saving}>{saving ? "Dispatching…" : "Dispatch"}</Button>}
-          {isDispatched && <Button onClick={receive} disabled={saving}>{saving ? "Saving…" : "Acknowledge Receipt"}</Button>}
+          {isDraft && <Button onClick={initiateTransfer} disabled={saving || !demandId}>{saving ? "Initiating…" : "Initiate Transfer"}</Button>}
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
