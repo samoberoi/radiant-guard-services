@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Plus, Search, PackageCheck, Eye, Trash2 } from "lucide-react";
+import { Plus, Search, PackageCheck, Eye, Trash2, FileText } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -161,7 +161,6 @@ function GRNPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Challan #</th>
-                <th className="px-5 py-3">PO #</th>
                 <th className="px-5 py-3">Vendor</th>
                 <th className="px-5 py-3">Warehouse</th>
                 <th className="px-5 py-3">Delivery Date</th>
@@ -178,7 +177,6 @@ function GRNPage() {
                 return (
                 <tr key={g.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs">{g.grn_number}</td>
-                  <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{g.po_id ? poMap.get(g.po_id)?.po_number ?? "—" : "—"}</td>
                   <td className="px-5 py-3">{g.vendor_id ? vMap.get(g.vendor_id) ?? "—" : "—"}</td>
                   <td className="px-5 py-3">{wMap.get(g.warehouse_id) ?? "—"}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{g.receipt_date}</td>
@@ -200,7 +198,7 @@ function GRNPage() {
                 </tr>
                 );
               })}
-              {!filtered.length && <tr><td colSpan={10} className="px-5 py-12 text-center text-sm text-muted-foreground"><PackageCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No delivery challans yet.</td></tr>}
+              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><PackageCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No delivery challans yet.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -444,6 +442,7 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
 }
 
 function GRNViewDialog({ open, onOpenChange, grn }: { open: boolean; onOpenChange: (o: boolean) => void; grn: GRN | null }) {
+  const { markPristine } = useDialogDirty();
   const { data: lines = [] } = useQuery({
     queryKey: ["inv", "grn-lines", grn?.id],
     enabled: !!grn,
@@ -463,10 +462,12 @@ function GRNViewDialog({ open, onOpenChange, grn }: { open: boolean; onOpenChang
           <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm">
             <span className="text-muted-foreground">Vendor invoice attached</span>
             <Button size="sm" variant="outline" onClick={async () => {
-              const { data, error } = await supabase.storage.from("vendor-invoices").createSignedUrl(grn.vendor_invoice_url!, 300);
+              const filePath = grn.vendor_invoice_url!.replace(/^\/+/, "").replace(/^vendor-invoices\//, "");
+              const { data, error } = await supabase.storage.from("vendor-invoices").createSignedUrl(filePath, 300);
               if (error || !data?.signedUrl) { toast.error("Could not open invoice"); return; }
-              window.open(data.signedUrl, "_blank", "noopener");
-            }}>View Invoice</Button>
+              const popup = window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+              if (!popup) window.location.href = data.signedUrl;
+            }}><FileText className="h-4 w-4" />View Invoice</Button>
           </div>
         )}
         <div className="overflow-x-clip rounded-xl border border-border">
@@ -490,7 +491,7 @@ function GRNViewDialog({ open, onOpenChange, grn }: { open: boolean; onOpenChang
             </tbody>
           </table>
         </div>
-        <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button></DialogFooter>
+        <DialogFooter><Button variant="outline" onClick={() => { markPristine(); onOpenChange(false); }}>Close</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
