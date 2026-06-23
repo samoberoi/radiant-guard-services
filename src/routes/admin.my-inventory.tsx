@@ -86,7 +86,7 @@ function MyInventoryPage() {
   const holdings = useMemo(() => {
     const map = new Map<string, { item_id: string; size_value: string; qty: number }>();
     for (const i of issuances) {
-      if (i.status !== "acknowledged") continue;
+      if (i.status !== "completed") continue;
       for (const l of linesByIss.get(i.id) ?? []) {
         const key = `${l.item_id}::${l.size_value ?? ""}`;
         const cur = map.get(key) ?? { item_id: l.item_id, size_value: l.size_value ?? "", qty: 0 };
