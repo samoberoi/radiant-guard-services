@@ -178,12 +178,14 @@ type AllowanceType = {
   percentage: number;
   baseComponents: { label: string; operator: "+" | "-" }[];
   capAmount: number | null;
+  includeInOt: boolean;
 };
 
 type ResourceComponent = {
   allowanceId: string;
   name: string;
   amount: number;
+  includeInOt?: boolean;
 };
 
 type BenefitItem = {
@@ -196,6 +198,7 @@ type BenefitItem = {
   capFlatAmount: number | null;
   amount: number; // computed (percentage) or manual (fixed)
   state: string;
+  deductionCalcType?: "earned_salary" | "fixed_amount";
 };
 
 type ContractResource = {
