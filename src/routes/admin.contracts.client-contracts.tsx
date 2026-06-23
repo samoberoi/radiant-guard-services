@@ -3363,6 +3363,7 @@ function ResourceFormDialog({
       capFlatAmount: c.capFlatAmount,
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
+      deductionCalcType: c.deductionCalcType,
     };
     if (benefit.calcType === "percentage") {
       benefit.amount = computeBenefitAmount(benefit, components, [], allowanceTypes);
@@ -3393,6 +3394,7 @@ function ResourceFormDialog({
       capFlatAmount: c.capFlatAmount,
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
+      deductionCalcType: c.deductionCalcType,
     };
     if (item.calcType === "percentage") {
       item.amount = computeBenefitAmount(item, components, benefits, allowanceTypes);
@@ -3423,6 +3425,7 @@ function ResourceFormDialog({
       capFlatAmount: c.capFlatAmount,
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
+      deductionCalcType: c.deductionCalcType,
     };
     if (item.calcType === "percentage") {
       const l = (s: string) => s.trim().toLowerCase();
