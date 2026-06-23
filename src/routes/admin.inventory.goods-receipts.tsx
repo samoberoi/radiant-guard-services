@@ -573,7 +573,7 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, o
 
   useResetOnOpen(open, async () => {
     setTransferId(""); setReceiptDate(new Date().toISOString().slice(0, 10));
-    setChallanNo(""); setVehicleNo(""); setNotes(""); setLines([]);
+    setNotes(""); setLines([]);
   });
 
   async function loadTransfer(id: string) {
