@@ -884,7 +884,9 @@ function FieldOfficerGRNFormDialog({ open, onOpenChange, candidateId, userId, pe
       toast.success(`Challan ${grn_number} posted — added to your inventory`);
       onSaved(); onOpenChange(false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
+      const msg = e instanceof Error ? e.message : (e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : JSON.stringify(e));
+      console.error("FO challan post failed", e);
+      toast.error(msg || "Failed");
     } finally {
       setSaving(false);
     }
