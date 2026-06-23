@@ -408,7 +408,6 @@ function benefitAmountFromConfig(
   earnedComponents: WageComponent[],
   contractComponents: WageComponent[],
   ratio: number,
-  options: { useContractBase?: boolean } = {},
 ): number {
   if (!item) return 0;
   if (item.calcType !== "percentage") return round2(Number(item.amount) || 0);
@@ -425,18 +424,19 @@ function benefitAmountFromConfig(
   };
   const earnedByName = amountMap(earnedComponents);
   const contractByName = amountMap(contractComponents);
+  const earnedGross = round2(earnedComponents.reduce((sum, c) => sum + (Number(c.amount) || 0), 0));
+  const contractGross = round2(contractComponents.reduce((sum, c) => sum + (Number(c.amount) || 0), 0));
   const bases = Array.isArray(item.baseComponents) ? item.baseComponents : [];
   const base = bases.reduce((sum, b) => {
     const key = norm(String(b.label ?? ""));
-    const contractValue = contractByName.get(key) ?? 0;
-    // EPF/PF and similar statutory items are computed on CONTRACT wages,
-    // not earned wages, in standard Indian payroll convention. The vendor
-    // wage register confirms: EE EPFC stays flat regardless of attendance
-    // (Basic+DA contract × 12 %, capped at ₹15 000). Pass useContractBase
-    // for those items; everything else stays on earned wages.
-    const value = options.useContractBase
-      ? contractValue
-      : (earnedByName.get(key) ?? round2(contractValue * ratio));
+    const contractValue =
+      key === "gross" || key === "fgross" || key === "fixedgross" || key === "contractgross"
+        ? contractGross
+        : contractByName.get(key) ?? 0;
+    const value =
+      key === "gross" || key === "earnedgross" || key === "egross" || key === "salarygross"
+        ? earnedGross
+        : (earnedByName.get(key) ?? round2(contractValue * ratio));
     return b.operator === "-" ? sum - value : sum + value;
   }, 0);
   let amount = (Number(item.percentage) || 0) * Math.max(0, base) / 100;
@@ -535,6 +535,7 @@ export function computeWages(
     components.reduce((s, c) => s + (Number(c.amount) || 0), 0),
   );
   const ratio = contractGross > 0 ? earnedGross / contractGross : 0;
+  const earnedSalaryRatio = baseRatio;
   // Fixed (non-prorated) deduction/contribution names. These stay at the
   // contract amount regardless of attendance — e.g. Uniform Charges is a
   // flat monthly recovery, LWF is a flat statutory monthly contribution.
@@ -560,7 +561,9 @@ export function computeWages(
       name: i.name,
       amount: isFixedItem(i)
         ? round2(Number(i.amount) || 0)
-        : round2((Number(i.amount) || 0) * ratio),
+        : i.calcType === "percentage"
+        ? benefitAmountFromConfig(i, components, resource.components, earnedSalaryRatio)
+        : round2((Number(i.amount) || 0) * earnedSalaryRatio),
     }));
   const benefits = scaleItems(resource.benefits, ratio);
   const deductionsScaled = scaleItemsRespectingFixed(resource.deductions);
@@ -574,15 +577,13 @@ export function computeWages(
     employeeEpfItem,
     components,
     resource.components,
-    ratio,
-    { useContractBase: true },
+    earnedSalaryRatio,
   );
   const employerEpfAmount = benefitAmountFromConfig(
     employerEpfItem,
     components,
     resource.components,
-    ratio,
-    { useContractBase: true },
+    earnedSalaryRatio,
   );
 
   // Only the FIRST EPF-named row carries the statutory amount; any other
