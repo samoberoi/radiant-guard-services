@@ -4014,8 +4014,13 @@ export type Database = {
         Args: { _id: string; p: Json }
         Returns: undefined
       }
+      candidate_branch_ids: {
+        Args: { _candidate_id: string }
+        Returns: string[]
+      }
       current_user_branch_id: { Args: never; Returns: string }
       current_user_branch_scope_ids: { Args: never; Returns: string[] }
+      current_user_candidate_id: { Args: never; Returns: string }
       current_user_has_branch_scope: { Args: never; Returns: boolean }
       current_user_mobile: { Args: never; Returns: string }
       current_user_role_key: { Args: never; Returns: string }
