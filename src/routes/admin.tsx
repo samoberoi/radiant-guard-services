@@ -287,9 +287,17 @@ function AdminLayout() {
     !can("attendance") &&
     !can("payroll") &&
     !can("invoice");
+  const filteredInventoryChildren = useMemo(
+    () =>
+      isSuperAdmin
+        ? inventoryChildren
+        : inventoryChildren.filter((c) => !c.sub || canSub("inventory", c.sub)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isSuperAdmin, permsLoading, roleKey],
+  );
   const visibleGroups = (() => {
     if (isInventoryOnly) {
-      return inventoryChildren.map<GroupItem>((c, idx) => ({
+      return filteredInventoryChildren.map<GroupItem>((c, idx) => ({
         key: c.to,
         label: c.label,
         icon: c.icon,
@@ -298,7 +306,9 @@ function AdminLayout() {
         exact: idx === 0,
       }));
     }
-    return groups.filter((g) => !g.module || can(g.module));
+    return groups
+      .filter((g) => !g.module || can(g.module))
+      .map((g) => (g.key === "inventory" ? { ...g, children: filteredInventoryChildren } : g));
   })();
   const isGroupActive = (g: GroupItem) =>
     (g.activePrefixes ?? []).some((p) => {
