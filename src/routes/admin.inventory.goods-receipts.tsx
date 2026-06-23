@@ -467,3 +467,10 @@ function useResetOnOpen(open: boolean, reset: () => void) {
   const [last, setLast] = useState(false);
   if (open !== last) { setLast(open); if (open) reset(); }
 }
+
+function CancelBtn({ saving, onClose }: { saving: boolean; onClose: () => void }) {
+  const { markPristine } = useDialogDirty();
+  return (
+    <Button variant="outline" disabled={saving} onClick={() => { markPristine(); onClose(); }}>Cancel</Button>
+  );
+}
