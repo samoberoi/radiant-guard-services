@@ -290,7 +290,13 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
     if (!lines.length || lines.some((l) => l.dispatched_qty <= 0)) {
       toast.error("Enter dispatched quantity for each line"); return;
     }
-    if (!(await confirmAction({ title: "Initiate this transfer?", description: "Stock will be deducted from the source warehouse and the demand will move to In Transit.", confirmText: "Initiate Transfer" }))) return;
+    if (overDispatchLines.length) {
+      const first = overDispatchLines[0];
+      const it = itemMap.get(first.item_id);
+      toast.error(`Insufficient stock for ${it?.name ?? "item"}${first.size_value ? ` (${first.size_value})` : ""}: only ${availableFor(first)} available, ${first.dispatched_qty} requested`);
+      return;
+    }
+
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
