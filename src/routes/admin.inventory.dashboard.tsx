@@ -40,7 +40,7 @@ type PO = { id: string; po_number: string; vendor_id: string; status: string; po
 type Cand = { id: string; full_name: string; employee_code: string; role_key: string; designation_id: string | null };
 type Branch = { id: string; name: string; code: string };
 type Designation = { id: string; name: string };
-type GRN = { id: string; receipt_date: string; po_id: string | null; vendor_id: string | null; status: string };
+type GRN = { id: string; receipt_date: string; po_id: string | null; vendor_id: string | null; status: string; branch_id: string | null };
 
 type ScopedMovement = { id: string; status: string; source_type: string; source_id: string; destination_type: string; destination_id: string };
 
