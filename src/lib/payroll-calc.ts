@@ -3,8 +3,8 @@
 // Wage formulas mirror the attendance page derivations: a candidate's earned
 // gross for a period is `per-day × T Days`, where per-day is derived from the
 // contract resource's monthly gross divided by the configured payroll-day
-// base. Percentage deductions/contributions are recalculated from their
-// configured contract base components, while fixed statutory rows stay fixed.
+// base. Percentage deductions/contributions are recalculated from earned
+// component bases, while explicitly fixed statutory rows stay fixed.
 
 export type AttendanceEntryLike = {
   candidate_id: string;
