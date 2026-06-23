@@ -441,6 +441,7 @@ function AllowanceFormDialog({
   const [percentage, setPercentage] = useState<string>("0");
   const [baseRefs, setBaseRefs] = useState<BaseRef[]>([]);
   const [capAmount, setCapAmount] = useState<string>("");
+  const [includeInOt, setIncludeInOt] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useResetOnOpen(open, () => {
