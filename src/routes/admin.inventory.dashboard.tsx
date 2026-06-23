@@ -395,8 +395,10 @@ export function InventoryOwnerDashboard() {
 
   return (
     <div className="space-y-6">
+      <ScopeBanner />
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/60 p-3 backdrop-blur">
+
         <div className="flex items-center gap-1 rounded-xl bg-secondary/40 p-1">
           {(Object.keys(RANGE_LABEL) as Range[]).map((r) => (
             <button
