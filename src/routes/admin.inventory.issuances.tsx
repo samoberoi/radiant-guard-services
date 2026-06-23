@@ -93,11 +93,21 @@ function IssuancesPage() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<Issuance | null>(null);
 
+  const scope = useUserBranchScope();
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return issuances;
-    return issuances.filter((i) => i.issuance_number.toLowerCase().includes(q));
-  }, [issuances, query]);
+    let list = issuances;
+    if (scope.isScoped && scope.branchId) {
+      list = list.filter(
+        (i) =>
+          (i.source_type === "branch" && i.source_id === scope.branchId) ||
+          (i.destination_type === "branch" && i.destination_id === scope.branchId),
+      );
+    }
+    if (!q) return list;
+    return list.filter((i) => i.issuance_number.toLowerCase().includes(q));
+  }, [issuances, query, scope.isScoped, scope.branchId]);
+
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["inv", "issuances"] });
