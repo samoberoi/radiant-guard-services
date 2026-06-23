@@ -4023,6 +4023,7 @@ export type Database = {
       current_user_branch_scope_ids: { Args: never; Returns: string[] }
       current_user_candidate_id: { Args: never; Returns: string }
       current_user_has_branch_scope: { Args: never; Returns: boolean }
+      current_user_is_inventory_manager: { Args: never; Returns: boolean }
       current_user_mobile: { Args: never; Returns: string }
       current_user_role_key: { Args: never; Returns: string }
       get_admin_user_ids: {
@@ -4048,6 +4049,14 @@ export type Database = {
       is_admin_user: { Args: never; Returns: boolean }
       is_candidate_in_current_user_branch: {
         Args: { _candidate_id: string }
+        Returns: boolean
+      }
+      is_inv_location_in_current_user_scope: {
+        Args: { _id: string; _type: string }
+        Returns: boolean
+      }
+      is_unit_in_current_user_branch: {
+        Args: { _unit_id: string }
         Returns: boolean
       }
       nextval: { Args: { sequence_name: string }; Returns: number }
