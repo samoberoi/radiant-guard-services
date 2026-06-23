@@ -69,6 +69,14 @@ function TransfersPage() {
       return (data as unknown as Item[]) ?? [];
     },
   });
+  const { data: openDemands = [] } = useQuery({
+    queryKey: ["inv", "demands-open"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_demands" as never).select("id,demand_number,branch_id,status").in("status", ["submitted"]).order("demand_date", { ascending: false });
+      if (error) throw error;
+      return (data as unknown as Demand[]) ?? [];
+    },
+  });
 
   const locName = (type: string, id: string): string => {
     if (type === "warehouse") return warehouses.find((w) => w.id === id)?.name ?? "—";
