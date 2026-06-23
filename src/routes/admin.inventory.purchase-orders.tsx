@@ -168,6 +168,12 @@ function POPage() {
 
   const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
   const warehouseMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w])), [warehouses]);
+  const branchMap = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
+  const locationLabel = (whId: string | null, brId: string | null) => {
+    if (whId) return warehouseMap.get(whId)?.name ?? "—";
+    if (brId) return branchMap.get(brId)?.name ?? "—";
+    return "—";
+  };
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
