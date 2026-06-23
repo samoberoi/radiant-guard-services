@@ -264,6 +264,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
         await supabase.from("inv_transfers" as never).update({
           source_type: sourceType, source_id: sourceId,
           destination_type: destType, destination_id: destId,
+          demand_id: demandId || null,
           transfer_date: transferDate, vehicle_number: vehicle, driver_name: driverName, driver_phone: driverPhone, notes,
         } as never).eq("id", initial.id);
         await supabase.from("inv_transfer_lines" as never).delete().eq("transfer_id", initial.id);
@@ -274,6 +275,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
         const { data: ins, error } = await supabase.from("inv_transfers" as never).insert({
           transfer_number: number, source_type: sourceType, source_id: sourceId,
           destination_type: destType, destination_id: destId,
+          demand_id: demandId || null,
           transfer_date: transferDate, status: "draft",
           vehicle_number: vehicle, driver_name: driverName, driver_phone: driverPhone, notes,
         } as never).select("id").single();
