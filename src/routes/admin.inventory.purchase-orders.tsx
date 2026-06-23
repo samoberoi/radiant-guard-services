@@ -217,14 +217,14 @@ function POPage() {
     <div>
       <PageHeader
         title="Purchase Orders"
-        description="Warehouse needs stock? Create a PO: pick the supplier, add items + qty + price, issue it. When goods arrive, receive against the PO in Goods Receipts to add stock into the warehouse."
+        description="Warehouse needs stock? Create a PO: pick the vendor, add items + qty + price, issue it. When goods arrive, receive against the PO in Goods Receipts to add stock into the warehouse."
         crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Purchase Orders" }]}
       />
 
       <div className="mb-4 rounded-2xl border border-accent/30 bg-accent/5 p-4 text-xs text-muted-foreground">
         <div className="font-display text-sm font-bold text-foreground">How procurement works</div>
         <div className="mt-1 leading-relaxed">
-          <span className="font-semibold text-foreground">1. PO</span> (here) → order from supplier ·{" "}
+          <span className="font-semibold text-foreground">1. PO</span> (here) → order from vendor ·{" "}
           <span className="font-semibold text-foreground">2. Goods Receipt</span> → verify challan &amp; add to warehouse ·{" "}
           <span className="font-semibold text-foreground">3. Transfer</span> → warehouse to branch ·{" "}
           <span className="font-semibold text-foreground">4. Issuance</span> → branch to FO / guard
@@ -243,7 +243,7 @@ function POPage() {
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative w-full sm:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search PO #, supplier…" className="h-10 rounded-lg pl-9" />
+            <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search PO #, vendor…" className="h-10 rounded-lg pl-9" />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="h-10 w-full rounded-lg sm:w-52"><SelectValue /></SelectTrigger>
@@ -258,7 +258,7 @@ function POPage() {
           </Select>
         </div>
         <Button onClick={() => { setEditing(null); setOpen(true); }} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
-          <Plus className="mr-1.5 h-4 w-4" />Order from Supplier
+          <Plus className="mr-1.5 h-4 w-4" />Order from Vendor
         </Button>
       </div>
 
@@ -274,7 +274,7 @@ function POPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">PO #</th>
-                <th className="px-5 py-3">Supplier</th>
+                <th className="px-5 py-3">Vendor</th>
                 <th className="px-5 py-3">Deliver To</th>
                 <th className="px-5 py-3">Date</th>
                 <th className="px-5 py-3">Status</th>
@@ -329,7 +329,7 @@ function POPage() {
                   </tr>
                 );
               })}
-              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />No purchase orders yet. Click <span className="font-semibold text-foreground">Order from Supplier</span> to create your first PO.</td></tr>}
+              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><FileText className="mx-auto mb-2 h-8 w-8 opacity-40" />No purchase orders yet. Click <span className="font-semibold text-foreground">Order from Vendor</span> to create your first PO.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -463,7 +463,7 @@ function POFormDialog({
 
   async function save(targetStatus: string) {
 
-    if (!vendorId) { toast.error("Supplier required"); return; }
+    if (!vendorId) { toast.error("Vendor required"); return; }
     if (!warehouseId) { toast.error("Destination warehouse required"); return; }
     if (!lines.length) { toast.error("Add at least one line"); return; }
     for (const l of lines) {
@@ -554,15 +554,15 @@ function POFormDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{initial ? `Purchase Order ${initial.po_number}` : "New Purchase Order"}</DialogTitle>
-          <DialogDescription>{readOnly ? "Read-only — goods have started arriving, edits are locked." : initial ? "Edit the PO. Available until the first Goods Receipt is posted." : "Order items from a supplier."}</DialogDescription>
+          <DialogDescription>{readOnly ? "Read-only — goods have started arriving, edits are locked." : initial ? "Edit the PO. Available until the first Goods Receipt is posted." : "Order items from a vendor."}</DialogDescription>
 
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2"><Label>Supplier</Label>
+            <div className="grid gap-2"><Label>Vendor</Label>
               <Select value={vendorId} onValueChange={(v) => { setVendorId(v); applyVendorPriceToLines(v); }} disabled={readOnly}>
-                <SelectTrigger><SelectValue placeholder="Pick supplier" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Pick vendor" /></SelectTrigger>
                 <SelectContent>{vendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>

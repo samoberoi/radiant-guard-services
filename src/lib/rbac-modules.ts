@@ -118,7 +118,7 @@ export const RBAC_MODULES: ModuleDef[] = [
     subModules: [
       
       { key: "item_master",       label: "Products",       path: "/admin/inventory/items",           icon: PackageOpen },
-      { key: "vendors",           label: "Suppliers",           path: "/admin/inventory/vendors",         icon: ShoppingBag },
+      { key: "vendors",           label: "Vendors",           path: "/admin/inventory/vendors",         icon: ShoppingBag },
       { key: "warehouses",        label: "Warehouses",        path: "/admin/inventory/warehouses",      icon: Warehouse },
       { key: "purchase_orders",   label: "Purchase Orders",   path: "/admin/inventory/purchase-orders", icon: FileText },
       { key: "goods_receipts",    label: "Delivery Challans", path: "/admin/inventory/goods-receipts",  icon: ClipboardList },
@@ -127,7 +127,7 @@ export const RBAC_MODULES: ModuleDef[] = [
       { key: "write_offs",        label: "Write-offs",        path: "/admin/inventory/write-offs",      icon: ShieldCheck },
       
       { key: "stock_report",      label: "Stock Report",      path: "/admin/inventory/stock",           icon: Wallet },
-      { key: "rate_cards",        label: "Supplier Rate Cards", path: "/admin/inventory/rate-cards",      icon: FileText },
+      { key: "rate_cards",        label: "Vendor Rate Cards", path: "/admin/inventory/rate-cards",      icon: FileText },
       
     ],
   },

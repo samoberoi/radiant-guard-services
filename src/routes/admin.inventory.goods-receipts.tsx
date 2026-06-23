@@ -142,7 +142,7 @@ function GRNPage() {
 
   return (
     <div>
-      <PageHeader title="Delivery Challans" description="Receive supplier deliveries against a Purchase Order. Posted challans increase warehouse stock." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Delivery Challans" }]} />
+      <PageHeader title="Delivery Challans" description="Receive vendor deliveries against a Purchase Order. Posted challans increase warehouse stock." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Delivery Challans" }]} />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full sm:max-w-xs">
@@ -161,7 +161,7 @@ function GRNPage() {
               <tr>
                 <th className="px-5 py-3">Challan #</th>
                 <th className="px-5 py-3">PO #</th>
-                <th className="px-5 py-3">Supplier</th>
+                <th className="px-5 py-3">Vendor</th>
                 <th className="px-5 py-3">Warehouse</th>
                 <th className="px-5 py-3">Delivery Date</th>
                 <th className="px-5 py-3 text-right">Products</th>
