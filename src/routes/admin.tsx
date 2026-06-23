@@ -296,14 +296,23 @@ function AdminLayout() {
     !can("payroll") &&
     !can("invoice");
   const filteredInventoryChildren = useMemo(
-    () =>
-      isSuperAdmin
-        ? inventoryChildren
-        : inventoryChildren.filter((c) => !c.sub || canSub("inventory", c.sub)),
+    () => {
+      if (isSuperAdmin) return inventoryChildren;
+      const list = inventoryChildren.filter((c) => !c.sub || canSub("inventory", c.sub));
+      // Field officers do not see the Inventory Command Center dashboard.
+      if (roleKey === "field_officer") return list.filter((c) => c.to !== "/admin/inventory");
+      return list;
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [isSuperAdmin, permsLoading, roleKey],
   );
+  const isGuard = !isSuperAdmin && roleKey === "guard";
+  const guardGroups: GroupItem[] = useMemo(() => [
+    { key: "my-inventory", label: "My Inventory", icon: Boxes, to: "/admin/my-inventory", activePrefixes: ["/admin/my-inventory"] },
+    { key: "profile", label: "My Profile", icon: Users, to: "/admin/profile", activePrefixes: ["/admin/profile"] },
+  ], []);
   const visibleGroups = (() => {
+    if (isGuard) return guardGroups;
     if (isInventoryOnly) {
       return filteredInventoryChildren.map<GroupItem>((c, idx) => ({
         key: c.to,
@@ -318,6 +327,7 @@ function AdminLayout() {
       .filter((g) => !g.module || can(g.module))
       .map((g) => (g.key === "inventory" ? { ...g, children: filteredInventoryChildren } : g));
   })();
+
   const isGroupActive = (g: GroupItem) =>
     (g.activePrefixes ?? []).some((p) => {
       if (g.exact) return pathname === p;
