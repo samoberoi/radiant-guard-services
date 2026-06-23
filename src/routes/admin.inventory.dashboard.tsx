@@ -41,7 +41,7 @@ type Cand = { id: string; full_name: string; employee_code: string; role_key: st
 type Branch = { id: string; name: string; code: string };
 type Designation = { id: string; name: string };
 type GRN = { id: string; receipt_date: string; po_id: string | null; vendor_id: string | null; status: string };
-type WriteOff = { id: string; writeoff_date: string; recovery_amount: number; status: string; location_type: string; location_id: string };
+
 type ScopedMovement = { id: string; status: string; source_type: string; source_id: string; destination_type: string; destination_id: string };
 
 type Range = "today" | "7d" | "30d" | "90d" | "mtd" | "ytd";
@@ -155,10 +155,6 @@ export function InventoryOwnerDashboard() {
     const { data, error } = await supabase.from("inv_goods_receipts" as never).select("id,receipt_date,po_id,vendor_id,status");
     if (error) throw error; return (data as unknown as GRN[]) ?? [];
   }});
-  const woQ = useQuery({ queryKey: ["dash2", "wo"], queryFn: async () => {
-    const { data, error } = await supabase.from("inv_write_offs" as never).select("id,writeoff_date,recovery_amount,status,location_type,location_id");
-    if (error) throw error; return (data as unknown as WriteOff[]) ?? [];
-  }});
   const whsQ = useQuery({ queryKey: ["dash2", "whs"], enabled: !scope.isLoading && !scope.isScoped, queryFn: async () => {
     const { data, error } = await supabase.from("inv_warehouses" as never).select("id,name,warehouse_code");
     if (error) throw error; return (data as unknown as { id: string; name: string; warehouse_code: string }[]) ?? [];
@@ -189,7 +185,7 @@ export function InventoryOwnerDashboard() {
   const desigs = desigQ.data ?? [];
   const branchesRaw = branchesQ.data ?? [];
   const grnsRaw = grnQ.data ?? [];
-  const wosRaw = woQ.data ?? [];
+  
   const whsRaw = whsQ.data ?? [];
   const transfersRaw = transfersQ.data ?? [];
   const issuancesRaw = issuancesQ.data ?? [];
@@ -215,14 +211,6 @@ export function InventoryOwnerDashboard() {
     () => (scope.isScoped && scope.branchId ? branchesRaw.filter((b) => b.id === scope.branchId) : branchesRaw),
     [branchesRaw, scope.isScoped, scope.branchId],
   );
-  const wos = useMemo(() => {
-    if (!scope.isScoped || !scope.branchId) return wosRaw;
-    if (!canUseScopedData) return [];
-    return wosRaw.filter((r) =>
-      (r.location_type === "branch" && r.location_id === scope.branchId) ||
-      ((r.location_type === "field_officer" || r.location_type === "guard") && allowedFoIds.has(r.location_id)),
-    );
-  }, [wosRaw, scope.isScoped, scope.branchId, canUseScopedData, allowedFoIds]);
   const transfers = useMemo(() => {
     if (!scope.isScoped || !scope.branchId) return transfersRaw;
     if (!canUseScopedData) return [];
@@ -248,7 +236,7 @@ export function InventoryOwnerDashboard() {
 
 
   const totalStockQty = useMemo(() => balances.reduce((s, b) => s + Math.max(0, Number(b.qty || 0)), 0), [balances]);
-  const recoveryCur = useMemo(() => wos.filter((x) => new Date(x.writeoff_date) >= w.from && new Date(x.writeoff_date) <= w.to).reduce((s, x) => s + Number(x.recovery_amount || 0), 0), [wos, w]);
+  
   const poSplit = useMemo(() => {
     const open = pos.filter((p) => ["draft", "approved", "partial", "open", "partially_received"].includes(p.status)).length;
     const closed = pos.filter((p) => ["received", "closed"].includes(p.status)).length;
@@ -269,11 +257,6 @@ export function InventoryOwnerDashboard() {
     const ack = issuances.filter((i) => i.status === "acknowledged").length;
     return { total: issuances.length, issued, ack };
   }, [issuances]);
-  const woSplit = useMemo(() => {
-    const pending = wos.filter((x) => x.status === "pending" || x.status === "draft").length;
-    const approved = wos.filter((x) => x.status === "approved").length;
-    return { total: wos.length, pending, approved };
-  }, [wos]);
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
@@ -353,7 +336,7 @@ export function InventoryOwnerDashboard() {
   const grnsInPeriod = useMemo(() => grns.filter((g) => inPeriod(g.receipt_date)).length, [grns, w]);
   const grnsPrev = useMemo(() => grns.filter((g) => inPrevPeriod(g.receipt_date)).length, [grns, w]);
   const openPOs = pos.filter((p) => ["draft", "approved", "partial"].includes(p.status)).length;
-  const writeoffCur = useMemo(() => wos.filter((x) => inPeriod(x.writeoff_date)).reduce((s, x) => s + Number(x.recovery_amount || 0), 0), [wos, w]);
+  
 
   // Low stock
   const lowStock = useMemo(() => {
@@ -495,9 +478,8 @@ export function InventoryOwnerDashboard() {
     const events: { ts: string; type: string; label: string; value?: string; href: string }[] = [];
     for (const p of pos) events.push({ ts: p.po_date, type: "PO", label: `${p.po_number} · ${vendorMap.get(p.vendor_id)?.name ?? "vendor"}`, value: inr(Number(p.grand_total || 0)), href: "/admin/inventory/purchase-orders" });
     for (const g of grns) events.push({ ts: g.receipt_date, type: "GRN", label: `Goods received`, href: "/admin/inventory/goods-receipts" });
-    for (const x of wos) events.push({ ts: x.writeoff_date, type: "Write-off", label: `Write-off ${x.status}`, value: x.recovery_amount > 0 ? inr(Number(x.recovery_amount)) : undefined, href: "/admin/inventory/write-offs" });
     return events.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime()).slice(0, 10);
-  }, [pos, grns, wos, vendorMap]);
+  }, [pos, grns, vendorMap]);
 
   const filter = (s: string) => !q || s.toLowerCase().includes(q.toLowerCase());
   const branchDashboardLoading = scope.isLoading || (scope.isScoped && scopeAssignmentsQ.isLoading);
@@ -568,7 +550,7 @@ export function InventoryOwnerDashboard() {
           <Kpi label={`Spend · ${RANGE_LABEL[range]}`} value={inr(spendCur)} delta={delta(spendCur, spendPrev)} icon={IndianRupee} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" />
           <Kpi label="POs Raised" value={posInPeriod.toString()} delta={delta(posInPeriod, posPrev)} icon={ShoppingCart} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" />
           <Kpi label="GRNs Posted" value={grnsInPeriod.toString()} delta={delta(grnsInPeriod, grnsPrev)} icon={Truck} tint="from-cyan-500/15 to-cyan-500/0" iconClass="text-cyan-500" />
-          <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs · ${inr(writeoffCur)} write-offs`} to="/admin/inventory/stock" />
+          <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs`} to="/admin/inventory/stock" />
         </div>
       )}
 
@@ -604,10 +586,6 @@ export function InventoryOwnerDashboard() {
           {canSub("inventory", "issuances") && (
             <WorkflowTile to="/admin/inventory/issuances" label="Issuances" value={issuanceSplit.total} icon={UserPlus} accent="text-teal-500"
               chips={[{ label: "Issued", value: issuanceSplit.issued, tone: "amber" }, { label: "Ack.", value: issuanceSplit.ack, tone: "emerald" }]} />
-          )}
-          {canSub("inventory", "write_offs") && (
-            <WorkflowTile to="/admin/inventory/write-offs" label="Write-offs" value={woSplit.total} icon={ShieldCheck} accent="text-rose-500"
-              chips={[{ label: "Pending", value: woSplit.pending, tone: "amber" }, { label: "Approved", value: woSplit.approved, tone: "emerald" }]} />
           )}
         </div>
 
