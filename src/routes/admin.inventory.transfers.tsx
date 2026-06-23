@@ -305,27 +305,42 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
     }
   }
 
-  async function dispatch() {
-    if (!initial) { await saveDraft(); return; }
-    if (!(await confirmAction({ title: "Dispatch this transfer?", description: "Stock will be deducted from the source location.", confirmText: "Dispatch" }))) return;
+  async function initiateTransfer() {
+    if (!demandId) { toast.error("Pick a demand to transfer against"); return; }
+    if (!sourceId) { toast.error("Pick the source warehouse"); return; }
+    if (!destId) { toast.error("Destination branch missing"); return; }
+    if (!lines.length || lines.some((l) => l.dispatched_qty <= 0)) {
+      toast.error("Enter dispatched quantity for each line"); return;
+    }
+    if (!(await confirmAction({ title: "Initiate this transfer?", description: "Stock will be deducted from the source warehouse and the demand will move to In Transit.", confirmText: "Initiate Transfer" }))) return;
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from("inv_transfers" as never).update({
-        status: "in_transit", dispatched_by: user?.id ?? null, dispatched_at: new Date().toISOString(),
-      } as never).eq("id", initial.id);
+      const n = await nextSeq("inv_transfer_number_seq");
+      const number = fmtNumber("TR", n);
+      const { data: ins, error } = await supabase.from("inv_transfers" as never).insert({
+        transfer_number: number, source_type: sourceType, source_id: sourceId,
+        destination_type: destType, destination_id: destId,
+        demand_id: demandId,
+        transfer_date: transferDate, status: "in_transit",
+        vehicle_number: "", driver_name: "", driver_phone: "", notes,
+        dispatched_by: user?.id ?? null, dispatched_at: new Date().toISOString(),
+      } as never).select("id").single();
+      if (error) throw error;
+      const tid = (ins as unknown as { id: string }).id;
+      const linesPayload = lines.map((l, idx) => ({
+        transfer_id: tid, item_id: l.item_id, size_value: l.size_value,
+        dispatched_qty: l.dispatched_qty, received_qty: 0, sort_order: idx,
+      }));
+      await supabase.from("inv_transfer_lines" as never).insert(linesPayload as never);
       await postMovements(lines.filter((l) => l.dispatched_qty > 0).map((l) => ({
         movement_type: "TRANSFER_OUT", location_type: sourceType, location_id: sourceId,
         item_id: l.item_id, size_value: l.size_value, qty_change: -l.dispatched_qty,
-        reference_type: "transfer", reference_id: initial.id,
+        reference_type: "transfer", reference_id: tid,
       })));
-      // If this transfer fulfills a demand, mark the demand in_transit
-      if (initial.demand_id || demandId) {
-        const did = (initial.demand_id ?? demandId) as string;
-        await supabase.from("inv_demands" as never).update({ status: "in_transit" } as never).eq("id", did);
-      }
-      void logActivity({ module: MODULE, action: "dispatch", entityType: ENTITY, entityId: initial.id, entityLabel: initial.transfer_number });
-      toast.success("Dispatched");
+      await supabase.from("inv_demands" as never).update({ status: "in_transit" } as never).eq("id", demandId);
+      void logActivity({ module: MODULE, action: "dispatch", entityType: ENTITY, entityId: tid, entityLabel: number });
+      toast.success("Transfer initiated — stock deducted, awaiting delivery challan from branch");
       onSaved(); onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -333,6 +348,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
       setSaving(false);
     }
   }
+
 
 
   async function receive() {
