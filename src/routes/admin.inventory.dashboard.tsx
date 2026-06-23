@@ -211,14 +211,6 @@ export function InventoryOwnerDashboard() {
     () => (scope.isScoped && scope.branchId ? branchesRaw.filter((b) => b.id === scope.branchId) : branchesRaw),
     [branchesRaw, scope.isScoped, scope.branchId],
   );
-  const wos = useMemo(() => {
-    if (!scope.isScoped || !scope.branchId) return wosRaw;
-    if (!canUseScopedData) return [];
-    return wosRaw.filter((r) =>
-      (r.location_type === "branch" && r.location_id === scope.branchId) ||
-      ((r.location_type === "field_officer" || r.location_type === "guard") && allowedFoIds.has(r.location_id)),
-    );
-  }, [wosRaw, scope.isScoped, scope.branchId, canUseScopedData, allowedFoIds]);
   const transfers = useMemo(() => {
     if (!scope.isScoped || !scope.branchId) return transfersRaw;
     if (!canUseScopedData) return [];
