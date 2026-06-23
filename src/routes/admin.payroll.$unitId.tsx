@@ -720,7 +720,7 @@ function PayrollUnitPage() {
         ...contractComponentCols.map((c) => round2(lookup(contractComponents, c))),
         w ? round2(w.contractGross) : 0,
         w ? w.baseDays : 0,
-        r.totals.tDays, r.totals.otHours, r.totals.otDays,
+        round2(r.totals.tDays - r.totals.otDays), r.totals.otHours, r.totals.otDays,
         ...earnedComponentCols.map((c) => round2(lookup(earnedComponents, c))),
         ...additionCols.map((c) => round2(lookup(earnedAdditions, c))),
         w ? round2(w.earnedGross) : 0,
