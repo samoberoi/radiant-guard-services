@@ -641,12 +641,32 @@ function POFormDialog({
 
 
           <div>
-            <div className="mb-2 flex items-center justify-between">
-              <Label className="text-sm font-semibold">Line Items</Label>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div>
+                <Label className="text-sm font-semibold">Line Items</Label>
+                {vendorId && <span className="ml-2 text-[11px] text-muted-foreground">Showing {vendorItems.length} item{vendorItems.length === 1 ? "" : "s"} this vendor quotes</span>}
+                {!vendorId && <span className="ml-2 text-[11px] text-muted-foreground">Pick a vendor to see their items</span>}
+              </div>
               {!readOnly && (
-                <Button size="sm" type="button" onClick={() => setLines((ls) => [...ls, { item_id: "", size_value: "", ordered_qty: 1, unit_price: 0, tax_percent: 0, notes: "" }])}>
-                  <Plus className="mr-1 h-3.5 w-3.5" />Add line
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" type="button" variant="outline" disabled={!vendorId || !vendorItems.length} onClick={() => {
+                    // Add every vendor item that isn't already on the PO. User can trim and set qty.
+                    const existing = new Set(lines.map((l) => l.item_id).filter(Boolean));
+                    const toAdd: POLine[] = [];
+                    for (const it of vendorItems) {
+                      if (existing.has(it.id)) continue;
+                      const rc = findRate(vendorId, it.id, "");
+                      toAdd.push({ item_id: it.id, size_value: "", ordered_qty: 1, unit_price: rc?.unit_price ?? 0, tax_percent: rc?.tax_percent ?? 0, notes: "" });
+                    }
+                    if (!toAdd.length) { toast.info("All vendor items already added"); return; }
+                    setLines((ls) => [...ls, ...toAdd]);
+                  }}>
+                    <Plus className="mr-1 h-3.5 w-3.5" />Add all vendor items
+                  </Button>
+                  <Button size="sm" type="button" disabled={!vendorId} onClick={() => setLines((ls) => [...ls, { item_id: "", size_value: "", ordered_qty: 1, unit_price: 0, tax_percent: 0, notes: "" }])}>
+                    <Plus className="mr-1 h-3.5 w-3.5" />Add line
+                  </Button>
+                </div>
               )}
             </div>
             <div className="overflow-x-clip rounded-xl border border-border">
