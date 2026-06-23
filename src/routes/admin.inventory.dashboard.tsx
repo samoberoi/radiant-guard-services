@@ -151,8 +151,8 @@ export function InventoryOwnerDashboard() {
     const { data, error } = await supabase.from("branches").select("id,name,code");
     if (error) throw error; return (data as unknown as Branch[]) ?? [];
   }});
-  const grnQ = useQuery({ queryKey: ["dash2", "grns"], enabled: !scope.isLoading && !scope.isScoped, queryFn: async () => {
-    const { data, error } = await supabase.from("inv_goods_receipts" as never).select("id,receipt_date,po_id,vendor_id,status");
+  const grnQ = useQuery({ queryKey: ["dash2", "grns"], queryFn: async () => {
+    const { data, error } = await supabase.from("inv_goods_receipts" as never).select("id,receipt_date,po_id,vendor_id,status,branch_id");
     if (error) throw error; return (data as unknown as GRN[]) ?? [];
   }});
   const whsQ = useQuery({ queryKey: ["dash2", "whs"], enabled: !scope.isLoading && !scope.isScoped, queryFn: async () => {
