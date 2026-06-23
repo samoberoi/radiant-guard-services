@@ -34,7 +34,7 @@ function StockPage() {
   });
   const { data: warehouses = [] } = useQuery({ queryKey: ["inv", "warehouses-list-full"], queryFn: async () => { const { data } = await supabase.from("inv_warehouses" as never).select("id,name"); return (data as unknown as { id: string; name: string }[]) ?? []; } });
   const { data: branches = [] } = useQuery({ queryKey: ["branches-full"], queryFn: async () => { const { data } = await supabase.from("branches" as never).select("id,name"); return (data as unknown as { id: string; name: string }[]) ?? []; } });
-  const { data: candidates = [] } = useQuery({ queryKey: ["candidates-min-all"], queryFn: async () => { const { data } = await supabase.from("candidates" as never).select("id,full_name,employee_code,role_key"); return (data as unknown as { id: string; full_name: string; employee_code: string; role_key: string }[]) ?? []; } });
+  const { data: candidates = [] } = useQuery({ queryKey: ["candidates-min-all"], queryFn: async () => { const { data } = await supabase.from("candidates" as never).select("id,full_name,employee_code,role_key,reports_to"); return (data as unknown as { id: string; full_name: string; employee_code: string; role_key: string; reports_to: string | null }[]) ?? []; } });
   const { data: scopeAssignments = [] } = useQuery({
     queryKey: ["admin", "employee_scope_assignments", "stock-page"],
     queryFn: async () => {
@@ -59,6 +59,15 @@ function StockPage() {
     () => candidates.filter((c) => c.role_key === "field_officer").sort((a, b) => a.full_name.localeCompare(b.full_name)),
     [candidates],
   );
+  const currentHolderLabel = currentUserRole.candidateId ? locName("field_officer", currentUserRole.candidateId) : "Own stock";
+  const currentFoGuardIds = useMemo(() => {
+    if (!currentUserRole.isFieldOfficer || !currentUserRole.candidateId) return new Set<string>();
+    return new Set(
+      candidates
+        .filter((c) => (c.role_key === "guard" || c.role_key === "security_guard") && c.reports_to === currentUserRole.candidateId)
+        .map((c) => c.id),
+    );
+  }, [candidates, currentUserRole.isFieldOfficer, currentUserRole.candidateId]);
 
   const candidateBranchMap = useMemo(() => {
     const unitBranchMap = new Map(units.filter((u) => u.branch_id).map((u) => [u.id, u.branch_id as string]));
@@ -114,7 +123,10 @@ function StockPage() {
       .filter((b) => Number(b.qty) !== 0)
       .filter((b) => {
         if (currentUserRole.isFieldOfficer) {
-          return b.location_type === "field_officer" && b.location_id === currentUserRole.candidateId;
+          return (
+            (b.location_type === "field_officer" && b.location_id === currentUserRole.candidateId)
+            || ((b.location_type === "guard" || b.location_type === "security_guard") && currentFoGuardIds.has(b.location_id))
+          );
         }
 
         // Branch manager / branch-scoped user: hard-limit to their branch + FOs mapped to it.
@@ -163,12 +175,21 @@ function StockPage() {
         return r.item_name.toLowerCase().includes(t) || r.item_code.toLowerCase().includes(t) || r.location_label.toLowerCase().includes(t);
       })
       .sort((a, b) => a.item_name.localeCompare(b.item_name));
-  }, [balances, itemMap, effectiveTypeFilter, effectiveSpecificFilter, foFilter, q, whMap, brMap, cMap, scope.isScoped, scope.branchId, allowedFoIds, candidateBranchMap, currentUserRole.isFieldOfficer, currentUserRole.candidateId]);
+  }, [balances, itemMap, effectiveTypeFilter, effectiveSpecificFilter, foFilter, q, whMap, brMap, cMap, scope.isScoped, scope.branchId, allowedFoIds, candidateBranchMap, currentUserRole.isFieldOfficer, currentUserRole.candidateId, currentFoGuardIds]);
 
   const lowCount = enriched.filter((r) => r.low).length;
   const totalQty = enriched.reduce((s, r) => s + Number(r.qty), 0);
 
   const specificOptions = effectiveTypeFilter === "warehouse" ? warehouses : effectiveTypeFilter === "branch" ? branches : [];
+
+  if (scope.isLoading || currentUserRole.isLoading) {
+    return (
+      <div>
+        <PageHeader title="Stock by Location" description="Live balances across warehouses, branches and field officers." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Stock" }]} />
+        <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">Loading stock access…</div>
+      </div>
+    );
+  }
 
 
   return (
@@ -189,7 +210,7 @@ function StockPage() {
           </div>
           {currentUserRole.isFieldOfficer ? (
             <div className="flex h-10 items-center rounded-lg border border-border bg-secondary/40 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Holder: Own stock
+              Field officer: {currentHolderLabel}
             </div>
           ) : scope.isScoped ? (
             <div className="flex h-10 items-center rounded-lg border border-border bg-secondary/40 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
