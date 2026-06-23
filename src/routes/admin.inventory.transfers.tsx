@@ -393,6 +393,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                     <th className="px-3 py-2">Item</th>
                     <th className="px-3 py-2 w-16">Size</th>
                     <th className="px-3 py-2 w-24 text-right">Demanded</th>
+                    {isDraft && <th className="px-3 py-2 w-24 text-right">Available</th>}
                     <th className="px-3 py-2 w-24 text-right">Dispatched</th>
                     {isDispatched && <th className="px-3 py-2 w-24 text-right">Received</th>}
                     {isDispatched && <th className="px-3 py-2">Variance Reason</th>}
@@ -401,14 +402,17 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                 <tbody className="divide-y divide-border">
                   {lines.map((l, idx) => {
                     const it = itemMap.get(l.item_id);
+                    const avail = availableFor(l);
+                    const over = isDraft && l.dispatched_qty > avail;
                     return (
-                      <tr key={idx}>
+                      <tr key={idx} className={over ? "bg-destructive/5" : undefined}>
                         <td className="px-3 py-2 font-medium">{it?.name ?? "—"}</td>
                         <td className="px-3 py-2 text-muted-foreground">{l.size_value || "—"}</td>
                         <td className="px-3 py-2 text-right tabular-nums">{l.requested_qty}</td>
+                        {isDraft && <td className={`px-3 py-2 text-right tabular-nums ${avail <= 0 ? "text-destructive" : "text-muted-foreground"}`}>{sourceId ? avail : "—"}</td>}
                         <td className="px-2 py-1.5">
                           {isDraft
-                            ? <Input type="number" min={0} className="h-9 text-right" value={l.dispatched_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, dispatched_qty: Number(e.target.value) || 0 } : x))} />
+                            ? <Input type="number" min={0} max={avail} className={`h-9 text-right ${over ? "border-destructive text-destructive" : ""}`} value={l.dispatched_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, dispatched_qty: Number(e.target.value) || 0 } : x))} />
                             : <div className="text-right tabular-nums">{l.dispatched_qty}</div>}
                         </td>
                         {isDispatched && <td className="px-2 py-1.5 text-right tabular-nums">{l.received_qty}</td>}
@@ -416,7 +420,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                       </tr>
                     );
                   })}
-                  {!lines.length && <tr><td colSpan={isDispatched ? 6 : 4} className="px-3 py-6 text-center text-xs text-muted-foreground">{isDraft ? "Pick a demand above to load items." : "No lines."}</td></tr>}
+                  {!lines.length && <tr><td colSpan={isDispatched ? 6 : (isDraft ? 5 : 4)} className="px-3 py-6 text-center text-xs text-muted-foreground">{isDraft ? "Pick a demand above to load items." : "No lines."}</td></tr>}
                 </tbody>
               </table>
             </div>
