@@ -188,6 +188,7 @@ function DemandsPage() {
         branchId={scope.branchId ?? ""}
         branchLabel={scope.branchLabel}
         isFieldOfficer={role.isFieldOfficer}
+        branches={branches}
         items={items}
         onSaved={invalidate}
       />
