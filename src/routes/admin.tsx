@@ -111,11 +111,11 @@ const inventoryChildren: LeafItem[] = [
   { to: "/admin/inventory/vendors", label: "Vendors", icon: ShoppingBag },
   { to: "/admin/inventory/warehouses", label: "Warehouses", icon: Warehouse },
   { to: "/admin/inventory/purchase-orders", label: "Purchase Orders", icon: FileText },
+  { to: "/admin/inventory/demands", label: "Demands", icon: Inbox },
   { to: "/admin/inventory/goods-receipts", label: "Delivery Challans", icon: ClipboardList },
   { to: "/admin/inventory/transfers", label: "Transfers", icon: Boxes },
   { to: "/admin/inventory/issuances", label: "Issuances", icon: UserPlus },
   { to: "/admin/inventory/write-offs", label: "Write-offs", icon: ShieldCheck },
-  
   { to: "/admin/inventory/stock", label: "Stock Report", icon: Wallet },
   { to: "/admin/inventory/rate-cards", label: "Vendor Rate Cards", icon: FileText },
 ];
