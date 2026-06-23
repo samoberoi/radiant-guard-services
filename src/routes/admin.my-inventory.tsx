@@ -1,0 +1,192 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { Package, KeyRound, Check } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth, SUPER_ADMIN_PHONE } from "@/lib/auth";
+import { logActivity } from "@/lib/activity-log";
+import { PageHeader } from "@/components/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { statusBadgeClass } from "@/lib/inv-helpers";
+
+export const Route = createFileRoute("/admin/my-inventory")({ component: MyInventoryPage });
+
+type Issuance = {
+  id: string; issuance_number: string; issuance_type: string; issuance_date: string; status: string;
+  source_type: string; source_id: string; destination_type: string; destination_id: string;
+  ack_method: string; otp_code: string | null; notes: string; acknowledged_at: string | null;
+};
+type Line = { id: string; issuance_id: string; item_id: string; size_value: string; qty: number; condition: string };
+type Item = { id: string; name: string; item_code: string };
+
+function MyInventoryPage() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const phone = user?.phone?.replace(/\D/g, "").slice(-10) ?? "";
+  const isSuperAdmin = phone === SUPER_ADMIN_PHONE;
+
+  const { data: me = null, isLoading: meLoading } = useQuery({
+    queryKey: ["candidate-by-phone", phone],
+    enabled: !!phone,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("candidates" as never).select("id,full_name,employee_code,role_key").eq("mobile", phone).maybeSingle();
+      if (error) throw error;
+      return data as unknown as { id: string; full_name: string; employee_code: string; role_key: string } | null;
+    },
+  });
+
+  const { data: issuances = [] } = useQuery({
+    queryKey: ["my-issuances", me?.id],
+    enabled: !!me?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_issuances" as never)
+        .select("*").eq("destination_id", me!.id).eq("destination_type", "guard")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data as unknown as Issuance[]) ?? [];
+    },
+  });
+
+  const { data: lines = [] } = useQuery({
+    queryKey: ["my-issuance-lines", issuances.map((i) => i.id).join(",")],
+    enabled: issuances.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_issuance_lines" as never)
+        .select("*").in("issuance_id", issuances.map((i) => i.id));
+      if (error) throw error;
+      return (data as unknown as Line[]) ?? [];
+    },
+  });
+
+  const itemIds = useMemo(() => Array.from(new Set(lines.map((l) => l.item_id))), [lines]);
+  const { data: items = [] } = useQuery({
+    queryKey: ["items-by-id", itemIds.join(",")],
+    enabled: itemIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_items" as never).select("id,name,item_code").in("id", itemIds);
+      if (error) throw error;
+      return (data as unknown as Item[]) ?? [];
+    },
+  });
+  const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  const linesByIss = useMemo(() => {
+    const m = new Map<string, Line[]>();
+    for (const l of lines) {
+      const arr = m.get(l.issuance_id) ?? [];
+      arr.push(l); m.set(l.issuance_id, arr);
+    }
+    return m;
+  }, [lines]);
+
+  // Aggregate current holdings (acknowledged / received only)
+  const holdings = useMemo(() => {
+    const map = new Map<string, { item_id: string; size_value: string; qty: number }>();
+    for (const i of issuances) {
+      if (i.status !== "acknowledged") continue;
+      for (const l of linesByIss.get(i.id) ?? []) {
+        const key = `${l.item_id}::${l.size_value ?? ""}`;
+        const cur = map.get(key) ?? { item_id: l.item_id, size_value: l.size_value ?? "", qty: 0 };
+        cur.qty += Number(l.qty || 0);
+        map.set(key, cur);
+      }
+    }
+    return Array.from(map.values()).filter((h) => h.qty > 0);
+  }, [issuances, linesByIss]);
+
+  const pending = issuances.filter((i) => i.status === "issued");
+
+  const invalidate = () => {
+    qc.invalidateQueries({ queryKey: ["my-issuances"] });
+    qc.invalidateQueries({ queryKey: ["inv", "issuances"] });
+  };
+
+  const [otpInputs, setOtpInputs] = useState<Record<string, string>>({});
+
+  const ackMut = useMutation({
+    mutationFn: async (i: Issuance) => {
+      const entered = (otpInputs[i.id] ?? "").trim();
+      if (!entered) throw new Error("Enter the OTP shared by your Field Officer");
+      if (entered !== (i.otp_code ?? "")) throw new Error("OTP does not match");
+      const { error } = await supabase.from("inv_issuances" as never).update({
+        status: "acknowledged", acknowledged_at: new Date().toISOString(),
+        ack_otp_verified: true, received_at: new Date().toISOString(), received_by: me?.id ?? null,
+      } as never).eq("id", i.id);
+      if (error) throw error;
+      void logActivity({ module: "Inventory Issuances", action: "acknowledge_otp", entityType: "inv_issuances", entityId: i.id, entityLabel: i.issuance_number });
+    },
+    onSuccess: () => { toast.success("Confirmed receipt"); invalidate(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  if (isSuperAdmin) {
+    return <div className="text-sm text-muted-foreground">My Inventory is for end-users (guards). Switch account.</div>;
+  }
+  if (meLoading) return <div className="text-sm text-muted-foreground">Loading…</div>;
+  if (!me) return <div className="text-sm text-muted-foreground">No employee profile found for this phone.</div>;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title="My Inventory" description="Items assigned to you and pending confirmations." crumbs={[{ label: "My Inventory" }]} />
+
+      {pending.length > 0 && (
+        <section className="rounded-2xl border border-border bg-card p-5">
+          <div className="mb-3 flex items-center gap-2"><KeyRound className="h-4 w-4 text-primary" /><h2 className="text-sm font-semibold">Pending OTP confirmations</h2></div>
+          <div className="space-y-4">
+            {pending.map((i) => (
+              <div key={i.id} className="rounded-xl border border-border p-4">
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <div className="font-mono text-xs text-muted-foreground">{i.issuance_number}</div>
+                    <div className="text-xs text-muted-foreground">Issued {i.issuance_date}</div>
+                  </div>
+                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(i.status)}`}>{i.status}</span>
+                </div>
+                <ul className="mb-3 list-disc pl-5 text-sm">
+                  {(linesByIss.get(i.id) ?? []).map((l) => (
+                    <li key={l.id}>{itemMap.get(l.item_id)?.name ?? "—"}{l.size_value ? ` (${l.size_value})` : ""} × {l.qty}</li>
+                  ))}
+                </ul>
+                {i.ack_method === "otp" ? (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="grid flex-1 gap-1">
+                      <Label className="text-xs">Enter 6-digit OTP shared by Field Officer</Label>
+                      <Input value={otpInputs[i.id] ?? ""} onChange={(e) => setOtpInputs((s) => ({ ...s, [i.id]: e.target.value }))} placeholder="••••••" inputMode="numeric" maxLength={6} className="font-mono tracking-[0.4em]" />
+                    </div>
+                    <Button onClick={() => ackMut.mutate(i)} disabled={ackMut.isPending}><Check className="mr-1 h-4 w-4" />Confirm Receipt</Button>
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground">Ack method: {i.ack_method}. Your Field Officer will mark this as received.</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="rounded-2xl border border-border bg-card p-5">
+        <div className="mb-3 flex items-center gap-2"><Package className="h-4 w-4 text-primary" /><h2 className="text-sm font-semibold">Currently assigned to me</h2></div>
+        {holdings.length === 0 ? (
+          <div className="py-6 text-center text-sm text-muted-foreground">Nothing assigned yet.</div>
+        ) : (
+          <table className="ios-table w-full text-sm">
+            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <tr><th className="px-4 py-2">Item</th><th className="px-4 py-2">Size</th><th className="px-4 py-2 text-right">Qty</th></tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {holdings.map((h) => (
+                <tr key={`${h.item_id}-${h.size_value}`}>
+                  <td className="px-4 py-2 font-medium">{itemMap.get(h.item_id)?.name ?? "—"}</td>
+                  <td className="px-4 py-2 text-muted-foreground">{h.size_value || "—"}</td>
+                  <td className="px-4 py-2 text-right">{h.qty}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+    </div>
+  );
+}

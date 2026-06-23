@@ -1891,6 +1891,9 @@ export type Database = {
           issued_at: string | null
           issued_by: string | null
           notes: string
+          otp_code: string | null
+          received_at: string | null
+          received_by: string | null
           source_id: string
           source_type: string
           status: string
@@ -1912,6 +1915,9 @@ export type Database = {
           issued_at?: string | null
           issued_by?: string | null
           notes?: string
+          otp_code?: string | null
+          received_at?: string | null
+          received_by?: string | null
           source_id: string
           source_type: string
           status?: string
@@ -1933,6 +1939,9 @@ export type Database = {
           issued_at?: string | null
           issued_by?: string | null
           notes?: string
+          otp_code?: string | null
+          received_at?: string | null
+          received_by?: string | null
           source_id?: string
           source_type?: string
           status?: string
