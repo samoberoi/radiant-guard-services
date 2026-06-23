@@ -40,7 +40,7 @@ type PO = { id: string; po_number: string; vendor_id: string; status: string; po
 type Cand = { id: string; full_name: string; employee_code: string; role_key: string; designation_id: string | null };
 type Branch = { id: string; name: string; code: string };
 type Designation = { id: string; name: string };
-type GRN = { id: string; receipt_date: string; po_id: string | null; vendor_id: string | null; status: string };
+type GRN = { id: string; receipt_date: string; po_id: string | null; vendor_id: string | null; status: string; branch_id: string | null };
 
 type ScopedMovement = { id: string; status: string; source_type: string; source_id: string; destination_type: string; destination_id: string };
 
@@ -151,8 +151,8 @@ export function InventoryOwnerDashboard() {
     const { data, error } = await supabase.from("branches").select("id,name,code");
     if (error) throw error; return (data as unknown as Branch[]) ?? [];
   }});
-  const grnQ = useQuery({ queryKey: ["dash2", "grns"], enabled: !scope.isLoading && !scope.isScoped, queryFn: async () => {
-    const { data, error } = await supabase.from("inv_goods_receipts" as never).select("id,receipt_date,po_id,vendor_id,status");
+  const grnQ = useQuery({ queryKey: ["dash2", "grns"], queryFn: async () => {
+    const { data, error } = await supabase.from("inv_goods_receipts" as never).select("id,receipt_date,po_id,vendor_id,status,branch_id");
     if (error) throw error; return (data as unknown as GRN[]) ?? [];
   }});
   const whsQ = useQuery({ queryKey: ["dash2", "whs"], enabled: !scope.isLoading && !scope.isScoped, queryFn: async () => {
@@ -205,7 +205,10 @@ export function InventoryOwnerDashboard() {
   const vendors = scope.isScoped ? [] : vendorsRaw;
   const rateCards = scope.isScoped ? [] : rateCardsRaw;
   const pos = scope.isScoped ? [] : posRaw;
-  const grns = scope.isScoped ? [] : grnsRaw;
+  const grns = useMemo(() => {
+    if (!scope.isScoped || !scope.branchId) return grnsRaw;
+    return grnsRaw.filter((g) => g.branch_id === scope.branchId);
+  }, [grnsRaw, scope.isScoped, scope.branchId]);
   const whs = scope.isScoped ? [] : whsRaw;
   const branches = useMemo(
     () => (scope.isScoped && scope.branchId ? branchesRaw.filter((b) => b.id === scope.branchId) : branchesRaw),
@@ -539,10 +542,11 @@ export function InventoryOwnerDashboard() {
 
       {scope.isScoped ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Kpi label="Branch Stock Value" value={inr(stockValue)} icon={Wallet} tint="from-emerald-500/15 to-emerald-500/0" iconClass="text-emerald-500" hint="Your branch and mapped field officers only" />
-          <Kpi label="Branch Units" value={branchHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Building2} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" hint="In branch holding" />
-          <Kpi label="Field Officer Units" value={foHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Users} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" hint="Mapped to your branch" />
-          <Kpi label="Guard Units" value={guardHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={ShieldCheck} tint="from-teal-500/15 to-teal-500/0" iconClass="text-teal-500" hint="Under your branch chain" />
+          <Kpi label="Branch Stock Value" value={inr(stockValue)} icon={Wallet} tint="from-emerald-500/15 to-emerald-500/0" iconClass="text-emerald-500" hint="Your branch and mapped field officers only" to="/admin/inventory/stock" />
+          <Kpi label="Branch Stock" value={branchHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Building2} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" hint="In branch holding" to="/admin/inventory/stock" />
+          <Kpi label="Field Officer Stock" value={foHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Users} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" hint="Mapped to your branch" to="/admin/inventory/stock" />
+          <Kpi label="Guard Stock" value={guardHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={ShieldCheck} tint="from-teal-500/15 to-teal-500/0" iconClass="text-teal-500" hint="Under your branch chain" to="/admin/inventory/stock" />
+
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
