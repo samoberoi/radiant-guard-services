@@ -872,7 +872,7 @@ function useCostComponentOptions() {
     queryFn: async (): Promise<CostComponentOption[]> => {
       const { data, error } = await supabase
         .from("cost_components" as never)
-        .select("id,name,calc_type,percentage,base_components,cap_amount,cap_flat_amount,amount,state,enabled,sort_order")
+        .select("id,name,calc_type,percentage,base_components,cap_amount,cap_flat_amount,amount,state,enabled,sort_order,deduction_calc_type")
         .order("sort_order")
         .order("name");
       if (error) throw error;
@@ -890,6 +890,8 @@ function useCostComponentOptions() {
           capFlatAmount: r.cap_flat_amount == null ? null : Number(r.cap_flat_amount),
           amount: r.amount == null ? null : Number(r.amount),
           state: String(r.state ?? "N/A"),
+          deductionCalcType:
+            (String(r.deduction_calc_type ?? "earned_salary") as "earned_salary" | "fixed_amount"),
         }));
     },
   });
