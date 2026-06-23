@@ -454,20 +454,22 @@ export function InventoryOwnerDashboard() {
           ))}
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-            <SelectTrigger className="h-9 w-[200px]"><SelectValue placeholder="Warehouse / Branch" /></SelectTrigger>
-            <SelectContent className="max-h-[320px]">
-              <SelectItem value="all">All warehouses and branches ({whs.length + branches.length})</SelectItem>
-              {whs.length > 0 && (
-                <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Warehouses</div>
-              )}
-              {whs.map((wh) => <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>)}
-              {branches.length > 0 && (
-                <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Branches</div>
-              )}
-              {branches.map((b) => <SelectItem key={b.id} value={`branch:${b.id}`}>{b.name}{b.code ? ` (${b.code})` : ""}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          {!scope.isScoped && (
+            <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
+              <SelectTrigger className="h-9 w-[200px]"><SelectValue placeholder="Warehouse / Branch" /></SelectTrigger>
+              <SelectContent className="max-h-[320px]">
+                <SelectItem value="all">All warehouses and branches ({whs.length + branches.length})</SelectItem>
+                {whs.length > 0 && (
+                  <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Warehouses</div>
+                )}
+                {whs.map((wh) => <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>)}
+                {branches.length > 0 && (
+                  <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Branches</div>
+                )}
+                {branches.map((b) => <SelectItem key={b.id} value={`branch:${b.id}`}>{b.name}{b.code ? ` (${b.code})` : ""}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="h-9 w-[160px]"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>
