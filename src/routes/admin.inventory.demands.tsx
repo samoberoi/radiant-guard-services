@@ -355,7 +355,7 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, branchLabel, 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
           <Button variant="outline" onClick={() => save(false)} disabled={saving}>Save Draft</Button>
-          <Button onClick={() => save(true)} disabled={saving}><Send className="mr-1.5 h-4 w-4" />{saving ? "Submitting…" : "Submit to Warehouse"}</Button>
+          <Button onClick={() => save(true)} disabled={saving}><Send className="mr-1.5 h-4 w-4" />{saving ? "Submitting…" : `Submit to ${source === "branch" ? "Branch" : "Warehouse"}`}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
