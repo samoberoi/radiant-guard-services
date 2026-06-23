@@ -3263,6 +3263,7 @@ function ResourceFormDialog({
     capFlatAmount: null,
     amount: 0,
     state: "Per state slab (resolved at payroll from unit state, employee gender, earned gross)",
+    deductionCalcType: "fixed_amount",
   };
 
   const usedBenefitIds = new Set(benefits.map((b) => b.costComponentId));
