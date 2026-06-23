@@ -14,6 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType } from "@/lib/inv-helpers";
+import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+
 
 export const Route = createFileRoute("/admin/inventory/transfers")({ component: TransfersPage });
 
@@ -75,11 +77,21 @@ function TransfersPage() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<Transfer | null>(null);
 
+  const scope = useUserBranchScope();
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return transfers;
-    return transfers.filter((t) => t.transfer_number.toLowerCase().includes(q));
-  }, [transfers, query]);
+    let list = transfers;
+    if (scope.isScoped && scope.branchId) {
+      list = list.filter(
+        (t) =>
+          (t.source_type === "branch" && t.source_id === scope.branchId) ||
+          (t.destination_type === "branch" && t.destination_id === scope.branchId),
+      );
+    }
+    if (!q) return list;
+    return list.filter((t) => t.transfer_number.toLowerCase().includes(q));
+  }, [transfers, query, scope.isScoped, scope.branchId]);
+
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["inv", "transfers"] });

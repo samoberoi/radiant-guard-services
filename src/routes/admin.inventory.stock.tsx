@@ -8,8 +8,10 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useUserBranchScope } from "@/lib/use-user-branch-scope";
 
 export const Route = createFileRoute("/admin/inventory/stock")({ component: StockPage });
+
 
 type Balance = { location_type: string; location_id: string; item_id: string; size_value: string; qty: number };
 
@@ -61,34 +63,61 @@ function StockPage() {
     return "—";
   };
 
+  const scope = useUserBranchScope();
   const [q, setQ] = useState("");
-  const [typeFilter, setTypeFilter] = useState<"all" | "warehouse" | "branch">("all");
-  const [specificFilter, setSpecificFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilterRaw] = useState<"all" | "warehouse" | "branch">("all");
+  const [specificFilter, setSpecificFilterRaw] = useState<string>("all");
   const [foFilter, setFoFilter] = useState<string>("all");
+  // When the user is locked to a single branch, force the filters.
+  const effectiveTypeFilter = scope.isScoped ? "branch" : typeFilter;
+  const effectiveSpecificFilter = scope.isScoped ? (scope.branchId ?? "all") : specificFilter;
+  const setTypeFilter = scope.isScoped ? () => {} : setTypeFilterRaw;
+  const setSpecificFilter = scope.isScoped ? () => {} : setSpecificFilterRaw;
+
 
   // FO list filtered by selected branch (via employee_scope_assignments)
   const fosForBranch = useMemo(() => {
-    if (typeFilter !== "branch" || specificFilter === "all") return fieldOfficers;
+    if (effectiveTypeFilter !== "branch" || effectiveSpecificFilter === "all") return fieldOfficers;
     const ids = new Set(
       scopeAssignments
-        .filter((a) => a.scope_type === "branch" && a.scope_id === specificFilter)
+        .filter((a) => a.scope_type === "branch" && a.scope_id === effectiveSpecificFilter)
         .map((a) => a.candidate_id),
     );
     return fieldOfficers.filter((f) => ids.has(f.id));
-  }, [typeFilter, specificFilter, scopeAssignments, fieldOfficers]);
+  }, [effectiveTypeFilter, effectiveSpecificFilter, scopeAssignments, fieldOfficers]);
+
+  // For a branch-scoped user, the FO whitelist is the set of field officers mapped to their branch.
+  const allowedFoIds = useMemo(() => {
+    if (!scope.isScoped || !scope.branchId) return null;
+    return new Set(
+      scopeAssignments
+        .filter((a) => a.scope_type === "branch" && a.scope_id === scope.branchId)
+        .map((a) => a.candidate_id),
+    );
+  }, [scope.isScoped, scope.branchId, scopeAssignments]);
 
   const enriched = useMemo(() => {
     return balances
       .filter((b) => Number(b.qty) !== 0)
       .filter((b) => {
-        // If a specific field officer is picked, only show that FO's rows
+        // Branch-scoped user: hard-limit to their branch + FOs mapped to it.
+        if (scope.isScoped) {
+          if (b.location_type === "branch" && b.location_id === scope.branchId) {
+            // allowed
+          } else if (b.location_type === "field_officer" && allowedFoIds?.has(b.location_id)) {
+            // allowed
+          } else {
+            return false;
+          }
+        }
         if (foFilter !== "all") {
           return b.location_type === "field_officer" && b.location_id === foFilter;
         }
-        // Otherwise filter by location type/specific
-        if (b.location_type !== "warehouse" && b.location_type !== "branch") return false;
-        if (typeFilter !== "all" && b.location_type !== typeFilter) return false;
-        if (specificFilter !== "all" && b.location_id !== specificFilter) return false;
+        if (!scope.isScoped) {
+          if (b.location_type !== "warehouse" && b.location_type !== "branch") return false;
+          if (effectiveTypeFilter !== "all" && b.location_type !== effectiveTypeFilter) return false;
+          if (effectiveSpecificFilter !== "all" && b.location_id !== effectiveSpecificFilter) return false;
+        }
         return true;
       })
       .map((b) => {
@@ -109,12 +138,13 @@ function StockPage() {
         return r.item_name.toLowerCase().includes(t) || r.item_code.toLowerCase().includes(t) || r.location_label.toLowerCase().includes(t);
       })
       .sort((a, b) => a.item_name.localeCompare(b.item_name));
-  }, [balances, itemMap, typeFilter, specificFilter, foFilter, q, whMap, brMap, cMap]);
+  }, [balances, itemMap, effectiveTypeFilter, effectiveSpecificFilter, foFilter, q, whMap, brMap, cMap, scope.isScoped, scope.branchId, allowedFoIds]);
 
   const lowCount = enriched.filter((r) => r.low).length;
   const totalQty = enriched.reduce((s, r) => s + Number(r.qty), 0);
 
-  const specificOptions = typeFilter === "warehouse" ? warehouses : typeFilter === "branch" ? branches : [];
+  const specificOptions = effectiveTypeFilter === "warehouse" ? warehouses : effectiveTypeFilter === "branch" ? branches : [];
+
 
   return (
     <div>
@@ -132,23 +162,32 @@ function StockPage() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search item or location…" className="h-10 rounded-lg pl-9" />
           </div>
-          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as "all" | "warehouse" | "branch"); setSpecificFilter("all"); setFoFilter("all"); }}>
-            <SelectTrigger className="h-10 w-44 rounded-lg"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All locations</SelectItem>
-              <SelectItem value="warehouse">Warehouses</SelectItem>
-              <SelectItem value="branch">Branches</SelectItem>
-            </SelectContent>
-          </Select>
-          {typeFilter !== "all" && (
-            <Select value={specificFilter} onValueChange={(v) => { setSpecificFilter(v); setFoFilter("all"); }}>
-              <SelectTrigger className="h-10 w-56 rounded-lg"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All {typeFilter === "warehouse" ? "warehouses" : "branches"}</SelectItem>
-                {specificOptions.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          {scope.isScoped ? (
+            <div className="flex h-10 items-center rounded-lg border border-border bg-secondary/40 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Branch: {scope.branchLabel || "—"}
+            </div>
+          ) : (
+            <>
+              <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as "all" | "warehouse" | "branch"); setSpecificFilter("all"); setFoFilter("all"); }}>
+                <SelectTrigger className="h-10 w-44 rounded-lg"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All locations</SelectItem>
+                  <SelectItem value="warehouse">Warehouses</SelectItem>
+                  <SelectItem value="branch">Branches</SelectItem>
+                </SelectContent>
+              </Select>
+              {typeFilter !== "all" && (
+                <Select value={specificFilter} onValueChange={(v) => { setSpecificFilter(v); setFoFilter("all"); }}>
+                  <SelectTrigger className="h-10 w-56 rounded-lg"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All {typeFilter === "warehouse" ? "warehouses" : "branches"}</SelectItem>
+                    {specificOptions.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            </>
           )}
+
           <Select value={foFilter} onValueChange={setFoFilter}>
             <SelectTrigger className="h-10 w-56 rounded-lg"><SelectValue placeholder="Field officer" /></SelectTrigger>
             <SelectContent>

@@ -8,6 +8,8 @@ import {
   SlidersHorizontal, UserPlus, FileText,
 } from "lucide-react";
 import { useCurrentPermissions } from "@/lib/rbac";
+import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+
 
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
@@ -393,8 +395,10 @@ export function InventoryOwnerDashboard() {
 
   return (
     <div className="space-y-6">
+      <ScopeBanner />
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/60 p-3 backdrop-blur">
+
         <div className="flex items-center gap-1 rounded-xl bg-secondary/40 p-1">
           {(Object.keys(RANGE_LABEL) as Range[]).map((r) => (
             <button
@@ -878,3 +882,17 @@ function WorkflowTile({ to, label, value, icon: Icon, accent, chips }: {
   );
 }
 
+
+function ScopeBanner() {
+  const scope = useUserBranchScope();
+  if (!scope.isScoped) return null;
+  return (
+    <div className="flex items-center gap-2 rounded-2xl border border-accent/30 bg-accent/5 px-4 py-2.5 text-sm">
+      <Building2 className="h-4 w-4 text-accent" />
+      <span className="font-medium text-foreground">Branch view:</span>
+      <span className="text-muted-foreground">
+        You are viewing data for <span className="font-semibold text-foreground">{scope.branchLabel || "your assigned branch"}</span> only.
+      </span>
+    </div>
+  );
+}

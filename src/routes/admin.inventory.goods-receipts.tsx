@@ -14,6 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, useDialogDirty } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass } from "@/lib/inv-helpers";
+import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+
 
 export const Route = createFileRoute("/admin/inventory/goods-receipts")({ component: GRNPage });
 
@@ -117,11 +119,16 @@ function GRNPage() {
   const [open, setOpen] = useState(false);
   const [viewing, setViewing] = useState<GRN | null>(null);
 
+  const scope = useUserBranchScope();
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
+    // Delivery Challans / Goods Receipts are warehouse-level events.
+    // A branch-scoped user does not own any warehouse, so their list is empty.
+    if (scope.isScoped) return [];
     if (!q) return grns;
     return grns.filter((g) => g.grn_number.toLowerCase().includes(q) || (g.vendor_invoice_number ?? "").toLowerCase().includes(q));
-  }, [grns, query]);
+  }, [grns, query, scope.isScoped]);
+
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["inv", "grns"] });

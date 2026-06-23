@@ -15,6 +15,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType, LOCATION_TYPE_LABELS } from "@/lib/inv-helpers";
+import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+
 
 export const Route = createFileRoute("/admin/inventory/write-offs")({ component: WriteOffsPage });
 
@@ -91,11 +93,17 @@ function WriteOffsPage() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<WO | null>(null);
 
+  const scope = useUserBranchScope();
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => r.writeoff_number.toLowerCase().includes(q));
-  }, [rows, query]);
+    let list = rows;
+    if (scope.isScoped && scope.branchId) {
+      list = list.filter((r) => r.location_type === "branch" && r.location_id === scope.branchId);
+    }
+    if (!q) return list;
+    return list.filter((r) => r.writeoff_number.toLowerCase().includes(q));
+  }, [rows, query, scope.isScoped, scope.branchId]);
+
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["inv", "writeoffs"] });

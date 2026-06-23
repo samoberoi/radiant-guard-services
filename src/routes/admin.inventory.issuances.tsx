@@ -14,6 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType } from "@/lib/inv-helpers";
+import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+
 
 export const Route = createFileRoute("/admin/inventory/issuances")({ component: IssuancesPage });
 
@@ -91,11 +93,21 @@ function IssuancesPage() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<Issuance | null>(null);
 
+  const scope = useUserBranchScope();
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return issuances;
-    return issuances.filter((i) => i.issuance_number.toLowerCase().includes(q));
-  }, [issuances, query]);
+    let list = issuances;
+    if (scope.isScoped && scope.branchId) {
+      list = list.filter(
+        (i) =>
+          (i.source_type === "branch" && i.source_id === scope.branchId) ||
+          (i.destination_type === "branch" && i.destination_id === scope.branchId),
+      );
+    }
+    if (!q) return list;
+    return list.filter((i) => i.issuance_number.toLowerCase().includes(q));
+  }, [issuances, query, scope.isScoped, scope.branchId]);
+
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["inv", "issuances"] });
