@@ -238,7 +238,18 @@ function GRNPage() {
         </div>
       </div>
 
-      <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} onSaved={invalidate} />
+      {adminMode ? (
+        <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} onSaved={invalidate} />
+      ) : (
+        <BranchGRNFormDialog
+          open={open}
+          onOpenChange={setOpen}
+          branchId={scope.branchId ?? ""}
+          transfers={incomingTransfers}
+          items={items}
+          onSaved={invalidate}
+        />
+      )}
       <GRNViewDialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)} grn={viewing} />
     </div>
   );
