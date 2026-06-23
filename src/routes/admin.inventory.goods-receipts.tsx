@@ -222,10 +222,12 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
   const [lines, setLines] = useState<Line[]>([]);
   const [items, setItems] = useState<Record<string, Item>>({});
   const [saving, setSaving] = useState(false);
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
 
   useResetOnOpen(open, async () => {
     setPoId(""); setReceiptDate(new Date().toISOString().slice(0, 10));
     setInvoiceNo(""); setChallanNo(""); setVehicleNo(""); setNotes(""); setLines([]); setItems({});
+    setInvoiceFile(null);
   });
 
   async function loadPo(id: string) {
