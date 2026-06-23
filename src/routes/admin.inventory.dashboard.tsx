@@ -552,7 +552,7 @@ export function InventoryOwnerDashboard() {
 
         {/* Workflow counts with status split */}
         <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {canSub("inventory", "purchase_orders") && (
+          {!scope.isScoped && canSub("inventory", "purchase_orders") && (
             <WorkflowTile to="/admin/inventory/purchase-orders" label="Purchase Orders" value={poSplit.total} icon={FileText} accent="text-blue-500"
               chips={[{ label: "Open", value: poSplit.open, tone: "amber" }, { label: "Closed", value: poSplit.closed, tone: "emerald" }]} />
           )}
