@@ -303,7 +303,7 @@ function POPage() {
                   <tr key={p.id} className="hover:bg-secondary/30">
                     <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{p.po_number}</td>
                     <td className="px-5 py-3 font-medium">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</td>
-                    <td className="px-5 py-3">{p.destination_warehouse_id ? warehouseMap.get(p.destination_warehouse_id)?.name ?? "—" : "—"}</td>
+                    <td className="px-5 py-3">{locationLabel(p.destination_warehouse_id, p.destination_branch_id)}</td>
                     <td className="px-5 py-3 text-xs text-muted-foreground tabular-nums">{p.po_date}</td>
                     <td className="px-5 py-3">
                       <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(p.status)}`}>{poStatusLabel(p.status)}</span>
