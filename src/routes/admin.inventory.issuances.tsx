@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Plus, Search, UserCheck, Eye, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Plus, Search, UserCheck, Eye, Trash2, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -290,6 +290,20 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
   });
   const availableFor = (l: Line) => stockMap.get(`${l.item_id}|${l.size_value ?? ""}`) ?? 0;
 
+  // FO → Guard has no demand: auto-load every item the FO has in stock so they can pick qty / remove.
+  const isFreeIssue = type === "fo_to_guard" && !demandId;
+  useEffect(() => {
+    if (!open || initial || !isFreeIssue || !sourceId || stockMap.size === 0 || lines.length > 0) return;
+    const next: Line[] = [];
+    for (const [key, qty] of stockMap.entries()) {
+      if (Number(qty) <= 0) continue;
+      const [item_id, size_value] = key.split("|");
+      next.push({ item_id, size_value: size_value ?? "", qty: 0, requested_qty: Number(qty) });
+    }
+    next.sort((a, b) => (itemMap.get(a.item_id)?.name ?? "").localeCompare(itemMap.get(b.item_id)?.name ?? ""));
+    if (next.length) setLines(next);
+  }, [open, initial, isFreeIssue, sourceId, stockMap, lines.length, itemMap]);
+
   function sourceOptions() {
     if (meta.source === "warehouse") return warehouses;
     if (meta.source === "branch") return branches;
@@ -380,10 +394,11 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
 
   async function saveOrIssue(target: "draft" | "issue") {
     if (!sourceId || !destId) { toast.error("Pick source and destination"); return; }
-    if (!lines.length || lines.some((l) => !l.item_id || l.qty <= 0)) { toast.error("Add items with qty"); return; }
+    const activeLines = isFreeIssue ? lines.filter((l) => l.qty > 0) : lines;
+    if (!activeLines.length || activeLines.some((l) => !l.item_id || l.qty <= 0)) { toast.error("Add items with qty"); return; }
     setSaving(true);
     try {
-      const linesPayload = lines.map((l, idx) => ({
+      const linesPayload = activeLines.map((l, idx) => ({
         item_id: l.item_id, size_value: l.size_value, qty: l.qty,
         condition: "new", notes: "", sort_order: idx,
       }));
@@ -422,7 +437,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
         } as never).eq("id", id);
         // Post OUT only — stock leaves source on issue.
         // The IN movement is posted when the receiver acknowledges (delivery challan / OTP).
-        const movs = lines.map((l) => ({
+        const movs = activeLines.map((l) => ({
           movement_type: `ISSUE_${meta.dest.toUpperCase()}_OUT`,
           location_type: meta.source as LocationType, location_id: sourceId,
           item_id: l.item_id, size_value: l.size_value, qty_change: -l.qty,
@@ -431,7 +446,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
         await postMovements(movs);
         // Bump demand fulfilment if this was raised against a demand.
         if (demandId) {
-          await bumpDemandFulfilled(demandId, lines);
+          await bumpDemandFulfilled(demandId, activeLines);
         }
         if (otp) toast.message(`OTP for receiver: ${otp}`, { description: "Share with the guard — they'll enter it on their profile to confirm receipt." });
       }
@@ -561,23 +576,24 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
                   <tr>
                     <th className="px-3 py-2">Item</th>
                     <th className="px-3 py-2 w-16">Size</th>
-                    <th className="px-3 py-2 w-24 text-right">Requested</th>
+                    {!isFreeIssue && <th className="px-3 py-2 w-24 text-right">Requested</th>}
                     {isDraft && <th className="px-3 py-2 w-24 text-right">In Stock</th>}
                     <th className="px-3 py-2 w-24 text-right">Issued</th>
+                    {isDraft && isFreeIssue && <th className="px-3 py-2 w-10" />}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {lines.map((l, idx) => {
                     const it = itemMap.get(l.item_id);
                     const avail = availableFor(l);
-                    const cap = Math.min(l.requested_qty, avail);
-                    const over = isDraft && (l.qty > avail || l.qty > l.requested_qty);
+                    const cap = isFreeIssue ? avail : Math.min(l.requested_qty, avail);
+                    const over = isDraft && (l.qty > avail || (!isFreeIssue && l.qty > l.requested_qty));
                     return (
                       <tr key={idx} className={over ? "bg-destructive/5" : undefined}>
                         <td className="px-3 py-2 font-medium">{it?.name ?? "—"}</td>
                         <td className="px-3 py-2 text-muted-foreground">{l.size_value || "—"}</td>
-                        <td className="px-3 py-2 text-right tabular-nums">{l.requested_qty}</td>
-                        {isDraft && <td className={`px-3 py-2 text-right tabular-nums ${!sourceId ? "text-muted-foreground" : avail <= 0 ? "text-destructive" : avail < l.requested_qty ? "text-amber-600" : "text-muted-foreground"}`}>{sourceId ? avail : "—"}</td>}
+                        {!isFreeIssue && <td className="px-3 py-2 text-right tabular-nums">{l.requested_qty}</td>}
+                        {isDraft && <td className={`px-3 py-2 text-right tabular-nums ${!sourceId ? "text-muted-foreground" : avail <= 0 ? "text-destructive" : (!isFreeIssue && avail < l.requested_qty) ? "text-amber-600" : "text-muted-foreground"}`}>{sourceId ? avail : "—"}</td>}
                         <td className="px-2 py-1.5">
                           {isDraft
                             ? <Input
@@ -590,17 +606,22 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
                                 onChange={(e) => {
                                   const raw = Number(e.target.value) || 0;
                                   let v = Math.max(0, raw);
-                                  if (v > l.requested_qty) { v = l.requested_qty; toast.error(`Issued cannot exceed requested (${l.requested_qty})`); }
+                                  if (!isFreeIssue && v > l.requested_qty) { v = l.requested_qty; toast.error(`Issued cannot exceed requested (${l.requested_qty})`); }
                                   if (sourceId && v > avail) { v = avail; toast.error(`Only ${avail} in stock for ${it?.name ?? "item"}`); }
                                   setLines((ls) => ls.map((x, i) => i === idx ? { ...x, qty: v } : x));
                                 }}
                               />
                             : <div className="text-right tabular-nums">{l.qty}</div>}
                         </td>
+                        {isDraft && isFreeIssue && (
+                          <td className="px-2 py-1.5 text-right">
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => setLines((ls) => ls.filter((_, i) => i !== idx))}><X className="h-4 w-4" /></Button>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}
-                  {!lines.length && <tr><td colSpan={isDraft ? 5 : 4} className="px-3 py-6 text-center text-xs text-muted-foreground">{isBranchManager ? "Pick a demand above to load items." : "No lines."}</td></tr>}
+                  {!lines.length && <tr><td colSpan={isDraft ? (isFreeIssue ? 5 : 5) : 4} className="px-3 py-6 text-center text-xs text-muted-foreground">{isBranchManager ? "Pick a demand above to load items." : isFreeIssue && !sourceId ? "Select source to load your stock." : isFreeIssue ? "You have no stock to issue." : "No lines."}</td></tr>}
                 </tbody>
               </table>
             </div>
