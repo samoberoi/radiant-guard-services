@@ -332,3 +332,72 @@ function VendorFormDialog({ open, onOpenChange, title, initial, onSubmit }: { op
     </Dialog>
   );
 }
+
+function PaymentTermsField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const parsed = parsePaymentTerms(value);
+  const [mode, setMode] = useState<"single" | "window">(parsed.mode);
+  const [from, setFrom] = useState<string>(parsed.from);
+  const [to, setTo] = useState<string>(parsed.to);
+  const [lastValue, setLastValue] = useState<string>(value);
+  if (value !== lastValue) {
+    setLastValue(value);
+    const p = parsePaymentTerms(value);
+    setMode(p.mode); setFrom(p.from); setTo(p.to);
+  }
+  const apply = (m: "single" | "window", f: string, t: string) => {
+    let nf = f, nt = t;
+    if (m === "window" && Number(nt) <= Number(nf)) {
+      const idx = NET_DAY_OPTIONS.indexOf(nf);
+      nt = NET_DAY_OPTIONS[Math.min(idx + 1, NET_DAY_OPTIONS.length - 1)] ?? nf;
+    }
+    setMode(m); setFrom(nf); setTo(nt);
+    const next = formatPaymentTerms(m, nf, nt);
+    setLastValue(next);
+    onChange(next);
+  };
+  return (
+    <div className="grid gap-2 rounded-lg border border-border p-3">
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-semibold">Payment Terms</Label>
+        <div className="flex items-center gap-2 text-xs">
+          <span className={mode === "single" ? "font-semibold text-foreground" : "text-muted-foreground"}>Single</span>
+          <Switch checked={mode === "window"} onCheckedChange={(v) => apply(v ? "window" : "single", from, to)} />
+          <span className={mode === "window" ? "font-semibold text-foreground" : "text-muted-foreground"}>Window</span>
+        </div>
+      </div>
+      {mode === "single" ? (
+        <div className="grid gap-1">
+          <Label className="text-xs text-muted-foreground">Net days</Label>
+          <Select value={from} onValueChange={(v) => apply("single", v, v)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {NET_DAY_OPTIONS.map((d) => <SelectItem key={d} value={d}>{d === "0" ? "Due on receipt" : `Net ${d}`}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-2">
+          <div className="grid gap-1">
+            <Label className="text-xs text-muted-foreground">From (days)</Label>
+            <Select value={from} onValueChange={(v) => apply("window", v, to)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {NET_DAY_OPTIONS.filter((d) => d !== "0").map((d) => <SelectItem key={d} value={d}>Net {d}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-1">
+            <Label className="text-xs text-muted-foreground">To (days)</Label>
+            <Select value={to} onValueChange={(v) => apply("window", from, v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {NET_DAY_OPTIONS.filter((d) => d !== "0" && Number(d) > Number(from)).map((d) => <SelectItem key={d} value={d}>Net {d}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+      <div className="text-[11px] text-muted-foreground">Stored as: <span className="font-mono text-foreground">{formatPaymentTerms(mode, from, to)}</span></div>
+    </div>
+  );
+}
