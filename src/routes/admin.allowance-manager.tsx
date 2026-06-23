@@ -56,6 +56,7 @@ type Allowance = {
   percentage: number;
   base_components: BaseRef[];
   cap_amount: number | null;
+  include_in_ot: boolean;
 };
 
 const QK = ["admin", "allowance-types"] as const;
