@@ -114,7 +114,7 @@ function MyInventoryPage() {
         if (entered !== (i.otp_code ?? "")) throw new Error("OTP does not match");
       }
       const { error } = await supabase.from("inv_issuances" as never).update({
-        status: "acknowledged", acknowledged_at: new Date().toISOString(),
+        status: "completed", acknowledged_at: new Date().toISOString(),
         ack_otp_verified: i.ack_method === "otp", received_at: new Date().toISOString(), received_by: me?.id ?? null,
       } as never).eq("id", i.id);
       if (error) throw error;
