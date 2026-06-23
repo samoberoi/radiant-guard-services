@@ -362,16 +362,17 @@ function POPage() {
 }
 
 function POFormDialog({
-  open, onOpenChange, initial, vendors, warehouses, items, itemSizes, rateCards, onSaved,
+  open, onOpenChange, initial, vendors, warehouses, branches, items, itemSizes, rateCards, onSaved,
 }: {
   open: boolean; onOpenChange: (o: boolean) => void;
-  initial: PO | null; vendors: Vendor[]; warehouses: Warehouse[]; items: Item[];
+  initial: PO | null; vendors: Vendor[]; warehouses: Warehouse[]; branches: Branch[]; items: Item[];
   itemSizes: ItemSize[];
   rateCards: RateCard[];
   onSaved: () => void;
 }) {
   const [vendorId, setVendorId] = useState<string>("");
-  const [warehouseId, setWarehouseId] = useState<string>("");
+  const [orderingFrom, setOrderingFrom] = useState<string>(""); // "wh:<id>" or "br:<id>"
+  const [deliverTo, setDeliverTo] = useState<string>("");
   const [poDate, setPoDate] = useState(new Date().toISOString().slice(0, 10));
   const [expectedDate, setExpectedDate] = useState("");
   const [notes, setNotes] = useState("");
