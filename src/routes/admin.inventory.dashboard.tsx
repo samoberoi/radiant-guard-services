@@ -406,9 +406,9 @@ export function InventoryOwnerDashboard() {
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-            <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Warehouse" /></SelectTrigger>
+            <SelectTrigger className="h-9 w-[200px]"><SelectValue placeholder="Warehouse / Branch" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All warehouses</SelectItem>
+              <SelectItem value="all">All warehouses and branches</SelectItem>
               {whs.map((wh) => <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -429,7 +429,7 @@ export function InventoryOwnerDashboard() {
         <Kpi label={`Spend · ${RANGE_LABEL[range]}`} value={inr(spendCur)} delta={delta(spendCur, spendPrev)} icon={IndianRupee} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" />
         <Kpi label="POs Raised" value={posInPeriod.toString()} delta={delta(posInPeriod, posPrev)} icon={ShoppingCart} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" />
         <Kpi label="GRNs Posted" value={grnsInPeriod.toString()} delta={delta(grnsInPeriod, grnsPrev)} icon={Truck} tint="from-cyan-500/15 to-cyan-500/0" iconClass="text-cyan-500" />
-        <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs · ${inr(writeoffCur)} write-offs`} />
+        <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs · ${inr(writeoffCur)} write-offs`} to="/admin/inventory/stock" />
       </div>
 
       {/* Overview — clickable totals across modules */}
@@ -444,7 +444,7 @@ export function InventoryOwnerDashboard() {
           {canSub("inventory", "item_master") && <CountTile to="/admin/inventory/items" label="Products" value={items.length} icon={PackageOpen} accent="text-violet-500" />}
           {canSub("inventory", "vendors") && <CountTile to="/admin/inventory/vendors" label="Vendors" value={vendors.length} icon={ShoppingCart} accent="text-blue-500" />}
           {canSub("inventory", "warehouses") && <CountTile to="/admin/inventory/warehouses" label="Warehouses" value={whs.length} icon={Warehouse} accent="text-amber-500" />}
-          {canSub("inventory", "stock_report") && <CountTile to="/admin/inventory/stock" label="Branches" value={branches.length} icon={Building2} accent="text-cyan-500" />}
+          {canSub("inventory", "stock_report") && <CountTile to="/admin/customers/branch-manager" label="Branches" value={branches.length} icon={Building2} accent="text-cyan-500" />}
         </div>
 
         {/* Workflow counts with status split */}
@@ -674,12 +674,12 @@ const PIE_COLORS = [
   "hsl(340 75% 55%)",
 ];
 
-function Kpi({ label, value, delta, icon: Icon, tint, iconClass, hint }: {
+function Kpi({ label, value, delta, icon: Icon, tint, iconClass, hint, to }: {
   label: string; value: string; delta?: number; icon: React.ComponentType<{ className?: string }>;
-  tint: string; iconClass: string; hint?: string;
+  tint: string; iconClass: string; hint?: string; to?: string;
 }) {
   const up = (delta ?? 0) >= 0;
-  return (
+  const body = (
     <div className={`relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${tint} p-4`}>
       <div className="flex items-start justify-between">
         <div>
@@ -700,6 +700,8 @@ function Kpi({ label, value, delta, icon: Icon, tint, iconClass, hint }: {
       </div>
     </div>
   );
+  if (to) return <Link to={to} className="block">{body}</Link>;
+  return body;
 }
 
 function Panel({ title, subtitle, right, children, className = "" }: {
