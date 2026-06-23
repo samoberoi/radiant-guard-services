@@ -257,11 +257,6 @@ export function InventoryOwnerDashboard() {
     const ack = issuances.filter((i) => i.status === "acknowledged").length;
     return { total: issuances.length, issued, ack };
   }, [issuances]);
-  const woSplit = useMemo(() => {
-    const pending = wos.filter((x) => x.status === "pending" || x.status === "draft").length;
-    const approved = wos.filter((x) => x.status === "approved").length;
-    return { total: wos.length, pending, approved };
-  }, [wos]);
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
