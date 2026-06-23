@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, useDialogDirty } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType } from "@/lib/inv-helpers";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+import { useCurrentUserRole } from "@/lib/use-current-user-role";
 
 
 export const Route = createFileRoute("/admin/inventory/goods-receipts")({ component: GRNPage });
@@ -41,9 +42,10 @@ type Line = { id?: string; po_line_id: string | null; transfer_line_id?: string 
 function GRNPage() {
   const qc = useQueryClient();
   const scope = useUserBranchScope();
+  const role = useCurrentUserRole();
   const adminMode = !scope.isScoped;
 
-  const { data: grns = [] } = useQuery({
+  const { data: grnsRaw = [] } = useQuery({
     queryKey: ["inv", "grns"],
     queryFn: async () => {
       const { data, error } = await supabase.from("inv_goods_receipts" as never).select("*").order("created_at", { ascending: false });
@@ -51,6 +53,23 @@ function GRNPage() {
       return (data as unknown as GRN[]) ?? [];
     },
   });
+  // Field officers should only see delivery challans tied to demands they raised.
+  const { data: myDemandIds = new Set<string>() } = useQuery({
+    queryKey: ["inv", "my-demand-ids", role.userId],
+    enabled: role.isFieldOfficer && !!role.userId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_demands" as never)
+        .select("id").eq("requester_id", role.userId as string);
+      if (error) throw error;
+      return new Set(((data as unknown as { id: string }[]) ?? []).map((r) => r.id));
+    },
+  });
+  const grns = useMemo(
+    () => (role.isFieldOfficer
+      ? grnsRaw.filter((g) => g.demand_id && myDemandIds.has(g.demand_id))
+      : grnsRaw),
+    [grnsRaw, role.isFieldOfficer, myDemandIds],
+  );
   const { data: pos = [] } = useQuery({
     queryKey: ["inv", "pos-open"],
     enabled: adminMode,

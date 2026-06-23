@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, statusBadgeClass } from "@/lib/inv-helpers";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+import { useCurrentUserRole } from "@/lib/use-current-user-role";
 
 export const Route = createFileRoute("/admin/inventory/demands")({ component: DemandsPage });
 
@@ -23,7 +24,7 @@ const ENTITY = "inv_demands";
 
 type Demand = {
   id: string; demand_number: string; branch_id: string; demand_date: string;
-  status: string; notes: string;
+  status: string; notes: string; requester_id: string | null;
 };
 type Branch = { id: string; name: string; code: string };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
@@ -32,8 +33,9 @@ type Line = { id?: string; item_id: string; size_value: string; requested_qty: n
 function DemandsPage() {
   const qc = useQueryClient();
   const scope = useUserBranchScope();
+  const role = useCurrentUserRole();
 
-  const { data: demands = [] } = useQuery({
+  const { data: demandsRaw = [] } = useQuery({
     queryKey: ["inv", "demands"],
     queryFn: async () => {
       const { data, error } = await supabase.from("inv_demands" as never).select("*").order("created_at", { ascending: false });
@@ -41,6 +43,12 @@ function DemandsPage() {
       return (data as unknown as Demand[]) ?? [];
     },
   });
+  const demands = useMemo(
+    () => (role.isFieldOfficer && role.userId
+      ? demandsRaw.filter((d) => d.requester_id === role.userId)
+      : demandsRaw),
+    [demandsRaw, role.isFieldOfficer, role.userId],
+  );
   const { data: branches = [] } = useQuery({
     queryKey: ["branches-list"],
     queryFn: async () => {
