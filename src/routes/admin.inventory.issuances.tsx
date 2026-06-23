@@ -501,8 +501,13 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
             <div className="grid gap-2"><Label>Type</Label>
               <Select value={type} onValueChange={(v) => { setType(v); setSourceId(""); setDestId(""); }} disabled={!isDraft}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{ISSUANCE_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {ISSUANCE_TYPES.filter((t) => t.source === "warehouse").map((t) => (
+                    <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
               </Select>
+              <p className="text-[11px] text-muted-foreground">Branch-originated issuances are handled by the branch manager.</p>
             </div>
           )}
           {isBranchManager && (
@@ -510,8 +515,8 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
               <Select value={type} onValueChange={(v) => { setType(v); setDestId(""); }} disabled={!isDraft || !!demandId}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="branch_to_guard">Branch → Guard</SelectItem>
                   <SelectItem value="branch_to_fo">Branch → Field Officer</SelectItem>
+                  <SelectItem value="branch_to_guard">Branch → Guard</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -537,31 +542,18 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
               </div>
             )}
             <div className="grid gap-2"><Label>{meta.dest === "field_officer" ? "Field Officer" : "Guard"}</Label>
-              <Select value={destId} onValueChange={setDestId} disabled={!isDraft || !!demandId}>
+              <Select value={destId} onValueChange={setDestId} disabled={!isDraft}>
                 <SelectTrigger><SelectValue placeholder={isFieldOfficer && destOptions().length === 0 ? "No guards assigned to you" : `Pick ${meta.dest === "field_officer" ? "field officer" : "guard"}`} /></SelectTrigger>
                 <SelectContent>{destOptions().map((o) => <SelectItem key={o.id} value={o.id}>{"full_name" in o ? `${o.full_name} (${o.employee_code})` : (o as { name: string }).name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid gap-2"><Label>Date</Label><Input type="date" value={issDate} onChange={(e) => setIssDate(e.target.value)} disabled={!isDraft} /></div>
-            <div className="grid gap-2"><Label>Ack Method</Label>
-              <Select value={ackMethod} onValueChange={setAckMethod} disabled={initial?.status === "acknowledged"}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="otp">OTP (guard)</SelectItem>
-                  <SelectItem value="signature">Delivery Challan (field officer)</SelectItem>
-                  <SelectItem value="photo">Photo</SelectItem>
-                  <SelectItem value="thumbprint">Thumbprint</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
           </div>
-
-
 
           <div>
             <div className="mb-2 flex items-center justify-between">
               <Label className="text-sm font-semibold">Items</Label>
-              {isDraft && <Button size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { item_id: "", size_value: "", qty: 1, condition: "new", notes: "" }])}><Plus className="mr-1 h-3.5 w-3.5" />Add line</Button>}
+              <span className="text-[11px] text-muted-foreground">{meta.dest === "guard" ? "Receiver confirms via OTP." : "Receiver confirms via delivery challan."}</span>
             </div>
             <div className="overflow-x-clip rounded-xl border border-border">
               <table className="ios-table w-full text-sm">
@@ -569,43 +561,51 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
                   <tr>
                     <th className="px-3 py-2">Item</th>
                     <th className="px-3 py-2 w-16">Size</th>
-                    <th className="px-3 py-2 w-20 text-right">Qty</th>
-                    <th className="px-3 py-2 w-28">Condition</th>
-                    <th className="px-3 py-2">Notes</th>
-                    {isDraft && <th className="px-3 py-2 w-10"></th>}
+                    <th className="px-3 py-2 w-24 text-right">Requested</th>
+                    {isDraft && <th className="px-3 py-2 w-24 text-right">In Stock</th>}
+                    <th className="px-3 py-2 w-24 text-right">Issued</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {lines.map((l, idx) => {
                     const it = itemMap.get(l.item_id);
+                    const avail = availableFor(l);
+                    const cap = Math.min(l.requested_qty, avail);
+                    const over = isDraft && (l.qty > avail || l.qty > l.requested_qty);
                     return (
-                      <tr key={idx}>
+                      <tr key={idx} className={over ? "bg-destructive/5" : undefined}>
+                        <td className="px-3 py-2 font-medium">{it?.name ?? "—"}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{l.size_value || "—"}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{l.requested_qty}</td>
+                        {isDraft && <td className={`px-3 py-2 text-right tabular-nums ${!sourceId ? "text-muted-foreground" : avail <= 0 ? "text-destructive" : avail < l.requested_qty ? "text-amber-600" : "text-muted-foreground"}`}>{sourceId ? avail : "—"}</td>}
                         <td className="px-2 py-1.5">
-                          {isDraft ? (
-                            <Select value={l.item_id} onValueChange={(v) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, item_id: v } : x))}>
-                              <SelectTrigger className="h-9"><SelectValue placeholder="Pick" /></SelectTrigger>
-                              <SelectContent>{items.map((x) => <SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                          ) : <div className="px-1 font-medium">{it?.name ?? "—"}</div>}
+                          {isDraft
+                            ? <Input
+                                type="number"
+                                min={0}
+                                max={cap}
+                                disabled={!sourceId}
+                                className={`h-9 text-right ${over ? "border-destructive text-destructive" : ""}`}
+                                value={l.qty}
+                                onChange={(e) => {
+                                  const raw = Number(e.target.value) || 0;
+                                  let v = Math.max(0, raw);
+                                  if (v > l.requested_qty) { v = l.requested_qty; toast.error(`Issued cannot exceed requested (${l.requested_qty})`); }
+                                  if (sourceId && v > avail) { v = avail; toast.error(`Only ${avail} in stock for ${it?.name ?? "item"}`); }
+                                  setLines((ls) => ls.map((x, i) => i === idx ? { ...x, qty: v } : x));
+                                }}
+                              />
+                            : <div className="text-right tabular-nums">{l.qty}</div>}
                         </td>
-                        <td className="px-2 py-1.5"><Input className="h-9" disabled={!isDraft || !it?.is_sized} value={l.size_value} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, size_value: e.target.value } : x))} placeholder={it?.is_sized ? "M/L" : "—"} /></td>
-                        <td className="px-2 py-1.5"><Input type="number" min={0} className="h-9 text-right" disabled={!isDraft} value={l.qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, qty: Number(e.target.value) || 0 } : x))} /></td>
-                        <td className="px-2 py-1.5">
-                          <Select value={l.condition} onValueChange={(v) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, condition: v } : x))} disabled={!isDraft}>
-                            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                            <SelectContent><SelectItem value="new">New</SelectItem><SelectItem value="used_good">Used – Good</SelectItem><SelectItem value="used_fair">Used – Fair</SelectItem></SelectContent>
-                          </Select>
-                        </td>
-                        <td className="px-2 py-1.5"><Input className="h-9" disabled={!isDraft} value={l.notes} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, notes: e.target.value } : x))} /></td>
-                        {isDraft && <td className="px-2 py-1.5"><Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => setLines((ls) => ls.filter((_, i) => i !== idx))}><Trash2 className="h-3.5 w-3.5" /></Button></td>}
                       </tr>
                     );
                   })}
-                  {!lines.length && <tr><td colSpan={6} className="px-3 py-6 text-center text-xs text-muted-foreground">No lines.</td></tr>}
+                  {!lines.length && <tr><td colSpan={isDraft ? 5 : 4} className="px-3 py-6 text-center text-xs text-muted-foreground">{isBranchManager ? "Pick a demand above to load items." : "No lines."}</td></tr>}
                 </tbody>
               </table>
             </div>
           </div>
+
 
           <div className="grid gap-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} disabled={initial?.status === "acknowledged"} rows={2} /></div>
         </div>
