@@ -1618,6 +1618,7 @@ export type Database = {
           vendor_challan_number: string
           vendor_id: string | null
           vendor_invoice_number: string
+          vendor_invoice_url: string | null
           warehouse_id: string
         }
         Insert: {
@@ -1636,6 +1637,7 @@ export type Database = {
           vendor_challan_number?: string
           vendor_id?: string | null
           vendor_invoice_number?: string
+          vendor_invoice_url?: string | null
           warehouse_id: string
         }
         Update: {
@@ -1654,6 +1656,7 @@ export type Database = {
           vendor_challan_number?: string
           vendor_id?: string | null
           vendor_invoice_number?: string
+          vendor_invoice_url?: string | null
           warehouse_id?: string
         }
         Relationships: [
