@@ -221,23 +221,6 @@ function POPage() {
         crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Purchase Orders" }]}
       />
 
-      <div className="mb-4 rounded-2xl border border-accent/30 bg-accent/5 p-4 text-xs text-muted-foreground">
-        <div className="font-display text-sm font-bold text-foreground">How procurement works</div>
-        <div className="mt-1 leading-relaxed">
-          <span className="font-semibold text-foreground">1. PO</span> (here) → order from vendor ·{" "}
-          <span className="font-semibold text-foreground">2. Goods Receipt</span> → verify challan &amp; add to warehouse ·{" "}
-          <span className="font-semibold text-foreground">3. Transfer</span> → warehouse to branch ·{" "}
-          <span className="font-semibold text-foreground">4. Issuance</span> → branch to FO / guard
-        </div>
-        <div className="mt-2 leading-relaxed">
-          <span className="font-semibold text-foreground">Status criteria:</span>{" "}
-          <span className="font-semibold text-foreground">Draft</span> = saved, not sent ·{" "}
-          <span className="font-semibold text-foreground">Delivery Open</span> = PO issued, nothing received ·{" "}
-          <span className="font-semibold text-foreground">Delivery Ongoing</span> = some line items received via Goods Receipts ·{" "}
-          <span className="font-semibold text-foreground">Delivery Completed</span> = every line's received qty ≥ ordered qty. Status updates automatically as you record Goods Receipts.
-        </div>
-
-      </div>
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row">
