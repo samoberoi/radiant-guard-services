@@ -542,10 +542,11 @@ export function InventoryOwnerDashboard() {
 
       {scope.isScoped ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Kpi label="Branch Stock Value" value={inr(stockValue)} icon={Wallet} tint="from-emerald-500/15 to-emerald-500/0" iconClass="text-emerald-500" hint="Your branch and mapped field officers only" />
-          <Kpi label="Branch Units" value={branchHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Building2} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" hint="In branch holding" />
-          <Kpi label="Field Officer Units" value={foHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Users} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" hint="Mapped to your branch" />
-          <Kpi label="Guard Units" value={guardHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={ShieldCheck} tint="from-teal-500/15 to-teal-500/0" iconClass="text-teal-500" hint="Under your branch chain" />
+          <Kpi label="Branch Stock Value" value={inr(stockValue)} icon={Wallet} tint="from-emerald-500/15 to-emerald-500/0" iconClass="text-emerald-500" hint="Your branch and mapped field officers only" to="/admin/inventory/stock" />
+          <Kpi label="Branch Stock" value={branchHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Building2} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" hint="In branch holding" to="/admin/inventory/stock" />
+          <Kpi label="Field Officer Stock" value={foHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Users} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" hint="Mapped to your branch" to="/admin/inventory/stock" />
+          <Kpi label="Guard Stock" value={guardHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={ShieldCheck} tint="from-teal-500/15 to-teal-500/0" iconClass="text-teal-500" hint="Under your branch chain" to="/admin/inventory/stock" />
+
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
