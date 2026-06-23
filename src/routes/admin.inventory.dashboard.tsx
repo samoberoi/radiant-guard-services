@@ -406,9 +406,9 @@ export function InventoryOwnerDashboard() {
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-            <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Warehouse" /></SelectTrigger>
+            <SelectTrigger className="h-9 w-[200px]"><SelectValue placeholder="Warehouse / Branch" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All warehouses</SelectItem>
+              <SelectItem value="all">All warehouses and branches</SelectItem>
               {whs.map((wh) => <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>)}
             </SelectContent>
           </Select>
