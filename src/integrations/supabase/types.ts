@@ -4031,6 +4031,10 @@ export type Database = {
         }[]
       }
       is_admin_user: { Args: never; Returns: boolean }
+      is_candidate_in_current_user_branch: {
+        Args: { _candidate_id: string }
+        Returns: boolean
+      }
       nextval: { Args: { sequence_name: string }; Returns: number }
     }
     Enums: {
