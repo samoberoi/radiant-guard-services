@@ -212,6 +212,7 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, branchLabel, 
     if (initial) {
       setDemandDate(initial.demand_date);
       setNotes(initial.notes ?? "");
+      setSource((initial.fulfillment_source as "warehouse" | "branch") ?? "warehouse");
       const { data } = await supabase.from("inv_demand_lines" as never).select("*").eq("demand_id", initial.id).order("sort_order");
       setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => ({
         id: String(r.id),
@@ -224,6 +225,7 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, branchLabel, 
       setDemandDate(new Date().toISOString().slice(0, 10));
       setNotes("");
       setLines([]);
+      setSource("warehouse");
     }
   });
 
