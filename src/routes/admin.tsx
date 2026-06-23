@@ -238,6 +238,13 @@ function AdminLayout() {
       }
       return;
     }
+    // Field officers must never land on the Inventory Command Center hub.
+    if (roleKey === "field_officer" && !isSuperAdmin) {
+      if (pathname === "/admin/inventory" || pathname === "/admin/inventory/" || pathname.startsWith("/admin/inventory/dashboard")) {
+        navigate({ to: "/admin/field-dashboard", replace: true });
+        return;
+      }
+    }
     const hit = pathToModule.find((p) => pathname === p.prefix || pathname.startsWith(p.prefix + "/"));
     if (!hit) return;
     if (!can(hit.module)) {
