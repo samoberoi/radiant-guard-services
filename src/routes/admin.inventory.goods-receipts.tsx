@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, useDialogDirty } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType } from "@/lib/inv-helpers";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+import { useCurrentUserRole } from "@/lib/use-current-user-role";
 
 
 export const Route = createFileRoute("/admin/inventory/goods-receipts")({ component: GRNPage });
