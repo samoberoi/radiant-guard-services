@@ -385,7 +385,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
     try {
       const linesPayload = lines.map((l, idx) => ({
         item_id: l.item_id, size_value: l.size_value, qty: l.qty,
-        condition: l.condition, notes: l.notes, sort_order: idx,
+        condition: "new", notes: "", sort_order: idx,
       }));
       let id = initial?.id;
       if (initial) {
