@@ -32,6 +32,8 @@ export type POPdfData = {
   po_date: string; // ISO yyyy-mm-dd
   remarks?: string;
   vendor: POPdfVendor | null;
+  ordering_from?: string;
+  deliver_to?: string;
   lines: POPdfLine[];
 };
 
@@ -172,6 +174,17 @@ export async function generatePOPdf(data: POPdfData): Promise<jsPDF> {
   }
   doc.text(`Vendor Address : ${vendorAddress}`, M, y, { maxWidth: W - 2 * M });
   y += 18;
+  if (data.ordering_from || data.deliver_to) {
+    doc.setFont("helvetica", "bold");
+    doc.text(`Ordering From : `, M, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(data.ordering_from ?? "—", M + 84, y);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Deliver To : `, W / 2, y);
+    doc.setFont("helvetica", "normal");
+    doc.text(data.deliver_to ?? "—", W / 2 + 66, y);
+    y += 18;
+  }
   if (data.remarks && data.remarks.trim()) {
     doc.text(`Remarks : ${data.remarks}`, M, y, { maxWidth: W - 2 * M });
     y += 18;
