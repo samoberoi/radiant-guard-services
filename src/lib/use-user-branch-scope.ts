@@ -72,11 +72,11 @@ export function useUserBranchScope(): UserBranchScope {
           if (branchId) {
             const { data: br } = await supabase
               .from("branches")
-              .select("name,branch_code")
+              .select("name,code")
               .eq("id", branchId)
               .maybeSingle();
-            const b = br as { name?: string; branch_code?: string } | null;
-            const label = b ? `${b.branch_code ?? ""}${b.branch_code && b.name ? " – " : ""}${b.name ?? ""}`.trim() : "";
+            const b = br as { name?: string; code?: string } | null;
+            const label = b ? `${b.code ?? ""}${b.code && b.name ? " – " : ""}${b.name ?? ""}`.trim() : "";
             return { scope_id: branchId, scope_label: label };
           }
         }
