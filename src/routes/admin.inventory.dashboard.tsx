@@ -79,12 +79,32 @@ const inr = (n: number) =>
     : n.toLocaleString("en-IN", { maximumFractionDigits: 0 }));
 
 export function InventoryOwnerDashboard() {
+  const scope = useUserBranchScope();
   const [range, setRange] = useState<Range>("30d");
   const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [q, setQ] = useState("");
 
   const w = useMemo(() => rangeWindow(range), [range]);
+
+  // Field officers mapped to the scoped branch (for branch-scoped users)
+  const scopeAssignmentsQ = useQuery({
+    queryKey: ["dash2", "scope-assignments", scope.branchId],
+    enabled: scope.isScoped && !!scope.branchId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("employee_scope_assignments" as never)
+        .select("candidate_id,scope_type,scope_id")
+        .eq("scope_type", "branch")
+        .eq("scope_id", scope.branchId as string);
+      return (data as unknown as { candidate_id: string }[]) ?? [];
+    },
+  });
+  const allowedFoIds = useMemo(
+    () => new Set((scopeAssignmentsQ.data ?? []).map((a) => a.candidate_id)),
+    [scopeAssignmentsQ.data],
+  );
+
 
   // ===== queries =====
   const balancesQ = useQuery({ queryKey: ["dash2", "balances"], queryFn: async () => {
