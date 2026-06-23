@@ -56,6 +56,7 @@ type Allowance = {
   percentage: number;
   base_components: BaseRef[];
   cap_amount: number | null;
+  include_in_ot: boolean;
 };
 
 const QK = ["admin", "allowance-types"] as const;
@@ -76,6 +77,7 @@ function rowToItem(r: Record<string, unknown>): Allowance {
     percentage: Number(r.percentage ?? 0),
     base_components: Array.isArray(r.base_components) ? (r.base_components as BaseRef[]) : [],
     cap_amount: r.cap_amount == null ? null : Number(r.cap_amount),
+    include_in_ot: r.include_in_ot == null ? true : Boolean(r.include_in_ot),
   };
 }
 
@@ -94,7 +96,7 @@ function useAllowances() {
     queryFn: async (): Promise<Allowance[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,earning_type,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount")
+        .select("id,name,earning_type,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot")
         .order("name", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
@@ -114,6 +116,7 @@ function useAllowances() {
     percentage: p.calc_type === "percentage" ? Number(p.percentage) || 0 : 0,
     base_components: p.calc_type === "percentage" ? p.base_components : [],
     cap_amount: p.calc_type === "percentage" ? p.cap_amount : null,
+    include_in_ot: p.include_in_ot,
   });
 
   const addMut = useMutation({
@@ -259,11 +262,13 @@ function AllowanceManagerPage() {
                 <th className="px-5 py-3">Short</th>
                 <th className="px-5 py-3">Formula</th>
                 <th className="px-5 py-3">Default</th>
+                <th className="px-5 py-3">In OT</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
+
               {filtered.map((i) => (
                 <tr key={i.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-medium text-foreground">
@@ -293,6 +298,17 @@ function AllowanceManagerPage() {
                       }
                     >
                       {i.is_default ? "YES" : "NO"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3">
+                    <span
+                      className={
+                        i.include_in_ot
+                          ? "inline-flex rounded-md bg-emerald-500/15 px-2 py-0.5 text-xs font-semibold text-emerald-700"
+                          : "inline-flex rounded-md bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground"
+                      }
+                    >
+                      {i.include_in_ot ? "YES" : "NO"}
                     </span>
                   </td>
                   <td className="px-5 py-3">
@@ -336,7 +352,7 @@ function AllowanceManagerPage() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground">
                     No allowance types found.
                   </td>
                 </tr>
@@ -438,6 +454,7 @@ function AllowanceFormDialog({
   const [percentage, setPercentage] = useState<string>("0");
   const [baseRefs, setBaseRefs] = useState<BaseRef[]>([]);
   const [capAmount, setCapAmount] = useState<string>("");
+  const [includeInOt, setIncludeInOt] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useResetOnOpen(open, () => {
@@ -451,6 +468,7 @@ function AllowanceFormDialog({
     setPercentage(String(initial?.percentage ?? 0));
     setBaseRefs(initial?.base_components ?? []);
     setCapAmount(initial?.cap_amount != null ? String(initial.cap_amount) : "");
+    setIncludeInOt(initial?.include_in_ot ?? true);
   });
 
   const preview = buildFormulaPreview({
@@ -605,6 +623,14 @@ function AllowanceFormDialog({
             </div>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
           </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
+            <div>
+              <div className="text-sm font-medium">Include in OT Calculation</div>
+              <div className="text-xs text-muted-foreground">If off, this allowance is excluded from the OT base amount</div>
+            </div>
+            <Switch checked={includeInOt} onCheckedChange={setIncludeInOt} />
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
@@ -625,6 +651,7 @@ function AllowanceFormDialog({
                 percentage: Number(percentage) || 0,
                 base_components: baseRefs,
                 cap_amount: capAmount ? Number(capAmount) : null,
+                include_in_ot: includeInOt,
               });
               setSaving(false);
               if (err) toast.error(err);

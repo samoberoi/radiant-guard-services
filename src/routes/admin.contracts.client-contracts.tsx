@@ -178,12 +178,14 @@ type AllowanceType = {
   percentage: number;
   baseComponents: { label: string; operator: "+" | "-" }[];
   capAmount: number | null;
+  includeInOt: boolean;
 };
 
 type ResourceComponent = {
   allowanceId: string;
   name: string;
   amount: number;
+  includeInOt?: boolean;
 };
 
 type BenefitItem = {
@@ -196,6 +198,7 @@ type BenefitItem = {
   capFlatAmount: number | null;
   amount: number; // computed (percentage) or manual (fixed)
   state: string;
+  deductionCalcType?: "earned_salary" | "fixed_amount";
 };
 
 type ContractResource = {
@@ -261,6 +264,7 @@ type CostComponentOption = {
   capFlatAmount: number | null;
   amount: number | null;
   state: string;
+  deductionCalcType: "earned_salary" | "fixed_amount";
 };
 
 const QK = ["admin", "client-contracts"] as const;
@@ -781,7 +785,7 @@ function useAllowanceTypes() {
     queryFn: async (): Promise<AllowanceType[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,created_at")
+        .select("id,name,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot,created_at")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data as unknown as Record<string, unknown>[])
@@ -798,6 +802,7 @@ function useAllowanceTypes() {
             ? (r.base_components as { label: string; operator: "+" | "-" }[])
             : [],
           capAmount: r.cap_amount == null ? null : Number(r.cap_amount),
+          includeInOt: r.include_in_ot == null ? true : Boolean(r.include_in_ot),
         }));
     },
   });
@@ -867,7 +872,7 @@ function useCostComponentOptions() {
     queryFn: async (): Promise<CostComponentOption[]> => {
       const { data, error } = await supabase
         .from("cost_components" as never)
-        .select("id,name,calc_type,percentage,base_components,cap_amount,cap_flat_amount,amount,state,enabled,sort_order")
+        .select("id,name,calc_type,percentage,base_components,cap_amount,cap_flat_amount,amount,state,enabled,sort_order,deduction_calc_type")
         .order("sort_order")
         .order("name");
       if (error) throw error;
@@ -885,6 +890,8 @@ function useCostComponentOptions() {
           capFlatAmount: r.cap_flat_amount == null ? null : Number(r.cap_flat_amount),
           amount: r.amount == null ? null : Number(r.amount),
           state: String(r.state ?? "N/A"),
+          deductionCalcType:
+            (String(r.deduction_calc_type ?? "earned_salary") as "earned_salary" | "fixed_amount"),
         }));
     },
   });
@@ -3113,6 +3120,7 @@ function ResourceFormDialog({
           allowanceId: a.id,
           name: a.shortName || a.displayName,
           amount: 0,
+          includeInOt: a.includeInOt,
         }));
       setDesignationId("");
       setServiceTypeId("");
@@ -3256,6 +3264,7 @@ function ResourceFormDialog({
     capFlatAmount: null,
     amount: 0,
     state: "Per state slab (resolved at payroll from unit state, employee gender, earned gross)",
+    deductionCalcType: "fixed_amount",
   };
 
   const usedBenefitIds = new Set(benefits.map((b) => b.costComponentId));
@@ -3318,6 +3327,7 @@ function ResourceFormDialog({
           allowanceId: a.id,
           name: a.shortName || a.displayName,
           amount: 0,
+          includeInOt: a.includeInOt,
         };
         if (a.calcType === "percentage") {
           // Compute formula against existing components (excluding self by id).
@@ -3353,6 +3363,7 @@ function ResourceFormDialog({
       capFlatAmount: c.capFlatAmount,
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
+      deductionCalcType: c.deductionCalcType,
     };
     if (benefit.calcType === "percentage") {
       benefit.amount = computeBenefitAmount(benefit, components, [], allowanceTypes);
@@ -3383,6 +3394,7 @@ function ResourceFormDialog({
       capFlatAmount: c.capFlatAmount,
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
+      deductionCalcType: c.deductionCalcType,
     };
     if (item.calcType === "percentage") {
       item.amount = computeBenefitAmount(item, components, benefits, allowanceTypes);
@@ -3413,6 +3425,7 @@ function ResourceFormDialog({
       capFlatAmount: c.capFlatAmount,
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
+      deductionCalcType: c.deductionCalcType,
     };
     if (item.calcType === "percentage") {
       const l = (s: string) => s.trim().toLowerCase();

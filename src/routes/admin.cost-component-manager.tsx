@@ -58,6 +58,7 @@ type CostComponent = {
   notes: string;
   enabled: boolean;
   sort_order: number;
+  deduction_calc_type: "earned_salary" | "fixed_amount";
 };
 
 type AllowanceRow = { id: string; name: string; display_name: string; short_name: string };
@@ -90,6 +91,8 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
     notes: String(r.notes ?? ""),
     enabled: Boolean(r.enabled ?? true),
     sort_order: Number(r.sort_order ?? 0),
+    deduction_calc_type:
+      (String(r.deduction_calc_type ?? "earned_salary") as "earned_salary" | "fixed_amount"),
   };
 }
 
@@ -150,6 +153,7 @@ function useCostComponents() {
     notes: p.notes,
     enabled: p.enabled,
     sort_order: p.sort_order,
+    deduction_calc_type: p.deduction_calc_type,
   });
 
   const addMut = useMutation({
@@ -469,6 +473,8 @@ function CostComponentDialog({
   const [notes, setNotes] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [sortOrder, setSortOrder] = useState<string>("0");
+  const [deductionCalcType, setDeductionCalcType] =
+    useState<"earned_salary" | "fixed_amount">("earned_salary");
   const [saving, setSaving] = useState(false);
 
   useResetOnOpen(open, () => {
@@ -487,6 +493,7 @@ function CostComponentDialog({
     setNotes(initial?.notes ?? "");
     setEnabled(initial?.enabled ?? true);
     setSortOrder(String(initial?.sort_order ?? 0));
+    setDeductionCalcType(initial?.deduction_calc_type ?? "earned_salary");
   });
 
   const stateOptions = useMemo(() => ["N/A", ...states.map((s) => s.name)], [states]);
@@ -637,6 +644,24 @@ function CostComponentDialog({
             <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Internal note" />
           </div>
 
+          <div className="grid gap-2">
+            <Label>Deduction Calculation Type</Label>
+            <Select
+              value={deductionCalcType}
+              onValueChange={(v) => setDeductionCalcType(v as "earned_salary" | "fixed_amount")}
+            >
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="earned_salary">Earned Salary Based — prorates with attendance</SelectItem>
+                <SelectItem value="fixed_amount">Fixed Amount — deduct full amount regardless of attendance</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Applies only when this component is used as a deduction or employee/employer contribution.
+            </p>
+          </div>
+
+
           <div className="rounded-lg border border-dashed border-border bg-secondary/30 px-3 py-2 text-sm">
             <span className="text-xs uppercase tracking-wider text-muted-foreground">Preview · </span>
             <span className="font-medium text-foreground">{preview}</span>
@@ -669,6 +694,7 @@ function CostComponentDialog({
                 notes,
                 enabled,
                 sort_order: Number(sortOrder) || 0,
+                deduction_calc_type: deductionCalcType,
               });
               setSaving(false);
               if (err) toast.error(err);

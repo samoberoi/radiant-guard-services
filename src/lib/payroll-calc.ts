@@ -118,6 +118,7 @@ export type WageComponent = {
   baseComponents?: { label: string; operator: "+" | "-" }[];
   capAmount?: number | string | null;
   capFlatAmount?: number | string | null;
+  includeInOt?: boolean | null;
 };
 export type BenefitLike = {
   name: string;
@@ -127,6 +128,7 @@ export type BenefitLike = {
   baseComponents?: { label: string; operator: "+" | "-" }[];
   capAmount?: number | string | null;
   capFlatAmount?: number | string | null;
+  deductionCalcType?: "earned_salary" | "fixed_amount" | null;
 };
 
 export type ContractResourceLike = {
@@ -156,6 +158,10 @@ export type WageComputation = {
   totalEmployerContributions: number;
   netPay: number;
   employerCost: number;
+  otBaseAmount: number;
+  perDutyOtAmount: number;
+  otDuties: number;
+  totalOtAmount: number;
 };
 
 const ESI_NAME_RE = /\besi(c)?\b/i;
@@ -500,19 +506,27 @@ export function computeWages(
     components.push({ name: "Paid Holiday", amount: phAmount, calcType: "fixed" });
   }
 
-  // Overtime — vendor convention used across all clients:
-  //   OT base   = contract gross MINUS Uniform Allowance component(s)
-  //   OT rate   = OT base / (baseDays × 8)        (single rate, ×1)
-  //   OT amount = OT rate × OT hours
-  // Statutory double-rate is intentionally NOT applied; the vendor wage
-  // register pays single-rate on (Gross − Uniform). Reconciles to ₹0.01
-  // against FPL May-2026 register.
-  const uniformContract = resource.components
-    .filter((c) => /\buniform\b/i.test(canonicalComponentName(c.name)))
+  // Overtime base = contract gross MINUS any components flagged as
+  // Include in OT Calculation = false (configured in Allowance Manager and
+  // carried per-contract). Legacy fallback: if no component carries the
+  // flag, exclude Uniform-named components (matches pre-flag behaviour).
+  const anyOtFlagSet = resource.components.some(
+    (c) => c.includeInOt === false || c.includeInOt === true,
+  );
+  const excludedFromOt = resource.components
+    .filter((c) =>
+      anyOtFlagSet
+        ? c.includeInOt === false
+        : /\buniform\b/i.test(canonicalComponentName(c.name)),
+    )
     .reduce((s, c) => s + (Number(c.amount) || 0), 0);
-  const otBase = Math.max(0, contractGross - uniformContract);
-  const otHourlyRate = baseDays > 0 ? otBase / (baseDays * 8) : 0;
+  const otBase = Math.max(0, contractGross - excludedFromOt);
+  // Per-duty OT rate (new payroll spec); hour-based path uses
+  // perDuty / UNIT_DUTY_HOURS so existing hour-driven attendance still works.
+  const perDutyOt = baseDays > 0 ? otBase / baseDays : 0;
+  const otHourlyRate = perDutyOt / UNIT_DUTY_HOURS;
   const otAmount = round2(otHourlyRate * totals.otHours);
+  const otDuties = totals.otDays;
   if (otAmount > 0) {
     components.push({ name: "Overtime", amount: otAmount, calcType: "fixed" });
   }
@@ -526,15 +540,25 @@ export function computeWages(
   // flat monthly recovery, LWF is a flat statutory monthly contribution.
   // Management Fee is intentionally NOT fixed — it prorates by T Days
   // like other earnings/contributions.
-  const isFixedItem = (name: string) =>
-    /\buniform\b/i.test(name) ||
-    /\blwf\b/i.test(name) ||
-    /labour\s*welfare/i.test(name);
+  // A row is treated as a fixed (non-prorated) deduction/contribution when
+  // its configured deduction_calc_type is 'fixed_amount'. Legacy fallback:
+  // when the row has no flag set (older contracts), use the historical
+  // name-based heuristic so reproductions remain identical.
+  const isFixedItem = (i: BenefitLike) => {
+    if (i.deductionCalcType === "fixed_amount") return true;
+    if (i.deductionCalcType === "earned_salary") return false;
+    const n = i.name;
+    return (
+      /\buniform\b/i.test(n) ||
+      /\blwf\b/i.test(n) ||
+      /labour\s*welfare/i.test(n)
+    );
+  };
   const scaleItemsRespectingFixed = (items: BenefitLike[]): WageComponent[] =>
     items.map((i) => ({
       ...i,
       name: i.name,
-      amount: isFixedItem(i.name)
+      amount: isFixedItem(i)
         ? round2(Number(i.amount) || 0)
         : round2((Number(i.amount) || 0) * ratio),
     }));
@@ -626,6 +650,10 @@ export function computeWages(
     totalEmployerContributions: round2(totalEmployerContributions),
     netPay,
     employerCost,
+    otBaseAmount: round2(otBase),
+    perDutyOtAmount: round2(perDutyOt),
+    otDuties: round2(otDuties),
+    totalOtAmount: otAmount,
   };
 }
 

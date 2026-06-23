@@ -100,6 +100,7 @@ export type Database = {
           earning_type: string
           enabled: boolean
           id: string
+          include_in_ot: boolean
           is_default: boolean
           name: string
           percentage: number
@@ -116,6 +117,7 @@ export type Database = {
           earning_type?: string
           enabled?: boolean
           id?: string
+          include_in_ot?: boolean
           is_default?: boolean
           name: string
           percentage?: number
@@ -132,6 +134,7 @@ export type Database = {
           earning_type?: string
           enabled?: boolean
           id?: string
+          include_in_ot?: boolean
           is_default?: boolean
           name?: string
           percentage?: number
@@ -910,6 +913,7 @@ export type Database = {
           cap_amount: number | null
           cap_flat_amount: number | null
           created_at: string
+          deduction_calc_type: string
           enabled: boolean
           id: string
           name: string
@@ -926,6 +930,7 @@ export type Database = {
           cap_amount?: number | null
           cap_flat_amount?: number | null
           created_at?: string
+          deduction_calc_type?: string
           enabled?: boolean
           id?: string
           name: string
@@ -942,6 +947,7 @@ export type Database = {
           cap_amount?: number | null
           cap_flat_amount?: number | null
           created_at?: string
+          deduction_calc_type?: string
           enabled?: boolean
           id?: string
           name?: string
