@@ -65,6 +65,7 @@ type LeafItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   search?: Record<string, unknown>;
+  sub?: string; // optional sub-module key for RBAC filtering
 };
 
 type GroupItem = {
