@@ -149,10 +149,6 @@ export function InventoryOwnerDashboard() {
     const { data, error } = await supabase.from("inv_issuances" as never).select("id,status");
     if (error) throw error; return (data as unknown as { id: string; status: string }[]) ?? [];
   }});
-  const adjustmentsQ = useQuery({ queryKey: ["dash2", "adjustments"], queryFn: async () => {
-    const { data, error } = await supabase.from("inv_adjustments" as never).select("id,status");
-    if (error) throw error; return (data as unknown as { id: string; status: string }[]) ?? [];
-  }});
 
   const items = itemsQ.data ?? [];
   const cats = catsQ.data ?? [];
