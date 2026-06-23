@@ -372,6 +372,22 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
+          {isDraft && (
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Against Demand (optional)</div>
+              <Select value={demandId || "__none__"} onValueChange={(v) => v === "__none__" ? setDemandId("") : loadDemand(v)}>
+                <SelectTrigger><SelectValue placeholder="Pick a submitted branch demand" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— None (manual transfer) —</SelectItem>
+                  {demands.map((d) => {
+                    const br = branches.find((b) => b.id === d.branch_id);
+                    return <SelectItem key={d.id} value={d.id}>{d.demand_number} → {br ? `${br.code} ${br.name}` : "Branch"}</SelectItem>;
+                  })}
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-[11px] text-muted-foreground">Selecting a demand prefills the destination branch and the requested item lines.</p>
+            </div>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl border border-border p-3">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">From</div>
