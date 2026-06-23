@@ -609,6 +609,8 @@ function AllowanceFormDialog({
               <div className="text-xs text-muted-foreground">Show in dropdowns</div>
             </div>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
+          </div>
+
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
             <div>
               <div className="text-sm font-medium">Include in OT Calculation</div>
