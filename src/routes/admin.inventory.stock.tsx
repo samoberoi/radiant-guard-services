@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+import { useCurrentUserRole } from "@/lib/use-current-user-role";
 
 export const Route = createFileRoute("/admin/inventory/stock")({ component: StockPage });
 
@@ -84,13 +85,14 @@ function StockPage() {
   };
 
   const scope = useUserBranchScope();
+  const currentUserRole = useCurrentUserRole();
   const [q, setQ] = useState("");
   const [typeFilter, setTypeFilterRaw] = useState<"all" | "warehouse" | "branch">("all");
   const [specificFilter, setSpecificFilterRaw] = useState<string>("all");
   const [foFilter, setFoFilter] = useState<string>("all");
   // When the user is locked to a single branch, force the filters.
-  const effectiveTypeFilter = scope.isScoped ? "branch" : typeFilter;
-  const effectiveSpecificFilter = scope.isScoped ? (scope.branchId ?? "all") : specificFilter;
+  const effectiveTypeFilter = scope.isScoped && !currentUserRole.isFieldOfficer ? "branch" : typeFilter;
+  const effectiveSpecificFilter = scope.isScoped && !currentUserRole.isFieldOfficer ? (scope.branchId ?? "all") : specificFilter;
   const setTypeFilter = scope.isScoped ? () => {} : setTypeFilterRaw;
   const setSpecificFilter = scope.isScoped ? () => {} : setSpecificFilterRaw;
 
@@ -111,7 +113,11 @@ function StockPage() {
     return balances
       .filter((b) => Number(b.qty) !== 0)
       .filter((b) => {
-        // Branch-scoped user: hard-limit to their branch + FOs mapped to it.
+        if (currentUserRole.isFieldOfficer) {
+          return b.location_type === "field_officer" && b.location_id === currentUserRole.candidateId;
+        }
+
+        // Branch manager / branch-scoped user: hard-limit to their branch + FOs mapped to it.
         if (scope.isScoped) {
           if (b.location_type === "branch" && b.location_id === scope.branchId) {
             // allowed
@@ -157,7 +163,7 @@ function StockPage() {
         return r.item_name.toLowerCase().includes(t) || r.item_code.toLowerCase().includes(t) || r.location_label.toLowerCase().includes(t);
       })
       .sort((a, b) => a.item_name.localeCompare(b.item_name));
-  }, [balances, itemMap, effectiveTypeFilter, effectiveSpecificFilter, foFilter, q, whMap, brMap, cMap, scope.isScoped, scope.branchId, allowedFoIds, candidateBranchMap]);
+  }, [balances, itemMap, effectiveTypeFilter, effectiveSpecificFilter, foFilter, q, whMap, brMap, cMap, scope.isScoped, scope.branchId, allowedFoIds, candidateBranchMap, currentUserRole.isFieldOfficer, currentUserRole.candidateId]);
 
   const lowCount = enriched.filter((r) => r.low).length;
   const totalQty = enriched.reduce((s, r) => s + Number(r.qty), 0);
@@ -181,7 +187,11 @@ function StockPage() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search item or location…" className="h-10 rounded-lg pl-9" />
           </div>
-          {scope.isScoped ? (
+          {currentUserRole.isFieldOfficer ? (
+            <div className="flex h-10 items-center rounded-lg border border-border bg-secondary/40 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Holder: Own stock
+            </div>
+          ) : scope.isScoped ? (
             <div className="flex h-10 items-center rounded-lg border border-border bg-secondary/40 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Branch: {scope.branchLabel || "—"}
             </div>
@@ -207,13 +217,15 @@ function StockPage() {
             </>
           )}
 
-          <Select value={foFilter} onValueChange={setFoFilter}>
-            <SelectTrigger className="h-10 w-56 rounded-lg"><SelectValue placeholder="Field officer" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All field officers</SelectItem>
-              {fosForBranch.map((f) => <SelectItem key={f.id} value={f.id}>{f.full_name} ({f.employee_code})</SelectItem>)}
-            </SelectContent>
-          </Select>
+          {!currentUserRole.isFieldOfficer && (
+            <Select value={foFilter} onValueChange={setFoFilter}>
+              <SelectTrigger className="h-10 w-56 rounded-lg"><SelectValue placeholder="Field officer" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All field officers</SelectItem>
+                {fosForBranch.map((f) => <SelectItem key={f.id} value={f.id}>{f.full_name} ({f.employee_code})</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         <Button variant="outline" className="h-10 rounded-lg" disabled={!enriched.length} onClick={() => downloadCsv("stock-balances", enriched.map((r) => ({
           location_type: r.location_type, location: r.location_label, item_code: r.item_code, item: r.item_name,
