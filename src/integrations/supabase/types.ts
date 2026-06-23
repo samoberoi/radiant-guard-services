@@ -2082,6 +2082,7 @@ export type Database = {
           approved_by: string | null
           created_at: string
           created_by: string | null
+          destination_branch_id: string | null
           destination_warehouse_id: string | null
           expected_date: string | null
           grand_total: number
@@ -2108,6 +2109,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           created_by?: string | null
+          destination_branch_id?: string | null
           destination_warehouse_id?: string | null
           expected_date?: string | null
           grand_total?: number
@@ -2134,6 +2136,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           created_by?: string | null
+          destination_branch_id?: string | null
           destination_warehouse_id?: string | null
           expected_date?: string | null
           grand_total?: number
@@ -2155,6 +2158,13 @@ export type Database = {
           vendor_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "inv_purchase_orders_destination_branch_id_fkey"
+            columns: ["destination_branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inv_purchase_orders_destination_warehouse_id_fkey"
             columns: ["destination_warehouse_id"]
