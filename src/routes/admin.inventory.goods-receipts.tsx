@@ -559,3 +559,197 @@ function CloseDialogButton({ onClose }: { onClose: () => void }) {
   const { markPristine } = useDialogDirty();
   return <Button variant="outline" onClick={() => { markPristine(); onClose(); }}>Close</Button>;
 }
+
+function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, onSaved }: {
+  open: boolean; onOpenChange: (o: boolean) => void; branchId: string;
+  transfers: Transfer[]; items: Item[]; onSaved: () => void;
+}) {
+  const [transferId, setTransferId] = useState<string>("");
+  const [receiptDate, setReceiptDate] = useState(new Date().toISOString().slice(0, 10));
+  const [challanNo, setChallanNo] = useState("");
+  const [vehicleNo, setVehicleNo] = useState("");
+  const [notes, setNotes] = useState("");
+  const [lines, setLines] = useState<Line[]>([]);
+  const [saving, setSaving] = useState(false);
+  const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+
+  useResetOnOpen(open, async () => {
+    setTransferId(""); setReceiptDate(new Date().toISOString().slice(0, 10));
+    setChallanNo(""); setVehicleNo(""); setNotes(""); setLines([]);
+  });
+
+  async function loadTransfer(id: string) {
+    setTransferId(id);
+    if (!id) { setLines([]); return; }
+    const { data, error } = await supabase.from("inv_transfer_lines" as never).select("*").eq("transfer_id", id).order("sort_order");
+    if (error) { toast.error("Could not load transfer lines"); return; }
+    const rows = (data as unknown as TransferLine[]) ?? [];
+    setLines(rows.map((r) => ({
+      po_line_id: null,
+      transfer_line_id: r.id,
+      item_id: r.item_id,
+      size_value: r.size_value ?? "",
+      ordered_qty: Number(r.dispatched_qty ?? 0),
+      received_qty: 0,
+      accepted_qty: Number(r.dispatched_qty ?? 0),
+      rejected_qty: 0,
+      rejection_reason: "",
+    })));
+  }
+
+  const selectedTransfer = transfers.find((t) => t.id === transferId);
+
+  async function save() {
+    if (!selectedTransfer) { toast.error("Pick an incoming transfer"); return; }
+    if (!branchId) { toast.error("No branch assigned to your account"); return; }
+    if (!lines.some((l) => l.accepted_qty > 0 || l.rejected_qty > 0)) { toast.error("Enter received quantities"); return; }
+    if (lines.some((l) => (l.accepted_qty + l.rejected_qty) > l.ordered_qty)) { toast.error("Accepted + rejected cannot exceed dispatched"); return; }
+    if (lines.some((l) => l.rejected_qty > 0 && !l.rejection_reason.trim())) { toast.error("Provide a reason for rejected items"); return; }
+    setSaving(true);
+    try {
+      const n = await nextSeq("inv_grn_number_seq");
+      const grn_number = fmtNumber("GRN", n);
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: ins, error } = await supabase.from("inv_goods_receipts" as never).insert({
+        grn_number, po_id: null, vendor_id: null, warehouse_id: null,
+        transfer_id: selectedTransfer.id,
+        demand_id: selectedTransfer.demand_id,
+        branch_id: branchId,
+        kind: "transfer",
+        receipt_date: receiptDate, vendor_invoice_number: "", vendor_challan_number: challanNo,
+        vehicle_number: vehicleNo, notes, status: "received",
+        received_by: user?.id ?? null, received_at: new Date().toISOString(),
+      } as never).select("id").single();
+      if (error) throw error;
+      const grnId = (ins as unknown as { id: string }).id;
+
+      const linesPayload = lines.map((l, idx) => ({
+        grn_id: grnId, po_line_id: null, item_id: l.item_id, size_value: l.size_value,
+        ordered_qty: l.ordered_qty, received_qty: l.accepted_qty + l.rejected_qty,
+        accepted_qty: l.accepted_qty, rejected_qty: l.rejected_qty,
+        rejection_reason: l.rejection_reason, sort_order: idx,
+      }));
+      const { error: lineErr } = await supabase.from("inv_goods_receipt_lines" as never).insert(linesPayload as never);
+      if (lineErr) throw lineErr;
+
+      // Stock IN at branch for accepted quantity
+      await postMovements(lines.filter((l) => l.accepted_qty > 0).map((l) => ({
+        movement_type: "GRN_IN", location_type: "branch", location_id: branchId,
+        item_id: l.item_id, size_value: l.size_value, qty_change: l.accepted_qty,
+        reference_type: "grn", reference_id: grnId,
+      })));
+      // Rejected qty goes to scrap (already deducted from warehouse, doesn't enter branch)
+      const rejects = lines.filter((l) => l.rejected_qty > 0).map((l) => ({
+        movement_type: "BRANCH_REJECT" as const,
+        location_type: "scrap" as LocationType,
+        location_id: selectedTransfer.id,
+        item_id: l.item_id, size_value: l.size_value, qty_change: l.rejected_qty,
+        reference_type: "grn", reference_id: grnId,
+        notes: l.rejection_reason,
+      }));
+      if (rejects.length) await postMovements(rejects);
+
+      // Mark transfer acknowledged and update fulfilled qty on demand lines
+      await supabase.from("inv_transfers" as never).update({
+        status: "acknowledged",
+        received_by: user?.id ?? null, received_at: new Date().toISOString(),
+      } as never).eq("id", selectedTransfer.id);
+      // Update transfer line received_qty
+      for (const l of lines) {
+        if (l.transfer_line_id) {
+          await supabase.from("inv_transfer_lines" as never).update({
+            received_qty: l.accepted_qty + l.rejected_qty,
+            variance_reason: l.rejected_qty > 0 ? l.rejection_reason : "",
+          } as never).eq("id", l.transfer_line_id);
+        }
+      }
+
+      // Mark demand fulfilled if all lines accepted, else keep in_transit
+      if (selectedTransfer.demand_id) {
+        // Update each demand line's fulfilled qty
+        const { data: demandLines } = await supabase.from("inv_demand_lines" as never).select("id,item_id,size_value,requested_qty,fulfilled_qty").eq("demand_id", selectedTransfer.demand_id);
+        const dls = (demandLines as unknown as { id: string; item_id: string; size_value: string; requested_qty: number; fulfilled_qty: number }[]) ?? [];
+        for (const dl of dls) {
+          const matched = lines.find((l) => l.item_id === dl.item_id && (l.size_value ?? "") === (dl.size_value ?? ""));
+          if (matched) {
+            await supabase.from("inv_demand_lines" as never).update({
+              fulfilled_qty: Number(dl.fulfilled_qty ?? 0) + matched.accepted_qty,
+            } as never).eq("id", dl.id);
+          }
+        }
+        await supabase.from("inv_demands" as never).update({
+          status: "fulfilled", fulfilled_at: new Date().toISOString(),
+        } as never).eq("id", selectedTransfer.demand_id);
+      }
+
+      void logActivity({ module: "Inventory Delivery Challans", action: "create", entityType: "inv_goods_receipts", entityId: grnId, entityLabel: grn_number });
+      toast.success(`Challan ${grn_number} posted — branch stock updated`);
+      onSaved(); onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>New Delivery Challan</DialogTitle>
+          <DialogDescription>Receive items dispatched from the warehouse against your branch demand.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-2">
+          <div className="grid gap-2"><Label>Incoming Transfer</Label>
+            <Select value={transferId} onValueChange={loadTransfer}>
+              <SelectTrigger><SelectValue placeholder={transfers.length ? "Pick an in-transit transfer" : "No incoming transfers"} /></SelectTrigger>
+              <SelectContent>
+                {transfers.map((t) => <SelectItem key={t.id} value={t.id}>{t.transfer_number}{t.demand_id ? " · against demand" : ""}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="grid gap-2"><Label>Receipt Date</Label><Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} /></div>
+            <div className="grid gap-2"><Label>Challan #</Label><Input value={challanNo} onChange={(e) => setChallanNo(e.target.value)} placeholder="Driver/courier challan" /></div>
+            <div className="grid gap-2"><Label>Vehicle #</Label><Input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} /></div>
+          </div>
+
+          {lines.length > 0 && (
+            <div className="overflow-x-clip rounded-xl border border-border">
+              <table className="ios-table w-full text-sm">
+                <thead className="bg-secondary/60 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2">Item</th>
+                    <th className="px-3 py-2 w-16">Size</th>
+                    <th className="px-3 py-2 w-20 text-right">Ordered</th>
+                    <th className="px-3 py-2 w-24 text-right">Accepted</th>
+                    <th className="px-3 py-2 w-24 text-right">Rejected</th>
+                    <th className="px-3 py-2">Reject Reason</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {lines.map((l, idx) => (
+                    <tr key={idx}>
+                      <td className="px-3 py-2 font-medium">{itemMap.get(l.item_id)?.name ?? "—"}</td>
+                      <td className="px-3 py-2 text-xs">{l.size_value || "—"}</td>
+                      <td className="px-3 py-2 text-right text-xs text-muted-foreground tabular-nums">{l.ordered_qty}</td>
+                      <td className="px-2 py-1.5"><Input type="number" min={0} max={l.ordered_qty} className="h-9 text-right" value={l.accepted_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, accepted_qty: Number(e.target.value) || 0 } : x))} /></td>
+                      <td className="px-2 py-1.5"><Input type="number" min={0} max={l.ordered_qty} className="h-9 text-right" value={l.rejected_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, rejected_qty: Number(e.target.value) || 0 } : x))} /></td>
+                      <td className="px-2 py-1.5"><Input className="h-9" disabled={!l.rejected_qty} value={l.rejection_reason} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, rejection_reason: e.target.value } : x))} placeholder={l.rejected_qty ? "Why?" : "—"} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="grid gap-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
+        </div>
+        <DialogFooter>
+          <CancelBtn saving={saving} onClose={() => onOpenChange(false)} />
+          <Button onClick={save} disabled={saving || !transferId}>{saving ? "Posting…" : "Post Challan"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
