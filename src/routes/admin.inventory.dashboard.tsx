@@ -8,6 +8,8 @@ import {
   SlidersHorizontal, UserPlus, FileText,
 } from "lucide-react";
 import { useCurrentPermissions } from "@/lib/rbac";
+import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+
 
 import {
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis,
