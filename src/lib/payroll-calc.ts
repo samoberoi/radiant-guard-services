@@ -650,6 +650,10 @@ export function computeWages(
     totalEmployerContributions: round2(totalEmployerContributions),
     netPay,
     employerCost,
+    otBaseAmount: round2(otBase),
+    perDutyOtAmount: round2(perDutyOt),
+    otDuties: round2(otDuties),
+    totalOtAmount: otAmount,
   };
 }
 
