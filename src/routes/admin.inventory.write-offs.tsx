@@ -15,6 +15,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType, LOCATION_TYPE_LABELS } from "@/lib/inv-helpers";
+import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+
 
 export const Route = createFileRoute("/admin/inventory/write-offs")({ component: WriteOffsPage });
 
