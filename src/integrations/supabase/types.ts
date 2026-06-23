@@ -1531,6 +1531,110 @@ export type Database = {
         }
         Relationships: []
       }
+      inv_demand_lines: {
+        Row: {
+          created_at: string
+          demand_id: string
+          fulfilled_qty: number
+          id: string
+          item_id: string
+          requested_qty: number
+          size_value: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          demand_id: string
+          fulfilled_qty?: number
+          id?: string
+          item_id: string
+          requested_qty?: number
+          size_value?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          demand_id?: string
+          fulfilled_qty?: number
+          id?: string
+          item_id?: string
+          requested_qty?: number
+          size_value?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_demand_lines_demand_id_fkey"
+            columns: ["demand_id"]
+            isOneToOne: false
+            referencedRelation: "inv_demands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_demand_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "inv_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inv_demands: {
+        Row: {
+          branch_id: string
+          cancelled_at: string | null
+          created_at: string
+          demand_date: string
+          demand_number: string
+          fulfilled_at: string | null
+          id: string
+          notes: string
+          requester_id: string | null
+          status: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          cancelled_at?: string | null
+          created_at?: string
+          demand_date?: string
+          demand_number: string
+          fulfilled_at?: string | null
+          id?: string
+          notes?: string
+          requester_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          cancelled_at?: string | null
+          created_at?: string
+          demand_date?: string
+          demand_number?: string
+          fulfilled_at?: string | null
+          id?: string
+          notes?: string
+          requester_id?: string | null
+          status?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inv_demands_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inv_goods_receipt_lines: {
         Row: {
           accepted_qty: number
@@ -1604,67 +1708,100 @@ export type Database = {
       inv_goods_receipts: {
         Row: {
           attachments: Json
+          branch_id: string | null
           created_at: string
+          demand_id: string | null
           grn_number: string
           id: string
+          kind: string
           notes: string
           po_id: string | null
           receipt_date: string
           received_at: string | null
           received_by: string | null
           status: string
+          transfer_id: string | null
           updated_at: string
           vehicle_number: string
           vendor_challan_number: string
           vendor_id: string | null
           vendor_invoice_number: string
           vendor_invoice_url: string | null
-          warehouse_id: string
+          warehouse_id: string | null
         }
         Insert: {
           attachments?: Json
+          branch_id?: string | null
           created_at?: string
+          demand_id?: string | null
           grn_number: string
           id?: string
+          kind?: string
           notes?: string
           po_id?: string | null
           receipt_date?: string
           received_at?: string | null
           received_by?: string | null
           status?: string
+          transfer_id?: string | null
           updated_at?: string
           vehicle_number?: string
           vendor_challan_number?: string
           vendor_id?: string | null
           vendor_invoice_number?: string
           vendor_invoice_url?: string | null
-          warehouse_id: string
+          warehouse_id?: string | null
         }
         Update: {
           attachments?: Json
+          branch_id?: string | null
           created_at?: string
+          demand_id?: string | null
           grn_number?: string
           id?: string
+          kind?: string
           notes?: string
           po_id?: string | null
           receipt_date?: string
           received_at?: string | null
           received_by?: string | null
           status?: string
+          transfer_id?: string | null
           updated_at?: string
           vehicle_number?: string
           vendor_challan_number?: string
           vendor_id?: string | null
           vendor_invoice_number?: string
           vendor_invoice_url?: string | null
-          warehouse_id?: string
+          warehouse_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "inv_goods_receipts_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_goods_receipts_demand_id_fkey"
+            columns: ["demand_id"]
+            isOneToOne: false
+            referencedRelation: "inv_demands"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inv_goods_receipts_po_id_fkey"
             columns: ["po_id"]
             isOneToOne: false
             referencedRelation: "inv_purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_goods_receipts_transfer_id_fkey"
+            columns: ["transfer_id"]
+            isOneToOne: false
+            referencedRelation: "inv_transfers"
             referencedColumns: ["id"]
           },
           {
@@ -2401,6 +2538,7 @@ export type Database = {
         Row: {
           acknowledgement: Json
           created_at: string
+          demand_id: string | null
           destination_id: string
           destination_type: string
           dispatched_at: string | null
@@ -2423,6 +2561,7 @@ export type Database = {
         Insert: {
           acknowledgement?: Json
           created_at?: string
+          demand_id?: string | null
           destination_id: string
           destination_type: string
           dispatched_at?: string | null
@@ -2445,6 +2584,7 @@ export type Database = {
         Update: {
           acknowledgement?: Json
           created_at?: string
+          demand_id?: string | null
           destination_id?: string
           destination_type?: string
           dispatched_at?: string | null
@@ -2465,6 +2605,13 @@ export type Database = {
           vehicle_number?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "inv_transfers_demand_id_fkey"
+            columns: ["demand_id"]
+            isOneToOne: false
+            referencedRelation: "inv_demands"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inv_transfers_linked_po_id_fkey"
             columns: ["linked_po_id"]
@@ -4007,6 +4154,7 @@ export type Database = {
         Args: { _id: string; p: Json }
         Returns: undefined
       }
+      current_user_branch_id: { Args: never; Returns: string }
       current_user_branch_scope_ids: { Args: never; Returns: string[] }
       current_user_has_branch_scope: { Args: never; Returns: boolean }
       current_user_mobile: { Args: never; Returns: string }
