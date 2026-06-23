@@ -165,12 +165,25 @@ function MyInventoryPage() {
                   ))}
                 </ul>
                 {i.ack_method === "otp" ? (
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                    <div className="grid flex-1 gap-1">
-                      <Label className="text-xs">Enter 6-digit OTP shared by Field Officer</Label>
-                      <Input value={otpInputs[i.id] ?? ""} onChange={(e) => setOtpInputs((s) => ({ ...s, [i.id]: e.target.value }))} placeholder="••••••" inputMode="numeric" maxLength={6} className="font-mono tracking-[0.4em]" />
+                  <div className="space-y-3">
+                    {i.otp_code && (
+                      <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-3 py-2">
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">OTP</span>
+                        <span className="font-mono text-lg tracking-[0.4em] text-primary">{i.otp_code}</span>
+                        <Button type="button" variant="ghost" size="sm" className="ml-auto h-7 px-2 text-xs"
+                          onClick={() => { navigator.clipboard.writeText(i.otp_code ?? ""); setOtpInputs((s) => ({ ...s, [i.id]: i.otp_code ?? "" })); toast.success("OTP copied"); }}>
+                          Copy
+                        </Button>
+                        <span className="w-full text-[11px] text-muted-foreground">In production this OTP will be sent to your phone. For now it is shown here — paste it below and confirm.</span>
+                      </div>
+                    )}
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <div className="grid flex-1 gap-1">
+                        <Label className="text-xs">Enter 6-digit OTP</Label>
+                        <Input value={otpInputs[i.id] ?? ""} onChange={(e) => setOtpInputs((s) => ({ ...s, [i.id]: e.target.value }))} placeholder="••••••" inputMode="numeric" maxLength={6} className="font-mono tracking-[0.4em]" />
+                      </div>
+                      <Button onClick={() => ackMut.mutate(i)} disabled={ackMut.isPending}><Check className="mr-1 h-4 w-4" />Acknowledge</Button>
                     </div>
-                    <Button onClick={() => ackMut.mutate(i)} disabled={ackMut.isPending}><Check className="mr-1 h-4 w-4" />Confirm Receipt</Button>
                   </div>
                 ) : (
                   <div className="flex items-end justify-end">
