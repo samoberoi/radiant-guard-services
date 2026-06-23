@@ -291,10 +291,16 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
     if (!lines.length || lines.some((l) => l.dispatched_qty <= 0)) {
       toast.error("Enter dispatched quantity for each line"); return;
     }
+    if (overDemandLines.length) {
+      const first = overDemandLines[0];
+      const it = itemMap.get(first.item_id);
+      toast.error(`Dispatched cannot exceed demanded for ${it?.name ?? "item"}: demanded ${first.requested_qty}, entered ${first.dispatched_qty}`);
+      return;
+    }
     if (overDispatchLines.length) {
       const first = overDispatchLines[0];
       const it = itemMap.get(first.item_id);
-      toast.error(`Insufficient stock for ${it?.name ?? "item"}${first.size_value ? ` (${first.size_value})` : ""}: only ${availableFor(first)} available, ${first.dispatched_qty} requested`);
+      toast.error(`Insufficient stock for ${it?.name ?? "item"}${first.size_value ? ` (${first.size_value})` : ""}: only ${availableFor(first)} in stock, ${first.dispatched_qty} requested`);
       return;
     }
     if (!(await confirmAction({ title: "Initiate this transfer?", description: "Stock will be deducted from the source warehouse and the demand will move to In Transit.", confirmText: "Initiate Transfer" }))) return;
