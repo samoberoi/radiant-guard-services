@@ -455,6 +455,7 @@ function AllowanceFormDialog({
     setPercentage(String(initial?.percentage ?? 0));
     setBaseRefs(initial?.base_components ?? []);
     setCapAmount(initial?.cap_amount != null ? String(initial.cap_amount) : "");
+    setIncludeInOt(initial?.include_in_ot ?? true);
   });
 
   const preview = buildFormulaPreview({
