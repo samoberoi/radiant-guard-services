@@ -459,6 +459,16 @@ function GRNViewDialog({ open, onOpenChange, grn }: { open: boolean; onOpenChang
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader><DialogTitle>Delivery Challan {grn?.grn_number}</DialogTitle><DialogDescription>Posted on {grn?.receipt_date}</DialogDescription></DialogHeader>
+        {grn?.vendor_invoice_url && (
+          <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">Vendor invoice attached</span>
+            <Button size="sm" variant="outline" onClick={async () => {
+              const { data, error } = await supabase.storage.from("vendor-invoices").createSignedUrl(grn.vendor_invoice_url!, 300);
+              if (error || !data?.signedUrl) { toast.error("Could not open invoice"); return; }
+              window.open(data.signedUrl, "_blank", "noopener");
+            }}>View Invoice</Button>
+          </div>
+        )}
         <div className="overflow-x-clip rounded-xl border border-border">
           <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
