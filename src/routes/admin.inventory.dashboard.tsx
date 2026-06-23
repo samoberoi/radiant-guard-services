@@ -674,12 +674,12 @@ const PIE_COLORS = [
   "hsl(340 75% 55%)",
 ];
 
-function Kpi({ label, value, delta, icon: Icon, tint, iconClass, hint }: {
+function Kpi({ label, value, delta, icon: Icon, tint, iconClass, hint, to }: {
   label: string; value: string; delta?: number; icon: React.ComponentType<{ className?: string }>;
-  tint: string; iconClass: string; hint?: string;
+  tint: string; iconClass: string; hint?: string; to?: string;
 }) {
   const up = (delta ?? 0) >= 0;
-  return (
+  const body = (
     <div className={`relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br ${tint} p-4`}>
       <div className="flex items-start justify-between">
         <div>
@@ -700,6 +700,8 @@ function Kpi({ label, value, delta, icon: Icon, tint, iconClass, hint }: {
       </div>
     </div>
   );
+  if (to) return <Link to={to} className="block">{body}</Link>;
+  return body;
 }
 
 function Panel({ title, subtitle, right, children, className = "" }: {
