@@ -172,24 +172,49 @@ export function InventoryOwnerDashboard() {
     if (error) throw error; return (data as unknown as { id: string; status: string }[]) ?? [];
   }});
 
-  const items = itemsQ.data ?? [];
+  const itemsRaw = itemsQ.data ?? [];
   const cats = catsQ.data ?? [];
   const sizes = sizesQ.data ?? [];
-  const balances = balancesQ.data ?? [];
-  const vendors = vendorsQ.data ?? [];
-  const rateCards = rateCardsQ.data ?? [];
-  const pos = poQ.data ?? [];
+  const balancesRaw = balancesQ.data ?? [];
+  const vendorsRaw = vendorsQ.data ?? [];
+  const rateCardsRaw = rateCardsQ.data ?? [];
+  const posRaw = poQ.data ?? [];
   const poLines = poLinesQ.data ?? [];
   const cands = candsQ.data ?? [];
   const desigs = desigQ.data ?? [];
-  const branches = branchesQ.data ?? [];
-  const grns = grnQ.data ?? [];
-  const wos = woQ.data ?? [];
-  const whs = whsQ.data ?? [];
-  const transfers = transfersQ.data ?? [];
-  const issuances = issuancesQ.data ?? [];
-  
+  const branchesRaw = branchesQ.data ?? [];
+  const grnsRaw = grnQ.data ?? [];
+  const wosRaw = woQ.data ?? [];
+  const whsRaw = whsQ.data ?? [];
+  const transfersRaw = transfersQ.data ?? [];
+  const issuancesRaw = issuancesQ.data ?? [];
+
+  // ===== Branch-scope hard-filter =====
+  // When the user is locked to a single branch, strip everything that does
+  // not belong to that branch (or its mapped field officers).
+  const items = itemsRaw;
+  const balances = useMemo(() => {
+    if (!scope.isScoped || !scope.branchId) return balancesRaw;
+    return balancesRaw.filter((b) =>
+      (b.location_type === "branch" && b.location_id === scope.branchId) ||
+      (b.location_type === "field_officer" && allowedFoIds.has(b.location_id)),
+    );
+  }, [balancesRaw, scope.isScoped, scope.branchId, allowedFoIds]);
+  const vendors = scope.isScoped ? [] : vendorsRaw;
+  const rateCards = scope.isScoped ? [] : rateCardsRaw;
+  const pos = scope.isScoped ? [] : posRaw;
+  const grns = scope.isScoped ? [] : grnsRaw;
+  const whs = scope.isScoped ? [] : whsRaw;
+  const branches = useMemo(
+    () => (scope.isScoped && scope.branchId ? branchesRaw.filter((b) => b.id === scope.branchId) : branchesRaw),
+    [branchesRaw, scope.isScoped, scope.branchId],
+  );
+  const wos = wosRaw;
+  const transfers = transfersRaw;
+  const issuances = issuancesRaw;
+
   const { canSub } = useCurrentPermissions();
+
 
   const totalStockQty = useMemo(() => balances.reduce((s, b) => s + Math.max(0, Number(b.qty || 0)), 0), [balances]);
   const recoveryCur = useMemo(() => wos.filter((x) => new Date(x.writeoff_date) >= w.from && new Date(x.writeoff_date) <= w.to).reduce((s, x) => s + Number(x.recovery_amount || 0), 0), [wos, w]);
