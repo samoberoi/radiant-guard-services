@@ -177,10 +177,18 @@ export function useCurrentPermissions(): {
   const canSub: SubPermCheck = (moduleKey, subModuleKey, action = "view") => {
     if (isSuperAdmin) return action === "approve" ? moduleSupportsApprove(moduleKey) : true;
     if (action === "approve" && !moduleSupportsApprove(moduleKey)) return false;
-    const moduleGrant = map.get(`${moduleKey}::`);
-    if (valueFor(moduleGrant, action)) return true;
     const subGrant = map.get(`${moduleKey}::${subModuleKey}`);
-    return valueFor(subGrant, action);
+    if (subGrant) return valueFor(subGrant, action);
+
+    // If a role has explicit sub-module rows for this module, those rows are the
+    // authority. Do not let the parent module row accidentally expose every child.
+    const hasAnySubGrant = Array.from(map.keys()).some(
+      (k) => k.startsWith(`${moduleKey}::`) && k !== `${moduleKey}::`,
+    );
+    if (hasAnySubGrant) return false;
+
+    const moduleGrant = map.get(`${moduleKey}::`);
+    return valueFor(moduleGrant, action);
   };
 
   return {
