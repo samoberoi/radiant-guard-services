@@ -227,6 +227,13 @@ function AdminLayout() {
       const dest = firstAllowedPath();
       if (dest) navigate({ to: dest, replace: true });
       else logout();
+      return;
+    }
+    if (hit.module === "inventory") {
+      const activeChild = inventoryChildren.find((c) => c.sub && (pathname === c.to || pathname.startsWith(c.to + "/")));
+      if (activeChild?.sub && !canSub("inventory", activeChild.sub)) {
+        navigate({ to: "/admin/inventory", replace: true });
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname, permsLoading, isSuperAdmin, isReady]);
@@ -493,7 +500,7 @@ function AdminLayout() {
         </div>
         <div className="mx-auto max-w-[1500px]">
           <div key={pathname} className="page-enter">
-            {isReady && user ? (
+            {isReady && user && !permsLoading ? (
               <Outlet />
             ) : (
               <div className="flex min-h-[40vh] items-center justify-center text-sm text-muted-foreground">
