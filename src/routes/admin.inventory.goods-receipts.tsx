@@ -566,8 +566,6 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, o
 }) {
   const [transferId, setTransferId] = useState<string>("");
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().slice(0, 10));
-  const [challanNo, setChallanNo] = useState("");
-  const [vehicleNo, setVehicleNo] = useState("");
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [saving, setSaving] = useState(false);
