@@ -1,79 +1,59 @@
-
 ## Goal
+Replace the hard-coded "Uniform Allowance" OT exclusion and the regex-based "fixed deduction" list with two explicit, user-controlled flags configured in the Control Center, and wire them through the payroll engine + every payroll export.
 
-Lock every list/report page to the logged-in user's place in the hierarchy, exactly like the Inventory → Stock page now does:
+## 1. Schema changes (one migration)
 
-```text
-super_admin           → sees everything (no lock)
-inventory_manager     → sees everything inside Inventory (no lock for inventory)
-branch_manager        → locked to their branch: sees branch + units in branch
-                        + field officers mapped to that branch + guards under them
-field_officer         → locked to themselves: sees own stock/records
-                        + guards reporting to them (reports_to)
-guard / security_guard→ locked to themselves only
+- `allowance_types`: add `include_in_ot boolean NOT NULL DEFAULT true`.
+- `cost_components`: add `deduction_calc_type text NOT NULL DEFAULT 'earned_salary'` with a CHECK in (`'earned_salary'`, `'fixed_amount'`).
+- Backfill: set `include_in_ot = false` for any existing allowance whose name matches `uniform` (preserves today's behaviour). Set `deduction_calc_type = 'fixed_amount'` for existing components whose name matches `uniform`, `lwf`, or `labour welfare` (preserves today's `isFixedItem` rule).
+- These flags also need to travel with each contract resource. The contract editor stores resource components/deductions as JSONB rows. Add the same two fields to those JSONB rows when the contract is created/edited so payroll doesn't need a second lookup, and backfill existing contracts from the master tables.
+
+## 2. Allowance Manager UI (`admin.allowance-manager.tsx`)
+- New "Include in OT Calculation" Switch in the create/edit dialog (default ON).
+- Show an "OT" badge / column in the list when disabled, so it's obvious which allowances are excluded.
+- Persist via existing insert/update mutations; keep `logActivity` calls as today.
+
+## 3. Cost Component Manager UI (`admin.cost-component-manager.tsx`)
+- New "Deduction Calculation Type" Select with two options: **Earned Salary Based** / **Fixed Amount** (default Earned Salary Based).
+- Only show the field for components used as deductions / employee contributions (component already has a "type" classification — reuse it; if not, show it for all and document that it only applies to deductions/contributions).
+- Persist via existing insert/update mutations; keep `logActivity`.
+
+## 4. Contract editor (`admin.contracts.client-contracts.tsx`)
+- When adding an allowance line, copy `include_in_ot` from the master.
+- When adding a deduction / employee contribution line, copy `deduction_calc_type` from the master.
+- Allow override per contract (so one client can mark Uniform "include in OT" without changing the global default). Show both as inline controls on each line.
+
+## 5. Payroll calculation engine (`src/lib/payroll-calc.ts`)
+Replace today's two heuristics:
+
+**OT base (currently `contractGross − uniform`):**
 ```
+otBase    = contractGross − Σ(component.amount where include_in_ot = false)
+perDutyOT = otBase / baseDays            // new: per-duty rate
+otAmount  = perDutyOT × otDuties
+```
+Keep the existing hour-based path as a fallback when the resource captures OT in hours rather than duties, gated on which field is populated. OT continues to be appended as its own line (`Overtime`) and never inflates per-component earnings.
 
-The lock is visual (no branch/FO dropdown — replaced by a read-only chip) AND enforced at the database level (RLS).
+**Deduction / contribution scaling (currently regex `isFixedItem`):**
+```
+if line.deduction_calc_type = 'fixed_amount' → amount = contractAmount (no proration)
+else                                          → amount = contractAmount × earnedRatio
+```
+EPF/ESI statutory overrides keep their current precedence (they run after scaling, same as today).
 
-## Centralise the rule once
+Expose new fields on the returned payroll row so the UI/exports can show them:
+`otDuties`, `otBaseAmount`, `perDutyOtAmount`, `totalOtAmount`.
 
-Create one shared hook `useScopeFilter()` in `src/lib/use-scope-filter.ts` that returns:
+## 6. Payroll screen + exports
+- `admin.payroll.$unitId.tsx`: add the OT block (Total Duties / Worked / Absent / OT Duties / OT Base / Per-Duty OT / Total OT) in the salary breakdown panel. Earned salary section keeps Net Salary at the bottom.
+- `csv-export` / Wage Register / Pay Sheet PDF / MIS: add the four OT columns and ensure fixed-amount deductions render at their full configured amount regardless of attendance.
 
-- `role` (super_admin | inventory_manager | branch_manager | field_officer | guard | none)
-- `branchId` / `branchLabel` (for branch_manager)
-- `candidateId` / `candidateLabel` (for field_officer / guard)
-- `assignedGuardIds: Set<string>` (for field_officer — their guards via `reports_to`)
-- helpers: `filterByBranch(row)`, `filterByCandidate(row)`, `filterByUnit(row, unitToBranchMap)`
+## 7. Out of scope
+Organization → Unit → Contract → Resource flow, attendance capture, and the salary-structure UI are unchanged. Only the two new flags, the payroll math that consumes them, and the exports that display the results are touched.
 
-Every page imports this hook instead of re-implementing the logic.
+## Technical notes
+- Migration runs first (adds columns + backfill). Code that reads the new fields ships after the regenerated Supabase types land.
+- `payroll-calc.ts` keeps backward compatibility: if a resource line has no `include_in_ot` / `deduction_calc_type` (older contracts not yet re-saved), fall back to the current regex behaviour so historical payroll runs reproduce.
+- All mutations continue to call `logActivity` with the existing module labels ("Allowance Manager", "Cost Component Manager") per the project core rule.
 
-## Pages to lock (frontend)
-
-For each, replace branch/holder dropdowns with a locked chip when the user is scoped, and filter the visible rows:
-
-| Module | Route | Lock by |
-|---|---|---|
-| Employees | `admin.employees` (in `admin-data.ts`) + candidate list views | branch (via `employee_scope_assignments`) |
-| Units | `admin.customers.unit-manager` | branch |
-| Branches | `admin.customers.branch-manager` | branch (only their own) |
-| Attendance index | `admin.attendance.index` | branch → units in branch |
-| Attendance unit | `admin.attendance.$unitId` | block if unit not in branch |
-| Payroll index | `admin.payroll.index` | branch |
-| Invoice index | `admin.invoice.index` | branch |
-| Vehicles | `admin.vehicles` | branch (via assigned unit) |
-| Assets | `admin.assets.inventory` | branch |
-| Inventory: demands, issuances, transfers, GR, dashboard | already partly locked — make them all use `useScopeFilter` consistently and add FO/guard handling |
-| Field dashboard | `admin.field-dashboard` | candidate-self for field_officer |
-| My inventory | `admin.my-inventory` | candidate-self always |
-
-Branch managers will not see other branches' units, employees, attendance, payroll, vehicles, assets or inventory. Field officers will only see their own records plus their guards'. Guards will only see themselves.
-
-## Backend (RLS) — enforce the same rule
-
-One migration that updates SELECT policies on these tables to follow the hierarchy via the existing helpers (`is_admin_user`, `current_user_branch_scope_ids`, `current_user_candidate_id`, `current_user_assigned_guard_ids`, `is_candidate_in_current_user_branch`):
-
-- `candidates` — branch_manager sees candidates whose branch ∈ their branch; field_officer sees self + guards reporting to them; guard sees self.
-- `units` — branch_manager sees units in their branch; lower roles see only units they are assigned to.
-- `branches` — branch_manager sees only their branch; lower roles same.
-- `attendance_sheets` / `attendance_entries` — by unit's branch.
-- `payroll_runs` — by unit's branch.
-- `client_contracts` / `contract_resources` — by unit's branch.
-- `vehicles` / `vehicle_*` — by assigned unit's branch.
-- `assets` / `property_*` — by branch.
-- `inv_demands`, `inv_issuances`, `inv_transfers`, `inv_goods_receipts`, `inv_stock_movements` — same hierarchy as `inv_stock_balances`.
-- Write policies tightened the same way (branch_manager cannot create records for another branch; field_officer cannot act on records that aren't theirs or their guards').
-
-`super_admin` and `inventory_manager` (for inventory tables only) bypass via `is_admin_user()` / role check.
-
-## Out of scope for this pass
-
-- Master-data admin screens (cost components, allowance types, language manager, etc.) — these stay super-admin/admin only and don't change.
-- RBAC module access toggles — unchanged; this plan only narrows what each role sees within modules they're already allowed into.
-
-## Confirmation
-
-When complete I will reply with a checklist of every file and every RLS policy that was updated, so you can verify the lock end-to-end.
-
----
-
-This is a large change touching ~15 routes and ~12 RLS policies in one migration. Approve and I'll ship it in one pass.
+Approve and I'll ship migration + code in one pass.
