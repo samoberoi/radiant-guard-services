@@ -24,6 +24,7 @@ type GRN = {
   id: string; grn_number: string; receipt_date: string; status: string;
   po_id: string | null; vendor_id: string | null; warehouse_id: string;
   vendor_invoice_number: string; vendor_challan_number: string; vehicle_number: string; notes: string;
+  vendor_invoice_url?: string | null;
 };
 type PO = { id: string; po_number: string; vendor_id: string | null; destination_warehouse_id: string | null; status: string };
 type POLine = { id: string; item_id: string; size_value: string; ordered_qty: number; received_qty: number };
@@ -221,10 +222,12 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
   const [lines, setLines] = useState<Line[]>([]);
   const [items, setItems] = useState<Record<string, Item>>({});
   const [saving, setSaving] = useState(false);
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
 
   useResetOnOpen(open, async () => {
     setPoId(""); setReceiptDate(new Date().toISOString().slice(0, 10));
     setInvoiceNo(""); setChallanNo(""); setVehicleNo(""); setNotes(""); setLines([]); setItems({});
+    setInvoiceFile(null);
   });
 
   async function loadPo(id: string) {
@@ -270,6 +273,15 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
       } as never).select("id").single();
       if (error) throw error;
       const grnId = (ins as unknown as { id: string }).id;
+
+      // Upload invoice file if provided
+      if (invoiceFile) {
+        const ext = invoiceFile.name.split(".").pop() || "pdf";
+        const path = `${grnId}/${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("vendor-invoices").upload(path, invoiceFile, { upsert: true, contentType: invoiceFile.type });
+        if (upErr) throw upErr;
+        await supabase.from("inv_goods_receipts" as never).update({ vendor_invoice_url: path } as never).eq("id", grnId);
+      }
 
       const linesPayload = lines.map((l, idx) => ({
         grn_id: grnId, po_line_id: l.po_line_id, item_id: l.item_id, size_value: l.size_value,
@@ -378,6 +390,17 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
             <div className="grid gap-2"><Label>Receipt Date</Label><Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} /></div>
             <div className="grid gap-2"><Label>Vendor Invoice #</Label><Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} /></div>
           </div>
+          <div className="grid gap-2">
+            <Label>Vendor Invoice File</Label>
+            <Input
+              type="file"
+              accept="application/pdf,image/*"
+              onChange={(e) => setInvoiceFile(e.target.files?.[0] ?? null)}
+              className="h-10 file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-secondary/80"
+            />
+            {invoiceFile && <p className="text-xs text-muted-foreground">{invoiceFile.name} ({Math.round(invoiceFile.size / 1024)} KB)</p>}
+          </div>
+
 
 
           {lines.length > 0 && (
@@ -436,6 +459,16 @@ function GRNViewDialog({ open, onOpenChange, grn }: { open: boolean; onOpenChang
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader><DialogTitle>Delivery Challan {grn?.grn_number}</DialogTitle><DialogDescription>Posted on {grn?.receipt_date}</DialogDescription></DialogHeader>
+        {grn?.vendor_invoice_url && (
+          <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm">
+            <span className="text-muted-foreground">Vendor invoice attached</span>
+            <Button size="sm" variant="outline" onClick={async () => {
+              const { data, error } = await supabase.storage.from("vendor-invoices").createSignedUrl(grn.vendor_invoice_url!, 300);
+              if (error || !data?.signedUrl) { toast.error("Could not open invoice"); return; }
+              window.open(data.signedUrl, "_blank", "noopener");
+            }}>View Invoice</Button>
+          </div>
+        )}
         <div className="overflow-x-clip rounded-xl border border-border">
           <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
