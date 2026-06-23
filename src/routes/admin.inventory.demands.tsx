@@ -237,7 +237,13 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, branchLabel, 
   });
 
   async function save(submit: boolean) {
-    if (!branchId) { toast.error("No branch assigned to your account."); return; }
+    // Resolve the branch + fulfillment_source from the source selection.
+    const isWarehouse = source === "warehouse";
+    const fulfillmentSource = isWarehouse ? "warehouse" : "branch";
+    const resolvedBranchId = isWarehouse
+      ? (branchId || branches[0]?.id || "")
+      : source;
+    if (!resolvedBranchId) { toast.error("No branches available. Please contact admin."); return; }
     if (!lines.length || lines.some((l) => !l.item_id || l.requested_qty <= 0)) {
       toast.error("Add at least one item with quantity"); return;
     }
@@ -248,7 +254,8 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, branchLabel, 
       if (initial) {
         await supabase.from("inv_demands" as never).update({
           demand_date: demandDate, notes,
-          fulfillment_source: source,
+          branch_id: resolvedBranchId,
+          fulfillment_source: fulfillmentSource,
           status: submit ? "submitted" : "draft",
           submitted_at: submit ? new Date().toISOString() : null,
         } as never).eq("id", initial.id);
@@ -257,8 +264,8 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, branchLabel, 
         const n = await nextSeq("inv_demand_number_seq");
         const number = fmtNumber("DM", n);
         const { data: ins, error } = await supabase.from("inv_demands" as never).insert({
-          demand_number: number, branch_id: branchId, demand_date: demandDate, notes,
-          fulfillment_source: source,
+          demand_number: number, branch_id: resolvedBranchId, demand_date: demandDate, notes,
+          fulfillment_source: fulfillmentSource,
           status: submit ? "submitted" : "draft",
           requester_id: user?.id ?? null,
           submitted_at: submit ? new Date().toISOString() : null,
@@ -273,7 +280,8 @@ function DemandFormDialog({ open, onOpenChange, initial, branchId, branchLabel, 
       const { error: linesErr } = await supabase.from("inv_demand_lines" as never).insert(payload as never);
       if (linesErr) throw linesErr;
       void logActivity({ module: MODULE, action: submit ? "post" : (initial ? "update" : "create"), entityType: ENTITY, entityId: id!, entityLabel: initial?.demand_number ?? "Demand" });
-      toast.success(submit ? `Demand submitted to ${source === "branch" ? "branch" : "warehouse"}` : "Draft saved");
+      const destLabel = isWarehouse ? "warehouse" : (branchMap.get(resolvedBranchId)?.name ?? "branch");
+      toast.success(submit ? `Demand submitted to ${destLabel}` : "Draft saved");
       onSaved(); onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
