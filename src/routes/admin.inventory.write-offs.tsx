@@ -93,11 +93,17 @@ function WriteOffsPage() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<WO | null>(null);
 
+  const scope = useUserBranchScope();
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((r) => r.writeoff_number.toLowerCase().includes(q));
-  }, [rows, query]);
+    let list = rows;
+    if (scope.isScoped && scope.branchId) {
+      list = list.filter((r) => r.location_type === "branch" && r.location_id === scope.branchId);
+    }
+    if (!q) return list;
+    return list.filter((r) => r.writeoff_number.toLowerCase().includes(q));
+  }, [rows, query, scope.isScoped, scope.branchId]);
+
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["inv", "writeoffs"] });
