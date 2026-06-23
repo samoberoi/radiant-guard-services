@@ -33,7 +33,7 @@ type Branch = { id: string; name: string; code: string };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
 type Demand = { id: string; demand_number: string; branch_id: string; status: string };
 type DemandLine = { id: string; demand_id: string; item_id: string; size_value: string; requested_qty: number };
-type Line = { id?: string; item_id: string; size_value: string; dispatched_qty: number; received_qty: number; variance_reason: string };
+type Line = { id?: string; item_id: string; size_value: string; requested_qty: number; dispatched_qty: number; received_qty: number; variance_reason: string };
 
 function TransfersPage() {
   const qc = useQueryClient();
@@ -142,7 +142,6 @@ function TransfersPage() {
                 <th className="px-5 py-3">From</th>
                 <th className="px-5 py-3">To</th>
                 <th className="px-5 py-3">Date</th>
-                <th className="px-5 py-3">Vehicle</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
@@ -154,7 +153,6 @@ function TransfersPage() {
                   <td className="px-5 py-3">{locName(t.source_type, t.source_id)}</td>
                   <td className="px-5 py-3">{locName(t.destination_type, t.destination_id)}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{t.transfer_date}</td>
-                  <td className="px-5 py-3 text-xs">{t.vehicle_number || "—"}</td>
                   <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(t.status)}`}>{t.status.replace("_", " ")}</span></td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
@@ -169,7 +167,7 @@ function TransfersPage() {
                   </td>
                 </tr>
               ))}
-              {!filtered.length && <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground"><Truck className="mx-auto mb-2 h-8 w-8 opacity-40" />No transfers yet.</td></tr>}
+              {!filtered.length && <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground"><Truck className="mx-auto mb-2 h-8 w-8 opacity-40" />No transfers yet.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -204,7 +202,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
 
   async function loadDemand(id: string) {
     setDemandId(id);
-    if (!id) return;
+    if (!id) { setLines([]); setDestId(""); return; }
     const d = demands.find((x) => x.id === id);
     if (!d) return;
     setDestType("branch");
@@ -215,6 +213,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
     setLines(rows.map((r) => ({
       item_id: r.item_id,
       size_value: r.size_value ?? "",
+      requested_qty: Number(r.requested_qty ?? 0),
       dispatched_qty: Number(r.requested_qty ?? 0),
       received_qty: 0,
       variance_reason: "",
@@ -232,14 +231,27 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
       setVehicle(initial.vehicle_number); setDriverName(initial.driver_name); setDriverPhone(initial.driver_phone);
       setNotes(initial.notes);
       const { data } = await supabase.from("inv_transfer_lines" as never).select("*").eq("transfer_id", initial.id).order("sort_order");
-      setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => ({
-        id: String(r.id),
-        item_id: String(r.item_id),
-        size_value: String(r.size_value ?? ""),
-        dispatched_qty: Number(r.dispatched_qty ?? 0),
-        received_qty: Number(r.received_qty ?? 0),
-        variance_reason: String(r.variance_reason ?? ""),
-      })));
+      // Also pull demand lines to show "Demanded" qty per item
+      const reqMap = new Map<string, number>();
+      if (initial.demand_id) {
+        const { data: dl } = await supabase.from("inv_demand_lines" as never).select("item_id,size_value,requested_qty").eq("demand_id", initial.demand_id);
+        for (const r of (dl as unknown as { item_id: string; size_value: string; requested_qty: number }[]) ?? []) {
+          reqMap.set(`${r.item_id}|${r.size_value ?? ""}`, Number(r.requested_qty ?? 0));
+        }
+      }
+      setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => {
+        const itemId = String(r.item_id);
+        const sz = String(r.size_value ?? "");
+        return {
+          id: String(r.id),
+          item_id: itemId,
+          size_value: sz,
+          requested_qty: reqMap.get(`${itemId}|${sz}`) ?? Number(r.dispatched_qty ?? 0),
+          dispatched_qty: Number(r.dispatched_qty ?? 0),
+          received_qty: Number(r.received_qty ?? 0),
+          variance_reason: String(r.variance_reason ?? ""),
+        };
+      }));
     } else {
       setSourceType("warehouse"); setSourceId(""); setDestType("branch"); setDestId("");
       setDemandId("");
@@ -248,72 +260,43 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
     }
   });
 
-  function srcOptions() { return sourceType === "warehouse" ? warehouses : branches; }
-  function dstOptions() { return destType === "warehouse" ? warehouses : branches; }
 
-  async function saveDraft() {
-    if (!sourceId || !destId) { toast.error("Pick source and destination"); return; }
-    if (!lines.length || lines.some((l) => !l.item_id || l.dispatched_qty <= 0)) { toast.error("Add lines with item + qty"); return; }
-    setSaving(true);
-    try {
-      const linesPayload = lines.map((l, idx) => ({
-        item_id: l.item_id, size_value: l.size_value,
-        dispatched_qty: l.dispatched_qty, received_qty: 0, sort_order: idx,
-      }));
-      if (initial) {
-        await supabase.from("inv_transfers" as never).update({
-          source_type: sourceType, source_id: sourceId,
-          destination_type: destType, destination_id: destId,
-          demand_id: demandId || null,
-          transfer_date: transferDate, vehicle_number: vehicle, driver_name: driverName, driver_phone: driverPhone, notes,
-        } as never).eq("id", initial.id);
-        await supabase.from("inv_transfer_lines" as never).delete().eq("transfer_id", initial.id);
-        await supabase.from("inv_transfer_lines" as never).insert(linesPayload.map((l) => ({ ...l, transfer_id: initial.id })) as never);
-      } else {
-        const n = await nextSeq("inv_transfer_number_seq");
-        const number = fmtNumber("TR", n);
-        const { data: ins, error } = await supabase.from("inv_transfers" as never).insert({
-          transfer_number: number, source_type: sourceType, source_id: sourceId,
-          destination_type: destType, destination_id: destId,
-          demand_id: demandId || null,
-          transfer_date: transferDate, status: "draft",
-          vehicle_number: vehicle, driver_name: driverName, driver_phone: driverPhone, notes,
-        } as never).select("id").single();
-        if (error) throw error;
-        const tid = (ins as unknown as { id: string }).id;
-        await supabase.from("inv_transfer_lines" as never).insert(linesPayload.map((l) => ({ ...l, transfer_id: tid })) as never);
-      }
-      void logActivity({ module: MODULE, action: initial ? "update" : "create", entityType: ENTITY, entityLabel: initial?.transfer_number ?? "Transfer" });
-      toast.success("Draft saved");
-      onSaved(); onOpenChange(false);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setSaving(false);
+  async function initiateTransfer() {
+    if (!demandId) { toast.error("Pick a demand to transfer against"); return; }
+    if (!sourceId) { toast.error("Pick the source warehouse"); return; }
+    if (!destId) { toast.error("Destination branch missing"); return; }
+    if (!lines.length || lines.some((l) => l.dispatched_qty <= 0)) {
+      toast.error("Enter dispatched quantity for each line"); return;
     }
-  }
-
-  async function dispatch() {
-    if (!initial) { await saveDraft(); return; }
-    if (!(await confirmAction({ title: "Dispatch this transfer?", description: "Stock will be deducted from the source location.", confirmText: "Dispatch" }))) return;
+    if (!(await confirmAction({ title: "Initiate this transfer?", description: "Stock will be deducted from the source warehouse and the demand will move to In Transit.", confirmText: "Initiate Transfer" }))) return;
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      await supabase.from("inv_transfers" as never).update({
-        status: "in_transit", dispatched_by: user?.id ?? null, dispatched_at: new Date().toISOString(),
-      } as never).eq("id", initial.id);
+      const n = await nextSeq("inv_transfer_number_seq");
+      const number = fmtNumber("TR", n);
+      const { data: ins, error } = await supabase.from("inv_transfers" as never).insert({
+        transfer_number: number, source_type: sourceType, source_id: sourceId,
+        destination_type: destType, destination_id: destId,
+        demand_id: demandId,
+        transfer_date: transferDate, status: "in_transit",
+        vehicle_number: "", driver_name: "", driver_phone: "", notes,
+        dispatched_by: user?.id ?? null, dispatched_at: new Date().toISOString(),
+      } as never).select("id").single();
+      if (error) throw error;
+      const tid = (ins as unknown as { id: string }).id;
+      const linesPayload = lines.map((l, idx) => ({
+        transfer_id: tid, item_id: l.item_id, size_value: l.size_value,
+        dispatched_qty: l.dispatched_qty, received_qty: 0, sort_order: idx,
+      }));
+      await supabase.from("inv_transfer_lines" as never).insert(linesPayload as never);
       await postMovements(lines.filter((l) => l.dispatched_qty > 0).map((l) => ({
         movement_type: "TRANSFER_OUT", location_type: sourceType, location_id: sourceId,
         item_id: l.item_id, size_value: l.size_value, qty_change: -l.dispatched_qty,
-        reference_type: "transfer", reference_id: initial.id,
+        reference_type: "transfer", reference_id: tid,
       })));
-      // If this transfer fulfills a demand, mark the demand in_transit
-      if (initial.demand_id || demandId) {
-        const did = (initial.demand_id ?? demandId) as string;
-        await supabase.from("inv_demands" as never).update({ status: "in_transit" } as never).eq("id", did);
-      }
-      void logActivity({ module: MODULE, action: "dispatch", entityType: ENTITY, entityId: initial.id, entityLabel: initial.transfer_number });
-      toast.success("Dispatched");
+      await supabase.from("inv_demands" as never).update({ status: "in_transit" } as never).eq("id", demandId);
+      void logActivity({ module: MODULE, action: "dispatch", entityType: ENTITY, entityId: tid, entityLabel: number });
+      toast.success("Transfer initiated — stock deducted, awaiting delivery challan from branch");
       onSaved(); onOpenChange(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed");
@@ -322,63 +305,22 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
     }
   }
 
-
-  async function receive() {
-    if (!initial) return;
-    if (lines.some((l) => l.received_qty > l.dispatched_qty)) { toast.error("Received cannot exceed dispatched"); return; }
-    if (!(await confirmAction({ title: "Acknowledge receipt?", description: "Stock will be added to the destination location.", confirmText: "Receive" }))) return;
-    setSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      // Update line received qty
-      for (const l of lines) {
-        if (l.id) await supabase.from("inv_transfer_lines" as never).update({ received_qty: l.received_qty, variance_reason: l.variance_reason } as never).eq("id", l.id);
-      }
-      await supabase.from("inv_transfers" as never).update({
-        status: "acknowledged", received_by: user?.id ?? null, received_at: new Date().toISOString(),
-      } as never).eq("id", initial.id);
-      // Post IN at destination for received qty
-      await postMovements(lines.filter((l) => l.received_qty > 0).map((l) => ({
-        movement_type: "TRANSFER_IN", location_type: destType, location_id: destId,
-        item_id: l.item_id, size_value: l.size_value, qty_change: l.received_qty,
-        reference_type: "transfer", reference_id: initial.id,
-      })));
-      // If variance, post adjustment-style write off at scrap for the missing qty (already deducted from source, never reaches destination)
-      const losses = lines.filter((l) => l.dispatched_qty - l.received_qty > 0).map((l) => ({
-        movement_type: "TRANSIT_LOSS" as const,
-        location_type: "scrap" as LocationType,
-        location_id: initial.id,
-        item_id: l.item_id, size_value: l.size_value, qty_change: l.dispatched_qty - l.received_qty,
-        reference_type: "transfer", reference_id: initial.id,
-        notes: l.variance_reason,
-      }));
-      if (losses.length) await postMovements(losses);
-      void logActivity({ module: MODULE, action: "receive", entityType: ENTITY, entityId: initial.id, entityLabel: initial.transfer_number });
-      toast.success("Receipt acknowledged");
-      onSaved(); onOpenChange(false);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setSaving(false);
-    }
-  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{initial ? `Transfer ${initial.transfer_number}` : "New Transfer"}</DialogTitle>
-          <DialogDescription>{initial?.status === "acknowledged" ? "Completed." : isDispatched ? "In transit — receive to complete." : "Build line items and dispatch."}</DialogDescription>
+          <DialogDescription>{initial?.status === "acknowledged" ? "Completed." : isDispatched ? "Initiated — awaiting delivery challan from branch." : "Pick a branch demand and initiate the transfer. Source inventory will be deducted immediately."}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
           {isDraft && (
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Against Demand (optional)</div>
-              <Select value={demandId || "__none__"} onValueChange={(v) => v === "__none__" ? setDemandId("") : loadDemand(v)}>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Against Demand</div>
+              <Select value={demandId} onValueChange={(v) => loadDemand(v)}>
                 <SelectTrigger><SelectValue placeholder="Pick a submitted branch demand" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">— None (manual transfer) —</SelectItem>
                   {demands.map((d) => {
                     const br = branches.find((b) => b.id === d.branch_id);
                     return <SelectItem key={d.id} value={d.id}>{d.demand_number} → {br ? `${br.code} ${br.name}` : "Branch"}</SelectItem>;
@@ -390,50 +332,28 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
           )}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-xl border border-border p-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">From</div>
-              <div className="grid gap-2">
-                <Select value={sourceType} onValueChange={(v) => { setSourceType(v as LocationType); setSourceId(""); }} disabled={!isDraft}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="warehouse">Warehouse</SelectItem>
-                    <SelectItem value="branch">Branch</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={sourceId} onValueChange={setSourceId} disabled={!isDraft}>
-                  <SelectTrigger><SelectValue placeholder="Pick" /></SelectTrigger>
-                  <SelectContent>{srcOptions().map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">From (Warehouse)</div>
+              <Select value={sourceId} onValueChange={setSourceId} disabled={!isDraft}>
+                <SelectTrigger><SelectValue placeholder="Pick warehouse" /></SelectTrigger>
+                <SelectContent>{warehouses.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}</SelectContent>
+              </Select>
             </div>
             <div className="rounded-xl border border-border p-3">
-              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">To</div>
-              <div className="grid gap-2">
-                <Select value={destType} onValueChange={(v) => { setDestType(v as LocationType); setDestId(""); }} disabled={!isDraft}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="warehouse">Warehouse</SelectItem>
-                    <SelectItem value="branch">Branch</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Select value={destId} onValueChange={setDestId} disabled={!isDraft}>
-                  <SelectTrigger><SelectValue placeholder="Pick" /></SelectTrigger>
-                  <SelectContent>{dstOptions().map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}</SelectContent>
-                </Select>
+              <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">To (Branch)</div>
+              <div className="flex h-10 items-center rounded-md border border-input bg-muted/30 px-3 text-sm">
+                {(() => { const br = branches.find((b) => b.id === destId); return br ? `${br.code} – ${br.name}` : "—"; })()}
               </div>
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-4">
-            <div className="grid gap-2"><Label>Date</Label><Input type="date" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} disabled={!isDraft} /></div>
-            <div className="grid gap-2"><Label>Vehicle</Label><Input value={vehicle} onChange={(e) => setVehicle(e.target.value)} disabled={isReceived} /></div>
-            <div className="grid gap-2"><Label>Driver</Label><Input value={driverName} onChange={(e) => setDriverName(e.target.value)} disabled={isReceived} /></div>
-            <div className="grid gap-2"><Label>Driver Phone</Label><Input value={driverPhone} onChange={(e) => setDriverPhone(e.target.value)} disabled={isReceived} /></div>
+          <div className="grid gap-2 sm:w-1/3">
+            <Label>Date</Label>
+            <Input type="date" value={transferDate} onChange={(e) => setTransferDate(e.target.value)} disabled={!isDraft} />
           </div>
 
           <div>
             <div className="mb-2 flex items-center justify-between">
               <Label className="text-sm font-semibold">Items</Label>
-              {isDraft && <Button size="sm" variant="outline" onClick={() => setLines((ls) => [...ls, { item_id: "", size_value: "", dispatched_qty: 1, received_qty: 0, variance_reason: "" }])}><Plus className="mr-1 h-3.5 w-3.5" />Add line</Button>}
             </div>
             <div className="overflow-x-clip rounded-xl border border-border">
               <table className="ios-table w-full text-sm">
@@ -441,10 +361,10 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                   <tr>
                     <th className="px-3 py-2">Item</th>
                     <th className="px-3 py-2 w-16">Size</th>
+                    <th className="px-3 py-2 w-24 text-right">Demanded</th>
                     <th className="px-3 py-2 w-24 text-right">Dispatched</th>
                     {isDispatched && <th className="px-3 py-2 w-24 text-right">Received</th>}
                     {isDispatched && <th className="px-3 py-2">Variance Reason</th>}
-                    {isDraft && <th className="px-3 py-2 w-10"></th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -452,25 +372,20 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                     const it = itemMap.get(l.item_id);
                     return (
                       <tr key={idx}>
+                        <td className="px-3 py-2 font-medium">{it?.name ?? "—"}</td>
+                        <td className="px-3 py-2 text-muted-foreground">{l.size_value || "—"}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{l.requested_qty}</td>
                         <td className="px-2 py-1.5">
-                          {isDraft ? (
-                            <Select value={l.item_id} onValueChange={(v) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, item_id: v } : x))}>
-                              <SelectTrigger className="h-9"><SelectValue placeholder="Pick" /></SelectTrigger>
-                              <SelectContent>{items.map((x) => <SelectItem key={x.id} value={x.id}>{x.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                          ) : <div className="px-1 font-medium">{it?.name ?? "—"}</div>}
+                          {isDraft
+                            ? <Input type="number" min={0} className="h-9 text-right" value={l.dispatched_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, dispatched_qty: Number(e.target.value) || 0 } : x))} />
+                            : <div className="text-right tabular-nums">{l.dispatched_qty}</div>}
                         </td>
-                        <td className="px-2 py-1.5">
-                          <Input className="h-9" disabled={!isDraft || !it?.is_sized} value={l.size_value} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, size_value: e.target.value } : x))} placeholder={it?.is_sized ? "M/L" : "—"} />
-                        </td>
-                        <td className="px-2 py-1.5"><Input type="number" min={0} disabled={!isDraft} className="h-9 text-right" value={l.dispatched_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, dispatched_qty: Number(e.target.value) || 0 } : x))} /></td>
-                        {isDispatched && <td className="px-2 py-1.5"><Input type="number" min={0} max={l.dispatched_qty} className="h-9 text-right" value={l.received_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, received_qty: Number(e.target.value) || 0 } : x))} /></td>}
-                        {isDispatched && <td className="px-2 py-1.5"><Input className="h-9" value={l.variance_reason} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, variance_reason: e.target.value } : x))} placeholder={l.received_qty < l.dispatched_qty ? "Required" : "—"} /></td>}
-                        {isDraft && <td className="px-2 py-1.5"><Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => setLines((ls) => ls.filter((_, i) => i !== idx))}><Trash2 className="h-3.5 w-3.5" /></Button></td>}
+                        {isDispatched && <td className="px-2 py-1.5 text-right tabular-nums">{l.received_qty}</td>}
+                        {isDispatched && <td className="px-2 py-1.5 text-xs text-muted-foreground">{l.variance_reason || "—"}</td>}
                       </tr>
                     );
                   })}
-                  {!lines.length && <tr><td colSpan={6} className="px-3 py-6 text-center text-xs text-muted-foreground">No lines.</td></tr>}
+                  {!lines.length && <tr><td colSpan={isDispatched ? 6 : 4} className="px-3 py-6 text-center text-xs text-muted-foreground">{isDraft ? "Pick a demand above to load items." : "No lines."}</td></tr>}
                 </tbody>
               </table>
             </div>
@@ -481,10 +396,9 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
-          {isDraft && <Button variant="outline" onClick={saveDraft} disabled={saving}>Save Draft</Button>}
-          {isDraft && initial && <Button onClick={dispatch} disabled={saving}>{saving ? "Dispatching…" : "Dispatch"}</Button>}
-          {isDispatched && <Button onClick={receive} disabled={saving}>{saving ? "Saving…" : "Acknowledge Receipt"}</Button>}
+          {isDraft && <Button onClick={initiateTransfer} disabled={saving || !demandId}>{saving ? "Initiating…" : "Initiate Transfer"}</Button>}
         </DialogFooter>
+
       </DialogContent>
     </Dialog>
   );
