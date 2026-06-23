@@ -4018,6 +4018,7 @@ export type Database = {
         Args: { _candidate_id: string }
         Returns: string[]
       }
+      current_user_assigned_guard_ids: { Args: never; Returns: string[] }
       current_user_branch_id: { Args: never; Returns: string }
       current_user_branch_scope_ids: { Args: never; Returns: string[] }
       current_user_candidate_id: { Args: never; Returns: string }
