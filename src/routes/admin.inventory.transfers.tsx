@@ -33,7 +33,7 @@ type Branch = { id: string; name: string; code: string };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
 type Demand = { id: string; demand_number: string; branch_id: string; status: string };
 type DemandLine = { id: string; demand_id: string; item_id: string; size_value: string; requested_qty: number };
-type Line = { id?: string; item_id: string; size_value: string; dispatched_qty: number; received_qty: number; variance_reason: string };
+type Line = { id?: string; item_id: string; size_value: string; requested_qty: number; dispatched_qty: number; received_qty: number; variance_reason: string };
 
 function TransfersPage() {
   const qc = useQueryClient();
@@ -142,7 +142,6 @@ function TransfersPage() {
                 <th className="px-5 py-3">From</th>
                 <th className="px-5 py-3">To</th>
                 <th className="px-5 py-3">Date</th>
-                <th className="px-5 py-3">Vehicle</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
               </tr>
@@ -154,7 +153,6 @@ function TransfersPage() {
                   <td className="px-5 py-3">{locName(t.source_type, t.source_id)}</td>
                   <td className="px-5 py-3">{locName(t.destination_type, t.destination_id)}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{t.transfer_date}</td>
-                  <td className="px-5 py-3 text-xs">{t.vehicle_number || "—"}</td>
                   <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(t.status)}`}>{t.status.replace("_", " ")}</span></td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
@@ -169,7 +167,7 @@ function TransfersPage() {
                   </td>
                 </tr>
               ))}
-              {!filtered.length && <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground"><Truck className="mx-auto mb-2 h-8 w-8 opacity-40" />No transfers yet.</td></tr>}
+              {!filtered.length && <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground"><Truck className="mx-auto mb-2 h-8 w-8 opacity-40" />No transfers yet.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -204,7 +202,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
 
   async function loadDemand(id: string) {
     setDemandId(id);
-    if (!id) return;
+    if (!id) { setLines([]); setDestId(""); return; }
     const d = demands.find((x) => x.id === id);
     if (!d) return;
     setDestType("branch");
@@ -215,6 +213,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
     setLines(rows.map((r) => ({
       item_id: r.item_id,
       size_value: r.size_value ?? "",
+      requested_qty: Number(r.requested_qty ?? 0),
       dispatched_qty: Number(r.requested_qty ?? 0),
       received_qty: 0,
       variance_reason: "",
@@ -232,14 +231,27 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
       setVehicle(initial.vehicle_number); setDriverName(initial.driver_name); setDriverPhone(initial.driver_phone);
       setNotes(initial.notes);
       const { data } = await supabase.from("inv_transfer_lines" as never).select("*").eq("transfer_id", initial.id).order("sort_order");
-      setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => ({
-        id: String(r.id),
-        item_id: String(r.item_id),
-        size_value: String(r.size_value ?? ""),
-        dispatched_qty: Number(r.dispatched_qty ?? 0),
-        received_qty: Number(r.received_qty ?? 0),
-        variance_reason: String(r.variance_reason ?? ""),
-      })));
+      // Also pull demand lines to show "Demanded" qty per item
+      const reqMap = new Map<string, number>();
+      if (initial.demand_id) {
+        const { data: dl } = await supabase.from("inv_demand_lines" as never).select("item_id,size_value,requested_qty").eq("demand_id", initial.demand_id);
+        for (const r of (dl as unknown as { item_id: string; size_value: string; requested_qty: number }[]) ?? []) {
+          reqMap.set(`${r.item_id}|${r.size_value ?? ""}`, Number(r.requested_qty ?? 0));
+        }
+      }
+      setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => {
+        const itemId = String(r.item_id);
+        const sz = String(r.size_value ?? "");
+        return {
+          id: String(r.id),
+          item_id: itemId,
+          size_value: sz,
+          requested_qty: reqMap.get(`${itemId}|${sz}`) ?? Number(r.dispatched_qty ?? 0),
+          dispatched_qty: Number(r.dispatched_qty ?? 0),
+          received_qty: Number(r.received_qty ?? 0),
+          variance_reason: String(r.variance_reason ?? ""),
+        };
+      }));
     } else {
       setSourceType("warehouse"); setSourceId(""); setDestType("branch"); setDestId("");
       setDemandId("");
