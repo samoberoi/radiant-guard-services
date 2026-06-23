@@ -694,6 +694,7 @@ function CostComponentDialog({
                 notes,
                 enabled,
                 sort_order: Number(sortOrder) || 0,
+                deduction_calc_type: deductionCalcType,
               });
               setSaving(false);
               if (err) toast.error(err);
