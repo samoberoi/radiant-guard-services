@@ -8,7 +8,6 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LOCATION_TYPE_LABELS, type LocationType } from "@/lib/inv-helpers";
 
 export const Route = createFileRoute("/admin/inventory/stock")({ component: StockPage });
 
@@ -32,12 +31,24 @@ function StockPage() {
   });
   const { data: warehouses = [] } = useQuery({ queryKey: ["inv", "warehouses-list-full"], queryFn: async () => { const { data } = await supabase.from("inv_warehouses" as never).select("id,name"); return (data as unknown as { id: string; name: string }[]) ?? []; } });
   const { data: branches = [] } = useQuery({ queryKey: ["branches-full"], queryFn: async () => { const { data } = await supabase.from("branches" as never).select("id,name"); return (data as unknown as { id: string; name: string }[]) ?? []; } });
-  const { data: candidates = [] } = useQuery({ queryKey: ["candidates-min-all"], queryFn: async () => { const { data } = await supabase.from("candidates" as never).select("id,full_name,employee_code"); return (data as unknown as { id: string; full_name: string; employee_code: string }[]) ?? []; } });
+  const { data: candidates = [] } = useQuery({ queryKey: ["candidates-min-all"], queryFn: async () => { const { data } = await supabase.from("candidates" as never).select("id,full_name,employee_code,role_key"); return (data as unknown as { id: string; full_name: string; employee_code: string; role_key: string }[]) ?? []; } });
+  const { data: scopeAssignments = [] } = useQuery({
+    queryKey: ["admin", "employee_scope_assignments", "stock-page"],
+    queryFn: async () => {
+      const { data } = await supabase.from("employee_scope_assignments" as never).select("candidate_id,scope_type,scope_id");
+      return (data as unknown as { candidate_id: string; scope_type: string; scope_id: string }[]) ?? [];
+    },
+  });
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const whMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w.name])), [warehouses]);
   const brMap = useMemo(() => new Map(branches.map((b) => [b.id, b.name])), [branches]);
   const cMap = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
+
+  const fieldOfficers = useMemo(
+    () => candidates.filter((c) => c.role_key === "field_officer").sort((a, b) => a.full_name.localeCompare(b.full_name)),
+    [candidates],
+  );
 
   const locName = (type: string, id: string) => {
     if (type === "warehouse") return whMap.get(id) ?? "—";
@@ -51,13 +62,35 @@ function StockPage() {
   };
 
   const [q, setQ] = useState("");
-  const [locFilter, setLocFilter] = useState<string>("all");
-  const [showZero, setShowZero] = useState(false);
+  const [typeFilter, setTypeFilter] = useState<"all" | "warehouse" | "branch">("all");
+  const [specificFilter, setSpecificFilter] = useState<string>("all");
+  const [foFilter, setFoFilter] = useState<string>("all");
+
+  // FO list filtered by selected branch (via employee_scope_assignments)
+  const fosForBranch = useMemo(() => {
+    if (typeFilter !== "branch" || specificFilter === "all") return fieldOfficers;
+    const ids = new Set(
+      scopeAssignments
+        .filter((a) => a.scope_type === "branch" && a.scope_id === specificFilter)
+        .map((a) => a.candidate_id),
+    );
+    return fieldOfficers.filter((f) => ids.has(f.id));
+  }, [typeFilter, specificFilter, scopeAssignments, fieldOfficers]);
 
   const enriched = useMemo(() => {
     return balances
-      .filter((b) => showZero || Number(b.qty) !== 0)
-      .filter((b) => locFilter === "all" || b.location_type === locFilter)
+      .filter((b) => Number(b.qty) !== 0)
+      .filter((b) => {
+        // If a specific field officer is picked, only show that FO's rows
+        if (foFilter !== "all") {
+          return b.location_type === "field_officer" && b.location_id === foFilter;
+        }
+        // Otherwise filter by location type/specific
+        if (b.location_type !== "warehouse" && b.location_type !== "branch") return false;
+        if (typeFilter !== "all" && b.location_type !== typeFilter) return false;
+        if (specificFilter !== "all" && b.location_id !== specificFilter) return false;
+        return true;
+      })
       .map((b) => {
         const it = itemMap.get(b.item_id);
         return {
@@ -76,14 +109,16 @@ function StockPage() {
         return r.item_name.toLowerCase().includes(t) || r.item_code.toLowerCase().includes(t) || r.location_label.toLowerCase().includes(t);
       })
       .sort((a, b) => a.item_name.localeCompare(b.item_name));
-  }, [balances, itemMap, locFilter, q, showZero, whMap, brMap, cMap]);
+  }, [balances, itemMap, typeFilter, specificFilter, foFilter, q, whMap, brMap, cMap]);
 
   const lowCount = enriched.filter((r) => r.low).length;
   const totalQty = enriched.reduce((s, r) => s + Number(r.qty), 0);
 
+  const specificOptions = typeFilter === "warehouse" ? warehouses : typeFilter === "branch" ? branches : [];
+
   return (
     <div>
-      <PageHeader title="Stock by Location" description="Live balances across warehouses, branches, field officers and guards." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Stock" }]} />
+      <PageHeader title="Stock by Location" description="Live balances across warehouses, branches and field officers." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Stock" }]} />
 
       <div className="mb-4 grid gap-3 sm:grid-cols-3">
         <div className="rounded-2xl border border-border bg-card p-4"><div className="text-xs uppercase tracking-wider text-muted-foreground">Rows</div><div className="mt-1 font-display text-2xl font-bold tabular-nums">{enriched.length.toLocaleString("en-IN")}</div></div>
@@ -92,23 +127,39 @@ function StockPage() {
       </div>
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
           <div className="relative w-full sm:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search item or location…" className="h-10 rounded-lg pl-9" />
           </div>
-          <Select value={locFilter} onValueChange={setLocFilter}>
+          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as "all" | "warehouse" | "branch"); setSpecificFilter("all"); setFoFilter("all"); }}>
             <SelectTrigger className="h-10 w-44 rounded-lg"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All locations</SelectItem>
-              {(["warehouse", "branch", "field_officer", "guard", "scrap"] as LocationType[]).map((t) => <SelectItem key={t} value={t}>{LOCATION_TYPE_LABELS[t]}</SelectItem>)}
+              <SelectItem value="warehouse">Warehouses</SelectItem>
+              <SelectItem value="branch">Branches</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" className="h-10 rounded-lg" onClick={() => setShowZero((v) => !v)}>{showZero ? "Hide zero" : "Show zero"}</Button>
+          {typeFilter !== "all" && (
+            <Select value={specificFilter} onValueChange={(v) => { setSpecificFilter(v); setFoFilter("all"); }}>
+              <SelectTrigger className="h-10 w-56 rounded-lg"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All {typeFilter === "warehouse" ? "warehouses" : "branches"}</SelectItem>
+                {specificOptions.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={foFilter} onValueChange={setFoFilter}>
+            <SelectTrigger className="h-10 w-56 rounded-lg"><SelectValue placeholder="Field officer" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All field officers</SelectItem>
+              {fosForBranch.map((f) => <SelectItem key={f.id} value={f.id}>{f.full_name} ({f.employee_code})</SelectItem>)}
+            </SelectContent>
+          </Select>
         </div>
         <Button variant="outline" className="h-10 rounded-lg" disabled={!enriched.length} onClick={() => downloadCsv("stock-balances", enriched.map((r) => ({
           location_type: r.location_type, location: r.location_label, item_code: r.item_code, item: r.item_name,
-          size: r.size_value, qty: r.qty, unit: r.unit, reorder_level: r.reorder, low_stock: r.low ? "Yes" : "No",
+          size: r.size_value, qty: r.qty, unit: r.unit, low_stock: r.low ? "Yes" : "No",
         })))}><Download className="mr-1.5 h-4 w-4" />Export</Button>
       </div>
 
@@ -116,7 +167,7 @@ function StockPage() {
         <div className="overflow-x-clip">
           <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              <tr><th className="px-5 py-3">Location</th><th className="px-5 py-3">Holder</th><th className="px-5 py-3">Item</th><th className="px-5 py-3">Size</th><th className="px-5 py-3 text-right">Qty</th><th className="px-5 py-3">Unit</th><th className="px-5 py-3 text-right">Reorder @</th></tr>
+              <tr><th className="px-5 py-3">Location</th><th className="px-5 py-3">Holder</th><th className="px-5 py-3">Item</th><th className="px-5 py-3">Size</th><th className="px-5 py-3 text-right">Qty</th><th className="px-5 py-3">Unit</th></tr>
             </thead>
             <tbody className="divide-y divide-border">
               {enriched.map((r) => (
@@ -127,10 +178,9 @@ function StockPage() {
                   <td className="px-5 py-3 text-xs">{r.size_value || "—"}</td>
                   <td className={`px-5 py-3 text-right font-semibold tabular-nums ${r.low ? "text-amber-700" : ""}`}>{Number(r.qty).toLocaleString("en-IN")}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{r.unit}</td>
-                  <td className="px-5 py-3 text-right text-xs text-muted-foreground tabular-nums">{r.reorder}</td>
                 </tr>
               ))}
-              {!enriched.length && <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground"><BarChart3 className="mx-auto mb-2 h-8 w-8 opacity-40" />No balances to show.</td></tr>}
+              {!enriched.length && <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground"><BarChart3 className="mx-auto mb-2 h-8 w-8 opacity-40" />No balances to show.</td></tr>}
             </tbody>
           </table>
         </div>
