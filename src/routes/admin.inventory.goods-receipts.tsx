@@ -14,6 +14,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, useDialogDirty } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass } from "@/lib/inv-helpers";
+import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+
 
 export const Route = createFileRoute("/admin/inventory/goods-receipts")({ component: GRNPage });
 
