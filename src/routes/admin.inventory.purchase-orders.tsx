@@ -44,6 +44,7 @@ const ENTITY = "inv_purchase_orders";
 
 type Vendor = { id: string; name: string; vendor_code: string };
 type Warehouse = { id: string; name: string; warehouse_code: string };
+type Branch = { id: string; name: string; code: string };
 type Item = { id: string; name: string; item_code: string; unit: string; is_sized: boolean };
 type ItemSize = { item_id: string; size_value: string; sort_order: number };
 type POLine = { id?: string; item_id: string; size_value: string; ordered_qty: number; unit_price: number; tax_percent: number; notes: string };
@@ -53,6 +54,9 @@ type PO = {
   po_number: string;
   vendor_id: string | null;
   destination_warehouse_id: string | null;
+  destination_branch_id: string | null;
+  source_warehouse_id: string | null;
+  requesting_branch_id: string | null;
   po_date: string;
   expected_date: string | null;
   status: string;
@@ -62,6 +66,15 @@ type PO = {
   notes: string;
 };
 
+// Combined location selector encoding: warehouses vs branches share one Select.
+type LocKind = "wh" | "br";
+const encLoc = (k: LocKind, id: string) => `${k}:${id}`;
+const decLoc = (v: string | null | undefined): { kind: LocKind; id: string } | null => {
+  if (!v) return null;
+  const [k, id] = v.split(":");
+  return (k === "wh" || k === "br") && id ? { kind: k, id } : null;
+};
+
 function POPage() {
   const qc = useQueryClient();
   const { data: pos = [] } = useQuery({
@@ -69,11 +82,19 @@ function POPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inv_purchase_orders" as never)
-        .select("id,po_number,vendor_id,destination_warehouse_id,po_date,expected_date,status,subtotal,tax_total,grand_total,notes")
+        .select("id,po_number,vendor_id,destination_warehouse_id,destination_branch_id,source_warehouse_id,requesting_branch_id,po_date,expected_date,status,subtotal,tax_total,grand_total,notes")
         .eq("po_type", "vendor")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data as unknown as PO[]) ?? [];
+    },
+  });
+  const { data: branches = [] } = useQuery({
+    queryKey: ["inv", "branches-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("branches").select("id,name,code").order("name");
+      if (error) throw error;
+      return (data as unknown as Branch[]) ?? [];
     },
   });
   const { data: vendors = [] } = useQuery({
@@ -147,6 +168,12 @@ function POPage() {
 
   const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
   const warehouseMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w])), [warehouses]);
+  const branchMap = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
+  const locationLabel = (whId: string | null, brId: string | null) => {
+    if (whId) return warehouseMap.get(whId)?.name ?? "—";
+    if (brId) return branchMap.get(brId)?.name ?? "—";
+    return "—";
+  };
 
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -276,7 +303,7 @@ function POPage() {
                   <tr key={p.id} className="hover:bg-secondary/30">
                     <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{p.po_number}</td>
                     <td className="px-5 py-3 font-medium">{p.vendor_id ? vendorMap.get(p.vendor_id)?.name ?? "—" : "—"}</td>
-                    <td className="px-5 py-3">{p.destination_warehouse_id ? warehouseMap.get(p.destination_warehouse_id)?.name ?? "—" : "—"}</td>
+                    <td className="px-5 py-3">{locationLabel(p.destination_warehouse_id, p.destination_branch_id)}</td>
                     <td className="px-5 py-3 text-xs text-muted-foreground tabular-nums">{p.po_date}</td>
                     <td className="px-5 py-3">
                       <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(p.status)}`}>{poStatusLabel(p.status)}</span>
@@ -324,6 +351,7 @@ function POPage() {
         initial={editing}
         vendors={vendors}
         warehouses={warehouses}
+        branches={branches}
         items={items}
         itemSizes={itemSizes}
         rateCards={rateCards}
@@ -334,16 +362,17 @@ function POPage() {
 }
 
 function POFormDialog({
-  open, onOpenChange, initial, vendors, warehouses, items, itemSizes, rateCards, onSaved,
+  open, onOpenChange, initial, vendors, warehouses, branches, items, itemSizes, rateCards, onSaved,
 }: {
   open: boolean; onOpenChange: (o: boolean) => void;
-  initial: PO | null; vendors: Vendor[]; warehouses: Warehouse[]; items: Item[];
+  initial: PO | null; vendors: Vendor[]; warehouses: Warehouse[]; branches: Branch[]; items: Item[];
   itemSizes: ItemSize[];
   rateCards: RateCard[];
   onSaved: () => void;
 }) {
   const [vendorId, setVendorId] = useState<string>("");
-  const [warehouseId, setWarehouseId] = useState<string>("");
+  const [orderingFrom, setOrderingFrom] = useState<string>(""); // "wh:<id>" or "br:<id>"
+  const [deliverTo, setDeliverTo] = useState<string>("");
   const [poDate, setPoDate] = useState(new Date().toISOString().slice(0, 10));
   const [expectedDate, setExpectedDate] = useState("");
   const [notes, setNotes] = useState("");
@@ -362,6 +391,12 @@ function POFormDialog({
     }
     return m;
   }, [itemSizes]);
+  // Items quoted by the selected vendor (via rate cards). Empty vendor => no items.
+  const vendorItems = useMemo(() => {
+    if (!vendorId) return [] as Item[];
+    const ids = new Set(rateCards.filter((rc) => rc.vendor_id === vendorId).map((rc) => rc.item_id));
+    return items.filter((i) => ids.has(i.id));
+  }, [vendorId, rateCards, items]);
   // Line/header field edits lock once goods start arriving. Status toggle stays available unless cancelled.
   const readOnly = !!initial && !(initial.status === "draft" || initial.status === "open" || initial.status === "approved");
 
@@ -411,7 +446,16 @@ function POFormDialog({
   useResetOnOpen(open, async () => {
     if (initial) {
       setVendorId(initial.vendor_id ?? "");
-      setWarehouseId(initial.destination_warehouse_id ?? "");
+      setOrderingFrom(
+        initial.source_warehouse_id ? encLoc("wh", initial.source_warehouse_id)
+        : initial.requesting_branch_id ? encLoc("br", initial.requesting_branch_id)
+        : ""
+      );
+      setDeliverTo(
+        initial.destination_warehouse_id ? encLoc("wh", initial.destination_warehouse_id)
+        : initial.destination_branch_id ? encLoc("br", initial.destination_branch_id)
+        : ""
+      );
       setPoDate(initial.po_date);
       setExpectedDate(initial.expected_date ?? "");
       setNotes(initial.notes);
@@ -428,10 +472,10 @@ function POFormDialog({
         notes: String(r.notes ?? ""),
       })));
     } else {
-      setVendorId(""); setWarehouseId(""); setPoDate(new Date().toISOString().slice(0, 10));
+      setVendorId(""); setOrderingFrom(""); setDeliverTo("");
+      setPoDate(new Date().toISOString().slice(0, 10));
       setExpectedDate(""); setNotes(""); setLines([]); setStatus("open");
     }
-
   });
 
   const totals = useMemo(() => {
@@ -447,7 +491,10 @@ function POFormDialog({
   async function save(targetStatus: string) {
 
     if (!vendorId) { toast.error("Vendor required"); return; }
-    if (!warehouseId) { toast.error("Destination warehouse required"); return; }
+    const dFrom = decLoc(orderingFrom);
+    const dTo = decLoc(deliverTo);
+    if (!dFrom) { toast.error("Ordering From is required"); return; }
+    if (!dTo) { toast.error("Deliver To is required"); return; }
     if (!lines.length) { toast.error("Add at least one line"); return; }
     for (const l of lines) {
       if (!l.item_id) { toast.error("Pick an item on every line"); return; }
@@ -455,6 +502,12 @@ function POFormDialog({
       const item = itemMap.get(l.item_id);
       if (item?.is_sized && !l.size_value) { toast.error(`Pick a size for ${item.name}`); return; }
     }
+    const locationFields = {
+      source_warehouse_id: dFrom.kind === "wh" ? dFrom.id : null,
+      requesting_branch_id: dFrom.kind === "br" ? dFrom.id : null,
+      destination_warehouse_id: dTo.kind === "wh" ? dTo.id : null,
+      destination_branch_id: dTo.kind === "br" ? dTo.id : null,
+    };
     setSaving(true);
     try {
       const linesPayload = lines.map((l, idx) => ({
@@ -471,7 +524,7 @@ function POFormDialog({
       if (initial) {
         const { error } = await supabase.from("inv_purchase_orders" as never).update({
           vendor_id: vendorId,
-          destination_warehouse_id: warehouseId,
+          ...locationFields,
           po_date: poDate,
           expected_date: expectedDate || null,
           notes,
@@ -493,7 +546,7 @@ function POFormDialog({
         const { data: ins, error } = await supabase.from("inv_purchase_orders" as never).insert({
           po_number, po_type: "vendor",
           vendor_id: vendorId,
-          destination_warehouse_id: warehouseId,
+          ...locationFields,
           po_date: poDate,
           expected_date: expectedDate || null,
           notes,
@@ -549,10 +602,26 @@ function POFormDialog({
                 <SelectContent>{vendors.map((v) => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2"><Label>Deliver To Warehouse</Label>
-              <Select value={warehouseId} onValueChange={setWarehouseId} disabled={readOnly}>
-                <SelectTrigger><SelectValue placeholder="Which warehouse needs the stock?" /></SelectTrigger>
-                <SelectContent>{warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}</SelectContent>
+            <div className="grid gap-2"><Label>Ordering From</Label>
+              <Select value={orderingFrom} onValueChange={setOrderingFrom} disabled={readOnly}>
+                <SelectTrigger><SelectValue placeholder="Pick warehouse or branch" /></SelectTrigger>
+                <SelectContent className="max-h-[320px]">
+                  {warehouses.length > 0 && <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Warehouses</div>}
+                  {warehouses.map((w) => <SelectItem key={`fw-${w.id}`} value={encLoc("wh", w.id)}>{w.name}</SelectItem>)}
+                  {branches.length > 0 && <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Branches</div>}
+                  {branches.map((b) => <SelectItem key={`fb-${b.id}`} value={encLoc("br", b.id)}>{b.name}{b.code ? ` (${b.code})` : ""}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2"><Label>Deliver To</Label>
+              <Select value={deliverTo} onValueChange={setDeliverTo} disabled={readOnly}>
+                <SelectTrigger><SelectValue placeholder="Pick warehouse or branch" /></SelectTrigger>
+                <SelectContent className="max-h-[320px]">
+                  {warehouses.length > 0 && <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Warehouses</div>}
+                  {warehouses.map((w) => <SelectItem key={`tw-${w.id}`} value={encLoc("wh", w.id)}>{w.name}</SelectItem>)}
+                  {branches.length > 0 && <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Branches</div>}
+                  {branches.map((b) => <SelectItem key={`tb-${b.id}`} value={encLoc("br", b.id)}>{b.name}{b.code ? ` (${b.code})` : ""}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2"><Label>PO Date</Label><Input type="date" value={poDate} onChange={(e) => setPoDate(e.target.value)} disabled={readOnly} /></div>
@@ -572,12 +641,32 @@ function POFormDialog({
 
 
           <div>
-            <div className="mb-2 flex items-center justify-between">
-              <Label className="text-sm font-semibold">Line Items</Label>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div>
+                <Label className="text-sm font-semibold">Line Items</Label>
+                {vendorId && <span className="ml-2 text-[11px] text-muted-foreground">Showing {vendorItems.length} item{vendorItems.length === 1 ? "" : "s"} this vendor quotes</span>}
+                {!vendorId && <span className="ml-2 text-[11px] text-muted-foreground">Pick a vendor to see their items</span>}
+              </div>
               {!readOnly && (
-                <Button size="sm" type="button" onClick={() => setLines((ls) => [...ls, { item_id: "", size_value: "", ordered_qty: 1, unit_price: 0, tax_percent: 0, notes: "" }])}>
-                  <Plus className="mr-1 h-3.5 w-3.5" />Add line
-                </Button>
+                <div className="flex gap-2">
+                  <Button size="sm" type="button" variant="outline" disabled={!vendorId || !vendorItems.length} onClick={() => {
+                    // Add every vendor item that isn't already on the PO. User can trim and set qty.
+                    const existing = new Set(lines.map((l) => l.item_id).filter(Boolean));
+                    const toAdd: POLine[] = [];
+                    for (const it of vendorItems) {
+                      if (existing.has(it.id)) continue;
+                      const rc = findRate(vendorId, it.id, "");
+                      toAdd.push({ item_id: it.id, size_value: "", ordered_qty: 1, unit_price: rc?.unit_price ?? 0, tax_percent: rc?.tax_percent ?? 0, notes: "" });
+                    }
+                    if (!toAdd.length) { toast.info("All vendor items already added"); return; }
+                    setLines((ls) => [...ls, ...toAdd]);
+                  }}>
+                    <Plus className="mr-1 h-3.5 w-3.5" />Add all vendor items
+                  </Button>
+                  <Button size="sm" type="button" disabled={!vendorId} onClick={() => setLines((ls) => [...ls, { item_id: "", size_value: "", ordered_qty: 1, unit_price: 0, tax_percent: 0, notes: "" }])}>
+                    <Plus className="mr-1 h-3.5 w-3.5" />Add line
+                  </Button>
+                </div>
               )}
             </div>
             <div className="overflow-x-clip rounded-xl border border-border">
@@ -605,7 +694,7 @@ function POFormDialog({
                         <td className="px-2 py-1.5">
                           <Select value={l.item_id} onValueChange={(v) => applyRateToLine(idx, v, l.size_value)} disabled={readOnly}>
                             <SelectTrigger className="h-9"><SelectValue placeholder="Pick item" /></SelectTrigger>
-                            <SelectContent>{items.map((it) => <SelectItem key={it.id} value={it.id}>{it.name}</SelectItem>)}</SelectContent>
+                            <SelectContent>{vendorItems.map((it) => <SelectItem key={it.id} value={it.id}>{it.name}</SelectItem>)}{!vendorItems.length && <div className="px-3 py-2 text-xs text-muted-foreground">No items quoted by this vendor</div>}</SelectContent>
                           </Select>
                         </td>
                         <td className="px-2 py-1.5 align-top">
