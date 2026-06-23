@@ -444,7 +444,7 @@ export function InventoryOwnerDashboard() {
           {canSub("inventory", "item_master") && <CountTile to="/admin/inventory/items" label="Products" value={items.length} icon={PackageOpen} accent="text-violet-500" />}
           {canSub("inventory", "vendors") && <CountTile to="/admin/inventory/vendors" label="Vendors" value={vendors.length} icon={ShoppingCart} accent="text-blue-500" />}
           {canSub("inventory", "warehouses") && <CountTile to="/admin/inventory/warehouses" label="Warehouses" value={whs.length} icon={Warehouse} accent="text-amber-500" />}
-          {canSub("inventory", "stock_report") && <CountTile to="/admin/inventory/stock" label="Branches" value={branches.length} icon={Building2} accent="text-cyan-500" />}
+          {canSub("inventory", "stock_report") && <CountTile to="/admin/customers/branch-manager" label="Branches" value={branches.length} icon={Building2} accent="text-cyan-500" />}
         </div>
 
         {/* Workflow counts with status split */}
