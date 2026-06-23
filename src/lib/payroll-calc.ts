@@ -492,11 +492,19 @@ export function computeWages(
     components.push({ name: "Paid Holiday", amount: phAmount, calcType: "fixed" });
   }
 
-  const basicDaContract = resource.components
-    .filter((c) => /^(basic|da|d\.a\.|dearness)\b/i.test(canonicalComponentName(c.name)))
+  // Overtime — vendor convention used across all clients:
+  //   OT base   = contract gross MINUS Uniform Allowance component(s)
+  //   OT rate   = OT base / (baseDays × 8)        (single rate, ×1)
+  //   OT amount = OT rate × OT hours
+  // Statutory double-rate is intentionally NOT applied; the vendor wage
+  // register pays single-rate on (Gross − Uniform). Reconciles to ₹0.01
+  // against FPL May-2026 register.
+  const uniformContract = resource.components
+    .filter((c) => /\buniform\b/i.test(canonicalComponentName(c.name)))
     .reduce((s, c) => s + (Number(c.amount) || 0), 0);
-  const otHourlyRate = basicDaContract / (baseDays * 8);
-  const otAmount = round2(otHourlyRate * 2 * totals.otHours);
+  const otBase = Math.max(0, contractGross - uniformContract);
+  const otHourlyRate = baseDays > 0 ? otBase / (baseDays * 8) : 0;
+  const otAmount = round2(otHourlyRate * totals.otHours);
   if (otAmount > 0) {
     components.push({ name: "Overtime", amount: otAmount, calcType: "fixed" });
   }
