@@ -123,11 +123,21 @@ function VendorsPage() {
   }, [vendors, query]);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: QK });
-  const toRow = (p: Payload) => ({ ...p, name: p.name.trim() });
+  const validate = (p: Payload) => {
+    if (!p.name.trim()) return "Name is required";
+    const g = p.gstin.trim().toUpperCase();
+    const pn = p.pan.trim().toUpperCase();
+    if (!g) return "GSTIN is required";
+    if (!GSTIN_RE.test(g)) return "GSTIN is invalid (15 chars, e.g. 27ABCDE1234F1Z5)";
+    if (!pn) return "PAN is required";
+    if (!PAN_RE.test(pn)) return "PAN is invalid (10 chars, e.g. ABCDE1234F)";
+    return null;
+  };
+  const toRow = (p: Payload) => ({ ...p, name: p.name.trim(), gstin: p.gstin.trim().toUpperCase(), pan: p.pan.trim().toUpperCase() });
 
   const addMut = useMutation({
     mutationFn: async (p: Payload) => {
-      if (!p.name.trim()) throw new Error("Name is required");
+      const v = validate(p); if (v) throw new Error(v);
       const { data: seq } = await supabase.rpc("nextval" as never, { sequence_name: "inv_vendor_code_seq" } as never);
       const code = `VEN-${String(Number(seq ?? 0) || vendors.length + 1).padStart(3, "0")}`;
       const { error } = await supabase.from("inv_vendors" as never).insert({ ...toRow(p), vendor_code: code } as never);
