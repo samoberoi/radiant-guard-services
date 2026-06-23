@@ -390,6 +390,17 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
             <div className="grid gap-2"><Label>Receipt Date</Label><Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} /></div>
             <div className="grid gap-2"><Label>Vendor Invoice #</Label><Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} /></div>
           </div>
+          <div className="grid gap-2">
+            <Label>Vendor Invoice File</Label>
+            <Input
+              type="file"
+              accept="application/pdf,image/*"
+              onChange={(e) => setInvoiceFile(e.target.files?.[0] ?? null)}
+              className="h-10 file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-secondary/80"
+            />
+            {invoiceFile && <p className="text-xs text-muted-foreground">{invoiceFile.name} ({Math.round(invoiceFile.size / 1024)} KB)</p>}
+          </div>
+
 
 
           {lines.length > 0 && (
