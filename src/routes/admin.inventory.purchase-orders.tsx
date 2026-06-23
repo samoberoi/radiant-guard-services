@@ -234,7 +234,8 @@ function POPage() {
       po_date: p.po_date,
       remarks: p.notes,
       vendor: vendorRes.data as never,
-
+      ordering_from: locationLabel(p.source_warehouse_id, p.requesting_branch_id),
+      deliver_to: locationLabel(p.destination_warehouse_id, p.destination_branch_id),
       lines: pdfLines,
     });
     toast.success("PDF downloaded");
