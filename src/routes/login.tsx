@@ -352,11 +352,11 @@ function LoginPage() {
               </p>
             )}
 
-            {/* Powered by slot — replace with RevdInfo logo when provided */}
+            {/* Powered by slot */}
             <div className="mt-8 flex items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
               <span>Powered by</span>
               <span className="rounded-md border border-neutral-200 px-2 py-0.5 text-neutral-600">
-                RevdInfo
+                HyperRevamp
               </span>
             </div>
           </div>
