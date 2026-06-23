@@ -478,9 +478,8 @@ export function InventoryOwnerDashboard() {
     const events: { ts: string; type: string; label: string; value?: string; href: string }[] = [];
     for (const p of pos) events.push({ ts: p.po_date, type: "PO", label: `${p.po_number} · ${vendorMap.get(p.vendor_id)?.name ?? "vendor"}`, value: inr(Number(p.grand_total || 0)), href: "/admin/inventory/purchase-orders" });
     for (const g of grns) events.push({ ts: g.receipt_date, type: "GRN", label: `Goods received`, href: "/admin/inventory/goods-receipts" });
-    for (const x of wos) events.push({ ts: x.writeoff_date, type: "Write-off", label: `Write-off ${x.status}`, value: x.recovery_amount > 0 ? inr(Number(x.recovery_amount)) : undefined, href: "/admin/inventory/write-offs" });
     return events.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime()).slice(0, 10);
-  }, [pos, grns, wos, vendorMap]);
+  }, [pos, grns, vendorMap]);
 
   const filter = (s: string) => !q || s.toLowerCase().includes(q.toLowerCase());
   const branchDashboardLoading = scope.isLoading || (scope.isScoped && scopeAssignmentsQ.isLoading);
