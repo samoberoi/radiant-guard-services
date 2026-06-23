@@ -221,7 +221,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
   const overDispatchLines = lines.filter((l) => l.dispatched_qty > availableFor(l));
   const overDemandLines = lines.filter((l) => l.dispatched_qty > l.requested_qty);
 
-  const isReceived = initial?.status === "acknowledged";
+  const isReceived = initial?.status === "completed";
 
   async function loadDemand(id: string) {
     setDemandId(id);
@@ -348,7 +348,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>{initial ? `Transfer ${initial.transfer_number}` : "New Transfer"}</DialogTitle>
-          <DialogDescription>{initial?.status === "acknowledged" ? "Completed." : isDispatched ? "Initiated — awaiting delivery challan from branch." : "Pick a branch demand and initiate the transfer. Source inventory will be deducted immediately."}</DialogDescription>
+          <DialogDescription>{initial?.status === "completed" ? "Completed." : isDispatched ? "Initiated — awaiting delivery challan from branch." : "Pick a branch demand and initiate the transfer. Source inventory will be deducted immediately."}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
