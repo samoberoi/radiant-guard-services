@@ -187,7 +187,7 @@ function GRNPage() {
                 <tr key={g.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs">{g.grn_number}</td>
                   <td className="px-5 py-3">{g.vendor_id ? vMap.get(g.vendor_id) ?? "—" : "—"}</td>
-                  <td className="px-5 py-3">{wMap.get(g.warehouse_id) ?? "—"}</td>
+                  <td className="px-5 py-3">{g.warehouse_id ? (wMap.get(g.warehouse_id) ?? "—") : (g.transfer_id ? "Branch Receipt" : "—")}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{g.receipt_date}</td>
                   <td className="px-5 py-3 text-right tabular-nums">{agg.products}</td>
                   <td className="px-5 py-3 text-right tabular-nums">{agg.qty}</td>
