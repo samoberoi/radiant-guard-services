@@ -203,7 +203,7 @@ function IssuancesPage() {
                   <td className="px-5 py-3">{locName(i.source_type, i.source_id)}</td>
                   <td className="px-5 py-3 font-medium">{locName(i.destination_type, i.destination_id)}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{i.issuance_date}</td>
-                  <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(i.status)}`}>{i.status}</span></td>
+                  <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(i.status)}`}>{i.status === "acknowledged" ? "completed" : i.status}</span></td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setActive(i); setOpen(true); }}><Eye className="h-4 w-4" /></Button>
