@@ -148,6 +148,7 @@ function VendorsPage() {
   });
   const updateMut = useMutation({
     mutationFn: async ({ id, p }: { id: string; p: Payload }) => {
+      const v = validate(p); if (v) throw new Error(v);
       const { error } = await supabase.from("inv_vendors" as never).update(toRow(p) as never).eq("id", id);
       if (error) throw error;
       void logActivity({ module: MODULE, action: "update", entityType: ENTITY, entityId: id, entityLabel: p.name });
