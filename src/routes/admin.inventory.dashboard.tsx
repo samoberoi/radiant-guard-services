@@ -166,7 +166,7 @@ export function InventoryOwnerDashboard() {
   const whs = whsQ.data ?? [];
   const transfers = transfersQ.data ?? [];
   const issuances = issuancesQ.data ?? [];
-  const adjustments = adjustmentsQ.data ?? [];
+  
   const { canSub } = useCurrentPermissions();
 
   const totalStockQty = useMemo(() => balances.reduce((s, b) => s + Math.max(0, Number(b.qty || 0)), 0), [balances]);
