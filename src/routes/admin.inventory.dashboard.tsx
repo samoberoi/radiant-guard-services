@@ -167,6 +167,11 @@ export function InventoryOwnerDashboard() {
     const { data, error } = await supabase.from("inv_transfers" as never).select("id,status,source_type,source_id,destination_type,destination_id");
     if (error) throw error; return (data as unknown as ScopedMovement[]) ?? [];
   }});
+  const transferLinesQ = useQuery({ queryKey: ["dash2", "transfer-lines"], queryFn: async () => {
+    const { data, error } = await supabase.from("inv_transfer_lines" as never).select("transfer_id,item_id,size_value,dispatched_qty,received_qty");
+    if (error) throw error;
+    return (data as unknown as { transfer_id: string; item_id: string; size_value: string; dispatched_qty: number; received_qty: number }[]) ?? [];
+  }});
   const issuancesQ = useQuery({ queryKey: ["dash2", "issuances"], queryFn: async () => {
     const { data, error } = await supabase.from("inv_issuances" as never).select("id,status,source_type,source_id,destination_type,destination_id");
     if (error) throw error; return (data as unknown as ScopedMovement[]) ?? [];
@@ -285,7 +290,31 @@ export function InventoryOwnerDashboard() {
   const balPasses = (b: Balance) => {
     if (!itemPasses(b.item_id)) return false;
     if (warehouseFilter === "all") return true;
-    return b.location_type === "warehouse" ? b.location_id === warehouseFilter : true;
+    if (warehouseFilter.startsWith("branch:")) {
+      return b.location_type === "branch" && b.location_id === warehouseFilter.slice(7);
+    }
+    return b.location_type === "warehouse" && b.location_id === warehouseFilter;
+  };
+
+  // In-transit transfers (dispatched but not yet received) still belong to
+  // the organisation — count them toward stock value so the KPI matches
+  // what the warehouse actually shipped.
+  const transferLines = transferLinesQ.data ?? [];
+  const inTransitTransferIds = useMemo(
+    () => new Set(transfers.filter((t) => ["in_transit", "dispatched"].includes(t.status)).map((t) => t.id)),
+    [transfers],
+  );
+  const transferById = useMemo(() => new Map(transfers.map((t) => [t.id, t])), [transfers]);
+  const transferLinePasses = (l: { transfer_id: string; item_id: string }) => {
+    if (!itemPasses(l.item_id)) return false;
+    if (warehouseFilter === "all") return true;
+    const t = transferById.get(l.transfer_id);
+    if (!t) return false;
+    if (warehouseFilter.startsWith("branch:")) {
+      const id = warehouseFilter.slice(7);
+      return (t.source_type === "branch" && t.source_id === id) || (t.destination_type === "branch" && t.destination_id === id);
+    }
+    return (t.source_type === "warehouse" && t.source_id === warehouseFilter) || (t.destination_type === "warehouse" && t.destination_id === warehouseFilter);
   };
 
   // ===== KPIs =====
@@ -297,8 +326,16 @@ export function InventoryOwnerDashboard() {
       if (!it) continue;
       v += Number(b.qty) * Number(it.standard_cost || 0);
     }
+    for (const l of transferLines) {
+      if (!inTransitTransferIds.has(l.transfer_id)) continue;
+      if (!transferLinePasses(l)) continue;
+      const it = itemMap.get(l.item_id);
+      if (!it) continue;
+      const outstanding = Math.max(0, Number(l.dispatched_qty || 0) - Number(l.received_qty || 0));
+      v += outstanding * Number(it.standard_cost || 0);
+    }
     return v;
-  }, [balances, itemMap, categoryFilter, warehouseFilter]);
+  }, [balances, itemMap, categoryFilter, warehouseFilter, transferLines, inTransitTransferIds, transferById]);
 
   const inPeriod = (d: string | Date) => {
     const x = new Date(d);
@@ -527,7 +564,7 @@ export function InventoryOwnerDashboard() {
         </div>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <Kpi label="Stock Value" value={inr(stockValue)} icon={Wallet} tint="from-emerald-500/15 to-emerald-500/0" iconClass="text-emerald-500" hint="On-hand at standard cost" />
+          <Kpi label="Stock Value" value={inr(stockValue)} icon={Wallet} tint="from-emerald-500/15 to-emerald-500/0" iconClass="text-emerald-500" hint="On-hand + in-transit at standard cost" />
           <Kpi label={`Spend · ${RANGE_LABEL[range]}`} value={inr(spendCur)} delta={delta(spendCur, spendPrev)} icon={IndianRupee} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" />
           <Kpi label="POs Raised" value={posInPeriod.toString()} delta={delta(posInPeriod, posPrev)} icon={ShoppingCart} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" />
           <Kpi label="GRNs Posted" value={grnsInPeriod.toString()} delta={delta(grnsInPeriod, grnsPrev)} icon={Truck} tint="from-cyan-500/15 to-cyan-500/0" iconClass="text-cyan-500" />
