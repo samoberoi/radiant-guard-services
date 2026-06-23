@@ -323,7 +323,8 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                 <SelectContent>
                   {demands.map((d) => {
                     const br = branches.find((b) => b.id === d.branch_id);
-                    return <SelectItem key={d.id} value={d.id}>{d.demand_number} → {br ? `${br.code} ${br.name}` : "Branch"}</SelectItem>;
+                    const label = br ? [br.code, br.name].filter(Boolean).join(" – ") : "Branch";
+                    return <SelectItem key={d.id} value={d.id}>{d.demand_number} → {label}</SelectItem>;
                   })}
                 </SelectContent>
               </Select>
