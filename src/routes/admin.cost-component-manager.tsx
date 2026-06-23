@@ -91,6 +91,8 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
     notes: String(r.notes ?? ""),
     enabled: Boolean(r.enabled ?? true),
     sort_order: Number(r.sort_order ?? 0),
+    deduction_calc_type:
+      (String(r.deduction_calc_type ?? "earned_salary") as "earned_salary" | "fixed_amount"),
   };
 }
 
