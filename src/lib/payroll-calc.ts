@@ -540,15 +540,25 @@ export function computeWages(
   // flat monthly recovery, LWF is a flat statutory monthly contribution.
   // Management Fee is intentionally NOT fixed — it prorates by T Days
   // like other earnings/contributions.
-  const isFixedItem = (name: string) =>
-    /\buniform\b/i.test(name) ||
-    /\blwf\b/i.test(name) ||
-    /labour\s*welfare/i.test(name);
+  // A row is treated as a fixed (non-prorated) deduction/contribution when
+  // its configured deduction_calc_type is 'fixed_amount'. Legacy fallback:
+  // when the row has no flag set (older contracts), use the historical
+  // name-based heuristic so reproductions remain identical.
+  const isFixedItem = (i: BenefitLike) => {
+    if (i.deductionCalcType === "fixed_amount") return true;
+    if (i.deductionCalcType === "earned_salary") return false;
+    const n = i.name;
+    return (
+      /\buniform\b/i.test(n) ||
+      /\blwf\b/i.test(n) ||
+      /labour\s*welfare/i.test(n)
+    );
+  };
   const scaleItemsRespectingFixed = (items: BenefitLike[]): WageComponent[] =>
     items.map((i) => ({
       ...i,
       name: i.name,
-      amount: isFixedItem(i.name)
+      amount: isFixedItem(i)
         ? round2(Number(i.amount) || 0)
         : round2((Number(i.amount) || 0) * ratio),
     }));
