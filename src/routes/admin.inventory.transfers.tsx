@@ -431,7 +431,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Close</Button>
-          {isDraft && <Button onClick={initiateTransfer} disabled={saving || !demandId}>{saving ? "Initiating…" : "Initiate Transfer"}</Button>}
+          {isDraft && <Button onClick={initiateTransfer} disabled={saving || !demandId || !sourceId || overDispatchLines.length > 0}>{saving ? "Initiating…" : overDispatchLines.length > 0 ? "Insufficient stock" : "Initiate Transfer"}</Button>}
         </DialogFooter>
 
       </DialogContent>
