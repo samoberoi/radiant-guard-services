@@ -551,12 +551,14 @@ export function computeWages(
     components,
     resource.components,
     ratio,
+    { useContractBase: true },
   );
   const employerEpfAmount = benefitAmountFromConfig(
     employerEpfItem,
     components,
     resource.components,
     ratio,
+    { useContractBase: true },
   );
 
   // Only the FIRST EPF-named row carries the statutory amount; any other
