@@ -197,23 +197,29 @@ function DemandsPage() {
   );
 }
 
-function DemandFormDialog({ open, onOpenChange, initial, branchId, branchLabel, isFieldOfficer, items, onSaved }: {
+function DemandFormDialog({ open, onOpenChange, initial, branchId, branchLabel, isFieldOfficer, branches, items, onSaved }: {
   open: boolean; onOpenChange: (o: boolean) => void; initial: Demand | null;
-  branchId: string; branchLabel: string; isFieldOfficer: boolean; items: Item[]; onSaved: () => void;
+  branchId: string; branchLabel: string; isFieldOfficer: boolean; branches: Branch[]; items: Item[]; onSaved: () => void;
 }) {
   const [demandDate, setDemandDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
-  const [source, setSource] = useState<"warehouse" | "branch">("warehouse");
+  // For FO: "warehouse" or a branch id. For others: always "warehouse".
+  const [source, setSource] = useState<string>("warehouse");
   const [saving, setSaving] = useState(false);
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  const branchMap = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
 
   useResetOnOpen(open, async () => {
     if (initial) {
       setDemandDate(initial.demand_date);
       setNotes(initial.notes ?? "");
-      setSource((initial.fulfillment_source as "warehouse" | "branch") ?? "warehouse");
+      if ((initial.fulfillment_source ?? "warehouse") === "branch") {
+        setSource(initial.branch_id);
+      } else {
+        setSource("warehouse");
+      }
       const { data } = await supabase.from("inv_demand_lines" as never).select("*").eq("demand_id", initial.id).order("sort_order");
       setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => ({
         id: String(r.id),
