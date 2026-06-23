@@ -79,12 +79,32 @@ const inr = (n: number) =>
     : n.toLocaleString("en-IN", { maximumFractionDigits: 0 }));
 
 export function InventoryOwnerDashboard() {
+  const scope = useUserBranchScope();
   const [range, setRange] = useState<Range>("30d");
   const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [q, setQ] = useState("");
 
   const w = useMemo(() => rangeWindow(range), [range]);
+
+  // Field officers mapped to the scoped branch (for branch-scoped users)
+  const scopeAssignmentsQ = useQuery({
+    queryKey: ["dash2", "scope-assignments", scope.branchId],
+    enabled: scope.isScoped && !!scope.branchId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("employee_scope_assignments" as never)
+        .select("candidate_id,scope_type,scope_id")
+        .eq("scope_type", "branch")
+        .eq("scope_id", scope.branchId as string);
+      return (data as unknown as { candidate_id: string }[]) ?? [];
+    },
+  });
+  const allowedFoIds = useMemo(
+    () => new Set((scopeAssignmentsQ.data ?? []).map((a) => a.candidate_id)),
+    [scopeAssignmentsQ.data],
+  );
+
 
   // ===== queries =====
   const balancesQ = useQuery({ queryKey: ["dash2", "balances"], queryFn: async () => {
@@ -152,24 +172,49 @@ export function InventoryOwnerDashboard() {
     if (error) throw error; return (data as unknown as { id: string; status: string }[]) ?? [];
   }});
 
-  const items = itemsQ.data ?? [];
+  const itemsRaw = itemsQ.data ?? [];
   const cats = catsQ.data ?? [];
   const sizes = sizesQ.data ?? [];
-  const balances = balancesQ.data ?? [];
-  const vendors = vendorsQ.data ?? [];
-  const rateCards = rateCardsQ.data ?? [];
-  const pos = poQ.data ?? [];
+  const balancesRaw = balancesQ.data ?? [];
+  const vendorsRaw = vendorsQ.data ?? [];
+  const rateCardsRaw = rateCardsQ.data ?? [];
+  const posRaw = poQ.data ?? [];
   const poLines = poLinesQ.data ?? [];
   const cands = candsQ.data ?? [];
   const desigs = desigQ.data ?? [];
-  const branches = branchesQ.data ?? [];
-  const grns = grnQ.data ?? [];
-  const wos = woQ.data ?? [];
-  const whs = whsQ.data ?? [];
-  const transfers = transfersQ.data ?? [];
-  const issuances = issuancesQ.data ?? [];
-  
+  const branchesRaw = branchesQ.data ?? [];
+  const grnsRaw = grnQ.data ?? [];
+  const wosRaw = woQ.data ?? [];
+  const whsRaw = whsQ.data ?? [];
+  const transfersRaw = transfersQ.data ?? [];
+  const issuancesRaw = issuancesQ.data ?? [];
+
+  // ===== Branch-scope hard-filter =====
+  // When the user is locked to a single branch, strip everything that does
+  // not belong to that branch (or its mapped field officers).
+  const items = itemsRaw;
+  const balances = useMemo(() => {
+    if (!scope.isScoped || !scope.branchId) return balancesRaw;
+    return balancesRaw.filter((b) =>
+      (b.location_type === "branch" && b.location_id === scope.branchId) ||
+      (b.location_type === "field_officer" && allowedFoIds.has(b.location_id)),
+    );
+  }, [balancesRaw, scope.isScoped, scope.branchId, allowedFoIds]);
+  const vendors = scope.isScoped ? [] : vendorsRaw;
+  const rateCards = scope.isScoped ? [] : rateCardsRaw;
+  const pos = scope.isScoped ? [] : posRaw;
+  const grns = scope.isScoped ? [] : grnsRaw;
+  const whs = scope.isScoped ? [] : whsRaw;
+  const branches = useMemo(
+    () => (scope.isScoped && scope.branchId ? branchesRaw.filter((b) => b.id === scope.branchId) : branchesRaw),
+    [branchesRaw, scope.isScoped, scope.branchId],
+  );
+  const wos = wosRaw;
+  const transfers = transfersRaw;
+  const issuances = issuancesRaw;
+
   const { canSub } = useCurrentPermissions();
+
 
   const totalStockQty = useMemo(() => balances.reduce((s, b) => s + Math.max(0, Number(b.qty || 0)), 0), [balances]);
   const recoveryCur = useMemo(() => wos.filter((x) => new Date(x.writeoff_date) >= w.from && new Date(x.writeoff_date) <= w.to).reduce((s, x) => s + Number(x.recovery_amount || 0), 0), [wos, w]);
@@ -409,20 +454,22 @@ export function InventoryOwnerDashboard() {
           ))}
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-            <SelectTrigger className="h-9 w-[200px]"><SelectValue placeholder="Warehouse / Branch" /></SelectTrigger>
-            <SelectContent className="max-h-[320px]">
-              <SelectItem value="all">All warehouses and branches ({whs.length + branches.length})</SelectItem>
-              {whs.length > 0 && (
-                <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Warehouses</div>
-              )}
-              {whs.map((wh) => <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>)}
-              {branches.length > 0 && (
-                <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Branches</div>
-              )}
-              {branches.map((b) => <SelectItem key={b.id} value={`branch:${b.id}`}>{b.name}{b.code ? ` (${b.code})` : ""}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          {!scope.isScoped && (
+            <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
+              <SelectTrigger className="h-9 w-[200px]"><SelectValue placeholder="Warehouse / Branch" /></SelectTrigger>
+              <SelectContent className="max-h-[320px]">
+                <SelectItem value="all">All warehouses and branches ({whs.length + branches.length})</SelectItem>
+                {whs.length > 0 && (
+                  <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Warehouses</div>
+                )}
+                {whs.map((wh) => <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>)}
+                {branches.length > 0 && (
+                  <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Branches</div>
+                )}
+                {branches.map((b) => <SelectItem key={b.id} value={`branch:${b.id}`}>{b.name}{b.code ? ` (${b.code})` : ""}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          )}
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="h-9 w-[160px]"><SelectValue placeholder="Category" /></SelectTrigger>
             <SelectContent>

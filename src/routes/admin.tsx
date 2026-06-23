@@ -65,6 +65,7 @@ type LeafItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   search?: Record<string, unknown>;
+  sub?: string; // optional sub-module key for RBAC filtering
 };
 
 type GroupItem = {
@@ -107,17 +108,17 @@ const assetsChildren: LeafItem[] = [
 
 const inventoryChildren: LeafItem[] = [
   { to: "/admin/inventory", label: "Inventory Command Center", icon: LayoutDashboard },
-  { to: "/admin/inventory/items", label: "Products", icon: PackageOpen },
-  { to: "/admin/inventory/vendors", label: "Vendors", icon: ShoppingBag },
-  { to: "/admin/inventory/warehouses", label: "Warehouses", icon: Warehouse },
-  { to: "/admin/inventory/purchase-orders", label: "Purchase Orders", icon: FileText },
-  { to: "/admin/inventory/demands", label: "Demands", icon: Inbox },
-  { to: "/admin/inventory/goods-receipts", label: "Delivery Challans", icon: ClipboardList },
-  { to: "/admin/inventory/transfers", label: "Transfers", icon: Boxes },
-  { to: "/admin/inventory/issuances", label: "Issuances", icon: UserPlus },
-  { to: "/admin/inventory/write-offs", label: "Write-offs", icon: ShieldCheck },
-  { to: "/admin/inventory/stock", label: "Stock Report", icon: Wallet },
-  { to: "/admin/inventory/rate-cards", label: "Vendor Rate Cards", icon: FileText },
+  { to: "/admin/inventory/items", label: "Products", icon: PackageOpen, sub: "item_master" },
+  { to: "/admin/inventory/vendors", label: "Vendors", icon: ShoppingBag, sub: "vendors" },
+  { to: "/admin/inventory/warehouses", label: "Warehouses", icon: Warehouse, sub: "warehouses" },
+  { to: "/admin/inventory/purchase-orders", label: "Purchase Orders", icon: FileText, sub: "purchase_orders" },
+  { to: "/admin/inventory/demands", label: "Demands", icon: Inbox, sub: "demands" },
+  { to: "/admin/inventory/goods-receipts", label: "Delivery Challans", icon: ClipboardList, sub: "goods_receipts" },
+  { to: "/admin/inventory/transfers", label: "Transfers", icon: Boxes, sub: "transfers" },
+  { to: "/admin/inventory/issuances", label: "Issuances", icon: UserPlus, sub: "issuances" },
+  { to: "/admin/inventory/write-offs", label: "Write-offs", icon: ShieldCheck, sub: "write_offs" },
+  { to: "/admin/inventory/stock", label: "Stock Report", icon: Wallet, sub: "stock_report" },
+  { to: "/admin/inventory/rate-cards", label: "Vendor Rate Cards", icon: FileText, sub: "rate_cards" },
 ];
 
 const payrollChildren: LeafItem[] = [
@@ -135,7 +136,7 @@ function AdminLayout() {
   const navigate = useNavigate();
   const { user, logout, isReady } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { can, isLoading: permsLoading, isSuperAdmin, roleKey } = useCurrentPermissions();
+  const { can, canSub, isLoading: permsLoading, isSuperAdmin, roleKey } = useCurrentPermissions();
   const dashboardHref =
     roleKey === "field_officer" && !isSuperAdmin ? "/admin/field-dashboard" : "/admin/dashboard";
 
@@ -286,9 +287,17 @@ function AdminLayout() {
     !can("attendance") &&
     !can("payroll") &&
     !can("invoice");
+  const filteredInventoryChildren = useMemo(
+    () =>
+      isSuperAdmin
+        ? inventoryChildren
+        : inventoryChildren.filter((c) => !c.sub || canSub("inventory", c.sub)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isSuperAdmin, permsLoading, roleKey],
+  );
   const visibleGroups = (() => {
     if (isInventoryOnly) {
-      return inventoryChildren.map<GroupItem>((c, idx) => ({
+      return filteredInventoryChildren.map<GroupItem>((c, idx) => ({
         key: c.to,
         label: c.label,
         icon: c.icon,
@@ -297,7 +306,9 @@ function AdminLayout() {
         exact: idx === 0,
       }));
     }
-    return groups.filter((g) => !g.module || can(g.module));
+    return groups
+      .filter((g) => !g.module || can(g.module))
+      .map((g) => (g.key === "inventory" ? { ...g, children: filteredInventoryChildren } : g));
   })();
   const isGroupActive = (g: GroupItem) =>
     (g.activePrefixes ?? []).some((p) => {
