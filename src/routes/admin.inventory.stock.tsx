@@ -162,23 +162,32 @@ function StockPage() {
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search item or location…" className="h-10 rounded-lg pl-9" />
           </div>
-          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as "all" | "warehouse" | "branch"); setSpecificFilter("all"); setFoFilter("all"); }}>
-            <SelectTrigger className="h-10 w-44 rounded-lg"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All locations</SelectItem>
-              <SelectItem value="warehouse">Warehouses</SelectItem>
-              <SelectItem value="branch">Branches</SelectItem>
-            </SelectContent>
-          </Select>
-          {typeFilter !== "all" && (
-            <Select value={specificFilter} onValueChange={(v) => { setSpecificFilter(v); setFoFilter("all"); }}>
-              <SelectTrigger className="h-10 w-56 rounded-lg"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All {typeFilter === "warehouse" ? "warehouses" : "branches"}</SelectItem>
-                {specificOptions.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+          {scope.isScoped ? (
+            <div className="flex h-10 items-center rounded-lg border border-border bg-secondary/40 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Branch: {scope.branchLabel || "—"}
+            </div>
+          ) : (
+            <>
+              <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v as "all" | "warehouse" | "branch"); setSpecificFilter("all"); setFoFilter("all"); }}>
+                <SelectTrigger className="h-10 w-44 rounded-lg"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All locations</SelectItem>
+                  <SelectItem value="warehouse">Warehouses</SelectItem>
+                  <SelectItem value="branch">Branches</SelectItem>
+                </SelectContent>
+              </Select>
+              {typeFilter !== "all" && (
+                <Select value={specificFilter} onValueChange={(v) => { setSpecificFilter(v); setFoFilter("all"); }}>
+                  <SelectTrigger className="h-10 w-56 rounded-lg"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All {typeFilter === "warehouse" ? "warehouses" : "branches"}</SelectItem>
+                    {specificOptions.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            </>
           )}
+
           <Select value={foFilter} onValueChange={setFoFilter}>
             <SelectTrigger className="h-10 w-56 rounded-lg"><SelectValue placeholder="Field officer" /></SelectTrigger>
             <SelectContent>
