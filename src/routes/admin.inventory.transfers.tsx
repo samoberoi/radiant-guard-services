@@ -306,47 +306,6 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
   }
 
 
-
-  async function receive() {
-    if (!initial) return;
-    if (lines.some((l) => l.received_qty > l.dispatched_qty)) { toast.error("Received cannot exceed dispatched"); return; }
-    if (!(await confirmAction({ title: "Acknowledge receipt?", description: "Stock will be added to the destination location.", confirmText: "Receive" }))) return;
-    setSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      // Update line received qty
-      for (const l of lines) {
-        if (l.id) await supabase.from("inv_transfer_lines" as never).update({ received_qty: l.received_qty, variance_reason: l.variance_reason } as never).eq("id", l.id);
-      }
-      await supabase.from("inv_transfers" as never).update({
-        status: "acknowledged", received_by: user?.id ?? null, received_at: new Date().toISOString(),
-      } as never).eq("id", initial.id);
-      // Post IN at destination for received qty
-      await postMovements(lines.filter((l) => l.received_qty > 0).map((l) => ({
-        movement_type: "TRANSFER_IN", location_type: destType, location_id: destId,
-        item_id: l.item_id, size_value: l.size_value, qty_change: l.received_qty,
-        reference_type: "transfer", reference_id: initial.id,
-      })));
-      // If variance, post adjustment-style write off at scrap for the missing qty (already deducted from source, never reaches destination)
-      const losses = lines.filter((l) => l.dispatched_qty - l.received_qty > 0).map((l) => ({
-        movement_type: "TRANSIT_LOSS" as const,
-        location_type: "scrap" as LocationType,
-        location_id: initial.id,
-        item_id: l.item_id, size_value: l.size_value, qty_change: l.dispatched_qty - l.received_qty,
-        reference_type: "transfer", reference_id: initial.id,
-        notes: l.variance_reason,
-      }));
-      if (losses.length) await postMovements(losses);
-      void logActivity({ module: MODULE, action: "receive", entityType: ENTITY, entityId: initial.id, entityLabel: initial.transfer_number });
-      toast.success("Receipt acknowledged");
-      onSaved(); onOpenChange(false);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
