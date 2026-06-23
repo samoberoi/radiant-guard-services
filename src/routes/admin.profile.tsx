@@ -344,8 +344,8 @@ function ProfilePage() {
         .from("inv_issuances")
         .select("id,issuance_number,issuance_date,status,issuance_type")
         .eq("destination_id", profile!.id)
-        .in("destination_type", ["guard", "candidate", "employee"])
-        .in("status", ["issued", "acknowledged"])
+        .in("destination_type", ["guard", "security_guard", "field_officer", "candidate", "employee"])
+        .in("status", ["issued", "acknowledged", "completed"])
         .order("issuance_date", { ascending: false });
       if (iErr) throw iErr;
       const ids = (issuances ?? []).map((r: any) => r.id);
