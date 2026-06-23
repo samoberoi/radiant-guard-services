@@ -13,6 +13,8 @@ export type UserBranchScope = {
  * Returns the branch scope for the current logged-in user.
  * - Super admin: not scoped (sees everything).
  * - Users with a `branch` row in `employee_scope_assignments`: scoped to that branch.
+ * - Field officers / branch managers / guards without a direct branch row:
+ *   derived from any `unit` scope row via units.branch_id.
  * - Everyone else: not scoped.
  */
 export function useUserBranchScope(): UserBranchScope {
@@ -26,20 +28,60 @@ export function useUserBranchScope(): UserBranchScope {
     queryFn: async () => {
       const { data: cand, error: cErr } = await supabase
         .from("candidates")
-        .select("id")
+        .select("id,role_key")
         .eq("mobile", phone)
         .maybeSingle();
       if (cErr) throw cErr;
       if (!cand?.id) return null;
-      const { data, error } = await supabase
+      const roleKey = (cand as { role_key?: string }).role_key ?? "";
+      const branchScopedRoles = new Set([
+        "branch_manager",
+        "field_officer",
+        "guard",
+        "security_guard",
+        "inventory_manager",
+      ]);
+
+      // 1) Direct branch scope row wins.
+      const { data: direct, error: dErr } = await supabase
         .from("employee_scope_assignments")
         .select("scope_id,scope_label")
         .eq("candidate_id", cand.id)
         .eq("scope_type", "branch")
         .limit(1)
         .maybeSingle();
-      if (error) throw error;
-      return data ?? null;
+      if (dErr) throw dErr;
+      if (direct?.scope_id) return direct;
+
+      // 2) Fallback for branch-scoped roles: derive from any unit scope row.
+      if (branchScopedRoles.has(roleKey)) {
+        const { data: unitRows, error: uErr } = await supabase
+          .from("employee_scope_assignments")
+          .select("scope_id")
+          .eq("candidate_id", cand.id)
+          .eq("scope_type", "unit");
+        if (uErr) throw uErr;
+        const unitIds = (unitRows ?? []).map((r: { scope_id: string }) => r.scope_id).filter(Boolean);
+        if (unitIds.length) {
+          const { data: units, error: unErr } = await supabase
+            .from("units")
+            .select("branch_id")
+            .in("id", unitIds);
+          if (unErr) throw unErr;
+          const branchId = (units ?? []).map((u: { branch_id: string | null }) => u.branch_id).find((b): b is string => !!b);
+          if (branchId) {
+            const { data: br } = await supabase
+              .from("branches")
+              .select("name,code")
+              .eq("id", branchId)
+              .maybeSingle();
+            const b = br as { name?: string; code?: string } | null;
+            const label = b ? `${b.code ?? ""}${b.code && b.name ? " – " : ""}${b.name ?? ""}`.trim() : "";
+            return { scope_id: branchId, scope_label: label };
+          }
+        }
+      }
+      return null;
     },
   });
 
