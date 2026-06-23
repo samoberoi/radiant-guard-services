@@ -412,7 +412,7 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
           <div className="grid gap-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          <CancelButton saving={saving} onClose={() => onOpenChange(false)} />
           <Button onClick={save} disabled={saving || !poId}>{saving ? "Posting…" : "Post Challan"}</Button>
         </DialogFooter>
       </DialogContent>
