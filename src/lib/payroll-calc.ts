@@ -158,6 +158,10 @@ export type WageComputation = {
   totalEmployerContributions: number;
   netPay: number;
   employerCost: number;
+  otBaseAmount: number;
+  perDutyOtAmount: number;
+  otDuties: number;
+  totalOtAmount: number;
 };
 
 const ESI_NAME_RE = /\besi(c)?\b/i;
