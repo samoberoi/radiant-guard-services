@@ -391,6 +391,12 @@ function POFormDialog({
     }
     return m;
   }, [itemSizes]);
+  // Items quoted by the selected vendor (via rate cards). Empty vendor => no items.
+  const vendorItems = useMemo(() => {
+    if (!vendorId) return [] as Item[];
+    const ids = new Set(rateCards.filter((rc) => rc.vendor_id === vendorId).map((rc) => rc.item_id));
+    return items.filter((i) => ids.has(i.id));
+  }, [vendorId, rateCards, items]);
   // Line/header field edits lock once goods start arriving. Status toggle stays available unless cancelled.
   const readOnly = !!initial && !(initial.status === "draft" || initial.status === "open" || initial.status === "approved");
 
