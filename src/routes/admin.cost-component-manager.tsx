@@ -546,7 +546,10 @@ function CostComponentDialog({
     cap_flat_amount: capFlatAmount ? Number(capFlatAmount) : null,
     amount: amount ? Number(amount) : null,
     name,
+    fixed_calc_method: fixedCalcMethod,
+    fixed_duty_components: fixedDutyComponents,
   });
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
