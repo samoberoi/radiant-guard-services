@@ -208,7 +208,7 @@ function DemandsPage() {
                 );
               })}
               {!filtered.length && (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground">
                   <ClipboardList className="mx-auto mb-2 h-8 w-8 opacity-40" />No demands yet.
                 </td></tr>
               )}
