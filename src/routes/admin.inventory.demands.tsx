@@ -94,6 +94,22 @@ function DemandsPage() {
     },
   });
 
+  const requesterIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const d of demands) if (d.requester_candidate_id) s.add(d.requester_candidate_id);
+    return Array.from(s);
+  }, [demands]);
+  const { data: requesters = [] } = useQuery({
+    queryKey: ["inv", "demand-requesters", requesterIds.join(",")],
+    enabled: requesterIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("candidates" as never).select("id,full_name,role_key,employee_code").in("id", requesterIds);
+      if (error) throw error;
+      return (data as unknown as { id: string; full_name: string; role_key: string; employee_code: string | null }[]) ?? [];
+    },
+  });
+  const requesterMap = useMemo(() => new Map(requesters.map((r) => [r.id, r])), [requesters]);
+
   const branchMap = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
   const warehouseMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w])), [warehouses]);
   const [query, setQuery] = useState("");
