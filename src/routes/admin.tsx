@@ -116,6 +116,7 @@ const inventoryChildren: LeafItem[] = [
   { to: "/admin/inventory/goods-receipts", label: "Delivery Challans", icon: ClipboardList, sub: "goods_receipts" },
   { to: "/admin/inventory/transfers", label: "Transfers", icon: Boxes, sub: "transfers" },
   { to: "/admin/inventory/issuances", label: "Issuances", icon: UserPlus, sub: "issuances" },
+  { to: "/admin/inventory/collections", label: "Collections", icon: Inbox, sub: "collections" },
 
   { to: "/admin/inventory/stock", label: "Stock Report", icon: Wallet, sub: "stock_report" },
   { to: "/admin/inventory/stock-ledger", label: "Stock Ledger", icon: Banknote, sub: "stock_ledger" },
