@@ -58,6 +58,7 @@ function rowToItem(r: Record<string, unknown>): Item {
     description: String(r.description ?? ""),
     enabled: Boolean(r.enabled ?? true),
     standard_cost: Number(r.standard_cost ?? 0),
+    standard_issue_price: Number(r.standard_issue_price ?? 0),
     last_purchase_price: r.last_purchase_price == null ? null : Number(r.last_purchase_price),
     last_purchase_vendor_id: r.last_purchase_vendor_id ? String(r.last_purchase_vendor_id) : null,
     last_purchase_at: r.last_purchase_at ? String(r.last_purchase_at) : null,
