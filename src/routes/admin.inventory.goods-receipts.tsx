@@ -486,6 +486,53 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: b
         }
       }
 
+      // Books-of-record passthrough: if vendor delivered to a final branch,
+      // auto-create a completed transfer (warehouse → branch) so books show:
+      //   IN at warehouse  →  OUT from warehouse  →  IN at branch
+      const acceptedForTransfer = lines.filter((l) => l.accepted_qty > 0);
+      let passthroughTransferId: string | null = null;
+      if (finalBranchId && acceptedForTransfer.length) {
+        const tn = await nextSeq("inv_transfer_number_seq");
+        const transferNumber = fmtNumber("TR", tn);
+        const { data: tIns, error: tErr } = await supabase.from("inv_transfers" as never).insert({
+          transfer_number: transferNumber,
+          source_type: "warehouse", source_id: po.destination_warehouse_id!,
+          destination_type: "branch", destination_id: finalBranchId,
+          linked_po_id: po.id,
+          transfer_date: receiptDate, status: "completed",
+          vehicle_number: vehicleNo, driver_name: "", driver_phone: "",
+          notes: `Auto-created from GRN ${grn_number} — vendor delivered direct to branch.`,
+          dispatched_by: user?.id ?? null, dispatched_at: new Date().toISOString(),
+          received_by: user?.id ?? null, received_at: new Date().toISOString(),
+        } as never).select("id").single();
+        if (tErr) throw tErr;
+        passthroughTransferId = (tIns as unknown as { id: string }).id;
+        const tLines = acceptedForTransfer.map((l, idx) => ({
+          transfer_id: passthroughTransferId, item_id: l.item_id, size_value: l.size_value,
+          dispatched_qty: l.accepted_qty, received_qty: l.accepted_qty, sort_order: idx,
+        }));
+        const { error: tlErr } = await supabase.from("inv_transfer_lines" as never).insert(tLines as never);
+        if (tlErr) throw tlErr;
+        // Leg 2: OUT from warehouse
+        await postMovements(acceptedForTransfer.map((l) => ({
+          movement_type: "TRANSFER_OUT", location_type: "warehouse" as LocationType,
+          location_id: po.destination_warehouse_id!,
+          item_id: l.item_id, size_value: l.size_value, qty_change: -l.accepted_qty,
+          reference_type: "transfer", reference_id: passthroughTransferId!,
+        })));
+        // Leg 3: IN at branch
+        await postMovements(acceptedForTransfer.map((l) => ({
+          movement_type: "TRANSFER_IN", location_type: "branch" as LocationType,
+          location_id: finalBranchId,
+          item_id: l.item_id, size_value: l.size_value, qty_change: l.accepted_qty,
+          reference_type: "transfer", reference_id: passthroughTransferId!,
+        })));
+        // Tag the GRN with the branch + transfer for downstream views
+        await supabase.from("inv_goods_receipts" as never).update({
+          branch_id: finalBranchId, transfer_id: passthroughTransferId,
+        } as never).eq("id", grnId);
+      }
+
 
       // Update PO status
       const { data: allLines } = await supabase.from("inv_po_lines" as never).select("ordered_qty,received_qty").eq("po_id", po.id);
@@ -496,7 +543,9 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: b
       await supabase.from("inv_purchase_orders" as never).update({ status: newStatus } as never).eq("id", po.id);
 
       void logActivity({ module: "Inventory Delivery Challans", action: "create", entityType: "inv_goods_receipts", entityId: grnId, entityLabel: grn_number });
-      toast.success(`GRN ${grn_number} posted — stock updated`);
+      toast.success(passthroughTransferId
+        ? `GRN ${grn_number} posted — warehouse credited, then passed through to branch`
+        : `GRN ${grn_number} posted — stock updated`);
       onSaved();
       onOpenChange(false);
     } catch (e) {
