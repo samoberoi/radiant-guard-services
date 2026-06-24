@@ -266,6 +266,7 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
     setDescription(initial?.description ?? "");
     setEnabled(initial?.enabled ?? true);
     setStdCost(initial?.standard_cost ?? 0);
+    setIssuePrice(initial?.standard_issue_price ?? 0);
     setSizes([]); setOrigSizes([]);
     if (initial?.id) {
       const { data } = await supabase.from("inv_item_sizes" as never).select("id,size_value,reorder_level,enabled,sort_order").eq("item_id", initial.id).order("sort_order");
