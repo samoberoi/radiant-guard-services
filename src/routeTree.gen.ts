@@ -84,7 +84,6 @@ import { Route as AdminAttendanceUnitIdRouteImport } from './routes/admin.attend
 import { Route as AdminAssetsLoanManagerRouteImport } from './routes/admin.assets.loan-manager'
 import { Route as AdminAssetsInventoryRouteImport } from './routes/admin.assets.inventory'
 import { Route as AdminAssetsExpenseManagerRouteImport } from './routes/admin.assets.expense-manager'
-import { Route as AdminFormulaLabKindIdRouteImport } from './routes/admin.formula-lab.$kind.$id'
 import { Route as AdminCandidatesIdDetailsRouteImport } from './routes/admin.candidates.$id.details'
 
 const WelcomeRoute = WelcomeRouteImport.update({
@@ -481,11 +480,6 @@ const AdminAssetsExpenseManagerRoute =
     path: '/expense-manager',
     getParentRoute: () => AdminAssetsRoute,
   } as any)
-const AdminFormulaLabKindIdRoute = AdminFormulaLabKindIdRouteImport.update({
-  id: '/formula-lab/$kind/$id',
-  path: '/formula-lab/$kind/$id',
-  getParentRoute: () => AdminRoute,
-} as any)
 const AdminCandidatesIdDetailsRoute =
   AdminCandidatesIdDetailsRouteImport.update({
     id: '/candidates/$id/details',
@@ -570,7 +564,6 @@ export interface FileRoutesByFullPath {
   '/admin/invoice/': typeof AdminInvoiceIndexRoute
   '/admin/payroll/': typeof AdminPayrollIndexRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
-  '/admin/formula-lab/$kind/$id': typeof AdminFormulaLabKindIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -646,7 +639,6 @@ export interface FileRoutesByTo {
   '/admin/invoice': typeof AdminInvoiceIndexRoute
   '/admin/payroll': typeof AdminPayrollIndexRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
-  '/admin/formula-lab/$kind/$id': typeof AdminFormulaLabKindIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -726,7 +718,6 @@ export interface FileRoutesById {
   '/admin/invoice/': typeof AdminInvoiceIndexRoute
   '/admin/payroll/': typeof AdminPayrollIndexRoute
   '/admin/candidates/$id/details': typeof AdminCandidatesIdDetailsRoute
-  '/admin/formula-lab/$kind/$id': typeof AdminFormulaLabKindIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -807,7 +798,6 @@ export interface FileRouteTypes {
     | '/admin/invoice/'
     | '/admin/payroll/'
     | '/admin/candidates/$id/details'
-    | '/admin/formula-lab/$kind/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -883,7 +873,6 @@ export interface FileRouteTypes {
     | '/admin/invoice'
     | '/admin/payroll'
     | '/admin/candidates/$id/details'
-    | '/admin/formula-lab/$kind/$id'
   id:
     | '__root__'
     | '/'
@@ -962,7 +951,6 @@ export interface FileRouteTypes {
     | '/admin/invoice/'
     | '/admin/payroll/'
     | '/admin/candidates/$id/details'
-    | '/admin/formula-lab/$kind/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1499,13 +1487,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAssetsExpenseManagerRouteImport
       parentRoute: typeof AdminAssetsRoute
     }
-    '/admin/formula-lab/$kind/$id': {
-      id: '/admin/formula-lab/$kind/$id'
-      path: '/formula-lab/$kind/$id'
-      fullPath: '/admin/formula-lab/$kind/$id'
-      preLoaderRoute: typeof AdminFormulaLabKindIdRouteImport
-      parentRoute: typeof AdminRoute
-    }
     '/admin/candidates/$id/details': {
       id: '/admin/candidates/$id/details'
       path: '/candidates/$id/details'
@@ -1692,7 +1673,6 @@ interface AdminRouteChildren {
   AdminVehiclesRoute: typeof AdminVehiclesRouteWithChildren
   AdminContractsClientContractsRoute: typeof AdminContractsClientContractsRoute
   AdminCandidatesIdDetailsRoute: typeof AdminCandidatesIdDetailsRoute
-  AdminFormulaLabKindIdRoute: typeof AdminFormulaLabKindIdRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -1735,7 +1715,6 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminVehiclesRoute: AdminVehiclesRouteWithChildren,
   AdminContractsClientContractsRoute: AdminContractsClientContractsRoute,
   AdminCandidatesIdDetailsRoute: AdminCandidatesIdDetailsRoute,
-  AdminFormulaLabKindIdRoute: AdminFormulaLabKindIdRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)

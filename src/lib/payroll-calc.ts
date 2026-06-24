@@ -124,14 +124,6 @@ export type WageComponent = {
   includeInOt?: boolean | null;
   fixedCalcMethod?: FixedCalcMethod | null;
   fixedDutyComponents?: FixedDutyBucket[] | null;
-  /** canonical short tag (BASIC, DA …) used by the formula engine */
-  shortCode?: string | null;
-  /** engine formula JSON; when set with .mode it overrides legacy logic */
-  formula?: unknown;
-  /** engine day-driver flag */
-  dayDriver?: string | null;
-  /** flag: when true, this row's quantity adds to T Days */
-  countsInTDays?: boolean | null;
 };
 export type BenefitLike = {
   name: string;
@@ -144,9 +136,6 @@ export type BenefitLike = {
   deductionCalcType?: "earned_salary" | "fixed_amount" | null;
   fixedCalcMethod?: FixedCalcMethod | null;
   fixedDutyComponents?: FixedDutyBucket[] | null;
-  shortCode?: string | null;
-  formula?: unknown;
-  dayDriver?: string | null;
 };
 
 
@@ -685,72 +674,25 @@ export function computeWages(
   const employerCost =
     round2(earnedGross + totalEmployerContributions);
 
-  // ---- Engine override pass (Phase-4) ----
-  // For any row that carries an engine `formula`, re-compute its amount via
-  // the formula engine. Statutory ESI/EPF rules above still run first; the
-  // engine result wins ONLY when the user explicitly authored a formula.
-  // Rows without `formula.mode` are untouched, so legacy behaviour is
-  // preserved bit-for-bit when no engine fields are populated.
-  const componentMap: Record<string, number> = {};
-  for (const c of components) {
-    const tag = String(c.shortCode ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "")
-      || canonicalComponentName(c.name).toUpperCase().replace(/[^A-Z0-9]/g, "");
-    if (tag) componentMap[tag] = (componentMap[tag] ?? 0) + (Number(c.amount) || 0);
-  }
-  const contractComponentMap: Record<string, number> = {};
-  for (const c of resource.components) {
-    const tag = String(c.shortCode ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "")
-      || canonicalComponentName(c.name).toUpperCase().replace(/[^A-Z0-9]/g, "");
-    if (tag) contractComponentMap[tag] = (contractComponentMap[tag] ?? 0) + (Number(c.amount) || 0);
-  }
-  const engineCtx: _EvalContext = {
-    components: componentMap,
-    contractComponents: contractComponentMap,
-    pDays: totals.pDays,
-    otDays: totals.otDays,
-    phDays: totals.phDays,
-    otherPaidDays: totals.otherPaidDays,
-    tDays: totals.tDays,
-    baseDays,
-    perDay: perDayRate,
-    earnedGross,
-    gross: contractGross,
-  };
-  const applyEngine = <T extends WageComponent>(items: T[]): T[] =>
-    items.map((i) => hasEngineFormula(i as EngineRow)
-      ? { ...i, amount: resolveEngineAmount(i as EngineRow, engineCtx, i.amount) }
-      : i);
-  const componentsFinal = applyEngine(components);
-  const benefitsFinal = applyEngine(benefits);
-  const deductionsFinal = applyEngine(deductions);
-  const employerContributionsFinal = applyEngine(employerContributions);
-  const earnedGrossFinal = round2(componentsFinal.reduce((s, c) => s + (Number(c.amount) || 0), 0));
-  const totalDeductionsFinal = deductionsFinal.reduce((s, d) => s + d.amount, 0);
-  const totalEmployerContributionsFinal = employerContributionsFinal.reduce((s, d) => s + d.amount, 0);
-  const netPayFinal = round2(earnedGrossFinal - totalDeductionsFinal);
-  const employerCostFinal = round2(earnedGrossFinal + totalEmployerContributionsFinal);
-
   return {
     contractGross,
     perDayRate: round2(perDayRate),
     baseDays,
-    earnedGross: earnedGrossFinal,
-    ratio: contractGross > 0 ? earnedGrossFinal / contractGross : 0,
-    components: componentsFinal,
-    benefits: benefitsFinal,
-    deductions: deductionsFinal,
-    employerContributions: employerContributionsFinal,
-    totalDeductions: round2(totalDeductionsFinal),
-    totalEmployerContributions: round2(totalEmployerContributionsFinal),
-    netPay: netPayFinal,
-    employerCost: employerCostFinal,
+    earnedGross,
+    ratio,
+    components,
+    benefits,
+    deductions,
+    employerContributions,
+    totalDeductions: round2(totalDeductions),
+    totalEmployerContributions: round2(totalEmployerContributions),
+    netPay,
+    employerCost,
     otBaseAmount: round2(otBase),
     perDutyOtAmount: round2(perDutyOt),
     otDuties: round2(otDuties),
     totalOtAmount: otAmount,
   };
-  // Pre-engine fallback values kept here for diff transparency.
-  void netPay; void employerCost;
 }
 
 export function fmtINR(n: number): string {
@@ -760,48 +702,4 @@ export function fmtINR(n: number): string {
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(n);
-}
-
-// ---------------------------------------------------------------------------
-// Engine-aware resolver (Phase-4 hook for the customizable formula engine).
-//
-// Opt-in: callers pass a row with a `formula` jsonb + day_driver. If the row
-// has a non-empty formula, it is evaluated by the formula engine and that
-// value wins. Otherwise we fall back to whichever legacy value the caller
-// supplies. This lets payroll, contract previews and bulk imports adopt the
-// engine incrementally without breaking any existing data.
-// ---------------------------------------------------------------------------
-
-import {
-  evaluateFormula as _evaluateFormula,
-  type Formula as _Formula,
-  type EvalContext as _EvalContext,
-} from "./formula-engine";
-
-export type EngineRow = {
-  formula?: unknown;
-  day_driver?: string | null;
-};
-
-export function hasEngineFormula(row: EngineRow | null | undefined): boolean {
-  if (!row || !row.formula || typeof row.formula !== "object") return false;
-  const f = row.formula as { mode?: string };
-  return typeof f.mode === "string" && f.mode.length > 0;
-}
-
-/**
- * Resolve a component amount: engine if defined, otherwise legacy fallback.
- * `legacyAmount` is what the existing code already computed for this row.
- */
-export function resolveEngineAmount(
-  row: EngineRow | null | undefined,
-  ctx: _EvalContext,
-  legacyAmount: number,
-): number {
-  if (!hasEngineFormula(row)) return legacyAmount;
-  try {
-    return _evaluateFormula(row!.formula as _Formula, ctx);
-  } catch {
-    return legacyAmount;
-  }
 }
