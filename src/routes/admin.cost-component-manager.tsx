@@ -116,8 +116,16 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
 }
 
 
-function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "cap_flat_amount" | "amount"> & { name?: string }): string {
+function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "cap_flat_amount" | "amount"> & { name?: string; fixed_calc_method?: FixedCalcMethod; fixed_duty_components?: FixedDutyBucket[] }): string {
   if (c.calc_type === "fixed") {
+    if (c.fixed_calc_method === "per_duty") {
+      const buckets = (c.fixed_duty_components ?? [])
+        .map((b) => FIXED_DUTY_BUCKETS.find((x) => x.value === b)?.short ?? b)
+        .join(" + ") || "—";
+      const amt = c.amount != null && c.amount > 0 ? `₹${c.amount.toLocaleString("en-IN")}` : "amount";
+      return `${amt} ÷ Base Days × (${buckets}) · per-duty`;
+    }
+
     const isMgmt = /management\s*fee/i.test(c.name ?? "");
     if (isMgmt) {
       return c.amount != null && c.amount > 0
