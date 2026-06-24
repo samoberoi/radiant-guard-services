@@ -91,7 +91,7 @@ function StockPage() {
   );
 
   // ---------- Filters ----------
-  const [holderType, setHolderType] = useState<HolderType>("warehouse");
+  const [holderType, setHolderType] = useState<HolderType>("all");
   const [holderId, setHolderId] = useState<string>("all");
   const [q, setQ] = useState("");
 
