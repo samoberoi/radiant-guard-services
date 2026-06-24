@@ -105,8 +105,16 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
     sort_order: Number(r.sort_order ?? 0),
     deduction_calc_type:
       (String(r.deduction_calc_type ?? "earned_salary") as "earned_salary" | "fixed_amount"),
+    fixed_calc_method:
+      (String(r.fixed_calc_method ?? "flat") as FixedCalcMethod),
+    fixed_duty_components: Array.isArray(r.fixed_duty_components)
+      ? ((r.fixed_duty_components as string[]).filter((b) =>
+          FIXED_DUTY_BUCKETS.some((x) => x.value === b),
+        ) as FixedDutyBucket[])
+      : [],
   };
 }
+
 
 function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "cap_flat_amount" | "amount"> & { name?: string }): string {
   if (c.calc_type === "fixed") {
