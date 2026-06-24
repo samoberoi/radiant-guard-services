@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType } from "@/lib/inv-helpers";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+import { useDemandRequesters } from "@/lib/use-demand-requesters";
 
 
 export const Route = createFileRoute("/admin/inventory/transfers")({ component: TransfersPage });
