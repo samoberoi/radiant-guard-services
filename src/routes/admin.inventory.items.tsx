@@ -325,10 +325,13 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
               <Select value={unit} onValueChange={setUnit}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select>
             </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2"><Label>HSN Code</Label><Input value={hsn} onChange={(e) => setHsn(e.target.value)} placeholder="optional" /></div>
             <div className="grid gap-2"><Label>Reorder Level</Label><Input type="number" min={0} inputMode="numeric" value={reorder === 0 ? "" : reorder} onChange={(e) => setReorder(Number(e.target.value.replace(/^0+(?=\d)/, "")) || 0)} placeholder="0" /></div>
-            <div className="grid gap-2"><Label>Standard Cost ₹</Label><Input type="number" min={0} step="0.01" inputMode="decimal" value={stdCost === 0 ? "" : stdCost} onChange={(e) => setStdCost(Number(e.target.value.replace(/^0+(?=\d)/, "")) || 0)} placeholder="0.00" /><div className="text-[10px] text-muted-foreground">Auto-updated on GRN as weighted avg.</div></div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2"><Label>Purchase Cost ₹</Label><Input type="number" min={0} step="0.01" inputMode="decimal" value={stdCost === 0 ? "" : stdCost} onChange={(e) => setStdCost(Number(e.target.value.replace(/^0+(?=\d)/, "")) || 0)} placeholder="0.00" /><div className="text-[10px] text-muted-foreground">Auto-updated on GRN as weighted avg.</div></div>
+            <div className="grid gap-2"><Label>Standard Issue Price ₹</Label><Input type="number" min={0} step="0.01" inputMode="decimal" value={issuePrice === 0 ? "" : issuePrice} onChange={(e) => setIssuePrice(Number(e.target.value.replace(/^0+(?=\d)/, "")) || 0)} placeholder="0.00" /><div className="text-[10px] text-muted-foreground">Used when issuing to staff/guards.</div></div>
           </div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2"><div><div className="text-sm font-medium">Sized item</div><div className="text-xs text-muted-foreground">Has size variants (S/M/L, shoe numbers, etc.)</div></div><Switch checked={isSized} onCheckedChange={setIsSized} /></div>
           {isSized && (
