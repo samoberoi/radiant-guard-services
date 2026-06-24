@@ -217,7 +217,7 @@ function ItemsPage() {
                   </td>
                 </tr>
               ))}
-              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground">No items yet. Click "Add Item" to begin.</td></tr>}
+              {!filtered.length && <tr><td colSpan={10} className="px-5 py-12 text-center text-sm text-muted-foreground">No items yet. Click "Add Item" to begin.</td></tr>}
             </tbody>
           </table>
         </div>
