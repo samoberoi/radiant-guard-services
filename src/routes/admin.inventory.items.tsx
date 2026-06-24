@@ -32,6 +32,7 @@ type Item = {
   description: string;
   enabled: boolean;
   standard_cost: number;
+  standard_issue_price: number;
   last_purchase_price: number | null;
   last_purchase_vendor_id: string | null;
   last_purchase_at: string | null;
