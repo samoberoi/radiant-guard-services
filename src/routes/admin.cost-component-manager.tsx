@@ -174,7 +174,13 @@ function useCostComponents() {
     enabled: p.enabled,
     sort_order: p.sort_order,
     deduction_calc_type: p.deduction_calc_type,
+    fixed_calc_method: p.calc_type === "fixed" ? p.fixed_calc_method : "flat",
+    fixed_duty_components:
+      p.calc_type === "fixed" && p.fixed_calc_method === "per_duty"
+        ? p.fixed_duty_components
+        : [],
   });
+
 
   const addMut = useMutation({
     mutationFn: async (p: Payload) => {
