@@ -59,6 +59,7 @@ function StockLedgerPage() {
   const [holderId, setHolderId] = useState<string>("all");
   const [direction, setDirection] = useState<"all" | "in" | "out">("all");
   const [q, setQ] = useState("");
+  const [view, setView] = useState<"movement" | "item">("movement");
 
   // ------- Reference data -------
   const { data: items = [] } = useQuery({
