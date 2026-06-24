@@ -400,11 +400,9 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
               <Select value={demandId} onValueChange={(v) => loadDemand(v)} disabled={!demands.length}>
                 <SelectTrigger><SelectValue placeholder={demands.length ? "Pick a submitted branch demand" : "No branch demands awaiting transfer"} /></SelectTrigger>
                 <SelectContent>
-                  {demands.map((d) => {
-                    const br = branches.find((b) => b.id === d.branch_id);
-                    const label = br ? [br.code, br.name].filter(Boolean).join(" – ") : "Branch";
-                    return <SelectItem key={d.id} value={d.id}>{d.demand_number} → {label}</SelectItem>;
-                  })}
+                  {demands.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>{d.demand_number} → {demandLabel(d)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <p className="mt-1 text-[11px] text-muted-foreground">
