@@ -511,6 +511,35 @@ function StockLedgerPage() {
     XLSX.writeFile(wb, `stock-ledger-view-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
+  function downloadItemSummaryXlsx() {
+    const wb = XLSX.utils.book_new();
+    const scopeLine = role.isSuperAdmin
+      ? "All locations (Super Admin)"
+      : role.isFieldOfficer
+      ? "Field Officer (own + reporting guards)"
+      : scope.isScoped
+      ? `Branch — ${scope.branchLabel}`
+      : "All locations";
+    const aoa: (string | number)[][] = [
+      ["Stock Ledger — By Item (Opening · IN · OUT · Closing)"],
+      [`Period: ${fromDate} → ${toDate}  ·  Scope: ${scopeLine}`],
+      [],
+      ["Item Code", "Item", "Size", "Unit", "Opening", "IN (period)", "OUT (period)", "Closing", "Last Movement"],
+      ...itemRows.map((r) => [
+        r.item_code, r.item_name, r.size, r.unit,
+        r.opening, r.in_qty, r.out_qty, r.closing,
+        r.last_movement ? fmtWhen(r.last_movement) : "",
+      ]),
+      [],
+      ["TOTAL", "", "", "", itemTotals.opening, itemTotals.in_qty, itemTotals.out_qty, itemTotals.closing, ""],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [{ wch: 14 }, { wch: 30 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 20 }];
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } }];
+    XLSX.utils.book_append_sheet(wb, ws, "By Item");
+    XLSX.writeFile(wb, `stock-by-item-${fromDate}_to_${toDate}.xlsx`);
+  }
+
   return (
     <div>
       <PageHeader
