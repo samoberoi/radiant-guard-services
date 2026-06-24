@@ -348,6 +348,8 @@ function GRNPage() {
           onOpenChange={setOpen}
           branchId={scope.branchId ?? ""}
           transfers={incomingTransfers}
+          incomingPOs={incomingBranchPOs}
+          vendors={vendors}
           items={items}
           warehouses={warehouses}
           branches={branches}
