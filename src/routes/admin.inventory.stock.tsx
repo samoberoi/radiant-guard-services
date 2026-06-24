@@ -333,6 +333,7 @@ function StockPage() {
           <Select value={holderType} onValueChange={(v) => { setHolderType(v as HolderType); setHolderId("all"); }}>
             <SelectTrigger className="h-10 w-48 rounded-lg"><SelectValue /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">All locations</SelectItem>
               <SelectItem value="warehouse">Warehouses</SelectItem>
               <SelectItem value="branch">Branches</SelectItem>
               <SelectItem value="field_officer">Field Officers</SelectItem>
