@@ -340,17 +340,19 @@ function StockPage() {
               <SelectItem value="security_guard">Security Guards</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={holderId} onValueChange={setHolderId}>
-            <SelectTrigger className="h-10 w-64 rounded-lg"><SelectValue placeholder={`All ${HOLDER_LABEL[holderType].toLowerCase()}`} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All {HOLDER_LABEL[holderType].toLowerCase()}</SelectItem>
-              {holderOptions
-                .filter((o) => !visibleHolderIds || visibleHolderIds.has(o.id))
-                .map((o) => (
-                  <SelectItem key={o.id} value={o.id}>{o.name}{o.sub ? ` · ${o.sub}` : ""}</SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+          {holderType !== "all" && (
+            <Select value={holderId} onValueChange={setHolderId}>
+              <SelectTrigger className="h-10 w-64 rounded-lg"><SelectValue placeholder={`All ${HOLDER_LABEL[holderType].toLowerCase()}`} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All {HOLDER_LABEL[holderType].toLowerCase()}</SelectItem>
+                {holderOptions
+                  .filter((o) => !visibleHolderIds || visibleHolderIds.has(o.id))
+                  .map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}{o.sub ? ` · ${o.sub}` : ""}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          )}
           <div className="relative w-full sm:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search item or holder…" className="h-10 rounded-lg pl-9" />
