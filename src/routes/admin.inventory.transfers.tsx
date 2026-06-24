@@ -31,7 +31,8 @@ type Transfer = {
 type Warehouse = { id: string; name: string };
 type Branch = { id: string; name: string; code: string };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
-type Demand = { id: string; demand_number: string; branch_id: string; status: string };
+type Candidate = { id: string; full_name: string; employee_code: string; role_key: string };
+type Demand = { id: string; demand_number: string; branch_id: string | null; warehouse_id: string | null; requester_candidate_id: string | null; status: string };
 type DemandLine = { id: string; demand_id: string; item_id: string; size_value: string; requested_qty: number };
 type Line = { id?: string; item_id: string; size_value: string; requested_qty: number; dispatched_qty: number; received_qty: number; variance_reason: string };
 
@@ -70,19 +71,31 @@ function TransfersPage() {
     },
   });
   const { data: openDemands = [] } = useQuery({
-    queryKey: ["inv", "demands-open"],
+    queryKey: ["inv", "demands-open-branch"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("inv_demands" as never).select("id,demand_number,branch_id,status").in("status", ["submitted"]).order("demand_date", { ascending: false });
+      const { data, error } = await supabase
+        .from("inv_demands" as never)
+        .select("id,demand_number,branch_id,warehouse_id,requester_candidate_id,status")
+        .in("status", ["submitted"])
+        .not("branch_id", "is", null)
+        .order("demand_date", { ascending: false });
       if (error) throw error;
       return (data as unknown as Demand[]) ?? [];
     },
   });
 
+  const branchLabel = (id: string | null) => {
+    if (!id) return "—";
+    const b = branches.find((x) => x.id === id);
+    return b ? [b.code, b.name].filter(Boolean).join(" – ") : "—";
+  };
   const locName = (type: string, id: string): string => {
+    if (!id) return "—";
     if (type === "warehouse") return warehouses.find((w) => w.id === id)?.name ?? "—";
-    if (type === "branch") return branches.find((b) => b.id === id)?.name ?? "—";
+    if (type === "branch") return branchLabel(id);
     return "—";
   };
+  const demandLabel = (d: Demand): string => branchLabel(d.branch_id);
 
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -229,7 +242,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
     const d = demands.find((x) => x.id === id);
     if (!d) return;
     setDestType("branch");
-    setDestId(d.branch_id);
+    setDestId(d.branch_id ?? "");
     const { data, error } = await supabase.from("inv_demand_lines" as never).select("*").eq("demand_id", id).order("sort_order");
     if (error) { toast.error("Could not load demand lines"); return; }
     const rows = (data as unknown as DemandLine[]) ?? [];
