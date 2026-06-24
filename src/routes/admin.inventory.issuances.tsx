@@ -370,17 +370,34 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
     if (!d) return;
     const reqCand = d.requester_candidate_id ? candById.get(d.requester_candidate_id) : null;
     const isFoReq = reqCand && /field|fo|supervisor|officer/i.test(reqCand.role_key);
-    if (isFoReq && reqCand) {
-      setType("branch_to_fo");
-      setDestId(reqCand.id);
-    } else if (reqCand) {
-      setType("branch_to_guard");
-      setDestId(reqCand.id);
+    const isWarehouseDemand = !!d.warehouse_id;
+    if (isWarehouseDemand) {
+      // Warehouse → FO/Guard issuance
+      if (isFoReq && reqCand) {
+        setType("warehouse_to_fo");
+        setDestId(reqCand.id);
+      } else if (reqCand) {
+        setType("warehouse_to_guard");
+        setDestId(reqCand.id);
+      } else {
+        setType("warehouse_to_fo");
+        setDestId("");
+      }
+      setSourceId(d.warehouse_id ?? "");
     } else {
-      setType("branch_to_fo");
-      setDestId("");
+      // Branch → FO/Guard issuance
+      if (isFoReq && reqCand) {
+        setType("branch_to_fo");
+        setDestId(reqCand.id);
+      } else if (reqCand) {
+        setType("branch_to_guard");
+        setDestId(reqCand.id);
+      } else {
+        setType("branch_to_fo");
+        setDestId("");
+      }
+      setSourceId(branchScopeId ?? d.branch_id ?? "");
     }
-    setSourceId(branchScopeId ?? d.branch_id);
     const { data: dls } = await supabase.from("inv_demand_lines" as never)
       .select("item_id,size_value,requested_qty,fulfilled_qty")
       .eq("demand_id", did).order("sort_order");
