@@ -31,7 +31,8 @@ type Transfer = {
 type Warehouse = { id: string; name: string };
 type Branch = { id: string; name: string; code: string };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
-type Demand = { id: string; demand_number: string; branch_id: string; status: string };
+type Candidate = { id: string; full_name: string; employee_code: string; role_key: string };
+type Demand = { id: string; demand_number: string; branch_id: string | null; warehouse_id: string | null; requester_candidate_id: string | null; status: string };
 type DemandLine = { id: string; demand_id: string; item_id: string; size_value: string; requested_qty: number };
 type Line = { id?: string; item_id: string; size_value: string; requested_qty: number; dispatched_qty: number; received_qty: number; variance_reason: string };
 
