@@ -110,6 +110,9 @@ export function computeAttendanceTotals(
   return { pDays, otHours, otDays, phDays, otherPaidDays, tDays };
 }
 
+export type FixedCalcMethod = "flat" | "per_duty";
+export type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
+
 export type WageComponent = {
   name: string;
   amount: number;
@@ -119,6 +122,8 @@ export type WageComponent = {
   capAmount?: number | string | null;
   capFlatAmount?: number | string | null;
   includeInOt?: boolean | null;
+  fixedCalcMethod?: FixedCalcMethod | null;
+  fixedDutyComponents?: FixedDutyBucket[] | null;
 };
 export type BenefitLike = {
   name: string;
@@ -129,7 +134,10 @@ export type BenefitLike = {
   capAmount?: number | string | null;
   capFlatAmount?: number | string | null;
   deductionCalcType?: "earned_salary" | "fixed_amount" | null;
+  fixedCalcMethod?: FixedCalcMethod | null;
+  fixedDutyComponents?: FixedDutyBucket[] | null;
 };
+
 
 export type ContractResourceLike = {
   designationId: string;
