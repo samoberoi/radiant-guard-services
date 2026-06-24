@@ -188,7 +188,8 @@ function ItemsPage() {
                 <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Category</th>
                 <th className="px-5 py-3">Unit</th>
-                <th className="px-5 py-3 text-right">Std Cost</th>
+                <th className="px-5 py-3 text-right">Purchase Cost</th>
+                <th className="px-5 py-3 text-right">Std Issue Price</th>
                 <th className="px-5 py-3 text-right">Last Buy</th>
                 <th className="px-5 py-3 text-right">Reorder</th>
                 <th className="px-5 py-3">Status</th>
