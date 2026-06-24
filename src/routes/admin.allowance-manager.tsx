@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Coins, Download, Edit2, Plus, Search, Trash2, X } from "lucide-react";
+import { Calculator, Coins, Download, Edit2, Plus, Search, Trash2, X } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -328,6 +329,11 @@ function AllowanceManagerPage() {
                   </td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
+                      <Link to="/admin/formula-lab/$kind/$id" params={{ kind: "allowance", id: i.id }}>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-primary" aria-label="Formula">
+                          <Calculator className="h-4 w-4" />
+                        </Button>
+                      </Link>
                       <Button
                         size="sm"
                         variant="ghost"
