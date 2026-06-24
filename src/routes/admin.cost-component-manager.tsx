@@ -785,7 +785,10 @@ function CostComponentDialog({
                 enabled,
                 sort_order: Number(sortOrder) || 0,
                 deduction_calc_type: deductionCalcType,
+                fixed_calc_method: fixedCalcMethod,
+                fixed_duty_components: fixedDutyComponents,
               });
+
               setSaving(false);
               if (err) toast.error(err);
               else onOpenChange(false);
