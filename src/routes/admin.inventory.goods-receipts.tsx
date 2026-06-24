@@ -744,8 +744,7 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, incoming
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
-  const [challanNo, setChallanNo] = useState("");
-  const [vehicleNo, setVehicleNo] = useState("");
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [saving, setSaving] = useState(false);
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
@@ -761,7 +760,7 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, incoming
 
   useResetOnOpen(open, async () => {
     setSourceKey(""); setReceiptDate(new Date().toISOString().slice(0, 10));
-    setNotes(""); setInvoiceNo(""); setChallanNo(""); setVehicleNo(""); setLines([]);
+    setNotes(""); setInvoiceNo(""); setInvoiceFile(null); setLines([]);
   });
 
   const kind: "transfer" | "po" | "" = sourceKey.startsWith("t:") ? "transfer" : sourceKey.startsWith("p:") ? "po" : "";
@@ -822,14 +821,23 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, incoming
         grn_number, po_id: selectedPO!.id, vendor_id: selectedPO!.vendor_id, warehouse_id: null,
         transfer_id: null, demand_id: null,
         branch_id: branchId, kind: "po",
-        receipt_date: receiptDate, vendor_invoice_number: invoiceNo, vendor_challan_number: challanNo,
-        vehicle_number: vehicleNo, notes, status: "received",
+        receipt_date: receiptDate, vendor_invoice_number: invoiceNo, vendor_challan_number: "",
+        vehicle_number: "", notes, status: "received",
         received_by: user?.id ?? null, received_at: new Date().toISOString(),
       };
 
       const { data: ins, error } = await supabase.from("inv_goods_receipts" as never).insert(grnInsert as never).select("id").single();
       if (error) throw error;
       const grnId = (ins as unknown as { id: string }).id;
+
+      // Upload vendor invoice file if provided (PO receipts only)
+      if (selectedPO && invoiceFile) {
+        const ext = invoiceFile.name.split(".").pop() || "pdf";
+        const path = `${grnId}/${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("vendor-invoices").upload(path, invoiceFile, { upsert: true, contentType: invoiceFile.type });
+        if (upErr) throw upErr;
+        await supabase.from("inv_goods_receipts" as never).update({ vendor_invoice_url: path } as never).eq("id", grnId);
+      }
 
       const linesPayload = lines.map((l, idx) => ({
         grn_id: grnId, po_line_id: l.po_line_id, item_id: l.item_id, size_value: l.size_value,
@@ -986,23 +994,24 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, incoming
             </div>
             {selectedPO && (
               <div className="grid gap-2">
-                <Label>Vehicle No.</Label>
-                <Input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} placeholder="Optional" />
+                <Label>Vendor Invoice No.</Label>
+                <Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} placeholder="Optional" />
               </div>
             )}
           </div>
           {selectedPO && (
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="grid gap-2">
-                <Label>Vendor Invoice No.</Label>
-                <Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} placeholder="Optional" />
-              </div>
-              <div className="grid gap-2">
-                <Label>Vendor Challan No.</Label>
-                <Input value={challanNo} onChange={(e) => setChallanNo(e.target.value)} placeholder="Optional" />
-              </div>
+            <div className="grid gap-2">
+              <Label>Vendor Invoice File</Label>
+              <Input
+                type="file"
+                accept="application/pdf,image/*"
+                onChange={(e) => setInvoiceFile(e.target.files?.[0] ?? null)}
+                className="h-10 file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-secondary/80"
+              />
+              {invoiceFile && <p className="text-xs text-muted-foreground">{invoiceFile.name} ({Math.round(invoiceFile.size / 1024)} KB)</p>}
             </div>
           )}
+
 
           {lines.length > 0 && (
             <div className="overflow-x-clip rounded-xl border border-border">
