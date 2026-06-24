@@ -110,6 +110,9 @@ export function computeAttendanceTotals(
   return { pDays, otHours, otDays, phDays, otherPaidDays, tDays };
 }
 
+export type FixedCalcMethod = "flat" | "per_duty";
+export type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
+
 export type WageComponent = {
   name: string;
   amount: number;
@@ -119,6 +122,8 @@ export type WageComponent = {
   capAmount?: number | string | null;
   capFlatAmount?: number | string | null;
   includeInOt?: boolean | null;
+  fixedCalcMethod?: FixedCalcMethod | null;
+  fixedDutyComponents?: FixedDutyBucket[] | null;
 };
 export type BenefitLike = {
   name: string;
@@ -129,7 +134,10 @@ export type BenefitLike = {
   capAmount?: number | string | null;
   capFlatAmount?: number | string | null;
   deductionCalcType?: "earned_salary" | "fixed_amount" | null;
+  fixedCalcMethod?: FixedCalcMethod | null;
+  fixedDutyComponents?: FixedDutyBucket[] | null;
 };
+
 
 export type ContractResourceLike = {
   designationId: string;
@@ -395,12 +403,15 @@ export function applyPtToWageComputation(
   };
 }
 
-function scaleItems(items: BenefitLike[], ratio: number): WageComponent[] {
+function scaleItems(items: BenefitLike[], ratio: number, perDuty?: (i: BenefitLike) => number): WageComponent[] {
   return items.map((i) => ({
     ...i,
     name: i.name,
-    amount: round2((Number(i.amount) || 0) * ratio),
+    amount: i.fixedCalcMethod === "per_duty" && perDuty
+      ? perDuty(i)
+      : round2((Number(i.amount) || 0) * ratio),
   }));
+
 }
 
 function benefitAmountFromConfig(
@@ -555,17 +566,43 @@ export function computeWages(
       /labour\s*welfare/i.test(n)
     );
   };
+  // Per-duty proration for fixed-amount components (e.g. WC Policy):
+  //   perDuty = configuredAmount / baseDays
+  //   amount  = perDuty × Σ(selected duty buckets from totals)
+  const dutyBucketValue = (bucket: FixedDutyBucket): number => {
+    switch (bucket) {
+      case "p_days": return totals.pDays;
+      case "ot_days": return totals.otDays;
+      case "ph_days": return totals.phDays;
+      case "other_paid_days": return totals.otherPaidDays;
+      default: return 0;
+    }
+  };
+  const computePerDutyAmount = (i: BenefitLike): number => {
+    const configured = Number(i.amount) || 0;
+    const buckets = Array.isArray(i.fixedDutyComponents) ? i.fixedDutyComponents : [];
+    const totalDuties = buckets.reduce((s, b) => s + dutyBucketValue(b), 0);
+    const perDuty = baseDays > 0 ? configured / baseDays : 0;
+    return round2(perDuty * totalDuties);
+  };
+  const resolveFixedAmount = (i: BenefitLike): number => {
+    if (i.fixedCalcMethod === "per_duty") return computePerDutyAmount(i);
+    return round2(Number(i.amount) || 0);
+  };
   const scaleItemsRespectingFixed = (items: BenefitLike[]): WageComponent[] =>
     items.map((i) => ({
       ...i,
       name: i.name,
-      amount: isFixedItem(i)
-        ? round2(Number(i.amount) || 0)
+      amount: i.fixedCalcMethod === "per_duty"
+        ? computePerDutyAmount(i)
+        : isFixedItem(i)
+        ? resolveFixedAmount(i)
         : i.calcType === "percentage"
         ? benefitAmountFromConfig(i, components, resource.components, earnedSalaryRatio)
         : round2((Number(i.amount) || 0) * earnedSalaryRatio),
     }));
-  const benefits = scaleItems(resource.benefits, ratio);
+
+  const benefits = scaleItems(resource.benefits, ratio, computePerDutyAmount);
   const deductionsScaled = scaleItemsRespectingFixed(resource.deductions);
   const employerContributionsScaled = scaleItemsRespectingFixed(resource.employerContributions);
 

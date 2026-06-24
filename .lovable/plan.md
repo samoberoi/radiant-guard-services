@@ -1,59 +1,79 @@
 ## Goal
-Replace the hard-coded "Uniform Allowance" OT exclusion and the regex-based "fixed deduction" list with two explicit, user-controlled flags configured in the Control Center, and wire them through the payroll engine + every payroll export.
+Make every **Fixed Amount** cost component support a configurable per-duty proration formula so components like *WC Policy* can be calculated as:
 
-## 1. Schema changes (one migration)
-
-- `allowance_types`: add `include_in_ot boolean NOT NULL DEFAULT true`.
-- `cost_components`: add `deduction_calc_type text NOT NULL DEFAULT 'earned_salary'` with a CHECK in (`'earned_salary'`, `'fixed_amount'`).
-- Backfill: set `include_in_ot = false` for any existing allowance whose name matches `uniform` (preserves today's behaviour). Set `deduction_calc_type = 'fixed_amount'` for existing components whose name matches `uniform`, `lwf`, or `labour welfare` (preserves today's `isFixedItem` rule).
-- These flags also need to travel with each contract resource. The contract editor stores resource components/deductions as JSONB rows. Add the same two fields to those JSONB rows when the contract is created/edited so payroll doesn't need a second lookup, and backfill existing contracts from the master tables.
-
-## 2. Allowance Manager UI (`admin.allowance-manager.tsx`)
-- New "Include in OT Calculation" Switch in the create/edit dialog (default ON).
-- Show an "OT" badge / column in the list when disabled, so it's obvious which allowances are excluded.
-- Persist via existing insert/update mutations; keep `logActivity` calls as today.
-
-## 3. Cost Component Manager UI (`admin.cost-component-manager.tsx`)
-- New "Deduction Calculation Type" Select with two options: **Earned Salary Based** / **Fixed Amount** (default Earned Salary Based).
-- Only show the field for components used as deductions / employee contributions (component already has a "type" classification — reuse it; if not, show it for all and document that it only applies to deductions/contributions).
-- Persist via existing insert/update mutations; keep `logActivity`.
-
-## 4. Contract editor (`admin.contracts.client-contracts.tsx`)
-- When adding an allowance line, copy `include_in_ot` from the master.
-- When adding a deduction / employee contribution line, copy `deduction_calc_type` from the master.
-- Allow override per contract (so one client can mark Uniform "include in OT" without changing the global default). Show both as inline controls on each line.
-
-## 5. Payroll calculation engine (`src/lib/payroll-calc.ts`)
-Replace today's two heuristics:
-
-**OT base (currently `contractGross − uniform`):**
 ```
-otBase    = contractGross − Σ(component.amount where include_in_ot = false)
-perDutyOT = otBase / baseDays            // new: per-duty rate
-otAmount  = perDutyOT × otDuties
+per_duty_amount = configured_amount / base_days
+final_amount    = per_duty_amount × (sum of selected duty counts)
 ```
-Keep the existing hour-based path as a fallback when the resource captures OT in hours rather than duties, gated on which field is populated. OT continues to be appended as its own line (`Overtime`) and never inflates per-component earnings.
 
-**Deduction / contribution scaling (currently regex `isFixedItem`):**
+The configuration must be reusable on any future fixed-amount component, override-able per contract line, and flow through payroll calculation + every payroll export.
+
+## 1. Schema (one migration)
+
+Add two columns to `cost_components` and mirror them on contract resource JSONB lines:
+
+- `fixed_calc_method` text NOT NULL DEFAULT `'flat'` CHECK in (`'flat'`, `'per_duty'`)
+- `fixed_duty_components` text[] NOT NULL DEFAULT `'{}'` — which duty buckets sum into "total duties" (allowed values: `p_days`, `ot_days`, `ph_days`, `other_paid_days`)
+
+Backfill: leave all existing rows as `flat` (no behaviour change). Divisor is always the contract resource's existing **Base Days** (Payroll Day Base) — no new divisor field needed.
+
+Contract resource JSONB rows (`contract_resources.components / deductions / employer_contributions`) gain the same two fields per line, copied from master when added and editable per line.
+
+## 2. Cost Component Manager UI (`admin.cost-component-manager.tsx`)
+
+When **Calculation Type = Fixed Amount**, render a new "Fixed Amount Formula" sub-section:
+
+- Radio / select: **Flat (use amount as-is)** ‧ **Per-Duty Proration**
+- When Per-Duty selected, show:
+  - Read-only helper: `per duty = amount ÷ Base Days (from contract resource)`
+  - Multi-select checkboxes for duty buckets to include in "Total Duties":
+    - ☐ P Days (present)
+    - ☐ OT Days
+    - ☐ PH Days
+    - ☐ Other Paid Days
+  - Live preview line, e.g. *"₹200 ÷ 26 × (P + OT + PH) = ₹/duty × total duties"*
+
+`buildDescription()` updated so the list page shows the formula summary.
+
+## 3. Contract editor (`admin.contracts.client-contracts.tsx`)
+
+When a fixed-amount component is added to a resource, copy `fixed_calc_method` + `fixed_duty_components` from master onto the line. Show inline controls (compact select + chips) so the formula can be overridden per contract without touching the master.
+
+## 4. Payroll engine (`src/lib/payroll-calc.ts`)
+
+Extend `BenefitLike` / `WageComponent` with:
+- `fixedCalcMethod?: 'flat' | 'per_duty'`
+- `fixedDutyComponents?: string[]`
+
+Replace today's `isFixedItem` branch:
+
+```text
+if calc_type = fixed AND fixedCalcMethod = 'per_duty':
+    perDuty   = configuredAmount / baseDays
+    totalDays = Σ(totals[bucket] for bucket in fixedDutyComponents)
+    amount    = round2(perDuty × totalDays)
+elif deductionCalcType = 'fixed_amount' (flat):
+    amount    = configuredAmount        // unchanged
+else:
+    amount    = configuredAmount × earnedRatio  // unchanged
 ```
-if line.deduction_calc_type = 'fixed_amount' → amount = contractAmount (no proration)
-else                                          → amount = contractAmount × earnedRatio
-```
-EPF/ESI statutory overrides keep their current precedence (they run after scaling, same as today).
 
-Expose new fields on the returned payroll row so the UI/exports can show them:
-`otDuties`, `otBaseAmount`, `perDutyOtAmount`, `totalOtAmount`.
+`totals` already exposes `pDays`, `otDays`, `phDays`, `otherPaidDays` from `summarizeAttendance` (lines 95–110), so no new attendance plumbing is needed.
 
-## 6. Payroll screen + exports
-- `admin.payroll.$unitId.tsx`: add the OT block (Total Duties / Worked / Absent / OT Duties / OT Base / Per-Duty OT / Total OT) in the salary breakdown panel. Earned salary section keeps Net Salary at the bottom.
-- `csv-export` / Wage Register / Pay Sheet PDF / MIS: add the four OT columns and ensure fixed-amount deductions render at their full configured amount regardless of attendance.
+Apply the same formula path for fixed-amount **earnings** (components used as earnings, e.g. Management Fee if reconfigured), so the rule is uniform across earnings / deductions / employer contributions. EPF and statutory ESI overrides keep their current precedence (run after this scaling).
+
+## 5. Payroll screen + exports
+
+- `admin.payroll.$unitId.tsx`: per-row tooltip / breakdown shows `amount ÷ baseDays × (P+OT+PH+…) = final` for any per-duty line.
+- Wage Register / Pay Sheet PDF / CSV / MIS: render the calculated `amount` field — no schema change, but verify each export reads the engine output (it already does) so WC-Policy-style rows show the prorated value, not the flat ₹200.
+
+## 6. Backward compatibility
+
+- Existing rows default to `flat` → identical output to today.
+- Legacy name-based `isFixedItem` heuristic (uniform/lwf) is kept as a final fallback for older contract JSONB rows missing the new fields, so historical payroll runs reproduce.
 
 ## 7. Out of scope
-Organization → Unit → Contract → Resource flow, attendance capture, and the salary-structure UI are unchanged. Only the two new flags, the payroll math that consumes them, and the exports that display the results are touched.
 
-## Technical notes
-- Migration runs first (adds columns + backfill). Code that reads the new fields ships after the regenerated Supabase types land.
-- `payroll-calc.ts` keeps backward compatibility: if a resource line has no `include_in_ot` / `deduction_calc_type` (older contracts not yet re-saved), fall back to the current regex behaviour so historical payroll runs reproduce.
-- All mutations continue to call `logActivity` with the existing module labels ("Allowance Manager", "Cost Component Manager") per the project core rule.
+Attendance capture, payroll-day-base UI, allowance master, and OT-base logic are unchanged. Only Fixed-Amount calculation gains the per-duty option plus its plumbing through contracts and exports.
 
-Approve and I'll ship migration + code in one pass.
+Approve and I'll ship the migration + code in one pass.

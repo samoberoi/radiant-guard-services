@@ -44,6 +44,15 @@ export const Route = createFileRoute("/admin/cost-component-manager")({
 
 type Operator = "+" | "-";
 type BaseRef = { label: string; operator: Operator };
+type FixedCalcMethod = "flat" | "per_duty";
+type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
+
+const FIXED_DUTY_BUCKETS: { value: FixedDutyBucket; label: string; short: string }[] = [
+  { value: "p_days", label: "P Days (present)", short: "P" },
+  { value: "ot_days", label: "OT Days", short: "OT" },
+  { value: "ph_days", label: "PH Days (public holiday)", short: "PH" },
+  { value: "other_paid_days", label: "Other Paid Days", short: "OPL" },
+];
 
 type CostComponent = {
   id: string;
@@ -59,7 +68,10 @@ type CostComponent = {
   enabled: boolean;
   sort_order: number;
   deduction_calc_type: "earned_salary" | "fixed_amount";
+  fixed_calc_method: FixedCalcMethod;
+  fixed_duty_components: FixedDutyBucket[];
 };
+
 
 type AllowanceRow = { id: string; name: string; display_name: string; short_name: string };
 type StateRow = { id: string; name: string };
@@ -93,11 +105,27 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
     sort_order: Number(r.sort_order ?? 0),
     deduction_calc_type:
       (String(r.deduction_calc_type ?? "earned_salary") as "earned_salary" | "fixed_amount"),
+    fixed_calc_method:
+      (String(r.fixed_calc_method ?? "flat") as FixedCalcMethod),
+    fixed_duty_components: Array.isArray(r.fixed_duty_components)
+      ? ((r.fixed_duty_components as string[]).filter((b) =>
+          FIXED_DUTY_BUCKETS.some((x) => x.value === b),
+        ) as FixedDutyBucket[])
+      : [],
   };
 }
 
-function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "cap_flat_amount" | "amount"> & { name?: string }): string {
+
+function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "cap_flat_amount" | "amount"> & { name?: string; fixed_calc_method?: FixedCalcMethod; fixed_duty_components?: FixedDutyBucket[] }): string {
   if (c.calc_type === "fixed") {
+    if (c.fixed_calc_method === "per_duty") {
+      const buckets = (c.fixed_duty_components ?? [])
+        .map((b) => FIXED_DUTY_BUCKETS.find((x) => x.value === b)?.short ?? b)
+        .join(" + ") || "—";
+      const amt = c.amount != null && c.amount > 0 ? `₹${c.amount.toLocaleString("en-IN")}` : "amount";
+      return `${amt} ÷ Base Days × (${buckets}) · per-duty`;
+    }
+
     const isMgmt = /management\s*fee/i.test(c.name ?? "");
     if (isMgmt) {
       return c.amount != null && c.amount > 0
@@ -154,7 +182,13 @@ function useCostComponents() {
     enabled: p.enabled,
     sort_order: p.sort_order,
     deduction_calc_type: p.deduction_calc_type,
+    fixed_calc_method: p.calc_type === "fixed" ? p.fixed_calc_method : "flat",
+    fixed_duty_components:
+      p.calc_type === "fixed" && p.fixed_calc_method === "per_duty"
+        ? p.fixed_duty_components
+        : [],
   });
+
 
   const addMut = useMutation({
     mutationFn: async (p: Payload) => {
@@ -475,7 +509,10 @@ function CostComponentDialog({
   const [sortOrder, setSortOrder] = useState<string>("0");
   const [deductionCalcType, setDeductionCalcType] =
     useState<"earned_salary" | "fixed_amount">("earned_salary");
+  const [fixedCalcMethod, setFixedCalcMethod] = useState<FixedCalcMethod>("flat");
+  const [fixedDutyComponents, setFixedDutyComponents] = useState<FixedDutyBucket[]>([]);
   const [saving, setSaving] = useState(false);
+
 
   useResetOnOpen(open, () => {
     setName(initial?.name ?? "");
@@ -494,7 +531,10 @@ function CostComponentDialog({
     setEnabled(initial?.enabled ?? true);
     setSortOrder(String(initial?.sort_order ?? 0));
     setDeductionCalcType(initial?.deduction_calc_type ?? "earned_salary");
+    setFixedCalcMethod(initial?.fixed_calc_method ?? "flat");
+    setFixedDutyComponents(initial?.fixed_duty_components ?? []);
   });
+
 
   const stateOptions = useMemo(() => ["N/A", ...states.map((s) => s.name)], [states]);
 
@@ -506,7 +546,10 @@ function CostComponentDialog({
     cap_flat_amount: capFlatAmount ? Number(capFlatAmount) : null,
     amount: amount ? Number(amount) : null,
     name,
+    fixed_calc_method: fixedCalcMethod,
+    fixed_duty_components: fixedDutyComponents,
   });
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -633,11 +676,69 @@ function CostComponentDialog({
               </div>
             </>
           ) : (
-            <div className="grid gap-2">
-              <Label>Fixed Amount (₹) — optional, can be entered later</Label>
-              <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Manual entry" />
+            <div className="grid gap-3">
+              <div className="grid gap-2">
+                <Label>Fixed Amount (₹) — optional, can be entered later</Label>
+                <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="Manual entry" />
+              </div>
+
+              <div className="rounded-lg border border-border p-3 space-y-3">
+                <div className="grid gap-2">
+                  <Label>Fixed Amount Formula</Label>
+                  <Select value={fixedCalcMethod} onValueChange={(v) => setFixedCalcMethod(v as FixedCalcMethod)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="flat">Flat — use the amount as entered</SelectItem>
+                      <SelectItem value="per_duty">Per-Duty Proration — amount ÷ Base Days × selected duties</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground">
+                    Per-Duty uses the contract resource&apos;s Base Days as the divisor (e.g. amount ÷ 26 = per-duty rate), then multiplies by the sum of the duty buckets you pick below.
+                  </p>
+                </div>
+
+                {fixedCalcMethod === "per_duty" && (
+                  <div className="grid gap-2">
+                    <Label>Duty Buckets in &quot;Total Duties&quot;</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {FIXED_DUTY_BUCKETS.map((b) => {
+                        const active = fixedDutyComponents.includes(b.value);
+                        return (
+                          <button
+                            key={b.value}
+                            type="button"
+                            onClick={() =>
+                              setFixedDutyComponents((prev) =>
+                                active ? prev.filter((x) => x !== b.value) : [...prev, b.value],
+                              )
+                            }
+                            className={
+                              "rounded-md border px-2.5 py-1 text-xs transition-colors " +
+                              (active
+                                ? "border-accent bg-accent/15 text-accent-foreground font-medium"
+                                : "border-border bg-card hover:bg-accent/10")
+                            }
+                          >
+                            {active ? "✓ " : "+ "}{b.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="rounded-md bg-secondary/40 px-3 py-2 text-[12px] text-foreground/80">
+                      <span className="font-medium">Example:</span>{" "}
+                      ₹{amount || "200"} ÷ Base Days ×{" "}
+                      ({fixedDutyComponents.length > 0
+                        ? fixedDutyComponents
+                            .map((b) => FIXED_DUTY_BUCKETS.find((x) => x.value === b)?.short ?? b)
+                            .join(" + ")
+                        : "select duties"})
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
+
 
           <div className="grid gap-2">
             <Label>Notes (optional)</Label>
@@ -695,7 +796,10 @@ function CostComponentDialog({
                 enabled,
                 sort_order: Number(sortOrder) || 0,
                 deduction_calc_type: deductionCalcType,
+                fixed_calc_method: fixedCalcMethod,
+                fixed_duty_components: fixedDutyComponents,
               });
+
               setSaving(false);
               if (err) toast.error(err);
               else onOpenChange(false);

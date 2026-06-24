@@ -188,6 +188,9 @@ type ResourceComponent = {
   includeInOt?: boolean;
 };
 
+type FixedCalcMethod = "flat" | "per_duty";
+type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
+
 type BenefitItem = {
   costComponentId: string;
   name: string;
@@ -199,7 +202,10 @@ type BenefitItem = {
   amount: number; // computed (percentage) or manual (fixed)
   state: string;
   deductionCalcType?: "earned_salary" | "fixed_amount";
+  fixedCalcMethod?: FixedCalcMethod;
+  fixedDutyComponents?: FixedDutyBucket[];
 };
+
 
 type ContractResource = {
   id?: string;
@@ -265,7 +271,10 @@ type CostComponentOption = {
   amount: number | null;
   state: string;
   deductionCalcType: "earned_salary" | "fixed_amount";
+  fixedCalcMethod: FixedCalcMethod;
+  fixedDutyComponents: FixedDutyBucket[];
 };
+
 
 const QK = ["admin", "client-contracts"] as const;
 const QK_SVC = ["admin", "service-types", "enabled"] as const;
@@ -872,7 +881,7 @@ function useCostComponentOptions() {
     queryFn: async (): Promise<CostComponentOption[]> => {
       const { data, error } = await supabase
         .from("cost_components" as never)
-        .select("id,name,calc_type,percentage,base_components,cap_amount,cap_flat_amount,amount,state,enabled,sort_order,deduction_calc_type")
+        .select("id,name,calc_type,percentage,base_components,cap_amount,cap_flat_amount,amount,state,enabled,sort_order,deduction_calc_type,fixed_calc_method,fixed_duty_components")
         .order("sort_order")
         .order("name");
       if (error) throw error;
@@ -892,8 +901,16 @@ function useCostComponentOptions() {
           state: String(r.state ?? "N/A"),
           deductionCalcType:
             (String(r.deduction_calc_type ?? "earned_salary") as "earned_salary" | "fixed_amount"),
+          fixedCalcMethod:
+            (String(r.fixed_calc_method ?? "flat") as FixedCalcMethod),
+          fixedDutyComponents: Array.isArray(r.fixed_duty_components)
+            ? ((r.fixed_duty_components as string[]).filter((b) =>
+                ["p_days","ot_days","ph_days","other_paid_days"].includes(b),
+              ) as FixedDutyBucket[])
+            : [],
         }));
     },
+
   });
   return data;
 }
@@ -3265,7 +3282,10 @@ function ResourceFormDialog({
     amount: 0,
     state: "Per state slab (resolved at payroll from unit state, employee gender, earned gross)",
     deductionCalcType: "fixed_amount",
+    fixedCalcMethod: "flat",
+    fixedDutyComponents: [],
   };
+
 
   const usedBenefitIds = new Set(benefits.map((b) => b.costComponentId));
   const usedDeductionIds = new Set(deductions.map((b) => b.costComponentId));
@@ -3364,6 +3384,8 @@ function ResourceFormDialog({
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
       deductionCalcType: c.deductionCalcType,
+      fixedCalcMethod: c.fixedCalcMethod,
+      fixedDutyComponents: c.fixedDutyComponents,
     };
     if (benefit.calcType === "percentage") {
       benefit.amount = computeBenefitAmount(benefit, components, [], allowanceTypes);
@@ -3395,6 +3417,8 @@ function ResourceFormDialog({
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
       deductionCalcType: c.deductionCalcType,
+      fixedCalcMethod: c.fixedCalcMethod,
+      fixedDutyComponents: c.fixedDutyComponents,
     };
     if (item.calcType === "percentage") {
       item.amount = computeBenefitAmount(item, components, benefits, allowanceTypes);
@@ -3426,6 +3450,8 @@ function ResourceFormDialog({
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
       deductionCalcType: c.deductionCalcType,
+      fixedCalcMethod: c.fixedCalcMethod,
+      fixedDutyComponents: c.fixedDutyComponents,
     };
     if (item.calcType === "percentage") {
       const l = (s: string) => s.trim().toLowerCase();
