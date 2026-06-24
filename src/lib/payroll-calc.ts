@@ -602,7 +602,7 @@ export function computeWages(
         : round2((Number(i.amount) || 0) * earnedSalaryRatio),
     }));
 
-  const benefits = scaleItemsRespectingFixed(resource.benefits);
+  const benefits = scaleItems(resource.benefits, ratio, computePerDutyAmount);
   const deductionsScaled = scaleItemsRespectingFixed(resource.deductions);
   const employerContributionsScaled = scaleItemsRespectingFixed(resource.employerContributions);
 
