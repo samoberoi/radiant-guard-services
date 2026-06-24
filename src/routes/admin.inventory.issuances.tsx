@@ -174,6 +174,8 @@ function IssuancesPage() {
     onSuccess: invalidate,
   });
 
+  const demandInfo = useDemandRequesters(filtered.map((i) => i.demand_id));
+
   return (
     <div>
       <PageHeader title="Issuances" description="Issue items: branch → field officer, or field officer / branch → guard. Stock moves on receiver acknowledgement." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Issuances" }]} />
@@ -195,6 +197,8 @@ function IssuancesPage() {
               <tr>
                 <th className="px-5 py-3">Issuance #</th>
                 <th className="px-5 py-3">Type</th>
+                <th className="px-5 py-3">Requested From</th>
+                <th className="px-5 py-3">Requested By</th>
                 <th className="px-5 py-3">From</th>
                 <th className="px-5 py-3">To</th>
                 <th className="px-5 py-3">Date</th>
@@ -203,10 +207,23 @@ function IssuancesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((i) => (
+              {filtered.map((i) => {
+                const info = i.demand_id ? demandInfo.get(i.demand_id) : null;
+                return (
                 <tr key={i.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs">{i.issuance_number}</td>
                   <td className="px-5 py-3 text-xs uppercase tracking-wider text-muted-foreground">{i.issuance_type.replace("_", " ")}</td>
+                  <td className="px-5 py-3 font-mono text-xs">{info?.demandNumber ?? "—"}</td>
+                  <td className="px-5 py-3">
+                    {info ? (
+                      <>
+                        <div className="font-medium">{info.requesterName}</div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                          {info.requesterRole}{info.requesterCode ? ` · ${info.requesterCode}` : ""}
+                        </div>
+                      </>
+                    ) : "—"}
+                  </td>
                   <td className="px-5 py-3">{locName(i.source_type, i.source_id)}</td>
                   <td className="px-5 py-3 font-medium">{locName(i.destination_type, i.destination_id)}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{i.issuance_date}</td>
@@ -223,12 +240,14 @@ function IssuancesPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
-              {!filtered.length && <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground"><UserCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No issuances yet.</td></tr>}
+                );
+              })}
+              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><UserCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No issuances yet.</td></tr>}
             </tbody>
           </table>
         </div>
       </div>
+
 
       <IssuanceDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setActive(null); }} initial={active} warehouses={warehouses} branches={branches} fos={fos} guards={guards} candidates={candidates} items={items} onSaved={invalidate} me={me} isFieldOfficer={isFieldOfficer} isBranchManager={isBranchManager} branchScopeId={scope.branchId} openDemands={openDemands} />
     </div>
