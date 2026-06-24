@@ -13,12 +13,13 @@ import { useCurrentUserRole } from "@/lib/use-current-user-role";
 
 export const Route = createFileRoute("/admin/inventory/stock")({ component: StockPage });
 
-type HolderType = "warehouse" | "branch" | "field_officer" | "security_guard";
+type HolderType = "all" | "warehouse" | "branch" | "field_officer" | "security_guard";
 type Balance = { location_type: string; location_id: string; item_id: string; size_value: string; qty: number };
 type Item = { id: string; name: string; item_code: string; unit: string; default_reorder_level: number };
 type Holder = { id: string; name: string; sub?: string };
 
 const HOLDER_LABEL: Record<HolderType, string> = {
+  all: "All locations",
   warehouse: "Warehouses",
   branch: "Branches",
   field_officer: "Field Officers",
