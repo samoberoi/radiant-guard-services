@@ -342,13 +342,14 @@ function GRNPage() {
   );
 }
 
-function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; onOpenChange: (o: boolean) => void; pos: PO[]; onSaved: () => void }) {
+function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: boolean; onOpenChange: (o: boolean) => void; pos: PO[]; branches: { id: string; name: string }[]; onSaved: () => void }) {
   const [poId, setPoId] = useState<string>("");
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().slice(0, 10));
   const [invoiceNo, setInvoiceNo] = useState("");
   const [challanNo, setChallanNo] = useState("");
   const [vehicleNo, setVehicleNo] = useState("");
   const [notes, setNotes] = useState("");
+  const [finalBranchId, setFinalBranchId] = useState<string>("");
   const [lines, setLines] = useState<Line[]>([]);
   const [items, setItems] = useState<Record<string, Item>>({});
   const [saving, setSaving] = useState(false);
@@ -357,7 +358,7 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
   useResetOnOpen(open, async () => {
     setPoId(""); setReceiptDate(new Date().toISOString().slice(0, 10));
     setInvoiceNo(""); setChallanNo(""); setVehicleNo(""); setNotes(""); setLines([]); setItems({});
-    setInvoiceFile(null);
+    setInvoiceFile(null); setFinalBranchId("");
   });
 
   async function loadPo(id: string) {
