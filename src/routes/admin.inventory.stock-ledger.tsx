@@ -582,17 +582,19 @@ function StockLedgerPage() {
               {holderOptions.map((o) => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={direction} onValueChange={(v) => setDirection(v as "all" | "in" | "out")}>
-            <SelectTrigger className="h-10 w-40 rounded-lg"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Debit & Credit</SelectItem>
-              <SelectItem value="in">Debit only (IN)</SelectItem>
-              <SelectItem value="out">Credit only (OUT)</SelectItem>
-            </SelectContent>
-          </Select>
+          {view === "movement" && (
+            <Select value={direction} onValueChange={(v) => setDirection(v as "all" | "in" | "out")}>
+              <SelectTrigger className="h-10 w-40 rounded-lg"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Debit & Credit</SelectItem>
+                <SelectItem value="in">Debit only (IN)</SelectItem>
+                <SelectItem value="out">Credit only (OUT)</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <div className="relative w-full sm:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search item, holder, type…" className="h-10 rounded-lg pl-9" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={view === "item" ? "Search item, code, size…" : "Search item, holder, type…"} className="h-10 rounded-lg pl-9" />
           </div>
         </div>
         <div className="flex gap-2">
