@@ -202,6 +202,7 @@ function DemandsPage() {
         branchLabel={scope.branchLabel}
         isFieldOfficer={role.isFieldOfficer}
         branches={branches}
+        warehouses={warehouses}
         items={items}
         onSaved={invalidate}
       />
