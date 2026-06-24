@@ -556,15 +556,31 @@ function StockLedgerPage() {
     <div>
       <PageHeader
         title="Stock Ledger"
-        description="Daybook — debit/credit reconciliation of every stock movement. Super admin sees all; branches see their chain; field officers see their own and reporting guards."
+        description="Daybook — every stock-in and stock-out movement. Super admin sees all; branches see their chain; field officers see their own and reporting guards."
         crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Stock Ledger" }]}
       />
 
+      {/* Mode toggle (By Count / By Value) */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex h-10 items-center rounded-lg border border-border bg-card p-0.5">
+          <button
+            type="button"
+            onClick={() => setMode("count")}
+            className={`inline-flex h-9 items-center gap-1.5 rounded-md px-4 text-xs font-semibold uppercase tracking-wider transition ${mode === "count" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >By Count</button>
+          <button
+            type="button"
+            onClick={() => setMode("value")}
+            className={`inline-flex h-9 items-center gap-1.5 rounded-md px-4 text-xs font-semibold uppercase tracking-wider transition ${mode === "value" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >By Value</button>
+        </div>
+      </div>
+
       {/* KPI band */}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard icon={<ArrowDownCircle className="h-4 w-4 text-emerald-600" />} label="Debit (IN)" value={totalDebit} accent="emerald" />
-        <KpiCard icon={<ArrowUpCircle className="h-4 w-4 text-rose-600" />} label="Credit (OUT)" value={totalCredit} accent="rose" />
-        <KpiCard icon={<Scale className="h-4 w-4" />} label="Net Movement" value={net} accent={net >= 0 ? "emerald" : "rose"} />
+        <KpiCard icon={<ArrowDownCircle className="h-4 w-4 text-emerald-600" />} label={mode === "value" ? "Stock In Value" : "Stock In"} value={mode === "value" ? fmtInr(totalDebitVal) : totalDebit} accent="emerald" />
+        <KpiCard icon={<ArrowUpCircle className="h-4 w-4 text-rose-600" />} label={mode === "value" ? "Stock Out Value" : "Stock Out"} value={mode === "value" ? fmtInr(totalCreditVal) : totalCredit} accent="rose" />
+        <KpiCard icon={<Scale className="h-4 w-4" />} label={mode === "value" ? "Net Value" : "Net Movement"} value={mode === "value" ? fmtInr(netVal) : net} accent={(mode === "value" ? netVal : net) >= 0 ? "emerald" : "rose"} />
         <KpiCard icon={<BookOpenCheck className="h-4 w-4" />} label="Ledger Entries" value={rows.length} accent="slate" />
       </div>
 
