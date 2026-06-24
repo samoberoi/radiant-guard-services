@@ -155,11 +155,13 @@ function DemandsPage() {
             <tbody className="divide-y divide-border">
               {filtered.map((d) => {
                 const agg = lineAgg.get(d.id) ?? { items: 0, qty: 0 };
-                const br = branchMap.get(d.branch_id);
+                const wh = d.warehouse_id ? warehouseMap.get(d.warehouse_id) : null;
+                const br = d.branch_id ? branchMap.get(d.branch_id) : null;
+                const destLabel = wh ? `${wh.name} (Warehouse)` : br ? `${br.code} – ${br.name}` : "—";
                 return (
                   <tr key={d.id} className="hover:bg-secondary/30">
                     <td className="px-5 py-3 font-mono text-xs">{d.demand_number}</td>
-                    <td className="px-5 py-3">{br ? `${br.code} – ${br.name}` : "—"}</td>
+                    <td className="px-5 py-3">{destLabel}</td>
                     <td className="px-5 py-3 text-xs text-muted-foreground">{d.demand_date}</td>
                     <td className="px-5 py-3 text-right tabular-nums">{agg.items}</td>
                     <td className="px-5 py-3 text-right tabular-nums">{agg.qty}</td>
