@@ -23,11 +23,12 @@ const MODULE = "Inventory Demands";
 const ENTITY = "inv_demands";
 
 type Demand = {
-  id: string; demand_number: string; branch_id: string; demand_date: string;
+  id: string; demand_number: string; branch_id: string | null; warehouse_id: string | null; demand_date: string;
   status: string; notes: string; requester_id: string | null;
   fulfillment_source?: "warehouse" | "branch";
 };
 type Branch = { id: string; name: string; code: string };
+type Warehouse = { id: string; name: string; warehouse_code: string; is_default: boolean };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
 type Line = { id?: string; item_id: string; size_value: string; requested_qty: number; fulfilled_qty: number };
 
@@ -58,6 +59,14 @@ function DemandsPage() {
       return (data as unknown as Branch[]) ?? [];
     },
   });
+  const { data: warehouses = [] } = useQuery({
+    queryKey: ["inv", "warehouses-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_warehouses" as never).select("id,name,warehouse_code,is_default").eq("enabled", true).order("name");
+      if (error) throw error;
+      return (data as unknown as Warehouse[]) ?? [];
+    },
+  });
   const { data: items = [] } = useQuery({
     queryKey: ["inv", "items-list"],
     queryFn: async () => {
@@ -86,6 +95,7 @@ function DemandsPage() {
   });
 
   const branchMap = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
+  const warehouseMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w])), [warehouses]);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Demand | null>(null);
@@ -134,7 +144,7 @@ function DemandsPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Demand #</th>
-                <th className="px-5 py-3">Branch</th>
+                <th className="px-5 py-3">Requested From</th>
                 <th className="px-5 py-3">Date</th>
                 <th className="px-5 py-3 text-right">Items</th>
                 <th className="px-5 py-3 text-right">Total Qty</th>
@@ -145,11 +155,13 @@ function DemandsPage() {
             <tbody className="divide-y divide-border">
               {filtered.map((d) => {
                 const agg = lineAgg.get(d.id) ?? { items: 0, qty: 0 };
-                const br = branchMap.get(d.branch_id);
+                const wh = d.warehouse_id ? warehouseMap.get(d.warehouse_id) : null;
+                const br = d.branch_id ? branchMap.get(d.branch_id) : null;
+                const destLabel = wh ? `${wh.name} (Warehouse)` : br ? `${br.code} – ${br.name}` : "—";
                 return (
                   <tr key={d.id} className="hover:bg-secondary/30">
                     <td className="px-5 py-3 font-mono text-xs">{d.demand_number}</td>
-                    <td className="px-5 py-3">{br ? `${br.code} – ${br.name}` : "—"}</td>
+                    <td className="px-5 py-3">{destLabel}</td>
                     <td className="px-5 py-3 text-xs text-muted-foreground">{d.demand_date}</td>
                     <td className="px-5 py-3 text-right tabular-nums">{agg.items}</td>
                     <td className="px-5 py-3 text-right tabular-nums">{agg.qty}</td>
@@ -190,6 +202,7 @@ function DemandsPage() {
         branchLabel={scope.branchLabel}
         isFieldOfficer={role.isFieldOfficer}
         branches={branches}
+        warehouses={warehouses}
         items={items}
         onSaved={invalidate}
       />
@@ -198,29 +211,37 @@ function DemandsPage() {
   );
 }
 
-function DemandFormDialog({ open, onOpenChange, initial, requesterCandidateId, branchId, branchLabel, isFieldOfficer, branches, items, onSaved }: {
+function DemandFormDialog({ open, onOpenChange, initial, requesterCandidateId, branchId, branchLabel, isFieldOfficer, branches, warehouses, items, onSaved }: {
   open: boolean; onOpenChange: (o: boolean) => void; initial: Demand | null;
   requesterCandidateId: string | null;
-  branchId: string; branchLabel: string; isFieldOfficer: boolean; branches: Branch[]; items: Item[]; onSaved: () => void;
+  branchId: string; branchLabel: string; isFieldOfficer: boolean;
+  branches: Branch[]; warehouses: Warehouse[]; items: Item[]; onSaved: () => void;
 }) {
   const [demandDate, setDemandDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
-  // For FO: "warehouse" or a branch id. For others: always "warehouse".
-  const [source, setSource] = useState<string>("warehouse");
+  // Source format: "wh:<warehouseId>" for warehouse-bound, "br:<branchId>" for branch-bound.
+  const defaultWarehouseId = useMemo(
+    () => warehouses.find((w) => w.is_default)?.id ?? warehouses[0]?.id ?? "",
+    [warehouses],
+  );
+  const [source, setSource] = useState<string>("");
   const [saving, setSaving] = useState(false);
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const branchMap = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
+  const warehouseMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w])), [warehouses]);
 
   useResetOnOpen(open, async () => {
     if (initial) {
       setDemandDate(initial.demand_date);
       setNotes(initial.notes ?? "");
-      if ((initial.fulfillment_source ?? "warehouse") === "branch") {
-        setSource(initial.branch_id);
+      if (initial.warehouse_id) {
+        setSource(`wh:${initial.warehouse_id}`);
+      } else if (initial.branch_id) {
+        setSource(`br:${initial.branch_id}`);
       } else {
-        setSource("warehouse");
+        setSource(defaultWarehouseId ? `wh:${defaultWarehouseId}` : "");
       }
       const { data } = await supabase.from("inv_demand_lines" as never).select("*").eq("demand_id", initial.id).order("sort_order");
       setLines(((data as unknown as Record<string, unknown>[]) ?? []).map((r) => ({
@@ -234,30 +255,32 @@ function DemandFormDialog({ open, onOpenChange, initial, requesterCandidateId, b
       setDemandDate(new Date().toISOString().slice(0, 10));
       setNotes("");
       setLines([]);
-      setSource("warehouse");
+      setSource(defaultWarehouseId ? `wh:${defaultWarehouseId}` : "");
     }
   });
 
+  const isWarehouse = source.startsWith("wh:");
+  const targetWarehouseId = isWarehouse ? source.slice(3) : "";
+  const targetBranchId = !isWarehouse && source.startsWith("br:") ? source.slice(3) : "";
+
   async function save(submit: boolean) {
-    // Resolve the branch + fulfillment_source from the source selection.
-    const isWarehouse = source === "warehouse";
-    const fulfillmentSource = isWarehouse ? "warehouse" : "branch";
-    const resolvedBranchId = isWarehouse
-      ? (branchId || branches[0]?.id || "")
-      : source;
-    if (!resolvedBranchId) { toast.error("No branches available. Please contact admin."); return; }
+    if (!source || (isWarehouse && !targetWarehouseId) || (!isWarehouse && !targetBranchId)) {
+      toast.error("Choose where to send this demand"); return;
+    }
     if (!lines.length || lines.some((l) => !l.item_id || l.requested_qty <= 0)) {
       toast.error("Add at least one item with quantity"); return;
     }
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const destFields = isWarehouse
+        ? { warehouse_id: targetWarehouseId, branch_id: null, fulfillment_source: "warehouse" as const }
+        : { warehouse_id: null, branch_id: targetBranchId, fulfillment_source: "branch" as const };
       let id = initial?.id;
       if (initial) {
         await supabase.from("inv_demands" as never).update({
           demand_date: demandDate, notes,
-          branch_id: resolvedBranchId,
-          fulfillment_source: fulfillmentSource,
+          ...destFields,
           status: submit ? "submitted" : "draft",
           submitted_at: submit ? new Date().toISOString() : null,
         } as never).eq("id", initial.id);
@@ -266,8 +289,8 @@ function DemandFormDialog({ open, onOpenChange, initial, requesterCandidateId, b
         const n = await nextSeq("inv_demand_number_seq");
         const number = fmtNumber("DM", n);
         const { data: ins, error } = await supabase.from("inv_demands" as never).insert({
-          demand_number: number, branch_id: resolvedBranchId, demand_date: demandDate, notes,
-          fulfillment_source: fulfillmentSource,
+          demand_number: number, demand_date: demandDate, notes,
+          ...destFields,
           status: submit ? "submitted" : "draft",
           requester_id: user?.id ?? null,
           requester_candidate_id: requesterCandidateId,
@@ -283,7 +306,9 @@ function DemandFormDialog({ open, onOpenChange, initial, requesterCandidateId, b
       const { error: linesErr } = await supabase.from("inv_demand_lines" as never).insert(payload as never);
       if (linesErr) throw linesErr;
       void logActivity({ module: MODULE, action: submit ? "post" : (initial ? "update" : "create"), entityType: ENTITY, entityId: id!, entityLabel: initial?.demand_number ?? "Demand" });
-      const destLabel = isWarehouse ? "warehouse" : (branchMap.get(resolvedBranchId)?.name ?? "branch");
+      const destLabel = isWarehouse
+        ? `${warehouseMap.get(targetWarehouseId)?.name ?? "warehouse"} (Warehouse)`
+        : (branchMap.get(targetBranchId)?.name ?? "branch");
       toast.success(submit ? `Demand submitted to ${destLabel}` : "Draft saved");
       onSaved(); onOpenChange(false);
     } catch (e) {
@@ -293,12 +318,16 @@ function DemandFormDialog({ open, onOpenChange, initial, requesterCandidateId, b
     }
   }
 
+  const submitLabel = isWarehouse
+    ? `Submit to ${warehouseMap.get(targetWarehouseId)?.name ?? "Warehouse"}`
+    : `Submit to ${branchMap.get(targetBranchId)?.name ?? "Branch"}`;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{initial ? `Edit Demand ${initial.demand_number}` : "New Demand"}</DialogTitle>
-          <DialogDescription>{isFieldOfficer ? "Request stock from the central warehouse or any branch." : "Ask the warehouse for the items you need. Submitting sends it for fulfillment."}</DialogDescription>
+          <DialogDescription>{isFieldOfficer ? "Request stock from a warehouse or any branch." : "Request stock from a warehouse. Submitting sends it to the warehouse team for fulfillment."}</DialogDescription>
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
@@ -307,20 +336,21 @@ function DemandFormDialog({ open, onOpenChange, initial, requesterCandidateId, b
               <Label>Demand Date</Label>
               <Input type="date" value={demandDate} onChange={(e) => setDemandDate(e.target.value)} />
             </div>
-            {isFieldOfficer && (
-              <div className="grid gap-2">
-                <Label>Request From</Label>
-                <Select value={source} onValueChange={(v) => setSource(v)}>
-                  <SelectTrigger className="h-10"><SelectValue placeholder="Choose source" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="warehouse">Central Warehouse</SelectItem>
-                    {branches.map((b) => (
-                      <SelectItem key={b.id} value={b.id}>{b.name}{b.code ? ` (${b.code})` : ""}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            <div className="grid gap-2">
+              <Label>Request From</Label>
+              <Select value={source} onValueChange={(v) => setSource(v)}>
+                <SelectTrigger className="h-10"><SelectValue placeholder="Choose source" /></SelectTrigger>
+                <SelectContent>
+                  {warehouses.map((w) => (
+                    <SelectItem key={`wh-${w.id}`} value={`wh:${w.id}`}>{w.name} (Warehouse)</SelectItem>
+                  ))}
+                  {isFieldOfficer && branches.map((b) => (
+                    <SelectItem key={`br-${b.id}`} value={`br:${b.id}`}>{b.name}{b.code ? ` (${b.code})` : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {!isFieldOfficer && <p className="text-[11px] text-muted-foreground">From branch: <span className="font-medium">{branchLabel}</span></p>}
+            </div>
           </div>
 
           <div>
@@ -375,7 +405,7 @@ function DemandFormDialog({ open, onOpenChange, initial, requesterCandidateId, b
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
           <Button variant="outline" onClick={() => save(false)} disabled={saving}>Save Draft</Button>
-          <Button onClick={() => save(true)} disabled={saving}><Send className="mr-1.5 h-4 w-4" />{saving ? "Submitting…" : `Submit to ${source === "warehouse" ? "Warehouse" : (branchMap.get(source)?.name ?? "Branch")}`}</Button>
+          <Button onClick={() => save(true)} disabled={saving}><Send className="mr-1.5 h-4 w-4" />{saving ? "Submitting…" : submitLabel}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

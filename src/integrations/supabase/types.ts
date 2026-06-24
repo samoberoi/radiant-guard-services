@@ -1590,7 +1590,7 @@ export type Database = {
       }
       inv_demands: {
         Row: {
-          branch_id: string
+          branch_id: string | null
           cancelled_at: string | null
           created_at: string
           demand_date: string
@@ -1604,9 +1604,10 @@ export type Database = {
           status: string
           submitted_at: string | null
           updated_at: string
+          warehouse_id: string | null
         }
         Insert: {
-          branch_id: string
+          branch_id?: string | null
           cancelled_at?: string | null
           created_at?: string
           demand_date?: string
@@ -1620,9 +1621,10 @@ export type Database = {
           status?: string
           submitted_at?: string | null
           updated_at?: string
+          warehouse_id?: string | null
         }
         Update: {
-          branch_id?: string
+          branch_id?: string | null
           cancelled_at?: string | null
           created_at?: string
           demand_date?: string
@@ -1636,6 +1638,7 @@ export type Database = {
           status?: string
           submitted_at?: string | null
           updated_at?: string
+          warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -1650,6 +1653,13 @@ export type Database = {
             columns: ["requester_candidate_id"]
             isOneToOne: false
             referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inv_demands_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "inv_warehouses"
             referencedColumns: ["id"]
           },
         ]
