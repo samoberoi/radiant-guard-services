@@ -565,6 +565,22 @@ function StockLedgerPage() {
             <span className="text-xs uppercase tracking-wider text-muted-foreground">To</span>
             <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-10 w-40 rounded-lg" />
           </div>
+          <div className="inline-flex h-10 items-center rounded-lg border border-border bg-card p-0.5">
+            <button
+              type="button"
+              onClick={() => setView("movement")}
+              className={`inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition ${view === "movement" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <List className="h-3.5 w-3.5" />By Movement
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("item")}
+              className={`inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition ${view === "item" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Package className="h-3.5 w-3.5" />By Item
+            </button>
+          </div>
           <Select value={holderType} onValueChange={(v) => { setHolderType(v as HolderTypeFilter); setHolderId("all"); }}>
             <SelectTrigger className="h-10 w-44 rounded-lg"><SelectValue /></SelectTrigger>
             <SelectContent>
