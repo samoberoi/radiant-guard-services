@@ -2079,6 +2079,7 @@ export type Database = {
           name: string
           size_chart_id: string | null
           standard_cost: number
+          standard_issue_price: number
           unit: string
           updated_at: string
         }
@@ -2100,6 +2101,7 @@ export type Database = {
           name: string
           size_chart_id?: string | null
           standard_cost?: number
+          standard_issue_price?: number
           unit?: string
           updated_at?: string
         }
@@ -2121,6 +2123,7 @@ export type Database = {
           name?: string
           size_chart_id?: string | null
           standard_cost?: number
+          standard_issue_price?: number
           unit?: string
           updated_at?: string
         }
