@@ -821,8 +821,8 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, incoming
         grn_number, po_id: selectedPO!.id, vendor_id: selectedPO!.vendor_id, warehouse_id: null,
         transfer_id: null, demand_id: null,
         branch_id: branchId, kind: "po",
-        receipt_date: receiptDate, vendor_invoice_number: invoiceNo, vendor_challan_number: challanNo,
-        vehicle_number: vehicleNo, notes, status: "received",
+        receipt_date: receiptDate, vendor_invoice_number: invoiceNo, vendor_challan_number: "",
+        vehicle_number: "", notes, status: "received",
         received_by: user?.id ?? null, received_at: new Date().toISOString(),
       };
 
