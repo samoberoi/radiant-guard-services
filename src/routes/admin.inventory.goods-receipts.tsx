@@ -744,8 +744,7 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, incoming
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [invoiceNo, setInvoiceNo] = useState("");
-  const [challanNo, setChallanNo] = useState("");
-  const [vehicleNo, setVehicleNo] = useState("");
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [lines, setLines] = useState<Line[]>([]);
   const [saving, setSaving] = useState(false);
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
