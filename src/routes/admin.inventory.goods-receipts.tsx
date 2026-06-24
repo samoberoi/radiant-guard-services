@@ -184,6 +184,31 @@ function GRNPage() {
     return grns.filter((g) => g.grn_number.toLowerCase().includes(q) || (g.vendor_invoice_number ?? "").toLowerCase().includes(q));
   }, [grns, query]);
 
+  // Resolve linked demand_id for each GRN: direct demand_id, or via transfer.demand_id
+  const transferIds = useMemo(
+    () => Array.from(new Set(filtered.map((g) => g.transfer_id).filter((x): x is string => !!x))).sort(),
+    [filtered],
+  );
+  const { data: transferDemandMap = new Map<string, string | null>() } = useQuery({
+    queryKey: ["inv", "grn-transfer-demand-map", transferIds.join(",")],
+    enabled: transferIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_transfers" as never)
+        .select("id,demand_id")
+        .in("id", transferIds);
+      if (error) throw error;
+      const m = new Map<string, string | null>();
+      for (const r of (data as unknown as { id: string; demand_id: string | null }[]) ?? []) {
+        m.set(r.id, r.demand_id);
+      }
+      return m;
+    },
+  });
+  const grnDemandId = (g: GRN): string | null =>
+    g.demand_id ?? (g.transfer_id ? transferDemandMap.get(g.transfer_id) ?? null : null);
+  const demandInfo = useDemandRequesters(filtered.map((g) => grnDemandId(g)));
+
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["inv", "grns"] });
