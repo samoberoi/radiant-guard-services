@@ -703,3 +703,47 @@ export function fmtINR(n: number): string {
     maximumFractionDigits: 0,
   }).format(n);
 }
+
+// ---------------------------------------------------------------------------
+// Engine-aware resolver (Phase-4 hook for the customizable formula engine).
+//
+// Opt-in: callers pass a row with a `formula` jsonb + day_driver. If the row
+// has a non-empty formula, it is evaluated by the formula engine and that
+// value wins. Otherwise we fall back to whichever legacy value the caller
+// supplies. This lets payroll, contract previews and bulk imports adopt the
+// engine incrementally without breaking any existing data.
+// ---------------------------------------------------------------------------
+
+import {
+  evaluateFormula as _evaluateFormula,
+  type Formula as _Formula,
+  type EvalContext as _EvalContext,
+} from "./formula-engine";
+
+export type EngineRow = {
+  formula?: unknown;
+  day_driver?: string | null;
+};
+
+export function hasEngineFormula(row: EngineRow | null | undefined): boolean {
+  if (!row || !row.formula || typeof row.formula !== "object") return false;
+  const f = row.formula as { mode?: string };
+  return typeof f.mode === "string" && f.mode.length > 0;
+}
+
+/**
+ * Resolve a component amount: engine if defined, otherwise legacy fallback.
+ * `legacyAmount` is what the existing code already computed for this row.
+ */
+export function resolveEngineAmount(
+  row: EngineRow | null | undefined,
+  ctx: _EvalContext,
+  legacyAmount: number,
+): number {
+  if (!hasEngineFormula(row)) return legacyAmount;
+  try {
+    return _evaluateFormula(row!.formula as _Formula, ctx);
+  } catch {
+    return legacyAmount;
+  }
+}
