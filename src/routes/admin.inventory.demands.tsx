@@ -24,7 +24,7 @@ const ENTITY = "inv_demands";
 
 type Demand = {
   id: string; demand_number: string; branch_id: string | null; warehouse_id: string | null; demand_date: string;
-  status: string; notes: string; requester_id: string | null;
+  status: string; notes: string; requester_id: string | null; requester_candidate_id: string | null;
   fulfillment_source?: "warehouse" | "branch";
 };
 type Branch = { id: string; name: string; code: string };
@@ -94,6 +94,22 @@ function DemandsPage() {
     },
   });
 
+  const requesterIds = useMemo(() => {
+    const s = new Set<string>();
+    for (const d of demands) if (d.requester_candidate_id) s.add(d.requester_candidate_id);
+    return Array.from(s);
+  }, [demands]);
+  const { data: requesters = [] } = useQuery({
+    queryKey: ["inv", "demand-requesters", requesterIds.join(",")],
+    enabled: requesterIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("candidates" as never).select("id,full_name,role_key,employee_code").in("id", requesterIds);
+      if (error) throw error;
+      return (data as unknown as { id: string; full_name: string; role_key: string; employee_code: string | null }[]) ?? [];
+    },
+  });
+  const requesterMap = useMemo(() => new Map(requesters.map((r) => [r.id, r])), [requesters]);
+
   const branchMap = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
   const warehouseMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w])), [warehouses]);
   const [query, setQuery] = useState("");
@@ -145,6 +161,7 @@ function DemandsPage() {
               <tr>
                 <th className="px-5 py-3">Demand #</th>
                 <th className="px-5 py-3">Requested From</th>
+                <th className="px-5 py-3">Requested By</th>
                 <th className="px-5 py-3">Date</th>
                 <th className="px-5 py-3 text-right">Items</th>
                 <th className="px-5 py-3 text-right">Total Qty</th>
@@ -158,10 +175,17 @@ function DemandsPage() {
                 const wh = d.warehouse_id ? warehouseMap.get(d.warehouse_id) : null;
                 const br = d.branch_id ? branchMap.get(d.branch_id) : null;
                 const destLabel = wh ? `${wh.name} (Warehouse)` : br ? `${br.code} – ${br.name}` : "—";
+                const req = d.requester_candidate_id ? requesterMap.get(d.requester_candidate_id) : null;
+                const reqLabel = req ? req.full_name : "—";
+                const reqSub = req ? `${(req.role_key ?? "").replace(/_/g, " ")}${req.employee_code ? ` · ${req.employee_code}` : ""}` : "";
                 return (
                   <tr key={d.id} className="hover:bg-secondary/30">
                     <td className="px-5 py-3 font-mono text-xs">{d.demand_number}</td>
                     <td className="px-5 py-3">{destLabel}</td>
+                    <td className="px-5 py-3">
+                      <div className="font-medium">{reqLabel}</div>
+                      {reqSub && <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{reqSub}</div>}
+                    </td>
                     <td className="px-5 py-3 text-xs text-muted-foreground">{d.demand_date}</td>
                     <td className="px-5 py-3 text-right tabular-nums">{agg.items}</td>
                     <td className="px-5 py-3 text-right tabular-nums">{agg.qty}</td>
@@ -184,7 +208,7 @@ function DemandsPage() {
                 );
               })}
               {!filtered.length && (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground">
                   <ClipboardList className="mx-auto mb-2 h-8 w-8 opacity-40" />No demands yet.
                 </td></tr>
               )}

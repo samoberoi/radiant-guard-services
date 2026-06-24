@@ -37,7 +37,8 @@ type Candidate = { id: string; full_name: string; employee_code: string; role_ke
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
 type Line = { id?: string; item_id: string; size_value: string; qty: number; requested_qty: number };
 type OpenDemand = {
-  id: string; demand_number: string; branch_id: string; requester_candidate_id: string | null;
+  id: string; demand_number: string; branch_id: string | null; warehouse_id: string | null;
+  requester_candidate_id: string | null;
   requester_id: string | null; fulfillment_source: string; status: string;
 };
 
@@ -103,17 +104,22 @@ function IssuancesPage() {
   const isBranchManager = role.isBranchManager;
   const scope = useUserBranchScope();
 
-  // Open demands targeting this branch (for BM to fulfil via an issuance).
+  // Open demands available to fulfil via an issuance.
+  // Branch managers see branch-bound demands for their branch.
+  // Warehouse-side users (admin / inventory manager / non-branch-scoped) see warehouse-bound demands.
   const { data: openDemands = [] } = useQuery({
-    queryKey: ["inv", "open-demands-for-branch", scope.branchId],
-    enabled: !!scope.branchId && isBranchManager,
+    queryKey: ["inv", "open-demands-for-issuance", scope.branchId, isBranchManager],
+    enabled: !isFieldOfficer,
     queryFn: async () => {
-      const { data, error } = await supabase.from("inv_demands" as never)
-        .select("id,demand_number,branch_id,requester_candidate_id,requester_id,fulfillment_source,status")
-        .eq("branch_id", scope.branchId!)
-        .eq("fulfillment_source", "branch")
-        .eq("status", "submitted")
-        .order("created_at", { ascending: false });
+      let q = supabase.from("inv_demands" as never)
+        .select("id,demand_number,branch_id,warehouse_id,requester_candidate_id,requester_id,fulfillment_source,status")
+        .eq("status", "submitted");
+      if (isBranchManager && scope.branchId) {
+        q = q.eq("branch_id", scope.branchId).eq("fulfillment_source", "branch");
+      } else {
+        q = q.eq("fulfillment_source", "warehouse");
+      }
+      const { data, error } = await q.order("created_at", { ascending: false });
       if (error) throw error;
       return (data as unknown as OpenDemand[]) ?? [];
     },
@@ -364,17 +370,34 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
     if (!d) return;
     const reqCand = d.requester_candidate_id ? candById.get(d.requester_candidate_id) : null;
     const isFoReq = reqCand && /field|fo|supervisor|officer/i.test(reqCand.role_key);
-    if (isFoReq && reqCand) {
-      setType("branch_to_fo");
-      setDestId(reqCand.id);
-    } else if (reqCand) {
-      setType("branch_to_guard");
-      setDestId(reqCand.id);
+    const isWarehouseDemand = !!d.warehouse_id;
+    if (isWarehouseDemand) {
+      // Warehouse → FO/Guard issuance
+      if (isFoReq && reqCand) {
+        setType("warehouse_to_fo");
+        setDestId(reqCand.id);
+      } else if (reqCand) {
+        setType("warehouse_to_guard");
+        setDestId(reqCand.id);
+      } else {
+        setType("warehouse_to_fo");
+        setDestId("");
+      }
+      setSourceId(d.warehouse_id ?? "");
     } else {
-      setType("branch_to_fo");
-      setDestId("");
+      // Branch → FO/Guard issuance
+      if (isFoReq && reqCand) {
+        setType("branch_to_fo");
+        setDestId(reqCand.id);
+      } else if (reqCand) {
+        setType("branch_to_guard");
+        setDestId(reqCand.id);
+      } else {
+        setType("branch_to_fo");
+        setDestId("");
+      }
+      setSourceId(branchScopeId ?? d.branch_id ?? "");
     }
-    setSourceId(branchScopeId ?? d.branch_id);
     const { data: dls } = await supabase.from("inv_demand_lines" as never)
       .select("item_id,size_value,requested_qty,fulfilled_qty")
       .eq("demand_id", did).order("sort_order");
@@ -498,9 +521,9 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
-          {isBranchManager && isDraft && !initial && openDemands.length > 0 && (
+          {!isFieldOfficer && isDraft && !initial && openDemands.length > 0 && (
             <div className="grid gap-2">
-              <Label>Against Demand <span className="font-normal text-muted-foreground">(optional — auto-fills items & receiver)</span></Label>
+              <Label>Against Demand <span className="font-normal text-muted-foreground">(optional — auto-fills items, source &amp; receiver)</span></Label>
               <Select value={demandId} onValueChange={onPickDemand}>
                 <SelectTrigger><SelectValue placeholder="Pick a pending demand to fulfil…" /></SelectTrigger>
                 <SelectContent>
@@ -514,7 +537,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
           )}
           {!isFieldOfficer && !isBranchManager && (
             <div className="grid gap-2"><Label>Type</Label>
-              <Select value={type} onValueChange={(v) => { setType(v); setSourceId(""); setDestId(""); }} disabled={!isDraft}>
+              <Select value={type} onValueChange={(v) => { setType(v); setSourceId(""); setDestId(""); }} disabled={!isDraft || !!demandId}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {ISSUANCE_TYPES.filter((t) => t.source === "warehouse").map((t) => (
