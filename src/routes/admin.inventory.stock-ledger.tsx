@@ -614,18 +614,27 @@ function StockLedgerPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="h-10 rounded-lg" disabled={!rows.length} onClick={downloadCurrentViewCsv}>
-            <Download className="mr-1.5 h-4 w-4" />Export view
-          </Button>
-          <Button className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90" disabled={!rows.length} onClick={downloadLedgerXlsx}>
-            <FileSpreadsheet className="mr-1.5 h-4 w-4" />Full Ledger
-          </Button>
+          {view === "movement" ? (
+            <>
+              <Button variant="outline" className="h-10 rounded-lg" disabled={!rows.length} onClick={downloadCurrentViewCsv}>
+                <Download className="mr-1.5 h-4 w-4" />Export view
+              </Button>
+              <Button className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90" disabled={!rows.length} onClick={downloadLedgerXlsx}>
+                <FileSpreadsheet className="mr-1.5 h-4 w-4" />Full Ledger
+              </Button>
+            </>
+          ) : (
+            <Button className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90" disabled={!itemRows.length} onClick={downloadItemSummaryXlsx}>
+              <FileSpreadsheet className="mr-1.5 h-4 w-4" />Export Item Summary
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Table */}
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="overflow-x-auto">
+          {view === "movement" ? (
           <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
@@ -680,6 +689,59 @@ function StockLedgerPage() {
               </tfoot>
             )}
           </table>
+          ) : (
+          <table className="ios-table w-full text-sm">
+            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3">Item</th>
+                <th className="px-4 py-3">Size</th>
+                <th className="px-4 py-3">Unit</th>
+                <th className="px-4 py-3 text-right">Opening</th>
+                <th className="px-4 py-3 text-right">IN (period)</th>
+                <th className="px-4 py-3 text-right">OUT (period)</th>
+                <th className="px-4 py-3 text-right">Closing</th>
+                <th className="px-4 py-3">Last Movement</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {isLoading && (
+                <tr><td colSpan={8} className="px-5 py-10 text-center text-sm text-muted-foreground">Loading…</td></tr>
+              )}
+              {!isLoading && itemRows.map((r) => (
+                <tr key={r.key} className="hover:bg-secondary/30">
+                  <td className="px-4 py-3">
+                    <span className="font-medium">{r.item_name}</span>
+                    <span className="ml-2 font-mono text-[11px] text-muted-foreground">{r.item_code}</span>
+                  </td>
+                  <td className="px-4 py-3 text-xs">{r.size}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{r.unit}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{r.opening.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-700">{r.in_qty ? r.in_qty.toLocaleString("en-IN") : ""}</td>
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-rose-700">{r.out_qty ? r.out_qty.toLocaleString("en-IN") : ""}</td>
+                  <td className={`px-4 py-3 text-right font-bold tabular-nums ${r.closing < 0 ? "text-rose-700" : ""}`}>{r.closing.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-[11px] text-muted-foreground whitespace-nowrap">{r.last_movement ? fmtWhen(r.last_movement) : "—"}</td>
+                </tr>
+              ))}
+              {!isLoading && !itemRows.length && (
+                <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <Package className="mx-auto mb-2 h-8 w-8 opacity-40" />No item activity in this range / scope.
+                </td></tr>
+              )}
+            </tbody>
+            {itemRows.length > 0 && (
+              <tfoot className="bg-secondary/30 text-sm">
+                <tr>
+                  <td colSpan={3} className="px-4 py-3 text-right text-xs uppercase tracking-wider text-muted-foreground">Totals</td>
+                  <td className="px-4 py-3 text-right font-bold tabular-nums">{itemTotals.opening.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-right font-bold tabular-nums text-emerald-700">{itemTotals.in_qty.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-right font-bold tabular-nums text-rose-700">{itemTotals.out_qty.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-right font-bold tabular-nums">{itemTotals.closing.toLocaleString("en-IN")}</td>
+                  <td />
+                </tr>
+              </tfoot>
+            )}
+          </table>
+          )}
         </div>
       </div>
     </div>
