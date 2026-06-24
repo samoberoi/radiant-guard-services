@@ -31,7 +31,7 @@ type GRN = {
   vendor_invoice_url?: string | null;
   transfer_id?: string | null; demand_id?: string | null; branch_id?: string | null; kind?: string;
 };
-type PO = { id: string; po_number: string; vendor_id: string | null; destination_warehouse_id: string | null; status: string };
+type PO = { id: string; po_number: string; vendor_id: string | null; destination_warehouse_id: string | null; destination_branch_id: string | null; status: string };
 type POLine = { id: string; item_id: string; size_value: string; ordered_qty: number; received_qty: number };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
 type Vendor = { id: string; name: string };
