@@ -181,73 +181,96 @@ function IssuancesPage() {
     <div>
       <PageHeader title="Issuances" description="Issue items: branch → field officer, or field officer / branch → guard. Stock moves on receiver acknowledgement." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Issuances" }]} />
 
-      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search issuance #…" className="h-10 rounded-lg pl-9" />
+      {isFieldOfficer && (
+        <div className="mb-4 inline-flex rounded-lg border border-border bg-card p-1">
+          <button
+            onClick={() => setView("issuances")}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${view === "issuances" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <UserCheck className="h-4 w-4" /> Issuances
+          </button>
+          <button
+            onClick={() => setView("collections")}
+            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${view === "collections" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >
+            <Inbox className="h-4 w-4" /> Collections
+          </button>
         </div>
-        <Button onClick={() => { setActive(null); setOpen(true); }} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
-          <Plus className="mr-1.5 h-4 w-4" />New Issuance
-        </Button>
-      </div>
+      )}
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="overflow-x-clip">
-          <table className="ios-table w-full text-sm">
-            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3">Issuance #</th>
-                <th className="px-5 py-3">Type</th>
-                <th className="px-5 py-3">Requested From</th>
-                <th className="px-5 py-3">Requested By</th>
-                <th className="px-5 py-3">From</th>
-                <th className="px-5 py-3">To</th>
-                <th className="px-5 py-3">Date</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((i) => {
-                const info = i.demand_id ? demandInfo.get(i.demand_id) : null;
-                return (
-                <tr key={i.id} className="hover:bg-secondary/30">
-                  <td className="px-5 py-3 font-mono text-xs">{i.issuance_number}</td>
-                  <td className="px-5 py-3 text-xs uppercase tracking-wider text-muted-foreground">{i.issuance_type.replace("_", " ")}</td>
-                  <td className="px-5 py-3 font-mono text-xs">{info?.demandNumber ?? "—"}</td>
-                  <td className="px-5 py-3">
-                    {info ? (
-                      <>
-                        <div className="font-medium">{info.requesterName}</div>
-                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                          {info.requesterRole}{info.requesterCode ? ` · ${info.requesterCode}` : ""}
+      {view === "collections" && isFieldOfficer && me ? (
+        <CollectionsPanel me={me} candMap={candMap} itemMap={new Map(items.map((i) => [i.id, i]))} onChanged={invalidate} />
+      ) : (
+        <>
+          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search issuance #…" className="h-10 rounded-lg pl-9" />
+            </div>
+            <Button onClick={() => { setActive(null); setOpen(true); }} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
+              <Plus className="mr-1.5 h-4 w-4" />New Issuance
+            </Button>
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-border bg-card">
+            <div className="overflow-x-clip">
+              <table className="ios-table w-full text-sm">
+                <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  <tr>
+                    <th className="px-5 py-3">Issuance #</th>
+                    <th className="px-5 py-3">Type</th>
+                    <th className="px-5 py-3">Requested From</th>
+                    <th className="px-5 py-3">Requested By</th>
+                    <th className="px-5 py-3">From</th>
+                    <th className="px-5 py-3">To</th>
+                    <th className="px-5 py-3">Date</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filtered.map((i) => {
+                    const info = i.demand_id ? demandInfo.get(i.demand_id) : null;
+                    return (
+                    <tr key={i.id} className="hover:bg-secondary/30">
+                      <td className="px-5 py-3 font-mono text-xs">{i.issuance_number}</td>
+                      <td className="px-5 py-3 text-xs uppercase tracking-wider text-muted-foreground">{i.issuance_type.replace("_", " ")}</td>
+                      <td className="px-5 py-3 font-mono text-xs">{info?.demandNumber ?? "—"}</td>
+                      <td className="px-5 py-3">
+                        {info ? (
+                          <>
+                            <div className="font-medium">{info.requesterName}</div>
+                            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                              {info.requesterRole}{info.requesterCode ? ` · ${info.requesterCode}` : ""}
+                            </div>
+                          </>
+                        ) : "—"}
+                      </td>
+                      <td className="px-5 py-3">{locName(i.source_type, i.source_id)}</td>
+                      <td className="px-5 py-3 font-medium">{locName(i.destination_type, i.destination_id)}</td>
+                      <td className="px-5 py-3 text-xs text-muted-foreground">{i.issuance_date}</td>
+                      <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(i.status)}`}>{i.status === "completed" ? "completed" : i.status}</span></td>
+                      <td className="px-5 py-3 text-right">
+                        <div className="inline-flex gap-1">
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setActive(i); setOpen(true); }}><Eye className="h-4 w-4" /></Button>
+                          {i.status === "draft" && (
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={async () => {
+                              if (!(await confirmAction({ title: "Delete?", description: `Delete ${i.issuance_number}?`, confirmText: "Delete" }))) return;
+                              try { await deleteMut.mutateAsync(i); toast.success("Deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                            }}><Trash2 className="h-4 w-4" /></Button>
+                          )}
                         </div>
-                      </>
-                    ) : "—"}
-                  </td>
-                  <td className="px-5 py-3">{locName(i.source_type, i.source_id)}</td>
-                  <td className="px-5 py-3 font-medium">{locName(i.destination_type, i.destination_id)}</td>
-                  <td className="px-5 py-3 text-xs text-muted-foreground">{i.issuance_date}</td>
-                  <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(i.status)}`}>{i.status === "completed" ? "completed" : i.status}</span></td>
-                  <td className="px-5 py-3 text-right">
-                    <div className="inline-flex gap-1">
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setActive(i); setOpen(true); }}><Eye className="h-4 w-4" /></Button>
-                      {i.status === "draft" && (
-                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={async () => {
-                          if (!(await confirmAction({ title: "Delete?", description: `Delete ${i.issuance_number}?`, confirmText: "Delete" }))) return;
-                          try { await deleteMut.mutateAsync(i); toast.success("Deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
-                        }}><Trash2 className="h-4 w-4" /></Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-                );
-              })}
-              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><UserCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No issuances yet.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                      </td>
+                    </tr>
+                    );
+                  })}
+                  {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><UserCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No issuances yet.</td></tr>}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
 
 
       <IssuanceDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setActive(null); }} initial={active} warehouses={warehouses} branches={branches} fos={fos} guards={guards} candidates={candidates} items={items} onSaved={invalidate} me={me} isFieldOfficer={isFieldOfficer} isBranchManager={isBranchManager} branchScopeId={scope.branchId} openDemands={openDemands} />
