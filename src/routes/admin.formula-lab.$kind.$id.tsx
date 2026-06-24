@@ -174,7 +174,7 @@ function FormulaLabPage() {
   if (isLoading || !value) {
     return (
       <div className="p-6">
-        <PageHeader title="Formula Lab" description="Loading…" />
+        <PageHeader title="Formula Lab" description="Loading…" crumbs={[{ label: "Control Center", to: "/admin/control-center" }, { label: "Formula" }]} />
       </div>
     );
   }
