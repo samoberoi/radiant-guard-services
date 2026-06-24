@@ -830,6 +830,15 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, incoming
       if (error) throw error;
       const grnId = (ins as unknown as { id: string }).id;
 
+      // Upload vendor invoice file if provided (PO receipts only)
+      if (selectedPO && invoiceFile) {
+        const ext = invoiceFile.name.split(".").pop() || "pdf";
+        const path = `${grnId}/${Date.now()}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("vendor-invoices").upload(path, invoiceFile, { upsert: true, contentType: invoiceFile.type });
+        if (upErr) throw upErr;
+        await supabase.from("inv_goods_receipts" as never).update({ vendor_invoice_url: path } as never).eq("id", grnId);
+      }
+
       const linesPayload = lines.map((l, idx) => ({
         grn_id: grnId, po_line_id: l.po_line_id, item_id: l.item_id, size_value: l.size_value,
         ordered_qty: l.ordered_qty, received_qty: l.accepted_qty + l.rejected_qty,
