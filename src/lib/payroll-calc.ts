@@ -407,8 +407,11 @@ function scaleItems(items: BenefitLike[], ratio: number, perDuty?: (i: BenefitLi
   return items.map((i) => ({
     ...i,
     name: i.name,
-    amount: round2((Number(i.amount) || 0) * ratio),
+    amount: i.fixedCalcMethod === "per_duty" && perDuty
+      ? perDuty(i)
+      : round2((Number(i.amount) || 0) * ratio),
   }));
+
 }
 
 function benefitAmountFromConfig(
