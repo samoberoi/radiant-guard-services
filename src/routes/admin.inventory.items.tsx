@@ -373,7 +373,7 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
           <Button disabled={saving} onClick={async () => {
             setSaving(true);
-            const err = await onSubmit({ name, category_id: categoryId || null, unit, is_sized: isSized, hsn_code: hsn, default_reorder_level: reorder, description, enabled, standard_cost: stdCost });
+            const err = await onSubmit({ name, category_id: categoryId || null, unit, is_sized: isSized, hsn_code: hsn, default_reorder_level: reorder, description, enabled, standard_cost: stdCost, standard_issue_price: issuePrice });
             if (err) { setSaving(false); toast.error(err); return; }
             try {
               let targetId = initial?.id;
