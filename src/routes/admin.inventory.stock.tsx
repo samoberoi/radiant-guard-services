@@ -315,7 +315,8 @@ function StockPage() {
       <PageHeader title="Stock Report" description="Live balances across warehouses, branches, field officers and guards." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Stock" }]} />
 
       {/* KPI band */}
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <KpiCard icon={<Layers className="h-4 w-4" />} label="All locations" value={counts.all} active={holderType === "all"} onClick={() => { setHolderType("all"); setHolderId("all"); }} />
         <KpiCard icon={<Warehouse className="h-4 w-4" />} label="Warehouses" value={counts.warehouse} active={holderType === "warehouse"} onClick={() => { setHolderType("warehouse"); setHolderId("all"); }} />
         <KpiCard icon={<Building2 className="h-4 w-4" />} label="Branches" value={counts.branch} active={holderType === "branch"} onClick={() => { setHolderType("branch"); setHolderId("all"); }} />
         <KpiCard icon={<UserCog className="h-4 w-4" />} label="Field Officers" value={counts.field_officer} active={holderType === "field_officer"} onClick={() => { setHolderType("field_officer"); setHolderId("all"); }} />
