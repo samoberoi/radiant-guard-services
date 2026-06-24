@@ -82,7 +82,7 @@ function GRNPage() {
     queryKey: ["inv", "pos-open"],
     enabled: adminMode,
     queryFn: async () => {
-      const { data, error } = await supabase.from("inv_purchase_orders" as never).select("id,po_number,vendor_id,destination_warehouse_id,status").in("status", ["open", "partially_received"]).order("po_date", { ascending: false });
+      const { data, error } = await supabase.from("inv_purchase_orders" as never).select("id,po_number,vendor_id,destination_warehouse_id,destination_branch_id,status").in("status", ["open", "partially_received"]).order("po_date", { ascending: false });
       if (error) throw error;
       return (data as unknown as PO[]) ?? [];
     },
