@@ -112,6 +112,7 @@ function ItemsPage() {
     description: p.description.trim(),
     enabled: p.enabled,
     standard_cost: p.standard_cost,
+    standard_issue_price: p.standard_issue_price,
   });
 
   const addMut = useMutation({
