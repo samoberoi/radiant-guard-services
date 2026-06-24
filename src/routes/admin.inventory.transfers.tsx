@@ -212,7 +212,7 @@ function TransfersPage() {
         </div>
       </div>
 
-      <TransferDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setActive(null); }} initial={active} warehouses={warehouses} branches={branches} items={items} demands={openDemands} onSaved={invalidate} />
+      <TransferDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setActive(null); }} initial={active} warehouses={warehouses} branches={branches} items={items} demands={openDemands} resolveDemandDest={demandDestBranchId} demandLabel={demandLabel} onSaved={invalidate} />
     </div>
   );
 }
