@@ -32,6 +32,7 @@ type Item = {
   description: string;
   enabled: boolean;
   standard_cost: number;
+  standard_issue_price: number;
   last_purchase_price: number | null;
   last_purchase_vendor_id: string | null;
   last_purchase_at: string | null;
@@ -57,6 +58,7 @@ function rowToItem(r: Record<string, unknown>): Item {
     description: String(r.description ?? ""),
     enabled: Boolean(r.enabled ?? true),
     standard_cost: Number(r.standard_cost ?? 0),
+    standard_issue_price: Number(r.standard_issue_price ?? 0),
     last_purchase_price: r.last_purchase_price == null ? null : Number(r.last_purchase_price),
     last_purchase_vendor_id: r.last_purchase_vendor_id ? String(r.last_purchase_vendor_id) : null,
     last_purchase_at: r.last_purchase_at ? String(r.last_purchase_at) : null,
@@ -110,6 +112,7 @@ function ItemsPage() {
     description: p.description.trim(),
     enabled: p.enabled,
     standard_cost: p.standard_cost,
+    standard_issue_price: p.standard_issue_price,
   });
 
   const addMut = useMutation({
@@ -185,7 +188,8 @@ function ItemsPage() {
                 <th className="px-5 py-3">Name</th>
                 <th className="px-5 py-3">Category</th>
                 <th className="px-5 py-3">Unit</th>
-                <th className="px-5 py-3 text-right">Std Cost</th>
+                <th className="px-5 py-3 text-right">Purchase Cost</th>
+                <th className="px-5 py-3 text-right">Std Issue Price</th>
                 <th className="px-5 py-3 text-right">Last Buy</th>
                 <th className="px-5 py-3 text-right">Reorder</th>
                 <th className="px-5 py-3">Status</th>
@@ -200,6 +204,7 @@ function ItemsPage() {
                   <td className="px-5 py-3"><span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{catMap.get(i.category_id ?? "") ?? "—"}</span></td>
                   <td className="px-5 py-3">{i.unit}{i.is_sized && <span className="ml-1 text-[10px] text-muted-foreground">·sized</span>}</td>
                   <td className="px-5 py-3 text-right tabular-nums">{i.standard_cost > 0 ? `₹${i.standard_cost.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</td>
+                  <td className="px-5 py-3 text-right tabular-nums">{i.standard_issue_price > 0 ? `₹${i.standard_issue_price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</td>
                   <td className="px-5 py-3 text-right tabular-nums">{i.last_purchase_price != null ? <><div>₹{i.last_purchase_price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</div><div className="text-[10px] text-muted-foreground">{i.last_purchase_at ? new Date(i.last_purchase_at).toLocaleDateString() : ""}</div></> : "—"}</td>
                   <td className="px-5 py-3 text-right tabular-nums">{i.default_reorder_level}</td>
                   <td className="px-5 py-3"><Switch checked={i.enabled} onCheckedChange={(v) => toggleMut.mutate({ id: i.id, enabled: v }, { onSuccess: () => toast.success(v ? "Enabled" : "Disabled") })} /></td>
@@ -212,7 +217,7 @@ function ItemsPage() {
                   </td>
                 </tr>
               ))}
-              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground">No items yet. Click "Add Item" to begin.</td></tr>}
+              {!filtered.length && <tr><td colSpan={10} className="px-5 py-12 text-center text-sm text-muted-foreground">No items yet. Click "Add Item" to begin.</td></tr>}
             </tbody>
           </table>
         </div>
@@ -246,6 +251,7 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
   const [description, setDescription] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [stdCost, setStdCost] = useState(0);
+  const [issuePrice, setIssuePrice] = useState(0);
   const [saving, setSaving] = useState(false);
   const [sizes, setSizes] = useState<SizeRow[]>([]);
   const [origSizes, setOrigSizes] = useState<SizeRow[]>([]);
@@ -260,6 +266,7 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
     setDescription(initial?.description ?? "");
     setEnabled(initial?.enabled ?? true);
     setStdCost(initial?.standard_cost ?? 0);
+    setIssuePrice(initial?.standard_issue_price ?? 0);
     setSizes([]); setOrigSizes([]);
     if (initial?.id) {
       const { data } = await supabase.from("inv_item_sizes" as never).select("id,size_value,reorder_level,enabled,sort_order").eq("item_id", initial.id).order("sort_order");
@@ -318,10 +325,13 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
               <Select value={unit} onValueChange={setUnit}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent></Select>
             </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2"><Label>HSN Code</Label><Input value={hsn} onChange={(e) => setHsn(e.target.value)} placeholder="optional" /></div>
             <div className="grid gap-2"><Label>Reorder Level</Label><Input type="number" min={0} inputMode="numeric" value={reorder === 0 ? "" : reorder} onChange={(e) => setReorder(Number(e.target.value.replace(/^0+(?=\d)/, "")) || 0)} placeholder="0" /></div>
-            <div className="grid gap-2"><Label>Standard Cost ₹</Label><Input type="number" min={0} step="0.01" inputMode="decimal" value={stdCost === 0 ? "" : stdCost} onChange={(e) => setStdCost(Number(e.target.value.replace(/^0+(?=\d)/, "")) || 0)} placeholder="0.00" /><div className="text-[10px] text-muted-foreground">Auto-updated on GRN as weighted avg.</div></div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2"><Label>Purchase Cost ₹</Label><Input type="number" min={0} step="0.01" inputMode="decimal" value={stdCost === 0 ? "" : stdCost} onChange={(e) => setStdCost(Number(e.target.value.replace(/^0+(?=\d)/, "")) || 0)} placeholder="0.00" /><div className="text-[10px] text-muted-foreground">Auto-updated on GRN as weighted avg.</div></div>
+            <div className="grid gap-2"><Label>Standard Issue Price ₹</Label><Input type="number" min={0} step="0.01" inputMode="decimal" value={issuePrice === 0 ? "" : issuePrice} onChange={(e) => setIssuePrice(Number(e.target.value.replace(/^0+(?=\d)/, "")) || 0)} placeholder="0.00" /><div className="text-[10px] text-muted-foreground">Used when issuing to staff/guards.</div></div>
           </div>
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2"><div><div className="text-sm font-medium">Sized item</div><div className="text-xs text-muted-foreground">Has size variants (S/M/L, shoe numbers, etc.)</div></div><Switch checked={isSized} onCheckedChange={setIsSized} /></div>
           {isSized && (
@@ -363,7 +373,7 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
           <Button disabled={saving} onClick={async () => {
             setSaving(true);
-            const err = await onSubmit({ name, category_id: categoryId || null, unit, is_sized: isSized, hsn_code: hsn, default_reorder_level: reorder, description, enabled, standard_cost: stdCost });
+            const err = await onSubmit({ name, category_id: categoryId || null, unit, is_sized: isSized, hsn_code: hsn, default_reorder_level: reorder, description, enabled, standard_cost: stdCost, standard_issue_price: issuePrice });
             if (err) { setSaving(false); toast.error(err); return; }
             try {
               let targetId = initial?.id;
