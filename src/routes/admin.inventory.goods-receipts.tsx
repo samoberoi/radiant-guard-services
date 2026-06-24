@@ -351,7 +351,6 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: b
   const [challanNo, setChallanNo] = useState("");
   const [vehicleNo, setVehicleNo] = useState("");
   const [notes, setNotes] = useState("");
-  const [finalBranchId, setFinalBranchId] = useState<string>("");
   const [lines, setLines] = useState<Line[]>([]);
   const [items, setItems] = useState<Record<string, Item>>({});
   const [saving, setSaving] = useState(false);
