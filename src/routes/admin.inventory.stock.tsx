@@ -99,7 +99,8 @@ function StockPage() {
     if (holderType === "warehouse") return warehouses.map((w) => ({ id: w.id, name: w.name }));
     if (holderType === "branch") return branches.map((b) => ({ id: b.id, name: b.code ? `${b.code} – ${b.name}` : b.name }));
     if (holderType === "field_officer") return fieldOfficers.map((f) => ({ id: f.id, name: f.full_name, sub: f.employee_code }));
-    return guards.map((g) => ({ id: g.id, name: g.full_name, sub: g.employee_code }));
+    if (holderType === "security_guard") return guards.map((g) => ({ id: g.id, name: g.full_name, sub: g.employee_code }));
+    return [];
   }, [holderType, warehouses, branches, fieldOfficers, guards]);
 
   // Apply branch-scope / FO-scope to which holders the user may see.
