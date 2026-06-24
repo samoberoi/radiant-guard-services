@@ -307,6 +307,84 @@ function StockLedgerPage() {
   const totalCredit = rows.reduce((s, r) => s + r.credit, 0);
   const net = totalDebit - totalCredit;
 
+  // ------- By-Item summary: opening + in/out (in period) + closing, per item+size -------
+  type ItemRow = {
+    key: string;
+    item_id: string;
+    item_name: string;
+    item_code: string;
+    unit: string;
+    size: string;
+    opening: number;
+    in_qty: number;
+    out_qty: number;
+    closing: number;
+    last_movement: string | null;
+  };
+  const itemRows = useMemo<ItemRow[]>(() => {
+    if (view !== "item") return [];
+    const map = new Map<string, ItemRow>();
+    const ql = q.trim().toLowerCase();
+    const keyOf = (item_id: string, size: string) => `${item_id}__${size}`;
+    const ensure = (item_id: string, size: string): ItemRow => {
+      const k = keyOf(item_id, size);
+      let r = map.get(k);
+      if (!r) {
+        const it = itemMap.get(item_id);
+        r = {
+          key: k,
+          item_id,
+          item_name: it?.name ?? "—",
+          item_code: it?.item_code ?? "",
+          unit: it?.unit ?? "",
+          size: size || "—",
+          opening: 0, in_qty: 0, out_qty: 0, closing: 0,
+          last_movement: null,
+        };
+        map.set(k, r);
+      }
+      return r;
+    };
+    // Opening = all movements strictly before fromDate, within visible scope and holder filters
+    const passFilters = (m: Movement) => {
+      if (!isVisible(m.location_type, m.location_id)) return false;
+      const t = normalizeType(m.location_type);
+      if (!t) return false;
+      if (holderType !== "all" && t !== holderType) return false;
+      if (holderId !== "all" && m.location_id !== holderId) return false;
+      return true;
+    };
+    for (const m of openingMoves) {
+      if (!passFilters(m)) continue;
+      const r = ensure(m.item_id, m.size_value || "");
+      r.opening += Number(m.qty_change);
+    }
+    for (const m of movements) {
+      if (!passFilters(m)) continue;
+      const qty = Number(m.qty_change);
+      const r = ensure(m.item_id, m.size_value || "");
+      if (qty > 0) r.in_qty += qty;
+      else r.out_qty += -qty;
+      if (!r.last_movement || m.movement_date > r.last_movement) r.last_movement = m.movement_date;
+    }
+    let out = Array.from(map.values()).map((r) => ({ ...r, closing: r.opening + r.in_qty - r.out_qty }));
+    // Hide rows that had zero opening AND no period activity
+    out = out.filter((r) => r.opening !== 0 || r.in_qty !== 0 || r.out_qty !== 0);
+    if (ql) {
+      out = out.filter((r) => `${r.item_name} ${r.item_code} ${r.size}`.toLowerCase().includes(ql));
+    }
+    out.sort((a, b) => a.item_name.localeCompare(b.item_name) || a.size.localeCompare(b.size));
+    return out;
+  }, [view, movements, openingMoves, isVisible, holderType, holderId, q, itemMap]);
+
+  const itemTotals = useMemo(() => ({
+    opening: itemRows.reduce((s, r) => s + r.opening, 0),
+    in_qty: itemRows.reduce((s, r) => s + r.in_qty, 0),
+    out_qty: itemRows.reduce((s, r) => s + r.out_qty, 0),
+    closing: itemRows.reduce((s, r) => s + r.closing, 0),
+  }), [itemRows]);
+
+
   // ------- XLSX export -------
   function fmtWhen(s: string): string {
     const d = new Date(s);
