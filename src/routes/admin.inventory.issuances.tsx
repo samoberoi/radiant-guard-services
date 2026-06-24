@@ -17,6 +17,7 @@ import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType 
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
 import { useAuth, SUPER_ADMIN_PHONE } from "@/lib/auth";
 import { useCurrentUserRole } from "@/lib/use-current-user-role";
+import { useDemandRequesters } from "@/lib/use-demand-requesters";
 
 
 
