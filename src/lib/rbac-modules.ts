@@ -125,6 +125,7 @@ export const RBAC_MODULES: ModuleDef[] = [
       { key: "demands",           label: "Demands",           path: "/admin/inventory/demands",         icon: ClipboardList },
       { key: "transfers",         label: "Transfers",         path: "/admin/inventory/transfers",       icon: Boxes },
       { key: "issuances",         label: "Issuances",         path: "/admin/inventory/issuances",       icon: UserPlus },
+      { key: "collections",       label: "Collections",       path: "/admin/inventory/collections",     icon: UserPlus },
       
 
       { key: "stock_report",      label: "Stock Report",      path: "/admin/inventory/stock",           icon: Wallet },
