@@ -139,10 +139,11 @@ function StockPage() {
     }[] = [];
     for (const b of balances) {
       const t = normalizeType(b.location_type);
-      if (!t || t !== holderType) continue;
+      if (!t || t === "all") continue;
+      if (holderType !== "all" && t !== holderType) continue;
       if (Number(b.qty) === 0) continue;
       if (visibleHolderIds && !visibleHolderIds.has(b.location_id)) continue;
-      if (holderId !== "all" && b.location_id !== holderId) continue;
+      if (holderType !== "all" && holderId !== "all" && b.location_id !== holderId) continue;
       const it = itemMap.get(b.item_id);
       const label = holderLabel(t, b.location_id);
       if (q.trim()) {
