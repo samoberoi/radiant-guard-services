@@ -3384,6 +3384,8 @@ function ResourceFormDialog({
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
       deductionCalcType: c.deductionCalcType,
+      fixedCalcMethod: c.fixedCalcMethod,
+      fixedDutyComponents: c.fixedDutyComponents,
     };
     if (benefit.calcType === "percentage") {
       benefit.amount = computeBenefitAmount(benefit, components, [], allowanceTypes);
@@ -3415,6 +3417,8 @@ function ResourceFormDialog({
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
       deductionCalcType: c.deductionCalcType,
+      fixedCalcMethod: c.fixedCalcMethod,
+      fixedDutyComponents: c.fixedDutyComponents,
     };
     if (item.calcType === "percentage") {
       item.amount = computeBenefitAmount(item, components, benefits, allowanceTypes);
@@ -3446,6 +3450,8 @@ function ResourceFormDialog({
       amount: c.calcType === "fixed" ? Number(c.amount ?? 0) : 0,
       state: c.state,
       deductionCalcType: c.deductionCalcType,
+      fixedCalcMethod: c.fixedCalcMethod,
+      fixedDutyComponents: c.fixedDutyComponents,
     };
     if (item.calcType === "percentage") {
       const l = (s: string) => s.trim().toLowerCase();
