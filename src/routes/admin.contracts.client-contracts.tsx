@@ -188,6 +188,9 @@ type ResourceComponent = {
   includeInOt?: boolean;
 };
 
+type FixedCalcMethod = "flat" | "per_duty";
+type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
+
 type BenefitItem = {
   costComponentId: string;
   name: string;
@@ -199,7 +202,10 @@ type BenefitItem = {
   amount: number; // computed (percentage) or manual (fixed)
   state: string;
   deductionCalcType?: "earned_salary" | "fixed_amount";
+  fixedCalcMethod?: FixedCalcMethod;
+  fixedDutyComponents?: FixedDutyBucket[];
 };
+
 
 type ContractResource = {
   id?: string;
