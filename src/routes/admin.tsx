@@ -325,9 +325,11 @@ function AdminLayout() {
     () => {
       if (isSuperAdmin) return inventoryChildren;
       const list = inventoryChildren.filter((c) => !c.sub || canSub("inventory", c.sub));
+      // Collections is field-officer only.
+      const withCollections = list.filter((c) => c.to !== "/admin/inventory/collections" || roleKey === "field_officer");
       // Field officers do not see the Inventory Command Center dashboard.
-      if (roleKey === "field_officer") return list.filter((c) => c.to !== "/admin/inventory");
-      return list;
+      if (roleKey === "field_officer") return withCollections.filter((c) => c.to !== "/admin/inventory");
+      return withCollections;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [isSuperAdmin, permsLoading, roleKey],
