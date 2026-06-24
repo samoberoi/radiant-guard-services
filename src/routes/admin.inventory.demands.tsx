@@ -59,6 +59,14 @@ function DemandsPage() {
       return (data as unknown as Branch[]) ?? [];
     },
   });
+  const { data: warehouses = [] } = useQuery({
+    queryKey: ["inv", "warehouses-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_warehouses" as never).select("id,name,warehouse_code,is_default").eq("enabled", true).order("name");
+      if (error) throw error;
+      return (data as unknown as Warehouse[]) ?? [];
+    },
+  });
   const { data: items = [] } = useQuery({
     queryKey: ["inv", "items-list"],
     queryFn: async () => {
