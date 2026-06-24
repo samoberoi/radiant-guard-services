@@ -95,6 +95,7 @@ function DemandsPage() {
   });
 
   const branchMap = useMemo(() => new Map(branches.map((b) => [b.id, b])), [branches]);
+  const warehouseMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w])), [warehouses]);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Demand | null>(null);
