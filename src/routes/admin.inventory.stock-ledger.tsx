@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
-import { Download, FileSpreadsheet, Search, BookOpenCheck, ArrowDownCircle, ArrowUpCircle, Scale } from "lucide-react";
+import { Download, FileSpreadsheet, Search, BookOpenCheck, ArrowDownCircle, ArrowUpCircle, Scale, List, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,7 @@ function StockLedgerPage() {
   const [holderId, setHolderId] = useState<string>("all");
   const [direction, setDirection] = useState<"all" | "in" | "out">("all");
   const [q, setQ] = useState("");
+  const [view, setView] = useState<"movement" | "item">("movement");
 
   // ------- Reference data -------
   const { data: items = [] } = useQuery({
@@ -128,6 +129,32 @@ function StockLedgerPage() {
           .gte("movement_date", fromIso)
           .lte("movement_date", toIso)
           .order("movement_date", { ascending: false })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const rows = (data as unknown as Movement[]) ?? [];
+        all.push(...rows);
+        if (rows.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
+    },
+  });
+
+  // ------- Opening balances: all movements strictly before fromDate (for By-Item view) -------
+  const { data: openingMoves = [] } = useQuery({
+    queryKey: ["ledger", "opening", fromDate],
+    enabled: view === "item",
+    queryFn: async () => {
+      const fromIso = new Date(fromDate + "T00:00:00").toISOString();
+      const all: Movement[] = [];
+      const pageSize = 1000;
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("inv_stock_movements" as never)
+          .select("id,movement_date,movement_type,location_type,location_id,item_id,size_value,qty_change,reference_type,reference_id,notes")
+          .lt("movement_date", fromIso)
+          .order("movement_date", { ascending: true })
           .range(from, from + pageSize - 1);
         if (error) throw error;
         const rows = (data as unknown as Movement[]) ?? [];
@@ -280,6 +307,84 @@ function StockLedgerPage() {
   const totalCredit = rows.reduce((s, r) => s + r.credit, 0);
   const net = totalDebit - totalCredit;
 
+  // ------- By-Item summary: opening + in/out (in period) + closing, per item+size -------
+  type ItemRow = {
+    key: string;
+    item_id: string;
+    item_name: string;
+    item_code: string;
+    unit: string;
+    size: string;
+    opening: number;
+    in_qty: number;
+    out_qty: number;
+    closing: number;
+    last_movement: string | null;
+  };
+  const itemRows = useMemo<ItemRow[]>(() => {
+    if (view !== "item") return [];
+    const map = new Map<string, ItemRow>();
+    const ql = q.trim().toLowerCase();
+    const keyOf = (item_id: string, size: string) => `${item_id}__${size}`;
+    const ensure = (item_id: string, size: string): ItemRow => {
+      const k = keyOf(item_id, size);
+      let r = map.get(k);
+      if (!r) {
+        const it = itemMap.get(item_id);
+        r = {
+          key: k,
+          item_id,
+          item_name: it?.name ?? "—",
+          item_code: it?.item_code ?? "",
+          unit: it?.unit ?? "",
+          size: size || "—",
+          opening: 0, in_qty: 0, out_qty: 0, closing: 0,
+          last_movement: null,
+        };
+        map.set(k, r);
+      }
+      return r;
+    };
+    // Opening = all movements strictly before fromDate, within visible scope and holder filters
+    const passFilters = (m: Movement) => {
+      if (!isVisible(m.location_type, m.location_id)) return false;
+      const t = normalizeType(m.location_type);
+      if (!t) return false;
+      if (holderType !== "all" && t !== holderType) return false;
+      if (holderId !== "all" && m.location_id !== holderId) return false;
+      return true;
+    };
+    for (const m of openingMoves) {
+      if (!passFilters(m)) continue;
+      const r = ensure(m.item_id, m.size_value || "");
+      r.opening += Number(m.qty_change);
+    }
+    for (const m of movements) {
+      if (!passFilters(m)) continue;
+      const qty = Number(m.qty_change);
+      const r = ensure(m.item_id, m.size_value || "");
+      if (qty > 0) r.in_qty += qty;
+      else r.out_qty += -qty;
+      if (!r.last_movement || m.movement_date > r.last_movement) r.last_movement = m.movement_date;
+    }
+    let out = Array.from(map.values()).map((r) => ({ ...r, closing: r.opening + r.in_qty - r.out_qty }));
+    // Hide rows that had zero opening AND no period activity
+    out = out.filter((r) => r.opening !== 0 || r.in_qty !== 0 || r.out_qty !== 0);
+    if (ql) {
+      out = out.filter((r) => `${r.item_name} ${r.item_code} ${r.size}`.toLowerCase().includes(ql));
+    }
+    out.sort((a, b) => a.item_name.localeCompare(b.item_name) || a.size.localeCompare(b.size));
+    return out;
+  }, [view, movements, openingMoves, isVisible, holderType, holderId, q, itemMap]);
+
+  const itemTotals = useMemo(() => ({
+    opening: itemRows.reduce((s, r) => s + r.opening, 0),
+    in_qty: itemRows.reduce((s, r) => s + r.in_qty, 0),
+    out_qty: itemRows.reduce((s, r) => s + r.out_qty, 0),
+    closing: itemRows.reduce((s, r) => s + r.closing, 0),
+  }), [itemRows]);
+
+
   // ------- XLSX export -------
   function fmtWhen(s: string): string {
     const d = new Date(s);
@@ -406,6 +511,35 @@ function StockLedgerPage() {
     XLSX.writeFile(wb, `stock-ledger-view-${new Date().toISOString().slice(0, 10)}.xlsx`);
   }
 
+  function downloadItemSummaryXlsx() {
+    const wb = XLSX.utils.book_new();
+    const scopeLine = role.isSuperAdmin
+      ? "All locations (Super Admin)"
+      : role.isFieldOfficer
+      ? "Field Officer (own + reporting guards)"
+      : scope.isScoped
+      ? `Branch — ${scope.branchLabel}`
+      : "All locations";
+    const aoa: (string | number)[][] = [
+      ["Stock Ledger — By Item (Opening · IN · OUT · Closing)"],
+      [`Period: ${fromDate} → ${toDate}  ·  Scope: ${scopeLine}`],
+      [],
+      ["Item Code", "Item", "Size", "Unit", "Opening", "IN (period)", "OUT (period)", "Closing", "Last Movement"],
+      ...itemRows.map((r) => [
+        r.item_code, r.item_name, r.size, r.unit,
+        r.opening, r.in_qty, r.out_qty, r.closing,
+        r.last_movement ? fmtWhen(r.last_movement) : "",
+      ]),
+      [],
+      ["TOTAL", "", "", "", itemTotals.opening, itemTotals.in_qty, itemTotals.out_qty, itemTotals.closing, ""],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [{ wch: 14 }, { wch: 30 }, { wch: 10 }, { wch: 8 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 20 }];
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: 8 } }];
+    XLSX.utils.book_append_sheet(wb, ws, "By Item");
+    XLSX.writeFile(wb, `stock-by-item-${fromDate}_to_${toDate}.xlsx`);
+  }
+
   return (
     <div>
       <PageHeader
@@ -431,6 +565,22 @@ function StockLedgerPage() {
             <span className="text-xs uppercase tracking-wider text-muted-foreground">To</span>
             <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="h-10 w-40 rounded-lg" />
           </div>
+          <div className="inline-flex h-10 items-center rounded-lg border border-border bg-card p-0.5">
+            <button
+              type="button"
+              onClick={() => setView("movement")}
+              className={`inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition ${view === "movement" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <List className="h-3.5 w-3.5" />By Movement
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("item")}
+              className={`inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-semibold transition ${view === "item" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              <Package className="h-3.5 w-3.5" />By Item
+            </button>
+          </div>
           <Select value={holderType} onValueChange={(v) => { setHolderType(v as HolderTypeFilter); setHolderId("all"); }}>
             <SelectTrigger className="h-10 w-44 rounded-lg"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -448,32 +598,43 @@ function StockLedgerPage() {
               {holderOptions.map((o) => <SelectItem key={o.id} value={o.id}>{o.label}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={direction} onValueChange={(v) => setDirection(v as "all" | "in" | "out")}>
-            <SelectTrigger className="h-10 w-40 rounded-lg"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Debit & Credit</SelectItem>
-              <SelectItem value="in">Debit only (IN)</SelectItem>
-              <SelectItem value="out">Credit only (OUT)</SelectItem>
-            </SelectContent>
-          </Select>
+          {view === "movement" && (
+            <Select value={direction} onValueChange={(v) => setDirection(v as "all" | "in" | "out")}>
+              <SelectTrigger className="h-10 w-40 rounded-lg"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Debit & Credit</SelectItem>
+                <SelectItem value="in">Debit only (IN)</SelectItem>
+                <SelectItem value="out">Credit only (OUT)</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <div className="relative w-full sm:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search item, holder, type…" className="h-10 rounded-lg pl-9" />
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={view === "item" ? "Search item, code, size…" : "Search item, holder, type…"} className="h-10 rounded-lg pl-9" />
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="h-10 rounded-lg" disabled={!rows.length} onClick={downloadCurrentViewCsv}>
-            <Download className="mr-1.5 h-4 w-4" />Export view
-          </Button>
-          <Button className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90" disabled={!rows.length} onClick={downloadLedgerXlsx}>
-            <FileSpreadsheet className="mr-1.5 h-4 w-4" />Full Ledger
-          </Button>
+          {view === "movement" ? (
+            <>
+              <Button variant="outline" className="h-10 rounded-lg" disabled={!rows.length} onClick={downloadCurrentViewCsv}>
+                <Download className="mr-1.5 h-4 w-4" />Export view
+              </Button>
+              <Button className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90" disabled={!rows.length} onClick={downloadLedgerXlsx}>
+                <FileSpreadsheet className="mr-1.5 h-4 w-4" />Full Ledger
+              </Button>
+            </>
+          ) : (
+            <Button className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90" disabled={!itemRows.length} onClick={downloadItemSummaryXlsx}>
+              <FileSpreadsheet className="mr-1.5 h-4 w-4" />Export Item Summary
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Table */}
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="overflow-x-auto">
+          {view === "movement" ? (
           <table className="ios-table w-full text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
@@ -528,6 +689,59 @@ function StockLedgerPage() {
               </tfoot>
             )}
           </table>
+          ) : (
+          <table className="ios-table w-full text-sm">
+            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3">Item</th>
+                <th className="px-4 py-3">Size</th>
+                <th className="px-4 py-3">Unit</th>
+                <th className="px-4 py-3 text-right">Opening</th>
+                <th className="px-4 py-3 text-right">IN (period)</th>
+                <th className="px-4 py-3 text-right">OUT (period)</th>
+                <th className="px-4 py-3 text-right">Closing</th>
+                <th className="px-4 py-3">Last Movement</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {isLoading && (
+                <tr><td colSpan={8} className="px-5 py-10 text-center text-sm text-muted-foreground">Loading…</td></tr>
+              )}
+              {!isLoading && itemRows.map((r) => (
+                <tr key={r.key} className="hover:bg-secondary/30">
+                  <td className="px-4 py-3">
+                    <span className="font-medium">{r.item_name}</span>
+                    <span className="ml-2 font-mono text-[11px] text-muted-foreground">{r.item_code}</span>
+                  </td>
+                  <td className="px-4 py-3 text-xs">{r.size}</td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">{r.unit}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{r.opening.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-700">{r.in_qty ? r.in_qty.toLocaleString("en-IN") : ""}</td>
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-rose-700">{r.out_qty ? r.out_qty.toLocaleString("en-IN") : ""}</td>
+                  <td className={`px-4 py-3 text-right font-bold tabular-nums ${r.closing < 0 ? "text-rose-700" : ""}`}>{r.closing.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-[11px] text-muted-foreground whitespace-nowrap">{r.last_movement ? fmtWhen(r.last_movement) : "—"}</td>
+                </tr>
+              ))}
+              {!isLoading && !itemRows.length && (
+                <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground">
+                  <Package className="mx-auto mb-2 h-8 w-8 opacity-40" />No item activity in this range / scope.
+                </td></tr>
+              )}
+            </tbody>
+            {itemRows.length > 0 && (
+              <tfoot className="bg-secondary/30 text-sm">
+                <tr>
+                  <td colSpan={3} className="px-4 py-3 text-right text-xs uppercase tracking-wider text-muted-foreground">Totals</td>
+                  <td className="px-4 py-3 text-right font-bold tabular-nums">{itemTotals.opening.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-right font-bold tabular-nums text-emerald-700">{itemTotals.in_qty.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-right font-bold tabular-nums text-rose-700">{itemTotals.out_qty.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-right font-bold tabular-nums">{itemTotals.closing.toLocaleString("en-IN")}</td>
+                  <td />
+                </tr>
+              </tfoot>
+            )}
+          </table>
+          )}
         </div>
       </div>
     </div>
