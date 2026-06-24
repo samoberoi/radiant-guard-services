@@ -89,7 +89,6 @@ function GRNPage() {
   });
   const { data: vendors = [] } = useQuery({
     queryKey: ["inv", "vendors-list"],
-    enabled: adminMode,
     queryFn: async () => {
       const { data, error } = await supabase.from("inv_vendors" as never).select("id,name").eq("enabled", true);
       if (error) throw error;
