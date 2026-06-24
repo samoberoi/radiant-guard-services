@@ -487,10 +487,11 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: b
         }
       }
 
-      // Books-of-record passthrough: if vendor delivered to a final branch,
+      // Books-of-record passthrough: if the PO designates a destination branch,
       // auto-create a completed transfer (warehouse → branch) so books show:
       //   IN at warehouse  →  OUT from warehouse  →  IN at branch
       const acceptedForTransfer = lines.filter((l) => l.accepted_qty > 0);
+      const finalBranchId = po.destination_branch_id ?? "";
       let passthroughTransferId: string | null = null;
       if (finalBranchId && acceptedForTransfer.length) {
         const tn = await nextSeq("inv_transfer_number_seq");
@@ -502,7 +503,7 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: b
           linked_po_id: po.id,
           transfer_date: receiptDate, status: "completed",
           vehicle_number: vehicleNo, driver_name: "", driver_phone: "",
-          notes: `Auto-created from GRN ${grn_number} — vendor delivered direct to branch.`,
+          notes: `Auto-created from GRN ${grn_number} — PO destination branch.`,
           dispatched_by: user?.id ?? null, dispatched_at: new Date().toISOString(),
           received_by: user?.id ?? null, received_at: new Date().toISOString(),
         } as never).select("id").single();
@@ -533,6 +534,7 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: b
           branch_id: finalBranchId, transfer_id: passthroughTransferId,
         } as never).eq("id", grnId);
       }
+
 
 
       // Update PO status
