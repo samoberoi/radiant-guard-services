@@ -1916,6 +1916,8 @@ export type Database = {
           ack_photo_url: string
           ack_signature_url: string
           acknowledged_at: string | null
+          collected_at: string | null
+          collected_by: string | null
           created_at: string
           demand_id: string | null
           destination_id: string
@@ -1941,6 +1943,8 @@ export type Database = {
           ack_photo_url?: string
           ack_signature_url?: string
           acknowledged_at?: string | null
+          collected_at?: string | null
+          collected_by?: string | null
           created_at?: string
           demand_id?: string | null
           destination_id: string
@@ -1966,6 +1970,8 @@ export type Database = {
           ack_photo_url?: string
           ack_signature_url?: string
           acknowledged_at?: string | null
+          collected_at?: string | null
+          collected_by?: string | null
           created_at?: string
           demand_id?: string | null
           destination_id?: string
