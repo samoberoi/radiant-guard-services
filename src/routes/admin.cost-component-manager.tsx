@@ -523,7 +523,10 @@ function CostComponentDialog({
     setEnabled(initial?.enabled ?? true);
     setSortOrder(String(initial?.sort_order ?? 0));
     setDeductionCalcType(initial?.deduction_calc_type ?? "earned_salary");
+    setFixedCalcMethod(initial?.fixed_calc_method ?? "flat");
+    setFixedDutyComponents(initial?.fixed_duty_components ?? []);
   });
+
 
   const stateOptions = useMemo(() => ["N/A", ...states.map((s) => s.name)], [states]);
 
