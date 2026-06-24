@@ -710,9 +710,11 @@ function CloseDialogButton({ onClose }: { onClose: () => void }) {
   return <Button variant="outline" onClick={() => { markPristine(); onClose(); }}>Close</Button>;
 }
 
-function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, onSaved }: {
+function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, warehouses, branches, onSaved }: {
   open: boolean; onOpenChange: (o: boolean) => void; branchId: string;
-  transfers: Transfer[]; items: Item[]; onSaved: () => void;
+  transfers: Transfer[]; items: Item[];
+  warehouses: { id: string; name: string }[]; branches: { id: string; name: string }[];
+  onSaved: () => void;
 }) {
   const [transferId, setTransferId] = useState<string>("");
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().slice(0, 10));
@@ -720,6 +722,14 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, o
   const [lines, setLines] = useState<Line[]>([]);
   const [saving, setSaving] = useState(false);
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  const wMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w.name])), [warehouses]);
+  const bMap = useMemo(() => new Map(branches.map((b) => [b.id, b.name])), [branches]);
+  const locLabel = (type: string, id: string): string => {
+    if (!id) return "—";
+    if (type === "warehouse") return wMap.get(id) ?? "Warehouse";
+    if (type === "branch") return bMap.get(id) ?? "Branch";
+    return type;
+  };
 
   useResetOnOpen(open, async () => {
     setTransferId(""); setReceiptDate(new Date().toISOString().slice(0, 10));
@@ -746,6 +756,7 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, o
   }
 
   const selectedTransfer = transfers.find((t) => t.id === transferId);
+
 
   async function save() {
     if (!selectedTransfer) { toast.error("Pick an incoming transfer"); return; }
