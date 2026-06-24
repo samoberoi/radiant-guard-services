@@ -1,79 +1,71 @@
-## Goal
-Make every **Fixed Amount** cost component support a configurable per-duty proration formula so components like *WC Policy* can be calculated as:
+# Attendance load — RCA & optimization plan
+
+## 1. Where attendance is stored (confirmation)
+
+Yes — it's in the Lovable Cloud database, not local/cached state.
+
+- `public.attendance_entries` — one row per (unit, candidate, designation, date). Columns: `code` (P/A/WO/etc.), `ot_hours`, `entry_date`. Unique on (unit_id, candidate_id, designation_id, entry_date). Indexed on (unit_id, entry_date) and (candidate_id, entry_date).
+- `public.attendance_sheets` — per-unit period header with status (draft/submitted/approved/rejected) and approval metadata.
+
+## 2. Root cause of the 20-second load
+
+The shared fetch helper `src/lib/attendance-fetch.ts` (function `fetchAttendanceEntriesForPeriod`) loops **one date at a time** and issues a separate Supabase request per day:
 
 ```
-per_duty_amount = configured_amount / base_days
-final_amount    = per_duty_amount × (sum of selected duty counts)
+for each date in [periodStart .. periodEnd]:
+    supabase.from('attendance_entries').select(...).eq('entry_date', date)
 ```
 
-The configuration must be reusable on any future fixed-amount component, override-able per contract line, and flow through payroll calculation + every payroll export.
+For a 31-day payroll month that's **31 sequential network round-trips**, each paying:
+- HTTPS + PostgREST overhead
+- RLS evaluation (`is_admin_user()` / `is_unit_in_current_user_branch(unit_id)`) on every request
+- JWT verification
 
-## 1. Schema (one migration)
+At ~500–700 ms each over a typical link, the total lands at ~15–25 s — matching what you're seeing. The empty grid renders first because the React Query state is `isLoading=true` while these 31 calls drain in series.
 
-Add two columns to `cost_components` and mirror them on contract resource JSONB lines:
+This same helper is used by:
+- `admin.attendance.$unitId.tsx` (the payroll-period attendance view you tested)
+- `admin.payroll.$unitId.tsx`
+- `admin.invoice.$unitId.tsx`
+- `admin.dashboard.tsx` (worst case — runs across many units in scope)
 
-- `fixed_calc_method` text NOT NULL DEFAULT `'flat'` CHECK in (`'flat'`, `'per_duty'`)
-- `fixed_duty_components` text[] NOT NULL DEFAULT `'{}'` — which duty buckets sum into "total duties" (allowed values: `p_days`, `ot_days`, `ph_days`, `other_paid_days`)
+The DB itself is fine: `(unit_id, entry_date)` index is already in place; a single ranged query for the period would return in tens of ms.
 
-Backfill: leave all existing rows as `flat` (no behaviour change). Divisor is always the contract resource's existing **Base Days** (Payroll Day Base) — no new divisor field needed.
+## 3. Fix
 
-Contract resource JSONB rows (`contract_resources.components / deductions / employer_contributions`) gain the same two fields per line, copied from master when added and editable per line.
+Rewrite `fetchAttendanceEntriesForPeriod` to issue **one query for the whole period** using `entry_date.gte(start).lte(end)`, paginating by `range()` only if the row count exceeds the page size:
 
-## 2. Cost Component Manager UI (`admin.cost-component-manager.tsx`)
-
-When **Calculation Type = Fixed Amount**, render a new "Fixed Amount Formula" sub-section:
-
-- Radio / select: **Flat (use amount as-is)** ‧ **Per-Duty Proration**
-- When Per-Duty selected, show:
-  - Read-only helper: `per duty = amount ÷ Base Days (from contract resource)`
-  - Multi-select checkboxes for duty buckets to include in "Total Duties":
-    - ☐ P Days (present)
-    - ☐ OT Days
-    - ☐ PH Days
-    - ☐ Other Paid Days
-  - Live preview line, e.g. *"₹200 ÷ 26 × (P + OT + PH) = ₹/duty × total duties"*
-
-`buildDescription()` updated so the list page shows the formula summary.
-
-## 3. Contract editor (`admin.contracts.client-contracts.tsx`)
-
-When a fixed-amount component is added to a resource, copy `fixed_calc_method` + `fixed_duty_components` from master onto the line. Show inline controls (compact select + chips) so the formula can be overridden per contract without touching the master.
-
-## 4. Payroll engine (`src/lib/payroll-calc.ts`)
-
-Extend `BenefitLike` / `WageComponent` with:
-- `fixedCalcMethod?: 'flat' | 'per_duty'`
-- `fixedDutyComponents?: string[]`
-
-Replace today's `isFixedItem` branch:
-
-```text
-if calc_type = fixed AND fixedCalcMethod = 'per_duty':
-    perDuty   = configuredAmount / baseDays
-    totalDays = Σ(totals[bucket] for bucket in fixedDutyComponents)
-    amount    = round2(perDuty × totalDays)
-elif deductionCalcType = 'fixed_amount' (flat):
-    amount    = configuredAmount        // unchanged
-else:
-    amount    = configuredAmount × earnedRatio  // unchanged
+```ts
+let from = 0;
+while (true) {
+  let q = supabase.from('attendance_entries')
+    .select(selectCols)
+    .gte('entry_date', start)
+    .lte('entry_date', end)
+    .order('entry_date', { ascending: true })
+    .range(from, from + pageSize - 1);
+  q = unitId ? q.eq('unit_id', unitId) : q.in('unit_id', unitIds);
+  ...
+}
 ```
 
-`totals` already exposes `pDays`, `otDays`, `phDays`, `otherPaidDays` from `summarizeAttendance` (lines 95–110), so no new attendance plumbing is needed.
+Expected effect: 31 round-trips → 1 (or 2 for very large units). Load time should drop from ~20 s to well under 1 s for a single unit, and the dashboard's multi-unit case from minutes-class to seconds.
 
-Apply the same formula path for fixed-amount **earnings** (components used as earnings, e.g. Management Fee if reconfigured), so the rule is uniform across earnings / deductions / employer contributions. EPF and statutory ESI overrides keep their current precedence (run after this scaling).
+No schema change, no RLS change, no UI change — pure data-layer fix in one file. All four callers benefit automatically.
 
-## 5. Payroll screen + exports
+## 4. Verification after the change
 
-- `admin.payroll.$unitId.tsx`: per-row tooltip / breakdown shows `amount ÷ baseDays × (P+OT+PH+…) = final` for any per-duty line.
-- Wage Register / Pay Sheet PDF / CSV / MIS: render the calculated `amount` field — no schema change, but verify each export reads the engine output (it already does) so WC-Policy-style rows show the prorated value, not the flat ₹200.
+- Open the same FPL Technologies May payroll attendance and confirm the grid populates immediately.
+- Check browser Network tab: one `attendance_entries` request instead of ~31.
+- Spot-check dashboard and payroll/invoice pages for the same unit to confirm no regressions in totals.
 
-## 6. Backward compatibility
+## 5. RCA report (for your records)
 
-- Existing rows default to `flat` → identical output to today.
-- Legacy name-based `isFixedItem` heuristic (uniform/lwf) is kept as a final fallback for older contract JSONB rows missing the new fields, so historical payroll runs reproduce.
+- **Symptom:** Attendance grid empty for ~20 s before data appears, every time, on every unit.
+- **Scope:** All attendance / payroll / invoice / dashboard pages that read `attendance_entries` via the shared fetch helper.
+- **Root cause:** Client-side fan-out — one Supabase request per calendar date in the selected period, awaited sequentially. Compounded by RLS re-evaluation on every request.
+- **Not the cause:** Database size, missing indexes, RLS policy correctness, Edge Function CPU limit (this path doesn't use Edge Functions), or front-end rendering.
+- **Fix:** Range query over the full period in a single request, with normal pagination only when row count demands it.
+- **Prevention:** Treat "loop calls per day/row" as an anti-pattern in any future helper that talks to Supabase; always prefer a single ranged query.
 
-## 7. Out of scope
-
-Attendance capture, payroll-day-base UI, allowance master, and OT-base logic are unchanged. Only Fixed-Amount calculation gains the per-duty option plus its plumbing through contracts and exports.
-
-Approve and I'll ship the migration + code in one pass.
+Ready to implement on approval.
