@@ -65,6 +65,7 @@ import { Route as AdminInvoiceUnitIdRouteImport } from './routes/admin.invoice.$
 import { Route as AdminInventoryWarehousesRouteImport } from './routes/admin.inventory.warehouses'
 import { Route as AdminInventoryVendorsRouteImport } from './routes/admin.inventory.vendors'
 import { Route as AdminInventoryTransfersRouteImport } from './routes/admin.inventory.transfers'
+import { Route as AdminInventoryStockLedgerRouteImport } from './routes/admin.inventory.stock-ledger'
 import { Route as AdminInventoryStockRouteImport } from './routes/admin.inventory.stock'
 import { Route as AdminInventoryRateCardsRouteImport } from './routes/admin.inventory.rate-cards'
 import { Route as AdminInventoryPurchaseOrdersRouteImport } from './routes/admin.inventory.purchase-orders'
@@ -373,6 +374,12 @@ const AdminInventoryTransfersRoute = AdminInventoryTransfersRouteImport.update({
   path: '/transfers',
   getParentRoute: () => AdminInventoryRoute,
 } as any)
+const AdminInventoryStockLedgerRoute =
+  AdminInventoryStockLedgerRouteImport.update({
+    id: '/stock-ledger',
+    path: '/stock-ledger',
+    getParentRoute: () => AdminInventoryRoute,
+  } as any)
 const AdminInventoryStockRoute = AdminInventoryStockRouteImport.update({
   id: '/stock',
   path: '/stock',
@@ -532,6 +539,7 @@ export interface FileRoutesByFullPath {
   '/admin/inventory/purchase-orders': typeof AdminInventoryPurchaseOrdersRoute
   '/admin/inventory/rate-cards': typeof AdminInventoryRateCardsRoute
   '/admin/inventory/stock': typeof AdminInventoryStockRoute
+  '/admin/inventory/stock-ledger': typeof AdminInventoryStockLedgerRoute
   '/admin/inventory/transfers': typeof AdminInventoryTransfersRoute
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
@@ -605,6 +613,7 @@ export interface FileRoutesByTo {
   '/admin/inventory/purchase-orders': typeof AdminInventoryPurchaseOrdersRoute
   '/admin/inventory/rate-cards': typeof AdminInventoryRateCardsRoute
   '/admin/inventory/stock': typeof AdminInventoryStockRoute
+  '/admin/inventory/stock-ledger': typeof AdminInventoryStockLedgerRoute
   '/admin/inventory/transfers': typeof AdminInventoryTransfersRoute
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
@@ -682,6 +691,7 @@ export interface FileRoutesById {
   '/admin/inventory/purchase-orders': typeof AdminInventoryPurchaseOrdersRoute
   '/admin/inventory/rate-cards': typeof AdminInventoryRateCardsRoute
   '/admin/inventory/stock': typeof AdminInventoryStockRoute
+  '/admin/inventory/stock-ledger': typeof AdminInventoryStockLedgerRoute
   '/admin/inventory/transfers': typeof AdminInventoryTransfersRoute
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
@@ -760,6 +770,7 @@ export interface FileRouteTypes {
     | '/admin/inventory/purchase-orders'
     | '/admin/inventory/rate-cards'
     | '/admin/inventory/stock'
+    | '/admin/inventory/stock-ledger'
     | '/admin/inventory/transfers'
     | '/admin/inventory/vendors'
     | '/admin/inventory/warehouses'
@@ -833,6 +844,7 @@ export interface FileRouteTypes {
     | '/admin/inventory/purchase-orders'
     | '/admin/inventory/rate-cards'
     | '/admin/inventory/stock'
+    | '/admin/inventory/stock-ledger'
     | '/admin/inventory/transfers'
     | '/admin/inventory/vendors'
     | '/admin/inventory/warehouses'
@@ -909,6 +921,7 @@ export interface FileRouteTypes {
     | '/admin/inventory/purchase-orders'
     | '/admin/inventory/rate-cards'
     | '/admin/inventory/stock'
+    | '/admin/inventory/stock-ledger'
     | '/admin/inventory/transfers'
     | '/admin/inventory/vendors'
     | '/admin/inventory/warehouses'
@@ -1328,6 +1341,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInventoryTransfersRouteImport
       parentRoute: typeof AdminInventoryRoute
     }
+    '/admin/inventory/stock-ledger': {
+      id: '/admin/inventory/stock-ledger'
+      path: '/stock-ledger'
+      fullPath: '/admin/inventory/stock-ledger'
+      preLoaderRoute: typeof AdminInventoryStockLedgerRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
     '/admin/inventory/stock': {
       id: '/admin/inventory/stock'
       path: '/stock'
@@ -1514,6 +1534,7 @@ interface AdminInventoryRouteChildren {
   AdminInventoryPurchaseOrdersRoute: typeof AdminInventoryPurchaseOrdersRoute
   AdminInventoryRateCardsRoute: typeof AdminInventoryRateCardsRoute
   AdminInventoryStockRoute: typeof AdminInventoryStockRoute
+  AdminInventoryStockLedgerRoute: typeof AdminInventoryStockLedgerRoute
   AdminInventoryTransfersRoute: typeof AdminInventoryTransfersRoute
   AdminInventoryVendorsRoute: typeof AdminInventoryVendorsRoute
   AdminInventoryWarehousesRoute: typeof AdminInventoryWarehousesRoute
@@ -1528,6 +1549,7 @@ const AdminInventoryRouteChildren: AdminInventoryRouteChildren = {
   AdminInventoryPurchaseOrdersRoute: AdminInventoryPurchaseOrdersRoute,
   AdminInventoryRateCardsRoute: AdminInventoryRateCardsRoute,
   AdminInventoryStockRoute: AdminInventoryStockRoute,
+  AdminInventoryStockLedgerRoute: AdminInventoryStockLedgerRoute,
   AdminInventoryTransfersRoute: AdminInventoryTransfersRoute,
   AdminInventoryVendorsRoute: AdminInventoryVendorsRoute,
   AdminInventoryWarehousesRoute: AdminInventoryWarehousesRoute,

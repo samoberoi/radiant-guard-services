@@ -128,6 +128,7 @@ export const RBAC_MODULES: ModuleDef[] = [
       
 
       { key: "stock_report",      label: "Stock Report",      path: "/admin/inventory/stock",           icon: Wallet },
+      { key: "stock_ledger",      label: "Stock Ledger",      path: "/admin/inventory/stock-ledger",    icon: Wallet },
       { key: "rate_cards",        label: "Vendor Rate Cards", path: "/admin/inventory/rate-cards",      icon: FileText },
 
       
