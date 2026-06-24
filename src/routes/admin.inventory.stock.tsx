@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, Download, AlertTriangle, BarChart3, Warehouse, Building2, UserCog, Shield, FileSpreadsheet } from "lucide-react";
+import { Search, Download, AlertTriangle, BarChart3, Warehouse, Building2, UserCog, Shield, FileSpreadsheet, Layers } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,12 +13,13 @@ import { useCurrentUserRole } from "@/lib/use-current-user-role";
 
 export const Route = createFileRoute("/admin/inventory/stock")({ component: StockPage });
 
-type HolderType = "warehouse" | "branch" | "field_officer" | "security_guard";
+type HolderType = "all" | "warehouse" | "branch" | "field_officer" | "security_guard";
 type Balance = { location_type: string; location_id: string; item_id: string; size_value: string; qty: number };
 type Item = { id: string; name: string; item_code: string; unit: string; default_reorder_level: number };
 type Holder = { id: string; name: string; sub?: string };
 
 const HOLDER_LABEL: Record<HolderType, string> = {
+  all: "All locations",
   warehouse: "Warehouses",
   branch: "Branches",
   field_officer: "Field Officers",
@@ -80,6 +81,7 @@ function StockPage() {
   // ---------- Top-level KPI counts (active across the org) ----------
   const counts = useMemo(
     () => ({
+      all: warehouses.length + branches.length + fieldOfficers.length + guards.length,
       warehouse: warehouses.length,
       branch: branches.length,
       field_officer: fieldOfficers.length,
@@ -97,7 +99,8 @@ function StockPage() {
     if (holderType === "warehouse") return warehouses.map((w) => ({ id: w.id, name: w.name }));
     if (holderType === "branch") return branches.map((b) => ({ id: b.id, name: b.code ? `${b.code} – ${b.name}` : b.name }));
     if (holderType === "field_officer") return fieldOfficers.map((f) => ({ id: f.id, name: f.full_name, sub: f.employee_code }));
-    return guards.map((g) => ({ id: g.id, name: g.full_name, sub: g.employee_code }));
+    if (holderType === "security_guard") return guards.map((g) => ({ id: g.id, name: g.full_name, sub: g.employee_code }));
+    return [];
   }, [holderType, warehouses, branches, fieldOfficers, guards]);
 
   // Apply branch-scope / FO-scope to which holders the user may see.
@@ -136,10 +139,11 @@ function StockPage() {
     }[] = [];
     for (const b of balances) {
       const t = normalizeType(b.location_type);
-      if (!t || t !== holderType) continue;
+      if (!t || t === "all") continue;
+      if (holderType !== "all" && t !== holderType) continue;
       if (Number(b.qty) === 0) continue;
       if (visibleHolderIds && !visibleHolderIds.has(b.location_id)) continue;
-      if (holderId !== "all" && b.location_id !== holderId) continue;
+      if (holderType !== "all" && holderId !== "all" && b.location_id !== holderId) continue;
       const it = itemMap.get(b.item_id);
       const label = holderLabel(t, b.location_id);
       if (q.trim()) {
@@ -185,30 +189,30 @@ function StockPage() {
     const today = new Date().toISOString().slice(0, 10);
 
     // ===== Summary sheet =====
-    const buckets: { type: HolderType; title: string; }[] = [
+    const buckets: { type: Exclude<HolderType, "all">; title: string; }[] = [
       { type: "warehouse", title: "Warehouses" },
       { type: "branch", title: "Branches" },
       { type: "field_officer", title: "Field Officers" },
       { type: "security_guard", title: "Security Guards" },
     ];
-    const bucketTotals: Record<HolderType, { holders: number; qty: number; lines: number }> = {
+    const bucketTotals: Record<Exclude<HolderType, "all">, { holders: number; qty: number; lines: number }> = {
       warehouse: { holders: 0, qty: 0, lines: 0 },
       branch: { holders: 0, qty: 0, lines: 0 },
       field_officer: { holders: 0, qty: 0, lines: 0 },
       security_guard: { holders: 0, qty: 0, lines: 0 },
     };
-    const seenHolders: Record<HolderType, Set<string>> = {
+    const seenHolders: Record<Exclude<HolderType, "all">, Set<string>> = {
       warehouse: new Set(), branch: new Set(), field_officer: new Set(), security_guard: new Set(),
     };
     for (const b of balances) {
       const t = normalizeType(b.location_type);
-      if (!t) continue;
+      if (!t || t === "all") continue;
       if (Number(b.qty) === 0) continue;
       bucketTotals[t].qty += Number(b.qty);
       bucketTotals[t].lines += 1;
       seenHolders[t].add(b.location_id);
     }
-    for (const t of Object.keys(bucketTotals) as HolderType[]) {
+    for (const t of Object.keys(bucketTotals) as Exclude<HolderType, "all">[]) {
       bucketTotals[t].holders = seenHolders[t].size;
     }
 
@@ -311,7 +315,8 @@ function StockPage() {
       <PageHeader title="Stock Report" description="Live balances across warehouses, branches, field officers and guards." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Stock" }]} />
 
       {/* KPI band */}
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
+        <KpiCard icon={<Layers className="h-4 w-4" />} label="All locations" value={counts.all} active={holderType === "all"} onClick={() => { setHolderType("all"); setHolderId("all"); }} />
         <KpiCard icon={<Warehouse className="h-4 w-4" />} label="Warehouses" value={counts.warehouse} active={holderType === "warehouse"} onClick={() => { setHolderType("warehouse"); setHolderId("all"); }} />
         <KpiCard icon={<Building2 className="h-4 w-4" />} label="Branches" value={counts.branch} active={holderType === "branch"} onClick={() => { setHolderType("branch"); setHolderId("all"); }} />
         <KpiCard icon={<UserCog className="h-4 w-4" />} label="Field Officers" value={counts.field_officer} active={holderType === "field_officer"} onClick={() => { setHolderType("field_officer"); setHolderId("all"); }} />
@@ -328,23 +333,26 @@ function StockPage() {
           <Select value={holderType} onValueChange={(v) => { setHolderType(v as HolderType); setHolderId("all"); }}>
             <SelectTrigger className="h-10 w-48 rounded-lg"><SelectValue /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">All locations</SelectItem>
               <SelectItem value="warehouse">Warehouses</SelectItem>
               <SelectItem value="branch">Branches</SelectItem>
               <SelectItem value="field_officer">Field Officers</SelectItem>
               <SelectItem value="security_guard">Security Guards</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={holderId} onValueChange={setHolderId}>
-            <SelectTrigger className="h-10 w-64 rounded-lg"><SelectValue placeholder={`All ${HOLDER_LABEL[holderType].toLowerCase()}`} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All {HOLDER_LABEL[holderType].toLowerCase()}</SelectItem>
-              {holderOptions
-                .filter((o) => !visibleHolderIds || visibleHolderIds.has(o.id))
-                .map((o) => (
-                  <SelectItem key={o.id} value={o.id}>{o.name}{o.sub ? ` · ${o.sub}` : ""}</SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+          {holderType !== "all" && (
+            <Select value={holderId} onValueChange={setHolderId}>
+              <SelectTrigger className="h-10 w-64 rounded-lg"><SelectValue placeholder={`All ${HOLDER_LABEL[holderType].toLowerCase()}`} /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All {HOLDER_LABEL[holderType].toLowerCase()}</SelectItem>
+                {holderOptions
+                  .filter((o) => !visibleHolderIds || visibleHolderIds.has(o.id))
+                  .map((o) => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}{o.sub ? ` · ${o.sub}` : ""}</SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+          )}
           <div className="relative w-full sm:max-w-xs">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search item or holder…" className="h-10 rounded-lg pl-9" />
