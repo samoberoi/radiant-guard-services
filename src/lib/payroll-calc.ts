@@ -124,6 +124,14 @@ export type WageComponent = {
   includeInOt?: boolean | null;
   fixedCalcMethod?: FixedCalcMethod | null;
   fixedDutyComponents?: FixedDutyBucket[] | null;
+  /** canonical short tag (BASIC, DA …) used by the formula engine */
+  shortCode?: string | null;
+  /** engine formula JSON; when set with .mode it overrides legacy logic */
+  formula?: unknown;
+  /** engine day-driver flag */
+  dayDriver?: string | null;
+  /** flag: when true, this row's quantity adds to T Days */
+  countsInTDays?: boolean | null;
 };
 export type BenefitLike = {
   name: string;
@@ -136,6 +144,9 @@ export type BenefitLike = {
   deductionCalcType?: "earned_salary" | "fixed_amount" | null;
   fixedCalcMethod?: FixedCalcMethod | null;
   fixedDutyComponents?: FixedDutyBucket[] | null;
+  shortCode?: string | null;
+  formula?: unknown;
+  dayDriver?: string | null;
 };
 
 
