@@ -26,7 +26,7 @@ type Movement = {
   reference_id: string | null;
   notes: string;
 };
-type Item = { id: string; name: string; item_code: string; unit: string };
+type Item = { id: string; name: string; item_code: string; unit: string; standard_cost: number };
 type ScopeAssignment = { candidate_id: string; scope_id: string; scope_type: string };
 
 type HolderTypeFilter = "all" | "warehouse" | "branch" | "field_officer" | "security_guard";
@@ -60,12 +60,13 @@ function StockLedgerPage() {
   const [direction, setDirection] = useState<"all" | "in" | "out">("all");
   const [q, setQ] = useState("");
   const [view, setView] = useState<"movement" | "item">("movement");
+  const [mode, setMode] = useState<"count" | "value">("count");
 
   // ------- Reference data -------
   const { data: items = [] } = useQuery({
     queryKey: ["ledger", "items"],
     queryFn: async () => {
-      const { data } = await supabase.from("inv_items" as never).select("id,name,item_code,unit");
+      const { data } = await supabase.from("inv_items" as never).select("id,name,item_code,unit,standard_cost");
       return (data as unknown as Item[]) ?? [];
     },
   });
