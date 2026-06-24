@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType } from "@/lib/inv-helpers";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+import { useDemandRequesters } from "@/lib/use-demand-requesters";
 
 
 export const Route = createFileRoute("/admin/inventory/transfers")({ component: TransfersPage });
@@ -157,6 +158,7 @@ function TransfersPage() {
     },
     onSuccess: invalidate,
   });
+  const demandInfo = useDemandRequesters(filtered.map((t) => t.demand_id));
 
   return (
     <div>
@@ -178,6 +180,8 @@ function TransfersPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Transfer #</th>
+                <th className="px-5 py-3">Requested From</th>
+                <th className="px-5 py-3">Requested By</th>
                 <th className="px-5 py-3">From</th>
                 <th className="px-5 py-3">To</th>
                 <th className="px-5 py-3">Date</th>
@@ -186,9 +190,22 @@ function TransfersPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {filtered.map((t) => (
+              {filtered.map((t) => {
+                const info = t.demand_id ? demandInfo.get(t.demand_id) : null;
+                return (
                 <tr key={t.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs">{t.transfer_number}</td>
+                  <td className="px-5 py-3 font-mono text-xs">{info?.demandNumber ?? "—"}</td>
+                  <td className="px-5 py-3">
+                    {info ? (
+                      <>
+                        <div className="font-medium">{info.requesterName}</div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                          {info.requesterRole}{info.requesterCode ? ` · ${info.requesterCode}` : ""}
+                        </div>
+                      </>
+                    ) : "—"}
+                  </td>
                   <td className="px-5 py-3">{locName(t.source_type, t.source_id)}</td>
                   <td className="px-5 py-3">{locName(t.destination_type, t.destination_id)}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{t.transfer_date}</td>
@@ -205,12 +222,14 @@ function TransfersPage() {
                     </div>
                   </td>
                 </tr>
-              ))}
-              {!filtered.length && <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground"><Truck className="mx-auto mb-2 h-8 w-8 opacity-40" />No transfers yet.</td></tr>}
+                );
+              })}
+              {!filtered.length && <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-muted-foreground"><Truck className="mx-auto mb-2 h-8 w-8 opacity-40" />No transfers yet.</td></tr>}
             </tbody>
           </table>
         </div>
       </div>
+
 
       <TransferDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setActive(null); }} initial={active} warehouses={warehouses} branches={branches} items={items} demands={openDemands} resolveDemandDest={demandDestBranchId} demandLabel={demandLabel} onSaved={invalidate} />
     </div>

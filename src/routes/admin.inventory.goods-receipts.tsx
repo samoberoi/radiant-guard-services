@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType } from "@/lib/inv-helpers";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
 import { useCurrentUserRole } from "@/lib/use-current-user-role";
+import { useDemandRequesters } from "@/lib/use-demand-requesters";
 
 
 export const Route = createFileRoute("/admin/inventory/goods-receipts")({ component: GRNPage });
@@ -183,6 +184,31 @@ function GRNPage() {
     return grns.filter((g) => g.grn_number.toLowerCase().includes(q) || (g.vendor_invoice_number ?? "").toLowerCase().includes(q));
   }, [grns, query]);
 
+  // Resolve linked demand_id for each GRN: direct demand_id, or via transfer.demand_id
+  const transferIds = useMemo(
+    () => Array.from(new Set(filtered.map((g) => g.transfer_id).filter((x): x is string => !!x))).sort(),
+    [filtered],
+  );
+  const { data: transferDemandMap = new Map<string, string | null>() } = useQuery({
+    queryKey: ["inv", "grn-transfer-demand-map", transferIds.join(",")],
+    enabled: transferIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_transfers" as never)
+        .select("id,demand_id")
+        .in("id", transferIds);
+      if (error) throw error;
+      const m = new Map<string, string | null>();
+      for (const r of (data as unknown as { id: string; demand_id: string | null }[]) ?? []) {
+        m.set(r.id, r.demand_id);
+      }
+      return m;
+    },
+  });
+  const grnDemandId = (g: GRN): string | null =>
+    g.demand_id ?? (g.transfer_id ? transferDemandMap.get(g.transfer_id) ?? null : null);
+  const demandInfo = useDemandRequesters(filtered.map((g) => grnDemandId(g)));
+
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["inv", "grns"] });
@@ -221,6 +247,8 @@ function GRNPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Challan #</th>
+                <th className="px-5 py-3">Requested From</th>
+                <th className="px-5 py-3">Requested By</th>
                 <th className="px-5 py-3">Vendor</th>
                 <th className="px-5 py-3">Warehouse</th>
                 <th className="px-5 py-3">Delivery Date</th>
@@ -234,9 +262,22 @@ function GRNPage() {
             <tbody className="divide-y divide-border">
               {filtered.map((g) => {
                 const agg = lineAgg.get(g.id) ?? { products: 0, qty: 0, value: 0 };
+                const did = grnDemandId(g);
+                const info = did ? demandInfo.get(did) : null;
                 return (
                 <tr key={g.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs">{g.grn_number}</td>
+                  <td className="px-5 py-3 font-mono text-xs">{info?.demandNumber ?? "—"}</td>
+                  <td className="px-5 py-3">
+                    {info ? (
+                      <>
+                        <div className="font-medium">{info.requesterName}</div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                          {info.requesterRole}{info.requesterCode ? ` · ${info.requesterCode}` : ""}
+                        </div>
+                      </>
+                    ) : "—"}
+                  </td>
                   <td className="px-5 py-3">{g.vendor_id ? vMap.get(g.vendor_id) ?? "—" : "—"}</td>
                   <td className="px-5 py-3">{g.warehouse_id ? (wMap.get(g.warehouse_id) ?? "—") : (g.transfer_id ? "Branch Receipt" : "—")}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{g.receipt_date}</td>
@@ -258,11 +299,12 @@ function GRNPage() {
                 </tr>
                 );
               })}
-              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><PackageCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No delivery challans yet.</td></tr>}
+              {!filtered.length && <tr><td colSpan={11} className="px-5 py-12 text-center text-sm text-muted-foreground"><PackageCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No delivery challans yet.</td></tr>}
             </tbody>
           </table>
         </div>
       </div>
+
 
       {adminMode && !role.isFieldOfficer ? (
         <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} onSaved={invalidate} />
