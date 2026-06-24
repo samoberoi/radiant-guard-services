@@ -81,6 +81,7 @@ function StockPage() {
   // ---------- Top-level KPI counts (active across the org) ----------
   const counts = useMemo(
     () => ({
+      all: warehouses.length + branches.length + fieldOfficers.length + guards.length,
       warehouse: warehouses.length,
       branch: branches.length,
       field_officer: fieldOfficers.length,
