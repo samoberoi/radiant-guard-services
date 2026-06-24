@@ -105,6 +105,15 @@ function GRNPage() {
       return (data as unknown as Warehouse[]) ?? [];
     },
   });
+  const { data: branches = [] } = useQuery({
+    queryKey: ["inv", "branches-list-grn"],
+    enabled: adminMode,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("branches" as never).select("id,name").order("name");
+      if (error) throw error;
+      return (data as unknown as { id: string; name: string }[]) ?? [];
+    },
+  });
   const { data: incomingTransfers = [] } = useQuery({
     queryKey: ["inv", "transfers-incoming", scope.branchId],
     enabled: !!scope.branchId,
