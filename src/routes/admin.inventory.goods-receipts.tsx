@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType } from "@/lib/inv-helpers";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
 import { useCurrentUserRole } from "@/lib/use-current-user-role";
+import { useDemandRequesters } from "@/lib/use-demand-requesters";
 
 
 export const Route = createFileRoute("/admin/inventory/goods-receipts")({ component: GRNPage });
