@@ -334,6 +334,8 @@ function GRNPage() {
           branchId={scope.branchId ?? ""}
           transfers={incomingTransfers}
           items={items}
+          warehouses={warehouses}
+          branches={branches}
           onSaved={invalidate}
         />
       )}
@@ -708,9 +710,11 @@ function CloseDialogButton({ onClose }: { onClose: () => void }) {
   return <Button variant="outline" onClick={() => { markPristine(); onClose(); }}>Close</Button>;
 }
 
-function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, onSaved }: {
+function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, warehouses, branches, onSaved }: {
   open: boolean; onOpenChange: (o: boolean) => void; branchId: string;
-  transfers: Transfer[]; items: Item[]; onSaved: () => void;
+  transfers: Transfer[]; items: Item[];
+  warehouses: { id: string; name: string }[]; branches: { id: string; name: string }[];
+  onSaved: () => void;
 }) {
   const [transferId, setTransferId] = useState<string>("");
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().slice(0, 10));
@@ -718,6 +722,14 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, o
   const [lines, setLines] = useState<Line[]>([]);
   const [saving, setSaving] = useState(false);
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+  const wMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w.name])), [warehouses]);
+  const bMap = useMemo(() => new Map(branches.map((b) => [b.id, b.name])), [branches]);
+  const locLabel = (type: string, id: string): string => {
+    if (!id) return "—";
+    if (type === "warehouse") return wMap.get(id) ?? "Warehouse";
+    if (type === "branch") return bMap.get(id) ?? "Branch";
+    return type;
+  };
 
   useResetOnOpen(open, async () => {
     setTransferId(""); setReceiptDate(new Date().toISOString().slice(0, 10));
@@ -744,6 +756,7 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, o
   }
 
   const selectedTransfer = transfers.find((t) => t.id === transferId);
+
 
   async function save() {
     if (!selectedTransfer) { toast.error("Pick an incoming transfer"); return; }
@@ -850,10 +863,28 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, o
             <Select value={transferId} onValueChange={loadTransfer}>
               <SelectTrigger><SelectValue placeholder={transfers.length ? "Pick an in-transit transfer" : "No incoming transfers"} /></SelectTrigger>
               <SelectContent>
-                {transfers.map((t) => <SelectItem key={t.id} value={t.id}>{t.transfer_number}{t.demand_id ? " · against demand" : ""}</SelectItem>)}
+                {transfers.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.transfer_number} · {locLabel(t.source_type, t.source_id)} → {locLabel(t.destination_type, t.destination_id)}{t.demand_id ? " · against demand" : ""}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
+          {selectedTransfer && (
+            <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-secondary/40 p-3 text-sm">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">From</div>
+                <div className="font-medium">{locLabel(selectedTransfer.source_type, selectedTransfer.source_id)}</div>
+                <div className="text-[11px] text-muted-foreground capitalize">{selectedTransfer.source_type}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">To</div>
+                <div className="font-medium">{locLabel(selectedTransfer.destination_type, selectedTransfer.destination_id)}</div>
+                <div className="text-[11px] text-muted-foreground capitalize">{selectedTransfer.destination_type}</div>
+              </div>
+            </div>
+          )}
           <div className="grid gap-2">
             <Label>Receipt Date</Label>
             <Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} />
