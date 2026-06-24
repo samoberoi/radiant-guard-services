@@ -84,26 +84,18 @@ function TransfersPage() {
     },
   });
 
-  const candMap = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
-  const ROLE_LABEL: Record<string, string> = { field_officer: "Field Officer", guard: "Guard", security_guard: "Guard" };
-  const candLabel = (id: string) => {
-    const c = candMap.get(id); if (!c) return "—";
-    const role = ROLE_LABEL[c.role_key] ?? c.role_key.replace(/_/g, " ");
-    return `${role} · ${c.full_name}${c.employee_code ? ` (${c.employee_code})` : ""}`;
+  const branchLabel = (id: string | null) => {
+    if (!id) return "—";
+    const b = branches.find((x) => x.id === id);
+    return b ? [b.code, b.name].filter(Boolean).join(" – ") : "—";
   };
   const locName = (type: string, id: string): string => {
     if (!id) return "—";
     if (type === "warehouse") return warehouses.find((w) => w.id === id)?.name ?? "—";
-    if (type === "branch") { const b = branches.find((x) => x.id === id); return b ? [b.code, b.name].filter(Boolean).join(" – ") : "—"; }
-    if (type === "field_officer" || type === "guard" || type === "security_guard") return candLabel(id);
+    if (type === "branch") return branchLabel(id);
     return "—";
   };
-  const demandLabel = (d: Demand): string => {
-    if (d.branch_id) { const b = branches.find((x) => x.id === d.branch_id); return b ? [b.code, b.name].filter(Boolean).join(" – ") : "Branch"; }
-    if (d.warehouse_id && d.requester_candidate_id) return candLabel(d.requester_candidate_id);
-    if (d.warehouse_id) return warehouses.find((w) => w.id === d.warehouse_id)?.name ?? "Warehouse";
-    return "—";
-  };
+  const demandLabel = (d: Demand): string => branchLabel(d.branch_id);
 
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
