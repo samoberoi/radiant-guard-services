@@ -23,11 +23,12 @@ const MODULE = "Inventory Demands";
 const ENTITY = "inv_demands";
 
 type Demand = {
-  id: string; demand_number: string; branch_id: string; demand_date: string;
+  id: string; demand_number: string; branch_id: string | null; warehouse_id: string | null; demand_date: string;
   status: string; notes: string; requester_id: string | null;
   fulfillment_source?: "warehouse" | "branch";
 };
 type Branch = { id: string; name: string; code: string };
+type Warehouse = { id: string; name: string; warehouse_code: string; is_default: boolean };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
 type Line = { id?: string; item_id: string; size_value: string; requested_qty: number; fulfilled_qty: number };
 
