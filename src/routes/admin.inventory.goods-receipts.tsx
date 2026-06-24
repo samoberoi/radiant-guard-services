@@ -334,6 +334,8 @@ function GRNPage() {
           branchId={scope.branchId ?? ""}
           transfers={incomingTransfers}
           items={items}
+          warehouses={warehouses}
+          branches={branches}
           onSaved={invalidate}
         />
       )}
