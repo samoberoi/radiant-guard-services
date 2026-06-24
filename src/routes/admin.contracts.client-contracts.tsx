@@ -271,7 +271,10 @@ type CostComponentOption = {
   amount: number | null;
   state: string;
   deductionCalcType: "earned_salary" | "fixed_amount";
+  fixedCalcMethod: FixedCalcMethod;
+  fixedDutyComponents: FixedDutyBucket[];
 };
+
 
 const QK = ["admin", "client-contracts"] as const;
 const QK_SVC = ["admin", "service-types", "enabled"] as const;
