@@ -612,6 +612,17 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: b
             </div>
           )}
 
+          <div className="grid gap-2">
+            <Label>Final Delivery Branch <span className="text-muted-foreground">(optional)</span></Label>
+            <Select value={finalBranchId || "__none__"} onValueChange={(v) => setFinalBranchId(v === "__none__" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="Stays at warehouse" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— Stays at warehouse —</SelectItem>
+                {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">If vendor delivered direct to a branch, pick it here. Books will record: stock IN at warehouse → OUT from warehouse → IN at branch (auto-creates a completed transfer).</p>
+          </div>
           <div className="grid gap-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
         </div>
         <DialogFooter>
