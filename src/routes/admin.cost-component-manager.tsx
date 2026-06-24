@@ -501,7 +501,10 @@ function CostComponentDialog({
   const [sortOrder, setSortOrder] = useState<string>("0");
   const [deductionCalcType, setDeductionCalcType] =
     useState<"earned_salary" | "fixed_amount">("earned_salary");
+  const [fixedCalcMethod, setFixedCalcMethod] = useState<FixedCalcMethod>("flat");
+  const [fixedDutyComponents, setFixedDutyComponents] = useState<FixedDutyBucket[]>([]);
   const [saving, setSaving] = useState(false);
+
 
   useResetOnOpen(open, () => {
     setName(initial?.name ?? "");
