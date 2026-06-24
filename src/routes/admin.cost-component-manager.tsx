@@ -44,6 +44,15 @@ export const Route = createFileRoute("/admin/cost-component-manager")({
 
 type Operator = "+" | "-";
 type BaseRef = { label: string; operator: Operator };
+type FixedCalcMethod = "flat" | "per_duty";
+type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
+
+const FIXED_DUTY_BUCKETS: { value: FixedDutyBucket; label: string; short: string }[] = [
+  { value: "p_days", label: "P Days (present)", short: "P" },
+  { value: "ot_days", label: "OT Days", short: "OT" },
+  { value: "ph_days", label: "PH Days (public holiday)", short: "PH" },
+  { value: "other_paid_days", label: "Other Paid Days", short: "OPL" },
+];
 
 type CostComponent = {
   id: string;
@@ -59,7 +68,10 @@ type CostComponent = {
   enabled: boolean;
   sort_order: number;
   deduction_calc_type: "earned_salary" | "fixed_amount";
+  fixed_calc_method: FixedCalcMethod;
+  fixed_duty_components: FixedDutyBucket[];
 };
+
 
 type AllowanceRow = { id: string; name: string; display_name: string; short_name: string };
 type StateRow = { id: string; name: string };
