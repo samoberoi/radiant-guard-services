@@ -316,7 +316,7 @@ function GRNPage() {
 
 
       {adminMode && !role.isFieldOfficer ? (
-        <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} onSaved={invalidate} />
+        <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} branches={branches} onSaved={invalidate} />
       ) : role.isFieldOfficer ? (
         <FieldOfficerGRNFormDialog
           open={open}
