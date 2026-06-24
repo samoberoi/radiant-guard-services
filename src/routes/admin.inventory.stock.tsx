@@ -351,6 +351,9 @@ function StockPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Link to="/admin/inventory/stock-ledger" className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/5 px-3 text-sm font-semibold text-primary hover:bg-primary/10">
+            <FileSpreadsheet className="h-4 w-4" />Open Stock Ledger
+          </Link>
           <Button variant="outline" className="h-10 rounded-lg" disabled={!rows.length} onClick={downloadCurrentView}>
             <Download className="mr-1.5 h-4 w-4" />Export view
           </Button>
@@ -359,6 +362,7 @@ function StockPage() {
           </Button>
         </div>
       </div>
+
 
       {/* Sub-summary line for current bucket */}
       <div className="mb-3 flex flex-wrap items-center gap-4 rounded-xl border border-border bg-secondary/30 px-4 py-2 text-xs uppercase tracking-wider text-muted-foreground">
