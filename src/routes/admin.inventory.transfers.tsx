@@ -71,18 +71,44 @@ function TransfersPage() {
     },
   });
   const { data: openDemands = [] } = useQuery({
-    queryKey: ["inv", "demands-open-branch"],
+    queryKey: ["inv", "demands-open-for-transfer"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inv_demands" as never)
         .select("id,demand_number,branch_id,warehouse_id,requester_candidate_id,status")
         .in("status", ["submitted"])
-        .not("branch_id", "is", null)
         .order("demand_date", { ascending: false });
       if (error) throw error;
       return (data as unknown as Demand[]) ?? [];
     },
   });
+  // Resolve requester → branch for demands that don't carry branch_id directly
+  const requesterIds = useMemo(
+    () => Array.from(new Set(openDemands.filter((d) => !d.branch_id && d.requester_candidate_id).map((d) => d.requester_candidate_id as string))),
+    [openDemands],
+  );
+  const { data: requesterBranchMap = new Map<string, string>() } = useQuery({
+    queryKey: ["inv", "demand-requester-branches", requesterIds],
+    enabled: requesterIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employee_scope_assignments" as never)
+        .select("candidate_id,scope_id,scope_type")
+        .eq("scope_type", "branch")
+        .in("candidate_id", requesterIds);
+      if (error) throw error;
+      const m = new Map<string, string>();
+      for (const r of (data as unknown as { candidate_id: string; scope_id: string }[]) ?? []) {
+        if (!m.has(r.candidate_id)) m.set(r.candidate_id, r.scope_id);
+      }
+      return m;
+    },
+  });
+  const demandDestBranchId = (d: Demand): string => {
+    if (d.branch_id) return d.branch_id;
+    if (d.requester_candidate_id) return requesterBranchMap.get(d.requester_candidate_id) ?? "";
+    return "";
+  };
 
   const branchLabel = (id: string | null) => {
     if (!id) return "—";
@@ -95,7 +121,7 @@ function TransfersPage() {
     if (type === "branch") return branchLabel(id);
     return "—";
   };
-  const demandLabel = (d: Demand): string => branchLabel(d.branch_id);
+  const demandLabel = (d: Demand): string => branchLabel(demandDestBranchId(d) || null);
 
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
