@@ -863,10 +863,28 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, w
             <Select value={transferId} onValueChange={loadTransfer}>
               <SelectTrigger><SelectValue placeholder={transfers.length ? "Pick an in-transit transfer" : "No incoming transfers"} /></SelectTrigger>
               <SelectContent>
-                {transfers.map((t) => <SelectItem key={t.id} value={t.id}>{t.transfer_number}{t.demand_id ? " · against demand" : ""}</SelectItem>)}
+                {transfers.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.transfer_number} · {locLabel(t.source_type, t.source_id)} → {locLabel(t.destination_type, t.destination_id)}{t.demand_id ? " · against demand" : ""}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
+          {selectedTransfer && (
+            <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-secondary/40 p-3 text-sm">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">From</div>
+                <div className="font-medium">{locLabel(selectedTransfer.source_type, selectedTransfer.source_id)}</div>
+                <div className="text-[11px] text-muted-foreground capitalize">{selectedTransfer.source_type}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">To</div>
+                <div className="font-medium">{locLabel(selectedTransfer.destination_type, selectedTransfer.destination_id)}</div>
+                <div className="text-[11px] text-muted-foreground capitalize">{selectedTransfer.destination_type}</div>
+              </div>
+            </div>
+          )}
           <div className="grid gap-2">
             <Label>Receipt Date</Label>
             <Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} />
