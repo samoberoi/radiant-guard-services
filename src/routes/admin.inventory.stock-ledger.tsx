@@ -671,8 +671,8 @@ function StockLedgerPage() {
                 <th className="px-4 py-3">Holder</th>
                 <th className="px-4 py-3">Item</th>
                 <th className="px-4 py-3">Size</th>
-                <th className="px-4 py-3 text-right">Debit (IN)</th>
-                <th className="px-4 py-3 text-right">Credit (OUT)</th>
+                <th className="px-4 py-3 text-right">{mode === "value" ? "Stock In (₹)" : "Stock In"}</th>
+                <th className="px-4 py-3 text-right">{mode === "value" ? "Stock Out (₹)" : "Stock Out"}</th>
                 <th className="px-4 py-3">Reference</th>
               </tr>
             </thead>
@@ -693,8 +693,8 @@ function StockLedgerPage() {
                     <span className="ml-2 font-mono text-[11px] text-muted-foreground">{r.item_code}</span>
                   </td>
                   <td className="px-4 py-3 text-xs">{r.size}</td>
-                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-700">{r.debit ? r.debit.toLocaleString("en-IN") : ""}</td>
-                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-rose-700">{r.credit ? r.credit.toLocaleString("en-IN") : ""}</td>
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-700">{mode === "value" ? (r.debit_val ? fmtInr(r.debit_val) : "") : (r.debit ? r.debit.toLocaleString("en-IN") : "")}</td>
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-rose-700">{mode === "value" ? (r.credit_val ? fmtInr(r.credit_val) : "") : (r.credit ? r.credit.toLocaleString("en-IN") : "")}</td>
                   <td className="px-4 py-3 text-[11px] text-muted-foreground">{r.ref}</td>
                 </tr>
               ))}
@@ -708,10 +708,10 @@ function StockLedgerPage() {
               <tfoot className="bg-secondary/30 text-sm">
                 <tr>
                   <td colSpan={5} className="px-4 py-3 text-right text-xs uppercase tracking-wider text-muted-foreground">Totals</td>
-                  <td className="px-4 py-3 text-right font-bold tabular-nums text-emerald-700">{totalDebit.toLocaleString("en-IN")}</td>
-                  <td className="px-4 py-3 text-right font-bold tabular-nums text-rose-700">{totalCredit.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-right font-bold tabular-nums text-emerald-700">{mode === "value" ? fmtInr(totalDebitVal) : totalDebit.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-right font-bold tabular-nums text-rose-700">{mode === "value" ? fmtInr(totalCreditVal) : totalCredit.toLocaleString("en-IN")}</td>
                   <td className="px-4 py-3 text-right text-xs">
-                    Net <span className={`font-bold tabular-nums ${net >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{net.toLocaleString("en-IN")}</span>
+                    Net <span className={`font-bold tabular-nums ${(mode === "value" ? netVal : net) >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{mode === "value" ? fmtInr(netVal) : net.toLocaleString("en-IN")}</span>
                   </td>
                 </tr>
               </tfoot>
@@ -725,8 +725,8 @@ function StockLedgerPage() {
                 <th className="px-4 py-3">Size</th>
                 <th className="px-4 py-3">Unit</th>
                 <th className="px-4 py-3 text-right">Opening</th>
-                <th className="px-4 py-3 text-right">IN (period)</th>
-                <th className="px-4 py-3 text-right">OUT (period)</th>
+                <th className="px-4 py-3 text-right">Stock In (period)</th>
+                <th className="px-4 py-3 text-right">Stock Out (period)</th>
                 <th className="px-4 py-3 text-right">Closing</th>
                 <th className="px-4 py-3">Last Movement</th>
               </tr>
