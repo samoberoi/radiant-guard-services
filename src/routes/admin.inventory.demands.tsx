@@ -161,6 +161,7 @@ function DemandsPage() {
               <tr>
                 <th className="px-5 py-3">Demand #</th>
                 <th className="px-5 py-3">Requested From</th>
+                <th className="px-5 py-3">Requested By</th>
                 <th className="px-5 py-3">Date</th>
                 <th className="px-5 py-3 text-right">Items</th>
                 <th className="px-5 py-3 text-right">Total Qty</th>
@@ -174,10 +175,17 @@ function DemandsPage() {
                 const wh = d.warehouse_id ? warehouseMap.get(d.warehouse_id) : null;
                 const br = d.branch_id ? branchMap.get(d.branch_id) : null;
                 const destLabel = wh ? `${wh.name} (Warehouse)` : br ? `${br.code} – ${br.name}` : "—";
+                const req = d.requester_candidate_id ? requesterMap.get(d.requester_candidate_id) : null;
+                const reqLabel = req ? req.full_name : "—";
+                const reqSub = req ? `${(req.role_key ?? "").replace(/_/g, " ")}${req.employee_code ? ` · ${req.employee_code}` : ""}` : "";
                 return (
                   <tr key={d.id} className="hover:bg-secondary/30">
                     <td className="px-5 py-3 font-mono text-xs">{d.demand_number}</td>
                     <td className="px-5 py-3">{destLabel}</td>
+                    <td className="px-5 py-3">
+                      <div className="font-medium">{reqLabel}</div>
+                      {reqSub && <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{reqSub}</div>}
+                    </td>
                     <td className="px-5 py-3 text-xs text-muted-foreground">{d.demand_date}</td>
                     <td className="px-5 py-3 text-right tabular-nums">{agg.items}</td>
                     <td className="px-5 py-3 text-right tabular-nums">{agg.qty}</td>
