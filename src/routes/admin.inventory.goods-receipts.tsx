@@ -359,7 +359,7 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: b
   useResetOnOpen(open, async () => {
     setPoId(""); setReceiptDate(new Date().toISOString().slice(0, 10));
     setInvoiceNo(""); setChallanNo(""); setVehicleNo(""); setNotes(""); setLines([]); setItems({});
-    setInvoiceFile(null); setFinalBranchId("");
+    setInvoiceFile(null);
   });
 
   async function loadPo(id: string) {
