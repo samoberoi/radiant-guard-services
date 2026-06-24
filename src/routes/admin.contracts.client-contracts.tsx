@@ -881,7 +881,7 @@ function useCostComponentOptions() {
     queryFn: async (): Promise<CostComponentOption[]> => {
       const { data, error } = await supabase
         .from("cost_components" as never)
-        .select("id,name,calc_type,percentage,base_components,cap_amount,cap_flat_amount,amount,state,enabled,sort_order,deduction_calc_type")
+        .select("id,name,calc_type,percentage,base_components,cap_amount,cap_flat_amount,amount,state,enabled,sort_order,deduction_calc_type,fixed_calc_method,fixed_duty_components")
         .order("sort_order")
         .order("name");
       if (error) throw error;
@@ -901,8 +901,16 @@ function useCostComponentOptions() {
           state: String(r.state ?? "N/A"),
           deductionCalcType:
             (String(r.deduction_calc_type ?? "earned_salary") as "earned_salary" | "fixed_amount"),
+          fixedCalcMethod:
+            (String(r.fixed_calc_method ?? "flat") as FixedCalcMethod),
+          fixedDutyComponents: Array.isArray(r.fixed_duty_components)
+            ? ((r.fixed_duty_components as string[]).filter((b) =>
+                ["p_days","ot_days","ph_days","other_paid_days"].includes(b),
+              ) as FixedDutyBucket[])
+            : [],
         }));
     },
+
   });
   return data;
 }
