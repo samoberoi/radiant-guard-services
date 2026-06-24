@@ -187,19 +187,19 @@ function StockPage() {
     const today = new Date().toISOString().slice(0, 10);
 
     // ===== Summary sheet =====
-    const buckets: { type: HolderType; title: string; }[] = [
+    const buckets: { type: Exclude<HolderType, "all">; title: string; }[] = [
       { type: "warehouse", title: "Warehouses" },
       { type: "branch", title: "Branches" },
       { type: "field_officer", title: "Field Officers" },
       { type: "security_guard", title: "Security Guards" },
     ];
-    const bucketTotals: Record<HolderType, { holders: number; qty: number; lines: number }> = {
+    const bucketTotals: Record<Exclude<HolderType, "all">, { holders: number; qty: number; lines: number }> = {
       warehouse: { holders: 0, qty: 0, lines: 0 },
       branch: { holders: 0, qty: 0, lines: 0 },
       field_officer: { holders: 0, qty: 0, lines: 0 },
       security_guard: { holders: 0, qty: 0, lines: 0 },
     };
-    const seenHolders: Record<HolderType, Set<string>> = {
+    const seenHolders: Record<Exclude<HolderType, "all">, Set<string>> = {
       warehouse: new Set(), branch: new Set(), field_officer: new Set(), security_guard: new Set(),
     };
     for (const b of balances) {
