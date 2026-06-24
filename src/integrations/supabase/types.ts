@@ -915,6 +915,8 @@ export type Database = {
           created_at: string
           deduction_calc_type: string
           enabled: boolean
+          fixed_calc_method: string
+          fixed_duty_components: string[]
           id: string
           name: string
           notes: string
@@ -932,6 +934,8 @@ export type Database = {
           created_at?: string
           deduction_calc_type?: string
           enabled?: boolean
+          fixed_calc_method?: string
+          fixed_duty_components?: string[]
           id?: string
           name: string
           notes?: string
@@ -949,6 +953,8 @@ export type Database = {
           created_at?: string
           deduction_calc_type?: string
           enabled?: boolean
+          fixed_calc_method?: string
+          fixed_duty_components?: string[]
           id?: string
           name?: string
           notes?: string
