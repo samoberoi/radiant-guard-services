@@ -204,6 +204,7 @@ function ItemsPage() {
                   <td className="px-5 py-3"><span className="rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{catMap.get(i.category_id ?? "") ?? "—"}</span></td>
                   <td className="px-5 py-3">{i.unit}{i.is_sized && <span className="ml-1 text-[10px] text-muted-foreground">·sized</span>}</td>
                   <td className="px-5 py-3 text-right tabular-nums">{i.standard_cost > 0 ? `₹${i.standard_cost.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</td>
+                  <td className="px-5 py-3 text-right tabular-nums">{i.standard_issue_price > 0 ? `₹${i.standard_issue_price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "—"}</td>
                   <td className="px-5 py-3 text-right tabular-nums">{i.last_purchase_price != null ? <><div>₹{i.last_purchase_price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</div><div className="text-[10px] text-muted-foreground">{i.last_purchase_at ? new Date(i.last_purchase_at).toLocaleDateString() : ""}</div></> : "—"}</td>
                   <td className="px-5 py-3 text-right tabular-nums">{i.default_reorder_level}</td>
                   <td className="px-5 py-3"><Switch checked={i.enabled} onCheckedChange={(v) => toggleMut.mutate({ id: i.id, enabled: v }, { onSuccess: () => toast.success(v ? "Enabled" : "Disabled") })} /></td>
