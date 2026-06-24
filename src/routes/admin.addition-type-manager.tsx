@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { TrendingUp, Edit2, Plus, Search, Trash2 } from "lucide-react";
+import { Calculator, TrendingUp, Edit2, Plus, Search, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -119,6 +119,9 @@ function AdditionTypeManagerPage() {
                 </td>
                 <td className="px-5 py-3 text-right">
                   <div className="inline-flex gap-1">
+                    <Link to="/admin/formula-lab/$kind/$id" params={{ kind: "addition", id: i.id }}>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-primary"><Calculator className="h-4 w-4" /></Button>
+                    </Link>
                     <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setEditing(i)}><Edit2 className="h-4 w-4" /></Button>
                     <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => setDeleting(i)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
