@@ -685,25 +685,72 @@ export function computeWages(
   const employerCost =
     round2(earnedGross + totalEmployerContributions);
 
+  // ---- Engine override pass (Phase-4) ----
+  // For any row that carries an engine `formula`, re-compute its amount via
+  // the formula engine. Statutory ESI/EPF rules above still run first; the
+  // engine result wins ONLY when the user explicitly authored a formula.
+  // Rows without `formula.mode` are untouched, so legacy behaviour is
+  // preserved bit-for-bit when no engine fields are populated.
+  const componentMap: Record<string, number> = {};
+  for (const c of components) {
+    const tag = String(c.shortCode ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "")
+      || canonicalComponentName(c.name).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (tag) componentMap[tag] = (componentMap[tag] ?? 0) + (Number(c.amount) || 0);
+  }
+  const contractComponentMap: Record<string, number> = {};
+  for (const c of resource.components) {
+    const tag = String(c.shortCode ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "")
+      || canonicalComponentName(c.name).toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (tag) contractComponentMap[tag] = (contractComponentMap[tag] ?? 0) + (Number(c.amount) || 0);
+  }
+  const engineCtx: _EvalContext = {
+    components: componentMap,
+    contractComponents: contractComponentMap,
+    pDays: totals.pDays,
+    otDays: totals.otDays,
+    phDays: totals.phDays,
+    otherPaidDays: totals.otherPaidDays,
+    tDays: totals.tDays,
+    baseDays,
+    perDay: perDayRate,
+    earnedGross,
+    gross: contractGross,
+  };
+  const applyEngine = <T extends WageComponent>(items: T[]): T[] =>
+    items.map((i) => hasEngineFormula(i as EngineRow)
+      ? { ...i, amount: resolveEngineAmount(i as EngineRow, engineCtx, i.amount) }
+      : i);
+  const componentsFinal = applyEngine(components);
+  const benefitsFinal = applyEngine(benefits);
+  const deductionsFinal = applyEngine(deductions);
+  const employerContributionsFinal = applyEngine(employerContributions);
+  const earnedGrossFinal = round2(componentsFinal.reduce((s, c) => s + (Number(c.amount) || 0), 0));
+  const totalDeductionsFinal = deductionsFinal.reduce((s, d) => s + d.amount, 0);
+  const totalEmployerContributionsFinal = employerContributionsFinal.reduce((s, d) => s + d.amount, 0);
+  const netPayFinal = round2(earnedGrossFinal - totalDeductionsFinal);
+  const employerCostFinal = round2(earnedGrossFinal + totalEmployerContributionsFinal);
+
   return {
     contractGross,
     perDayRate: round2(perDayRate),
     baseDays,
-    earnedGross,
-    ratio,
-    components,
-    benefits,
-    deductions,
-    employerContributions,
-    totalDeductions: round2(totalDeductions),
-    totalEmployerContributions: round2(totalEmployerContributions),
-    netPay,
-    employerCost,
+    earnedGross: earnedGrossFinal,
+    ratio: contractGross > 0 ? earnedGrossFinal / contractGross : 0,
+    components: componentsFinal,
+    benefits: benefitsFinal,
+    deductions: deductionsFinal,
+    employerContributions: employerContributionsFinal,
+    totalDeductions: round2(totalDeductionsFinal),
+    totalEmployerContributions: round2(totalEmployerContributionsFinal),
+    netPay: netPayFinal,
+    employerCost: employerCostFinal,
     otBaseAmount: round2(otBase),
     perDutyOtAmount: round2(perDutyOt),
     otDuties: round2(otDuties),
     totalOtAmount: otAmount,
   };
+  // Pre-engine fallback values kept here for diff transparency.
+  void netPay; void employerCost;
 }
 
 export function fmtINR(n: number): string {
