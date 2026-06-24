@@ -44,28 +44,40 @@ type GRN = { id: string; receipt_date: string; po_id: string | null; vendor_id: 
 
 type ScopedMovement = { id: string; status: string; source_type: string; source_id: string; destination_type: string; destination_id: string };
 
-type Range = "today" | "7d" | "30d" | "90d" | "mtd" | "ytd";
+type Range = "this_month" | "last_month" | "last_quarter" | "custom";
 
 const RANGE_LABEL: Record<Range, string> = {
-  today: "Today",
-  "7d": "Last 7 days",
-  "30d": "Last 30 days",
-  "90d": "Last 90 days",
-  mtd: "Month to date",
-  ytd: "Year to date",
+  this_month: "This month",
+  last_month: "Last month",
+  last_quarter: "Last quarter",
+  custom: "Custom",
 };
 
-function rangeWindow(r: Range): { from: Date; to: Date; prevFrom: Date; prevTo: Date; days: number } {
-  const to = new Date();
-  to.setHours(23, 59, 59, 999);
-  const from = new Date(to);
+function rangeWindow(r: Range, cf?: string, ct?: string): { from: Date; to: Date; prevFrom: Date; prevTo: Date; days: number } {
+  const now = new Date();
+  let from: Date; let to: Date;
+  if (r === "this_month") {
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    to = new Date();
+  } else if (r === "last_month") {
+    from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    to = new Date(now.getFullYear(), now.getMonth(), 0);
+  } else if (r === "last_quarter") {
+    const q = Math.floor(now.getMonth() / 3);
+    if (q === 0) {
+      from = new Date(now.getFullYear() - 1, 9, 1);
+      to = new Date(now.getFullYear() - 1, 12, 0);
+    } else {
+      from = new Date(now.getFullYear(), (q - 1) * 3, 1);
+      to = new Date(now.getFullYear(), q * 3, 0);
+    }
+  } else {
+    from = cf ? new Date(cf + "T00:00:00") : new Date(now.getFullYear(), now.getMonth(), 1);
+    to = ct ? new Date(ct + "T23:59:59.999") : new Date();
+  }
   from.setHours(0, 0, 0, 0);
-  let days = 1;
-  if (r === "7d") { from.setDate(to.getDate() - 6); days = 7; }
-  else if (r === "30d") { from.setDate(to.getDate() - 29); days = 30; }
-  else if (r === "90d") { from.setDate(to.getDate() - 89); days = 90; }
-  else if (r === "mtd") { from.setDate(1); days = to.getDate(); }
-  else if (r === "ytd") { from.setMonth(0, 1); days = Math.ceil((to.getTime() - from.getTime()) / 86400000) + 1; }
+  to.setHours(23, 59, 59, 999);
+  const days = Math.max(1, Math.ceil((to.getTime() - from.getTime()) / 86400000) + 1);
   const prevTo = new Date(from); prevTo.setMilliseconds(-1);
   const prevFrom = new Date(prevTo); prevFrom.setDate(prevTo.getDate() - days + 1); prevFrom.setHours(0, 0, 0, 0);
   return { from, to, prevFrom, prevTo, days };
@@ -80,12 +92,14 @@ const inr = (n: number) =>
 
 export function InventoryOwnerDashboard() {
   const scope = useUserBranchScope();
-  const [range, setRange] = useState<Range>("30d");
+  const [range, setRange] = useState<Range>("this_month");
+  const [customFrom, setCustomFrom] = useState<string>(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
+  const [customTo, setCustomTo] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [warehouseFilter, setWarehouseFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [q, setQ] = useState("");
 
-  const w = useMemo(() => rangeWindow(range), [range]);
+  const w = useMemo(() => rangeWindow(range, customFrom, customTo), [range, customFrom, customTo]);
 
   // Field officers mapped to the scoped branch (for branch-scoped users)
   const scopeAssignmentsQ = useQuery({
@@ -498,45 +512,50 @@ export function InventoryOwnerDashboard() {
         <>
       {/* Filter bar */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border bg-card/60 p-3 backdrop-blur">
-
-        <div className="flex items-center gap-1 rounded-xl bg-secondary/40 p-1">
-          {(Object.keys(RANGE_LABEL) as Range[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${range === r ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
-            >{RANGE_LABEL[r]}</button>
-          ))}
-        </div>
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          {scope.isScoped ? (
-            <div className="flex h-9 items-center rounded-lg border border-border bg-secondary/40 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Branch: {scope.branchLabel || branches[0]?.name || "Assigned branch"}
-            </div>
-          ) : (
-            <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
-              <SelectTrigger className="h-9 w-[200px]"><SelectValue placeholder="Warehouse / Branch" /></SelectTrigger>
-              <SelectContent className="max-h-[320px]">
-                <SelectItem value="all">All warehouses and branches ({whs.length + branches.length})</SelectItem>
-                {whs.length > 0 && (
-                  <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Warehouses</div>
-                )}
-                {whs.map((wh) => <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>)}
-                {branches.length > 0 && (
-                  <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Branches</div>
-                )}
-                {branches.map((b) => <SelectItem key={b.id} value={`branch:${b.id}`}>{b.name}{b.code ? ` (${b.code})` : ""}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          )}
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="h-9 w-[160px]"><SelectValue placeholder="Category" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All categories</SelectItem>
-              {cats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="h-9 w-[220px]" />
+        {scope.isScoped ? (
+          <div className="flex h-9 items-center rounded-lg border border-border bg-secondary/40 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Branch: {scope.branchLabel || branches[0]?.name || "Assigned branch"}
+          </div>
+        ) : (
+          <Select value={warehouseFilter} onValueChange={setWarehouseFilter}>
+            <SelectTrigger className="h-9 w-[220px]"><SelectValue placeholder="Warehouse / Branch" /></SelectTrigger>
+            <SelectContent className="max-h-[320px]">
+              <SelectItem value="all">All warehouses and branches ({whs.length + branches.length})</SelectItem>
+              {whs.length > 0 && (
+                <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Warehouses</div>
+              )}
+              {whs.map((wh) => <SelectItem key={wh.id} value={wh.id}>{wh.name}</SelectItem>)}
+              {branches.length > 0 && (
+                <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Branches</div>
+              )}
+              {branches.map((b) => <SelectItem key={b.id} value={`branch:${b.id}`}>{b.name}{b.code ? ` (${b.code})` : ""}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search…" className="h-9 w-[200px]" />
+        )}
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="h-9 w-[180px]"><SelectValue placeholder="Category" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All categories</SelectItem>
+            {cats.map((c) => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          {range === "custom" && (
+            <>
+              <Input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} className="h-9 w-[150px]" />
+              <Input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} className="h-9 w-[150px]" />
+            </>
+          )}
+          <div className="flex items-center gap-1 rounded-xl bg-secondary/40 p-1">
+            {(Object.keys(RANGE_LABEL) as Range[]).map((r) => (
+              <button
+                key={r}
+                onClick={() => setRange(r)}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${range === r ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+              >{RANGE_LABEL[r]}</button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -546,14 +565,10 @@ export function InventoryOwnerDashboard() {
           <Kpi label="Branch Stock" value={branchHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Building2} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" hint="In branch holding" to="/admin/inventory/stock" />
           <Kpi label="Field Officer Stock" value={foHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Users} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" hint="Mapped to your branch" to="/admin/inventory/stock" />
           <Kpi label="Guard Stock" value={guardHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={ShieldCheck} tint="from-teal-500/15 to-teal-500/0" iconClass="text-teal-500" hint="Under your branch chain" to="/admin/inventory/stock" />
-
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2">
           <Kpi label="Stock Value" value={inr(stockValue)} icon={Wallet} tint="from-emerald-500/15 to-emerald-500/0" iconClass="text-emerald-500" hint="On-hand + in-transit at standard cost" />
-          <Kpi label={`Spend · ${RANGE_LABEL[range]}`} value={inr(spendCur)} delta={delta(spendCur, spendPrev)} icon={IndianRupee} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" />
-          <Kpi label="POs Raised" value={posInPeriod.toString()} delta={delta(posInPeriod, posPrev)} icon={ShoppingCart} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" />
-          <Kpi label="GRNs Posted" value={grnsInPeriod.toString()} delta={delta(grnsInPeriod, grnsPrev)} icon={Truck} tint="from-cyan-500/15 to-cyan-500/0" iconClass="text-cyan-500" />
           <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs`} to="/admin/inventory/stock" />
         </div>
       )}
@@ -647,135 +662,28 @@ export function InventoryOwnerDashboard() {
 
 
 
-      {!scope.isScoped && <>
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Panel title="Spend Trend" subtitle={RANGE_LABEL[range]} className="lg:col-span-2">
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={spendSeries} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="sp" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                    <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="date" tick={{ fontSize: 11 }} tickFormatter={(d) => d.slice(5)} />
-                <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1e5 ? `${(v / 1e5).toFixed(1)}L` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v} />
-                <Tooltip
-                  contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
-                  formatter={(v: number) => [inr(v), "Spend"]}
-                />
-                <Area type="monotone" dataKey="spend" stroke="hsl(var(--primary))" strokeWidth={2} fill="url(#sp)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Panel>
-
-        <Panel title="Stock Value by Category">
-          <div className="h-64">
-            {catSplit.length === 0 ? <Empty>No stock yet.</Empty> : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={catSplit} dataKey="value" nameKey="name" innerRadius={45} outerRadius={80} paddingAngle={2}>
-                    {catSplit.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
-                    formatter={(v: number) => inr(v)}
-                  />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                </PieChart>
-              </ResponsiveContainer>
+      {!scope.isScoped && (
+        <div className="grid gap-4 lg:grid-cols-1">
+          <Panel title="Low Stock Alerts" subtitle="Warehouse + Branch combined" right={<Link to="/admin/inventory/stock" className="text-xs text-primary hover:underline flex items-center gap-1">View stock <ArrowRight className="h-3 w-3" /></Link>}>
+            {lowStock.length === 0 ? <Empty>Healthy — no items at reorder.</Empty> : (
+              <DataTable head={["Item", "Size", "On Hand", "Reorder", ""]}>
+                {lowStock.filter((r) => filter(r.item.name) || filter(r.item.item_code)).slice(0, 12).map((r, i) => {
+                  const ratio = r.qty / Math.max(1, r.reorder);
+                  return (
+                    <tr key={i} className="border-t border-border/60">
+                      <td className="p-2"><div className="font-medium">{r.item.name}</div><div className="text-xs text-muted-foreground">{r.item.item_code}</div></td>
+                      <td className="p-2 text-muted-foreground">{r.size_value || "—"}</td>
+                      <td className="p-2 tabular-nums font-semibold">{r.qty}</td>
+                      <td className="p-2 tabular-nums text-muted-foreground">{r.reorder}</td>
+                      <td className="p-2"><Badge variant={ratio < 0.25 ? "destructive" : "secondary"}>{ratio < 0.25 ? "Critical" : "Low"}</Badge></td>
+                    </tr>
+                  );
+                })}
+              </DataTable>
             )}
-          </div>
-        </Panel>
-      </div>
-
-      {/* Top items + Vendor leaderboard */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Panel title="Top Items by Stock Value" className="lg:col-span-2">
-          <div className="h-72">
-            {topItems.length === 0 ? <Empty>No stock yet.</Empty> : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topItems.map((t) => ({ name: t.item.name, qty: t.qty, value: t.value }))} layout="vertical" margin={{ left: 30, right: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={(v) => v >= 1e5 ? `${(v / 1e5).toFixed(1)}L` : v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={140} />
-                  <Tooltip
-                    contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 12, fontSize: 12 }}
-                    formatter={(v: number, k) => k === "value" ? [inr(v), "Value"] : [v.toLocaleString("en-IN"), "Qty"]}
-                  />
-                  <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-        </Panel>
-
-        <Panel title="Vendor Leaderboard" subtitle={`PO spend · ${RANGE_LABEL[range]}`}>
-          {vendorSpend.length === 0 ? <Empty>No purchase orders in period.</Empty> : (
-            <div className="space-y-2">
-              {vendorSpend.slice(0, 7).map((r, i) => {
-                const max = vendorSpend[0].total || 1;
-                return (
-                  <div key={i} className="space-y-1">
-                    <div className="flex items-baseline justify-between text-sm">
-                      <span className="flex items-center gap-2">
-                        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-secondary text-[10px] font-semibold">{i + 1}</span>
-                        <Link to="/admin/inventory/vendors" className="font-medium hover:underline">{r.vendor!.name}</Link>
-                        <span className="text-xs text-muted-foreground">{r.vendor!.city}</span>
-                      </span>
-                      <span className="tabular-nums font-semibold">{inr(r.total)}</span>
-                    </div>
-                    <div className="h-1.5 overflow-hidden rounded-full bg-secondary/40">
-                      <div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500" style={{ width: `${(r.total / max) * 100}%` }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </Panel>
-      </div>
-
-      {/* Low stock + Cheapest vendor */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Panel title="Low Stock Alerts" subtitle="Warehouse + Branch combined" right={<Link to="/admin/inventory/stock" className="text-xs text-primary hover:underline flex items-center gap-1">View stock <ArrowRight className="h-3 w-3" /></Link>}>
-          {lowStock.length === 0 ? <Empty>Healthy — no items at reorder.</Empty> : (
-            <DataTable head={["Item", "Size", "On Hand", "Reorder", ""]}>
-              {lowStock.filter((r) => filter(r.item.name) || filter(r.item.item_code)).slice(0, 8).map((r, i) => {
-                const ratio = r.qty / Math.max(1, r.reorder);
-                return (
-                  <tr key={i} className="border-t border-border/60">
-                    <td className="p-2"><div className="font-medium">{r.item.name}</div><div className="text-xs text-muted-foreground">{r.item.item_code}</div></td>
-                    <td className="p-2 text-muted-foreground">{r.size_value || "—"}</td>
-                    <td className="p-2 tabular-nums font-semibold">{r.qty}</td>
-                    <td className="p-2 tabular-nums text-muted-foreground">{r.reorder}</td>
-                    <td className="p-2"><Badge variant={ratio < 0.25 ? "destructive" : "secondary"}>{ratio < 0.25 ? "Critical" : "Low"}</Badge></td>
-                  </tr>
-                );
-              })}
-            </DataTable>
-          )}
-        </Panel>
-
-        <Panel title="Cheapest Vendor per Item" subtitle="From active rate cards" right={<Link to="/admin/inventory/rate-cards" className="text-xs text-primary hover:underline flex items-center gap-1">Rate cards <ArrowRight className="h-3 w-3" /></Link>}>
-          {cheapestPerItem.length === 0 ? <Empty>No rate cards configured.</Empty> : (
-            <DataTable head={["Item", "Best Vendor", "Unit Price", "Quotes"]}>
-              {cheapestPerItem.filter((r) => filter(r.item!.name) || filter(r.vendor!.name)).slice(0, 8).map((r, i) => (
-                <tr key={i} className="border-t border-border/60">
-                  <td className="p-2"><div className="font-medium">{r.item!.name}</div><div className="text-xs text-muted-foreground">{r.item!.item_code}</div></td>
-                  <td className="p-2 text-muted-foreground">{r.vendor!.name}</td>
-                  <td className="p-2 tabular-nums font-semibold text-emerald-600">₹{r.unit_price.toLocaleString("en-IN")}</td>
-                  <td className="p-2 tabular-nums text-muted-foreground">{r.vendor_count}</td>
-                </tr>
-              ))}
-            </DataTable>
-          )}
-        </Panel>
-      </div>
-      </>}
+          </Panel>
+        </div>
+      )}
 
 
         </>

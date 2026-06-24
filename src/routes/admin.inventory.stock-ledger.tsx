@@ -26,7 +26,7 @@ type Movement = {
   reference_id: string | null;
   notes: string;
 };
-type Item = { id: string; name: string; item_code: string; unit: string };
+type Item = { id: string; name: string; item_code: string; unit: string; standard_cost: number };
 type ScopeAssignment = { candidate_id: string; scope_id: string; scope_type: string };
 
 type HolderTypeFilter = "all" | "warehouse" | "branch" | "field_officer" | "security_guard";
@@ -60,12 +60,13 @@ function StockLedgerPage() {
   const [direction, setDirection] = useState<"all" | "in" | "out">("all");
   const [q, setQ] = useState("");
   const [view, setView] = useState<"movement" | "item">("movement");
+  const [mode, setMode] = useState<"count" | "value">("count");
 
   // ------- Reference data -------
   const { data: items = [] } = useQuery({
     queryKey: ["ledger", "items"],
     queryFn: async () => {
-      const { data } = await supabase.from("inv_items" as never).select("id,name,item_code,unit");
+      const { data } = await supabase.from("inv_items" as never).select("id,name,item_code,unit,standard_cost");
       return (data as unknown as Item[]) ?? [];
     },
   });
@@ -266,6 +267,8 @@ function StockLedgerPage() {
       size: string;
       debit: number;
       credit: number;
+      debit_val: number;
+      credit_val: number;
       ref: string;
       notes: string;
     }[] = [];
@@ -285,6 +288,9 @@ function StockLedgerPage() {
         const hay = `${label} ${it?.name ?? ""} ${it?.item_code ?? ""} ${m.movement_type} ${m.reference_type}`.toLowerCase();
         if (!hay.includes(ql)) continue;
       }
+      const cost = Number(it?.standard_cost ?? 0);
+      const debit = qty > 0 ? qty : 0;
+      const credit = qty < 0 ? -qty : 0;
       out.push({
         id: m.id,
         when: m.movement_date,
@@ -294,8 +300,10 @@ function StockLedgerPage() {
         item_name: it?.name ?? "—",
         item_code: it?.item_code ?? "",
         size: m.size_value || "—",
-        debit: qty > 0 ? qty : 0,
-        credit: qty < 0 ? -qty : 0,
+        debit,
+        credit,
+        debit_val: debit * cost,
+        credit_val: credit * cost,
         ref: m.reference_type ? `${m.reference_type.toUpperCase()}${m.reference_id ? ` · ${m.reference_id.slice(0, 8)}` : ""}` : "—",
         notes: m.notes || "",
       });
@@ -305,7 +313,11 @@ function StockLedgerPage() {
 
   const totalDebit = rows.reduce((s, r) => s + r.debit, 0);
   const totalCredit = rows.reduce((s, r) => s + r.credit, 0);
+  const totalDebitVal = rows.reduce((s, r) => s + r.debit_val, 0);
+  const totalCreditVal = rows.reduce((s, r) => s + r.credit_val, 0);
   const net = totalDebit - totalCredit;
+  const netVal = totalDebitVal - totalCreditVal;
+  const fmtInr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
   // ------- By-Item summary: opening + in/out (in period) + closing, per item+size -------
   type ItemRow = {
@@ -544,15 +556,31 @@ function StockLedgerPage() {
     <div>
       <PageHeader
         title="Stock Ledger"
-        description="Daybook — debit/credit reconciliation of every stock movement. Super admin sees all; branches see their chain; field officers see their own and reporting guards."
+        description="Daybook — every stock-in and stock-out movement. Super admin sees all; branches see their chain; field officers see their own and reporting guards."
         crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Stock Ledger" }]}
       />
 
+      {/* Mode toggle (By Count / By Value) */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="inline-flex h-10 items-center rounded-lg border border-border bg-card p-0.5">
+          <button
+            type="button"
+            onClick={() => setMode("count")}
+            className={`inline-flex h-9 items-center gap-1.5 rounded-md px-4 text-xs font-semibold uppercase tracking-wider transition ${mode === "count" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >By Count</button>
+          <button
+            type="button"
+            onClick={() => setMode("value")}
+            className={`inline-flex h-9 items-center gap-1.5 rounded-md px-4 text-xs font-semibold uppercase tracking-wider transition ${mode === "value" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+          >By Value</button>
+        </div>
+      </div>
+
       {/* KPI band */}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard icon={<ArrowDownCircle className="h-4 w-4 text-emerald-600" />} label="Debit (IN)" value={totalDebit} accent="emerald" />
-        <KpiCard icon={<ArrowUpCircle className="h-4 w-4 text-rose-600" />} label="Credit (OUT)" value={totalCredit} accent="rose" />
-        <KpiCard icon={<Scale className="h-4 w-4" />} label="Net Movement" value={net} accent={net >= 0 ? "emerald" : "rose"} />
+        <KpiCard icon={<ArrowDownCircle className="h-4 w-4 text-emerald-600" />} label={mode === "value" ? "Stock In Value" : "Stock In"} value={mode === "value" ? fmtInr(totalDebitVal) : totalDebit} accent="emerald" />
+        <KpiCard icon={<ArrowUpCircle className="h-4 w-4 text-rose-600" />} label={mode === "value" ? "Stock Out Value" : "Stock Out"} value={mode === "value" ? fmtInr(totalCreditVal) : totalCredit} accent="rose" />
+        <KpiCard icon={<Scale className="h-4 w-4" />} label={mode === "value" ? "Net Value" : "Net Movement"} value={mode === "value" ? fmtInr(netVal) : net} accent={(mode === "value" ? netVal : net) >= 0 ? "emerald" : "rose"} />
         <KpiCard icon={<BookOpenCheck className="h-4 w-4" />} label="Ledger Entries" value={rows.length} accent="slate" />
       </div>
 
@@ -600,11 +628,11 @@ function StockLedgerPage() {
           </Select>
           {view === "movement" && (
             <Select value={direction} onValueChange={(v) => setDirection(v as "all" | "in" | "out")}>
-              <SelectTrigger className="h-10 w-40 rounded-lg"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-10 w-44 rounded-lg"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Debit & Credit</SelectItem>
-                <SelectItem value="in">Debit only (IN)</SelectItem>
-                <SelectItem value="out">Credit only (OUT)</SelectItem>
+                <SelectItem value="all">Stock In & Out</SelectItem>
+                <SelectItem value="in">Stock In only</SelectItem>
+                <SelectItem value="out">Stock Out only</SelectItem>
               </SelectContent>
             </Select>
           )}
@@ -643,8 +671,8 @@ function StockLedgerPage() {
                 <th className="px-4 py-3">Holder</th>
                 <th className="px-4 py-3">Item</th>
                 <th className="px-4 py-3">Size</th>
-                <th className="px-4 py-3 text-right">Debit (IN)</th>
-                <th className="px-4 py-3 text-right">Credit (OUT)</th>
+                <th className="px-4 py-3 text-right">{mode === "value" ? "Stock In (₹)" : "Stock In"}</th>
+                <th className="px-4 py-3 text-right">{mode === "value" ? "Stock Out (₹)" : "Stock Out"}</th>
                 <th className="px-4 py-3">Reference</th>
               </tr>
             </thead>
@@ -665,8 +693,8 @@ function StockLedgerPage() {
                     <span className="ml-2 font-mono text-[11px] text-muted-foreground">{r.item_code}</span>
                   </td>
                   <td className="px-4 py-3 text-xs">{r.size}</td>
-                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-700">{r.debit ? r.debit.toLocaleString("en-IN") : ""}</td>
-                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-rose-700">{r.credit ? r.credit.toLocaleString("en-IN") : ""}</td>
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-700">{mode === "value" ? (r.debit_val ? fmtInr(r.debit_val) : "") : (r.debit ? r.debit.toLocaleString("en-IN") : "")}</td>
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-rose-700">{mode === "value" ? (r.credit_val ? fmtInr(r.credit_val) : "") : (r.credit ? r.credit.toLocaleString("en-IN") : "")}</td>
                   <td className="px-4 py-3 text-[11px] text-muted-foreground">{r.ref}</td>
                 </tr>
               ))}
@@ -680,10 +708,10 @@ function StockLedgerPage() {
               <tfoot className="bg-secondary/30 text-sm">
                 <tr>
                   <td colSpan={5} className="px-4 py-3 text-right text-xs uppercase tracking-wider text-muted-foreground">Totals</td>
-                  <td className="px-4 py-3 text-right font-bold tabular-nums text-emerald-700">{totalDebit.toLocaleString("en-IN")}</td>
-                  <td className="px-4 py-3 text-right font-bold tabular-nums text-rose-700">{totalCredit.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-right font-bold tabular-nums text-emerald-700">{mode === "value" ? fmtInr(totalDebitVal) : totalDebit.toLocaleString("en-IN")}</td>
+                  <td className="px-4 py-3 text-right font-bold tabular-nums text-rose-700">{mode === "value" ? fmtInr(totalCreditVal) : totalCredit.toLocaleString("en-IN")}</td>
                   <td className="px-4 py-3 text-right text-xs">
-                    Net <span className={`font-bold tabular-nums ${net >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{net.toLocaleString("en-IN")}</span>
+                    Net <span className={`font-bold tabular-nums ${(mode === "value" ? netVal : net) >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{mode === "value" ? fmtInr(netVal) : net.toLocaleString("en-IN")}</span>
                   </td>
                 </tr>
               </tfoot>
@@ -697,8 +725,8 @@ function StockLedgerPage() {
                 <th className="px-4 py-3">Size</th>
                 <th className="px-4 py-3">Unit</th>
                 <th className="px-4 py-3 text-right">Opening</th>
-                <th className="px-4 py-3 text-right">IN (period)</th>
-                <th className="px-4 py-3 text-right">OUT (period)</th>
+                <th className="px-4 py-3 text-right">Stock In (period)</th>
+                <th className="px-4 py-3 text-right">Stock Out (period)</th>
                 <th className="px-4 py-3 text-right">Closing</th>
                 <th className="px-4 py-3">Last Movement</th>
               </tr>
@@ -748,7 +776,7 @@ function StockLedgerPage() {
   );
 }
 
-function KpiCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent: "emerald" | "rose" | "slate" }) {
+function KpiCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number | string; accent: "emerald" | "rose" | "slate" }) {
   const cls =
     accent === "emerald" ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-700"
     : accent === "rose" ? "border-rose-500/30 bg-rose-500/5 text-rose-700"
@@ -756,7 +784,7 @@ function KpiCard({ icon, label, value, accent }: { icon: React.ReactNode; label:
   return (
     <div className={`rounded-2xl border p-4 ${cls}`}>
       <div className="flex items-center gap-2 text-xs uppercase tracking-wider opacity-80">{icon}{label}</div>
-      <div className="mt-1 font-display text-2xl font-bold tabular-nums">{value.toLocaleString("en-IN")}</div>
+      <div className="mt-1 font-display text-2xl font-bold tabular-nums">{typeof value === "number" ? value.toLocaleString("en-IN") : value}</div>
     </div>
   );
 }
