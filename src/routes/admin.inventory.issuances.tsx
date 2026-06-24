@@ -144,7 +144,6 @@ function IssuancesPage() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<Issuance | null>(null);
-  const [view, setView] = useState<"issuances" | "collections">("issuances");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
