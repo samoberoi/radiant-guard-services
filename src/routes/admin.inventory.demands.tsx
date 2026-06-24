@@ -144,7 +144,7 @@ function DemandsPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Demand #</th>
-                <th className="px-5 py-3">Branch</th>
+                <th className="px-5 py-3">Requested From</th>
                 <th className="px-5 py-3">Date</th>
                 <th className="px-5 py-3 text-right">Items</th>
                 <th className="px-5 py-3 text-right">Total Qty</th>
