@@ -267,6 +267,8 @@ function StockLedgerPage() {
       size: string;
       debit: number;
       credit: number;
+      debit_val: number;
+      credit_val: number;
       ref: string;
       notes: string;
     }[] = [];
@@ -286,6 +288,9 @@ function StockLedgerPage() {
         const hay = `${label} ${it?.name ?? ""} ${it?.item_code ?? ""} ${m.movement_type} ${m.reference_type}`.toLowerCase();
         if (!hay.includes(ql)) continue;
       }
+      const cost = Number(it?.standard_cost ?? 0);
+      const debit = qty > 0 ? qty : 0;
+      const credit = qty < 0 ? -qty : 0;
       out.push({
         id: m.id,
         when: m.movement_date,
@@ -295,8 +300,10 @@ function StockLedgerPage() {
         item_name: it?.name ?? "—",
         item_code: it?.item_code ?? "",
         size: m.size_value || "—",
-        debit: qty > 0 ? qty : 0,
-        credit: qty < 0 ? -qty : 0,
+        debit,
+        credit,
+        debit_val: debit * cost,
+        credit_val: credit * cost,
         ref: m.reference_type ? `${m.reference_type.toUpperCase()}${m.reference_id ? ` · ${m.reference_id.slice(0, 8)}` : ""}` : "—",
         notes: m.notes || "",
       });
@@ -306,7 +313,11 @@ function StockLedgerPage() {
 
   const totalDebit = rows.reduce((s, r) => s + r.debit, 0);
   const totalCredit = rows.reduce((s, r) => s + r.credit, 0);
+  const totalDebitVal = rows.reduce((s, r) => s + r.debit_val, 0);
+  const totalCreditVal = rows.reduce((s, r) => s + r.credit_val, 0);
   const net = totalDebit - totalCredit;
+  const netVal = totalDebitVal - totalCreditVal;
+  const fmtInr = (n: number) => "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
 
   // ------- By-Item summary: opening + in/out (in period) + closing, per item+size -------
   type ItemRow = {
