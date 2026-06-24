@@ -104,17 +104,22 @@ function IssuancesPage() {
   const isBranchManager = role.isBranchManager;
   const scope = useUserBranchScope();
 
-  // Open demands targeting this branch (for BM to fulfil via an issuance).
+  // Open demands available to fulfil via an issuance.
+  // Branch managers see branch-bound demands for their branch.
+  // Warehouse-side users (admin / inventory manager / non-branch-scoped) see warehouse-bound demands.
   const { data: openDemands = [] } = useQuery({
-    queryKey: ["inv", "open-demands-for-branch", scope.branchId],
-    enabled: !!scope.branchId && isBranchManager,
+    queryKey: ["inv", "open-demands-for-issuance", scope.branchId, isBranchManager],
+    enabled: !isFieldOfficer,
     queryFn: async () => {
-      const { data, error } = await supabase.from("inv_demands" as never)
-        .select("id,demand_number,branch_id,requester_candidate_id,requester_id,fulfillment_source,status")
-        .eq("branch_id", scope.branchId!)
-        .eq("fulfillment_source", "branch")
-        .eq("status", "submitted")
-        .order("created_at", { ascending: false });
+      let q = supabase.from("inv_demands" as never)
+        .select("id,demand_number,branch_id,warehouse_id,requester_candidate_id,requester_id,fulfillment_source,status")
+        .eq("status", "submitted");
+      if (isBranchManager && scope.branchId) {
+        q = q.eq("branch_id", scope.branchId).eq("fulfillment_source", "branch");
+      } else {
+        q = q.eq("fulfillment_source", "warehouse");
+      }
+      const { data, error } = await q.order("created_at", { ascending: false });
       if (error) throw error;
       return (data as unknown as OpenDemand[]) ?? [];
     },
