@@ -836,9 +836,10 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, w
             } as never).eq("id", dl.id);
           }
         }
-        await supabase.from("inv_demands" as never).update({
+        const { error: dErr } = await supabase.from("inv_demands" as never).update({
           status: "fulfilled", fulfilled_at: new Date().toISOString(),
         } as never).eq("id", selectedTransfer.demand_id);
+        if (dErr) toast.error(`Demand status update failed: ${dErr.message}`);
       }
 
       void logActivity({ module: "Inventory Delivery Challans", action: "create", entityType: "inv_goods_receipts", entityId: grnId, entityLabel: grn_number });
