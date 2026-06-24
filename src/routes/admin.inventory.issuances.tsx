@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Search, UserCheck, Eye, Trash2, X, PackageCheck, Inbox } from "lucide-react";
+import { Plus, Search, UserCheck, Eye, Trash2, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -144,7 +144,6 @@ function IssuancesPage() {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState<Issuance | null>(null);
-  const [view, setView] = useState<"issuances" | "collections">("issuances");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -181,96 +180,74 @@ function IssuancesPage() {
     <div>
       <PageHeader title="Issuances" description="Issue items: branch → field officer, or field officer / branch → guard. Stock moves on receiver acknowledgement." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Issuances" }]} />
 
-      {isFieldOfficer && (
-        <div className="mb-4 inline-flex rounded-lg border border-border bg-card p-1">
-          <button
-            onClick={() => setView("issuances")}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${view === "issuances" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            <UserCheck className="h-4 w-4" /> Issuances
-          </button>
-          <button
-            onClick={() => setView("collections")}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${view === "collections" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-          >
-            <Inbox className="h-4 w-4" /> Collections
-          </button>
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search issuance #…" className="h-10 rounded-lg pl-9" />
         </div>
-      )}
+        <Button onClick={() => { setActive(null); setOpen(true); }} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
+          <Plus className="mr-1.5 h-4 w-4" />New Issuance
+        </Button>
+      </div>
 
-      {view === "collections" && isFieldOfficer && me ? (
-        <CollectionsPanel me={me} candMap={candMap} itemMap={new Map(items.map((i) => [i.id, i]))} onChanged={invalidate} />
-      ) : (
-        <>
-          <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search issuance #…" className="h-10 rounded-lg pl-9" />
-            </div>
-            <Button onClick={() => { setActive(null); setOpen(true); }} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90">
-              <Plus className="mr-1.5 h-4 w-4" />New Issuance
-            </Button>
-          </div>
-
-          <div className="overflow-hidden rounded-2xl border border-border bg-card">
-            <div className="overflow-x-clip">
-              <table className="ios-table w-full text-sm">
-                <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  <tr>
-                    <th className="px-5 py-3">Issuance #</th>
-                    <th className="px-5 py-3">Type</th>
-                    <th className="px-5 py-3">Requested From</th>
-                    <th className="px-5 py-3">Requested By</th>
-                    <th className="px-5 py-3">From</th>
-                    <th className="px-5 py-3">To</th>
-                    <th className="px-5 py-3">Date</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border">
-                  {filtered.map((i) => {
-                    const info = i.demand_id ? demandInfo.get(i.demand_id) : null;
-                    return (
-                    <tr key={i.id} className="hover:bg-secondary/30">
-                      <td className="px-5 py-3 font-mono text-xs">{i.issuance_number}</td>
-                      <td className="px-5 py-3 text-xs uppercase tracking-wider text-muted-foreground">{i.issuance_type.replace("_", " ")}</td>
-                      <td className="px-5 py-3 font-mono text-xs">{info?.demandNumber ?? "—"}</td>
-                      <td className="px-5 py-3">
-                        {info ? (
-                          <>
-                            <div className="font-medium">{info.requesterName}</div>
-                            <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
-                              {info.requesterRole}{info.requesterCode ? ` · ${info.requesterCode}` : ""}
-                            </div>
-                          </>
-                        ) : "—"}
-                      </td>
-                      <td className="px-5 py-3">{locName(i.source_type, i.source_id)}</td>
-                      <td className="px-5 py-3 font-medium">{locName(i.destination_type, i.destination_id)}</td>
-                      <td className="px-5 py-3 text-xs text-muted-foreground">{i.issuance_date}</td>
-                      <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(i.status)}`}>{i.status === "completed" ? "completed" : i.status}</span></td>
-                      <td className="px-5 py-3 text-right">
-                        <div className="inline-flex gap-1">
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setActive(i); setOpen(true); }}><Eye className="h-4 w-4" /></Button>
-                          {i.status === "draft" && (
-                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={async () => {
-                              if (!(await confirmAction({ title: "Delete?", description: `Delete ${i.issuance_number}?`, confirmText: "Delete" }))) return;
-                              try { await deleteMut.mutateAsync(i); toast.success("Deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
-                            }}><Trash2 className="h-4 w-4" /></Button>
-                          )}
+      <div className="overflow-hidden rounded-2xl border border-border bg-card">
+        <div className="overflow-x-clip">
+          <table className="ios-table w-full text-sm">
+            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <tr>
+                <th className="px-5 py-3">Issuance #</th>
+                <th className="px-5 py-3">Type</th>
+                <th className="px-5 py-3">Requested From</th>
+                <th className="px-5 py-3">Requested By</th>
+                <th className="px-5 py-3">From</th>
+                <th className="px-5 py-3">To</th>
+                <th className="px-5 py-3">Date</th>
+                <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3 text-right" data-col="actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {filtered.map((i) => {
+                const info = i.demand_id ? demandInfo.get(i.demand_id) : null;
+                return (
+                <tr key={i.id} className="hover:bg-secondary/30">
+                  <td className="px-5 py-3 font-mono text-xs">{i.issuance_number}</td>
+                  <td className="px-5 py-3 text-xs uppercase tracking-wider text-muted-foreground">{i.issuance_type.replace("_", " ")}</td>
+                  <td className="px-5 py-3 font-mono text-xs">{info?.demandNumber ?? "—"}</td>
+                  <td className="px-5 py-3">
+                    {info ? (
+                      <>
+                        <div className="font-medium">{info.requesterName}</div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                          {info.requesterRole}{info.requesterCode ? ` · ${info.requesterCode}` : ""}
                         </div>
-                      </td>
-                    </tr>
-                    );
-                  })}
-                  {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><UserCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No issuances yet.</td></tr>}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      )}
+                      </>
+                    ) : "—"}
+                  </td>
+                  <td className="px-5 py-3">{locName(i.source_type, i.source_id)}</td>
+                  <td className="px-5 py-3 font-medium">{locName(i.destination_type, i.destination_id)}</td>
+                  <td className="px-5 py-3 text-xs text-muted-foreground">{i.issuance_date}</td>
+                  <td className="px-5 py-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${statusBadgeClass(i.status)}`}>{i.status === "completed" ? "completed" : i.status}</span></td>
+                  <td className="px-5 py-3 text-right">
+                    <div className="inline-flex gap-1">
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => { setActive(i); setOpen(true); }}><Eye className="h-4 w-4" /></Button>
+                      {i.status === "draft" && (
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={async () => {
+                          if (!(await confirmAction({ title: "Delete?", description: `Delete ${i.issuance_number}?`, confirmText: "Delete" }))) return;
+                          try { await deleteMut.mutateAsync(i); toast.success("Deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
+                        }}><Trash2 className="h-4 w-4" /></Button>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+                );
+              })}
+              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><UserCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No issuances yet.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
 
 
       <IssuanceDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setActive(null); }} initial={active} warehouses={warehouses} branches={branches} fos={fos} guards={guards} candidates={candidates} items={items} onSaved={invalidate} me={me} isFieldOfficer={isFieldOfficer} isBranchManager={isBranchManager} branchScopeId={scope.branchId} openDemands={openDemands} />
@@ -734,183 +711,5 @@ async function bumpDemandFulfilled(demandId: string, lines: Line[]) {
 function useResetOnOpen(open: boolean, reset: () => void) {
   const [last, setLast] = useState(false);
   if (open !== last) { setLast(open); if (open) reset(); }
-}
-
-type CollectionRow = {
-  id: string;
-  issuance_number: string;
-  issuance_date: string;
-  issued_at: string | null;
-  destination_id: string;
-  destination_type: string;
-  source_id: string;
-  notes: string;
-  lines: { item_id: string; size_value: string; qty: number }[];
-};
-
-function CollectionsPanel({ me, candMap, itemMap, onChanged }: {
-  me: Candidate;
-  candMap: Map<string, Candidate>;
-  itemMap: Map<string, Item>;
-  onChanged: () => void;
-}) {
-  const qc = useQueryClient();
-  const [q, setQ] = useState("");
-  const [busy, setBusy] = useState<string | null>(null);
-
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["inv", "collections", me.id],
-    queryFn: async () => {
-      const { data: iss, error } = await supabase
-        .from("inv_issuances" as never)
-        .select("id,issuance_number,issuance_date,issued_at,source_id,source_type,destination_id,destination_type,notes,status,collected_at")
-        .eq("issuance_type", "fo_to_guard")
-        .eq("source_id", me.id)
-        .eq("status", "completed")
-        .is("collected_at", null)
-        .order("issued_at", { ascending: false });
-      if (error) throw error;
-      const list = (iss as unknown as (Issuance & { issued_at: string | null; collected_at: string | null })[]) ?? [];
-      if (!list.length) return [] as CollectionRow[];
-      const ids = list.map((x) => x.id);
-      const { data: lns } = await supabase
-        .from("inv_issuance_lines" as never)
-        .select("issuance_id,item_id,size_value,qty")
-        .in("issuance_id", ids);
-      const byIss = new Map<string, { item_id: string; size_value: string; qty: number }[]>();
-      for (const l of (lns as unknown as { issuance_id: string; item_id: string; size_value: string | null; qty: number }[]) ?? []) {
-        const arr = byIss.get(l.issuance_id) ?? [];
-        arr.push({ item_id: l.item_id, size_value: l.size_value ?? "", qty: Number(l.qty ?? 0) });
-        byIss.set(l.issuance_id, arr);
-      }
-      return list.map<CollectionRow>((i) => ({
-        id: i.id,
-        issuance_number: i.issuance_number,
-        issuance_date: i.issuance_date,
-        issued_at: i.issued_at,
-        destination_id: i.destination_id,
-        destination_type: i.destination_type,
-        source_id: i.source_id,
-        notes: i.notes,
-        lines: byIss.get(i.id) ?? [],
-      }));
-    },
-  });
-
-  const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return rows;
-    return rows.filter((r) => {
-      const guard = candMap.get(r.destination_id)?.full_name?.toLowerCase() ?? "";
-      return r.issuance_number.toLowerCase().includes(s) || guard.includes(s);
-    });
-  }, [rows, q, candMap]);
-
-  async function collect(r: CollectionRow) {
-    if (!(await confirmAction({
-      title: "Confirm collection",
-      description: "Kindly confirm you have collected it. Items will be removed from the guard and added back to your stock.",
-      confirmText: "Confirm Collected",
-    }))) return;
-    setBusy(r.id);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      // OUT from guard, IN to field officer (me)
-      const movs = r.lines.flatMap((l) => ([
-        {
-          movement_type: "COLLECT_GUARD_OUT",
-          location_type: r.destination_type as LocationType,
-          location_id: r.destination_id,
-          item_id: l.item_id, size_value: l.size_value, qty_change: -l.qty,
-          reference_type: "collection", reference_id: r.id,
-        },
-        {
-          movement_type: "COLLECT_FO_IN",
-          location_type: "field_officer" as LocationType,
-          location_id: me.id,
-          item_id: l.item_id, size_value: l.size_value, qty_change: l.qty,
-          reference_type: "collection", reference_id: r.id,
-        },
-      ]));
-      await postMovements(movs);
-      await supabase.from("inv_issuances" as never).update({
-        status: "collected",
-        collected_at: new Date().toISOString(),
-        collected_by: user?.id ?? null,
-      } as never).eq("id", r.id);
-      void logActivity({ module: MODULE, action: "acknowledge", entityType: ENTITY, entityId: r.id, entityLabel: `Collected ${r.issuance_number}` });
-      toast.success("Collected — stock returned to you");
-      qc.invalidateQueries({ queryKey: ["inv", "collections", me.id] });
-      qc.invalidateQueries({ queryKey: ["inv", "balances-sum"] });
-      onChanged();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  return (
-    <div>
-      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search issuance # or guard…" className="h-10 rounded-lg pl-9" />
-        </div>
-        <div className="text-xs text-muted-foreground">{filtered.length} pending</div>
-      </div>
-
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="overflow-x-clip">
-          <table className="ios-table w-full text-sm">
-            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3">Issuance #</th>
-                <th className="px-5 py-3">From</th>
-                <th className="px-5 py-3">To (Guard)</th>
-                <th className="px-5 py-3">Issued On</th>
-                <th className="px-5 py-3">Items</th>
-                <th className="px-5 py-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((r) => {
-                const guard = candMap.get(r.destination_id);
-                return (
-                  <tr key={r.id} className="hover:bg-secondary/30">
-                    <td className="px-5 py-3 font-mono text-xs">{r.issuance_number}</td>
-                    <td className="px-5 py-3">{me.full_name}<div className="text-[11px] uppercase tracking-wider text-muted-foreground">Field Officer</div></td>
-                    <td className="px-5 py-3 font-medium">{guard?.full_name ?? "—"}<div className="text-[11px] uppercase tracking-wider text-muted-foreground">{guard?.employee_code ?? ""}</div></td>
-                    <td className="px-5 py-3 text-xs text-muted-foreground">{(r.issued_at ?? r.issuance_date).slice(0, 10)}</td>
-                    <td className="px-5 py-3 text-xs">
-                      {r.lines.map((l, idx) => (
-                        <div key={idx}>
-                          <span className="font-medium">{itemMap.get(l.item_id)?.name ?? "—"}</span>
-                          {l.size_value && <span className="text-muted-foreground"> · {l.size_value}</span>}
-                          <span className="text-muted-foreground"> × {l.qty}</span>
-                        </div>
-                      ))}
-                      {!r.lines.length && <span className="text-muted-foreground">—</span>}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <Button size="sm" disabled={busy === r.id} onClick={() => collect(r)} className="h-8 rounded-md">
-                        <PackageCheck className="mr-1.5 h-4 w-4" />{busy === r.id ? "Collecting…" : "Collect"}
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {!filtered.length && (
-                <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
-                  <Inbox className="mx-auto mb-2 h-8 w-8 opacity-40" />
-                  {isLoading ? "Loading…" : "Nothing pending collection."}
-                </td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
 }
 

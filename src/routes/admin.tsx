@@ -116,6 +116,7 @@ const inventoryChildren: LeafItem[] = [
   { to: "/admin/inventory/goods-receipts", label: "Delivery Challans", icon: ClipboardList, sub: "goods_receipts" },
   { to: "/admin/inventory/transfers", label: "Transfers", icon: Boxes, sub: "transfers" },
   { to: "/admin/inventory/issuances", label: "Issuances", icon: UserPlus, sub: "issuances" },
+  { to: "/admin/inventory/collections", label: "Collections", icon: Inbox, sub: "collections" },
 
   { to: "/admin/inventory/stock", label: "Stock Report", icon: Wallet, sub: "stock_report" },
   { to: "/admin/inventory/stock-ledger", label: "Stock Ledger", icon: Banknote, sub: "stock_ledger" },
@@ -324,9 +325,11 @@ function AdminLayout() {
     () => {
       if (isSuperAdmin) return inventoryChildren;
       const list = inventoryChildren.filter((c) => !c.sub || canSub("inventory", c.sub));
+      // Collections is field-officer only.
+      const withCollections = list.filter((c) => c.to !== "/admin/inventory/collections" || roleKey === "field_officer");
       // Field officers do not see the Inventory Command Center dashboard.
-      if (roleKey === "field_officer") return list.filter((c) => c.to !== "/admin/inventory");
-      return list;
+      if (roleKey === "field_officer") return withCollections.filter((c) => c.to !== "/admin/inventory");
+      return withCollections;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [isSuperAdmin, permsLoading, roleKey],
