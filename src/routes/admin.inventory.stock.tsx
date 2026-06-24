@@ -204,13 +204,13 @@ function StockPage() {
     };
     for (const b of balances) {
       const t = normalizeType(b.location_type);
-      if (!t) continue;
+      if (!t || t === "all") continue;
       if (Number(b.qty) === 0) continue;
       bucketTotals[t].qty += Number(b.qty);
       bucketTotals[t].lines += 1;
       seenHolders[t].add(b.location_id);
     }
-    for (const t of Object.keys(bucketTotals) as HolderType[]) {
+    for (const t of Object.keys(bucketTotals) as Exclude<HolderType, "all">[]) {
       bucketTotals[t].holders = seenHolders[t].size;
     }
 
