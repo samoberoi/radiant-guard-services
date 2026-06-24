@@ -31,7 +31,7 @@ type GRN = {
   vendor_invoice_url?: string | null;
   transfer_id?: string | null; demand_id?: string | null; branch_id?: string | null; kind?: string;
 };
-type PO = { id: string; po_number: string; vendor_id: string | null; destination_warehouse_id: string | null; status: string };
+type PO = { id: string; po_number: string; vendor_id: string | null; destination_warehouse_id: string | null; destination_branch_id: string | null; status: string };
 type POLine = { id: string; item_id: string; size_value: string; ordered_qty: number; received_qty: number };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
 type Vendor = { id: string; name: string };
@@ -82,7 +82,7 @@ function GRNPage() {
     queryKey: ["inv", "pos-open"],
     enabled: adminMode,
     queryFn: async () => {
-      const { data, error } = await supabase.from("inv_purchase_orders" as never).select("id,po_number,vendor_id,destination_warehouse_id,status").in("status", ["open", "partially_received"]).order("po_date", { ascending: false });
+      const { data, error } = await supabase.from("inv_purchase_orders" as never).select("id,po_number,vendor_id,destination_warehouse_id,destination_branch_id,status").in("status", ["open", "partially_received"]).order("po_date", { ascending: false });
       if (error) throw error;
       return (data as unknown as PO[]) ?? [];
     },
@@ -316,7 +316,7 @@ function GRNPage() {
 
 
       {adminMode && !role.isFieldOfficer ? (
-        <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} branches={branches} onSaved={invalidate} />
+        <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} branches={branches} warehouses={warehouses} onSaved={invalidate} />
       ) : role.isFieldOfficer ? (
         <FieldOfficerGRNFormDialog
           open={open}
@@ -344,14 +344,13 @@ function GRNPage() {
   );
 }
 
-function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: boolean; onOpenChange: (o: boolean) => void; pos: PO[]; branches: { id: string; name: string }[]; onSaved: () => void }) {
+function GRNFormDialog({ open, onOpenChange, pos, branches, warehouses, onSaved }: { open: boolean; onOpenChange: (o: boolean) => void; pos: PO[]; branches: { id: string; name: string }[]; warehouses: { id: string; name: string }[]; onSaved: () => void }) {
   const [poId, setPoId] = useState<string>("");
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().slice(0, 10));
   const [invoiceNo, setInvoiceNo] = useState("");
   const [challanNo, setChallanNo] = useState("");
   const [vehicleNo, setVehicleNo] = useState("");
   const [notes, setNotes] = useState("");
-  const [finalBranchId, setFinalBranchId] = useState<string>("");
   const [lines, setLines] = useState<Line[]>([]);
   const [items, setItems] = useState<Record<string, Item>>({});
   const [saving, setSaving] = useState(false);
@@ -360,7 +359,7 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: b
   useResetOnOpen(open, async () => {
     setPoId(""); setReceiptDate(new Date().toISOString().slice(0, 10));
     setInvoiceNo(""); setChallanNo(""); setVehicleNo(""); setNotes(""); setLines([]); setItems({});
-    setInvoiceFile(null); setFinalBranchId("");
+    setInvoiceFile(null);
   });
 
   async function loadPo(id: string) {
@@ -488,10 +487,11 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: b
         }
       }
 
-      // Books-of-record passthrough: if vendor delivered to a final branch,
+      // Books-of-record passthrough: if the PO designates a destination branch,
       // auto-create a completed transfer (warehouse → branch) so books show:
       //   IN at warehouse  →  OUT from warehouse  →  IN at branch
       const acceptedForTransfer = lines.filter((l) => l.accepted_qty > 0);
+      const finalBranchId = po.destination_branch_id ?? "";
       let passthroughTransferId: string | null = null;
       if (finalBranchId && acceptedForTransfer.length) {
         const tn = await nextSeq("inv_transfer_number_seq");
@@ -503,7 +503,7 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: b
           linked_po_id: po.id,
           transfer_date: receiptDate, status: "completed",
           vehicle_number: vehicleNo, driver_name: "", driver_phone: "",
-          notes: `Auto-created from GRN ${grn_number} — vendor delivered direct to branch.`,
+          notes: `Auto-created from GRN ${grn_number} — PO destination branch.`,
           dispatched_by: user?.id ?? null, dispatched_at: new Date().toISOString(),
           received_by: user?.id ?? null, received_at: new Date().toISOString(),
         } as never).select("id").single();
@@ -534,6 +534,7 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: b
           branch_id: finalBranchId, transfer_id: passthroughTransferId,
         } as never).eq("id", grnId);
       }
+
 
 
       // Update PO status
@@ -614,17 +615,19 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: b
             </div>
           )}
 
-          <div className="grid gap-2">
-            <Label>Final Delivery Branch <span className="text-muted-foreground">(optional)</span></Label>
-            <Select value={finalBranchId || "__none__"} onValueChange={(v) => setFinalBranchId(v === "__none__" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="Stays at warehouse" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">— Stays at warehouse —</SelectItem>
-                {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground">If vendor delivered direct to a branch, pick it here. Books will record: stock IN at warehouse → OUT from warehouse → IN at branch (auto-creates a completed transfer).</p>
-          </div>
+          {po && (
+            <div className="rounded-xl border border-border bg-secondary/40 px-3 py-2 text-xs">
+              <div className="font-semibold text-foreground/80 mb-1">Books will record</div>
+              <div className="text-muted-foreground">
+                IN at <span className="text-foreground">{warehouses.find((w) => w.id === po.destination_warehouse_id)?.name ?? "warehouse"}</span>
+                {po.destination_branch_id ? (
+                  <> → OUT from <span className="text-foreground">{warehouses.find((w) => w.id === po.destination_warehouse_id)?.name ?? "warehouse"}</span> → IN at <span className="text-foreground">{branches.find((b) => b.id === po.destination_branch_id)?.name ?? "branch"}</span> (auto passthrough)</>
+                ) : (
+                  <> · stays at warehouse</>
+                )}
+              </div>
+            </div>
+          )}
           <div className="grid gap-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
         </div>
         <DialogFooter>
