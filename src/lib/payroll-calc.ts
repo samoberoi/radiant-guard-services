@@ -403,7 +403,7 @@ export function applyPtToWageComputation(
   };
 }
 
-function scaleItems(items: BenefitLike[], ratio: number): WageComponent[] {
+function scaleItems(items: BenefitLike[], ratio: number, perDuty?: (i: BenefitLike) => number): WageComponent[] {
   return items.map((i) => ({
     ...i,
     name: i.name,
