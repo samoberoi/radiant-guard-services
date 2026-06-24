@@ -344,7 +344,7 @@ function GRNPage() {
   );
 }
 
-function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: boolean; onOpenChange: (o: boolean) => void; pos: PO[]; branches: { id: string; name: string }[]; onSaved: () => void }) {
+function GRNFormDialog({ open, onOpenChange, pos, branches, warehouses, onSaved }: { open: boolean; onOpenChange: (o: boolean) => void; pos: PO[]; branches: { id: string; name: string }[]; warehouses: { id: string; name: string }[]; onSaved: () => void }) {
   const [poId, setPoId] = useState<string>("");
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().slice(0, 10));
   const [invoiceNo, setInvoiceNo] = useState("");
