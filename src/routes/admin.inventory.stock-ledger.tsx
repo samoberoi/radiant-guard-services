@@ -628,11 +628,11 @@ function StockLedgerPage() {
           </Select>
           {view === "movement" && (
             <Select value={direction} onValueChange={(v) => setDirection(v as "all" | "in" | "out")}>
-              <SelectTrigger className="h-10 w-40 rounded-lg"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-10 w-44 rounded-lg"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Debit & Credit</SelectItem>
-                <SelectItem value="in">Debit only (IN)</SelectItem>
-                <SelectItem value="out">Credit only (OUT)</SelectItem>
+                <SelectItem value="all">Stock In & Out</SelectItem>
+                <SelectItem value="in">Stock In only</SelectItem>
+                <SelectItem value="out">Stock Out only</SelectItem>
               </SelectContent>
             </Select>
           )}
