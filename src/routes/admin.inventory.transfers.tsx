@@ -71,19 +71,16 @@ function TransfersPage() {
     },
   });
   const { data: openDemands = [] } = useQuery({
-    queryKey: ["inv", "demands-open"],
+    queryKey: ["inv", "demands-open-branch"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("inv_demands" as never).select("id,demand_number,branch_id,warehouse_id,requester_candidate_id,status").in("status", ["submitted"]).order("demand_date", { ascending: false });
+      const { data, error } = await supabase
+        .from("inv_demands" as never)
+        .select("id,demand_number,branch_id,warehouse_id,requester_candidate_id,status")
+        .in("status", ["submitted"])
+        .not("branch_id", "is", null)
+        .order("demand_date", { ascending: false });
       if (error) throw error;
       return (data as unknown as Demand[]) ?? [];
-    },
-  });
-  const { data: candidates = [] } = useQuery({
-    queryKey: ["candidates-min-for-transfers"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("candidates" as never).select("id,full_name,employee_code,role_key").eq("status", "active");
-      if (error) throw error;
-      return (data as unknown as Candidate[]) ?? [];
     },
   });
 
