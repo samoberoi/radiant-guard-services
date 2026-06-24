@@ -251,6 +251,7 @@ function ItemFormDialog({ open, onOpenChange, title, initial, categories, onSubm
   const [description, setDescription] = useState("");
   const [enabled, setEnabled] = useState(true);
   const [stdCost, setStdCost] = useState(0);
+  const [issuePrice, setIssuePrice] = useState(0);
   const [saving, setSaving] = useState(false);
   const [sizes, setSizes] = useState<SizeRow[]>([]);
   const [origSizes, setOrigSizes] = useState<SizeRow[]>([]);
