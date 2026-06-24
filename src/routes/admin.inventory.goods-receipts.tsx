@@ -985,23 +985,24 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, incoming
             </div>
             {selectedPO && (
               <div className="grid gap-2">
-                <Label>Vehicle No.</Label>
-                <Input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} placeholder="Optional" />
+                <Label>Vendor Invoice No.</Label>
+                <Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} placeholder="Optional" />
               </div>
             )}
           </div>
           {selectedPO && (
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="grid gap-2">
-                <Label>Vendor Invoice No.</Label>
-                <Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} placeholder="Optional" />
-              </div>
-              <div className="grid gap-2">
-                <Label>Vendor Challan No.</Label>
-                <Input value={challanNo} onChange={(e) => setChallanNo(e.target.value)} placeholder="Optional" />
-              </div>
+            <div className="grid gap-2">
+              <Label>Vendor Invoice File</Label>
+              <Input
+                type="file"
+                accept="application/pdf,image/*"
+                onChange={(e) => setInvoiceFile(e.target.files?.[0] ?? null)}
+                className="h-10 file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-sm file:font-medium hover:file:bg-secondary/80"
+              />
+              {invoiceFile && <p className="text-xs text-muted-foreground">{invoiceFile.name} ({Math.round(invoiceFile.size / 1024)} KB)</p>}
             </div>
           )}
+
 
           {lines.length > 0 && (
             <div className="overflow-x-clip rounded-xl border border-border">
