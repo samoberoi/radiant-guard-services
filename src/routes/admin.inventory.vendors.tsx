@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Download, Edit2, Plus, Search, Trash2, ShoppingBag, Package } from "lucide-react";
+import { Download, Edit2, Plus, Search, Trash2, ShoppingBag, Package, Truck, CheckCircle2, MapPin } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -172,54 +172,160 @@ function VendorsPage() {
     onSuccess: invalidate,
   });
 
+  const enabledCount = useMemo(() => vendors.filter((v) => v.enabled).length, [vendors]);
+  const cityCount = useMemo(() => new Set(vendors.map((v) => v.city).filter(Boolean)).size, [vendors]);
+  const mappedItems = useMemo(() => new Set((capsQ.data ?? []).map((c) => c.item_id)).size, [capsQ.data]);
+
   return (
-    <div>
-      <PageHeader title="Vendors" description="Vendors that fulfil warehouse purchase orders." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Vendors" }]} />
-      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search vendors…" className="h-10 rounded-lg pl-9" />
-        </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setAddOpen(true)} className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="mr-1.5 h-4 w-4" />Add Vendor</Button>
-          <Button variant="outline" disabled={!filtered.length} onClick={() => downloadCsv("inventory-vendors", filtered.map((v) => ({ code: v.vendor_code, name: v.name, contact: v.contact_person, phone: v.phone, email: v.email, gstin: v.gstin, city: v.city, state: v.state, enabled: v.enabled ? "Yes" : "No" })))} className="h-10 rounded-lg"><Download className="mr-1.5 h-4 w-4" />Export</Button>
-        </div>
+    <div className="page-enter">
+      <PageHeader
+        title="Vendors"
+        description="Suppliers that fulfil warehouse purchase orders."
+        icon={Truck}
+        eyebrow="Inventory"
+        crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Vendors" }]}
+        actions={
+          <>
+            <Button
+              variant="outline"
+              disabled={!filtered.length}
+              onClick={() => downloadCsv("inventory-vendors", filtered.map((v) => ({ code: v.vendor_code, name: v.name, contact: v.contact_person, phone: v.phone, email: v.email, gstin: v.gstin, city: v.city, state: v.state, enabled: v.enabled ? "Yes" : "No" })))}
+              className="h-10 rounded-xl"
+            >
+              <Download className="mr-1.5 h-4 w-4" />Export
+            </Button>
+            <Button
+              onClick={() => setAddOpen(true)}
+              className="h-10 rounded-xl bg-foreground font-semibold text-background shadow-sm hover:bg-foreground/90"
+            >
+              <Plus className="mr-1.5 h-4 w-4" />Add Vendor
+            </Button>
+          </>
+        }
+      />
+
+      {/* KPI strip */}
+      <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          { label: "Total vendors", value: vendors.length, icon: Truck, tint: "from-accent/15 to-accent/0 text-accent" },
+          { label: "Active", value: enabledCount, icon: CheckCircle2, tint: "from-emerald-500/15 to-emerald-500/0 text-emerald-600" },
+          { label: "Cities", value: cityCount, icon: MapPin, tint: "from-violet-500/15 to-violet-500/0 text-violet-600" },
+          { label: "Mapped items", value: mappedItems, icon: Package, tint: "from-amber-500/15 to-amber-500/0 text-amber-600" },
+        ].map((k) => (
+          <div key={k.label} className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4 transition-shadow hover:shadow-md">
+            <div className={`absolute inset-0 -z-0 bg-gradient-to-br ${k.tint} opacity-60`} />
+            <div className="relative flex items-start justify-between gap-3">
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{k.label}</div>
+                <div className="mt-1 font-display text-2xl font-bold tabular-nums text-foreground">{k.value}</div>
+              </div>
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/70 ring-1 ring-border/60 backdrop-blur">
+                <k.icon className="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="flex items-center justify-between border-b border-border bg-accent/10 px-5 py-2.5 text-xs"><span className="inline-flex items-center gap-2"><span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">{filtered.length}</span><span className="uppercase tracking-[0.14em] text-muted-foreground">Total rows</span></span></div>
-        <div className="overflow-x-clip">
+      <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+        {/* Toolbar */}
+        <div className="flex flex-col gap-3 border-b border-border/60 bg-gradient-to-r from-secondary/40 via-white to-secondary/30 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-white px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground shadow-sm">
+              <span className="grid h-5 min-w-5 place-items-center rounded-full bg-foreground px-1.5 text-[10px] font-bold text-background tabular-nums">{filtered.length}</span>
+              {filtered.length === 1 ? "vendor" : "vendors"}
+              {query && <span className="text-muted-foreground/60">of {vendors.length}</span>}
+            </span>
+          </div>
+          <div className="relative w-full sm:w-80">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name, code, GSTIN, phone…"
+              className="h-10 rounded-xl border-border/70 bg-white pl-9 shadow-sm focus-visible:ring-2 focus-visible:ring-accent/40"
+            />
+          </div>
+        </div>
+        <div className="overflow-x-auto">
           <table className="ios-table w-full text-sm">
-            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              <tr><th className="px-5 py-3">Code</th><th className="px-5 py-3">Name</th><th className="px-5 py-3">Products</th><th className="px-5 py-3">Contact</th><th className="px-5 py-3">Phone</th><th className="px-5 py-3">GSTIN</th><th className="px-5 py-3">City</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right" data-col="actions">Actions</th></tr>
+            <thead>
+              <tr>
+                <th>Code</th>
+                <th>Vendor</th>
+                <th>Products</th>
+                <th>Contact</th>
+                <th>Phone</th>
+                <th>GSTIN</th>
+                <th>City</th>
+                <th>Status</th>
+                <th data-col="actions" className="text-right">Actions</th>
+              </tr>
             </thead>
-            <tbody className="divide-y divide-border">
+            <tbody>
               {filtered.map((v) => {
                 const caps = capsByVendor.get(v.id) ?? [];
                 const distinctItems = new Set(caps.map((c) => c.item_id)).size;
                 return (
-                <tr key={v.id} className="hover:bg-secondary/30">
-                  <td className="px-5 py-3 font-mono text-xs text-muted-foreground">{v.vendor_code}</td>
-                  <td className="px-5 py-3 font-medium"><span className="inline-flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-muted-foreground" />{v.name}</span></td>
-                  <td className="px-5 py-3">
-                    <button onClick={() => setCapVendor(v)} className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${distinctItems ? "bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/25" : "bg-secondary text-muted-foreground hover:bg-secondary/80"}`}>
+                <tr key={v.id} className="group transition-colors hover:bg-accent/[0.04]">
+                  <td className="font-mono text-[11px] font-semibold tracking-wide text-muted-foreground">{v.vendor_code}</td>
+                  <td>
+                    <div className="flex items-center gap-2.5">
+                      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-accent/15 to-accent/0 text-accent ring-1 ring-accent/15">
+                        <ShoppingBag className="h-3.5 w-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold text-foreground">{v.name}</div>
+                        {v.payment_terms && <div className="text-[11px] text-muted-foreground">{v.payment_terms}</div>}
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <button
+                      onClick={() => setCapVendor(v)}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all ${distinctItems ? "border border-emerald-500/25 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20" : "border border-border/70 bg-secondary text-muted-foreground hover:bg-secondary/80"}`}
+                    >
                       <Package className="h-3 w-3" />{distinctItems} item{distinctItems === 1 ? "" : "s"}
                     </button>
                   </td>
-                  <td className="px-5 py-3">{v.contact_person || "—"}</td>
-                  <td className="px-5 py-3 font-mono text-xs">{v.phone || "—"}</td>
-                  <td className="px-5 py-3 font-mono text-xs">{v.gstin || "—"}</td>
-                  <td className="px-5 py-3">{v.city || "—"}</td>
-                  <td className="px-5 py-3"><Switch checked={v.enabled} onCheckedChange={(val) => toggleMut.mutate({ id: v.id, enabled: val }, { onSuccess: () => toast.success(val ? "Enabled" : "Disabled") })} /></td>
-                  <td className="px-5 py-3 text-right"><div className="inline-flex gap-1"><Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setEditing(v)}><Edit2 className="h-4 w-4" /></Button><Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => setDeleting(v)}><Trash2 className="h-4 w-4" /></Button></div></td>
+                  <td className="text-foreground/90">{v.contact_person || <span className="text-muted-foreground/60">—</span>}</td>
+                  <td className="font-mono text-[12px] text-foreground/80">{v.phone || <span className="text-muted-foreground/60">—</span>}</td>
+                  <td className="font-mono text-[11px] uppercase text-foreground/80">{v.gstin || <span className="text-muted-foreground/60">—</span>}</td>
+                  <td>{v.city ? <span className="inline-flex items-center gap-1.5 text-foreground/90"><MapPin className="h-3 w-3 text-muted-foreground" />{v.city}</span> : <span className="text-muted-foreground/60">—</span>}</td>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      <Switch checked={v.enabled} onCheckedChange={(val) => toggleMut.mutate({ id: v.id, enabled: val }, { onSuccess: () => toast.success(val ? "Enabled" : "Disabled") })} />
+                      <span className={`text-[11px] font-semibold ${v.enabled ? "text-emerald-600" : "text-muted-foreground"}`}>{v.enabled ? "Active" : "Off"}</span>
+                    </div>
+                  </td>
+                  <td data-col="actions" className="text-right">
+                    <div className="inline-flex gap-1">
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setEditing(v)}><Edit2 className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => setDeleting(v)}><Trash2 className="h-4 w-4" /></Button>
+                    </div>
+                  </td>
                 </tr>
                 );
               })}
-              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground">No vendors yet.</td></tr>}
+              {!filtered.length && (
+                <tr>
+                  <td colSpan={9} className="py-16 text-center">
+                    <div className="mx-auto flex max-w-sm flex-col items-center gap-3 text-muted-foreground">
+                      <div className="grid h-12 w-12 place-items-center rounded-2xl bg-accent/10 text-accent">
+                        <Truck className="h-5 w-5" />
+                      </div>
+                      <div className="font-display text-base font-semibold text-foreground">No vendors {query ? "match your search" : "yet"}</div>
+                      <p className="text-xs">{query ? "Try a different name, code, or GSTIN." : "Add your first supplier to start raising purchase orders."}</p>
+                      {!query && <Button onClick={() => setAddOpen(true)} className="mt-1 h-9 rounded-lg"><Plus className="mr-1.5 h-3.5 w-3.5" />Add Vendor</Button>}
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
 
       <VendorFormDialog open={addOpen} onOpenChange={setAddOpen} title="Add Vendor" onSubmit={async (p) => { try { await addMut.mutateAsync(p); toast.success("Vendor added"); return null; } catch (e) { return e instanceof Error ? e.message : "Failed"; } }} />
       <VendorFormDialog open={!!editing} initial={editing} onOpenChange={(o) => !o && setEditing(null)} title="Edit Vendor" onSubmit={async (p) => { if (!editing) return null; try { await updateMut.mutateAsync({ id: editing.id, p }); toast.success("Updated"); setEditing(null); return null; } catch (e) { return e instanceof Error ? e.message : "Failed"; } }} />
