@@ -247,6 +247,8 @@ function GRNPage() {
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               <tr>
                 <th className="px-5 py-3">Challan #</th>
+                <th className="px-5 py-3">Requested From</th>
+                <th className="px-5 py-3">Requested By</th>
                 <th className="px-5 py-3">Vendor</th>
                 <th className="px-5 py-3">Warehouse</th>
                 <th className="px-5 py-3">Delivery Date</th>
@@ -260,9 +262,22 @@ function GRNPage() {
             <tbody className="divide-y divide-border">
               {filtered.map((g) => {
                 const agg = lineAgg.get(g.id) ?? { products: 0, qty: 0, value: 0 };
+                const did = grnDemandId(g);
+                const info = did ? demandInfo.get(did) : null;
                 return (
                 <tr key={g.id} className="hover:bg-secondary/30">
                   <td className="px-5 py-3 font-mono text-xs">{g.grn_number}</td>
+                  <td className="px-5 py-3 font-mono text-xs">{info?.demandNumber ?? "—"}</td>
+                  <td className="px-5 py-3">
+                    {info ? (
+                      <>
+                        <div className="font-medium">{info.requesterName}</div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">
+                          {info.requesterRole}{info.requesterCode ? ` · ${info.requesterCode}` : ""}
+                        </div>
+                      </>
+                    ) : "—"}
+                  </td>
                   <td className="px-5 py-3">{g.vendor_id ? vMap.get(g.vendor_id) ?? "—" : "—"}</td>
                   <td className="px-5 py-3">{g.warehouse_id ? (wMap.get(g.warehouse_id) ?? "—") : (g.transfer_id ? "Branch Receipt" : "—")}</td>
                   <td className="px-5 py-3 text-xs text-muted-foreground">{g.receipt_date}</td>
@@ -284,11 +299,12 @@ function GRNPage() {
                 </tr>
                 );
               })}
-              {!filtered.length && <tr><td colSpan={9} className="px-5 py-12 text-center text-sm text-muted-foreground"><PackageCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No delivery challans yet.</td></tr>}
+              {!filtered.length && <tr><td colSpan={11} className="px-5 py-12 text-center text-sm text-muted-foreground"><PackageCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />No delivery challans yet.</td></tr>}
             </tbody>
           </table>
         </div>
       </div>
+
 
       {adminMode && !role.isFieldOfficer ? (
         <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} onSaved={invalidate} />
