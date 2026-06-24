@@ -615,17 +615,19 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, warehouses, onSaved 
             </div>
           )}
 
-          <div className="grid gap-2">
-            <Label>Final Delivery Branch <span className="text-muted-foreground">(optional)</span></Label>
-            <Select value={finalBranchId || "__none__"} onValueChange={(v) => setFinalBranchId(v === "__none__" ? "" : v)}>
-              <SelectTrigger><SelectValue placeholder="Stays at warehouse" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">— Stays at warehouse —</SelectItem>
-                {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <p className="text-[11px] text-muted-foreground">If vendor delivered direct to a branch, pick it here. Books will record: stock IN at warehouse → OUT from warehouse → IN at branch (auto-creates a completed transfer).</p>
-          </div>
+          {po && (
+            <div className="rounded-xl border border-border bg-secondary/40 px-3 py-2 text-xs">
+              <div className="font-semibold text-foreground/80 mb-1">Books will record</div>
+              <div className="text-muted-foreground">
+                IN at <span className="text-foreground">{warehouses.find((w) => w.id === po.destination_warehouse_id)?.name ?? "warehouse"}</span>
+                {po.destination_branch_id ? (
+                  <> → OUT from <span className="text-foreground">{warehouses.find((w) => w.id === po.destination_warehouse_id)?.name ?? "warehouse"}</span> → IN at <span className="text-foreground">{branches.find((b) => b.id === po.destination_branch_id)?.name ?? "branch"}</span> (auto passthrough)</>
+                ) : (
+                  <> · stays at warehouse</>
+                )}
+              </div>
+            </div>
+          )}
           <div className="grid gap-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
         </div>
         <DialogFooter>
