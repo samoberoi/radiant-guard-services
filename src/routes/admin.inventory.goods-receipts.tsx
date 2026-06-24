@@ -730,20 +730,28 @@ function CloseDialogButton({ onClose }: { onClose: () => void }) {
   return <Button variant="outline" onClick={() => { markPristine(); onClose(); }}>Close</Button>;
 }
 
-function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, warehouses, branches, onSaved }: {
+function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, incomingPOs, vendors, items, warehouses, branches, onSaved }: {
   open: boolean; onOpenChange: (o: boolean) => void; branchId: string;
-  transfers: Transfer[]; items: Item[];
+  transfers: Transfer[];
+  incomingPOs: PO[];
+  vendors: Vendor[];
+  items: Item[];
   warehouses: { id: string; name: string }[]; branches: { id: string; name: string }[];
   onSaved: () => void;
 }) {
-  const [transferId, setTransferId] = useState<string>("");
+  // sourceKey encodes which incoming record to receive: "t:<transferId>" or "p:<poId>"
+  const [sourceKey, setSourceKey] = useState<string>("");
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
+  const [invoiceNo, setInvoiceNo] = useState("");
+  const [challanNo, setChallanNo] = useState("");
+  const [vehicleNo, setVehicleNo] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
   const [saving, setSaving] = useState(false);
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const wMap = useMemo(() => new Map(warehouses.map((w) => [w.id, w.name])), [warehouses]);
   const bMap = useMemo(() => new Map(branches.map((b) => [b.id, b.name])), [branches]);
+  const vMap = useMemo(() => new Map(vendors.map((v) => [v.id, v.name])), [vendors]);
   const locLabel = (type: string, id: string): string => {
     if (!id) return "—";
     if (type === "warehouse") return wMap.get(id) ?? "Warehouse";
@@ -752,34 +760,47 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, w
   };
 
   useResetOnOpen(open, async () => {
-    setTransferId(""); setReceiptDate(new Date().toISOString().slice(0, 10));
-    setNotes(""); setLines([]);
+    setSourceKey(""); setReceiptDate(new Date().toISOString().slice(0, 10));
+    setNotes(""); setInvoiceNo(""); setChallanNo(""); setVehicleNo(""); setLines([]);
   });
 
-  async function loadTransfer(id: string) {
-    setTransferId(id);
-    if (!id) { setLines([]); return; }
-    const { data, error } = await supabase.from("inv_transfer_lines" as never).select("*").eq("transfer_id", id).order("sort_order");
-    if (error) { toast.error("Could not load transfer lines"); return; }
-    const rows = (data as unknown as TransferLine[]) ?? [];
-    setLines(rows.map((r) => ({
-      po_line_id: null,
-      transfer_line_id: r.id,
-      item_id: r.item_id,
-      size_value: r.size_value ?? "",
-      ordered_qty: Number(r.dispatched_qty ?? 0),
-      received_qty: 0,
-      accepted_qty: Number(r.dispatched_qty ?? 0),
-      rejected_qty: 0,
-      rejection_reason: "",
-    })));
+  const kind: "transfer" | "po" | "" = sourceKey.startsWith("t:") ? "transfer" : sourceKey.startsWith("p:") ? "po" : "";
+  const selectedTransfer = kind === "transfer" ? transfers.find((t) => t.id === sourceKey.slice(2)) : undefined;
+  const selectedPO = kind === "po" ? incomingPOs.find((p) => p.id === sourceKey.slice(2)) : undefined;
+
+  async function loadSource(key: string) {
+    setSourceKey(key);
+    if (!key) { setLines([]); return; }
+    if (key.startsWith("t:")) {
+      const id = key.slice(2);
+      const { data, error } = await supabase.from("inv_transfer_lines" as never).select("*").eq("transfer_id", id).order("sort_order");
+      if (error) { toast.error("Could not load transfer lines"); return; }
+      const rows = (data as unknown as TransferLine[]) ?? [];
+      setLines(rows.map((r) => ({
+        po_line_id: null, transfer_line_id: r.id,
+        item_id: r.item_id, size_value: r.size_value ?? "",
+        ordered_qty: Number(r.dispatched_qty ?? 0), received_qty: 0,
+        accepted_qty: Number(r.dispatched_qty ?? 0), rejected_qty: 0, rejection_reason: "",
+      })));
+    } else if (key.startsWith("p:")) {
+      const id = key.slice(2);
+      const { data, error } = await supabase.from("inv_po_lines" as never).select("*").eq("po_id", id).order("sort_order");
+      if (error) { toast.error("Could not load PO lines"); return; }
+      const rows = (data as unknown as POLine[]) ?? [];
+      setLines(rows.map((l) => {
+        const remaining = Math.max(0, Number(l.ordered_qty) - Number(l.received_qty ?? 0));
+        return {
+          po_line_id: l.id, transfer_line_id: null,
+          item_id: l.item_id, size_value: l.size_value ?? "",
+          ordered_qty: remaining, received_qty: 0,
+          accepted_qty: remaining, rejected_qty: 0, rejection_reason: "",
+        };
+      }));
+    }
   }
 
-  const selectedTransfer = transfers.find((t) => t.id === transferId);
-
-
   async function save() {
-    if (!selectedTransfer) { toast.error("Pick an incoming transfer"); return; }
+    if (!selectedTransfer && !selectedPO) { toast.error("Pick an incoming delivery"); return; }
     if (!branchId) { toast.error("No branch assigned to your account"); return; }
     if (!lines.some((l) => l.accepted_qty > 0 || l.rejected_qty > 0)) { toast.error("Enter received quantities"); return; }
     if (lines.some((l) => (l.accepted_qty + l.rejected_qty) > l.ordered_qty)) { toast.error("Accepted + rejected cannot exceed dispatched"); return; }
@@ -789,21 +810,29 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, w
       const n = await nextSeq("inv_grn_number_seq");
       const grn_number = fmtNumber("GRN", n);
       const { data: { user } } = await supabase.auth.getUser();
-      const { data: ins, error } = await supabase.from("inv_goods_receipts" as never).insert({
+
+      const grnInsert: Record<string, unknown> = selectedTransfer ? {
         grn_number, po_id: null, vendor_id: null, warehouse_id: null,
-        transfer_id: selectedTransfer.id,
-        demand_id: selectedTransfer.demand_id,
-        branch_id: branchId,
-        kind: "transfer",
+        transfer_id: selectedTransfer.id, demand_id: selectedTransfer.demand_id,
+        branch_id: branchId, kind: "transfer",
         receipt_date: receiptDate, vendor_invoice_number: "", vendor_challan_number: "",
         vehicle_number: "", notes, status: "received",
         received_by: user?.id ?? null, received_at: new Date().toISOString(),
-      } as never).select("id").single();
+      } : {
+        grn_number, po_id: selectedPO!.id, vendor_id: selectedPO!.vendor_id, warehouse_id: null,
+        transfer_id: null, demand_id: null,
+        branch_id: branchId, kind: "po",
+        receipt_date: receiptDate, vendor_invoice_number: invoiceNo, vendor_challan_number: challanNo,
+        vehicle_number: vehicleNo, notes, status: "received",
+        received_by: user?.id ?? null, received_at: new Date().toISOString(),
+      };
+
+      const { data: ins, error } = await supabase.from("inv_goods_receipts" as never).insert(grnInsert as never).select("id").single();
       if (error) throw error;
       const grnId = (ins as unknown as { id: string }).id;
 
       const linesPayload = lines.map((l, idx) => ({
-        grn_id: grnId, po_line_id: null, item_id: l.item_id, size_value: l.size_value,
+        grn_id: grnId, po_line_id: l.po_line_id, item_id: l.item_id, size_value: l.size_value,
         ordered_qty: l.ordered_qty, received_qty: l.accepted_qty + l.rejected_qty,
         accepted_qty: l.accepted_qty, rejected_qty: l.rejected_qty,
         rejection_reason: l.rejection_reason, sort_order: idx,
@@ -817,49 +846,66 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, w
         item_id: l.item_id, size_value: l.size_value, qty_change: l.accepted_qty,
         reference_type: "grn", reference_id: grnId,
       })));
-      // Rejected qty goes to scrap (already deducted from warehouse, doesn't enter branch)
+      // Rejected qty goes to scrap
       const rejects = lines.filter((l) => l.rejected_qty > 0).map((l) => ({
         movement_type: "BRANCH_REJECT" as const,
         location_type: "scrap" as LocationType,
-        location_id: selectedTransfer.id,
+        location_id: selectedTransfer?.id ?? selectedPO!.id,
         item_id: l.item_id, size_value: l.size_value, qty_change: l.rejected_qty,
         reference_type: "grn", reference_id: grnId,
         notes: l.rejection_reason,
       }));
       if (rejects.length) await postMovements(rejects);
 
-      // Mark transfer acknowledged and update fulfilled qty on demand lines
-      await supabase.from("inv_transfers" as never).update({
-        status: "completed",
-        received_by: user?.id ?? null, received_at: new Date().toISOString(),
-      } as never).eq("id", selectedTransfer.id);
-      // Update transfer line received_qty
-      for (const l of lines) {
-        if (l.transfer_line_id) {
-          await supabase.from("inv_transfer_lines" as never).update({
-            received_qty: l.accepted_qty + l.rejected_qty,
-            variance_reason: l.rejected_qty > 0 ? l.rejection_reason : "",
-          } as never).eq("id", l.transfer_line_id);
-        }
-      }
-
-      // Mark demand fulfilled if all lines accepted, else keep in_transit
-      if (selectedTransfer.demand_id) {
-        // Update each demand line's fulfilled qty
-        const { data: demandLines } = await supabase.from("inv_demand_lines" as never).select("id,item_id,size_value,requested_qty,fulfilled_qty").eq("demand_id", selectedTransfer.demand_id);
-        const dls = (demandLines as unknown as { id: string; item_id: string; size_value: string; requested_qty: number; fulfilled_qty: number }[]) ?? [];
-        for (const dl of dls) {
-          const matched = lines.find((l) => l.item_id === dl.item_id && (l.size_value ?? "") === (dl.size_value ?? ""));
-          if (matched) {
-            await supabase.from("inv_demand_lines" as never).update({
-              fulfilled_qty: Number(dl.fulfilled_qty ?? 0) + matched.accepted_qty,
-            } as never).eq("id", dl.id);
+      if (selectedTransfer) {
+        await supabase.from("inv_transfers" as never).update({
+          status: "completed",
+          received_by: user?.id ?? null, received_at: new Date().toISOString(),
+        } as never).eq("id", selectedTransfer.id);
+        for (const l of lines) {
+          if (l.transfer_line_id) {
+            await supabase.from("inv_transfer_lines" as never).update({
+              received_qty: l.accepted_qty + l.rejected_qty,
+              variance_reason: l.rejected_qty > 0 ? l.rejection_reason : "",
+            } as never).eq("id", l.transfer_line_id);
           }
         }
-        const { error: dErr } = await supabase.from("inv_demands" as never).update({
-          status: "fulfilled", fulfilled_at: new Date().toISOString(),
-        } as never).eq("id", selectedTransfer.demand_id);
-        if (dErr) toast.error(`Demand status update failed: ${dErr.message}`);
+
+        if (selectedTransfer.demand_id) {
+          const { data: demandLines } = await supabase.from("inv_demand_lines" as never).select("id,item_id,size_value,requested_qty,fulfilled_qty").eq("demand_id", selectedTransfer.demand_id);
+          const dls = (demandLines as unknown as { id: string; item_id: string; size_value: string; requested_qty: number; fulfilled_qty: number }[]) ?? [];
+          for (const dl of dls) {
+            const matched = lines.find((l) => l.item_id === dl.item_id && (l.size_value ?? "") === (dl.size_value ?? ""));
+            if (matched) {
+              await supabase.from("inv_demand_lines" as never).update({
+                fulfilled_qty: Number(dl.fulfilled_qty ?? 0) + matched.accepted_qty,
+              } as never).eq("id", dl.id);
+            }
+          }
+          const { error: dErr } = await supabase.from("inv_demands" as never).update({
+            status: "fulfilled", fulfilled_at: new Date().toISOString(),
+          } as never).eq("id", selectedTransfer.demand_id);
+          if (dErr) toast.error(`Demand status update failed: ${dErr.message}`);
+        }
+      } else if (selectedPO) {
+        // Update PO line received/accepted qty
+        for (const l of lines) {
+          if (l.po_line_id) {
+            const { data: cur } = await supabase.from("inv_po_lines" as never).select("received_qty,accepted_qty").eq("id", l.po_line_id).single();
+            const c = cur as unknown as { received_qty: number; accepted_qty: number };
+            await supabase.from("inv_po_lines" as never).update({
+              received_qty: Number(c.received_qty) + l.accepted_qty + l.rejected_qty,
+              accepted_qty: Number(c.accepted_qty) + l.accepted_qty,
+            } as never).eq("id", l.po_line_id);
+          }
+        }
+        // Recompute PO status
+        const { data: allLines } = await supabase.from("inv_po_lines" as never).select("ordered_qty,received_qty").eq("po_id", selectedPO.id);
+        const rows = (allLines as unknown as { ordered_qty: number; received_qty: number }[]) ?? [];
+        const allReceived = rows.every((r) => Number(r.received_qty) >= Number(r.ordered_qty));
+        const anyReceived = rows.some((r) => Number(r.received_qty) > 0);
+        const newStatus = allReceived ? "received" : anyReceived ? "partially_received" : "open";
+        await supabase.from("inv_purchase_orders" as never).update({ status: newStatus } as never).eq("id", selectedPO.id);
       }
 
       void logActivity({ module: "Inventory Delivery Challans", action: "create", entityType: "inv_goods_receipts", entityId: grnId, entityLabel: grn_number });
@@ -872,21 +918,34 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, w
     }
   }
 
+  const hasAny = transfers.length + incomingPOs.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
           <DialogTitle>New Delivery Challan</DialogTitle>
-          <DialogDescription>Receive items dispatched from the warehouse against your branch demand.</DialogDescription>
+          <DialogDescription>Receive items dispatched to your branch — from a warehouse transfer or a vendor PO raised for this branch.</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-2">
-          <div className="grid gap-2"><Label>Incoming Transfer</Label>
-            <Select value={transferId} onValueChange={loadTransfer}>
-              <SelectTrigger><SelectValue placeholder={transfers.length ? "Pick an in-transit transfer" : "No incoming transfers"} /></SelectTrigger>
+          <div className="grid gap-2"><Label>Incoming Delivery</Label>
+            <Select value={sourceKey} onValueChange={loadSource}>
+              <SelectTrigger><SelectValue placeholder={hasAny ? "Pick an incoming transfer or PO" : "No incoming transfers or POs"} /></SelectTrigger>
               <SelectContent>
+                {transfers.length > 0 && (
+                  <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Warehouse transfers</div>
+                )}
                 {transfers.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
+                  <SelectItem key={`t:${t.id}`} value={`t:${t.id}`}>
                     {t.transfer_number} · {locLabel(t.source_type, t.source_id)} → {locLabel(t.destination_type, t.destination_id)}{t.demand_id ? " · against demand" : ""}
+                  </SelectItem>
+                ))}
+                {incomingPOs.length > 0 && (
+                  <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Vendor purchase orders</div>
+                )}
+                {incomingPOs.map((p) => (
+                  <SelectItem key={`p:${p.id}`} value={`p:${p.id}`}>
+                    {p.po_number} · {vMap.get(p.vendor_id ?? "") ?? "Vendor"} → {bMap.get(p.destination_branch_id ?? "") ?? "Branch"}{p.status === "partially_received" ? " · partial" : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -906,10 +965,44 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, w
               </div>
             </div>
           )}
-          <div className="grid gap-2">
-            <Label>Receipt Date</Label>
-            <Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} />
+          {selectedPO && (
+            <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-secondary/40 p-3 text-sm">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Vendor</div>
+                <div className="font-medium">{vMap.get(selectedPO.vendor_id ?? "") ?? "—"}</div>
+                <div className="text-[11px] text-muted-foreground">PO {selectedPO.po_number}</div>
+              </div>
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Deliver to</div>
+                <div className="font-medium">{bMap.get(selectedPO.destination_branch_id ?? "") ?? "Branch"}</div>
+                <div className="text-[11px] text-muted-foreground capitalize">branch</div>
+              </div>
+            </div>
+          )}
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label>Receipt Date</Label>
+              <Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} />
+            </div>
+            {selectedPO && (
+              <div className="grid gap-2">
+                <Label>Vehicle No.</Label>
+                <Input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} placeholder="Optional" />
+              </div>
+            )}
           </div>
+          {selectedPO && (
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label>Vendor Invoice No.</Label>
+                <Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} placeholder="Optional" />
+              </div>
+              <div className="grid gap-2">
+                <Label>Vendor Challan No.</Label>
+                <Input value={challanNo} onChange={(e) => setChallanNo(e.target.value)} placeholder="Optional" />
+              </div>
+            </div>
+          )}
 
           {lines.length > 0 && (
             <div className="overflow-x-clip rounded-xl border border-border">
@@ -918,7 +1011,7 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, w
                   <tr>
                     <th className="px-3 py-2">Item</th>
                     <th className="px-3 py-2 w-16">Size</th>
-                    <th className="px-3 py-2 w-20 text-right">Ordered</th>
+                    <th className="px-3 py-2 w-20 text-right">{selectedPO ? "Pending" : "Ordered"}</th>
                     <th className="px-3 py-2 w-24 text-right">Accepted</th>
                     <th className="px-3 py-2 w-24 text-right">Rejected</th>
                     <th className="px-3 py-2">Reject Reason</th>
@@ -944,7 +1037,7 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, items, w
         </div>
         <DialogFooter>
           <CancelBtn saving={saving} onClose={() => onOpenChange(false)} />
-          <Button onClick={save} disabled={saving || !transferId}>{saving ? "Posting…" : "Post Challan"}</Button>
+          <Button onClick={save} disabled={saving || !sourceKey}>{saving ? "Posting…" : "Post Challan"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
