@@ -105,6 +105,15 @@ function GRNPage() {
       return (data as unknown as Warehouse[]) ?? [];
     },
   });
+  const { data: branches = [] } = useQuery({
+    queryKey: ["inv", "branches-list-grn"],
+    enabled: adminMode,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("branches" as never).select("id,name").order("name");
+      if (error) throw error;
+      return (data as unknown as { id: string; name: string }[]) ?? [];
+    },
+  });
   const { data: incomingTransfers = [] } = useQuery({
     queryKey: ["inv", "transfers-incoming", scope.branchId],
     enabled: !!scope.branchId,
@@ -307,7 +316,7 @@ function GRNPage() {
 
 
       {adminMode && !role.isFieldOfficer ? (
-        <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} onSaved={invalidate} />
+        <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} branches={branches} onSaved={invalidate} />
       ) : role.isFieldOfficer ? (
         <FieldOfficerGRNFormDialog
           open={open}
@@ -333,13 +342,14 @@ function GRNPage() {
   );
 }
 
-function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; onOpenChange: (o: boolean) => void; pos: PO[]; onSaved: () => void }) {
+function GRNFormDialog({ open, onOpenChange, pos, branches, onSaved }: { open: boolean; onOpenChange: (o: boolean) => void; pos: PO[]; branches: { id: string; name: string }[]; onSaved: () => void }) {
   const [poId, setPoId] = useState<string>("");
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().slice(0, 10));
   const [invoiceNo, setInvoiceNo] = useState("");
   const [challanNo, setChallanNo] = useState("");
   const [vehicleNo, setVehicleNo] = useState("");
   const [notes, setNotes] = useState("");
+  const [finalBranchId, setFinalBranchId] = useState<string>("");
   const [lines, setLines] = useState<Line[]>([]);
   const [items, setItems] = useState<Record<string, Item>>({});
   const [saving, setSaving] = useState(false);
@@ -348,7 +358,7 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
   useResetOnOpen(open, async () => {
     setPoId(""); setReceiptDate(new Date().toISOString().slice(0, 10));
     setInvoiceNo(""); setChallanNo(""); setVehicleNo(""); setNotes(""); setLines([]); setItems({});
-    setInvoiceFile(null);
+    setInvoiceFile(null); setFinalBranchId("");
   });
 
   async function loadPo(id: string) {
@@ -476,6 +486,53 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
         }
       }
 
+      // Books-of-record passthrough: if vendor delivered to a final branch,
+      // auto-create a completed transfer (warehouse → branch) so books show:
+      //   IN at warehouse  →  OUT from warehouse  →  IN at branch
+      const acceptedForTransfer = lines.filter((l) => l.accepted_qty > 0);
+      let passthroughTransferId: string | null = null;
+      if (finalBranchId && acceptedForTransfer.length) {
+        const tn = await nextSeq("inv_transfer_number_seq");
+        const transferNumber = fmtNumber("TR", tn);
+        const { data: tIns, error: tErr } = await supabase.from("inv_transfers" as never).insert({
+          transfer_number: transferNumber,
+          source_type: "warehouse", source_id: po.destination_warehouse_id!,
+          destination_type: "branch", destination_id: finalBranchId,
+          linked_po_id: po.id,
+          transfer_date: receiptDate, status: "completed",
+          vehicle_number: vehicleNo, driver_name: "", driver_phone: "",
+          notes: `Auto-created from GRN ${grn_number} — vendor delivered direct to branch.`,
+          dispatched_by: user?.id ?? null, dispatched_at: new Date().toISOString(),
+          received_by: user?.id ?? null, received_at: new Date().toISOString(),
+        } as never).select("id").single();
+        if (tErr) throw tErr;
+        passthroughTransferId = (tIns as unknown as { id: string }).id;
+        const tLines = acceptedForTransfer.map((l, idx) => ({
+          transfer_id: passthroughTransferId, item_id: l.item_id, size_value: l.size_value,
+          dispatched_qty: l.accepted_qty, received_qty: l.accepted_qty, sort_order: idx,
+        }));
+        const { error: tlErr } = await supabase.from("inv_transfer_lines" as never).insert(tLines as never);
+        if (tlErr) throw tlErr;
+        // Leg 2: OUT from warehouse
+        await postMovements(acceptedForTransfer.map((l) => ({
+          movement_type: "TRANSFER_OUT", location_type: "warehouse" as LocationType,
+          location_id: po.destination_warehouse_id!,
+          item_id: l.item_id, size_value: l.size_value, qty_change: -l.accepted_qty,
+          reference_type: "transfer", reference_id: passthroughTransferId!,
+        })));
+        // Leg 3: IN at branch
+        await postMovements(acceptedForTransfer.map((l) => ({
+          movement_type: "TRANSFER_IN", location_type: "branch" as LocationType,
+          location_id: finalBranchId,
+          item_id: l.item_id, size_value: l.size_value, qty_change: l.accepted_qty,
+          reference_type: "transfer", reference_id: passthroughTransferId!,
+        })));
+        // Tag the GRN with the branch + transfer for downstream views
+        await supabase.from("inv_goods_receipts" as never).update({
+          branch_id: finalBranchId, transfer_id: passthroughTransferId,
+        } as never).eq("id", grnId);
+      }
+
 
       // Update PO status
       const { data: allLines } = await supabase.from("inv_po_lines" as never).select("ordered_qty,received_qty").eq("po_id", po.id);
@@ -486,7 +543,9 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
       await supabase.from("inv_purchase_orders" as never).update({ status: newStatus } as never).eq("id", po.id);
 
       void logActivity({ module: "Inventory Delivery Challans", action: "create", entityType: "inv_goods_receipts", entityId: grnId, entityLabel: grn_number });
-      toast.success(`GRN ${grn_number} posted — stock updated`);
+      toast.success(passthroughTransferId
+        ? `GRN ${grn_number} posted — warehouse credited, then passed through to branch`
+        : `GRN ${grn_number} posted — stock updated`);
       onSaved();
       onOpenChange(false);
     } catch (e) {
@@ -553,6 +612,17 @@ function GRNFormDialog({ open, onOpenChange, pos, onSaved }: { open: boolean; on
             </div>
           )}
 
+          <div className="grid gap-2">
+            <Label>Final Delivery Branch <span className="text-muted-foreground">(optional)</span></Label>
+            <Select value={finalBranchId || "__none__"} onValueChange={(v) => setFinalBranchId(v === "__none__" ? "" : v)}>
+              <SelectTrigger><SelectValue placeholder="Stays at warehouse" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">— Stays at warehouse —</SelectItem>
+                {branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <p className="text-[11px] text-muted-foreground">If vendor delivered direct to a branch, pick it here. Books will record: stock IN at warehouse → OUT from warehouse → IN at branch (auto-creates a completed transfer).</p>
+          </div>
           <div className="grid gap-2"><Label>Notes</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} /></div>
         </div>
         <DialogFooter>
