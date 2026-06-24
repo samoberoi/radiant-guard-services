@@ -140,6 +140,32 @@ function StockLedgerPage() {
     },
   });
 
+  // ------- Opening balances: all movements strictly before fromDate (for By-Item view) -------
+  const { data: openingMoves = [] } = useQuery({
+    queryKey: ["ledger", "opening", fromDate],
+    enabled: view === "item",
+    queryFn: async () => {
+      const fromIso = new Date(fromDate + "T00:00:00").toISOString();
+      const all: Movement[] = [];
+      const pageSize = 1000;
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("inv_stock_movements" as never)
+          .select("id,movement_date,movement_type,location_type,location_id,item_id,size_value,qty_change,reference_type,reference_id,notes")
+          .lt("movement_date", fromIso)
+          .order("movement_date", { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const rows = (data as unknown as Movement[]) ?? [];
+        all.push(...rows);
+        if (rows.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
+    },
+  });
+
   // ------- Role-based visible-location filter -------
   // Returns a function that decides whether a given (locType, locId) is visible to the user.
   const isVisible = useMemo(() => {
