@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { Search, Download, AlertTriangle, BarChart3, Warehouse, Building2, UserCog, Shield, FileSpreadsheet } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
