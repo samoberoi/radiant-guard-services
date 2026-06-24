@@ -71,18 +71,44 @@ function TransfersPage() {
     },
   });
   const { data: openDemands = [] } = useQuery({
-    queryKey: ["inv", "demands-open-branch"],
+    queryKey: ["inv", "demands-open-for-transfer"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("inv_demands" as never)
         .select("id,demand_number,branch_id,warehouse_id,requester_candidate_id,status")
         .in("status", ["submitted"])
-        .not("branch_id", "is", null)
         .order("demand_date", { ascending: false });
       if (error) throw error;
       return (data as unknown as Demand[]) ?? [];
     },
   });
+  // Resolve requester → branch for demands that don't carry branch_id directly
+  const requesterIds = useMemo(
+    () => Array.from(new Set(openDemands.filter((d) => !d.branch_id && d.requester_candidate_id).map((d) => d.requester_candidate_id as string))),
+    [openDemands],
+  );
+  const { data: requesterBranchMap = new Map<string, string>() } = useQuery({
+    queryKey: ["inv", "demand-requester-branches", requesterIds],
+    enabled: requesterIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employee_scope_assignments" as never)
+        .select("candidate_id,scope_id,scope_type")
+        .eq("scope_type", "branch")
+        .in("candidate_id", requesterIds);
+      if (error) throw error;
+      const m = new Map<string, string>();
+      for (const r of (data as unknown as { candidate_id: string; scope_id: string }[]) ?? []) {
+        if (!m.has(r.candidate_id)) m.set(r.candidate_id, r.scope_id);
+      }
+      return m;
+    },
+  });
+  const demandDestBranchId = (d: Demand): string => {
+    if (d.branch_id) return d.branch_id;
+    if (d.requester_candidate_id) return requesterBranchMap.get(d.requester_candidate_id) ?? "";
+    return "";
+  };
 
   const branchLabel = (id: string | null) => {
     if (!id) return "—";
@@ -95,7 +121,7 @@ function TransfersPage() {
     if (type === "branch") return branchLabel(id);
     return "—";
   };
-  const demandLabel = (d: Demand): string => branchLabel(d.branch_id);
+  const demandLabel = (d: Demand): string => branchLabel(demandDestBranchId(d) || null);
 
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -186,14 +212,16 @@ function TransfersPage() {
         </div>
       </div>
 
-      <TransferDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setActive(null); }} initial={active} warehouses={warehouses} branches={branches} items={items} demands={openDemands} onSaved={invalidate} />
+      <TransferDialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setActive(null); }} initial={active} warehouses={warehouses} branches={branches} items={items} demands={openDemands} resolveDemandDest={demandDestBranchId} demandLabel={demandLabel} onSaved={invalidate} />
     </div>
   );
 }
 
-function TransferDialog({ open, onOpenChange, initial, warehouses, branches, items, demands, onSaved }: {
+function TransferDialog({ open, onOpenChange, initial, warehouses, branches, items, demands, resolveDemandDest, demandLabel, onSaved }: {
   open: boolean; onOpenChange: (o: boolean) => void; initial: Transfer | null;
-  warehouses: Warehouse[]; branches: Branch[]; items: Item[]; demands: Demand[]; onSaved: () => void;
+  warehouses: Warehouse[]; branches: Branch[]; items: Item[]; demands: Demand[];
+  resolveDemandDest: (d: Demand) => string; demandLabel: (d: Demand) => string;
+  onSaved: () => void;
 }) {
   const [sourceType, setSourceType] = useState<LocationType>("warehouse");
   const [sourceId, setSourceId] = useState("");
@@ -242,7 +270,8 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
     const d = demands.find((x) => x.id === id);
     if (!d) return;
     setDestType("branch");
-    setDestId(d.branch_id ?? "");
+    setDestId(resolveDemandDest(d));
+    if (d.warehouse_id) { setSourceType("warehouse"); setSourceId(d.warehouse_id); }
     const { data, error } = await supabase.from("inv_demand_lines" as never).select("*").eq("demand_id", id).order("sort_order");
     if (error) { toast.error("Could not load demand lines"); return; }
     const rows = (data as unknown as DemandLine[]) ?? [];
@@ -371,11 +400,9 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
               <Select value={demandId} onValueChange={(v) => loadDemand(v)} disabled={!demands.length}>
                 <SelectTrigger><SelectValue placeholder={demands.length ? "Pick a submitted branch demand" : "No branch demands awaiting transfer"} /></SelectTrigger>
                 <SelectContent>
-                  {demands.map((d) => {
-                    const br = branches.find((b) => b.id === d.branch_id);
-                    const label = br ? [br.code, br.name].filter(Boolean).join(" – ") : "Branch";
-                    return <SelectItem key={d.id} value={d.id}>{d.demand_number} → {label}</SelectItem>;
-                  })}
+                  {demands.map((d) => (
+                    <SelectItem key={d.id} value={d.id}>{d.demand_number} → {demandLabel(d)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <p className="mt-1 text-[11px] text-muted-foreground">
