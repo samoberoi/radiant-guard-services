@@ -521,9 +521,9 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
-          {isBranchManager && isDraft && !initial && openDemands.length > 0 && (
+          {!isFieldOfficer && isDraft && !initial && openDemands.length > 0 && (
             <div className="grid gap-2">
-              <Label>Against Demand <span className="font-normal text-muted-foreground">(optional — auto-fills items & receiver)</span></Label>
+              <Label>Against Demand <span className="font-normal text-muted-foreground">(optional — auto-fills items, source &amp; receiver)</span></Label>
               <Select value={demandId} onValueChange={onPickDemand}>
                 <SelectTrigger><SelectValue placeholder="Pick a pending demand to fulfil…" /></SelectTrigger>
                 <SelectContent>
@@ -537,7 +537,7 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
           )}
           {!isFieldOfficer && !isBranchManager && (
             <div className="grid gap-2"><Label>Type</Label>
-              <Select value={type} onValueChange={(v) => { setType(v); setSourceId(""); setDestId(""); }} disabled={!isDraft}>
+              <Select value={type} onValueChange={(v) => { setType(v); setSourceId(""); setDestId(""); }} disabled={!isDraft || !!demandId}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {ISSUANCE_TYPES.filter((t) => t.source === "warehouse").map((t) => (
