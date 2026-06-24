@@ -217,9 +217,11 @@ function TransfersPage() {
   );
 }
 
-function TransferDialog({ open, onOpenChange, initial, warehouses, branches, items, demands, onSaved }: {
+function TransferDialog({ open, onOpenChange, initial, warehouses, branches, items, demands, resolveDemandDest, demandLabel, onSaved }: {
   open: boolean; onOpenChange: (o: boolean) => void; initial: Transfer | null;
-  warehouses: Warehouse[]; branches: Branch[]; items: Item[]; demands: Demand[]; onSaved: () => void;
+  warehouses: Warehouse[]; branches: Branch[]; items: Item[]; demands: Demand[];
+  resolveDemandDest: (d: Demand) => string; demandLabel: (d: Demand) => string;
+  onSaved: () => void;
 }) {
   const [sourceType, setSourceType] = useState<LocationType>("warehouse");
   const [sourceId, setSourceId] = useState("");
