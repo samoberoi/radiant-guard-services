@@ -368,8 +368,8 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
           {isDraft && (
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Against Demand</div>
-              <Select value={demandId} onValueChange={(v) => loadDemand(v)}>
-                <SelectTrigger><SelectValue placeholder="Pick a submitted branch demand" /></SelectTrigger>
+              <Select value={demandId} onValueChange={(v) => loadDemand(v)} disabled={!demands.length}>
+                <SelectTrigger><SelectValue placeholder={demands.length ? "Pick a submitted branch demand" : "No branch demands awaiting transfer"} /></SelectTrigger>
                 <SelectContent>
                   {demands.map((d) => {
                     const br = branches.find((b) => b.id === d.branch_id);
@@ -378,7 +378,11 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
                   })}
                 </SelectContent>
               </Select>
-              <p className="mt-1 text-[11px] text-muted-foreground">Selecting a demand prefills the destination branch and the requested item lines.</p>
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                {demands.length
+                  ? "Selecting a demand prefills the destination branch and the requested item lines."
+                  : "Transfers fulfil branch-raised demands (warehouse → branch). Field Officer demands are fulfilled from Issuances, not here."}
+              </p>
             </div>
           )}
           <div className="grid gap-4 sm:grid-cols-2">
