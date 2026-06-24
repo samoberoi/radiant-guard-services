@@ -760,7 +760,7 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, incoming
 
   useResetOnOpen(open, async () => {
     setSourceKey(""); setReceiptDate(new Date().toISOString().slice(0, 10));
-    setNotes(""); setInvoiceNo(""); setChallanNo(""); setVehicleNo(""); setLines([]);
+    setNotes(""); setInvoiceNo(""); setInvoiceFile(null); setLines([]);
   });
 
   const kind: "transfer" | "po" | "" = sourceKey.startsWith("t:") ? "transfer" : sourceKey.startsWith("p:") ? "po" : "";
