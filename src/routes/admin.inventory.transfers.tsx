@@ -242,7 +242,7 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
     const d = demands.find((x) => x.id === id);
     if (!d) return;
     setDestType("branch");
-    setDestId(d.branch_id);
+    setDestId(d.branch_id ?? "");
     const { data, error } = await supabase.from("inv_demand_lines" as never).select("*").eq("demand_id", id).order("sort_order");
     if (error) { toast.error("Could not load demand lines"); return; }
     const rows = (data as unknown as DemandLine[]) ?? [];
