@@ -129,6 +129,22 @@ function GRNPage() {
       return (data as unknown as Transfer[]) ?? [];
     },
   });
+  // Direct vendor POs raised by admin where the delivery destination is THIS branch.
+  // The branch manager needs to receive these as a delivery challan too.
+  const { data: incomingBranchPOs = [] } = useQuery({
+    queryKey: ["inv", "pos-incoming-branch", scope.branchId],
+    enabled: !!scope.branchId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_purchase_orders" as never)
+        .select("id,po_number,vendor_id,destination_warehouse_id,destination_branch_id,status")
+        .eq("destination_branch_id", scope.branchId as string)
+        .in("status", ["open", "partially_received"])
+        .order("po_date", { ascending: false });
+      if (error) throw error;
+      return (data as unknown as PO[]) ?? [];
+    },
+  });
   const { data: items = [] } = useQuery({
     queryKey: ["inv", "items-list-grn"],
     queryFn: async () => {
