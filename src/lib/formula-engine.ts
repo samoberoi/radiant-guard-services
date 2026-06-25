@@ -44,13 +44,24 @@ export const FORMULA_VARIABLES: { key: keyof FormulaContext; label: string; desc
 
 // ---------------- Preset shape ----------------
 
+export type CompositeComponent = { name: string; operator: "+" | "-" };
+
 export type PresetBase =
   | { kind: "basic" }
   | { kind: "da" }
   | { kind: "basic_plus_da" }
   | { kind: "gross" }
   | { kind: "fixed_amount"; value: number }
-  | { kind: "variable"; name: keyof FormulaContext };
+  | { kind: "variable"; name: keyof FormulaContext }
+  | { kind: "composite"; components: CompositeComponent[] };
+
+export function slugifyVar(label: string): string {
+  return String(label || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "x";
+}
 
 export type PresetDivisor =
   | "none"
