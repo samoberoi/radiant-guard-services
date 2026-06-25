@@ -267,9 +267,20 @@ function PayrollUnitPage() {
         resourceByDesignation.set(did, {
           designationId: did,
           components: Array.isArray(r.components)
-            ? (r.components as { name: string; amount: number }[]).map((c) => ({
+            ? (r.components as {
+                name: string;
+                amount: number;
+                includeInOt?: boolean | null;
+                formulaMode?: string | null;
+                formulaExpression?: string | null;
+                formulaVersion?: number | null;
+              }[]).map((c) => ({
                 name: String(c.name ?? ""),
                 amount: Number(c.amount) || 0,
+                includeInOt: c.includeInOt,
+                formulaMode: c.formulaMode ?? null,
+                formulaExpression: c.formulaExpression ?? null,
+                formulaVersion: c.formulaVersion ?? null,
               }))
             : [],
           benefits: Array.isArray(r.benefits) ? (r.benefits as { name: string; amount: number }[]) : [],
