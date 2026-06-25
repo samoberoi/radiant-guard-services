@@ -1038,11 +1038,11 @@ function PayrollUnitPage() {
             </thead>
             <tbody className="divide-y divide-border/50">
               {isLoading ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">Computing wages…</td></tr>
+                <tr><td colSpan={14} className="px-4 py-10 text-center text-muted-foreground">Computing wages…</td></tr>
               ) : error ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
+                <tr><td colSpan={14} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
+                <tr><td colSpan={14} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
               ) : rows.map((r) => {
                 const isHighlighted = highlightCandidate === r.id;
                 const isExpanded = expandedRows.has(r.rowKey);
@@ -1069,8 +1069,11 @@ function PayrollUnitPage() {
                   <td className="px-4 py-3 font-mono text-xs">{r.employeeCode || "—"}</td>
                   <td className="px-4 py-3 font-medium">{r.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{r.designation}</td>
-                  <td className="px-4 py-3 text-left">{r.totals.tDays}</td>
-                  <td className="px-4 py-3 text-left">{r.totals.otHours}</td>
+                  <td className="px-4 py-3 text-left tabular-nums">{r.totals.pDays}</td>
+                  <td className="px-4 py-3 text-left tabular-nums">{r.totals.phDays}</td>
+                  <td className="px-4 py-3 text-left tabular-nums">{r.totals.otDays}</td>
+                  <td className="px-4 py-3 text-left tabular-nums font-medium">{r.totals.tDays}</td>
+                  <td className="px-4 py-3 text-left tabular-nums">{r.totals.otHours}</td>
                   <td className="px-4 py-3 text-left text-muted-foreground">{r.wages ? fmtINR(r.wages.contractGross) : <span className="text-xs text-amber-600">no contract</span>}</td>
                   <td className="px-4 py-3 text-left font-medium">{r.wages ? fmtINR(r.wages.earnedGross) : "—"}</td>
                   <td className="px-4 py-3 text-left">{r.wages ? fmtINR(r.wages.totalDeductions) : "—"}</td>
@@ -1079,7 +1082,7 @@ function PayrollUnitPage() {
                 </tr>
                 {isExpanded && r.wages && r.resource && (
                   <tr key={`${r.rowKey}-detail`} className="bg-secondary/20">
-                    <td colSpan={11} className="px-4 py-0">
+                    <td colSpan={14} className="px-4 py-0">
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs my-3 rounded-lg border border-border/60 overflow-hidden">
                           <tbody>
