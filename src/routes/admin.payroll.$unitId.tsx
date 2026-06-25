@@ -890,11 +890,27 @@ function PayrollUnitPage() {
               {unit?.customer_name} · Period {fmtPretty(start)} – {fmtPretty(end)}
             </div>
           </div>
-          {sheet?.status === "approved" && (
-            <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
-              Attendance approved
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {sheet?.status === "approved" && (
+              <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
+                Attendance approved
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ["admin", "payroll", "unit"] });
+                queryClient.invalidateQueries({ queryKey: ["admin", "additions"] });
+                queryClient.invalidateQueries({ queryKey: ["admin", "deductions"] });
+                queryClient.invalidateQueries({ queryKey: ["admin", "allowance-types"] });
+                queryClient.invalidateQueries({ queryKey: ["admin", "cost-components"] });
+                toast.success("Recalculating from latest contract, attendance, additions and deductions");
+              }}
+            >
+              Recalculate
+            </Button>
+          </div>
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-5">
