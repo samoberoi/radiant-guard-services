@@ -462,6 +462,7 @@ function AllowanceFormDialog({
   onOpenChange,
   title,
   initial,
+  baseLabels,
   onSubmit,
 }: {
   open: boolean;
