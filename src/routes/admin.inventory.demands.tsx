@@ -75,6 +75,27 @@ function DemandsPage() {
       return (data as unknown as Item[]) ?? [];
     },
   });
+  const { data: itemSizes = new Map<string, string[]>() } = useQuery({
+    queryKey: ["inv", "item-sizes-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_item_sizes" as never).select("item_id,size_value,sort_order,enabled").eq("enabled", true);
+      if (error) throw error;
+      const rows = (data as unknown as { item_id: string; size_value: string; sort_order: number }[]) ?? [];
+      const out = new Map<string, string[]>();
+      const grouped = new Map<string, { v: string; o: number }[]>();
+      for (const r of rows) {
+        const a = grouped.get(r.item_id) ?? [];
+        a.push({ v: r.size_value, o: r.sort_order });
+        grouped.set(r.item_id, a);
+      }
+      for (const [k, arr] of grouped) {
+        arr.sort((a, b) => a.o - b.o || a.v.localeCompare(b.v));
+        out.set(k, arr.map((x) => x.v));
+      }
+      return out;
+    },
+  });
+
   const { data: lineAgg = new Map<string, { items: number; qty: number }>() } = useQuery({
     queryKey: ["inv", "demand-line-agg"],
     queryFn: async () => {
@@ -238,6 +259,8 @@ function DemandsPage() {
         branches={branches}
         warehouses={warehouses}
         items={items}
+        itemSizes={itemSizes}
+
         onSaved={invalidate}
       />
       <DemandViewDialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)} demand={viewing} items={items} />
@@ -245,12 +268,13 @@ function DemandsPage() {
   );
 }
 
-function DemandFormDialog({ open, onOpenChange, initial, requesterCandidateId, branchId, branchLabel, isFieldOfficer, branches, warehouses, items, onSaved }: {
+function DemandFormDialog({ open, onOpenChange, initial, requesterCandidateId, branchId, branchLabel, isFieldOfficer, branches, warehouses, items, itemSizes, onSaved }: {
   open: boolean; onOpenChange: (o: boolean) => void; initial: Demand | null;
   requesterCandidateId: string | null;
   branchId: string; branchLabel: string; isFieldOfficer: boolean;
-  branches: Branch[]; warehouses: Warehouse[]; items: Item[]; onSaved: () => void;
+  branches: Branch[]; warehouses: Warehouse[]; items: Item[]; itemSizes: Map<string, string[]>; onSaved: () => void;
 }) {
+
   const [demandDate, setDemandDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([]);
@@ -304,6 +328,18 @@ function DemandFormDialog({ open, onOpenChange, initial, requesterCandidateId, b
     if (!lines.length || lines.some((l) => !l.item_id || l.requested_qty <= 0)) {
       toast.error("Add at least one item with quantity"); return;
     }
+    if (submit) {
+      const missingSize = lines.find((l) => {
+        const it = itemMap.get(l.item_id);
+        return it?.is_sized && !String(l.size_value ?? "").trim();
+      });
+      if (missingSize) {
+        const it = itemMap.get(missingSize.item_id);
+        toast.error(`Select a size for ${it?.name ?? "the sized item"} before submitting`);
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -416,8 +452,30 @@ function DemandFormDialog({ open, onOpenChange, initial, requesterCandidateId, b
                           </Select>
                         </td>
                         <td className="px-2 py-1.5">
-                          <Input className="h-9" disabled={!it?.is_sized} value={l.size_value} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, size_value: e.target.value } : x))} placeholder={it?.is_sized ? "M/L" : "—"} />
+                          {(() => {
+                            const sizes = it ? (itemSizes.get(it.id) ?? []) : [];
+                            const needsSize = !!it?.is_sized;
+                            const missing = needsSize && !String(l.size_value ?? "").trim();
+                            if (needsSize && sizes.length > 0) {
+                              return (
+                                <Select value={l.size_value} onValueChange={(v) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, size_value: v } : x))}>
+                                  <SelectTrigger className={`h-9 ${missing ? "border-destructive ring-1 ring-destructive/40" : ""}`}><SelectValue placeholder="Required" /></SelectTrigger>
+                                  <SelectContent>{sizes.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                                </Select>
+                              );
+                            }
+                            return (
+                              <Input
+                                className={`h-9 ${missing ? "border-destructive ring-1 ring-destructive/40" : ""}`}
+                                disabled={!needsSize}
+                                value={l.size_value}
+                                onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, size_value: e.target.value } : x))}
+                                placeholder={needsSize ? "Required (e.g. M / L)" : "—"}
+                              />
+                            );
+                          })()}
                         </td>
+
                         <td className="px-2 py-1.5">
                           <Input type="number" min={0} className="h-9 text-right" value={l.requested_qty} onChange={(e) => setLines((ls) => ls.map((x, i) => i === idx ? { ...x, requested_qty: Number(e.target.value) || 0 } : x))} />
                         </td>

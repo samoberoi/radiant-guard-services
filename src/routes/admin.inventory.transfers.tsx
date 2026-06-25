@@ -16,6 +16,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType } from "@/lib/inv-helpers";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
 import { useDemandRequesters } from "@/lib/use-demand-requesters";
+import { useDocItemSummaries } from "@/lib/inv-doc-summary";
+
 
 
 export const Route = createFileRoute("/admin/inventory/transfers")({ component: TransfersPage });
@@ -416,14 +418,8 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
           {isDraft && (
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-3">
               <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Against Demand</div>
-              <Select value={demandId} onValueChange={(v) => loadDemand(v)} disabled={!demands.length}>
-                <SelectTrigger><SelectValue placeholder={demands.length ? "Pick a submitted branch demand" : "No branch demands awaiting transfer"} /></SelectTrigger>
-                <SelectContent>
-                  {demands.map((d) => (
-                    <SelectItem key={d.id} value={d.id}>{d.demand_number} → {demandLabel(d)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <DemandSelect demands={demands} demandId={demandId} demandLabel={demandLabel} onChange={(v) => loadDemand(v)} />
+
               <p className="mt-1 text-[11px] text-muted-foreground">
                 {demands.length
                   ? "Selecting a demand prefills the destination branch and the requested item lines."
@@ -527,4 +523,26 @@ function TransferDialog({ open, onOpenChange, initial, warehouses, branches, ite
 function useResetOnOpen(open: boolean, reset: () => void) {
   const [last, setLast] = useState(false);
   if (open !== last) { setLast(open); if (open) reset(); }
+}
+
+function DemandSelect({ demands, demandId, demandLabel, onChange }: { demands: Demand[]; demandId: string; demandLabel: (d: Demand) => string; onChange: (v: string) => void }) {
+  const { data: summaries = new Map<string, string>() } = useDocItemSummaries("inv_demand_lines", demands.map((d) => d.id));
+  return (
+    <Select value={demandId} onValueChange={onChange} disabled={!demands.length}>
+      <SelectTrigger><SelectValue placeholder={demands.length ? "Pick a submitted branch demand" : "No branch demands awaiting transfer"} /></SelectTrigger>
+      <SelectContent>
+        {demands.map((d) => {
+          const s = summaries.get(d.id);
+          return (
+            <SelectItem key={d.id} value={d.id}>
+              <div className="flex flex-col gap-0.5">
+                <span className="font-mono text-xs">{d.demand_number} → {demandLabel(d)}</span>
+                {s && <span className="text-[11px] text-muted-foreground">{s}</span>}
+              </div>
+            </SelectItem>
+          );
+        })}
+      </SelectContent>
+    </Select>
+  );
 }

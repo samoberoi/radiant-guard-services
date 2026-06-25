@@ -17,6 +17,8 @@ import { nextSeq, fmtNumber, postMovements, statusBadgeClass, type LocationType 
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
 import { useCurrentUserRole } from "@/lib/use-current-user-role";
 import { useDemandRequesters } from "@/lib/use-demand-requesters";
+import { useDocItemSummaries } from "@/lib/inv-doc-summary";
+
 
 
 export const Route = createFileRoute("/admin/inventory/goods-receipts")({ component: GRNPage });
@@ -331,7 +333,7 @@ function GRNPage() {
 
 
       {adminMode && !role.isFieldOfficer ? (
-        <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} branches={branches} warehouses={warehouses} onSaved={invalidate} />
+        <GRNFormDialog open={open} onOpenChange={setOpen} pos={pos} vendors={vendors} branches={branches} warehouses={warehouses} onSaved={invalidate} />
       ) : role.isFieldOfficer ? (
         <FieldOfficerGRNFormDialog
           open={open}
@@ -361,7 +363,7 @@ function GRNPage() {
   );
 }
 
-function GRNFormDialog({ open, onOpenChange, pos, branches, warehouses, onSaved }: { open: boolean; onOpenChange: (o: boolean) => void; pos: PO[]; branches: { id: string; name: string }[]; warehouses: { id: string; name: string }[]; onSaved: () => void }) {
+function GRNFormDialog({ open, onOpenChange, pos, vendors, branches, warehouses, onSaved }: { open: boolean; onOpenChange: (o: boolean) => void; pos: PO[]; vendors: Vendor[]; branches: { id: string; name: string }[]; warehouses: { id: string; name: string }[]; onSaved: () => void }) {
   const [poId, setPoId] = useState<string>("");
   const [receiptDate, setReceiptDate] = useState(new Date().toISOString().slice(0, 10));
   const [invoiceNo, setInvoiceNo] = useState("");
@@ -372,6 +374,9 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, warehouses, onSaved 
   const [items, setItems] = useState<Record<string, Item>>({});
   const [saving, setSaving] = useState(false);
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
+  const { data: poSummary = new Map<string, string>() } = useDocItemSummaries("inv_po_lines", pos.map((p) => p.id));
+
+
 
   useResetOnOpen(open, async () => {
     setPoId(""); setReceiptDate(new Date().toISOString().slice(0, 10));
@@ -583,9 +588,24 @@ function GRNFormDialog({ open, onOpenChange, pos, branches, warehouses, onSaved 
           <div className="grid gap-2"><Label>Purchase Order</Label>
             <Select value={poId} onValueChange={loadPo}>
               <SelectTrigger><SelectValue placeholder="Pick an open PO" /></SelectTrigger>
-              <SelectContent>{pos.map((p) => <SelectItem key={p.id} value={p.id}>{p.po_number}</SelectItem>)}</SelectContent>
+              <SelectContent>{pos.map((p) => {
+                const vName = vendors.find((v) => v.id === p.vendor_id)?.name ?? "Vendor";
+                const dest = p.destination_branch_id
+                  ? (branches.find((b) => b.id === p.destination_branch_id)?.name ?? "Branch")
+                  : (warehouses.find((w) => w.id === p.destination_warehouse_id)?.name ?? "Warehouse");
+                const summary = poSummary.get(p.id);
+                return (
+                  <SelectItem key={p.id} value={p.id}>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-mono text-xs">{p.po_number} · {vName} → {dest}{p.status === "partially_received" ? " · partial" : ""}</span>
+                      {summary && <span className="text-[11px] text-muted-foreground">{summary}</span>}
+                    </div>
+                  </SelectItem>
+                );
+              })}</SelectContent>
             </Select>
           </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2"><Label>Receipt Date</Label><Input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} /></div>
             <div className="grid gap-2"><Label>Vendor Invoice #</Label><Input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} /></div>
@@ -762,6 +782,9 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, incoming
     setSourceKey(""); setReceiptDate(new Date().toISOString().slice(0, 10));
     setNotes(""); setInvoiceNo(""); setInvoiceFile(null); setLines([]);
   });
+  const { data: tSummary = new Map<string, string>() } = useDocItemSummaries("inv_transfer_lines", transfers.map((t) => t.id));
+  const { data: pSummary = new Map<string, string>() } = useDocItemSummaries("inv_po_lines", incomingPOs.map((p) => p.id));
+
 
   const kind: "transfer" | "po" | "" = sourceKey.startsWith("t:") ? "transfer" : sourceKey.startsWith("p:") ? "po" : "";
   const selectedTransfer = kind === "transfer" ? transfers.find((t) => t.id === sourceKey.slice(2)) : undefined;
@@ -943,19 +966,32 @@ function BranchGRNFormDialog({ open, onOpenChange, branchId, transfers, incoming
                 {transfers.length > 0 && (
                   <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Warehouse transfers</div>
                 )}
-                {transfers.map((t) => (
-                  <SelectItem key={`t:${t.id}`} value={`t:${t.id}`}>
-                    {t.transfer_number} · {locLabel(t.source_type, t.source_id)} → {locLabel(t.destination_type, t.destination_id)}{t.demand_id ? " · against demand" : ""}
-                  </SelectItem>
-                ))}
+                {transfers.map((t) => {
+                  const s = tSummary.get(t.id);
+                  return (
+                    <SelectItem key={`t:${t.id}`} value={`t:${t.id}`}>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-mono text-xs">{t.transfer_number} · {locLabel(t.source_type, t.source_id)} → {locLabel(t.destination_type, t.destination_id)}{t.demand_id ? " · against demand" : ""}</span>
+                        {s && <span className="text-[11px] text-muted-foreground">{s}</span>}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
                 {incomingPOs.length > 0 && (
                   <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Vendor purchase orders</div>
                 )}
-                {incomingPOs.map((p) => (
-                  <SelectItem key={`p:${p.id}`} value={`p:${p.id}`}>
-                    {p.po_number} · {vMap.get(p.vendor_id ?? "") ?? "Vendor"} → {bMap.get(p.destination_branch_id ?? "") ?? "Branch"}{p.status === "partially_received" ? " · partial" : ""}
-                  </SelectItem>
-                ))}
+                {incomingPOs.map((p) => {
+                  const s = pSummary.get(p.id);
+                  return (
+                    <SelectItem key={`p:${p.id}`} value={`p:${p.id}`}>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-mono text-xs">{p.po_number} · {vMap.get(p.vendor_id ?? "") ?? "Vendor"} → {bMap.get(p.destination_branch_id ?? "") ?? "Branch"}{p.status === "partially_received" ? " · partial" : ""}</span>
+                        {s && <span className="text-[11px] text-muted-foreground">{s}</span>}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+
               </SelectContent>
             </Select>
           </div>
@@ -1071,6 +1107,9 @@ function FieldOfficerGRNFormDialog({ open, onOpenChange, candidateId, userId, pe
     setIssuanceId(""); setReceiptDate(new Date().toISOString().slice(0, 10));
     setNotes(""); setLines([]);
   });
+  const { data: iSummary = new Map<string, string>() } = useDocItemSummaries("inv_issuance_lines", pendingIssuances.map((i) => i.id));
+
+
 
   async function loadIssuance(id: string) {
     setIssuanceId(id);
@@ -1171,11 +1210,18 @@ function FieldOfficerGRNFormDialog({ open, onOpenChange, candidateId, userId, pe
             <Select value={issuanceId} onValueChange={loadIssuance}>
               <SelectTrigger><SelectValue placeholder={pendingIssuances.length ? "Pick a pending issuance" : "No pending issuances"} /></SelectTrigger>
               <SelectContent>
-                {pendingIssuances.map((i) => (
-                  <SelectItem key={i.id} value={i.id}>
-                    {i.issuance_number} · {i.issuance_date}{i.demand_id ? " · against demand" : ""}
-                  </SelectItem>
-                ))}
+                {pendingIssuances.map((i) => {
+                  const s = iSummary.get(i.id);
+                  return (
+                    <SelectItem key={i.id} value={i.id}>
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-mono text-xs">{i.issuance_number} · {i.issuance_date}{i.demand_id ? " · against demand" : ""}</span>
+                        {s && <span className="text-[11px] text-muted-foreground">{s}</span>}
+                      </div>
+                    </SelectItem>
+                  );
+                })}
+
               </SelectContent>
             </Select>
           </div>

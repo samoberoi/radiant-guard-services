@@ -18,6 +18,8 @@ import { useUserBranchScope } from "@/lib/use-user-branch-scope";
 import { useAuth, SUPER_ADMIN_PHONE } from "@/lib/auth";
 import { useCurrentUserRole } from "@/lib/use-current-user-role";
 import { useDemandRequesters } from "@/lib/use-demand-requesters";
+import { useDocItemSummaries } from "@/lib/inv-doc-summary";
+
 
 
 
@@ -545,15 +547,8 @@ function IssuanceDialog({ open, onOpenChange, initial, warehouses, branches, fos
           {!isFieldOfficer && isDraft && !initial && openDemands.length > 0 && (
             <div className="grid gap-2">
               <Label>Against Demand <span className="font-normal text-muted-foreground">(optional — auto-fills items, source &amp; receiver)</span></Label>
-              <Select value={demandId} onValueChange={onPickDemand}>
-                <SelectTrigger><SelectValue placeholder="Pick a pending demand to fulfil…" /></SelectTrigger>
-                <SelectContent>
-                  {openDemands.map((d) => {
-                    const c = d.requester_candidate_id ? candById.get(d.requester_candidate_id) : null;
-                    return <SelectItem key={d.id} value={d.id}>{d.demand_number}{c ? ` — ${c.full_name} (${c.role_key})` : ""}</SelectItem>;
-                  })}
-                </SelectContent>
-              </Select>
+              <IssuanceDemandSelect openDemands={openDemands} candById={candById} value={demandId} onChange={onPickDemand} />
+
             </div>
           )}
           {!isFieldOfficer && !isBranchManager && (
@@ -713,3 +708,26 @@ function useResetOnOpen(open: boolean, reset: () => void) {
   if (open !== last) { setLast(open); if (open) reset(); }
 }
 
+
+function IssuanceDemandSelect({ openDemands, candById, value, onChange }: { openDemands: OpenDemand[]; candById: Map<string, Candidate>; value: string; onChange: (v: string) => void }) {
+  const { data: summaries = new Map<string, string>() } = useDocItemSummaries("inv_demand_lines", openDemands.map((d) => d.id));
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger><SelectValue placeholder="Pick a pending demand to fulfil…" /></SelectTrigger>
+      <SelectContent>
+        {openDemands.map((d) => {
+          const c = d.requester_candidate_id ? candById.get(d.requester_candidate_id) : null;
+          const s = summaries.get(d.id);
+          return (
+            <SelectItem key={d.id} value={d.id}>
+              <div className="flex flex-col gap-0.5">
+                <span className="font-mono text-xs">{d.demand_number}{c ? ` — ${c.full_name} (${c.role_key})` : ""}</span>
+                {s && <span className="text-[11px] text-muted-foreground">{s}</span>}
+              </div>
+            </SelectItem>
+          );
+        })}
+      </SelectContent>
+    </Select>
+  );
+}
