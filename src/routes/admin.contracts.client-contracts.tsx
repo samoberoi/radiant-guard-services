@@ -965,12 +965,20 @@ function isEsiItem(item: { name?: unknown } | null | undefined): boolean {
   return ESI_COMPONENT_RE.test(String(item?.name ?? ""));
 }
 
-function contractTotalAmount(item: { name?: unknown; amount?: unknown }): number {
-  return isEsiItem(item) ? 0 : Number(item.amount) || 0;
-}
-
 function hasConfiguredFormula(item: { formulaExpression?: string | null }): boolean {
   return !!item.formulaExpression?.trim();
+}
+
+// ESI rows fall back to the statutory calc only when no custom formula is set
+// in Cost Component Manager. When a formula IS configured the row uses its own
+// evaluated amount instead of the statutory 0.75% / 3.25% override.
+function isStatutoryEsi(item: { name?: unknown; formulaExpression?: string | null } | null | undefined): boolean {
+  return isEsiItem(item) && !hasConfiguredFormula(item ?? {});
+}
+
+function contractTotalAmount(item: { name?: unknown; amount?: unknown; formulaExpression?: string | null }): number {
+  if (isStatutoryEsi(item)) return 0;
+  return Number(item.amount) || 0;
 }
 
 function addFormulaAliases(ctx: FormulaContext, amount: number, labels: Array<string | null | undefined>) {
@@ -3438,6 +3446,35 @@ function ResourceFormDialog({
     });
   }, [components, benefits, allowanceTypes]);
 
+  // Overlay latest formula_mode / formula_expression from Cost Component master
+  // onto loaded benefits/deductions/employer rows so existing contracts pick up
+  // formula edits made in Control Center without needing to re-save the row.
+  useEffect(() => {
+    if (!costComponents.length) return;
+    const byId = new Map(costComponents.map((c) => [c.id, c]));
+    const overlay = (b: BenefitItem): BenefitItem => {
+      const m = byId.get(b.costComponentId);
+      if (!m) return b;
+      const expr = m.formulaExpression ?? null;
+      const mode = m.formulaMode ?? null;
+      const ver = m.formulaVersion ?? null;
+      if ((b.formulaExpression ?? null) === expr && (b.formulaMode ?? null) === mode && (b.formulaVersion ?? null) === ver) return b;
+      return { ...b, formulaMode: mode, formulaExpression: expr, formulaVersion: ver };
+    };
+    setBenefits((prev) => {
+      const next = prev.map(overlay);
+      return next.some((b, i) => b !== prev[i]) ? next : prev;
+    });
+    setDeductions((prev) => {
+      const next = prev.map(overlay);
+      return next.some((b, i) => b !== prev[i]) ? next : prev;
+    });
+    setEmployerContributions((prev) => {
+      const next = prev.map(overlay);
+      return next.some((b, i) => b !== prev[i]) ? next : prev;
+    });
+  }, [costComponents]);
+
   const PT_SYNTHETIC_ID = "__pt__";
   const ptSynthetic: CostComponentOption = {
     id: PT_SYNTHETIC_ID,
@@ -3731,9 +3768,9 @@ function ResourceFormDialog({
   const esiEmployerAmount = _esiEligible ? Math.ceil(_esiBase * (_esiErPct / 100)) : 0;
 
   const totalDeductions =
-    deductions.reduce((s, b) => s + (isEsiItem(b) ? esiEmployeeAmount : contractTotalAmount(b)), 0);
+    deductions.reduce((s, b) => s + (isStatutoryEsi(b) ? esiEmployeeAmount : contractTotalAmount(b)), 0);
   const totalEmployer =
-    employerContributions.reduce((s, b) => s + (isEsiItem(b) ? esiEmployerAmount : contractTotalAmount(b)), 0);
+    employerContributions.reduce((s, b) => s + (isStatutoryEsi(b) ? esiEmployerAmount : contractTotalAmount(b)), 0);
 
   const selectedDesignation = designations.find((d) => d.id === designationId);
 
@@ -4055,24 +4092,32 @@ function ResourceFormDialog({
                         <span
                           className={cn(
                             "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-                            b.calcType === "percentage"
+                            hasConfiguredFormula(b)
+                              ? "bg-violet-500/15 text-violet-700 dark:text-violet-300"
+                              : b.calcType === "percentage"
                               ? "bg-accent/15 text-accent"
                               : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
                           )}
                         >
-                          {b.calcType === "percentage" ? `${b.percentage}%` : "Fixed"}
+                          {hasConfiguredFormula(b)
+                            ? "Formula"
+                            : b.calcType === "percentage"
+                            ? `${b.percentage}%`
+                            : "Fixed"}
                         </span>
                       </div>
                       <div className="mt-0.5 text-[11px] text-muted-foreground">
-                        {b.calcType === "percentage"
-                          ? isEsiItem(b)
+                        {hasConfiguredFormula(b)
+                          ? `Custom formula · ${b.formulaExpression?.slice(0, 60) ?? ""}${(b.formulaExpression?.length ?? 0) > 60 ? "…" : ""}`
+                          : b.calcType === "percentage"
+                          ? isStatutoryEsi(b)
                             ? `${b.percentage}% · ${ESI_CONTRACT_NOTE}`
                             : `${b.percentage}% of ${b.baseComponents.map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`)).join(" ") || "—"}${b.capAmount ? ` · cap ₹${b.capAmount.toLocaleString("en-IN")}` : ""}`
                           : "Manual entry"}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {b.calcType === "fixed" ? (
+                      {b.calcType === "fixed" && !hasConfiguredFormula(b) ? (
                          <DecimalAmountInput
                            value={b.amount}
                            className="h-9 w-28"
@@ -4080,7 +4125,7 @@ function ResourceFormDialog({
                          />
                       ) : (
                         <span className="w-28 text-right text-sm font-semibold text-foreground">
-                          {isEsiItem(b) ? esiEmployeeAmount.toFixed(2) : b.amount.toFixed(2)}
+                          {isStatutoryEsi(b) ? esiEmployeeAmount.toFixed(2) : Number(b.amount).toFixed(2)}
                         </span>
                       )}
                       <Button
@@ -4195,14 +4240,18 @@ function ResourceFormDialog({
                         <span
                           className={cn(
                             "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-                            b.calcType === "percentage"
+                            hasConfiguredFormula(b)
+                              ? "bg-violet-500/15 text-violet-700 dark:text-violet-300"
+                              : b.calcType === "percentage"
                               ? "bg-accent/15 text-accent"
                               : /management\s*fee/i.test(b.name)
                                 ? "bg-primary/15 text-primary"
                                 : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
                           )}
                         >
-                          {b.calcType === "percentage"
+                          {hasConfiguredFormula(b)
+                            ? "Formula"
+                            : b.calcType === "percentage"
                             ? `${b.percentage}%`
                             : /management\s*fee/i.test(b.name)
                               ? "Prorated"
@@ -4210,8 +4259,10 @@ function ResourceFormDialog({
                         </span>
                       </div>
                       <div className="mt-0.5 text-[11px] text-muted-foreground">
-                        {b.calcType === "percentage"
-                          ? isEsiItem(b)
+                        {hasConfiguredFormula(b)
+                          ? `Custom formula · ${b.formulaExpression?.slice(0, 60) ?? ""}${(b.formulaExpression?.length ?? 0) > 60 ? "…" : ""}`
+                          : b.calcType === "percentage"
+                          ? isStatutoryEsi(b)
                             ? `${b.percentage}% · ${ESI_CONTRACT_NOTE}`
                             : `${b.percentage}% of ${b.baseComponents.map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`)).join(" ") || "—"}${b.capAmount ? ` · cap ₹${b.capAmount.toLocaleString("en-IN")}` : ""}`
                           : /management\s*fee/i.test(b.name)
@@ -4221,7 +4272,7 @@ function ResourceFormDialog({
 
                     </div>
                     <div className="flex items-center gap-2">
-                      {b.calcType === "fixed" ? (
+                      {b.calcType === "fixed" && !hasConfiguredFormula(b) ? (
                          <DecimalAmountInput
                            value={b.amount}
                            className="h-9 w-28"
@@ -4229,7 +4280,7 @@ function ResourceFormDialog({
                          />
                       ) : (
                         <span className="w-28 text-right text-sm font-semibold text-foreground">
-                          {isEsiItem(b) ? esiEmployerAmount.toFixed(2) : b.amount.toFixed(2)}
+                          {isStatutoryEsi(b) ? esiEmployerAmount.toFixed(2) : Number(b.amount).toFixed(2)}
                         </span>
                       )}
                       <Button
@@ -4465,7 +4516,7 @@ function SalaryBreakdownTable({
               <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
             </tr>
             {(() => {
-              const visibleDeductions = deductions.filter((b) => Number(b.amount) > 0 || isEsiItem(b));
+              const visibleDeductions = deductions.filter((b) => Number(b.amount) > 0 || isStatutoryEsi(b));
               if (visibleDeductions.length === 0) {
                 return (
                   <tr>
@@ -4481,7 +4532,7 @@ function SalaryBreakdownTable({
                     {b.name}
                     {b.calcType === "percentage" && (
                       <span className="ml-2 text-[11px] text-muted-foreground">
-                        {isEsiItem(b)
+                        {isStatutoryEsi(b)
                           ? `@ ${b.percentage}% · ${ESI_CONTRACT_NOTE}`
                           : `@ ${b.percentage}% of ${b.baseComponents
                               .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
@@ -4489,9 +4540,9 @@ function SalaryBreakdownTable({
                       </span>
                     )}
                   </td>
-                  <td className="text-center tabular-nums">{isEsiItem(b) ? esiEmployeeAmount.toFixed(2) : Number(b.amount).toFixed(2)}</td>
+                  <td className="text-center tabular-nums">{isStatutoryEsi(b) ? esiEmployeeAmount.toFixed(2) : Number(b.amount).toFixed(2)}</td>
                   <td />
-                  <td className="text-right tabular-nums">{isEsiItem(b) ? earnedFor(esiEmployeeAmount).toFixed(2) : earnedFor(Number(b.amount)).toFixed(2)}</td>
+                  <td className="text-right tabular-nums">{isStatutoryEsi(b) ? earnedFor(esiEmployeeAmount).toFixed(2) : earnedFor(Number(b.amount)).toFixed(2)}</td>
                 </tr>
               ));
             })()}
@@ -4514,7 +4565,7 @@ function SalaryBreakdownTable({
               <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
             </tr>
             {(() => {
-              const visibleEmployer = coreEmployer.filter((b) => Number(b.amount) > 0 || isEsiItem(b));
+              const visibleEmployer = coreEmployer.filter((b) => Number(b.amount) > 0 || isStatutoryEsi(b));
               if (visibleEmployer.length === 0) {
                 return (
                   <tr>
@@ -4530,7 +4581,7 @@ function SalaryBreakdownTable({
                     {b.name}
                     {b.calcType === "percentage" && (
                       <span className="ml-2 text-[11px] text-muted-foreground">
-                        {isEsiItem(b)
+                        {isStatutoryEsi(b)
                           ? `@ ${b.percentage}% · ${ESI_CONTRACT_NOTE}`
                           : `@ ${b.percentage}% of ${b.baseComponents
                               .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
@@ -4538,9 +4589,9 @@ function SalaryBreakdownTable({
                       </span>
                     )}
                   </td>
-                  <td className="text-center tabular-nums">{isEsiItem(b) ? esiEmployerAmount.toFixed(2) : Number(b.amount).toFixed(2)}</td>
+                  <td className="text-center tabular-nums">{isStatutoryEsi(b) ? esiEmployerAmount.toFixed(2) : Number(b.amount).toFixed(2)}</td>
                   <td />
-                  <td className="text-right tabular-nums">{isEsiItem(b) ? earnedFor(esiEmployerAmount).toFixed(2) : earnedFor(Number(b.amount)).toFixed(2)}</td>
+                  <td className="text-right tabular-nums">{isStatutoryEsi(b) ? earnedFor(esiEmployerAmount).toFixed(2) : earnedFor(Number(b.amount)).toFixed(2)}</td>
                 </tr>
               ));
             })()}
