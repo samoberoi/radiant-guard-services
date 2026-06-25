@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
+import { PayrollTabs } from "@/components/PayrollTabs";
 import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -160,10 +161,11 @@ function AdditionList() {
 
   return (
     <div>
+      <PayrollTabs />
       <PageHeader
         title="Additions"
         description="Record and track employee additions (bonus, incentives, allowances, reimbursements) applied to payroll."
-        crumbs={[{ label: "Employees", to: "/admin/employees" }, { label: "Additions" }]}
+        crumbs={[{ label: "Payroll", to: "/admin/payroll" }, { label: "Additions" }]}
       />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">

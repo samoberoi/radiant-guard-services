@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
+import { PayrollTabs } from "@/components/PayrollTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -283,10 +284,11 @@ function DeductionList() {
 
   return (
     <div>
+      <PayrollTabs />
       <PageHeader
         title="Deductions"
         description="Record and track employee deductions applied to payroll."
-        crumbs={[{ label: "Employees", to: "/admin/employees" }, { label: "Deductions" }]}
+        crumbs={[{ label: "Payroll", to: "/admin/payroll" }, { label: "Deductions" }]}
       />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
