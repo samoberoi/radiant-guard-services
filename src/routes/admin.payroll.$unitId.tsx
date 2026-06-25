@@ -317,10 +317,10 @@ function PayrollUnitPage() {
       const dayAdjustmentByCandidate = new Map<string, DayAdj>();
       const phDisplayCountByCandidate = new Map<string, number>();
       if (candidateIds.length > 0) {
-        const [addsRes, dedsRes] = await Promise.all([
+        const [addsRes, dedsRes, addTypesRes] = await Promise.all([
           supabase
             .from("additions" as never)
-            .select("candidate_id, addition_name, calculation_type, amount, installments, status, entry_mode, days, include_in_total_days, affects_days_for")
+            .select("candidate_id, addition_type_id, addition_name, calculation_type, amount, installments, status, entry_mode, days, include_in_total_days, affects_days_for")
             .in("candidate_id", candidateIds)
             .gte("addition_date", start)
             .lte("addition_date", end)
@@ -332,7 +332,13 @@ function PayrollUnitPage() {
             .gte("deduction_date", start)
             .lte("deduction_date", end)
             .eq("status", "active"),
+          supabase.from("addition_types").select("id, code"),
         ]);
+        const phTypeIds = new Set<string>(
+          ((addTypesRes.data ?? []) as { id: string; code: string | null }[])
+            .filter((t) => (t.code ?? "").toLowerCase() === "paid_holidays")
+            .map((t) => t.id),
+        );
         type RawAdd = { candidate_id: string; addition_name: string; calculation_type: string; amount: number | string; installments: number; entry_mode?: string | null; days?: number | string | null; include_in_total_days?: boolean | null; affects_days_for?: string[] | null };
         type RawDed = { candidate_id: string; deduction_name: string; calculation_type: string; amount: number | string; installments: number; entry_mode?: string | null; days?: number | string | null; include_in_total_days?: boolean | null; affects_days_for?: string[] | null };
         const applyDayAdj = (cid: string, dayDelta: number, buckets: string[] | null | undefined, sign: 1 | -1) => {
