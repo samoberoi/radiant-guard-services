@@ -644,6 +644,13 @@ function AllowanceFormDialog({
             </div>
             <Switch checked={includeInOt} onCheckedChange={setIncludeInOt} />
           </div>
+
+          <FormulaBuilderToggle
+            enabled={formulaEnabled}
+            onToggle={setFormulaEnabled}
+            value={formulaCfg}
+            onChange={setFormulaCfg}
+          />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
@@ -653,6 +660,7 @@ function AllowanceFormDialog({
             disabled={saving}
             onClick={async () => {
               setSaving(true);
+              const ser = formulaEnabled && formulaCfg ? serializeFormulaConfig(formulaCfg) : null;
               const err = await onSubmit({
                 name,
                 earning_type: earningType,
@@ -665,6 +673,8 @@ function AllowanceFormDialog({
                 base_components: baseRefs,
                 cap_amount: capAmount ? Number(capAmount) : null,
                 include_in_ot: includeInOt,
+                formula_mode: ser ? ser.mode : null,
+                formula_expression: ser ? ser.expression : null,
               });
               setSaving(false);
               if (err) toast.error(err);
