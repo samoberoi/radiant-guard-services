@@ -189,24 +189,15 @@ function FieldOfficerDashboard() {
         eyebrow="Field operations"
         title={data?.meName || "Welcome"}
         subtitle={phone ? `+91 ${phone}` : undefined}
-        description="Your units, your guards, and the status of candidates you've submitted."
-        right={
-          <Link
-            to="/admin/employees"
-            className="inline-flex items-center gap-2 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground shadow-lg shadow-accent/20 transition hover:-translate-y-0.5 hover:bg-accent/90"
-          >
-            <UserPlus className="h-4 w-4" /> Add Candidate
-          </Link>
-        }
+        description="Your units and the guards reporting to you."
       />
 
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4">
         <StatCard icon={Warehouse} label="Units I cover" value={data?.units.length ?? 0} accent="from-cyan-500/20 to-cyan-500/5 text-cyan-600" />
         <StatCard icon={ShieldCheck} label="Guards on duty" value={data?.guardsTotal ?? 0} accent="from-emerald-500/20 to-emerald-500/5 text-emerald-600" />
-        <StatCard icon={ClipboardList} label="Awaiting HR" value={data?.pendingMine ?? 0} accent="from-amber-500/20 to-amber-500/5 text-amber-600" to="/admin/employees" />
-        <StatCard icon={ClipboardList} label="Needs my fix" value={data?.rejectedMine ?? 0} accent="from-rose-500/20 to-rose-500/5 text-rose-600" to="/admin/employees" />
       </div>
+
 
       <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
         <div className="border-b border-border/60 px-5 py-5">
