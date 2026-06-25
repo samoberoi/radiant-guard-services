@@ -38,13 +38,16 @@ const MULTIPLIER_OPTIONS: { value: PresetMultiplier; label: string }[] = [
 ];
 
 const BASE_KIND_OPTIONS: { value: PresetBase["kind"]; label: string }[] = [
-  { value: "basic",         label: "Basic" },
-  { value: "da",            label: "DA" },
+  { value: "composite",     label: "Combine components (Basic + DA + …)" },
+  { value: "basic",         label: "Basic only" },
+  { value: "da",            label: "DA only" },
   { value: "basic_plus_da", label: "Basic + DA" },
   { value: "gross",         label: "Gross" },
-  { value: "fixed_amount",  label: "Fixed Amount" },
+  { value: "fixed_amount",  label: "Fixed Amount (₹)" },
   { value: "variable",      label: "Custom Variable" },
 ];
+
+const DEFAULT_AVAILABLE_BASES = ["Basic", "DA", "HRA", "Special Allowance", "Conveyance", "Gross"];
 
 const DIVISOR_OPTIONS: { value: string; label: string }[] = [
   { value: "none",          label: "—" },
