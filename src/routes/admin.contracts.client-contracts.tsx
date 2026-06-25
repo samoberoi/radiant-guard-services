@@ -932,6 +932,9 @@ function useCostComponentOptions() {
                 ["p_days","ot_days","ph_days","other_paid_days"].includes(b),
               ) as FixedDutyBucket[])
             : [],
+          fixedDutyDivisor: (["base_days","days_in_month","payable_days","fixed_26"].includes(String(r.fixed_duty_divisor))
+            ? (r.fixed_duty_divisor as FixedDutyDivisor)
+            : "base_days"),
           formulaMode: r.formula_mode == null ? null : String(r.formula_mode),
           formulaExpression: r.formula_expression == null ? null : String(r.formula_expression),
           formulaVersion: r.formula_version == null ? null : Number(r.formula_version),
