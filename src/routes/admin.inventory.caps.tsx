@@ -14,10 +14,6 @@ import { createNotification } from "@/lib/notifications";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/admin/inventory/caps")({
-  beforeLoad: () => {
-    // Lightweight client-only gate; deeper gating is enforced via RLS.
-    return;
-  },
   component: CapsPage,
 });
 
