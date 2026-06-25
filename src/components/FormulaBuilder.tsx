@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { Plus, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Plus, Search, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -37,28 +36,19 @@ const MULTIPLIER_OPTIONS: { value: PresetMultiplier; label: string }[] = [
   { value: "pl",      label: "Paid Leave" },
 ];
 
-const BASE_KIND_OPTIONS: { value: PresetBase["kind"]; label: string }[] = [
-  { value: "composite",     label: "Combine components (Basic + DA + …)" },
-  { value: "basic",         label: "Basic only" },
-  { value: "da",            label: "DA only" },
-  { value: "basic_plus_da", label: "Basic + DA" },
-  { value: "gross",         label: "Gross" },
-  { value: "fixed_amount",  label: "Fixed Amount (₹)" },
-  { value: "variable",      label: "Custom Variable" },
-];
-
-const DEFAULT_AVAILABLE_BASES = ["Basic", "DA", "HRA", "Special Allowance", "Conveyance", "Gross"];
-
 const DIVISOR_OPTIONS: { value: string; label: string }[] = [
   { value: "none",          label: "—" },
   { value: "fixed_days",    label: "Fixed Days (client)" },
   { value: "working_days",  label: "Working Days" },
   { value: "payable_days",  label: "Payable Days" },
-  { value: "month_26",      label: "Fixed 26" },
-  { value: "month_28",      label: "Fixed 28" },
-  { value: "month_30",      label: "Fixed 30" },
-  { value: "month_31",      label: "Fixed 31" },
+  { value: "month_26",      label: "÷ 26" },
+  { value: "month_28",      label: "÷ 28" },
+  { value: "month_30",      label: "÷ 30" },
+  { value: "month_31",      label: "÷ 31" },
 ];
+
+const CORE_LABELS = new Set(["Basic", "DA", "HRA"]);
+const DERIVED_LABELS = new Set(["Gross", "CTC"]);
 
 function divisorFromUi(v: string): PresetDivisor {
   if (v.startsWith("month_")) {
@@ -67,7 +57,6 @@ function divisorFromUi(v: string): PresetDivisor {
   }
   return v as PresetDivisor;
 }
-
 function divisorToUi(d: PresetDivisor | undefined): string {
   if (!d || d === "none") return "none";
   if (typeof d === "string") return d;
@@ -80,8 +69,23 @@ const SAMPLE_CTX = {
   present: 24, worked: 24, ot: 2, ph: 1, wo: 4, el: 0, pl: 0,
 };
 
+const DEFAULT_AVAILABLE_BASES = ["Basic", "DA", "HRA", "Special Allowance", "Conveyance", "Gross"];
+
+function asComposite(b: PresetBase): CompositeComponent[] {
+  switch (b.kind) {
+    case "basic":         return [{ name: "Basic", operator: "+" }];
+    case "da":            return [{ name: "DA", operator: "+" }];
+    case "basic_plus_da": return [{ name: "Basic", operator: "+" }, { name: "DA", operator: "+" }];
+    case "gross":         return [{ name: "Gross", operator: "+" }];
+    case "composite":     return b.components ?? [];
+    default:              return [];
+  }
+}
+
 export function FormulaBuilder({ value, onChange, availableBases }: Props) {
-  const baseChoices = (availableBases && availableBases.length > 0 ? availableBases : DEFAULT_AVAILABLE_BASES);
+  const baseChoices = availableBases && availableBases.length > 0 ? availableBases : DEFAULT_AVAILABLE_BASES;
+  const [search, setSearch] = useState("");
+
   const mode = value?.mode ?? "preset";
   const preset = value?.mode === "preset" ? value.preset : DEFAULT_PRESET;
   const expression = value?.mode === "advanced" ? value.expression : "";
@@ -90,9 +94,35 @@ export function FormulaBuilder({ value, onChange, availableBases }: Props) {
     if (m === "preset") onChange({ mode: "preset", preset });
     else onChange({ mode: "advanced", expression: expression || presetToExpression(preset) });
   };
-
   const updatePreset = (p: Partial<PresetFormula>) =>
     onChange({ mode: "preset", preset: { ...preset, ...p } });
+
+  // Treat the canvas as "composite" by default. Migrate simple bases on first chip add.
+  const composite = asComposite(preset.base);
+  const selectedNames = new Set(composite.map((c) => c.name));
+
+  const setComposite = (next: CompositeComponent[]) =>
+    updatePreset({ base: { kind: "composite", components: next } });
+
+  const addComponent = (name: string) => {
+    if (selectedNames.has(name)) return;
+    setComposite([...composite, { name, operator: "+" }]);
+  };
+  const removeComponent = (idx: number) => setComposite(composite.filter((_, i) => i !== idx));
+  const toggleSign = (idx: number) => {
+    const next = composite.slice();
+    next[idx] = { ...next[idx], operator: next[idx].operator === "+" ? "-" : "+" };
+    setComposite(next);
+  };
+
+  const filteredBases = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return baseChoices.filter((b) => !q || b.toLowerCase().includes(q));
+  }, [baseChoices, search]);
+
+  const coreBases = filteredBases.filter((b) => CORE_LABELS.has(b));
+  const derivedBases = filteredBases.filter((b) => DERIVED_LABELS.has(b));
+  const otherBases = filteredBases.filter((b) => !CORE_LABELS.has(b) && !DERIVED_LABELS.has(b));
 
   const compiledPreview = useMemo(() => {
     if (!value) return { expr: "", amount: 0, error: undefined as string | undefined };
@@ -108,248 +138,297 @@ export function FormulaBuilder({ value, onChange, availableBases }: Props) {
   }, [value]);
 
   return (
-    <div className="rounded-lg border border-border bg-secondary/20 p-3 space-y-3">
-      <div className="flex items-center justify-between">
-        <Label className="text-sm font-semibold">Hybrid Formula</Label>
-        <div className="inline-flex overflow-hidden rounded-md border border-border">
+    <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-border bg-card px-4 py-3">
+        <div>
+          <div className="text-sm font-semibold text-foreground">Hybrid Formula Builder</div>
+          <div className="text-[11px] text-muted-foreground">Combine components, modifiers and bounds — preview updates live.</div>
+        </div>
+        <div className="inline-flex rounded-lg bg-secondary p-1">
           <button
             type="button"
-            className={`px-3 py-1 text-xs ${mode === "preset" ? "bg-primary text-primary-foreground" : "bg-background"}`}
+            className={`rounded-md px-3 py-1 text-xs font-medium transition ${mode === "preset" ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             onClick={() => setMode("preset")}
           >Preset</button>
           <button
             type="button"
-            className={`px-3 py-1 text-xs ${mode === "advanced" ? "bg-primary text-primary-foreground" : "bg-background"}`}
+            className={`rounded-md px-3 py-1 text-xs font-medium transition ${mode === "advanced" ? "bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             onClick={() => setMode("advanced")}
           >Advanced</button>
         </div>
       </div>
 
-      {mode === "preset" && (
-        <div className="grid gap-3">
-          <div className="grid gap-2 md:grid-cols-2">
-            <div className="grid gap-1.5">
-              <Label className="text-xs">Base</Label>
-              <Select
-                value={preset.base.kind}
-                onValueChange={(v) => {
-                  const k = v as PresetBase["kind"];
-                  let next: PresetBase;
-                  if (k === "fixed_amount") next = { kind: "fixed_amount", value: 0 };
-                  else if (k === "variable") next = { kind: "variable", name: "basic" };
-                  else if (k === "composite") next = { kind: "composite", components: [{ name: "Basic", operator: "+" }, { name: "DA", operator: "+" }] };
-                  else next = { kind: k } as PresetBase;
-                  updatePreset({ base: next });
-                }}
-              >
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {BASE_KIND_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {preset.base.kind === "fixed_amount" && (
+      {mode === "preset" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12">
+          {/* Left: searchable pool */}
+          <aside className="lg:col-span-4 border-b border-border bg-secondary/30 lg:border-b-0 lg:border-r">
+            <div className="border-b border-border bg-card p-3">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  type="number"
-                  className="h-9"
-                  value={preset.base.value}
-                  onChange={(e) => updatePreset({ base: { kind: "fixed_amount", value: Number(e.target.value) || 0 } })}
-                  placeholder="₹"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search components…"
+                  className="h-9 pl-8 text-sm"
                 />
+              </div>
+            </div>
+            <div className="max-h-[260px] space-y-4 overflow-y-auto p-4 lg:max-h-[380px]">
+              {coreBases.length > 0 && (
+                <ComponentGroup title="Core Components" tone="primary" items={coreBases} selected={selectedNames} onAdd={addComponent} />
               )}
-              {preset.base.kind === "variable" && (
-                <Select
-                  value={String(preset.base.name)}
-                  onValueChange={(v) => updatePreset({ base: { kind: "variable", name: v as never } })}
-                >
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {FORMULA_VARIABLES.map((v) => (
-                      <SelectItem key={String(v.key)} value={String(v.key)}>{v.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              {derivedBases.length > 0 && (
+                <ComponentGroup title="Derived Values" tone="success" items={derivedBases} selected={selectedNames} onAdd={addComponent} />
               )}
-              {preset.base.kind === "composite" && (() => {
-                const comps: CompositeComponent[] = preset.base.components ?? [];
-                const setComps = (next: CompositeComponent[]) =>
-                  updatePreset({ base: { kind: "composite", components: next } });
-                const selectedNames = new Set(comps.map((c) => c.name));
-                const remaining = baseChoices.filter((b) => !selectedNames.has(b));
-                return (
-                  <div className="rounded-md border border-border bg-card p-2 space-y-2">
-                    <div className="flex flex-wrap gap-1.5">
-                      {comps.map((c, idx) => (
-                        <span key={`${c.name}-${idx}`} className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs">
-                          <button
-                            type="button"
-                            className="font-mono text-[11px] text-muted-foreground hover:text-foreground"
-                            title="Toggle + / −"
-                            onClick={() => {
-                              const next = comps.slice();
-                              next[idx] = { ...c, operator: c.operator === "+" ? "-" : "+" };
-                              setComps(next);
-                            }}
-                          >{c.operator}</button>
-                          <span>{c.name}</span>
-                          <button
-                            type="button"
-                            className="text-muted-foreground hover:text-destructive"
-                            onClick={() => setComps(comps.filter((_, i) => i !== idx))}
-                          ><X className="h-3 w-3" /></button>
-                        </span>
-                      ))}
-                      {comps.length === 0 && (
-                        <span className="text-[11px] text-muted-foreground">Pick one or more components below…</span>
-                      )}
+              {otherBases.length > 0 && (
+                <ComponentGroup title="Allowances & Custom" tone="muted" items={otherBases} selected={selectedNames} onAdd={addComponent} />
+              )}
+              {filteredBases.length === 0 && (
+                <div className="rounded-md border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                  No components match "{search}".
+                </div>
+              )}
+            </div>
+          </aside>
+
+          {/* Right: canvas + modifiers */}
+          <section className="lg:col-span-8 flex flex-col">
+            <div className="flex flex-col gap-5 p-5">
+              {/* Canvas */}
+              <div>
+                <div className="mb-2 flex items-center justify-between">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Formula Canvas</Label>
+                  {composite.length > 0 && (
+                    <button type="button" onClick={() => setComposite([])} className="text-xs font-medium text-primary hover:underline">Clear All</button>
+                  )}
+                </div>
+                <div className="flex min-h-[100px] flex-wrap content-start items-center gap-2 rounded-xl border-2 border-dashed border-border bg-secondary/30 p-3">
+                  {composite.length === 0 && (
+                    <div className="w-full text-center text-xs text-muted-foreground">
+                      Pick components from the left to build the base of the formula.
                     </div>
-                    {remaining.length > 0 && (
-                      <div className="flex flex-wrap gap-1.5 border-t border-border pt-2">
-                        {remaining.map((b) => (
-                          <button
-                            key={b}
-                            type="button"
-                            className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:border-primary hover:text-primary"
-                            onClick={() => setComps([...comps, { name: b, operator: "+" }])}
-                          ><Plus className="h-3 w-3" /> {b}</button>
-                        ))}
+                  )}
+                  {composite.map((c, idx) => (
+                    <div key={`${c.name}-${idx}`} className="flex items-center gap-2">
+                      {idx > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => toggleSign(idx)}
+                          title="Toggle + / −"
+                          className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold shadow-sm transition ${
+                            c.operator === "-"
+                              ? "bg-destructive text-destructive-foreground"
+                              : "bg-foreground text-background"
+                          }`}
+                        >{c.operator}</button>
+                      )}
+                      <div className={`flex items-center rounded-lg border bg-card px-2 py-1 shadow-sm ${
+                        idx === 0 && c.operator === "-" ? "border-destructive/40" : "border-border"
+                      }`}>
+                        {idx === 0 && c.operator === "-" && <span className="px-1 text-sm font-bold text-destructive">−</span>}
+                        <span className="px-2 text-sm font-medium text-foreground">{c.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeComponent(idx)}
+                          className="ml-1 text-muted-foreground hover:text-destructive"
+                          aria-label={`Remove ${c.name}`}
+                        ><X className="h-4 w-4" /></button>
                       </div>
-                    )}
-                    <p className="text-[10px] text-muted-foreground">Click the +/− chip to subtract a component. Resolved variable: <code>{comps.map((c) => `${c.operator === "-" ? "-" : "+"}${slugifyVar(c.name)}`).join(" ") || "0"}</code></p>
-                  </div>
-                );
-              })()}
-            </div>
-
-
-            <div className="grid gap-1.5">
-              <Label className="text-xs">Operator</Label>
-              <Select
-                value={preset.operator}
-                onValueChange={(v) => updatePreset({ operator: v as PresetFormula["operator"] })}
-              >
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="flat">Flat amount</SelectItem>
-                  <SelectItem value="percent">% of base</SelectItem>
-                  <SelectItem value="per_day">Per day × multiplier</SelectItem>
-                  <SelectItem value="divide">Divide by</SelectItem>
-                </SelectContent>
-              </Select>
-              {preset.operator === "percent" && (
-                <Input
-                  type="number" step="0.01" className="h-9"
-                  value={preset.percent ?? 0}
-                  onChange={(e) => updatePreset({ percent: Number(e.target.value) || 0 })}
-                  placeholder="e.g. 12"
-                />
-              )}
-            </div>
-          </div>
-
-          {(preset.operator === "per_day" || preset.operator === "divide") && (
-            <div className="grid gap-1.5">
-              <Label className="text-xs">Divisor (day basis)</Label>
-              <Select value={divisorToUi(preset.divisor)} onValueChange={(v) => updatePreset({ divisor: divisorFromUi(v) })}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {DIVISOR_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    </div>
                   ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+                  {composite.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-dashed border-border bg-secondary text-muted-foreground">
+                        <Plus className="h-3.5 w-3.5" />
+                      </div>
+                      <span className="text-[11px] text-muted-foreground">Add from left</span>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-          <div className="grid gap-1.5">
-            <Label className="text-xs">Multipliers (summed)</Label>
-            <div className="flex flex-wrap gap-1.5 rounded-md border border-border bg-card p-2 min-h-[40px]">
-              {(preset.multipliers ?? []).map((m, idx) => {
-                const opt = MULTIPLIER_OPTIONS.find((o) => o.value === m);
-                return (
-                  <span key={`${m}-${idx}`} className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs">
-                    {opt?.label ?? m}
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-destructive"
-                      onClick={() => updatePreset({ multipliers: (preset.multipliers ?? []).filter((_, i) => i !== idx) })}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </span>
-                );
-              })}
-              {MULTIPLIER_OPTIONS.filter((o) => !(preset.multipliers ?? []).includes(o.value)).map((o) => (
-                <button
-                  key={o.value}
-                  type="button"
-                  className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:border-primary hover:text-primary"
-                  onClick={() => updatePreset({ multipliers: [...(preset.multipliers ?? []), o.value] })}
-                >
-                  <Plus className="h-3 w-3" /> {o.label}
-                </button>
-              ))}
-            </div>
-          </div>
+              {/* Modifiers row */}
+              <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                <div className="space-y-3">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Operator</Label>
+                  <Select value={preset.operator} onValueChange={(v) => updatePreset({ operator: v as PresetFormula["operator"] })}>
+                    <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="flat">Flat — use base as-is</SelectItem>
+                      <SelectItem value="percent">× % of base</SelectItem>
+                      <SelectItem value="per_day">Per day × multiplier</SelectItem>
+                      <SelectItem value="divide">Divide base by …</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {preset.operator === "percent" && (
+                    <div className="relative">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        className="h-9 pr-8"
+                        value={preset.percent ?? 0}
+                        onChange={(e) => updatePreset({ percent: Number(e.target.value) || 0 })}
+                        placeholder="e.g. 12"
+                      />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">%</span>
+                    </div>
+                  )}
+                  {(preset.operator === "per_day" || preset.operator === "divide") && (
+                    <Select value={divisorToUi(preset.divisor)} onValueChange={(v) => updatePreset({ divisor: divisorFromUi(v) })}>
+                      <SelectTrigger className="h-9"><SelectValue placeholder="Divisor" /></SelectTrigger>
+                      <SelectContent>
+                        {DIVISOR_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="grid gap-1.5">
-              <Label className="text-xs">Cap (max ₹)</Label>
-              <Input
-                type="number" className="h-9"
-                value={preset.capAmount ?? ""}
-                onChange={(e) => updatePreset({ capAmount: e.target.value ? Number(e.target.value) : null })}
-              />
+                <div className="space-y-3">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Bounds (₹)</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground">Min</span>
+                      <Input
+                        type="number"
+                        className="h-9 pl-10"
+                        placeholder="0"
+                        value={preset.floorAmount ?? ""}
+                        onChange={(e) => updatePreset({ floorAmount: e.target.value ? Number(e.target.value) : null })}
+                      />
+                    </div>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold uppercase text-muted-foreground">Max</span>
+                      <Input
+                        type="number"
+                        className="h-9 pl-10"
+                        placeholder="∞"
+                        value={preset.capAmount ?? ""}
+                        onChange={(e) => updatePreset({ capAmount: e.target.value ? Number(e.target.value) : null })}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Multipliers */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Attendance Multipliers</Label>
+                  <span className="text-[11px] text-muted-foreground">{(preset.multipliers ?? []).length === 0 ? "Optional · summed when set" : `${(preset.multipliers ?? []).length} selected`}</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {MULTIPLIER_OPTIONS.map((o) => {
+                    const active = (preset.multipliers ?? []).includes(o.value);
+                    return (
+                      <button
+                        key={o.value}
+                        type="button"
+                        onClick={() => {
+                          const cur = preset.multipliers ?? [];
+                          updatePreset({ multipliers: active ? cur.filter((m) => m !== o.value) : [...cur, o.value] });
+                        }}
+                        className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-xs transition ${
+                          active
+                            ? "border-primary bg-primary/10 text-primary font-medium"
+                            : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                        }`}
+                      >
+                        {active ? "✓" : "+"} {o.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
-            <div className="grid gap-1.5">
-              <Label className="text-xs">Floor (min ₹)</Label>
-              <Input
-                type="number" className="h-9"
-                value={preset.floorAmount ?? ""}
-                onChange={(e) => updatePreset({ floorAmount: e.target.value ? Number(e.target.value) : null })}
-              />
-            </div>
-          </div>
+          </section>
         </div>
-      )}
-
-      {mode === "advanced" && (
-        <div className="grid gap-2">
+      ) : (
+        <div className="space-y-3 p-5">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Free-form Expression</Label>
           <Textarea
-            rows={3}
-            className="font-mono text-xs"
+            rows={4}
+            className="font-mono text-sm"
             value={expression}
             onChange={(e) => onChange({ mode: "advanced", expression: e.target.value })}
-            placeholder="e.g. (basic + da) * 0.12  or  min(15000, basic) * 0.05"
+            placeholder="e.g. (basic + da) * 0.12   ·   min(15000, basic) * 0.05"
           />
           <details className="text-xs">
-            <summary className="cursor-pointer text-muted-foreground">Available variables & functions</summary>
+            <summary className="cursor-pointer text-muted-foreground">Available variables &amp; functions</summary>
             <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 md:grid-cols-3">
               {FORMULA_VARIABLES.map((v) => (
                 <div key={String(v.key)} className="text-[11px]"><code className="text-foreground">{v.label}</code> — <span className="text-muted-foreground">{v.desc}</span></div>
               ))}
-              <div className="text-[11px] col-span-full mt-1"><code>min(a,b)</code> · <code>max(a,b)</code> · <code>round(x)</code> · <code>floor(x)</code> · <code>ceil(x)</code> · operators <code>+ − × ÷ ( )</code></div>
+              <div className="col-span-full mt-1 text-[11px]"><code>min(a,b)</code> · <code>max(a,b)</code> · <code>round(x)</code> · <code>floor(x)</code> · <code>ceil(x)</code> · operators <code>+ − × ÷ ( )</code></div>
             </div>
           </details>
         </div>
       )}
 
-      <div className="rounded-md border border-dashed border-border bg-card p-2 text-xs">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <span className="uppercase tracking-wider text-muted-foreground">Resolved · </span>
-            <code className="text-foreground">{compiledPreview.expr || "—"}</code>
-          </div>
-          <div className="text-right">
-            <div className="text-muted-foreground">Sample → ₹</div>
-            <div className={`font-semibold tabular-nums ${compiledPreview.error ? "text-destructive" : "text-emerald-700"}`}>
-              {compiledPreview.error ? compiledPreview.error : compiledPreview.amount.toFixed(2)}
-            </div>
+      {/* Live Preview Footer */}
+      <div className="flex flex-col gap-2 border-t border-border bg-slate-900 px-5 py-4 text-slate-100 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Live Formula Preview</div>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <code className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded bg-slate-800 px-2 py-1 font-mono text-xs text-blue-300">
+              {compiledPreview.expr || "—"}
+            </code>
+            <span className="text-slate-500">=</span>
+            {compiledPreview.error ? (
+              <span className="font-semibold text-red-400">{compiledPreview.error}</span>
+            ) : (
+              <span className="font-bold tabular-nums text-emerald-400">₹ {compiledPreview.amount.toFixed(2)}</span>
+            )}
           </div>
         </div>
+        <span className="text-[10px] italic text-slate-500">Sample · Basic 10,000 · DA 2,000 · Gross 15,000 · 24 P / 26 base</span>
       </div>
     </div>
+  );
+}
+
+function ComponentGroup({
+  title,
+  tone,
+  items,
+  selected,
+  onAdd,
+}: {
+  title: string;
+  tone: "primary" | "success" | "muted";
+  items: string[];
+  selected: Set<string>;
+  onAdd: (label: string) => void;
+}) {
+  const cls =
+    tone === "primary"
+      ? "bg-primary/10 text-primary border-primary/20 hover:bg-primary/15"
+      : tone === "success"
+      ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/20 hover:bg-emerald-500/15 dark:text-emerald-300"
+      : "bg-secondary text-foreground border-border hover:bg-secondary/70";
+
+  return (
+    <section>
+      <h3 className="mb-2 px-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{title}</h3>
+      <div className="flex flex-wrap gap-1.5">
+        {items.map((b) => {
+          const isSel = selected.has(b);
+          return (
+            <button
+              key={b}
+              type="button"
+              disabled={isSel}
+              onClick={() => onAdd(b)}
+              className={`rounded-md border px-2.5 py-1 text-xs font-medium transition ${
+                isSel ? "cursor-not-allowed border-border bg-muted text-muted-foreground line-through" : cls
+              }`}
+            >
+              {b}
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -358,25 +437,26 @@ export function FormulaBuilderToggle({
   onToggle,
   value,
   onChange,
+  availableBases,
 }: {
   enabled: boolean;
   onToggle: (v: boolean) => void;
   value: FormulaConfig | null;
   onChange: (next: FormulaConfig | null) => void;
+  availableBases?: string[];
 }) {
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between rounded-lg border border-border bg-card px-3 py-2">
         <div>
           <div className="text-sm font-medium">Use Hybrid Formula (advanced)</div>
-          <div className="text-xs text-muted-foreground">Override the standard calc with a preset row or free-form expression.</div>
+          <div className="text-xs text-muted-foreground">Override the standard calc with a preset or free-form expression.</div>
         </div>
         <Switch checked={enabled} onCheckedChange={(v) => { onToggle(v); if (v && !value) onChange({ mode: "preset", preset: DEFAULT_PRESET }); }} />
       </div>
-      {enabled && <FormulaBuilder value={value} onChange={onChange} />}
+      {enabled && <FormulaBuilder value={value} onChange={onChange} availableBases={availableBases} />}
     </div>
   );
 }
 
-// Re-export for callers that don't need the toggle.
 export { useState };
