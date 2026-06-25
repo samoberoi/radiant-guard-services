@@ -325,16 +325,20 @@ function AdminLayout() {
   const filteredInventoryChildren = useMemo(
     () => {
       if (isSuperAdmin) return inventoryChildren;
-      const list = inventoryChildren.filter((c) => !c.sub || canSub("inventory", c.sub));
-      // Collections is field-officer only.
-      const withCollections = list.filter((c) => c.to !== "/admin/inventory/collections" || roleKey === "field_officer");
+      const isFO = roleKey === "field_officer";
+      const list = inventoryChildren.filter((c) => {
+        // Collections is field-officer only — bypass sub-permission gating for FOs.
+        if (c.to === "/admin/inventory/collections") return isFO;
+        return !c.sub || canSub("inventory", c.sub);
+      });
       // Field officers do not see the Inventory Command Center dashboard.
-      if (roleKey === "field_officer") return withCollections.filter((c) => c.to !== "/admin/inventory");
-      return withCollections;
+      if (isFO) return list.filter((c) => c.to !== "/admin/inventory");
+      return list;
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [isSuperAdmin, permsLoading, roleKey],
   );
+
   const isGuard = !isSuperAdmin && roleKey === "guard";
   const guardGroups: GroupItem[] = useMemo(() => [
     { key: "my-inventory", label: "My Inventory", icon: Boxes, to: "/admin/my-inventory", activePrefixes: ["/admin/my-inventory"] },
