@@ -202,6 +202,7 @@ type ResourceComponent = {
 
 type FixedCalcMethod = "flat" | "per_duty";
 type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
+type FixedDutyDivisor = "base_days" | "days_in_month" | "payable_days" | "fixed_26";
 
 type BenefitItem = {
   costComponentId: string;
