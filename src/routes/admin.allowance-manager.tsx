@@ -462,6 +462,8 @@ function AllowanceFormDialog({
   const [capAmount, setCapAmount] = useState<string>("");
   const [includeInOt, setIncludeInOt] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [formulaEnabled, setFormulaEnabled] = useState(false);
+  const [formulaCfg, setFormulaCfg] = useState<FormulaConfig | null>(null);
 
   useResetOnOpen(open, () => {
     setName(initial?.name ?? "");
@@ -475,6 +477,9 @@ function AllowanceFormDialog({
     setBaseRefs(initial?.base_components ?? []);
     setCapAmount(initial?.cap_amount != null ? String(initial.cap_amount) : "");
     setIncludeInOt(initial?.include_in_ot ?? true);
+    const cfg = parseFormulaConfig(initial?.formula_mode, initial?.formula_expression);
+    setFormulaEnabled(!!cfg);
+    setFormulaCfg(cfg);
   });
 
   const preview = buildFormulaPreview({
