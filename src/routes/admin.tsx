@@ -67,6 +67,7 @@ type LeafItem = {
   icon: React.ComponentType<{ className?: string }>;
   search?: Record<string, unknown>;
   sub?: string; // optional sub-module key for RBAC filtering
+  adminOnly?: boolean; // only super admins & inventory managers
 };
 
 type GroupItem = {
