@@ -40,6 +40,8 @@ export const Route = createFileRoute("/admin/deductions")({
 
 type CalcType = "lumpsum" | "per_duty_amount" | "total_amount";
 type Status = "active" | "paused" | "completed" | "cancelled";
+type EntryMode = "lumpsum" | "days_x_per_day";
+type DayBucket = "present" | "worked" | "ot" | "ph";
 
 type Deduction = {
   id: string;
@@ -54,7 +56,19 @@ type Deduction = {
   max_duty?: number;
   description: string;
   status: Status;
+  entry_mode?: EntryMode;
+  days?: number | null;
+  per_day_amount?: number | null;
+  include_in_total_days?: boolean;
+  affects_days_for?: DayBucket[];
 };
+
+const DAY_BUCKETS: { value: DayBucket; label: string }[] = [
+  { value: "present", label: "Present" },
+  { value: "worked", label: "Worked" },
+  { value: "ot", label: "OT" },
+  { value: "ph", label: "PH" },
+];
 
 type DType = { id: string; name: string; code: string; is_active: boolean };
 type Emp = { id: string; full_name: string; employee_code: string; mobile: string };
