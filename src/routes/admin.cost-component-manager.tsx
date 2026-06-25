@@ -547,6 +547,7 @@ function CostComponentDialog({
     setDeductionCalcType(initial?.deduction_calc_type ?? "earned_salary");
     setFixedCalcMethod(initial?.fixed_calc_method ?? "flat");
     setFixedDutyComponents(initial?.fixed_duty_components ?? []);
+    setFixedDutyDivisor(initial?.fixed_duty_divisor ?? "base_days");
     // Seed formula: explicit saved formula_expression wins; otherwise rebuild a
     // preset from legacy calc_type=percentage + base_components + percentage so
     // existing rows open with their original chips populated in the builder.
