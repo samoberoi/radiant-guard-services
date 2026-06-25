@@ -100,7 +100,7 @@ function useAllowances() {
     queryFn: async (): Promise<Allowance[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,earning_type,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot")
+        .select("id,name,earning_type,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot,formula_mode,formula_expression")
         .order("name", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
@@ -121,6 +121,8 @@ function useAllowances() {
     base_components: p.calc_type === "percentage" ? p.base_components : [],
     cap_amount: p.calc_type === "percentage" ? p.cap_amount : null,
     include_in_ot: p.include_in_ot,
+    formula_mode: p.formula_mode,
+    formula_expression: p.formula_expression,
   });
 
   const addMut = useMutation({
