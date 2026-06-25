@@ -135,14 +135,15 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
 }
 
 
-function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "cap_flat_amount" | "amount"> & { name?: string; fixed_calc_method?: FixedCalcMethod; fixed_duty_components?: FixedDutyBucket[] }): string {
+function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "cap_flat_amount" | "amount"> & { name?: string; fixed_calc_method?: FixedCalcMethod; fixed_duty_components?: FixedDutyBucket[]; fixed_duty_divisor?: FixedDutyDivisor }): string {
   if (c.calc_type === "fixed") {
     if (c.fixed_calc_method === "per_duty") {
       const buckets = (c.fixed_duty_components ?? [])
         .map((b) => FIXED_DUTY_BUCKETS.find((x) => x.value === b)?.short ?? b)
         .join(" + ") || "—";
       const amt = c.amount != null && c.amount > 0 ? `₹${c.amount.toLocaleString("en-IN")}` : "amount";
-      return `${amt} ÷ Base Days × (${buckets}) · per-duty`;
+      const divLabel = FIXED_DUTY_DIVISORS.find((x) => x.value === (c.fixed_duty_divisor ?? "base_days"))?.short ?? "Base Days";
+      return `${amt} ÷ ${divLabel} × (${buckets}) · per-duty`;
     }
 
     const isMgmt = /management\s*fee/i.test(c.name ?? "");
