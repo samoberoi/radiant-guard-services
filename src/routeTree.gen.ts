@@ -62,6 +62,7 @@ import { Route as AdminVehiclesFastagsRouteImport } from './routes/admin.vehicle
 import { Route as AdminVehiclesExpenseManagerRouteImport } from './routes/admin.vehicles.expense-manager'
 import { Route as AdminPayrollUnitIdRouteImport } from './routes/admin.payroll.$unitId'
 import { Route as AdminInvoiceUnitIdRouteImport } from './routes/admin.invoice.$unitId'
+import { Route as AdminInventoryWorkflowsRouteImport } from './routes/admin.inventory.workflows'
 import { Route as AdminInventoryWarehousesRouteImport } from './routes/admin.inventory.warehouses'
 import { Route as AdminInventoryVendorsRouteImport } from './routes/admin.inventory.vendors'
 import { Route as AdminInventoryTransfersRouteImport } from './routes/admin.inventory.transfers'
@@ -359,6 +360,11 @@ const AdminInvoiceUnitIdRoute = AdminInvoiceUnitIdRouteImport.update({
   path: '/$unitId',
   getParentRoute: () => AdminInvoiceRoute,
 } as any)
+const AdminInventoryWorkflowsRoute = AdminInventoryWorkflowsRouteImport.update({
+  id: '/workflows',
+  path: '/workflows',
+  getParentRoute: () => AdminInventoryRoute,
+} as any)
 const AdminInventoryWarehousesRoute =
   AdminInventoryWarehousesRouteImport.update({
     id: '/warehouses',
@@ -551,6 +557,7 @@ export interface FileRoutesByFullPath {
   '/admin/inventory/transfers': typeof AdminInventoryTransfersRoute
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
+  '/admin/inventory/workflows': typeof AdminInventoryWorkflowsRoute
   '/admin/invoice/$unitId': typeof AdminInvoiceUnitIdRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
@@ -626,6 +633,7 @@ export interface FileRoutesByTo {
   '/admin/inventory/transfers': typeof AdminInventoryTransfersRoute
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
+  '/admin/inventory/workflows': typeof AdminInventoryWorkflowsRoute
   '/admin/invoice/$unitId': typeof AdminInvoiceUnitIdRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
@@ -705,6 +713,7 @@ export interface FileRoutesById {
   '/admin/inventory/transfers': typeof AdminInventoryTransfersRoute
   '/admin/inventory/vendors': typeof AdminInventoryVendorsRoute
   '/admin/inventory/warehouses': typeof AdminInventoryWarehousesRoute
+  '/admin/inventory/workflows': typeof AdminInventoryWorkflowsRoute
   '/admin/invoice/$unitId': typeof AdminInvoiceUnitIdRoute
   '/admin/payroll/$unitId': typeof AdminPayrollUnitIdRoute
   '/admin/vehicles/expense-manager': typeof AdminVehiclesExpenseManagerRoute
@@ -785,6 +794,7 @@ export interface FileRouteTypes {
     | '/admin/inventory/transfers'
     | '/admin/inventory/vendors'
     | '/admin/inventory/warehouses'
+    | '/admin/inventory/workflows'
     | '/admin/invoice/$unitId'
     | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
@@ -860,6 +870,7 @@ export interface FileRouteTypes {
     | '/admin/inventory/transfers'
     | '/admin/inventory/vendors'
     | '/admin/inventory/warehouses'
+    | '/admin/inventory/workflows'
     | '/admin/invoice/$unitId'
     | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
@@ -938,6 +949,7 @@ export interface FileRouteTypes {
     | '/admin/inventory/transfers'
     | '/admin/inventory/vendors'
     | '/admin/inventory/warehouses'
+    | '/admin/inventory/workflows'
     | '/admin/invoice/$unitId'
     | '/admin/payroll/$unitId'
     | '/admin/vehicles/expense-manager'
@@ -1333,6 +1345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInvoiceUnitIdRouteImport
       parentRoute: typeof AdminInvoiceRoute
     }
+    '/admin/inventory/workflows': {
+      id: '/admin/inventory/workflows'
+      path: '/workflows'
+      fullPath: '/admin/inventory/workflows'
+      preLoaderRoute: typeof AdminInventoryWorkflowsRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
     '/admin/inventory/warehouses': {
       id: '/admin/inventory/warehouses'
       path: '/warehouses'
@@ -1559,6 +1578,7 @@ interface AdminInventoryRouteChildren {
   AdminInventoryTransfersRoute: typeof AdminInventoryTransfersRoute
   AdminInventoryVendorsRoute: typeof AdminInventoryVendorsRoute
   AdminInventoryWarehousesRoute: typeof AdminInventoryWarehousesRoute
+  AdminInventoryWorkflowsRoute: typeof AdminInventoryWorkflowsRoute
 }
 
 const AdminInventoryRouteChildren: AdminInventoryRouteChildren = {
@@ -1575,6 +1595,7 @@ const AdminInventoryRouteChildren: AdminInventoryRouteChildren = {
   AdminInventoryTransfersRoute: AdminInventoryTransfersRoute,
   AdminInventoryVendorsRoute: AdminInventoryVendorsRoute,
   AdminInventoryWarehousesRoute: AdminInventoryWarehousesRoute,
+  AdminInventoryWorkflowsRoute: AdminInventoryWorkflowsRoute,
 }
 
 const AdminInventoryRouteWithChildren = AdminInventoryRoute._addFileChildren(
