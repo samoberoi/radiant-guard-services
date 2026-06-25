@@ -315,6 +315,7 @@ function PayrollUnitPage() {
       const additionsByCandidate = new Map<string, PerEmpItem[]>();
       const deductionsByCandidate = new Map<string, PerEmpItem[]>();
       const dayAdjustmentByCandidate = new Map<string, DayAdj>();
+      const phDisplayCountByCandidate = new Map<string, number>();
       if (candidateIds.length > 0) {
         const [addsRes, dedsRes] = await Promise.all([
           supabase
