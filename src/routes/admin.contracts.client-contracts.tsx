@@ -3491,7 +3491,8 @@ function ResourceFormDialog({
       formulaExpression: c.formulaExpression ?? null,
       formulaVersion: c.formulaVersion ?? null,
     };
-    if (item.calcType === "percentage") {
+    const hasF = !!(item.formulaExpression && item.formulaExpression.trim());
+    if (item.calcType === "percentage" || hasF) {
       item.amount = computeBenefitAmount(item, components, benefits, allowanceTypes);
     }
     preserveDialogScroll(() => {
