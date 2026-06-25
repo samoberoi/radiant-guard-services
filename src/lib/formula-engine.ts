@@ -15,6 +15,7 @@ export type FormulaContext = {
   fixed_days?: number;
   working_days?: number;
   payable_days?: number;
+  days_in_month?: number;
   present?: number;
   worked?: number;
   ot?: number;
