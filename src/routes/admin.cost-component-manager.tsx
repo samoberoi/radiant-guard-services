@@ -520,6 +520,8 @@ function CostComponentDialog({
   const [fixedCalcMethod, setFixedCalcMethod] = useState<FixedCalcMethod>("flat");
   const [fixedDutyComponents, setFixedDutyComponents] = useState<FixedDutyBucket[]>([]);
   const [saving, setSaving] = useState(false);
+  const [formulaEnabled, setFormulaEnabled] = useState(false);
+  const [formulaCfg, setFormulaCfg] = useState<FormulaConfig | null>(null);
 
 
   useResetOnOpen(open, () => {
@@ -527,7 +529,6 @@ function CostComponentDialog({
     setCalcType(initial?.calc_type ?? "percentage");
     setPercentage(String(initial?.percentage ?? 0));
     const initialBase = initial?.base_components ?? [];
-    // Migrate legacy "Earned Gross" label → "Gross" (no such component exists).
     setBaseRefs(
       initialBase.map((b) => (b.label === "Earned Gross" ? { ...b, label: "Gross" } : b)),
     );
@@ -541,6 +542,9 @@ function CostComponentDialog({
     setDeductionCalcType(initial?.deduction_calc_type ?? "earned_salary");
     setFixedCalcMethod(initial?.fixed_calc_method ?? "flat");
     setFixedDutyComponents(initial?.fixed_duty_components ?? []);
+    const cfg = parseFormulaConfig(initial?.formula_mode, initial?.formula_expression);
+    setFormulaEnabled(!!cfg);
+    setFormulaCfg(cfg);
   });
 
 
