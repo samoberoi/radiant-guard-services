@@ -64,7 +64,9 @@ function divisorToUi(d: PresetDivisor | undefined): string {
 }
 
 const SAMPLE_CTX = {
-  basic: 10000, da: 2000, gross: 15000, fixed_amount: 200,
+  basic: 10000, da: 2000, spl_allow: 2000, splallow: 2000, special_allowance: 2000, specialallowance: 2000,
+  conv_allow: 1200, conveyance_allowance: 1200, washing_allowance: 500, wa: 500,
+  gross: 15000, fixed_amount: 200,
   fixed_days: 26, working_days: 30, payable_days: 26,
   present: 24, worked: 24, ot: 2, ph: 1, wo: 4, el: 0, pl: 0,
 };
