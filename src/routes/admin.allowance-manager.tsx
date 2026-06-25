@@ -123,7 +123,7 @@ function useAllowances() {
     base_components: p.calc_type === "percentage" ? p.base_components : [],
     cap_amount: p.calc_type === "percentage" ? p.cap_amount : null,
     include_in_ot: p.include_in_ot,
-    formula_mode: p.formula_mode,
+    formula_mode: p.formula_mode ?? "preset",
     formula_expression: p.formula_expression,
   });
 
