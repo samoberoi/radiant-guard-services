@@ -706,12 +706,6 @@ function CostComponentDialog({
             <Switch checked={enabled} onCheckedChange={setEnabled} />
           </div>
 
-          <FormulaBuilderToggle
-            enabled={formulaEnabled}
-            onToggle={setFormulaEnabled}
-            value={formulaCfg}
-            onChange={setFormulaCfg}
-          />
         </div>
 
         <DialogFooter>
@@ -720,14 +714,14 @@ function CostComponentDialog({
             disabled={saving}
             onClick={async () => {
               setSaving(true);
-              const ser = formulaEnabled && formulaCfg ? serializeFormulaConfig(formulaCfg) : null;
+              const ser = calcType === "percentage" && formulaCfg ? serializeFormulaConfig(formulaCfg) : null;
               const err = await onSubmit({
                 name,
                 calc_type: calcType,
-                percentage: Number(percentage) || 0,
-                base_components: baseRefs,
-                cap_amount: capAmount ? Number(capAmount) : null,
-                cap_flat_amount: capFlatAmount ? Number(capFlatAmount) : null,
+                percentage: 0,
+                base_components: [],
+                cap_amount: null,
+                cap_flat_amount: null,
                 amount: amount ? Number(amount) : null,
                 state: state || "N/A",
                 notes,
@@ -736,7 +730,7 @@ function CostComponentDialog({
                 deduction_calc_type: deductionCalcType,
                 fixed_calc_method: fixedCalcMethod,
                 fixed_duty_components: fixedDutyComponents,
-                formula_mode: ser ? ser.mode : null,
+                formula_mode: ser ? ser.mode : "preset",
                 formula_expression: ser ? ser.expression : null,
               });
 
