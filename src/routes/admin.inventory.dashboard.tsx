@@ -620,6 +620,31 @@ export function InventoryOwnerDashboard() {
         </div>
       )}
 
+      {/* Live Notifications — pending actions across the inventory pipeline */}
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className={`relative flex h-9 w-9 items-center justify-center rounded-xl ${totalPending > 0 ? "bg-amber-500/15 text-amber-600" : "bg-emerald-500/15 text-emerald-600"}`}>
+              <Bell className="h-4 w-4" />
+              {totalPending > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-amber-500 ring-2 ring-card" />}
+            </span>
+            <div>
+              <div className="font-display text-sm font-bold tracking-tight">Live Notifications</div>
+              <div className="text-[11px] text-muted-foreground">
+                {totalPending === 0 ? "All caught up — nothing pending." : (
+                  <>{totalPending} pending action{totalPending !== 1 ? "s" : ""}{totalBreached > 0 && <> · <span className="font-semibold text-rose-600">{totalBreached} past SLA ({SLA_DAYS}d)</span></>}</>
+                )}
+              </div>
+            </div>
+          </div>
+          <span className="hidden text-[10px] uppercase tracking-wider text-muted-foreground sm:inline">SLA: {SLA_DAYS} days</span>
+        </div>
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {notifications.map((n) => <NotifTile key={n.key} {...n} sla={SLA_DAYS} />)}
+        </div>
+      </div>
+
+
       {/* Overview — clickable totals across modules */}
       <div className="space-y-3">
         <div className="flex items-baseline justify-between px-1">
