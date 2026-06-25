@@ -13,7 +13,7 @@
 // REPLACES the legacy proration for that line. Statutory ESI/EPF/PT still
 // run as a final post-pass unless the line opts out of statutory via its
 // own formula.
-import { evaluateFormula, parseFormulaConfig, type FormulaContext } from "./formula-engine";
+import { evaluateFormula, parseFormulaConfig, slugifyVar, type FormulaContext } from "./formula-engine";
 
 export type AttendanceEntryLike = {
   candidate_id: string;
