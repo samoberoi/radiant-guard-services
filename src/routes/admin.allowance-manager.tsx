@@ -439,22 +439,28 @@ function AllowanceManagerPage() {
 
 function legacyToFormulaConfig(initial: Allowance | null | undefined): FormulaConfig | null {
   if (!initial) return null;
-  const existing = parseFormulaConfig(initial.formula_mode, initial.formula_expression);
-  if (existing && (existing.mode === "advanced" ? existing.expression : true) && initial.formula_expression) {
-    return existing;
+  // Prefer a saved formula payload when present.
+  if (initial.formula_expression && initial.formula_expression.trim()) {
+    const existing = parseFormulaConfig(initial.formula_mode, initial.formula_expression);
+    if (existing) return existing;
   }
-  if (initial.calc_type === "percentage" && initial.base_components.length > 0) {
-    const parts = initial.base_components.map((b, i) => {
-      const label = b.label.toLowerCase().replace(/[^a-z0-9_]/g, "_");
-      if (i === 0) return label;
-      return `${b.operator === "-" ? "-" : "+"} ${label}`;
-    });
-    const baseExpr = `(${parts.join(" ")})`;
-    let expr = `${baseExpr} * ${initial.percentage || 0} / 100`;
-    if (initial.cap_amount && initial.cap_amount > 0) expr = `min(${initial.cap_amount}, ${expr})`;
-    return { mode: "advanced", expression: expr };
+  // Otherwise rebuild a preset from the legacy percentage/components fields so
+  // the FormulaBuilder shows the same chips the user originally configured.
+  if (initial.calc_type === "percentage") {
+    const components = initial.base_components.map((b) => ({ name: b.label, operator: b.operator }));
+    return {
+      mode: "preset",
+      preset: {
+        base: components.length > 0 ? { kind: "composite", components } : { kind: "basic" },
+        operator: "percent",
+        percent: initial.percentage || 0,
+        capAmount: initial.cap_amount ?? null,
+        floorAmount: null,
+        multipliers: [],
+      },
+    };
   }
-  return existing;
+  return parseFormulaConfig(initial.formula_mode, initial.formula_expression);
 }
 
 function AllowanceFormDialog({
