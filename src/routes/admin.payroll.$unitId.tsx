@@ -316,6 +316,9 @@ function PayrollUnitPage() {
       const deductionsByCandidate = new Map<string, PerEmpItem[]>();
       const dayAdjustmentByCandidate = new Map<string, DayAdj>();
       const phDisplayCountByCandidate = new Map<string, number>();
+      // PH cash override: user-entered PH addition amount is paid as-is on
+      // the "Paid Holiday" line (bypasses the engine's perDayRate × phCount).
+      const phCashByCandidate = new Map<string, number>();
       if (candidateIds.length > 0) {
         const [addsRes, dedsRes, addTypesRes] = await Promise.all([
           supabase
