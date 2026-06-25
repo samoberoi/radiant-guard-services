@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentPermissions } from "@/lib/rbac";
 import { logActivity } from "@/lib/activity-log";
+import { hydrateFormulasFromMaster } from "@/lib/contract-hydrate";
 import {
   applyEsiToWageComputation,
   applyPtToWageComputation,
