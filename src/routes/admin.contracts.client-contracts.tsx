@@ -4487,7 +4487,7 @@ function SalaryBreakdownTable({
               <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
             </tr>
             {(() => {
-              const visibleDeductions = deductions.filter((b) => Number(b.amount) > 0 || isEsiItem(b));
+              const visibleDeductions = deductions.filter((b) => Number(b.amount) > 0 || isStatutoryEsi(b));
               if (visibleDeductions.length === 0) {
                 return (
                   <tr>
@@ -4511,7 +4511,7 @@ function SalaryBreakdownTable({
                       </span>
                     )}
                   </td>
-                  <td className="text-center tabular-nums">{isEsiItem(b) ? esiEmployeeAmount.toFixed(2) : Number(b.amount).toFixed(2)}</td>
+                  <td className="text-center tabular-nums">{isStatutoryEsi(b) ? esiEmployeeAmount.toFixed(2) : Number(b.amount).toFixed(2)}</td>
                   <td />
                   <td className="text-right tabular-nums">{isEsiItem(b) ? earnedFor(esiEmployeeAmount).toFixed(2) : earnedFor(Number(b.amount)).toFixed(2)}</td>
                 </tr>
@@ -4536,7 +4536,7 @@ function SalaryBreakdownTable({
               <td className="text-right font-bold tracking-wider">( EARNED ) Rs.</td>
             </tr>
             {(() => {
-              const visibleEmployer = coreEmployer.filter((b) => Number(b.amount) > 0 || isEsiItem(b));
+              const visibleEmployer = coreEmployer.filter((b) => Number(b.amount) > 0 || isStatutoryEsi(b));
               if (visibleEmployer.length === 0) {
                 return (
                   <tr>
@@ -4560,7 +4560,7 @@ function SalaryBreakdownTable({
                       </span>
                     )}
                   </td>
-                  <td className="text-center tabular-nums">{isEsiItem(b) ? esiEmployerAmount.toFixed(2) : Number(b.amount).toFixed(2)}</td>
+                  <td className="text-center tabular-nums">{isStatutoryEsi(b) ? esiEmployerAmount.toFixed(2) : Number(b.amount).toFixed(2)}</td>
                   <td />
                   <td className="text-right tabular-nums">{isEsiItem(b) ? earnedFor(esiEmployerAmount).toFixed(2) : earnedFor(Number(b.amount)).toFixed(2)}</td>
                 </tr>
