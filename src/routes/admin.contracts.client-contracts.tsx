@@ -4063,24 +4063,32 @@ function ResourceFormDialog({
                         <span
                           className={cn(
                             "rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider",
-                            b.calcType === "percentage"
+                            hasConfiguredFormula(b)
+                              ? "bg-violet-500/15 text-violet-700 dark:text-violet-300"
+                              : b.calcType === "percentage"
                               ? "bg-accent/15 text-accent"
                               : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
                           )}
                         >
-                          {b.calcType === "percentage" ? `${b.percentage}%` : "Fixed"}
+                          {hasConfiguredFormula(b)
+                            ? "Formula"
+                            : b.calcType === "percentage"
+                            ? `${b.percentage}%`
+                            : "Fixed"}
                         </span>
                       </div>
                       <div className="mt-0.5 text-[11px] text-muted-foreground">
-                        {b.calcType === "percentage"
-                          ? isEsiItem(b)
+                        {hasConfiguredFormula(b)
+                          ? `Custom formula · ${b.formulaExpression?.slice(0, 60) ?? ""}${(b.formulaExpression?.length ?? 0) > 60 ? "…" : ""}`
+                          : b.calcType === "percentage"
+                          ? isStatutoryEsi(b)
                             ? `${b.percentage}% · ${ESI_CONTRACT_NOTE}`
                             : `${b.percentage}% of ${b.baseComponents.map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`)).join(" ") || "—"}${b.capAmount ? ` · cap ₹${b.capAmount.toLocaleString("en-IN")}` : ""}`
                           : "Manual entry"}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {b.calcType === "fixed" ? (
+                      {b.calcType === "fixed" && !hasConfiguredFormula(b) ? (
                          <DecimalAmountInput
                            value={b.amount}
                            className="h-9 w-28"
@@ -4088,7 +4096,7 @@ function ResourceFormDialog({
                          />
                       ) : (
                         <span className="w-28 text-right text-sm font-semibold text-foreground">
-                          {isEsiItem(b) ? esiEmployeeAmount.toFixed(2) : b.amount.toFixed(2)}
+                          {isStatutoryEsi(b) ? esiEmployeeAmount.toFixed(2) : Number(b.amount).toFixed(2)}
                         </span>
                       )}
                       <Button
