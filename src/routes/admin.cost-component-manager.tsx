@@ -125,6 +125,10 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
           FIXED_DUTY_BUCKETS.some((x) => x.value === b),
         ) as FixedDutyBucket[])
       : [],
+    fixed_duty_divisor:
+      (FIXED_DUTY_DIVISORS.some((x) => x.value === r.fixed_duty_divisor)
+        ? (r.fixed_duty_divisor as FixedDutyDivisor)
+        : "base_days"),
     formula_mode: r.formula_mode == null ? null : String(r.formula_mode),
     formula_expression: r.formula_expression == null ? null : String(r.formula_expression),
   };
