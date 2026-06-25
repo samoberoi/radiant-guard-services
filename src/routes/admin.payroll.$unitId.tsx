@@ -412,9 +412,10 @@ function PayrollUnitPage() {
         resourceByDesignation.set(did, {
           designationId: did,
           components: Array.isArray(r.components)
-            ? (r.components as { name: string; amount: number; includeInOt?: boolean; formulaMode?: string | null; formulaExpression?: string | null; formulaVersion?: number | null }[]).map((c) => ({
+            ? (r.components as { name: string; amount: number; allowanceId?: string | null; includeInOt?: boolean; formulaMode?: string | null; formulaExpression?: string | null; formulaVersion?: number | null }[]).map((c) => ({
                 name: String(c.name ?? ""),
                 amount: Number(c.amount) || 0,
+                allowanceId: c.allowanceId ?? null,
                 includeInOt: c.includeInOt,
                 formulaMode: c.formulaMode ?? null,
                 formulaExpression: c.formulaExpression ?? null,
@@ -423,15 +424,24 @@ function PayrollUnitPage() {
             : [],
           benefits: Array.isArray(r.benefits) ? (r.benefits as { name: string; amount: number; formulaMode?: string | null; formulaExpression?: string | null }[]) : [],
           deductions: Array.isArray(r.deductions)
-            ? (r.deductions as { name: string; amount: number; deductionCalcType?: "earned_salary" | "fixed_amount"; formulaMode?: string | null; formulaExpression?: string | null }[])
+            ? (r.deductions as { name: string; amount: number; allowanceId?: string | null; costComponentId?: string | null; deductionCalcType?: "earned_salary" | "fixed_amount"; formulaMode?: string | null; formulaExpression?: string | null }[])
             : [],
           employerContributions: Array.isArray(r.employer_contributions)
-            ? (r.employer_contributions as { name: string; amount: number; deductionCalcType?: "earned_salary" | "fixed_amount"; formulaMode?: string | null; formulaExpression?: string | null }[])
+            ? (r.employer_contributions as { name: string; amount: number; allowanceId?: string | null; costComponentId?: string | null; deductionCalcType?: "earned_salary" | "fixed_amount"; formulaMode?: string | null; formulaExpression?: string | null }[])
             : [],
           payrollDayBase: r.payroll_day_base_id
             ? pdbMap.get(String(r.payroll_day_base_id)) ?? null
             : null,
         });
+      }
+
+      // Hydrate formula_mode/expression/version from Control Center masters
+      // so payroll always reflects the LATEST master formula — even when the
+      // contract snapshot pre-dates the formula engine. Per-line `amount`
+      // (the agreed monetary base) stays from the snapshot.
+      const hydratedList = await hydrateFormulasFromMaster(Array.from(resourceByDesignation.values()));
+      for (const r of hydratedList) {
+        resourceByDesignation.set(r.designationId, r);
       }
 
       // 4. Build line items per (candidate, designation_id).
