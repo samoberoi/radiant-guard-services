@@ -76,6 +76,7 @@ import { Route as AdminInventoryGoodsReceiptsRouteImport } from './routes/admin.
 import { Route as AdminInventoryDemandsRouteImport } from './routes/admin.inventory.demands'
 import { Route as AdminInventoryDashboardRouteImport } from './routes/admin.inventory.dashboard'
 import { Route as AdminInventoryCollectionsRouteImport } from './routes/admin.inventory.collections'
+import { Route as AdminInventoryCapsRouteImport } from './routes/admin.inventory.caps'
 import { Route as AdminCustomersUnitManagerRouteImport } from './routes/admin.customers.unit-manager'
 import { Route as AdminCustomersStateManagerRouteImport } from './routes/admin.customers.state-manager'
 import { Route as AdminCustomersCustomerManagerRouteImport } from './routes/admin.customers.customer-manager'
@@ -435,6 +436,11 @@ const AdminInventoryCollectionsRoute =
     path: '/collections',
     getParentRoute: () => AdminInventoryRoute,
   } as any)
+const AdminInventoryCapsRoute = AdminInventoryCapsRouteImport.update({
+  id: '/caps',
+  path: '/caps',
+  getParentRoute: () => AdminInventoryRoute,
+} as any)
 const AdminCustomersUnitManagerRoute =
   AdminCustomersUnitManagerRouteImport.update({
     id: '/unit-manager',
@@ -544,6 +550,7 @@ export interface FileRoutesByFullPath {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/inventory/caps': typeof AdminInventoryCapsRoute
   '/admin/inventory/collections': typeof AdminInventoryCollectionsRoute
   '/admin/inventory/dashboard': typeof AdminInventoryDashboardRoute
   '/admin/inventory/demands': typeof AdminInventoryDemandsRoute
@@ -620,6 +627,7 @@ export interface FileRoutesByTo {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/inventory/caps': typeof AdminInventoryCapsRoute
   '/admin/inventory/collections': typeof AdminInventoryCollectionsRoute
   '/admin/inventory/dashboard': typeof AdminInventoryDashboardRoute
   '/admin/inventory/demands': typeof AdminInventoryDemandsRoute
@@ -700,6 +708,7 @@ export interface FileRoutesById {
   '/admin/customers/customer-manager': typeof AdminCustomersCustomerManagerRoute
   '/admin/customers/state-manager': typeof AdminCustomersStateManagerRoute
   '/admin/customers/unit-manager': typeof AdminCustomersUnitManagerRoute
+  '/admin/inventory/caps': typeof AdminInventoryCapsRoute
   '/admin/inventory/collections': typeof AdminInventoryCollectionsRoute
   '/admin/inventory/dashboard': typeof AdminInventoryDashboardRoute
   '/admin/inventory/demands': typeof AdminInventoryDemandsRoute
@@ -781,6 +790,7 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/inventory/caps'
     | '/admin/inventory/collections'
     | '/admin/inventory/dashboard'
     | '/admin/inventory/demands'
@@ -857,6 +867,7 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/inventory/caps'
     | '/admin/inventory/collections'
     | '/admin/inventory/dashboard'
     | '/admin/inventory/demands'
@@ -936,6 +947,7 @@ export interface FileRouteTypes {
     | '/admin/customers/customer-manager'
     | '/admin/customers/state-manager'
     | '/admin/customers/unit-manager'
+    | '/admin/inventory/caps'
     | '/admin/inventory/collections'
     | '/admin/inventory/dashboard'
     | '/admin/inventory/demands'
@@ -1443,6 +1455,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInventoryCollectionsRouteImport
       parentRoute: typeof AdminInventoryRoute
     }
+    '/admin/inventory/caps': {
+      id: '/admin/inventory/caps'
+      path: '/caps'
+      fullPath: '/admin/inventory/caps'
+      preLoaderRoute: typeof AdminInventoryCapsRouteImport
+      parentRoute: typeof AdminInventoryRoute
+    }
     '/admin/customers/unit-manager': {
       id: '/admin/customers/unit-manager'
       path: '/unit-manager'
@@ -1565,6 +1584,7 @@ const AdminCustomersRouteWithChildren = AdminCustomersRoute._addFileChildren(
 )
 
 interface AdminInventoryRouteChildren {
+  AdminInventoryCapsRoute: typeof AdminInventoryCapsRoute
   AdminInventoryCollectionsRoute: typeof AdminInventoryCollectionsRoute
   AdminInventoryDashboardRoute: typeof AdminInventoryDashboardRoute
   AdminInventoryDemandsRoute: typeof AdminInventoryDemandsRoute
@@ -1582,6 +1602,7 @@ interface AdminInventoryRouteChildren {
 }
 
 const AdminInventoryRouteChildren: AdminInventoryRouteChildren = {
+  AdminInventoryCapsRoute: AdminInventoryCapsRoute,
   AdminInventoryCollectionsRoute: AdminInventoryCollectionsRoute,
   AdminInventoryDashboardRoute: AdminInventoryDashboardRoute,
   AdminInventoryDemandsRoute: AdminInventoryDemandsRoute,
