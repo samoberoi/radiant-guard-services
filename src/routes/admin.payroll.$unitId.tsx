@@ -382,6 +382,18 @@ function PayrollUnitPage() {
           if (a.entry_mode === "days_x_per_day" && a.include_in_total_days) {
             applyDayAdj(a.candidate_id, Number(a.days) || 0, a.affects_days_for, +1);
           }
+          // PH-type lumpsum additions (e.g. "Paid Holidays") should still
+          // surface in the PH Days column for visibility. Each addition row
+          // represents one PH day (uses configured `days` if provided, else 1).
+          // Display-only: do NOT mutate tDays or recompute earnings — the
+          // lumpsum cash already accounts for the rupee value.
+          if (a.addition_type_id && phTypeIds.has(String(a.addition_type_id))) {
+            const phDelta = Math.max(1, Number(a.days) || 1);
+            phDisplayCountByCandidate.set(
+              a.candidate_id,
+              (phDisplayCountByCandidate.get(a.candidate_id) ?? 0) + phDelta,
+            );
+          }
         }
         for (const d of ((dedsRes.data ?? []) as unknown as RawDed[])) {
           const inst = Math.max(1, Number(d.installments) || 1);
