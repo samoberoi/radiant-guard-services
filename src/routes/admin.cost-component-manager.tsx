@@ -529,23 +529,26 @@ function CostComponentDialog({
     setDeductionCalcType(initial?.deduction_calc_type ?? "earned_salary");
     setFixedCalcMethod(initial?.fixed_calc_method ?? "flat");
     setFixedDutyComponents(initial?.fixed_duty_components ?? []);
-    // Seed formula: explicit formula_expression wins; else convert legacy
-    // calc_type=percentage + base_components + percentage into an advanced
-    // expression so old rows open cleanly in the new builder.
-    let cfg: FormulaConfig | null = parseFormulaConfig(initial?.formula_mode, initial?.formula_expression);
-    if (initial && (!cfg || (cfg.mode === "advanced" && !cfg.expression))) {
-      const bases = initial.base_components ?? [];
-      if (initial.calc_type === "percentage" && bases.length > 0) {
-        const parts = bases.map((b, i) => {
-          const lbl = b.label.toLowerCase().replace(/[^a-z0-9_]/g, "_");
-          return i === 0 ? lbl : `${b.operator === "-" ? "-" : "+"} ${lbl}`;
-        });
-        let expr = `(${parts.join(" ")}) * ${initial.percentage || 0} / 100`;
-        if (initial.cap_amount && initial.cap_amount > 0) expr = `min(${initial.cap_amount}, ${expr})`;
-        cfg = { mode: "advanced", expression: expr };
-      } else {
-        cfg = { mode: "preset", preset: DEFAULT_PRESET };
-      }
+    // Seed formula: explicit saved formula_expression wins; otherwise rebuild a
+    // preset from legacy calc_type=percentage + base_components + percentage so
+    // existing rows open with their original chips populated in the builder.
+    let cfg: FormulaConfig | null = null;
+    if (initial?.formula_expression && initial.formula_expression.trim()) {
+      cfg = parseFormulaConfig(initial.formula_mode, initial.formula_expression);
+    }
+    if (!cfg && initial && initial.calc_type === "percentage") {
+      const components = (initial.base_components ?? []).map((b) => ({ name: b.label, operator: b.operator }));
+      cfg = {
+        mode: "preset",
+        preset: {
+          base: components.length > 0 ? { kind: "composite", components } : { kind: "basic" },
+          operator: "percent",
+          percent: initial.percentage || 0,
+          capAmount: initial.cap_amount ?? null,
+          floorAmount: null,
+          multipliers: [],
+        },
+      };
     }
     if (!cfg) cfg = { mode: "preset", preset: DEFAULT_PRESET };
     setFormulaCfg(cfg);
