@@ -80,7 +80,8 @@ const SAMPLE_CTX = {
   present: 24, worked: 24, ot: 2, ph: 1, wo: 4, el: 0, pl: 0,
 };
 
-export function FormulaBuilder({ value, onChange }: Props) {
+export function FormulaBuilder({ value, onChange, availableBases }: Props) {
+  const baseChoices = (availableBases && availableBases.length > 0 ? availableBases : DEFAULT_AVAILABLE_BASES);
   const mode = value?.mode ?? "preset";
   const preset = value?.mode === "preset" ? value.preset : DEFAULT_PRESET;
   const expression = value?.mode === "advanced" ? value.expression : "";
