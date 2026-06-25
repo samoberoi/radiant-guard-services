@@ -5,6 +5,15 @@
 // contract resource's monthly gross divided by the configured payroll-day
 // base. Percentage deductions/contributions are recalculated from earned
 // component bases, while explicitly fixed statutory rows stay fixed.
+//
+// In addition, each contract line (component / benefit / deduction /
+// employer contribution) may carry a `formulaMode` + `formulaExpression`
+// snapshotted from Allowance Manager or Cost Component Manager. When
+// present, that formula is evaluated against a per-employee context and
+// REPLACES the legacy proration for that line. Statutory ESI/EPF/PT still
+// run as a final post-pass unless the line opts out of statutory via its
+// own formula.
+import { evaluateFormula, parseFormulaConfig, type FormulaContext } from "./formula-engine";
 
 export type AttendanceEntryLike = {
   candidate_id: string;
