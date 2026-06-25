@@ -49,6 +49,8 @@ const DIVISOR_OPTIONS: { value: string; label: string }[] = [
 
 const CORE_LABELS = new Set(["Basic", "DA", "HRA"]);
 const DERIVED_LABELS = new Set(["Gross", "CTC"]);
+const DAYS_LABELS = ["Working Days", "Payable Days", "Fixed Days", "Present Duties", "Worked Duties"];
+const DAYS_SET = new Set(DAYS_LABELS);
 
 function divisorFromUi(v: string): PresetDivisor {
   if (v.startsWith("month_")) {
