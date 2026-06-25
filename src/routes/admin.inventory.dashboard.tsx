@@ -673,7 +673,23 @@ export function InventoryOwnerDashboard() {
 
       {scope.isScoped ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Kpi label="Branch Stock Value" value={inr(stockValue)} icon={Wallet} tint="from-emerald-500/15 to-emerald-500/0" iconClass="text-emerald-500" hint="Your branch and mapped field officers only" to="/admin/inventory/stock" />
+          {(() => {
+            const capLabel = myCap?.kind === "field_officer" ? "My Stock Value" : "Branch Stock Value";
+            const capValue = myCap
+              ? (myCap.max > 0 ? `${inr(myCap.used)} / ${inr(myCap.max)}` : inr(myCap.used))
+              : inr(stockValue);
+            const pct = myCap && myCap.max > 0 ? Math.round((myCap.used / myCap.max) * 100) : null;
+            const hint = myCap && myCap.max > 0
+              ? `${pct}% of cap${myCap.used >= myCap.max ? " · CAP REACHED" : myCap.min > 0 && myCap.used >= myCap.min ? " · nearing cap" : ""}`
+              : (myCap?.kind === "field_officer" ? "Stock held against your field officer cap" : "Your branch and mapped field officers only");
+            const tint = pct !== null && pct >= 100 ? "from-rose-500/20 to-rose-500/0"
+              : pct !== null && pct >= 80 ? "from-amber-500/20 to-amber-500/0"
+              : "from-emerald-500/15 to-emerald-500/0";
+            const iconClass = pct !== null && pct >= 100 ? "text-rose-500"
+              : pct !== null && pct >= 80 ? "text-amber-500"
+              : "text-emerald-500";
+            return <Kpi label={capLabel} value={capValue} icon={Wallet} tint={tint} iconClass={iconClass} hint={hint} to="/admin/inventory/stock" />;
+          })()}
           <Kpi label="Branch Stock" value={branchHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Building2} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" hint="In branch holding" to="/admin/inventory/stock" />
           <Kpi label="Field Officer Stock" value={foHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Users} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" hint="Mapped to your branch" to="/admin/inventory/stock" />
           <Kpi label="Guard Stock" value={guardHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={ShieldCheck} tint="from-teal-500/15 to-teal-500/0" iconClass="text-teal-500" hint="Under your branch chain" to="/admin/inventory/stock" />
@@ -682,6 +698,53 @@ export function InventoryOwnerDashboard() {
         <div className="grid gap-4 sm:grid-cols-2">
           <Kpi label="Stock Value" value={inr(stockValue)} icon={Wallet} tint="from-emerald-500/15 to-emerald-500/0" iconClass="text-emerald-500" hint="On-hand + in-transit at standard cost" />
           <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs`} to="/admin/inventory/stock" />
+        </div>
+      )}
+
+      {/* Inventory Cap Alerts — visible to non-scoped admins (super admin / inventory manager) */}
+      {!scope.isScoped && capAlerts.length > 0 && (
+        <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-rose-500/5 p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600">
+                <AlertTriangle className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="font-display text-sm font-bold tracking-tight">Inventory Cap Alerts</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {capAlerts.filter((a) => a.status === "red").length} cap reached · {capAlerts.filter((a) => a.status === "amber").length} nearing cap
+                </div>
+              </div>
+            </div>
+            <Link to="/admin/inventory/caps" className="text-xs text-primary hover:underline flex items-center gap-1">Manage caps <ArrowRight className="h-3 w-3" /></Link>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {capAlerts.slice(0, 12).map((a) => {
+              const pct = a.max > 0 ? Math.min(100, Math.round((a.used / a.max) * 100)) : 0;
+              const barCls = a.status === "red" ? "bg-rose-500" : "bg-amber-500";
+              const badgeCls = a.status === "red"
+                ? "bg-rose-500/15 text-rose-600 border border-rose-500/30"
+                : "bg-amber-500/15 text-amber-700 border border-amber-500/30";
+              return (
+                <div key={`${a.kind}:${a.id}`} className="rounded-xl border border-border bg-card/80 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{a.kind === "branch" ? "Branch" : "Field Officer"}</div>
+                      <div className="truncate text-sm font-semibold">{a.name}</div>
+                    </div>
+                    <Badge className={badgeCls}>{a.status === "red" ? "Cap reached" : "Nearing"}</Badge>
+                  </div>
+                  <div className="mt-2 flex items-baseline justify-between text-xs">
+                    <span className="font-semibold tabular-nums">{inr(a.used)} <span className="text-muted-foreground font-normal">/ {inr(a.max)}</span></span>
+                    <span className="text-muted-foreground tabular-nums">{pct}%</span>
+                  </div>
+                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-secondary/60">
+                    <div className={`h-full ${barCls}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
