@@ -639,8 +639,26 @@ export function InventoryOwnerDashboard() {
               </div>
             </div>
           </div>
-          <span className="hidden text-[10px] uppercase tracking-wider text-muted-foreground sm:inline">SLA: {SLA_DAYS} days</span>
-        </div>
+          <div className="flex items-center gap-2">
+            {(scope.isScoped || role.isFieldOfficer || role.isBranchManager) ? (
+              <Link
+                to="/admin/inventory/demands"
+                search={{ new: "1" } as never}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-3 text-xs font-semibold text-white shadow-sm transition hover:opacity-90"
+              >
+                <Zap className="h-3.5 w-3.5" />Raise Demand
+              </Link>
+            ) : (
+              <Link
+                to="/admin/inventory/purchase-orders"
+                search={{ new: "1" } as never}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-3 text-xs font-semibold text-white shadow-sm transition hover:opacity-90"
+              >
+                <Zap className="h-3.5 w-3.5" />Raise Purchase Order
+              </Link>
+            )}
+            <span className="hidden text-[10px] uppercase tracking-wider text-muted-foreground sm:inline">SLA: {SLA_DAYS} days</span>
+          </div>
         <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {notifications.map(({ key, ...n }) => <NotifTile key={key} {...n} sla={SLA_DAYS} />)}
         </div>
