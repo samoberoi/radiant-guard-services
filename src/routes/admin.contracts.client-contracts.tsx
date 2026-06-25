@@ -28,6 +28,12 @@ import { logActivity } from "@/lib/activity-log";
 import { useCurrentPermissions } from "@/lib/rbac";
 import { notifyApprovers } from "@/lib/notifications";
 import { csvDate, downloadCsv } from "@/lib/csv-export";
+import {
+  evaluateFormula,
+  parseFormulaConfig,
+  slugifyVar,
+  type FormulaContext,
+} from "@/lib/formula-engine";
 import { DeleteGuardButton } from "@/components/DeleteGuardButton";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmProvider";
