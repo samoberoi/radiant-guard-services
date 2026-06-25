@@ -310,33 +310,52 @@ function PayrollUnitPage() {
       // Pull anything dated within the payroll period and still active.
       const candidateIds = roster.map((c) => c.id);
       type PerEmpItem = { name: string; amount: number };
+      type DayAdj = { pDays: number; otDays: number; phDays: number; otherPaidDays: number; tDays: number };
       const additionsByCandidate = new Map<string, PerEmpItem[]>();
       const deductionsByCandidate = new Map<string, PerEmpItem[]>();
+      const dayAdjustmentByCandidate = new Map<string, DayAdj>();
       if (candidateIds.length > 0) {
         const [addsRes, dedsRes] = await Promise.all([
           supabase
             .from("additions" as never)
-            .select("candidate_id, addition_name, calculation_type, amount, installments, status")
+            .select("candidate_id, addition_name, calculation_type, amount, installments, status, entry_mode, days, include_in_total_days, affects_days_for")
             .in("candidate_id", candidateIds)
             .gte("addition_date", start)
             .lte("addition_date", end)
             .eq("status", "active"),
           supabase
             .from("deductions" as never)
-            .select("candidate_id, deduction_name, calculation_type, amount, installments, status")
+            .select("candidate_id, deduction_name, calculation_type, amount, installments, status, entry_mode, days, include_in_total_days, affects_days_for")
             .in("candidate_id", candidateIds)
             .gte("deduction_date", start)
             .lte("deduction_date", end)
             .eq("status", "active"),
         ]);
-        type RawAdd = { candidate_id: string; addition_name: string; calculation_type: string; amount: number | string; installments: number };
-        type RawDed = { candidate_id: string; deduction_name: string; calculation_type: string; amount: number | string; installments: number };
+        type RawAdd = { candidate_id: string; addition_name: string; calculation_type: string; amount: number | string; installments: number; entry_mode?: string | null; days?: number | string | null; include_in_total_days?: boolean | null; affects_days_for?: string[] | null };
+        type RawDed = { candidate_id: string; deduction_name: string; calculation_type: string; amount: number | string; installments: number; entry_mode?: string | null; days?: number | string | null; include_in_total_days?: boolean | null; affects_days_for?: string[] | null };
+        const applyDayAdj = (cid: string, dayDelta: number, buckets: string[] | null | undefined, sign: 1 | -1) => {
+          if (!dayDelta) return;
+          const prev = dayAdjustmentByCandidate.get(cid) ?? { pDays: 0, otDays: 0, phDays: 0, otherPaidDays: 0, tDays: 0 };
+          const list = (buckets ?? []).filter(Boolean);
+          if (list.length === 0) list.push("present");
+          for (const b of list) {
+            if (b === "present" || b === "worked") prev.pDays += sign * dayDelta;
+            else if (b === "ot") prev.otDays += sign * dayDelta;
+            else if (b === "ph") prev.phDays += sign * dayDelta;
+            else prev.otherPaidDays += sign * dayDelta;
+          }
+          prev.tDays += sign * dayDelta * Math.max(1, list.length);
+          dayAdjustmentByCandidate.set(cid, prev);
+        };
         for (const a of ((addsRes.data ?? []) as unknown as RawAdd[])) {
           const inst = Math.max(1, Number(a.installments) || 1);
           const amt = (Number(a.amount) || 0) / inst;
           const arr = additionsByCandidate.get(a.candidate_id) ?? [];
           arr.push({ name: cleanLedgerName(a.addition_name), amount: Math.round(amt * 100) / 100 });
           additionsByCandidate.set(a.candidate_id, arr);
+          if (a.entry_mode === "days_x_per_day" && a.include_in_total_days) {
+            applyDayAdj(a.candidate_id, Number(a.days) || 0, a.affects_days_for, +1);
+          }
         }
         for (const d of ((dedsRes.data ?? []) as unknown as RawDed[])) {
           const inst = Math.max(1, Number(d.installments) || 1);
@@ -344,8 +363,12 @@ function PayrollUnitPage() {
           const arr = deductionsByCandidate.get(d.candidate_id) ?? [];
           arr.push({ name: cleanLedgerName(d.deduction_name), amount: Math.round(amt * 100) / 100 });
           deductionsByCandidate.set(d.candidate_id, arr);
+          if (d.entry_mode === "days_x_per_day" && d.include_in_total_days) {
+            applyDayAdj(d.candidate_id, Number(d.days) || 0, d.affects_days_for, -1);
+          }
         }
       }
+
 
       // Make sure we know the names of any designation_ids referenced by entries
       // that weren't in the roster's primary designation list.
@@ -439,6 +462,19 @@ function PayrollUnitPage() {
           lineEntries as AttendanceEntryLike[],
           (codes ?? []) as AttendanceCodeLike[],
         );
+        // Apply per-employee day adjustments from additions/deductions that opted into
+        // "Include in total days" — only on the candidate's primary designation line.
+        const isPrimaryForAdj = (c.designation_id ?? null) === p.designationId;
+        if (isPrimaryForAdj) {
+          const adj = dayAdjustmentByCandidate.get(c.id);
+          if (adj) {
+            totals.pDays = Math.max(0, totals.pDays + adj.pDays);
+            totals.otDays = Math.max(0, totals.otDays + adj.otDays);
+            totals.phDays = Math.max(0, totals.phDays + adj.phDays);
+            totals.otherPaidDays = Math.max(0, totals.otherPaidDays + adj.otherPaidDays);
+            totals.tDays = Math.max(0, totals.tDays + adj.tDays);
+          }
+        }
         const resource = resourceByDesignation.get(did);
         const wages = resource
           ? computeWages(totals, resource, periodDates.length)

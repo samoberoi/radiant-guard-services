@@ -67,14 +67,19 @@ export type Database = {
           addition_date: string
           addition_name: string
           addition_type_id: string
+          affects_days_for: string[]
           amount: number
           calculation_type: string
           candidate_id: string
           computed_amount: number | null
           created_at: string
+          days: number | null
           description: string
+          entry_mode: string
           id: string
+          include_in_total_days: boolean
           installments: number
+          per_day_amount: number | null
           qty: number | null
           status: string
           updated_at: string
@@ -83,14 +88,19 @@ export type Database = {
           addition_date: string
           addition_name: string
           addition_type_id: string
+          affects_days_for?: string[]
           amount: number
           calculation_type: string
           candidate_id: string
           computed_amount?: number | null
           created_at?: string
+          days?: number | null
           description?: string
+          entry_mode?: string
           id?: string
+          include_in_total_days?: boolean
           installments?: number
+          per_day_amount?: number | null
           qty?: number | null
           status?: string
           updated_at?: string
@@ -99,14 +109,19 @@ export type Database = {
           addition_date?: string
           addition_name?: string
           addition_type_id?: string
+          affects_days_for?: string[]
           amount?: number
           calculation_type?: string
           candidate_id?: string
           computed_amount?: number | null
           created_at?: string
+          days?: number | null
           description?: string
+          entry_mode?: string
           id?: string
+          include_in_total_days?: boolean
           installments?: number
+          per_day_amount?: number | null
           qty?: number | null
           status?: string
           updated_at?: string
@@ -126,6 +141,9 @@ export type Database = {
           earning_type: string
           enabled: boolean
           formula: Json
+          formula_expression: string | null
+          formula_mode: string
+          formula_version: number
           id: string
           include_in_ot: boolean
           is_default: boolean
@@ -147,6 +165,9 @@ export type Database = {
           earning_type?: string
           enabled?: boolean
           formula?: Json
+          formula_expression?: string | null
+          formula_mode?: string
+          formula_version?: number
           id?: string
           include_in_ot?: boolean
           is_default?: boolean
@@ -168,6 +189,9 @@ export type Database = {
           earning_type?: string
           enabled?: boolean
           formula?: Json
+          formula_expression?: string | null
+          formula_mode?: string
+          formula_version?: number
           id?: string
           include_in_ot?: boolean
           is_default?: boolean
@@ -956,6 +980,9 @@ export type Database = {
           fixed_calc_method: string
           fixed_duty_components: string[]
           formula: Json
+          formula_expression: string | null
+          formula_mode: string
+          formula_version: number
           id: string
           name: string
           notes: string
@@ -978,6 +1005,9 @@ export type Database = {
           fixed_calc_method?: string
           fixed_duty_components?: string[]
           formula?: Json
+          formula_expression?: string | null
+          formula_mode?: string
+          formula_version?: number
           id?: string
           name: string
           notes?: string
@@ -1000,6 +1030,9 @@ export type Database = {
           fixed_calc_method?: string
           fixed_duty_components?: string[]
           formula?: Json
+          formula_expression?: string | null
+          formula_mode?: string
+          formula_version?: number
           id?: string
           name?: string
           notes?: string
@@ -1221,55 +1254,70 @@ export type Database = {
       }
       deductions: {
         Row: {
+          affects_days_for: string[]
           amount: number
           calculation_type: string
           candidate_id: string
           computed_amount: number | null
           created_at: string
+          days: number | null
           deduction_date: string
           deduction_name: string
           deduction_type_id: string
           description: string
+          entry_mode: string
           id: string
+          include_in_total_days: boolean
           installments: number
           max_duty: number
           min_duty: number
+          per_day_amount: number | null
           qty: number | null
           status: string
           updated_at: string
         }
         Insert: {
+          affects_days_for?: string[]
           amount: number
           calculation_type: string
           candidate_id: string
           computed_amount?: number | null
           created_at?: string
+          days?: number | null
           deduction_date: string
           deduction_name: string
           deduction_type_id: string
           description?: string
+          entry_mode?: string
           id?: string
+          include_in_total_days?: boolean
           installments?: number
           max_duty?: number
           min_duty?: number
+          per_day_amount?: number | null
           qty?: number | null
           status?: string
           updated_at?: string
         }
         Update: {
+          affects_days_for?: string[]
           amount?: number
           calculation_type?: string
           candidate_id?: string
           computed_amount?: number | null
           created_at?: string
+          days?: number | null
           deduction_date?: string
           deduction_name?: string
           deduction_type_id?: string
           description?: string
+          entry_mode?: string
           id?: string
+          include_in_total_days?: boolean
           installments?: number
           max_duty?: number
           min_duty?: number
+          per_day_amount?: number | null
           qty?: number | null
           status?: string
           updated_at?: string

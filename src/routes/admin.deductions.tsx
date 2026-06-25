@@ -8,9 +8,11 @@ import { cn } from "@/lib/utils";
 import { downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/PageHeader";
+import { PayrollTabs } from "@/components/PayrollTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -39,6 +41,8 @@ export const Route = createFileRoute("/admin/deductions")({
 
 type CalcType = "lumpsum" | "per_duty_amount" | "total_amount";
 type Status = "active" | "paused" | "completed" | "cancelled";
+type EntryMode = "lumpsum" | "days_x_per_day";
+type DayBucket = "present" | "worked" | "ot" | "ph";
 
 type Deduction = {
   id: string;
@@ -53,7 +57,19 @@ type Deduction = {
   max_duty?: number;
   description: string;
   status: Status;
+  entry_mode?: EntryMode;
+  days?: number | null;
+  per_day_amount?: number | null;
+  include_in_total_days?: boolean;
+  affects_days_for?: DayBucket[];
 };
+
+const DAY_BUCKETS: { value: DayBucket; label: string }[] = [
+  { value: "present", label: "Present" },
+  { value: "worked", label: "Worked" },
+  { value: "ot", label: "OT" },
+  { value: "ph", label: "PH" },
+];
 
 type DType = { id: string; name: string; code: string; is_active: boolean };
 type Emp = { id: string; full_name: string; employee_code: string; mobile: string };
@@ -268,10 +284,11 @@ function DeductionList() {
 
   return (
     <div>
+      <PayrollTabs />
       <PageHeader
         title="Deductions"
         description="Record and track employee deductions applied to payroll."
-        crumbs={[{ label: "Employees", to: "/admin/employees" }, { label: "Deductions" }]}
+        crumbs={[{ label: "Payroll", to: "/admin/payroll" }, { label: "Deductions" }]}
       />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -422,7 +439,7 @@ function DeductionForm() {
     queryFn: async (): Promise<Deduction | null> => {
       const { data, error } = await supabase
         .from("deductions" as never)
-        .select("id,candidate_id,deduction_type_id,deduction_date,deduction_name,calculation_type,amount,installments,description,status,min_duty,max_duty")
+        .select("id,candidate_id,deduction_type_id,deduction_date,deduction_name,calculation_type,amount,installments,description,status,min_duty,max_duty,entry_mode,days,per_day_amount,include_in_total_days,affects_days_for")
         .eq("id", search.id!)
         .maybeSingle();
       if (error) throw error;
@@ -434,6 +451,11 @@ function DeductionForm() {
   const [typeId, setTypeId] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [calc, setCalc] = useState<CalcType>("lumpsum");
+  const [entryMode, setEntryMode] = useState<EntryMode>("lumpsum");
+  const [days, setDays] = useState<string>("");
+  const [perDayAmount, setPerDayAmount] = useState<string>("");
+  const [includeInTotalDays, setIncludeInTotalDays] = useState(false);
+  const [affectsDaysFor, setAffectsDaysFor] = useState<DayBucket[]>(["present"]);
   const [amount, setAmount] = useState<string>("");
   const [installments, setInstallments] = useState<string>("1");
   const [description, setDescription] = useState("");
@@ -456,11 +478,26 @@ function DeductionForm() {
     setStatus(d.status);
     setMinDuty(String(d.min_duty ?? 0));
     setMaxDuty(String(d.max_duty ?? 0));
+    setEntryMode((d.entry_mode ?? "lumpsum") as EntryMode);
+    setDays(d.days != null ? String(d.days) : "");
+    setPerDayAmount(d.per_day_amount != null ? String(d.per_day_amount) : "");
+    setIncludeInTotalDays(Boolean(d.include_in_total_days));
+    setAffectsDaysFor(Array.isArray(d.affects_days_for) && d.affects_days_for.length > 0 ? d.affects_days_for : ["present"]);
     setHydrated(true);
   }
 
   const firstEmp = useMemo(() => (emps.data ?? []).find((e) => e.id === candidateIds[0]), [emps.data, candidateIds]);
   const type = useMemo(() => (types.data ?? []).find((t) => t.id === typeId), [types.data, typeId]);
+
+  const computedAmount = useMemo(() => {
+    if (entryMode === "days_x_per_day") {
+      return Math.round((Number(days) || 0) * (Number(perDayAmount) || 0) * 100) / 100;
+    }
+    return Number(amount) || 0;
+  }, [entryMode, days, perDayAmount, amount]);
+
+  const toggleBucket = (b: DayBucket) =>
+    setAffectsDaysFor((prev) => prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b]);
 
   // Auto-generated deduction name: "{emp_code} - {type} - {date}"
   const autoName = useMemo(() => {
@@ -477,10 +514,17 @@ function DeductionForm() {
     mutationFn: async () => {
       if (candidateIds.length === 0) throw new Error("Select at least one employee");
       if (!typeId) throw new Error("Select a deduction type");
-      const amt = Number(amount);
+      const amt = computedAmount;
       if (!Number.isFinite(amt) || amt < 0) throw new Error("Enter a valid amount");
       const inst = Math.max(1, parseInt(installments, 10) || 1);
       const typePart = type?.name || "Deduction";
+      const extras = {
+        entry_mode: entryMode,
+        days: entryMode === "days_x_per_day" ? (Number(days) || 0) : null,
+        per_day_amount: entryMode === "days_x_per_day" ? (Number(perDayAmount) || 0) : null,
+        include_in_total_days: entryMode === "days_x_per_day" ? includeInTotalDays : false,
+        affects_days_for: entryMode === "days_x_per_day" && includeInTotalDays ? affectsDaysFor : [],
+      };
       if (isEdit && search.id) {
         const payload = {
           candidate_id: candidateIds[0],
@@ -494,6 +538,7 @@ function DeductionForm() {
           status,
           min_duty: Math.max(0, Number(minDuty) || 0),
           max_duty: Math.max(0, Number(maxDuty) || 0),
+          ...extras,
         };
         const { error } = await supabase.from("deductions" as never).update(payload as never).eq("id", search.id);
         if (error) throw error;
@@ -514,6 +559,7 @@ function DeductionForm() {
             status,
             min_duty: Math.max(0, Number(minDuty) || 0),
             max_duty: Math.max(0, Number(maxDuty) || 0),
+            ...extras,
           };
         });
         const { error } = await supabase.from("deductions" as never).insert(rows as never);
@@ -591,25 +637,59 @@ function DeductionForm() {
             <Input value={autoName} readOnly className="bg-muted/40" />
           </div>
 
-          <div className="grid gap-1.5">
-            <Label>* Deduction Calculation Type</Label>
-            <Select value={calc} onValueChange={(v) => setCalc(v as CalcType)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="lumpsum">Lumpsum Amount</SelectItem>
-                <SelectItem value="per_duty_amount">Based On Duty And Per Day Amount</SelectItem>
-                <SelectItem value="total_amount">Based On Duty And Total Amount</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid gap-1.5 md:col-span-2 lg:col-span-4">
+            <Label>* Entry Mode</Label>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setEntryMode("lumpsum")}
+                className={cn("rounded-lg border px-3 py-1.5 text-sm", entryMode === "lumpsum" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                Lumpsum Amount
+              </button>
+              <button type="button" onClick={() => setEntryMode("days_x_per_day")}
+                className={cn("rounded-lg border px-3 py-1.5 text-sm", entryMode === "days_x_per_day" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                Days × Per-day Amount
+              </button>
+            </div>
           </div>
-          <div className="grid gap-1.5">
-            <Label>* Deduction Amount</Label>
-            <Input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
-          </div>
-          <div className="grid gap-1.5">
-            <Label>* Deduction Installments</Label>
-            <Input type="number" min="1" step="1" value={installments} onChange={(e) => setInstallments(e.target.value)} disabled={calc !== "lumpsum"} />
-          </div>
+
+          {entryMode === "lumpsum" ? (
+            <>
+              <div className="grid gap-1.5">
+                <Label>* Deduction Calculation Type</Label>
+                <Select value={calc} onValueChange={(v) => setCalc(v as CalcType)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lumpsum">Lumpsum Amount</SelectItem>
+                    <SelectItem value="per_duty_amount">Based On Duty And Per Day Amount</SelectItem>
+                    <SelectItem value="total_amount">Based On Duty And Total Amount</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label>* Deduction Amount</Label>
+                <Input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>* Installments</Label>
+                <Input type="number" min="1" step="1" value={installments} onChange={(e) => setInstallments(e.target.value)} disabled={calc !== "lumpsum"} />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid gap-1.5">
+                <Label>* Number of Days</Label>
+                <Input type="number" min="0" step="0.5" value={days} onChange={(e) => setDays(e.target.value)} placeholder="e.g. 2" />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>* Amount per Day (₹)</Label>
+                <Input type="number" min="0" step="0.01" value={perDayAmount} onChange={(e) => setPerDayAmount(e.target.value)} placeholder="e.g. 500" />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>Computed Amount</Label>
+                <Input value={fmtINR(computedAmount)} readOnly className="bg-muted/40 font-semibold" />
+              </div>
+            </>
+          )}
+
           <div className="grid gap-1.5">
             <Label>Status</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
@@ -623,22 +703,43 @@ function DeductionForm() {
             </Select>
           </div>
 
+          {entryMode === "days_x_per_day" && (
+            <div className="grid gap-1.5 md:col-span-2 lg:col-span-4 rounded-xl border border-dashed border-border bg-muted/20 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-foreground">Deduct these days from employee's total days?</Label>
+                  <p className="text-xs text-muted-foreground">When ON, the days here are subtracted from T-days in payroll (e.g. unpaid leave reduces worked days).</p>
+                </div>
+                <Switch checked={includeInTotalDays} onCheckedChange={setIncludeInTotalDays} />
+              </div>
+              {includeInTotalDays && (
+                <div className="mt-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Subtract days from which buckets</Label>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    {DAY_BUCKETS.map((b) => (
+                      <button key={b.value} type="button" onClick={() => toggleBucket(b.value)}
+                        className={cn("rounded-md border px-3 py-1 text-xs font-medium",
+                          affectsDaysFor.includes(b.value) ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                        {b.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid gap-1.5 md:col-span-2 lg:col-span-4">
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" rows={3} />
           </div>
         </div>
 
-        <div className="mt-5 rounded-xl border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
-          <div><strong>Lumpsum Amount:</strong> Amount = Deduction Amount / Installments</div>
-          <div><strong>Based On Duty And Per Day Amount:</strong> Amount = Deduction Amount × Duties</div>
-          <div><strong>Based On Duty And Total Amount:</strong> Amount = (Deduction Amount / Working Days) × Duties</div>
-        </div>
-
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate({ to: "/admin/deductions", search: { mode: "list" } })} disabled={saving}>Cancel</Button>
-          <Button type="button" disabled={candidateIds.length === 0 || !typeId || !amount} onClick={() => setStep("constraints")}>Next step</Button>
+          <Button type="button" disabled={candidateIds.length === 0 || !typeId || computedAmount <= 0} onClick={() => setStep("constraints")}>Next step</Button>
         </div>
+
       </div>
       )}
 
