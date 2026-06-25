@@ -254,12 +254,20 @@ export function InventoryOwnerDashboard() {
       ((i.destination_type === "field_officer" || i.destination_type === "guard") && allowedFoIds.has(i.destination_id)),
     );
   }, [issuancesRaw, scope.isScoped, scope.branchId, canUseScopedData, allowedFoIds]);
+  const demands = useMemo(() => {
+    if (!scope.isScoped || !scope.branchId) return demandsRaw;
+    if (!canUseScopedData) return [];
+    return demandsRaw.filter((d) =>
+      d.branch_id === scope.branchId ||
+      (d.requester_candidate_id && allowedFoIds.has(d.requester_candidate_id)),
+    );
+  }, [demandsRaw, scope.isScoped, scope.branchId, canUseScopedData, allowedFoIds]);
 
   const { canSub } = useCurrentPermissions();
 
 
   const totalStockQty = useMemo(() => balances.reduce((s, b) => s + Math.max(0, Number(b.qty || 0)), 0), [balances]);
-  
+
   const poSplit = useMemo(() => {
     const open = pos.filter((p) => ["draft", "approved", "partial", "open", "partially_received"].includes(p.status)).length;
     const closed = pos.filter((p) => ["received", "closed"].includes(p.status)).length;
@@ -280,6 +288,39 @@ export function InventoryOwnerDashboard() {
     const ack = issuances.filter((i) => i.status === "completed").length;
     return { total: issuances.length, issued, ack };
   }, [issuances]);
+
+  // ====== Live Notifications / Pending Actions ======
+  // SLA in days — anything older than this counts as "delayed".
+  const SLA_DAYS = 3;
+  const now = Date.now();
+  const ageDays = (iso: string | null | undefined) =>
+    iso ? Math.max(0, Math.floor((now - new Date(iso).getTime()) / 86400000)) : 0;
+  const ageBreakdown = <T extends { created_at: string }>(rows: T[]) => {
+    let breached = 0; let oldest = 0;
+    for (const r of rows) {
+      const a = ageDays(r.created_at);
+      if (a > SLA_DAYS) breached += 1;
+      if (a > oldest) oldest = a;
+    }
+    return { breached, oldest };
+  };
+  const notifications = useMemo(() => {
+    const openPOsAll = pos.filter((p) => ["draft", "approved", "partial", "open", "partially_received"].includes(p.status));
+    const pendingDemands = demands.filter((d) => !["fulfilled", "cancelled", "rejected"].includes(d.status));
+    const pendingGRNs = grns.filter((g) => g.status === "received" || g.status === "draft");
+    const inTransit = transfers.filter((t) => ["in_transit", "dispatched"].includes(t.status));
+    const pendingAck = issuances.filter((i) => i.status === "issued");
+    return [
+      { key: "demands", label: "Open Demands", hint: "Submitted, awaiting fulfilment", to: "/admin/inventory/demands", icon: ClipboardList, accent: "text-violet-500", count: pendingDemands.length, ...ageBreakdown(pendingDemands) },
+      ...(!scope.isScoped ? [{ key: "pos", label: "Open Purchase Orders", hint: "Draft / Approved / Partial", to: "/admin/inventory/purchase-orders", icon: FileText, accent: "text-blue-500", count: openPOsAll.length, ...ageBreakdown(openPOsAll) }] : []),
+      { key: "grns", label: "Delivery Challans to Post", hint: "Received but not posted", to: "/admin/inventory/goods-receipts", icon: ClipboardCheck, accent: "text-cyan-500", count: pendingGRNs.length, ...ageBreakdown(pendingGRNs) },
+      { key: "transfers", label: "Transfers In-Transit", hint: "Dispatched, awaiting receipt", to: "/admin/inventory/transfers", icon: Truck, accent: "text-amber-500", count: inTransit.length, ...ageBreakdown(inTransit) },
+      { key: "issuances", label: "Issuances Awaiting Ack", hint: "Issued, awaiting confirmation", to: "/admin/inventory/issuances", icon: UserPlus, accent: "text-teal-500", count: pendingAck.length, ...ageBreakdown(pendingAck) },
+    ];
+  }, [pos, demands, grns, transfers, issuances, scope.isScoped]);
+  const totalPending = notifications.reduce((s, n) => s + n.count, 0);
+  const totalBreached = notifications.reduce((s, n) => s + n.breached, 0);
+
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
