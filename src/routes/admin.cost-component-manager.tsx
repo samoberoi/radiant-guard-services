@@ -589,8 +589,8 @@ function CostComponentDialog({
               <Select value={calcType} onValueChange={(v) => setCalcType(v as "percentage" | "fixed")}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="percentage">Percentage of base</SelectItem>
-                  <SelectItem value="fixed">Fixed amount</SelectItem>
+                  <SelectItem value="percentage">Formula — auto-calculated from preset or expression</SelectItem>
+                  <SelectItem value="fixed">Fixed amount — manual or per-duty</SelectItem>
                 </SelectContent>
               </Select>
             </div>
