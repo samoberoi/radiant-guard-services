@@ -975,8 +975,43 @@ function computeBenefitAmount(
   wageComponents: ResourceComponent[],
   benefitItems: BenefitItem[] = [],
   allowanceTypes: AllowanceType[] = [],
+function computeBenefitAmount(
+  benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "capFlatAmount" | "amount"> & {
+    formulaMode?: string | null;
+    formulaExpression?: string | null;
+    name?: string;
+  },
+  wageComponents: ResourceComponent[],
+  benefitItems: BenefitItem[] = [],
+  allowanceTypes: AllowanceType[] = [],
   employerItems: BenefitItem[] = [],
 ): number {
+  // Formula-first: if the master record (allowance / cost component) has a
+  // formula expression configured, evaluate it against a slugified context
+  // built from the current wage components.
+  const cfg = parseFormulaConfig(benefit.formulaMode ?? null, benefit.formulaExpression ?? null);
+  if (cfg && !(cfg.mode === "advanced" && !cfg.expression?.trim())) {
+    const ctx: FormulaContext = {
+      basic: 0, da: 0, gross: 0, fixed_amount: Number(benefit.amount) || 0,
+    };
+    let gross = 0;
+    for (const c of wageComponents) {
+      const amt = Number(c.amount) || 0;
+      gross += amt;
+      const key = slugifyVar(c.name);
+      if (key && ctx[key] === undefined) ctx[key] = amt;
+      const lower = c.name.trim().toLowerCase();
+      if (/\bbasic\b/.test(lower)) ctx.basic = (ctx.basic || 0) + amt;
+      if (/\bda\b|dearness/.test(lower)) ctx.da = (ctx.da || 0) + amt;
+    }
+    ctx.gross = gross + benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+    for (const b of benefitItems) {
+      const key = slugifyVar(b.name);
+      if (key && ctx[key] === undefined) ctx[key] = Number(b.amount) || 0;
+    }
+    const r = evaluateFormula(cfg, ctx);
+    if (!r.error) return r.amount;
+  }
   if (benefit.calcType === "fixed") return Number(benefit.amount) || 0;
   const componentsTotal = wageComponents.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const benefitsTotal = benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
