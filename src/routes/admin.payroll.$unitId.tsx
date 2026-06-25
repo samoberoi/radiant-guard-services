@@ -462,6 +462,19 @@ function PayrollUnitPage() {
           lineEntries as AttendanceEntryLike[],
           (codes ?? []) as AttendanceCodeLike[],
         );
+        // Apply per-employee day adjustments from additions/deductions that opted into
+        // "Include in total days" — only on the candidate's primary designation line.
+        const isPrimaryForAdj = (c.designation_id ?? null) === p.designationId;
+        if (isPrimaryForAdj) {
+          const adj = dayAdjustmentByCandidate.get(c.id);
+          if (adj) {
+            totals.pDays = Math.max(0, totals.pDays + adj.pDays);
+            totals.otDays = Math.max(0, totals.otDays + adj.otDays);
+            totals.phDays = Math.max(0, totals.phDays + adj.phDays);
+            totals.otherPaidDays = Math.max(0, totals.otherPaidDays + adj.otherPaidDays);
+            totals.tDays = Math.max(0, totals.tDays + adj.tDays);
+          }
+        }
         const resource = resourceByDesignation.get(did);
         const wages = resource
           ? computeWages(totals, resource, periodDates.length)
