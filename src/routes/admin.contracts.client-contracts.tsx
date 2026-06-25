@@ -28,6 +28,12 @@ import { logActivity } from "@/lib/activity-log";
 import { useCurrentPermissions } from "@/lib/rbac";
 import { notifyApprovers } from "@/lib/notifications";
 import { csvDate, downloadCsv } from "@/lib/csv-export";
+import {
+  evaluateFormula,
+  parseFormulaConfig,
+  slugifyVar,
+  type FormulaContext,
+} from "@/lib/formula-engine";
 import { DeleteGuardButton } from "@/components/DeleteGuardButton";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmProvider";
@@ -965,12 +971,42 @@ function contractTotalAmount(item: { name?: unknown; amount?: unknown }): number
 
 /** Compute benefit amount from a percentage component using the resource's wage components. */
 function computeBenefitAmount(
-  benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "capFlatAmount" | "amount">,
+  benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "capFlatAmount" | "amount"> & {
+    formulaMode?: string | null;
+    formulaExpression?: string | null;
+    name?: string;
+  },
   wageComponents: ResourceComponent[],
   benefitItems: BenefitItem[] = [],
   allowanceTypes: AllowanceType[] = [],
   employerItems: BenefitItem[] = [],
 ): number {
+  // Formula-first: if the master record (allowance / cost component) has a
+  // formula expression configured, evaluate it against a slugified context
+  // built from the current wage components.
+  const cfg = parseFormulaConfig(benefit.formulaMode ?? null, benefit.formulaExpression ?? null);
+  if (cfg && !(cfg.mode === "advanced" && !cfg.expression?.trim())) {
+    const ctx: FormulaContext = {
+      basic: 0, da: 0, gross: 0, fixed_amount: Number(benefit.amount) || 0,
+    };
+    let gross = 0;
+    for (const c of wageComponents) {
+      const amt = Number(c.amount) || 0;
+      gross += amt;
+      const key = slugifyVar(c.name);
+      if (key && ctx[key] === undefined) ctx[key] = amt;
+      const lower = c.name.trim().toLowerCase();
+      if (/\bbasic\b/.test(lower)) ctx.basic = (ctx.basic || 0) + amt;
+      if (/\bda\b|dearness/.test(lower)) ctx.da = (ctx.da || 0) + amt;
+    }
+    ctx.gross = gross + benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+    for (const b of benefitItems) {
+      const key = slugifyVar(b.name);
+      if (key && ctx[key] === undefined) ctx[key] = Number(b.amount) || 0;
+    }
+    const r = evaluateFormula(cfg, ctx);
+    if (!r.error) return r.amount;
+  }
   if (benefit.calcType === "fixed") return Number(benefit.amount) || 0;
   const componentsTotal = wageComponents.reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const benefitsTotal = benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
@@ -3222,16 +3258,21 @@ function ResourceFormDialog({
       let changed = false;
       const next = prev.map((c) => {
         const at = allowanceTypes.find((a) => a.id === c.allowanceId);
-        if (!at || at.calcType !== "percentage") return c;
+        if (!at) return c;
+        const hasFormula = !!(at.formulaExpression && at.formulaExpression.trim());
+        if (!hasFormula && at.calcType !== "percentage") return c;
         const others = prev.filter((x) => x.allowanceId !== c.allowanceId);
         const newAmt = computeBenefitAmount(
           {
-            calcType: "percentage",
+            calcType: at.calcType,
             percentage: at.percentage,
             baseComponents: at.baseComponents,
             capAmount: at.capAmount,
             capFlatAmount: null,
             amount: 0,
+            formulaMode: at.formulaMode ?? null,
+            formulaExpression: at.formulaExpression ?? null,
+            name: at.shortName || at.displayName || at.name,
           },
           others,
           [],
@@ -3245,11 +3286,12 @@ function ResourceFormDialog({
     });
   }, [components, allowanceTypes]);
 
-  // Recompute percentage benefits whenever wage components change
+  // Recompute percentage/formula benefits whenever wage components change
+  const hasFormula = (b: BenefitItem) => !!(b.formulaExpression && b.formulaExpression.trim());
   useEffect(() => {
     setBenefits((prev) =>
       prev.map((b) =>
-        b.calcType === "percentage"
+        b.calcType === "percentage" || hasFormula(b)
           ? { ...b, amount: computeBenefitAmount(b, components, [], allowanceTypes) }
           : b,
       ),
@@ -3260,7 +3302,7 @@ function ResourceFormDialog({
   useEffect(() => {
     setDeductions((prev) =>
       prev.map((b) =>
-        b.calcType === "percentage"
+        b.calcType === "percentage" || hasFormula(b)
           ? { ...b, amount: computeBenefitAmount(b, components, benefits, allowanceTypes) }
           : b,
       ),
@@ -3271,20 +3313,15 @@ function ResourceFormDialog({
           const l = x.label.trim().toLowerCase();
           return l === "ctc" || l === "total ctc";
         });
-      // Management Fee is a billing markup, not part of CTC — exclude from CTC base.
       const isMgmtFee = (b: BenefitItem) => /management\s*fee/i.test(b.name);
-      // First pass: compute all non-CTC-dependent employer items
       const firstPass = prev.map((b) =>
-        b.calcType === "percentage" && !refsCtc(b)
+        (b.calcType === "percentage" || hasFormula(b)) && !refsCtc(b)
           ? { ...b, amount: computeBenefitAmount(b, components, benefits, allowanceTypes) }
           : b,
       );
-      // Second pass: compute CTC-dependent items. CTC base = gross + core employer
-      // contributions (exclude CTC-dependent rows and Management Fee), matching the
-      // "Total CTC" shown in the contract preview.
       const ctcBase = firstPass.filter((b) => !refsCtc(b) && !isMgmtFee(b));
       return firstPass.map((b) =>
-        b.calcType === "percentage" && refsCtc(b)
+        (b.calcType === "percentage" || hasFormula(b)) && refsCtc(b)
           ? { ...b, amount: computeBenefitAmount(b, components, benefits, allowanceTypes, ctcBase) }
           : b,
       );
@@ -3373,16 +3410,19 @@ function ResourceFormDialog({
           formulaExpression: a.formulaExpression ?? null,
           formulaVersion: a.formulaVersion ?? null,
         };
-        if (a.calcType === "percentage") {
-          // Compute formula against existing components (excluding self by id).
+        const hasF = !!(a.formulaExpression && a.formulaExpression.trim());
+        if (a.calcType === "percentage" || hasF) {
           next.amount = computeBenefitAmount(
             {
-              calcType: "percentage",
+              calcType: a.calcType,
               percentage: a.percentage,
               baseComponents: a.baseComponents,
               capAmount: a.capAmount,
               capFlatAmount: null,
               amount: 0,
+              formulaMode: a.formulaMode ?? null,
+              formulaExpression: a.formulaExpression ?? null,
+              name: a.shortName || a.displayName || a.name,
             },
             prev,
             [],
@@ -3414,7 +3454,8 @@ function ResourceFormDialog({
       formulaExpression: c.formulaExpression ?? null,
       formulaVersion: c.formulaVersion ?? null,
     };
-    if (benefit.calcType === "percentage") {
+    const hasF = !!(benefit.formulaExpression && benefit.formulaExpression.trim());
+    if (benefit.calcType === "percentage" || hasF) {
       benefit.amount = computeBenefitAmount(benefit, components, [], allowanceTypes);
     }
     preserveDialogScroll(() => {
@@ -3450,7 +3491,8 @@ function ResourceFormDialog({
       formulaExpression: c.formulaExpression ?? null,
       formulaVersion: c.formulaVersion ?? null,
     };
-    if (item.calcType === "percentage") {
+    const hasF = !!(item.formulaExpression && item.formulaExpression.trim());
+    if (item.calcType === "percentage" || hasF) {
       item.amount = computeBenefitAmount(item, components, benefits, allowanceTypes);
     }
     preserveDialogScroll(() => {
@@ -3486,7 +3528,8 @@ function ResourceFormDialog({
       formulaExpression: c.formulaExpression ?? null,
       formulaVersion: c.formulaVersion ?? null,
     };
-    if (item.calcType === "percentage") {
+    const hasF = !!(item.formulaExpression && item.formulaExpression.trim());
+    if (item.calcType === "percentage" || hasF) {
       const l = (s: string) => s.trim().toLowerCase();
       const refsCtc = item.baseComponents.some(
         (x) => l(x.label) === "ctc" || l(x.label) === "total ctc",
