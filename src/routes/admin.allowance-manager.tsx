@@ -80,6 +80,8 @@ function rowToItem(r: Record<string, unknown>): Allowance {
     base_components: Array.isArray(r.base_components) ? (r.base_components as BaseRef[]) : [],
     cap_amount: r.cap_amount == null ? null : Number(r.cap_amount),
     include_in_ot: r.include_in_ot == null ? true : Boolean(r.include_in_ot),
+    formula_mode: r.formula_mode == null ? null : String(r.formula_mode),
+    formula_expression: r.formula_expression == null ? null : String(r.formula_expression),
   };
 }
 
