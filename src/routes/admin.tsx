@@ -19,6 +19,7 @@ import {
   FileText,
   Files,
   Fuel,
+  Gauge,
   Home,
   Inbox,
   LayoutDashboard,
