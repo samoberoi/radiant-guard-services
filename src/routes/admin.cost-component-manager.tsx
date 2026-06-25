@@ -649,13 +649,27 @@ function CostComponentDialog({
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="flat">Flat — use the amount as entered</SelectItem>
-                      <SelectItem value="per_duty">Per-Duty Proration — amount ÷ Base Days × selected duties</SelectItem>
+                      <SelectItem value="per_duty">Per-Duty Proration — amount ÷ divisor × selected duties</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-[11px] text-muted-foreground">
-                    Per-Duty uses the contract resource&apos;s Base Days as the divisor (e.g. amount ÷ 26 = per-duty rate), then multiplies by the sum of the duty buckets you pick below.
+                    Per-Duty divides the amount by your chosen day basis (e.g. amount ÷ 26 or ÷ days-in-month), then multiplies by the sum of the duty buckets you pick below.
                   </p>
                 </div>
+
+                {fixedCalcMethod === "per_duty" && (
+                  <div className="grid gap-2">
+                    <Label>Divisor (day basis)</Label>
+                    <Select value={fixedDutyDivisor} onValueChange={(v) => setFixedDutyDivisor(v as FixedDutyDivisor)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {FIXED_DUTY_DIVISORS.map((d) => (
+                          <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {fixedCalcMethod === "per_duty" && (
                   <div className="grid gap-2">
