@@ -3739,9 +3739,9 @@ function ResourceFormDialog({
   const esiEmployerAmount = _esiEligible ? Math.ceil(_esiBase * (_esiErPct / 100)) : 0;
 
   const totalDeductions =
-    deductions.reduce((s, b) => s + (isEsiItem(b) ? esiEmployeeAmount : contractTotalAmount(b)), 0);
+    deductions.reduce((s, b) => s + (isStatutoryEsi(b) ? esiEmployeeAmount : contractTotalAmount(b)), 0);
   const totalEmployer =
-    employerContributions.reduce((s, b) => s + (isEsiItem(b) ? esiEmployerAmount : contractTotalAmount(b)), 0);
+    employerContributions.reduce((s, b) => s + (isStatutoryEsi(b) ? esiEmployerAmount : contractTotalAmount(b)), 0);
 
   const selectedDesignation = designations.find((d) => d.id === designationId);
 
