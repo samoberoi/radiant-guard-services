@@ -23,6 +23,7 @@ import {
 import { downloadCsv, writeXlsx } from "@/lib/csv-export";
 import { gstinStateCode } from "@/lib/gstin";
 import { fetchAttendanceEntriesForPeriod } from "@/lib/attendance-fetch";
+import { hydrateFormulasFromMaster } from "@/lib/contract-hydrate";
 
 const searchSchema = z.object({
   start: z.string(),
