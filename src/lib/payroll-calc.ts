@@ -633,15 +633,19 @@ export function computeWages(
     )
     .reduce((s, c) => s + (Number(c.amount) || 0), 0);
   const otBase = Math.max(0, contractGross - excludedFromOt);
-  // Per-duty OT rate (new payroll spec); hour-based path uses
-  // perDuty / UNIT_DUTY_HOURS so existing hour-driven attendance still works.
+  // Per-duty OT rate (new payroll spec): one OT duty pays the per-duty rate
+  // computed off the OT-eligible gross. We pay by DUTIES, not raw hours, so
+  // day-based additions (entry_mode=days_x_per_day, affects_days_for=['ot'])
+  // are honoured the same way attendance ot_hours are. otDays is derived from
+  // ot_hours and is also incremented by additions, so it's the single source
+  // of truth here.
   const perDutyOt = baseDays > 0 ? otBase / baseDays : 0;
-  const otHourlyRate = perDutyOt / UNIT_DUTY_HOURS;
-  const otAmount = round2(otHourlyRate * totals.otHours);
+  const otAmount = round2(perDutyOt * totals.otDays);
   const otDuties = totals.otDays;
   if (otAmount > 0) {
     components.push({ name: "Overtime", amount: otAmount, calcType: "fixed" });
   }
+
 
   const earnedGross = round2(
     components.reduce((s, c) => s + (Number(c.amount) || 0), 0),
