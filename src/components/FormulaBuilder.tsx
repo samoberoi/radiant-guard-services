@@ -170,6 +170,7 @@ export function FormulaBuilder({ value, onChange, availableBases }: Props) {
                     ))}
                   </SelectContent>
                 </Select>
+              )}
               {preset.base.kind === "composite" && (() => {
                 const comps: CompositeComponent[] = preset.base.components ?? [];
                 const setComps = (next: CompositeComponent[]) =>
