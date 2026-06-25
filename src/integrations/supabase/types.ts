@@ -17,29 +17,47 @@ export type Database = {
       addition_types: {
         Row: {
           code: string
+          counts_in_t_days: boolean
           created_at: string
+          default_amount: number | null
+          formula: Json
           id: string
           is_active: boolean
           name: string
+          qty_unit: string | null
+          rate_source: string
           sort_order: number
+          t_days_bucket: string | null
           updated_at: string
         }
         Insert: {
           code: string
+          counts_in_t_days?: boolean
           created_at?: string
+          default_amount?: number | null
+          formula?: Json
           id?: string
           is_active?: boolean
           name: string
+          qty_unit?: string | null
+          rate_source?: string
           sort_order?: number
+          t_days_bucket?: string | null
           updated_at?: string
         }
         Update: {
           code?: string
+          counts_in_t_days?: boolean
           created_at?: string
+          default_amount?: number | null
+          formula?: Json
           id?: string
           is_active?: boolean
           name?: string
+          qty_unit?: string | null
+          rate_source?: string
           sort_order?: number
+          t_days_bucket?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -52,10 +70,12 @@ export type Database = {
           amount: number
           calculation_type: string
           candidate_id: string
+          computed_amount: number | null
           created_at: string
           description: string
           id: string
           installments: number
+          qty: number | null
           status: string
           updated_at: string
         }
@@ -66,10 +86,12 @@ export type Database = {
           amount: number
           calculation_type: string
           candidate_id: string
+          computed_amount?: number | null
           created_at?: string
           description?: string
           id?: string
           installments?: number
+          qty?: number | null
           status?: string
           updated_at?: string
         }
@@ -80,10 +102,12 @@ export type Database = {
           amount?: number
           calculation_type?: string
           candidate_id?: string
+          computed_amount?: number | null
           created_at?: string
           description?: string
           id?: string
           installments?: number
+          qty?: number | null
           status?: string
           updated_at?: string
         }
@@ -95,15 +119,19 @@ export type Database = {
           calc_type: string
           cap_amount: number | null
           cap_flat_amount: number | null
+          counts_in_t_days: boolean
           created_at: string
+          day_driver: string
           display_name: string
           earning_type: string
           enabled: boolean
+          formula: Json
           id: string
           include_in_ot: boolean
           is_default: boolean
           name: string
           percentage: number
+          short_code: string
           short_name: string
           updated_at: string
         }
@@ -112,15 +140,19 @@ export type Database = {
           calc_type?: string
           cap_amount?: number | null
           cap_flat_amount?: number | null
+          counts_in_t_days?: boolean
           created_at?: string
+          day_driver?: string
           display_name?: string
           earning_type?: string
           enabled?: boolean
+          formula?: Json
           id?: string
           include_in_ot?: boolean
           is_default?: boolean
           name: string
           percentage?: number
+          short_code?: string
           short_name?: string
           updated_at?: string
         }
@@ -129,15 +161,19 @@ export type Database = {
           calc_type?: string
           cap_amount?: number | null
           cap_flat_amount?: number | null
+          counts_in_t_days?: boolean
           created_at?: string
+          day_driver?: string
           display_name?: string
           earning_type?: string
           enabled?: boolean
+          formula?: Json
           id?: string
           include_in_ot?: boolean
           is_default?: boolean
           name?: string
           percentage?: number
+          short_code?: string
           short_name?: string
           updated_at?: string
         }
@@ -912,11 +948,14 @@ export type Database = {
           calc_type: string
           cap_amount: number | null
           cap_flat_amount: number | null
+          code: string
           created_at: string
+          day_driver: string
           deduction_calc_type: string
           enabled: boolean
           fixed_calc_method: string
           fixed_duty_components: string[]
+          formula: Json
           id: string
           name: string
           notes: string
@@ -931,11 +970,14 @@ export type Database = {
           calc_type?: string
           cap_amount?: number | null
           cap_flat_amount?: number | null
+          code?: string
           created_at?: string
+          day_driver?: string
           deduction_calc_type?: string
           enabled?: boolean
           fixed_calc_method?: string
           fixed_duty_components?: string[]
+          formula?: Json
           id?: string
           name: string
           notes?: string
@@ -950,11 +992,14 @@ export type Database = {
           calc_type?: string
           cap_amount?: number | null
           cap_flat_amount?: number | null
+          code?: string
           created_at?: string
+          day_driver?: string
           deduction_calc_type?: string
           enabled?: boolean
           fixed_calc_method?: string
           fixed_duty_components?: string[]
+          formula?: Json
           id?: string
           name?: string
           notes?: string
@@ -1139,27 +1184,36 @@ export type Database = {
         Row: {
           code: string
           created_at: string
+          default_amount: number | null
+          formula: Json
           id: string
           is_active: boolean
           name: string
+          rate_source: string
           sort_order: number
           updated_at: string
         }
         Insert: {
           code: string
           created_at?: string
+          default_amount?: number | null
+          formula?: Json
           id?: string
           is_active?: boolean
           name: string
+          rate_source?: string
           sort_order?: number
           updated_at?: string
         }
         Update: {
           code?: string
           created_at?: string
+          default_amount?: number | null
+          formula?: Json
           id?: string
           is_active?: boolean
           name?: string
+          rate_source?: string
           sort_order?: number
           updated_at?: string
         }
@@ -1170,6 +1224,7 @@ export type Database = {
           amount: number
           calculation_type: string
           candidate_id: string
+          computed_amount: number | null
           created_at: string
           deduction_date: string
           deduction_name: string
@@ -1179,6 +1234,7 @@ export type Database = {
           installments: number
           max_duty: number
           min_duty: number
+          qty: number | null
           status: string
           updated_at: string
         }
@@ -1186,6 +1242,7 @@ export type Database = {
           amount: number
           calculation_type: string
           candidate_id: string
+          computed_amount?: number | null
           created_at?: string
           deduction_date: string
           deduction_name: string
@@ -1195,6 +1252,7 @@ export type Database = {
           installments?: number
           max_duty?: number
           min_duty?: number
+          qty?: number | null
           status?: string
           updated_at?: string
         }
@@ -1202,6 +1260,7 @@ export type Database = {
           amount?: number
           calculation_type?: string
           candidate_id?: string
+          computed_amount?: number | null
           created_at?: string
           deduction_date?: string
           deduction_name?: string
@@ -1211,6 +1270,7 @@ export type Database = {
           installments?: number
           max_duty?: number
           min_duty?: number
+          qty?: number | null
           status?: string
           updated_at?: string
         }
