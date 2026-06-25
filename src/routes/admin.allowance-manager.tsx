@@ -462,6 +462,7 @@ function AllowanceFormDialog({
   onOpenChange,
   title,
   initial,
+  baseLabels,
   onSubmit,
 }: {
   open: boolean;
@@ -552,7 +553,7 @@ function AllowanceFormDialog({
           </div>
 
           {mode === "formula" && (
-            <FormulaBuilder value={formulaCfg} onChange={setFormulaCfg} />
+            <FormulaBuilder value={formulaCfg} onChange={setFormulaCfg} availableBases={baseLabels} />
           )}
 
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">

@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   DEFAULT_PRESET,
   FORMULA_VARIABLES,
+  slugifyVar,
+  type CompositeComponent,
   type FormulaConfig,
   type PresetBase,
   type PresetDivisor,
@@ -22,6 +24,7 @@ import {
 type Props = {
   value: FormulaConfig | null;
   onChange: (next: FormulaConfig | null) => void;
+  availableBases?: string[];
 };
 
 const MULTIPLIER_OPTIONS: { value: PresetMultiplier; label: string }[] = [
@@ -35,13 +38,16 @@ const MULTIPLIER_OPTIONS: { value: PresetMultiplier; label: string }[] = [
 ];
 
 const BASE_KIND_OPTIONS: { value: PresetBase["kind"]; label: string }[] = [
-  { value: "basic",         label: "Basic" },
-  { value: "da",            label: "DA" },
+  { value: "composite",     label: "Combine components (Basic + DA + …)" },
+  { value: "basic",         label: "Basic only" },
+  { value: "da",            label: "DA only" },
   { value: "basic_plus_da", label: "Basic + DA" },
   { value: "gross",         label: "Gross" },
-  { value: "fixed_amount",  label: "Fixed Amount" },
+  { value: "fixed_amount",  label: "Fixed Amount (₹)" },
   { value: "variable",      label: "Custom Variable" },
 ];
+
+const DEFAULT_AVAILABLE_BASES = ["Basic", "DA", "HRA", "Special Allowance", "Conveyance", "Gross"];
 
 const DIVISOR_OPTIONS: { value: string; label: string }[] = [
   { value: "none",          label: "—" },
@@ -74,7 +80,8 @@ const SAMPLE_CTX = {
   present: 24, worked: 24, ot: 2, ph: 1, wo: 4, el: 0, pl: 0,
 };
 
-export function FormulaBuilder({ value, onChange }: Props) {
+export function FormulaBuilder({ value, onChange, availableBases }: Props) {
+  const baseChoices = (availableBases && availableBases.length > 0 ? availableBases : DEFAULT_AVAILABLE_BASES);
   const mode = value?.mode ?? "preset";
   const preset = value?.mode === "preset" ? value.preset : DEFAULT_PRESET;
   const expression = value?.mode === "advanced" ? value.expression : "";
@@ -130,6 +137,7 @@ export function FormulaBuilder({ value, onChange }: Props) {
                   let next: PresetBase;
                   if (k === "fixed_amount") next = { kind: "fixed_amount", value: 0 };
                   else if (k === "variable") next = { kind: "variable", name: "basic" };
+                  else if (k === "composite") next = { kind: "composite", components: [{ name: "Basic", operator: "+" }, { name: "DA", operator: "+" }] };
                   else next = { kind: k } as PresetBase;
                   updatePreset({ base: next });
                 }}
@@ -163,7 +171,57 @@ export function FormulaBuilder({ value, onChange }: Props) {
                   </SelectContent>
                 </Select>
               )}
+              {preset.base.kind === "composite" && (() => {
+                const comps: CompositeComponent[] = preset.base.components ?? [];
+                const setComps = (next: CompositeComponent[]) =>
+                  updatePreset({ base: { kind: "composite", components: next } });
+                const selectedNames = new Set(comps.map((c) => c.name));
+                const remaining = baseChoices.filter((b) => !selectedNames.has(b));
+                return (
+                  <div className="rounded-md border border-border bg-card p-2 space-y-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {comps.map((c, idx) => (
+                        <span key={`${c.name}-${idx}`} className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs">
+                          <button
+                            type="button"
+                            className="font-mono text-[11px] text-muted-foreground hover:text-foreground"
+                            title="Toggle + / −"
+                            onClick={() => {
+                              const next = comps.slice();
+                              next[idx] = { ...c, operator: c.operator === "+" ? "-" : "+" };
+                              setComps(next);
+                            }}
+                          >{c.operator}</button>
+                          <span>{c.name}</span>
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => setComps(comps.filter((_, i) => i !== idx))}
+                          ><X className="h-3 w-3" /></button>
+                        </span>
+                      ))}
+                      {comps.length === 0 && (
+                        <span className="text-[11px] text-muted-foreground">Pick one or more components below…</span>
+                      )}
+                    </div>
+                    {remaining.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 border-t border-border pt-2">
+                        {remaining.map((b) => (
+                          <button
+                            key={b}
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:border-primary hover:text-primary"
+                            onClick={() => setComps([...comps, { name: b, operator: "+" }])}
+                          ><Plus className="h-3 w-3" /> {b}</button>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted-foreground">Click the +/− chip to subtract a component. Resolved variable: <code>{comps.map((c) => `${c.operator === "-" ? "-" : "+"}${slugifyVar(c.name)}`).join(" ") || "0"}</code></p>
+                  </div>
+                );
+              })()}
             </div>
+
 
             <div className="grid gap-1.5">
               <Label className="text-xs">Operator</Label>

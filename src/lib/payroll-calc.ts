@@ -13,7 +13,7 @@
 // REPLACES the legacy proration for that line. Statutory ESI/EPF/PT still
 // run as a final post-pass unless the line opts out of statutory via its
 // own formula.
-import { evaluateFormula, parseFormulaConfig, type FormulaContext } from "./formula-engine";
+import { evaluateFormula, parseFormulaConfig, slugifyVar, type FormulaContext } from "./formula-engine";
 
 export type AttendanceEntryLike = {
   candidate_id: string;
@@ -543,6 +543,14 @@ export function computeWages(
     el: 0,
     pl: totals.otherPaidDays,
   };
+  // Expose every contract component as a slugified variable so formulas can
+  // reference HRA, Special Allowance, Conveyance, etc. by name.
+  for (const c of resource.components) {
+    const key = slugifyVar(c.name);
+    if (key && baseFormulaCtx[key] === undefined) {
+      baseFormulaCtx[key] = Number(c.amount) || 0;
+    }
+  }
   const tryFormulaAmount = (
     item: { formulaMode?: string | null; formulaExpression?: string | null; amount?: number | string | null },
   ): number | null => {

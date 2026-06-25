@@ -610,7 +610,7 @@ function CostComponentDialog({
           </div>
 
           {calcType === "percentage" ? (
-            <FormulaBuilder value={formulaCfg} onChange={setFormulaCfg} />
+            <FormulaBuilder value={formulaCfg} onChange={setFormulaCfg} availableBases={baseLabels} />
           ) : (
             <div className="grid gap-3">
               <div className="grid gap-2">
