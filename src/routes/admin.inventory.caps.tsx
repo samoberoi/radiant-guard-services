@@ -64,6 +64,27 @@ function CapsPage() {
 function CapsInner() {
   const qc = useQueryClient();
 
+  // Realtime: auto-refresh when branches, field officers, or caps change
+  useEffect(() => {
+    const ch = supabase
+      .channel("inv-caps-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "branches" }, () => {
+        qc.invalidateQueries({ queryKey: ["branches-caps"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "candidates" }, () => {
+        qc.invalidateQueries({ queryKey: ["candidates-fo-caps"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "inv_caps" }, () => {
+        qc.invalidateQueries({ queryKey: ["inv", "caps"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "inv_stock_balances" }, () => {
+        qc.invalidateQueries({ queryKey: ["inv", "stock-all-for-caps"] });
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(ch); };
+  }, [qc]);
+
+
   const { data: caps = [] } = useQuery({
     queryKey: ["inv", "caps"],
     queryFn: async () => {
