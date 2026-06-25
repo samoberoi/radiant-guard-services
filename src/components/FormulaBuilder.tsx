@@ -170,8 +170,57 @@ export function FormulaBuilder({ value, onChange, availableBases }: Props) {
                     ))}
                   </SelectContent>
                 </Select>
-              )}
+              {preset.base.kind === "composite" && (() => {
+                const comps: CompositeComponent[] = preset.base.components ?? [];
+                const setComps = (next: CompositeComponent[]) =>
+                  updatePreset({ base: { kind: "composite", components: next } });
+                const selectedNames = new Set(comps.map((c) => c.name));
+                const remaining = baseChoices.filter((b) => !selectedNames.has(b));
+                return (
+                  <div className="rounded-md border border-border bg-card p-2 space-y-2">
+                    <div className="flex flex-wrap gap-1.5">
+                      {comps.map((c, idx) => (
+                        <span key={`${c.name}-${idx}`} className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs">
+                          <button
+                            type="button"
+                            className="font-mono text-[11px] text-muted-foreground hover:text-foreground"
+                            title="Toggle + / −"
+                            onClick={() => {
+                              const next = comps.slice();
+                              next[idx] = { ...c, operator: c.operator === "+" ? "-" : "+" };
+                              setComps(next);
+                            }}
+                          >{c.operator}</button>
+                          <span>{c.name}</span>
+                          <button
+                            type="button"
+                            className="text-muted-foreground hover:text-destructive"
+                            onClick={() => setComps(comps.filter((_, i) => i !== idx))}
+                          ><X className="h-3 w-3" /></button>
+                        </span>
+                      ))}
+                      {comps.length === 0 && (
+                        <span className="text-[11px] text-muted-foreground">Pick one or more components below…</span>
+                      )}
+                    </div>
+                    {remaining.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 border-t border-border pt-2">
+                        {remaining.map((b) => (
+                          <button
+                            key={b}
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-md border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground hover:border-primary hover:text-primary"
+                            onClick={() => setComps([...comps, { name: b, operator: "+" }])}
+                          ><Plus className="h-3 w-3" /> {b}</button>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-[10px] text-muted-foreground">Click the +/− chip to subtract a component. Resolved variable: <code>{comps.map((c) => `${c.operator === "-" ? "-" : "+"}${slugifyVar(c.name)}`).join(" ") || "0"}</code></p>
+                  </div>
+                );
+              })()}
             </div>
+
 
             <div className="grid gap-1.5">
               <Label className="text-xs">Operator</Label>
