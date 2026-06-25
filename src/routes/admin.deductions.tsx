@@ -635,25 +635,59 @@ function DeductionForm() {
             <Input value={autoName} readOnly className="bg-muted/40" />
           </div>
 
-          <div className="grid gap-1.5">
-            <Label>* Deduction Calculation Type</Label>
-            <Select value={calc} onValueChange={(v) => setCalc(v as CalcType)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="lumpsum">Lumpsum Amount</SelectItem>
-                <SelectItem value="per_duty_amount">Based On Duty And Per Day Amount</SelectItem>
-                <SelectItem value="total_amount">Based On Duty And Total Amount</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="grid gap-1.5 md:col-span-2 lg:col-span-4">
+            <Label>* Entry Mode</Label>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setEntryMode("lumpsum")}
+                className={cn("rounded-lg border px-3 py-1.5 text-sm", entryMode === "lumpsum" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                Lumpsum Amount
+              </button>
+              <button type="button" onClick={() => setEntryMode("days_x_per_day")}
+                className={cn("rounded-lg border px-3 py-1.5 text-sm", entryMode === "days_x_per_day" ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                Days × Per-day Amount
+              </button>
+            </div>
           </div>
-          <div className="grid gap-1.5">
-            <Label>* Deduction Amount</Label>
-            <Input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
-          </div>
-          <div className="grid gap-1.5">
-            <Label>* Deduction Installments</Label>
-            <Input type="number" min="1" step="1" value={installments} onChange={(e) => setInstallments(e.target.value)} disabled={calc !== "lumpsum"} />
-          </div>
+
+          {entryMode === "lumpsum" ? (
+            <>
+              <div className="grid gap-1.5">
+                <Label>* Deduction Calculation Type</Label>
+                <Select value={calc} onValueChange={(v) => setCalc(v as CalcType)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lumpsum">Lumpsum Amount</SelectItem>
+                    <SelectItem value="per_duty_amount">Based On Duty And Per Day Amount</SelectItem>
+                    <SelectItem value="total_amount">Based On Duty And Total Amount</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label>* Deduction Amount</Label>
+                <Input type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>* Installments</Label>
+                <Input type="number" min="1" step="1" value={installments} onChange={(e) => setInstallments(e.target.value)} disabled={calc !== "lumpsum"} />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="grid gap-1.5">
+                <Label>* Number of Days</Label>
+                <Input type="number" min="0" step="0.5" value={days} onChange={(e) => setDays(e.target.value)} placeholder="e.g. 2" />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>* Amount per Day (₹)</Label>
+                <Input type="number" min="0" step="0.01" value={perDayAmount} onChange={(e) => setPerDayAmount(e.target.value)} placeholder="e.g. 500" />
+              </div>
+              <div className="grid gap-1.5">
+                <Label>Computed Amount</Label>
+                <Input value={fmtINR(computedAmount)} readOnly className="bg-muted/40 font-semibold" />
+              </div>
+            </>
+          )}
+
           <div className="grid gap-1.5">
             <Label>Status</Label>
             <Select value={status} onValueChange={(v) => setStatus(v as Status)}>
@@ -667,22 +701,43 @@ function DeductionForm() {
             </Select>
           </div>
 
+          {entryMode === "days_x_per_day" && (
+            <div className="grid gap-1.5 md:col-span-2 lg:col-span-4 rounded-xl border border-dashed border-border bg-muted/20 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label className="text-foreground">Deduct these days from employee's total days?</Label>
+                  <p className="text-xs text-muted-foreground">When ON, the days here are subtracted from T-days in payroll (e.g. unpaid leave reduces worked days).</p>
+                </div>
+                <Switch checked={includeInTotalDays} onCheckedChange={setIncludeInTotalDays} />
+              </div>
+              {includeInTotalDays && (
+                <div className="mt-2">
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Subtract days from which buckets</Label>
+                  <div className="mt-1.5 flex flex-wrap gap-2">
+                    {DAY_BUCKETS.map((b) => (
+                      <button key={b.value} type="button" onClick={() => toggleBucket(b.value)}
+                        className={cn("rounded-md border px-3 py-1 text-xs font-medium",
+                          affectsDaysFor.includes(b.value) ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground")}>
+                        {b.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="grid gap-1.5 md:col-span-2 lg:col-span-4">
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Description" rows={3} />
           </div>
         </div>
 
-        <div className="mt-5 rounded-xl border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
-          <div><strong>Lumpsum Amount:</strong> Amount = Deduction Amount / Installments</div>
-          <div><strong>Based On Duty And Per Day Amount:</strong> Amount = Deduction Amount × Duties</div>
-          <div><strong>Based On Duty And Total Amount:</strong> Amount = (Deduction Amount / Working Days) × Duties</div>
-        </div>
-
         <div className="mt-5 flex justify-end gap-2">
           <Button type="button" variant="outline" onClick={() => navigate({ to: "/admin/deductions", search: { mode: "list" } })} disabled={saving}>Cancel</Button>
-          <Button type="button" disabled={candidateIds.length === 0 || !typeId || !amount} onClick={() => setStep("constraints")}>Next step</Button>
+          <Button type="button" disabled={candidateIds.length === 0 || !typeId || computedAmount <= 0} onClick={() => setStep("constraints")}>Next step</Button>
         </div>
+
       </div>
       )}
 
