@@ -965,12 +965,20 @@ function isEsiItem(item: { name?: unknown } | null | undefined): boolean {
   return ESI_COMPONENT_RE.test(String(item?.name ?? ""));
 }
 
-function contractTotalAmount(item: { name?: unknown; amount?: unknown }): number {
-  return isEsiItem(item) ? 0 : Number(item.amount) || 0;
-}
-
 function hasConfiguredFormula(item: { formulaExpression?: string | null }): boolean {
   return !!item.formulaExpression?.trim();
+}
+
+// ESI rows fall back to the statutory calc only when no custom formula is set
+// in Cost Component Manager. When a formula IS configured the row uses its own
+// evaluated amount instead of the statutory 0.75% / 3.25% override.
+function isStatutoryEsi(item: { name?: unknown; formulaExpression?: string | null } | null | undefined): boolean {
+  return isEsiItem(item) && !hasConfiguredFormula(item ?? {});
+}
+
+function contractTotalAmount(item: { name?: unknown; amount?: unknown; formulaExpression?: string | null }): number {
+  if (isStatutoryEsi(item)) return 0;
+  return Number(item.amount) || 0;
 }
 
 function addFormulaAliases(ctx: FormulaContext, amount: number, labels: Array<string | null | undefined>) {
