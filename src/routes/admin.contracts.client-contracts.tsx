@@ -4513,7 +4513,7 @@ function SalaryBreakdownTable({
                   </td>
                   <td className="text-center tabular-nums">{isStatutoryEsi(b) ? esiEmployeeAmount.toFixed(2) : Number(b.amount).toFixed(2)}</td>
                   <td />
-                  <td className="text-right tabular-nums">{isEsiItem(b) ? earnedFor(esiEmployeeAmount).toFixed(2) : earnedFor(Number(b.amount)).toFixed(2)}</td>
+                  <td className="text-right tabular-nums">{isStatutoryEsi(b) ? earnedFor(esiEmployeeAmount).toFixed(2) : earnedFor(Number(b.amount)).toFixed(2)}</td>
                 </tr>
               ));
             })()}
@@ -4562,7 +4562,7 @@ function SalaryBreakdownTable({
                   </td>
                   <td className="text-center tabular-nums">{isStatutoryEsi(b) ? esiEmployerAmount.toFixed(2) : Number(b.amount).toFixed(2)}</td>
                   <td />
-                  <td className="text-right tabular-nums">{isEsiItem(b) ? earnedFor(esiEmployerAmount).toFixed(2) : earnedFor(Number(b.amount)).toFixed(2)}</td>
+                  <td className="text-right tabular-nums">{isStatutoryEsi(b) ? earnedFor(esiEmployerAmount).toFixed(2) : earnedFor(Number(b.amount)).toFixed(2)}</td>
                 </tr>
               ));
             })()}
