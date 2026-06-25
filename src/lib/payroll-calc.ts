@@ -244,9 +244,12 @@ function applyEsiRule(
   // ESI-named rows are zeroed so the contract can't double-count ESI.
   // If the contract has no ESI row, do NOT auto-inject — the contract is
   // the source of truth for whether ESI applies to this resource.
+  // CUSTOM-FORMULA WINS: if the row carries its own formula_expression,
+  // keep the already-evaluated amount instead of overwriting with statutory.
   let placed = false;
   return items.map((i) => {
     if (!ESI_NAME_RE.test(i.name)) return i;
+    if (hasConfiguredFormula(i)) return i;
     if (placed) return { ...i, amount: 0 };
     placed = true;
     return { ...i, amount: share };
@@ -434,10 +437,13 @@ export function resolvePtAmount(input: PtResolveInput): PtResolveResult {
 }
 
 function applyPtRule(items: WageComponent[], amount: number, defaultName: string): WageComponent[] {
+  // CUSTOM-FORMULA WINS: PT rows with their own formula keep the evaluated
+  // amount. Statutory slab lookup only fills plain (formula-less) PT rows.
   const hasPt = items.some((i) => PT_NAME_RE.test(i.name));
   let placed = false;
   const mapped = items.map((i) => {
     if (!PT_NAME_RE.test(i.name)) return i;
+    if (hasConfiguredFormula(i)) return i;
     if (placed) return { ...i, amount: 0 };
     placed = true;
     return { ...i, amount };
@@ -731,10 +737,14 @@ export function computeWages(
   // Only the FIRST EPF-named row carries the statutory amount; any other
   // EPF-named rows are zeroed so a contract listing multiple EPF lines
   // can't double-deduct.
+  // CUSTOM-FORMULA WINS: rows whose contract line carries an explicit
+  // formula_expression keep that evaluated amount; statutory EPF only
+  // applies to plain (formula-less) EPF rows.
   const applyEpfRule = (items: WageComponent[], amount: number) => {
     let placed = false;
     return items.map((i) => {
       if (!EPF_NAME_RE.test(i.name)) return i;
+      if (hasConfiguredFormula(i)) return i;
       if (placed) return { ...i, amount: 0 };
       placed = true;
       return { ...i, amount };
