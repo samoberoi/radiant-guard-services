@@ -179,6 +179,9 @@ type AllowanceType = {
   baseComponents: { label: string; operator: "+" | "-" }[];
   capAmount: number | null;
   includeInOt: boolean;
+  formulaMode?: string | null;
+  formulaExpression?: string | null;
+  formulaVersion?: number | null;
 };
 
 type ResourceComponent = {
@@ -186,6 +189,9 @@ type ResourceComponent = {
   name: string;
   amount: number;
   includeInOt?: boolean;
+  formulaMode?: string | null;
+  formulaExpression?: string | null;
+  formulaVersion?: number | null;
 };
 
 type FixedCalcMethod = "flat" | "per_duty";
@@ -204,6 +210,9 @@ type BenefitItem = {
   deductionCalcType?: "earned_salary" | "fixed_amount";
   fixedCalcMethod?: FixedCalcMethod;
   fixedDutyComponents?: FixedDutyBucket[];
+  formulaMode?: string | null;
+  formulaExpression?: string | null;
+  formulaVersion?: number | null;
 };
 
 
