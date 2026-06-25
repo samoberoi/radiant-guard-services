@@ -348,12 +348,30 @@ function PayrollUnitPage() {
           prev.tDays += sign * dayDelta * Math.max(1, list.length);
           dayAdjustmentByCandidate.set(cid, prev);
         };
+        // System-computed day buckets: when an addition/deduction affects
+        // these buckets via day-adjustments, the cash value is recomputed
+        // by computeWages from the contract gross (perDayRate × days for PH,
+        // perDutyOt × days for OT). Pushing the manual amount as a cash
+        // addition would double-count, so we suppress it and rely on the
+        // engine. Buckets like 'present'/'worked'/'other' don't have a
+        // built-in cash line, so we still keep the addition row for those.
+        const SYSTEM_COMPUTED_BUCKETS = new Set(["ph", "ot"]);
+        const isSystemComputedDayAdj = (entryMode: string | null | undefined, includeInTotal: boolean | null | undefined, buckets: string[] | null | undefined) =>
+          entryMode === "days_x_per_day"
+          && !!includeInTotal
+          && Array.isArray(buckets)
+          && buckets.length > 0
+          && buckets.every((b) => SYSTEM_COMPUTED_BUCKETS.has(b));
+
         for (const a of ((addsRes.data ?? []) as unknown as RawAdd[])) {
           const inst = Math.max(1, Number(a.installments) || 1);
           const amt = (Number(a.amount) || 0) / inst;
-          const arr = additionsByCandidate.get(a.candidate_id) ?? [];
-          arr.push({ name: cleanLedgerName(a.addition_name), amount: Math.round(amt * 100) / 100 });
-          additionsByCandidate.set(a.candidate_id, arr);
+          const isDayAdj = isSystemComputedDayAdj(a.entry_mode, a.include_in_total_days, a.affects_days_for);
+          if (!isDayAdj) {
+            const arr = additionsByCandidate.get(a.candidate_id) ?? [];
+            arr.push({ name: cleanLedgerName(a.addition_name), amount: Math.round(amt * 100) / 100 });
+            additionsByCandidate.set(a.candidate_id, arr);
+          }
           if (a.entry_mode === "days_x_per_day" && a.include_in_total_days) {
             applyDayAdj(a.candidate_id, Number(a.days) || 0, a.affects_days_for, +1);
           }
@@ -361,13 +379,17 @@ function PayrollUnitPage() {
         for (const d of ((dedsRes.data ?? []) as unknown as RawDed[])) {
           const inst = Math.max(1, Number(d.installments) || 1);
           const amt = (Number(d.amount) || 0) / inst;
-          const arr = deductionsByCandidate.get(d.candidate_id) ?? [];
-          arr.push({ name: cleanLedgerName(d.deduction_name), amount: Math.round(amt * 100) / 100 });
-          deductionsByCandidate.set(d.candidate_id, arr);
+          const isDayAdj = isSystemComputedDayAdj(d.entry_mode, d.include_in_total_days, d.affects_days_for);
+          if (!isDayAdj) {
+            const arr = deductionsByCandidate.get(d.candidate_id) ?? [];
+            arr.push({ name: cleanLedgerName(d.deduction_name), amount: Math.round(amt * 100) / 100 });
+            deductionsByCandidate.set(d.candidate_id, arr);
+          }
           if (d.entry_mode === "days_x_per_day" && d.include_in_total_days) {
             applyDayAdj(d.candidate_id, Number(d.days) || 0, d.affects_days_for, -1);
           }
         }
+
       }
 
 
