@@ -48,12 +48,20 @@ type Operator = "+" | "-";
 type BaseRef = { label: string; operator: Operator };
 type FixedCalcMethod = "flat" | "per_duty";
 type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
+type FixedDutyDivisor = "base_days" | "days_in_month" | "payable_days" | "fixed_26";
 
 const FIXED_DUTY_BUCKETS: { value: FixedDutyBucket; label: string; short: string }[] = [
   { value: "p_days", label: "P Days (present)", short: "P" },
   { value: "ot_days", label: "OT Days", short: "OT" },
   { value: "ph_days", label: "PH Days (public holiday)", short: "PH" },
   { value: "other_paid_days", label: "Other Paid Days", short: "OPL" },
+];
+
+const FIXED_DUTY_DIVISORS: { value: FixedDutyDivisor; label: string; short: string }[] = [
+  { value: "base_days",     label: "Base Days (contract — usually 26)",           short: "Base Days" },
+  { value: "days_in_month", label: "Total Days in Month (calendar days)",         short: "Days in Month" },
+  { value: "payable_days",  label: "Payable Days (P + Other Paid)",               short: "Payable Days" },
+  { value: "fixed_26",      label: "Fixed 26",                                    short: "26" },
 ];
 
 type CostComponent = {
@@ -72,6 +80,7 @@ type CostComponent = {
   deduction_calc_type: "earned_salary" | "fixed_amount";
   fixed_calc_method: FixedCalcMethod;
   fixed_duty_components: FixedDutyBucket[];
+  fixed_duty_divisor: FixedDutyDivisor;
   formula_mode: string | null;
   formula_expression: string | null;
 };
@@ -116,20 +125,25 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
           FIXED_DUTY_BUCKETS.some((x) => x.value === b),
         ) as FixedDutyBucket[])
       : [],
+    fixed_duty_divisor:
+      (FIXED_DUTY_DIVISORS.some((x) => x.value === r.fixed_duty_divisor)
+        ? (r.fixed_duty_divisor as FixedDutyDivisor)
+        : "base_days"),
     formula_mode: r.formula_mode == null ? null : String(r.formula_mode),
     formula_expression: r.formula_expression == null ? null : String(r.formula_expression),
   };
 }
 
 
-function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "cap_flat_amount" | "amount"> & { name?: string; fixed_calc_method?: FixedCalcMethod; fixed_duty_components?: FixedDutyBucket[] }): string {
+function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "base_components" | "cap_amount" | "cap_flat_amount" | "amount"> & { name?: string; fixed_calc_method?: FixedCalcMethod; fixed_duty_components?: FixedDutyBucket[]; fixed_duty_divisor?: FixedDutyDivisor }): string {
   if (c.calc_type === "fixed") {
     if (c.fixed_calc_method === "per_duty") {
       const buckets = (c.fixed_duty_components ?? [])
         .map((b) => FIXED_DUTY_BUCKETS.find((x) => x.value === b)?.short ?? b)
         .join(" + ") || "—";
       const amt = c.amount != null && c.amount > 0 ? `₹${c.amount.toLocaleString("en-IN")}` : "amount";
-      return `${amt} ÷ Base Days × (${buckets}) · per-duty`;
+      const divLabel = FIXED_DUTY_DIVISORS.find((x) => x.value === (c.fixed_duty_divisor ?? "base_days"))?.short ?? "Base Days";
+      return `${amt} ÷ ${divLabel} × (${buckets}) · per-duty`;
     }
 
     const isMgmt = /management\s*fee/i.test(c.name ?? "");
@@ -193,6 +207,10 @@ function useCostComponents() {
       p.calc_type === "fixed" && p.fixed_calc_method === "per_duty"
         ? p.fixed_duty_components
         : [],
+    fixed_duty_divisor:
+      p.calc_type === "fixed" && p.fixed_calc_method === "per_duty"
+        ? p.fixed_duty_divisor
+        : "base_days",
     formula_mode: p.formula_mode ?? "preset",
     formula_expression: p.formula_expression,
   });
@@ -515,6 +533,7 @@ function CostComponentDialog({
     useState<"earned_salary" | "fixed_amount">("earned_salary");
   const [fixedCalcMethod, setFixedCalcMethod] = useState<FixedCalcMethod>("flat");
   const [fixedDutyComponents, setFixedDutyComponents] = useState<FixedDutyBucket[]>([]);
+  const [fixedDutyDivisor, setFixedDutyDivisor] = useState<FixedDutyDivisor>("base_days");
   const [saving, setSaving] = useState(false);
   const [formulaCfg, setFormulaCfg] = useState<FormulaConfig | null>(null);
 
@@ -529,6 +548,7 @@ function CostComponentDialog({
     setDeductionCalcType(initial?.deduction_calc_type ?? "earned_salary");
     setFixedCalcMethod(initial?.fixed_calc_method ?? "flat");
     setFixedDutyComponents(initial?.fixed_duty_components ?? []);
+    setFixedDutyDivisor(initial?.fixed_duty_divisor ?? "base_days");
     // Seed formula: explicit saved formula_expression wins; otherwise rebuild a
     // preset from legacy calc_type=percentage + base_components + percentage so
     // existing rows open with their original chips populated in the builder.
@@ -568,6 +588,7 @@ function CostComponentDialog({
         name,
         fixed_calc_method: fixedCalcMethod,
         fixed_duty_components: fixedDutyComponents,
+        fixed_duty_divisor: fixedDutyDivisor,
       })
     : "";
 
@@ -628,13 +649,27 @@ function CostComponentDialog({
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="flat">Flat — use the amount as entered</SelectItem>
-                      <SelectItem value="per_duty">Per-Duty Proration — amount ÷ Base Days × selected duties</SelectItem>
+                      <SelectItem value="per_duty">Per-Duty Proration — amount ÷ divisor × selected duties</SelectItem>
                     </SelectContent>
                   </Select>
                   <p className="text-[11px] text-muted-foreground">
-                    Per-Duty uses the contract resource&apos;s Base Days as the divisor (e.g. amount ÷ 26 = per-duty rate), then multiplies by the sum of the duty buckets you pick below.
+                    Per-Duty divides the amount by your chosen day basis (e.g. amount ÷ 26 or ÷ days-in-month), then multiplies by the sum of the duty buckets you pick below.
                   </p>
                 </div>
+
+                {fixedCalcMethod === "per_duty" && (
+                  <div className="grid gap-2">
+                    <Label>Divisor (day basis)</Label>
+                    <Select value={fixedDutyDivisor} onValueChange={(v) => setFixedDutyDivisor(v as FixedDutyDivisor)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {FIXED_DUTY_DIVISORS.map((d) => (
+                          <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {fixedCalcMethod === "per_duty" && (
                   <div className="grid gap-2">
@@ -665,7 +700,7 @@ function CostComponentDialog({
                     </div>
                     <div className="rounded-md bg-secondary/40 px-3 py-2 text-[12px] text-foreground/80">
                       <span className="font-medium">Example:</span>{" "}
-                      ₹{amount || "200"} ÷ Base Days ×{" "}
+                      ₹{amount || "200"} ÷ {FIXED_DUTY_DIVISORS.find((d) => d.value === fixedDutyDivisor)?.short ?? "Base Days"} ×{" "}
                       ({fixedDutyComponents.length > 0
                         ? fixedDutyComponents
                             .map((b) => FIXED_DUTY_BUCKETS.find((x) => x.value === b)?.short ?? b)
@@ -741,6 +776,7 @@ function CostComponentDialog({
                 deduction_calc_type: deductionCalcType,
                 fixed_calc_method: fixedCalcMethod,
                 fixed_duty_components: fixedDutyComponents,
+                fixed_duty_divisor: fixedDutyDivisor,
                 formula_mode: ser ? ser.mode : "preset",
                 formula_expression: ser ? ser.expression : null,
               });

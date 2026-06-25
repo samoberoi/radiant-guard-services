@@ -202,6 +202,7 @@ type ResourceComponent = {
 
 type FixedCalcMethod = "flat" | "per_duty";
 type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
+type FixedDutyDivisor = "base_days" | "days_in_month" | "payable_days" | "fixed_26";
 
 type BenefitItem = {
   costComponentId: string;
@@ -216,6 +217,7 @@ type BenefitItem = {
   deductionCalcType?: "earned_salary" | "fixed_amount";
   fixedCalcMethod?: FixedCalcMethod;
   fixedDutyComponents?: FixedDutyBucket[];
+  fixedDutyDivisor?: FixedDutyDivisor;
   formulaMode?: string | null;
   formulaExpression?: string | null;
   formulaVersion?: number | null;
@@ -288,6 +290,7 @@ type CostComponentOption = {
   deductionCalcType: "earned_salary" | "fixed_amount";
   fixedCalcMethod: FixedCalcMethod;
   fixedDutyComponents: FixedDutyBucket[];
+  fixedDutyDivisor: FixedDutyDivisor;
   formulaMode?: string | null;
   formulaExpression?: string | null;
   formulaVersion?: number | null;
@@ -902,7 +905,7 @@ function useCostComponentOptions() {
     queryFn: async (): Promise<CostComponentOption[]> => {
       const { data, error } = await supabase
         .from("cost_components" as never)
-        .select("id,name,calc_type,percentage,base_components,cap_amount,cap_flat_amount,amount,state,enabled,sort_order,deduction_calc_type,fixed_calc_method,fixed_duty_components,formula_mode,formula_expression,formula_version")
+        .select("id,name,calc_type,percentage,base_components,cap_amount,cap_flat_amount,amount,state,enabled,sort_order,deduction_calc_type,fixed_calc_method,fixed_duty_components,fixed_duty_divisor,formula_mode,formula_expression,formula_version")
         .order("sort_order")
         .order("name");
       if (error) throw error;
@@ -929,6 +932,9 @@ function useCostComponentOptions() {
                 ["p_days","ot_days","ph_days","other_paid_days"].includes(b),
               ) as FixedDutyBucket[])
             : [],
+          fixedDutyDivisor: (["base_days","days_in_month","payable_days","fixed_26"].includes(String(r.fixed_duty_divisor))
+            ? (r.fixed_duty_divisor as FixedDutyDivisor)
+            : "base_days"),
           formulaMode: r.formula_mode == null ? null : String(r.formula_mode),
           formulaExpression: r.formula_expression == null ? null : String(r.formula_expression),
           formulaVersion: r.formula_version == null ? null : Number(r.formula_version),
@@ -3489,6 +3495,7 @@ function ResourceFormDialog({
     deductionCalcType: "fixed_amount",
     fixedCalcMethod: "flat",
     fixedDutyComponents: [],
+    fixedDutyDivisor: "base_days",
   };
 
 
@@ -3597,6 +3604,7 @@ function ResourceFormDialog({
       deductionCalcType: c.deductionCalcType,
       fixedCalcMethod: c.fixedCalcMethod,
       fixedDutyComponents: c.fixedDutyComponents,
+      fixedDutyDivisor: c.fixedDutyDivisor,
       formulaMode: c.formulaMode ?? null,
       formulaExpression: c.formulaExpression ?? null,
       formulaVersion: c.formulaVersion ?? null,
@@ -3634,6 +3642,7 @@ function ResourceFormDialog({
       deductionCalcType: c.deductionCalcType,
       fixedCalcMethod: c.fixedCalcMethod,
       fixedDutyComponents: c.fixedDutyComponents,
+      fixedDutyDivisor: c.fixedDutyDivisor,
       formulaMode: c.formulaMode ?? null,
       formulaExpression: c.formulaExpression ?? null,
       formulaVersion: c.formulaVersion ?? null,
@@ -3671,6 +3680,7 @@ function ResourceFormDialog({
       deductionCalcType: c.deductionCalcType,
       fixedCalcMethod: c.fixedCalcMethod,
       fixedDutyComponents: c.fixedDutyComponents,
+      fixedDutyDivisor: c.fixedDutyDivisor,
       formulaMode: c.formulaMode ?? null,
       formulaExpression: c.formulaExpression ?? null,
       formulaVersion: c.formulaVersion ?? null,

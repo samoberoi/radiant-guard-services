@@ -1,48 +1,71 @@
 ## Goal
 
-Fix two miscalculations in the payroll engine (`src/lib/payroll-calc.ts`) and its caller (`src/routes/admin.payroll.$unitId.tsx`):
+In **Control Center → Cost Component Manager**, the "Per-Duty Proration" mode currently hard-divides by **Base Days** (26). The user wants the divisor to be **customizable per component** so Management Fee (and any other component) can be set as:
 
-1. **Paid Holiday (PH)** must honour the amount entered in Payroll Additions, not recompute from `contractGross / baseDays`.
-2. **Overtime (OT)** must use a fixed divisor of `26` and exclude only the Uniform allowance.
+```
+amount ÷ <chosen day basis> × <selected duty buckets>
+```
+
+Example requested: `amount ÷ Total Days in Month × Total Working Duties`.
 
 ## Changes
 
-### 1. Paid Holiday uses the addition amount
+### 1. Schema (`cost_components` + `contract_resources` snapshot)
 
-In `admin.payroll.$unitId.tsx` (PH addition handling, ~lines 384-394):
-- For every PH-type addition row, sum the addition amount (`amount × installments` consistent with existing logic) into a new per-candidate map `phCashByCandidate`.
-- Continue to bump `phDisplayCountByCandidate` so the **PH Days** column still shows the count.
-- Stop letting PH additions contribute to `dayAdjustmentByCandidate.phDays` (so `computeWages` doesn't auto-pay them).
+Add one nullable column:
+- `fixed_duty_divisor text` — one of `base_days` | `days_in_month` | `payable_days` | `fixed_26` (default `base_days` to preserve current behaviour).
 
-In `payroll-calc.ts` (`computeWages`):
-- Add an optional `phOverrideAmount?: number` parameter (passed by the caller when a PH cash override exists).
-- When provided, use it as the `Paid Holiday` line amount instead of `perDayRate × phCount`.
-- When not provided, keep current behaviour (so attendance-only PH still pays via `perDayRate`).
+No data backfill needed; `NULL`/`base_days` keeps today's math.
 
-At the call site, pass `phCashByCandidate.get(c.id)` into `computeWages`.
+### 2. Cost Component Manager UI (`src/routes/admin.cost-component-manager.tsx`)
 
-Result: Sambhaji's PH line shows exactly ₹1003 when the user enters ₹1003 in Additions.
+When `calc_type = fixed` and `fixed_calc_method = per_duty`, show a new "Divisor" select beside the existing duty-bucket checkboxes:
 
-### 2. Overtime uses ÷26 and excludes Uniform
+- **Base Days** (current default, ÷ baseDays e.g. 26)
+- **Total Days in Month** (÷ calendar days of the payroll period)
+- **Payable Days** (÷ P + Other Paid days)
+- **Fixed 26**
 
-In `payroll-calc.ts` (OT block, ~lines 621-647), replace the current logic with:
+Update `buildDescription()` so the row subtitle reads e.g. `₹10,000 ÷ Days in Month × (T) · per-duty` so the user sees exactly which divisor is in effect.
 
+Persist via `toRow()` / `rowToItem()`.
+
+### 3. Payroll engine (`src/lib/payroll-calc.ts`)
+
+`computePerDutyAmount()` currently does:
+
+```ts
+const perDuty = baseDays > 0 ? configured / baseDays : 0;
 ```
-otExcluded = sum of components whose canonical name matches /uniform/i
-otBase     = contractGross - otExcluded
-perDutyOt  = otBase / 26          // hard-coded, not baseDays
-otAmount   = round2(perDutyOt × totals.otDays)
+
+Replace with a divisor lookup driven by the new field:
+
+```ts
+const divisor = (() => {
+  switch (i.fixedDutyDivisor) {
+    case "days_in_month": return periodDayCount;
+    case "payable_days":  return basePaidDays;
+    case "fixed_26":      return 26;
+    case "base_days":
+    default:              return baseDays;
+  }
+})();
+const perDuty = divisor > 0 ? configured / divisor : 0;
 ```
 
-Remove the `includeInOt` flag branch entirely for this rule (per spec). Keep the `Overtime` line emission and the `otBaseAmount / perDutyOtAmount / otDuties / totalOtAmount` fields unchanged in shape — only their values change.
+Thread `fixedDutyDivisor` through the `BenefitLike` / `WageComponent` types and the contract-hydrate snapshot (`src/lib/contract-hydrate.ts`) so it flows from `cost_components` → `contract_resources.components` → `computeWages`.
+
+Remove the special-case comment block that says "Management Fee is intentionally NOT fixed"; once Management Fee is configured as `per_duty` with divisor = `days_in_month` and bucket = `p_days + other_paid_days`, the engine handles it generically — no name-based logic needed.
+
+### 4. Verification
+
+- Edit Management Fee → set Per-Duty, Divisor = **Total Days in Month**, Buckets = **Working Duties (P + Other Paid)**, Amount = ₹X.
+- Re-run a unit payroll and confirm the Management Fee line equals `X / days_in_month × T` and exports correctly.
+- Existing rows without `fixed_duty_divisor` continue computing identically (÷ baseDays).
+- Typecheck clean.
 
 ## Out of scope
 
-- No UI / column / export-header changes.
-- No DB migration.
-- Other components (HRA, ESI, EPF, PT, deductions) remain untouched.
-
-## Verification
-
-- Recompute Sambhaji Tukaram Mastake: PH line = ₹1003 (matches addition); OT line = `(26076 − uniform) / 26 × ot_days`.
-- Run typecheck; spot-check the payroll table renders without console errors.
+- No UI rework outside the Per-Duty section.
+- No changes to PH, OT, EPF/ESI/PT logic.
+- No retroactive recomputation of historical payroll runs.
