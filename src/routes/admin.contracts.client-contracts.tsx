@@ -3528,7 +3528,8 @@ function ResourceFormDialog({
       formulaExpression: c.formulaExpression ?? null,
       formulaVersion: c.formulaVersion ?? null,
     };
-    if (item.calcType === "percentage") {
+    const hasF = !!(item.formulaExpression && item.formulaExpression.trim());
+    if (item.calcType === "percentage" || hasF) {
       const l = (s: string) => s.trim().toLowerCase();
       const refsCtc = item.baseComponents.some(
         (x) => l(x.label) === "ctc" || l(x.label) === "total ctc",
