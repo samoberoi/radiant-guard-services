@@ -108,6 +108,7 @@ const assetsChildren: LeafItem[] = [
 
 const inventoryChildren: LeafItem[] = [
   { to: "/admin/inventory", label: "Inventory Command Center", icon: LayoutDashboard },
+  { to: "/admin/inventory/workflows", label: "Inventory Workflows", icon: Boxes },
   { to: "/admin/inventory/items", label: "Products", icon: PackageOpen, sub: "item_master" },
   { to: "/admin/inventory/vendors", label: "Vendors", icon: ShoppingBag, sub: "vendors" },
   { to: "/admin/inventory/warehouses", label: "Warehouses", icon: Warehouse, sub: "warehouses" },
