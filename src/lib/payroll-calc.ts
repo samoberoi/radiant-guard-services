@@ -521,11 +521,47 @@ export function computeWages(
   const basePaidDays = totals.pDays + totals.otherPaidDays;
   const baseRatio = baseDays > 0 ? basePaidDays / baseDays : 0;
 
-  const components: WageComponent[] = resource.components.map((c) => ({
-    ...c,
-    name: c.name,
-    amount: round2((Number(c.amount) || 0) * baseRatio),
-  }));
+  // Build a FormulaContext shared by every line that opts into the engine.
+  // Variables match what Allowance Manager / Cost Component Manager expose.
+  const findAmountByName = (re: RegExp): number => {
+    const hit = resource.components.find((c) => re.test(canonicalComponentName(c.name)));
+    return hit ? Number(hit.amount) || 0 : 0;
+  };
+  const baseFormulaCtx: FormulaContext = {
+    basic: findAmountByName(/\bbasic\b/i),
+    da: findAmountByName(/\bda\b|dearness/i),
+    gross: contractGross,
+    fixed_amount: 0,
+    fixed_days: baseDays,
+    working_days: periodDayCount,
+    payable_days: basePaidDays,
+    present: totals.pDays,
+    worked: totals.pDays + totals.otherPaidDays,
+    ot: totals.otDays,
+    ph: totals.phDays,
+    wo: 0,
+    el: 0,
+    pl: totals.otherPaidDays,
+  };
+  const tryFormulaAmount = (
+    item: { formulaMode?: string | null; formulaExpression?: string | null; amount?: number | string | null },
+  ): number | null => {
+    const cfg = parseFormulaConfig(item.formulaMode, item.formulaExpression);
+    if (!cfg) return null;
+    if (cfg.mode === "advanced" && (!cfg.expression || !cfg.expression.trim())) return null;
+    const ctx: FormulaContext = { ...baseFormulaCtx, fixed_amount: Number(item.amount) || 0 };
+    const r = evaluateFormula(cfg, ctx);
+    return r.error ? null : r.amount;
+  };
+
+  const components: WageComponent[] = resource.components.map((c) => {
+    const fromFormula = tryFormulaAmount(c);
+    return {
+      ...c,
+      name: c.name,
+      amount: fromFormula != null ? fromFormula : round2((Number(c.amount) || 0) * baseRatio),
+    };
+  });
 
   const phAmount = round2(perDayRate * phCount);
   if (phAmount > 0) {
