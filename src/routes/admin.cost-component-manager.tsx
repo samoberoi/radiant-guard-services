@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { FormulaBuilderToggle } from "@/components/FormulaBuilder";
+import { parseFormulaConfig, serializeFormulaConfig, type FormulaConfig } from "@/lib/formula-engine";
 import {
   Select,
   SelectContent,
@@ -70,6 +72,8 @@ type CostComponent = {
   deduction_calc_type: "earned_salary" | "fixed_amount";
   fixed_calc_method: FixedCalcMethod;
   fixed_duty_components: FixedDutyBucket[];
+  formula_mode: string | null;
+  formula_expression: string | null;
 };
 
 
@@ -112,6 +116,8 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
           FIXED_DUTY_BUCKETS.some((x) => x.value === b),
         ) as FixedDutyBucket[])
       : [],
+    formula_mode: r.formula_mode == null ? null : String(r.formula_mode),
+    formula_expression: r.formula_expression == null ? null : String(r.formula_expression),
   };
 }
 
@@ -187,6 +193,8 @@ function useCostComponents() {
       p.calc_type === "fixed" && p.fixed_calc_method === "per_duty"
         ? p.fixed_duty_components
         : [],
+    formula_mode: p.formula_mode,
+    formula_expression: p.formula_expression,
   });
 
 
@@ -512,6 +520,8 @@ function CostComponentDialog({
   const [fixedCalcMethod, setFixedCalcMethod] = useState<FixedCalcMethod>("flat");
   const [fixedDutyComponents, setFixedDutyComponents] = useState<FixedDutyBucket[]>([]);
   const [saving, setSaving] = useState(false);
+  const [formulaEnabled, setFormulaEnabled] = useState(false);
+  const [formulaCfg, setFormulaCfg] = useState<FormulaConfig | null>(null);
 
 
   useResetOnOpen(open, () => {
@@ -519,7 +529,6 @@ function CostComponentDialog({
     setCalcType(initial?.calc_type ?? "percentage");
     setPercentage(String(initial?.percentage ?? 0));
     const initialBase = initial?.base_components ?? [];
-    // Migrate legacy "Earned Gross" label → "Gross" (no such component exists).
     setBaseRefs(
       initialBase.map((b) => (b.label === "Earned Gross" ? { ...b, label: "Gross" } : b)),
     );
@@ -533,6 +542,9 @@ function CostComponentDialog({
     setDeductionCalcType(initial?.deduction_calc_type ?? "earned_salary");
     setFixedCalcMethod(initial?.fixed_calc_method ?? "flat");
     setFixedDutyComponents(initial?.fixed_duty_components ?? []);
+    const cfg = parseFormulaConfig(initial?.formula_mode, initial?.formula_expression);
+    setFormulaEnabled(!!cfg);
+    setFormulaCfg(cfg);
   });
 
 
@@ -775,6 +787,13 @@ function CostComponentDialog({
             </div>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
           </div>
+
+          <FormulaBuilderToggle
+            enabled={formulaEnabled}
+            onToggle={setFormulaEnabled}
+            value={formulaCfg}
+            onChange={setFormulaCfg}
+          />
         </div>
 
         <DialogFooter>
@@ -783,6 +802,7 @@ function CostComponentDialog({
             disabled={saving}
             onClick={async () => {
               setSaving(true);
+              const ser = formulaEnabled && formulaCfg ? serializeFormulaConfig(formulaCfg) : null;
               const err = await onSubmit({
                 name,
                 calc_type: calcType,
@@ -798,6 +818,8 @@ function CostComponentDialog({
                 deduction_calc_type: deductionCalcType,
                 fixed_calc_method: fixedCalcMethod,
                 fixed_duty_components: fixedDutyComponents,
+                formula_mode: ser ? ser.mode : null,
+                formula_expression: ser ? ser.expression : null,
               });
 
               setSaving(false);

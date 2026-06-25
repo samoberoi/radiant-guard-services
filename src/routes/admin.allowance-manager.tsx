@@ -11,6 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { FormulaBuilderToggle } from "@/components/FormulaBuilder";
+import { parseFormulaConfig, serializeFormulaConfig, type FormulaConfig } from "@/lib/formula-engine";
 import {
   Select,
   SelectContent,
@@ -57,6 +59,8 @@ type Allowance = {
   base_components: BaseRef[];
   cap_amount: number | null;
   include_in_ot: boolean;
+  formula_mode: string | null;
+  formula_expression: string | null;
 };
 
 const QK = ["admin", "allowance-types"] as const;
@@ -78,6 +82,8 @@ function rowToItem(r: Record<string, unknown>): Allowance {
     base_components: Array.isArray(r.base_components) ? (r.base_components as BaseRef[]) : [],
     cap_amount: r.cap_amount == null ? null : Number(r.cap_amount),
     include_in_ot: r.include_in_ot == null ? true : Boolean(r.include_in_ot),
+    formula_mode: r.formula_mode == null ? null : String(r.formula_mode),
+    formula_expression: r.formula_expression == null ? null : String(r.formula_expression),
   };
 }
 
@@ -96,7 +102,7 @@ function useAllowances() {
     queryFn: async (): Promise<Allowance[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,earning_type,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot")
+        .select("id,name,earning_type,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot,formula_mode,formula_expression")
         .order("name", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
@@ -117,6 +123,8 @@ function useAllowances() {
     base_components: p.calc_type === "percentage" ? p.base_components : [],
     cap_amount: p.calc_type === "percentage" ? p.cap_amount : null,
     include_in_ot: p.include_in_ot,
+    formula_mode: p.formula_mode,
+    formula_expression: p.formula_expression,
   });
 
   const addMut = useMutation({
@@ -456,6 +464,8 @@ function AllowanceFormDialog({
   const [capAmount, setCapAmount] = useState<string>("");
   const [includeInOt, setIncludeInOt] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [formulaEnabled, setFormulaEnabled] = useState(false);
+  const [formulaCfg, setFormulaCfg] = useState<FormulaConfig | null>(null);
 
   useResetOnOpen(open, () => {
     setName(initial?.name ?? "");
@@ -469,6 +479,9 @@ function AllowanceFormDialog({
     setBaseRefs(initial?.base_components ?? []);
     setCapAmount(initial?.cap_amount != null ? String(initial.cap_amount) : "");
     setIncludeInOt(initial?.include_in_ot ?? true);
+    const cfg = parseFormulaConfig(initial?.formula_mode, initial?.formula_expression);
+    setFormulaEnabled(!!cfg);
+    setFormulaCfg(cfg);
   });
 
   const preview = buildFormulaPreview({
@@ -631,6 +644,13 @@ function AllowanceFormDialog({
             </div>
             <Switch checked={includeInOt} onCheckedChange={setIncludeInOt} />
           </div>
+
+          <FormulaBuilderToggle
+            enabled={formulaEnabled}
+            onToggle={setFormulaEnabled}
+            value={formulaCfg}
+            onChange={setFormulaCfg}
+          />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
@@ -640,6 +660,7 @@ function AllowanceFormDialog({
             disabled={saving}
             onClick={async () => {
               setSaving(true);
+              const ser = formulaEnabled && formulaCfg ? serializeFormulaConfig(formulaCfg) : null;
               const err = await onSubmit({
                 name,
                 earning_type: earningType,
@@ -652,6 +673,8 @@ function AllowanceFormDialog({
                 base_components: baseRefs,
                 cap_amount: capAmount ? Number(capAmount) : null,
                 include_in_ot: includeInOt,
+                formula_mode: ser ? ser.mode : null,
+                formula_expression: ser ? ser.expression : null,
               });
               setSaving(false);
               if (err) toast.error(err);

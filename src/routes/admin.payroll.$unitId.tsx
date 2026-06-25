@@ -1153,6 +1153,8 @@ function PayrollUnitPage() {
           </table>
         </div>
       </div>
+
+      {rows.length > 0 && <MisDetailSheet rows={rows} />}
     </div>
   );
 }
@@ -1166,3 +1168,163 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "em
     </div>
   );
 }
+
+// --------------------------------------------------------------------------
+// MIS-style detail sheet: wide horizontally scrollable grid with column groups
+// for Attendance, Earnings, Additions, Deductions, Employer contributions,
+// and Totals. Sticky first three columns. Per-column totals row at the bottom.
+// --------------------------------------------------------------------------
+type MisRow = {
+  rowKey: string;
+  employeeCode: string;
+  name: string;
+  designation: string;
+  totals: { pDays: number; otHours: number; otDays: number; phDays: number; otherPaidDays: number; tDays: number };
+  wages: {
+    baseDays: number;
+    contractGross: number;
+    earnedGross: number;
+    totalDeductions: number;
+    netPay: number;
+    employerCost: number;
+    totalEmployerContributions: number;
+    components: { name: string; amount: number }[];
+    deductions: { name: string; amount: number }[];
+    employerContributions: { name: string; amount: number }[];
+    additions?: { name: string; amount: number }[];
+  } | null;
+  resource: { components: { name: string; amount: number }[] } | null;
+};
+
+function MisDetailSheet({ rows }: { rows: MisRow[] }) {
+  const [open, setOpen] = useState(true);
+
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const round2 = (n: number) => Math.round((Number(n) || 0) * 100) / 100;
+  const lookup = (items: { name: string; amount: number }[] | undefined, label: string) => {
+    if (!items) return 0;
+    const t = norm(label);
+    const hit = items.find((i) => norm(i.name) === t);
+    return hit ? Number(hit.amount) || 0 : 0;
+  };
+  const collectUnique = (pick: (r: MisRow) => { name: string }[] | undefined) => {
+    const seen = new Map<string, string>();
+    rows.forEach((r) => (pick(r) ?? []).forEach((it) => {
+      const k = norm(it.name);
+      if (!k || seen.has(k)) return;
+      seen.set(k, it.name);
+    }));
+    return Array.from(seen.values());
+  };
+  const keepNonZero = (names: string[], get: (r: MisRow, n: string) => number) =>
+    names.filter((n) => rows.some((r) => Math.abs(get(r, n)) > 0.005));
+
+  const earnedCols    = keepNonZero(collectUnique((r) => r.wages?.components), (r, n) => lookup(r.wages?.components, n));
+  const additionCols  = keepNonZero(collectUnique((r) => r.wages?.additions), (r, n) => lookup(r.wages?.additions, n));
+  const deductionCols = keepNonZero(collectUnique((r) => r.wages?.deductions), (r, n) => lookup(r.wages?.deductions, n));
+  const employerCols  = keepNonZero(collectUnique((r) => r.wages?.employerContributions), (r, n) => lookup(r.wages?.employerContributions, n));
+
+  const totalsFor = (get: (r: MisRow) => number) => round2(rows.reduce((s, r) => s + get(r), 0));
+
+  const cellNum = "px-2 py-2 text-right tabular-nums whitespace-nowrap";
+  const cellHead = "px-2 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap";
+
+  const grpAttClass    = "bg-sky-50 dark:bg-sky-500/10";
+  const grpEarnClass   = "bg-emerald-50 dark:bg-emerald-500/10";
+  const grpAddClass    = "bg-amber-50 dark:bg-amber-500/10";
+  const grpDedClass    = "bg-rose-50 dark:bg-rose-500/10";
+  const grpEmpClass    = "bg-violet-50 dark:bg-violet-500/10";
+  const grpTotClass    = "bg-cyan-50 dark:bg-cyan-500/10";
+
+  return (
+    <div className="rounded-3xl border border-border/70 bg-card shadow-sm">
+      <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">MIS Detail View</div>
+          <div className="text-sm text-muted-foreground">Wide register with every component, addition, deduction, and employer cost.</div>
+        </div>
+        <Button size="sm" variant="outline" onClick={() => setOpen((o) => !o)}>
+          {open ? "Collapse" : "Expand"}
+        </Button>
+      </div>
+      {open && (
+        <div className="overflow-x-auto overscroll-x-contain">
+          <table className="min-w-max text-xs">
+            <thead>
+              <tr className="border-b border-border/60 bg-secondary/40">
+                <th className={cellHead + " sticky left-0 z-20 bg-secondary/80 text-left"} style={{ minWidth: 100 }}>Emp ID</th>
+                <th className={cellHead + " sticky left-[100px] z-20 bg-secondary/80 text-left"} style={{ minWidth: 180 }}>Name</th>
+                <th className={cellHead + " sticky left-[280px] z-20 bg-secondary/80 text-left"} style={{ minWidth: 140 }}>Designation</th>
+                <th className={cellHead + " " + grpAttClass}>FD</th>
+                <th className={cellHead + " " + grpAttClass}>P</th>
+                <th className={cellHead + " " + grpAttClass}>WO</th>
+                <th className={cellHead + " " + grpAttClass}>PH</th>
+                <th className={cellHead + " " + grpAttClass}>OT Hrs</th>
+                <th className={cellHead + " " + grpAttClass}>OT</th>
+                <th className={cellHead + " " + grpAttClass}>T Days</th>
+                {earnedCols.map((c) => (<th key={`e-${c}`} className={cellHead + " " + grpEarnClass}>{c}</th>))}
+                <th className={cellHead + " " + grpEarnClass}>Earned Gross</th>
+                {additionCols.map((c) => (<th key={`a-${c}`} className={cellHead + " " + grpAddClass}>{c}</th>))}
+                {deductionCols.map((c) => (<th key={`d-${c}`} className={cellHead + " " + grpDedClass}>{c}</th>))}
+                <th className={cellHead + " " + grpDedClass}>Total Ded</th>
+                {employerCols.map((c) => (<th key={`ec-${c}`} className={cellHead + " " + grpEmpClass}>{c}</th>))}
+                <th className={cellHead + " " + grpEmpClass}>Employer Total</th>
+                <th className={cellHead + " " + grpTotClass}>Net Pay</th>
+                <th className={cellHead + " " + grpTotClass}>CTC</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              {rows.map((r) => (
+                <tr key={r.rowKey} className="hover:bg-muted/30">
+                  <td className="px-2 py-2 font-mono text-[11px] sticky left-0 z-10 bg-card whitespace-nowrap" style={{ minWidth: 100 }}>{r.employeeCode || "—"}</td>
+                  <td className="px-2 py-2 font-medium sticky left-[100px] z-10 bg-card whitespace-nowrap" style={{ minWidth: 180 }}>{r.name}</td>
+                  <td className="px-2 py-2 text-muted-foreground sticky left-[280px] z-10 bg-card whitespace-nowrap" style={{ minWidth: 140 }}>{r.designation}</td>
+                  <td className={cellNum + " " + grpAttClass}>{r.wages?.baseDays ?? 0}</td>
+                  <td className={cellNum + " " + grpAttClass}>{r.totals.pDays}</td>
+                  <td className={cellNum + " " + grpAttClass}>{r.totals.otherPaidDays}</td>
+                  <td className={cellNum + " " + grpAttClass}>{r.totals.phDays}</td>
+                  <td className={cellNum + " " + grpAttClass}>{r.totals.otHours}</td>
+                  <td className={cellNum + " " + grpAttClass}>{r.totals.otDays}</td>
+                  <td className={cellNum + " " + grpAttClass}>{r.totals.tDays}</td>
+                  {earnedCols.map((c) => (<td key={`e-${r.rowKey}-${c}`} className={cellNum + " " + grpEarnClass}>{lookup(r.wages?.components, c).toFixed(2)}</td>))}
+                  <td className={cellNum + " " + grpEarnClass + " font-semibold"}>{(r.wages?.earnedGross ?? 0).toFixed(2)}</td>
+                  {additionCols.map((c) => (<td key={`a-${r.rowKey}-${c}`} className={cellNum + " " + grpAddClass}>{lookup(r.wages?.additions, c).toFixed(2)}</td>))}
+                  {deductionCols.map((c) => (<td key={`d-${r.rowKey}-${c}`} className={cellNum + " " + grpDedClass}>{lookup(r.wages?.deductions, c).toFixed(2)}</td>))}
+                  <td className={cellNum + " " + grpDedClass + " font-semibold"}>{(r.wages?.totalDeductions ?? 0).toFixed(2)}</td>
+                  {employerCols.map((c) => (<td key={`ec-${r.rowKey}-${c}`} className={cellNum + " " + grpEmpClass}>{lookup(r.wages?.employerContributions, c).toFixed(2)}</td>))}
+                  <td className={cellNum + " " + grpEmpClass + " font-semibold"}>{(r.wages?.totalEmployerContributions ?? 0).toFixed(2)}</td>
+                  <td className={cellNum + " " + grpTotClass + " font-semibold text-emerald-700"}>{(r.wages?.netPay ?? 0).toFixed(2)}</td>
+                  <td className={cellNum + " " + grpTotClass + " font-semibold text-amber-700"}>{(r.wages?.employerCost ?? 0).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr className="border-t border-border/60 bg-secondary/40 font-semibold">
+                <td className="px-2 py-2 sticky left-0 z-10 bg-secondary/80" />
+                <td className="px-2 py-2 sticky left-[100px] z-10 bg-secondary/80">TOTAL</td>
+                <td className="px-2 py-2 sticky left-[280px] z-10 bg-secondary/80" />
+                <td className={cellNum + " " + grpAttClass}>—</td>
+                <td className={cellNum + " " + grpAttClass}>{totalsFor((r) => r.totals.pDays)}</td>
+                <td className={cellNum + " " + grpAttClass}>{totalsFor((r) => r.totals.otherPaidDays)}</td>
+                <td className={cellNum + " " + grpAttClass}>{totalsFor((r) => r.totals.phDays)}</td>
+                <td className={cellNum + " " + grpAttClass}>{totalsFor((r) => r.totals.otHours)}</td>
+                <td className={cellNum + " " + grpAttClass}>{totalsFor((r) => r.totals.otDays)}</td>
+                <td className={cellNum + " " + grpAttClass}>{totalsFor((r) => r.totals.tDays)}</td>
+                {earnedCols.map((c) => (<td key={`te-${c}`} className={cellNum + " " + grpEarnClass}>{totalsFor((r) => lookup(r.wages?.components, c)).toFixed(2)}</td>))}
+                <td className={cellNum + " " + grpEarnClass}>{totalsFor((r) => r.wages?.earnedGross ?? 0).toFixed(2)}</td>
+                {additionCols.map((c) => (<td key={`ta-${c}`} className={cellNum + " " + grpAddClass}>{totalsFor((r) => lookup(r.wages?.additions, c)).toFixed(2)}</td>))}
+                {deductionCols.map((c) => (<td key={`td-${c}`} className={cellNum + " " + grpDedClass}>{totalsFor((r) => lookup(r.wages?.deductions, c)).toFixed(2)}</td>))}
+                <td className={cellNum + " " + grpDedClass}>{totalsFor((r) => r.wages?.totalDeductions ?? 0).toFixed(2)}</td>
+                {employerCols.map((c) => (<td key={`tec-${c}`} className={cellNum + " " + grpEmpClass}>{totalsFor((r) => lookup(r.wages?.employerContributions, c)).toFixed(2)}</td>))}
+                <td className={cellNum + " " + grpEmpClass}>{totalsFor((r) => r.wages?.totalEmployerContributions ?? 0).toFixed(2)}</td>
+                <td className={cellNum + " " + grpTotClass + " text-emerald-700"}>{totalsFor((r) => r.wages?.netPay ?? 0).toFixed(2)}</td>
+                <td className={cellNum + " " + grpTotClass + " text-amber-700"}>{totalsFor((r) => r.wages?.employerCost ?? 0).toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
