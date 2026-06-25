@@ -4530,7 +4530,11 @@ function SalaryBreakdownTable({
                 <tr key={`d-${b.costComponentId}`}>
                   <td>
                     {b.name}
-                    {b.calcType === "percentage" && (
+                    {hasConfiguredFormula(b) ? (
+                      <span className="ml-2 text-[11px] text-muted-foreground">
+                        @ formula · {b.formulaExpression?.slice(0, 80) ?? ""}{(b.formulaExpression?.length ?? 0) > 80 ? "…" : ""}
+                      </span>
+                    ) : b.calcType === "percentage" && (
                       <span className="ml-2 text-[11px] text-muted-foreground">
                         {isStatutoryEsi(b)
                           ? `@ ${b.percentage}% · ${ESI_CONTRACT_NOTE}`
@@ -4539,6 +4543,7 @@ function SalaryBreakdownTable({
                               .join(" ") || "—"}${b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}`}
                       </span>
                     )}
+
                   </td>
                   <td className="text-center tabular-nums">{isStatutoryEsi(b) ? esiEmployeeAmount.toFixed(2) : Number(b.amount).toFixed(2)}</td>
                   <td />
@@ -4579,7 +4584,11 @@ function SalaryBreakdownTable({
                 <tr key={`e-${b.costComponentId}`}>
                   <td>
                     {b.name}
-                    {b.calcType === "percentage" && (
+                    {hasConfiguredFormula(b) ? (
+                      <span className="ml-2 text-[11px] text-muted-foreground">
+                        @ formula · {b.formulaExpression?.slice(0, 80) ?? ""}{(b.formulaExpression?.length ?? 0) > 80 ? "…" : ""}
+                      </span>
+                    ) : b.calcType === "percentage" && (
                       <span className="ml-2 text-[11px] text-muted-foreground">
                         {isStatutoryEsi(b)
                           ? `@ ${b.percentage}% · ${ESI_CONTRACT_NOTE}`
@@ -4588,6 +4597,7 @@ function SalaryBreakdownTable({
                               .join(" ") || "—"}${b.capAmount ? ` (cap ₹${b.capAmount.toLocaleString("en-IN")})` : ""}`}
                       </span>
                     )}
+
                   </td>
                   <td className="text-center tabular-nums">{isStatutoryEsi(b) ? esiEmployerAmount.toFixed(2) : Number(b.amount).toFixed(2)}</td>
                   <td />
