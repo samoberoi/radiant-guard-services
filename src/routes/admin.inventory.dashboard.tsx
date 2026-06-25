@@ -193,6 +193,11 @@ export function InventoryOwnerDashboard() {
     const { data, error } = await supabase.from("inv_demands" as never).select("id,demand_number,status,branch_id,warehouse_id,requester_candidate_id,demand_date,created_at,submitted_at");
     if (error) throw error; return (data as unknown as Demand[]) ?? [];
   }});
+  const capsQ = useQuery({ queryKey: ["dash2", "caps"], queryFn: async () => {
+    const { data, error } = await supabase.from("inv_caps" as never).select("scope_type,scope_id,min_value,max_value");
+    if (error) throw error;
+    return (data as unknown as { scope_type: "branch" | "field_officer"; scope_id: string | null; min_value: number; max_value: number }[]) ?? [];
+  }});
 
   const itemsRaw = itemsQ.data ?? [];
   const cats = catsQ.data ?? [];
@@ -385,6 +390,64 @@ export function InventoryOwnerDashboard() {
     }
     return v;
   }, [balances, itemMap, categoryFilter, warehouseFilter, transferLines, inTransitTransferIds, transferById]);
+
+  // ===== Inventory Caps =====
+  const caps = capsQ.data ?? [];
+  const capLookup = useMemo(() => {
+    const branchDefault = caps.find((c) => c.scope_type === "branch" && !c.scope_id) ?? null;
+    const foDefault = caps.find((c) => c.scope_type === "field_officer" && !c.scope_id) ?? null;
+    const overrides = new Map<string, { min_value: number; max_value: number }>();
+    for (const c of caps) if (c.scope_id) overrides.set(`${c.scope_type}:${c.scope_id}`, c);
+    return { branchDefault, foDefault, overrides };
+  }, [caps]);
+  const getCap = (kind: "branch" | "field_officer", id: string) => {
+    const ov = capLookup.overrides.get(`${kind}:${id}`);
+    const def = kind === "branch" ? capLookup.branchDefault : capLookup.foDefault;
+    return { min: ov?.min_value ?? def?.min_value ?? 0, max: ov?.max_value ?? def?.max_value ?? 0 };
+  };
+  // Value at a specific location only (matches Caps page math)
+  const locValue = (locType: "branch" | "field_officer" | "guard", locId: string) => {
+    let v = 0;
+    for (const b of balancesRaw) {
+      if (b.location_type !== locType || b.location_id !== locId) continue;
+      const it = itemMap.get(b.item_id); if (!it) continue;
+      v += Number(b.qty) * Number(it.standard_cost || 0);
+    }
+    return v;
+  };
+  // Scoped user's primary cap (branch for branch-roles, FO for field officers)
+  const myCap = useMemo(() => {
+    if (role.isFieldOfficer && role.candidateId) {
+      const { min, max } = getCap("field_officer", role.candidateId);
+      return { kind: "field_officer" as const, max, min, used: locValue("field_officer", role.candidateId) };
+    }
+    if (scope.isScoped && scope.branchId) {
+      const { min, max } = getCap("branch", scope.branchId);
+      return { kind: "branch" as const, max, min, used: locValue("branch", scope.branchId) };
+    }
+    return null;
+  }, [role.isFieldOfficer, role.candidateId, scope.isScoped, scope.branchId, caps, balancesRaw, itemMap]);
+
+  // For admin (non-scoped) — find branches/FOs at or beyond min threshold
+  const capAlerts = useMemo(() => {
+    if (scope.isScoped) return [] as { kind: "branch" | "field_officer"; id: string; name: string; used: number; min: number; max: number; status: "amber" | "red" }[];
+    const rows: { kind: "branch" | "field_officer"; id: string; name: string; used: number; min: number; max: number; status: "amber" | "red" }[] = [];
+    for (const b of branchesRaw) {
+      const { min, max } = getCap("branch", b.id);
+      if (max <= 0 && min <= 0) continue;
+      const used = locValue("branch", b.id);
+      const status: "amber" | "red" | null = max > 0 && used >= max ? "red" : min > 0 && used >= min ? "amber" : null;
+      if (status) rows.push({ kind: "branch", id: b.id, name: b.code ? `${b.code} – ${b.name}` : b.name, used, min, max, status });
+    }
+    for (const c of cands.filter((c) => c.role_key === "field_officer")) {
+      const { min, max } = getCap("field_officer", c.id);
+      if (max <= 0 && min <= 0) continue;
+      const used = locValue("field_officer", c.id);
+      const status: "amber" | "red" | null = max > 0 && used >= max ? "red" : min > 0 && used >= min ? "amber" : null;
+      if (status) rows.push({ kind: "field_officer", id: c.id, name: `${c.full_name}${c.employee_code ? ` · ${c.employee_code}` : ""}`, used, min, max, status });
+    }
+    return rows.sort((a, b) => (a.status === b.status ? b.used - a.used : a.status === "red" ? -1 : 1));
+  }, [scope.isScoped, branchesRaw, cands, caps, balancesRaw, itemMap]);
 
   const inPeriod = (d: string | Date) => {
     const x = new Date(d);
@@ -610,7 +673,23 @@ export function InventoryOwnerDashboard() {
 
       {scope.isScoped ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Kpi label="Branch Stock Value" value={inr(stockValue)} icon={Wallet} tint="from-emerald-500/15 to-emerald-500/0" iconClass="text-emerald-500" hint="Your branch and mapped field officers only" to="/admin/inventory/stock" />
+          {(() => {
+            const capLabel = myCap?.kind === "field_officer" ? "My Stock Value" : "Branch Stock Value";
+            const capValue = myCap
+              ? (myCap.max > 0 ? `${inr(myCap.used)} / ${inr(myCap.max)}` : inr(myCap.used))
+              : inr(stockValue);
+            const pct = myCap && myCap.max > 0 ? Math.round((myCap.used / myCap.max) * 100) : null;
+            const hint = myCap && myCap.max > 0
+              ? `${pct}% of cap${myCap.used >= myCap.max ? " · CAP REACHED" : myCap.min > 0 && myCap.used >= myCap.min ? " · nearing cap" : ""}`
+              : (myCap?.kind === "field_officer" ? "Stock held against your field officer cap" : "Your branch and mapped field officers only");
+            const tint = pct !== null && pct >= 100 ? "from-rose-500/20 to-rose-500/0"
+              : pct !== null && pct >= 80 ? "from-amber-500/20 to-amber-500/0"
+              : "from-emerald-500/15 to-emerald-500/0";
+            const iconClass = pct !== null && pct >= 100 ? "text-rose-500"
+              : pct !== null && pct >= 80 ? "text-amber-500"
+              : "text-emerald-500";
+            return <Kpi label={capLabel} value={capValue} icon={Wallet} tint={tint} iconClass={iconClass} hint={hint} to="/admin/inventory/stock" />;
+          })()}
           <Kpi label="Branch Stock" value={branchHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Building2} tint="from-blue-500/15 to-blue-500/0" iconClass="text-blue-500" hint="In branch holding" to="/admin/inventory/stock" />
           <Kpi label="Field Officer Stock" value={foHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={Users} tint="from-violet-500/15 to-violet-500/0" iconClass="text-violet-500" hint="Mapped to your branch" to="/admin/inventory/stock" />
           <Kpi label="Guard Stock" value={guardHoldings.reduce((s, r) => s + r.qty, 0).toLocaleString("en-IN")} icon={ShieldCheck} tint="from-teal-500/15 to-teal-500/0" iconClass="text-teal-500" hint="Under your branch chain" to="/admin/inventory/stock" />
@@ -619,6 +698,53 @@ export function InventoryOwnerDashboard() {
         <div className="grid gap-4 sm:grid-cols-2">
           <Kpi label="Stock Value" value={inr(stockValue)} icon={Wallet} tint="from-emerald-500/15 to-emerald-500/0" iconClass="text-emerald-500" hint="On-hand + in-transit at standard cost" />
           <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs`} to="/admin/inventory/stock" />
+        </div>
+      )}
+
+      {/* Inventory Cap Alerts — visible to non-scoped admins (super admin / inventory manager) */}
+      {!scope.isScoped && capAlerts.length > 0 && (
+        <div className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-rose-500/5 p-5">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600">
+                <AlertTriangle className="h-4 w-4" />
+              </span>
+              <div>
+                <div className="font-display text-sm font-bold tracking-tight">Inventory Cap Alerts</div>
+                <div className="text-[11px] text-muted-foreground">
+                  {capAlerts.filter((a) => a.status === "red").length} cap reached · {capAlerts.filter((a) => a.status === "amber").length} nearing cap
+                </div>
+              </div>
+            </div>
+            <Link to="/admin/inventory/caps" className="text-xs text-primary hover:underline flex items-center gap-1">Manage caps <ArrowRight className="h-3 w-3" /></Link>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {capAlerts.slice(0, 12).map((a) => {
+              const pct = a.max > 0 ? Math.min(100, Math.round((a.used / a.max) * 100)) : 0;
+              const barCls = a.status === "red" ? "bg-rose-500" : "bg-amber-500";
+              const badgeCls = a.status === "red"
+                ? "bg-rose-500/15 text-rose-600 border border-rose-500/30"
+                : "bg-amber-500/15 text-amber-700 border border-amber-500/30";
+              return (
+                <div key={`${a.kind}:${a.id}`} className="rounded-xl border border-border bg-card/80 p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{a.kind === "branch" ? "Branch" : "Field Officer"}</div>
+                      <div className="truncate text-sm font-semibold">{a.name}</div>
+                    </div>
+                    <Badge className={badgeCls}>{a.status === "red" ? "Cap reached" : "Nearing"}</Badge>
+                  </div>
+                  <div className="mt-2 flex items-baseline justify-between text-xs">
+                    <span className="font-semibold tabular-nums">{inr(a.used)} <span className="text-muted-foreground font-normal">/ {inr(a.max)}</span></span>
+                    <span className="text-muted-foreground tabular-nums">{pct}%</span>
+                  </div>
+                  <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-secondary/60">
+                    <div className={`h-full ${barCls}`} style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
