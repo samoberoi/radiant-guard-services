@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Coins, Download, Edit2, Plus, Search, Trash2, X } from "lucide-react";
+import { Coins, Download, Edit2, Plus, Search, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { FormulaBuilderToggle } from "@/components/FormulaBuilder";
-import { parseFormulaConfig, serializeFormulaConfig, type FormulaConfig } from "@/lib/formula-engine";
+import { FormulaBuilder } from "@/components/FormulaBuilder";
+import { parseFormulaConfig, serializeFormulaConfig, type FormulaConfig, DEFAULT_PRESET } from "@/lib/formula-engine";
 import {
   Select,
   SelectContent,
@@ -123,7 +123,7 @@ function useAllowances() {
     base_components: p.calc_type === "percentage" ? p.base_components : [],
     cap_amount: p.calc_type === "percentage" ? p.cap_amount : null,
     include_in_ot: p.include_in_ot,
-    formula_mode: p.formula_mode,
+    formula_mode: p.formula_mode ?? "preset",
     formula_expression: p.formula_expression,
   });
 
@@ -437,19 +437,38 @@ function AllowanceManagerPage() {
   );
 }
 
+function legacyToFormulaConfig(initial: Allowance | null | undefined): FormulaConfig | null {
+  if (!initial) return null;
+  const existing = parseFormulaConfig(initial.formula_mode, initial.formula_expression);
+  if (existing && (existing.mode === "advanced" ? existing.expression : true) && initial.formula_expression) {
+    return existing;
+  }
+  if (initial.calc_type === "percentage" && initial.base_components.length > 0) {
+    const parts = initial.base_components.map((b, i) => {
+      const label = b.label.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+      if (i === 0) return label;
+      return `${b.operator === "-" ? "-" : "+"} ${label}`;
+    });
+    const baseExpr = `(${parts.join(" ")})`;
+    let expr = `${baseExpr} * ${initial.percentage || 0} / 100`;
+    if (initial.cap_amount && initial.cap_amount > 0) expr = `min(${initial.cap_amount}, ${expr})`;
+    return { mode: "advanced", expression: expr };
+  }
+  return existing;
+}
+
 function AllowanceFormDialog({
   open,
   onOpenChange,
   title,
   initial,
-  baseLabels,
   onSubmit,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   title: string;
   initial?: Allowance | null;
-  baseLabels: string[];
+  baseLabels?: string[];
   onSubmit: (p: Omit<Allowance, "id">) => Promise<string | null>;
 }) {
   const [name, setName] = useState("");
@@ -458,13 +477,9 @@ function AllowanceFormDialog({
   const [shortName, setShortName] = useState("");
   const [isDefault, setIsDefault] = useState(false);
   const [enabled, setEnabled] = useState(true);
-  const [calcType, setCalcType] = useState<"fixed" | "percentage">("fixed");
-  const [percentage, setPercentage] = useState<string>("0");
-  const [baseRefs, setBaseRefs] = useState<BaseRef[]>([]);
-  const [capAmount, setCapAmount] = useState<string>("");
+  const [mode, setMode] = useState<"manual" | "formula">("manual");
   const [includeInOt, setIncludeInOt] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [formulaEnabled, setFormulaEnabled] = useState(false);
   const [formulaCfg, setFormulaCfg] = useState<FormulaConfig | null>(null);
 
   useResetOnOpen(open, () => {
@@ -474,21 +489,13 @@ function AllowanceFormDialog({
     setShortName(initial?.short_name ?? "");
     setIsDefault(initial?.is_default ?? false);
     setEnabled(initial?.enabled ?? true);
-    setCalcType(initial?.calc_type ?? "fixed");
-    setPercentage(String(initial?.percentage ?? 0));
-    setBaseRefs(initial?.base_components ?? []);
-    setCapAmount(initial?.cap_amount != null ? String(initial.cap_amount) : "");
     setIncludeInOt(initial?.include_in_ot ?? true);
-    const cfg = parseFormulaConfig(initial?.formula_mode, initial?.formula_expression);
-    setFormulaEnabled(!!cfg);
-    setFormulaCfg(cfg);
-  });
-
-  const preview = buildFormulaPreview({
-    calc_type: calcType,
-    percentage: Number(percentage) || 0,
-    base_components: baseRefs,
-    cap_amount: capAmount ? Number(capAmount) : null,
+    const cfg = legacyToFormulaConfig(initial);
+    const hasFormulaSemantics =
+      (initial?.calc_type === "percentage") ||
+      !!initial?.formula_expression;
+    setMode(hasFormulaSemantics ? "formula" : "manual");
+    setFormulaCfg(cfg ?? { mode: "preset", preset: DEFAULT_PRESET });
   });
 
   return (
@@ -531,95 +538,21 @@ function AllowanceFormDialog({
           </div>
 
           <div className="grid gap-2">
-            <Label>Calculation Type</Label>
-            <Select value={calcType} onValueChange={(v) => setCalcType(v as "fixed" | "percentage")}>
+            <Label>How is this amount calculated?</Label>
+            <Select value={mode} onValueChange={(v) => setMode(v as "manual" | "formula")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="fixed">Manual amount (entered per contract)</SelectItem>
-                <SelectItem value="percentage">Formula — % of other components</SelectItem>
+                <SelectItem value="manual">Manual amount — entered on each contract</SelectItem>
+                <SelectItem value="formula">Formula — auto-calculated from a preset or expression</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-[11px] text-muted-foreground">
+              Pick &quot;Formula&quot; to compute this allowance from Basic, DA, Gross, or any custom expression — works for things like HRA = (Basic + DA) × 12%.
+            </p>
           </div>
 
-          {calcType === "percentage" && (
-            <div className="rounded-lg border border-border bg-secondary/20 p-3 space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-2">
-                  <Label>Percentage (%)</Label>
-                  <Input type="number" step="0.01" value={percentage} onChange={(e) => setPercentage(e.target.value)} placeholder="e.g. 5" />
-                </div>
-                <div className="grid gap-2">
-                  <Label>Wage Ceiling (optional, ₹)</Label>
-                  <Input type="number" value={capAmount} onChange={(e) => setCapAmount(e.target.value)} placeholder="e.g. 15000" />
-                </div>
-              </div>
-
-              <div className="grid gap-2">
-                <Label>Base Components</Label>
-                <div className="rounded-lg border border-border bg-card p-3">
-                  {baseRefs.length === 0 ? (
-                    <div className="text-xs text-muted-foreground">No base added. Pick a component below.</div>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {baseRefs.map((b, idx) => (
-                        <div key={`${b.label}-${idx}`} className="inline-flex items-center gap-1 rounded-md border border-border bg-secondary/40 pl-1 pr-1">
-                          <Select
-                            value={b.operator}
-                            onValueChange={(v) => {
-                              const next = [...baseRefs];
-                              next[idx] = { ...b, operator: v as Operator };
-                              setBaseRefs(next);
-                            }}
-                          >
-                            <SelectTrigger className="h-7 w-12 border-0 bg-transparent px-1 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="+">+</SelectItem>
-                              <SelectItem value="-">−</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <span className="text-sm font-medium">{b.label}</span>
-                          <button
-                            type="button"
-                            className="rounded p-0.5 text-muted-foreground hover:text-destructive"
-                            onClick={() => setBaseRefs(baseRefs.filter((_, i) => i !== idx))}
-                            aria-label="Remove"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  {(() => {
-                    const used = new Set(baseRefs.map((b) => b.label.toLowerCase()));
-                    const remaining = baseLabels.filter((l) => !used.has(l.toLowerCase()));
-                    if (remaining.length === 0) return null;
-                    return (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {remaining.map((lbl) => (
-                          <button
-                            key={lbl}
-                            type="button"
-                            className="rounded-md border border-border bg-card px-2 py-1 text-xs hover:bg-accent/10 hover:text-accent"
-                            onClick={() => setBaseRefs([...baseRefs, { label: lbl, operator: "+" }])}
-                          >
-                            + {lbl}
-                          </button>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Pick built-in totals (Basic, DA, Gross, CTC) or other allowances. The amount is auto-calculated on each contract when this allowance is added.
-                </p>
-              </div>
-
-              <div className="rounded-lg border border-dashed border-border bg-card px-3 py-2 text-sm">
-                <span className="text-xs uppercase tracking-wider text-muted-foreground">Preview · </span>
-                <span className="font-medium text-foreground">{preview}</span>
-              </div>
-            </div>
+          {mode === "formula" && (
+            <FormulaBuilder value={formulaCfg} onChange={setFormulaCfg} />
           )}
 
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
@@ -644,13 +577,6 @@ function AllowanceFormDialog({
             </div>
             <Switch checked={includeInOt} onCheckedChange={setIncludeInOt} />
           </div>
-
-          <FormulaBuilderToggle
-            enabled={formulaEnabled}
-            onToggle={setFormulaEnabled}
-            value={formulaCfg}
-            onChange={setFormulaCfg}
-          />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
@@ -660,7 +586,7 @@ function AllowanceFormDialog({
             disabled={saving}
             onClick={async () => {
               setSaving(true);
-              const ser = formulaEnabled && formulaCfg ? serializeFormulaConfig(formulaCfg) : null;
+              const ser = mode === "formula" && formulaCfg ? serializeFormulaConfig(formulaCfg) : null;
               const err = await onSubmit({
                 name,
                 earning_type: earningType,
@@ -668,12 +594,12 @@ function AllowanceFormDialog({
                 short_name: shortName,
                 is_default: isDefault,
                 enabled,
-                calc_type: calcType,
-                percentage: Number(percentage) || 0,
-                base_components: baseRefs,
-                cap_amount: capAmount ? Number(capAmount) : null,
+                calc_type: mode === "formula" ? "percentage" : "fixed",
+                percentage: 0,
+                base_components: [],
+                cap_amount: null,
                 include_in_ot: includeInOt,
-                formula_mode: ser ? ser.mode : null,
+                formula_mode: ser ? ser.mode : "preset",
                 formula_expression: ser ? ser.expression : null,
               });
               setSaving(false);
