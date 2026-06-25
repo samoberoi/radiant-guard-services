@@ -529,6 +529,9 @@ function PayrollUnitPage() {
             totals.otherPaidDays = Math.max(0, totals.otherPaidDays + adj.otherPaidDays);
             totals.tDays = Math.max(0, totals.tDays + adj.tDays);
           }
+          // Display-only PH count from PH-type lumpsum additions.
+          const phDisplay = phDisplayCountByCandidate.get(c.id) ?? 0;
+          if (phDisplay) totals.phDays = totals.phDays + phDisplay;
         }
         const resource = resourceByDesignation.get(did);
         const wages = resource
