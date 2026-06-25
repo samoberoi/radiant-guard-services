@@ -147,7 +147,7 @@ export function InventoryOwnerDashboard() {
     if (error) throw error; return (data as unknown as RateCard[]) ?? [];
   }});
   const poQ = useQuery({ queryKey: ["dash2", "pos"], enabled: !scope.isLoading && !scope.isScoped, queryFn: async () => {
-    const { data, error } = await supabase.from("inv_purchase_orders" as never).select("id,po_number,vendor_id,status,po_date,grand_total,destination_warehouse_id");
+    const { data, error } = await supabase.from("inv_purchase_orders" as never).select("id,po_number,vendor_id,status,po_date,grand_total,destination_warehouse_id,created_at");
     if (error) throw error; return (data as unknown as PO[]) ?? [];
   }});
   const poLinesQ = useQuery({ queryKey: ["dash2", "po-lines"], enabled: !scope.isLoading && !scope.isScoped, queryFn: async () => {
@@ -167,7 +167,7 @@ export function InventoryOwnerDashboard() {
     if (error) throw error; return (data as unknown as Branch[]) ?? [];
   }});
   const grnQ = useQuery({ queryKey: ["dash2", "grns"], queryFn: async () => {
-    const { data, error } = await supabase.from("inv_goods_receipts" as never).select("id,receipt_date,po_id,vendor_id,status,branch_id");
+    const { data, error } = await supabase.from("inv_goods_receipts" as never).select("id,receipt_date,po_id,vendor_id,status,branch_id,created_at");
     if (error) throw error; return (data as unknown as GRN[]) ?? [];
   }});
   const whsQ = useQuery({ queryKey: ["dash2", "whs"], enabled: !scope.isLoading && !scope.isScoped, queryFn: async () => {
@@ -175,7 +175,7 @@ export function InventoryOwnerDashboard() {
     if (error) throw error; return (data as unknown as { id: string; name: string; warehouse_code: string }[]) ?? [];
   }});
   const transfersQ = useQuery({ queryKey: ["dash2", "transfers"], queryFn: async () => {
-    const { data, error } = await supabase.from("inv_transfers" as never).select("id,status,source_type,source_id,destination_type,destination_id");
+    const { data, error } = await supabase.from("inv_transfers" as never).select("id,status,source_type,source_id,destination_type,destination_id,created_at");
     if (error) throw error; return (data as unknown as ScopedMovement[]) ?? [];
   }});
   const transferLinesQ = useQuery({ queryKey: ["dash2", "transfer-lines"], queryFn: async () => {
@@ -184,8 +184,12 @@ export function InventoryOwnerDashboard() {
     return (data as unknown as { transfer_id: string; item_id: string; size_value: string; dispatched_qty: number; received_qty: number }[]) ?? [];
   }});
   const issuancesQ = useQuery({ queryKey: ["dash2", "issuances"], queryFn: async () => {
-    const { data, error } = await supabase.from("inv_issuances" as never).select("id,status,source_type,source_id,destination_type,destination_id");
+    const { data, error } = await supabase.from("inv_issuances" as never).select("id,status,source_type,source_id,destination_type,destination_id,created_at");
     if (error) throw error; return (data as unknown as ScopedMovement[]) ?? [];
+  }});
+  const demandsQ = useQuery({ queryKey: ["dash2", "demands"], queryFn: async () => {
+    const { data, error } = await supabase.from("inv_demands" as never).select("id,demand_number,status,branch_id,warehouse_id,requester_candidate_id,demand_date,created_at,submitted_at");
+    if (error) throw error; return (data as unknown as Demand[]) ?? [];
   }});
 
   const itemsRaw = itemsQ.data ?? [];
