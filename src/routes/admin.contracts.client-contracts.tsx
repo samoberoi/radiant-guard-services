@@ -3446,6 +3446,9 @@ function ResourceFormDialog({
       deductionCalcType: c.deductionCalcType,
       fixedCalcMethod: c.fixedCalcMethod,
       fixedDutyComponents: c.fixedDutyComponents,
+      formulaMode: c.formulaMode ?? null,
+      formulaExpression: c.formulaExpression ?? null,
+      formulaVersion: c.formulaVersion ?? null,
     };
     if (item.calcType === "percentage") {
       item.amount = computeBenefitAmount(item, components, benefits, allowanceTypes);
