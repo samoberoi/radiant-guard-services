@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import {
   AlertTriangle, Users, Building2, ShieldCheck, IndianRupee, ShoppingCart, TrendingUp, TrendingDown,
   ArrowRight, Boxes, Truck, Wallet, Warehouse, PackageOpen, ClipboardList,
-  UserPlus, FileText,
+  UserPlus, FileText, Bell, Clock, ClipboardCheck,
 } from "lucide-react";
 import { useCurrentPermissions } from "@/lib/rbac";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
@@ -36,13 +36,14 @@ type ItemSize = { item_id: string; size_value: string; reorder_level: number };
 type Vendor = { id: string; name: string; vendor_code: string; city: string };
 type RateCard = { vendor_id: string; item_id: string; size_value: string; unit_price: number };
 type POLine = { po_id: string; item_id: string; ordered_qty: number; accepted_qty: number; line_total: number; unit_price: number };
-type PO = { id: string; po_number: string; vendor_id: string; status: string; po_date: string; grand_total: number; destination_warehouse_id: string | null };
+type PO = { id: string; po_number: string; vendor_id: string; status: string; po_date: string; grand_total: number; destination_warehouse_id: string | null; created_at: string };
 type Cand = { id: string; full_name: string; employee_code: string; role_key: string; designation_id: string | null };
 type Branch = { id: string; name: string; code: string };
 type Designation = { id: string; name: string };
-type GRN = { id: string; receipt_date: string; po_id: string | null; vendor_id: string | null; status: string; branch_id: string | null };
+type GRN = { id: string; receipt_date: string; po_id: string | null; vendor_id: string | null; status: string; branch_id: string | null; created_at: string };
 
-type ScopedMovement = { id: string; status: string; source_type: string; source_id: string; destination_type: string; destination_id: string };
+type ScopedMovement = { id: string; status: string; source_type: string; source_id: string; destination_type: string; destination_id: string; created_at: string };
+type Demand = { id: string; demand_number: string; status: string; branch_id: string | null; warehouse_id: string | null; requester_candidate_id: string | null; demand_date: string; created_at: string; submitted_at: string | null };
 
 type Range = "this_month" | "last_month" | "last_quarter" | "custom";
 
@@ -146,7 +147,7 @@ export function InventoryOwnerDashboard() {
     if (error) throw error; return (data as unknown as RateCard[]) ?? [];
   }});
   const poQ = useQuery({ queryKey: ["dash2", "pos"], enabled: !scope.isLoading && !scope.isScoped, queryFn: async () => {
-    const { data, error } = await supabase.from("inv_purchase_orders" as never).select("id,po_number,vendor_id,status,po_date,grand_total,destination_warehouse_id");
+    const { data, error } = await supabase.from("inv_purchase_orders" as never).select("id,po_number,vendor_id,status,po_date,grand_total,destination_warehouse_id,created_at");
     if (error) throw error; return (data as unknown as PO[]) ?? [];
   }});
   const poLinesQ = useQuery({ queryKey: ["dash2", "po-lines"], enabled: !scope.isLoading && !scope.isScoped, queryFn: async () => {
@@ -166,7 +167,7 @@ export function InventoryOwnerDashboard() {
     if (error) throw error; return (data as unknown as Branch[]) ?? [];
   }});
   const grnQ = useQuery({ queryKey: ["dash2", "grns"], queryFn: async () => {
-    const { data, error } = await supabase.from("inv_goods_receipts" as never).select("id,receipt_date,po_id,vendor_id,status,branch_id");
+    const { data, error } = await supabase.from("inv_goods_receipts" as never).select("id,receipt_date,po_id,vendor_id,status,branch_id,created_at");
     if (error) throw error; return (data as unknown as GRN[]) ?? [];
   }});
   const whsQ = useQuery({ queryKey: ["dash2", "whs"], enabled: !scope.isLoading && !scope.isScoped, queryFn: async () => {
@@ -174,7 +175,7 @@ export function InventoryOwnerDashboard() {
     if (error) throw error; return (data as unknown as { id: string; name: string; warehouse_code: string }[]) ?? [];
   }});
   const transfersQ = useQuery({ queryKey: ["dash2", "transfers"], queryFn: async () => {
-    const { data, error } = await supabase.from("inv_transfers" as never).select("id,status,source_type,source_id,destination_type,destination_id");
+    const { data, error } = await supabase.from("inv_transfers" as never).select("id,status,source_type,source_id,destination_type,destination_id,created_at");
     if (error) throw error; return (data as unknown as ScopedMovement[]) ?? [];
   }});
   const transferLinesQ = useQuery({ queryKey: ["dash2", "transfer-lines"], queryFn: async () => {
@@ -183,8 +184,12 @@ export function InventoryOwnerDashboard() {
     return (data as unknown as { transfer_id: string; item_id: string; size_value: string; dispatched_qty: number; received_qty: number }[]) ?? [];
   }});
   const issuancesQ = useQuery({ queryKey: ["dash2", "issuances"], queryFn: async () => {
-    const { data, error } = await supabase.from("inv_issuances" as never).select("id,status,source_type,source_id,destination_type,destination_id");
+    const { data, error } = await supabase.from("inv_issuances" as never).select("id,status,source_type,source_id,destination_type,destination_id,created_at");
     if (error) throw error; return (data as unknown as ScopedMovement[]) ?? [];
+  }});
+  const demandsQ = useQuery({ queryKey: ["dash2", "demands"], queryFn: async () => {
+    const { data, error } = await supabase.from("inv_demands" as never).select("id,demand_number,status,branch_id,warehouse_id,requester_candidate_id,demand_date,created_at,submitted_at");
+    if (error) throw error; return (data as unknown as Demand[]) ?? [];
   }});
 
   const itemsRaw = itemsQ.data ?? [];
@@ -203,6 +208,7 @@ export function InventoryOwnerDashboard() {
   const whsRaw = whsQ.data ?? [];
   const transfersRaw = transfersQ.data ?? [];
   const issuancesRaw = issuancesQ.data ?? [];
+  const demandsRaw = demandsQ.data ?? [];
   const canUseScopedData = !scope.isScoped || (!!scope.branchId && !scopeAssignmentsQ.isLoading);
 
   // ===== Branch-scope hard-filter =====
@@ -248,12 +254,20 @@ export function InventoryOwnerDashboard() {
       ((i.destination_type === "field_officer" || i.destination_type === "guard") && allowedFoIds.has(i.destination_id)),
     );
   }, [issuancesRaw, scope.isScoped, scope.branchId, canUseScopedData, allowedFoIds]);
+  const demands = useMemo(() => {
+    if (!scope.isScoped || !scope.branchId) return demandsRaw;
+    if (!canUseScopedData) return [];
+    return demandsRaw.filter((d) =>
+      d.branch_id === scope.branchId ||
+      (d.requester_candidate_id && allowedFoIds.has(d.requester_candidate_id)),
+    );
+  }, [demandsRaw, scope.isScoped, scope.branchId, canUseScopedData, allowedFoIds]);
 
   const { canSub } = useCurrentPermissions();
 
 
   const totalStockQty = useMemo(() => balances.reduce((s, b) => s + Math.max(0, Number(b.qty || 0)), 0), [balances]);
-  
+
   const poSplit = useMemo(() => {
     const open = pos.filter((p) => ["draft", "approved", "partial", "open", "partially_received"].includes(p.status)).length;
     const closed = pos.filter((p) => ["received", "closed"].includes(p.status)).length;
@@ -274,6 +288,39 @@ export function InventoryOwnerDashboard() {
     const ack = issuances.filter((i) => i.status === "completed").length;
     return { total: issuances.length, issued, ack };
   }, [issuances]);
+
+  // ====== Live Notifications / Pending Actions ======
+  // SLA in days — anything older than this counts as "delayed".
+  const SLA_DAYS = 3;
+  const now = Date.now();
+  const ageDays = (iso: string | null | undefined) =>
+    iso ? Math.max(0, Math.floor((now - new Date(iso).getTime()) / 86400000)) : 0;
+  const ageBreakdown = <T extends { created_at: string }>(rows: T[]) => {
+    let breached = 0; let oldest = 0;
+    for (const r of rows) {
+      const a = ageDays(r.created_at);
+      if (a > SLA_DAYS) breached += 1;
+      if (a > oldest) oldest = a;
+    }
+    return { breached, oldest };
+  };
+  const notifications = useMemo(() => {
+    const openPOsAll = pos.filter((p) => ["draft", "approved", "partial", "open", "partially_received"].includes(p.status));
+    const pendingDemands = demands.filter((d) => !["fulfilled", "cancelled", "rejected"].includes(d.status));
+    const pendingGRNs = grns.filter((g) => g.status === "received" || g.status === "draft");
+    const inTransit = transfers.filter((t) => ["in_transit", "dispatched"].includes(t.status));
+    const pendingAck = issuances.filter((i) => i.status === "issued");
+    return [
+      { key: "demands", label: "Open Demands", hint: "Submitted, awaiting fulfilment", to: "/admin/inventory/demands", icon: ClipboardList, accent: "text-violet-500", count: pendingDemands.length, ...ageBreakdown(pendingDemands) },
+      ...(!scope.isScoped ? [{ key: "pos", label: "Open Purchase Orders", hint: "Draft / Approved / Partial", to: "/admin/inventory/purchase-orders", icon: FileText, accent: "text-blue-500", count: openPOsAll.length, ...ageBreakdown(openPOsAll) }] : []),
+      { key: "grns", label: "Delivery Challans to Post", hint: "Received but not posted", to: "/admin/inventory/goods-receipts", icon: ClipboardCheck, accent: "text-cyan-500", count: pendingGRNs.length, ...ageBreakdown(pendingGRNs) },
+      { key: "transfers", label: "Transfers In-Transit", hint: "Dispatched, awaiting receipt", to: "/admin/inventory/transfers", icon: Truck, accent: "text-amber-500", count: inTransit.length, ...ageBreakdown(inTransit) },
+      { key: "issuances", label: "Issuances Awaiting Ack", hint: "Issued, awaiting confirmation", to: "/admin/inventory/issuances", icon: UserPlus, accent: "text-teal-500", count: pendingAck.length, ...ageBreakdown(pendingAck) },
+    ];
+  }, [pos, demands, grns, transfers, issuances, scope.isScoped]);
+  const totalPending = notifications.reduce((s, n) => s + n.count, 0);
+  const totalBreached = notifications.reduce((s, n) => s + n.breached, 0);
+
 
   const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
   const vendorMap = useMemo(() => new Map(vendors.map((v) => [v.id, v])), [vendors]);
@@ -572,6 +619,31 @@ export function InventoryOwnerDashboard() {
           <Kpi label="Low Stock Lines" value={lowStock.length.toString()} icon={AlertTriangle} tint="from-amber-500/15 to-amber-500/0" iconClass="text-amber-500" hint={`${openPOs} open POs`} to="/admin/inventory/stock" />
         </div>
       )}
+
+      {/* Live Notifications — pending actions across the inventory pipeline */}
+      <div className="rounded-2xl border border-border bg-card p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className={`relative flex h-9 w-9 items-center justify-center rounded-xl ${totalPending > 0 ? "bg-amber-500/15 text-amber-600" : "bg-emerald-500/15 text-emerald-600"}`}>
+              <Bell className="h-4 w-4" />
+              {totalPending > 0 && <span className="absolute -right-0.5 -top-0.5 flex h-2.5 w-2.5 items-center justify-center rounded-full bg-amber-500 ring-2 ring-card" />}
+            </span>
+            <div>
+              <div className="font-display text-sm font-bold tracking-tight">Live Notifications</div>
+              <div className="text-[11px] text-muted-foreground">
+                {totalPending === 0 ? "All caught up — nothing pending." : (
+                  <>{totalPending} pending action{totalPending !== 1 ? "s" : ""}{totalBreached > 0 && <> · <span className="font-semibold text-rose-600">{totalBreached} past SLA ({SLA_DAYS}d)</span></>}</>
+                )}
+              </div>
+            </div>
+          </div>
+          <span className="hidden text-[10px] uppercase tracking-wider text-muted-foreground sm:inline">SLA: {SLA_DAYS} days</span>
+        </div>
+        <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {notifications.map(({ key, ...n }) => <NotifTile key={key} {...n} sla={SLA_DAYS} />)}
+        </div>
+      </div>
+
 
       {/* Overview — clickable totals across modules */}
       <div className="space-y-3">
@@ -903,6 +975,50 @@ function WorkflowTile({ to, label, value, icon: Icon, accent, chips }: {
     </Link>
   );
 }
+
+
+function NotifTile({ label, hint, to, icon: Icon, accent, count, breached, oldest, sla }: {
+  label: string; hint: string; to: string; icon: React.ComponentType<{ className?: string }>; accent: string;
+  count: number; breached: number; oldest: number; sla: number;
+}) {
+  const isClear = count === 0;
+  const isBreached = breached > 0;
+  return (
+    <Link to={to} className={`group relative flex flex-col gap-2 rounded-2xl border p-4 transition hover:bg-accent/5 ${isBreached ? "border-rose-500/40 bg-rose-500/5" : isClear ? "border-border bg-card" : "border-amber-500/30 bg-amber-500/5"}`}>
+      <div className="flex items-center justify-between">
+        <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-background/70 ${accent}`}><Icon className="h-4 w-4" /></div>
+        {!isClear && (
+          <span className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${isBreached ? "bg-rose-500 text-white" : "bg-amber-500 text-white"}`}>
+            {count}
+          </span>
+        )}
+      </div>
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="mt-0.5 text-xs text-muted-foreground">{hint}</div>
+      </div>
+      {isClear ? (
+        <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600">
+          <ClipboardCheck className="h-3 w-3" /> No pending actions
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+          <span className="inline-flex items-center gap-1 rounded-full bg-background/70 px-2 py-0.5 font-medium text-muted-foreground">
+            <Clock className="h-3 w-3" /> Oldest {oldest}d
+          </span>
+          {isBreached && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 px-2 py-0.5 font-semibold text-rose-700 dark:text-rose-300">
+              <AlertTriangle className="h-3 w-3" /> {breached} past {sla}d SLA
+            </span>
+          )}
+        </div>
+      )}
+      <ArrowRight className="absolute bottom-3 right-3 h-3.5 w-3.5 text-muted-foreground/40 transition group-hover:translate-x-0.5 group-hover:text-accent" />
+    </Link>
+  );
+}
+
+
 
 
 function ScopeBanner() {
