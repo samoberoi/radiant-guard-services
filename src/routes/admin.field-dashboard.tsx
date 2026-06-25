@@ -74,28 +74,61 @@ function FieldOfficerDashboard() {
         };
       }
 
-      // Units I cover
-      const { data: cu } = await supabase
-        .from("candidate_units")
-        .select("unit_id,is_primary")
-        .eq("candidate_id", meId);
-      const unitIds = ((cu ?? []) as Array<{ unit_id: string; is_primary: boolean }>).map((r) => r.unit_id);
-      const primaryMap = new Map(((cu ?? []) as Array<{ unit_id: string; is_primary: boolean }>).map((r) => [r.unit_id, r.is_primary]));
+      // Units I cover — from employee_scope_assignments (modern) + legacy candidate_units
+      const [scopeRes, cuRes] = await Promise.all([
+        supabase
+          .from("employee_scope_assignments")
+          .select("scope_id,scope_type")
+          .eq("candidate_id", meId)
+          .eq("scope_type", "unit"),
+        supabase
+          .from("candidate_units")
+          .select("unit_id,is_primary")
+          .eq("candidate_id", meId),
+      ]);
+      const scopeUnitIds = ((scopeRes.data ?? []) as Array<{ scope_id: string }>).map((r) => r.scope_id);
+      const legacyUnits = ((cuRes.data ?? []) as Array<{ unit_id: string; is_primary: boolean }>);
+      const primaryMap = new Map(legacyUnits.map((r) => [r.unit_id, r.is_primary]));
+      const unitIds = Array.from(new Set([...scopeUnitIds, ...legacyUnits.map((r) => r.unit_id)]));
 
-      if (unitIds.length === 0) {
+      // Guards reporting to me (regardless of whether unit_id is set on the candidate)
+      const { data: myGuards } = await supabase
+        .from("candidates")
+        .select("id,full_name,mobile,designation_id,unit_id,role_key,status,is_enabled,reports_to")
+        .eq("reports_to", meId)
+        .in("role_key", ["guard", "security_guard"])
+        .eq("status", "active")
+        .eq("is_enabled", true);
+      const guardList = (myGuards ?? []) as Array<{ id: string; full_name: string; mobile: string; designation_id: string | null; unit_id: string | null }>;
+
+      // Resolve guard unit via scope_assignments when candidates.unit_id is null
+      const guardsMissingUnit = guardList.filter((g) => !g.unit_id).map((g) => g.id);
+      const guardScopeUnit = new Map<string, string>();
+      if (guardsMissingUnit.length) {
+        const { data: gs } = await supabase
+          .from("employee_scope_assignments")
+          .select("candidate_id,scope_id,scope_type")
+          .in("candidate_id", guardsMissingUnit)
+          .eq("scope_type", "unit");
+        for (const r of (gs ?? []) as Array<{ candidate_id: string; scope_id: string }>) {
+          if (!guardScopeUnit.has(r.candidate_id)) guardScopeUnit.set(r.candidate_id, r.scope_id);
+        }
+      }
+      // Also include the units those guards belong to
+      for (const g of guardList) {
+        const uid = g.unit_id ?? guardScopeUnit.get(g.id) ?? null;
+        if (uid && !unitIds.includes(uid)) unitIds.push(uid);
+      }
+
+      if (unitIds.length === 0 && guardList.length === 0) {
         return { meName, units: [], pendingMine: 0, rejectedMine: 0, guardsTotal: 0 };
       }
 
-      const [unitsRes, custRes, guardsRes, mineRes] = await Promise.all([
-        supabase.from("units").select("id,code,name,customer_id").in("id", unitIds),
+      const [unitsRes, custRes, mineRes] = await Promise.all([
+        unitIds.length
+          ? supabase.from("units").select("id,code,name,customer_id").in("id", unitIds)
+          : Promise.resolve({ data: [] as Array<{ id: string; code: string; name: string; customer_id: string | null }> }),
         supabase.from("customers").select("id,name"),
-        supabase
-          .from("candidates")
-          .select("id,full_name,mobile,designation_id,unit_id,role_key,status,is_enabled")
-          .in("unit_id", unitIds)
-          .eq("role_key", "guard")
-          .eq("status", "active")
-          .eq("is_enabled", true),
         userId
           ? supabase
               .from("candidates")
@@ -109,16 +142,17 @@ function FieldOfficerDashboard() {
       const desigMap = new Map(((desigs ?? []) as Array<{ id: string; name: string }>).map((d) => [d.id, d.name]));
       const custMap = new Map(((custRes.data ?? []) as Array<{ id: string; name: string }>).map((c) => [c.id, c.name]));
       const guardsByUnit = new Map<string, UnitNode["guards"]>();
-      for (const g of (guardsRes.data ?? []) as Array<{ id: string; full_name: string; mobile: string; designation_id: string | null; unit_id: string | null }>) {
-        if (!g.unit_id) continue;
-        const arr = guardsByUnit.get(g.unit_id) ?? [];
+      const UNASSIGNED = "__unassigned__";
+      for (const g of guardList) {
+        const uid = g.unit_id ?? guardScopeUnit.get(g.id) ?? UNASSIGNED;
+        const arr = guardsByUnit.get(uid) ?? [];
         arr.push({
           id: g.id,
           full_name: g.full_name,
           mobile: g.mobile,
           designation: (g.designation_id && desigMap.get(g.designation_id)) || "—",
         });
-        guardsByUnit.set(g.unit_id, arr);
+        guardsByUnit.set(uid, arr);
       }
 
       const units: UnitNode[] = ((unitsRes.data ?? []) as Array<{ id: string; code: string; name: string; customer_id: string | null }>).map((u) => ({
@@ -129,6 +163,13 @@ function FieldOfficerDashboard() {
         is_primary: primaryMap.get(u.id) ?? false,
         guards: guardsByUnit.get(u.id) ?? [],
       })).sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || a.name.localeCompare(b.name));
+
+      // Surface guards whose unit could not be resolved as a synthetic row so FO sees them
+      const orphaned = guardsByUnit.get(UNASSIGNED) ?? [];
+      if (orphaned.length) {
+        units.push({ id: UNASSIGNED, code: "—", name: "Unassigned guards", customer_name: "Map these guards to a unit", is_primary: false, guards: orphaned });
+      }
+
 
       const mine = ((mineRes.data ?? []) as Array<{ status: string }>);
       return {
