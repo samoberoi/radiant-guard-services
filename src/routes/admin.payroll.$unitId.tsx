@@ -316,6 +316,9 @@ function PayrollUnitPage() {
       const deductionsByCandidate = new Map<string, PerEmpItem[]>();
       const dayAdjustmentByCandidate = new Map<string, DayAdj>();
       const phDisplayCountByCandidate = new Map<string, number>();
+      // PH cash override: user-entered PH addition amount is paid as-is on
+      // the "Paid Holiday" line (bypasses the engine's perDayRate × phCount).
+      const phCashByCandidate = new Map<string, number>();
       if (candidateIds.length > 0) {
         const [addsRes, dedsRes, addTypesRes] = await Promise.all([
           supabase
@@ -373,6 +376,23 @@ function PayrollUnitPage() {
         for (const a of ((addsRes.data ?? []) as unknown as RawAdd[])) {
           const inst = Math.max(1, Number(a.installments) || 1);
           const amt = (Number(a.amount) || 0) / inst;
+          const isPhType = !!(a.addition_type_id && phTypeIds.has(String(a.addition_type_id)));
+          if (isPhType) {
+            // PH-type addition: pay the user-entered amount directly on the
+            // Paid Holiday line; bump the PH Days display count; skip the
+            // generic cash-addition row and day-adjustment paths so we
+            // don't double-count.
+            phCashByCandidate.set(
+              a.candidate_id,
+              (phCashByCandidate.get(a.candidate_id) ?? 0) + amt,
+            );
+            const phDelta = Math.max(1, Number(a.days) || 1);
+            phDisplayCountByCandidate.set(
+              a.candidate_id,
+              (phDisplayCountByCandidate.get(a.candidate_id) ?? 0) + phDelta,
+            );
+            continue;
+          }
           const isDayAdj = isSystemComputedDayAdj(a.entry_mode, a.include_in_total_days, a.affects_days_for);
           if (!isDayAdj) {
             const arr = additionsByCandidate.get(a.candidate_id) ?? [];
@@ -381,18 +401,6 @@ function PayrollUnitPage() {
           }
           if (a.entry_mode === "days_x_per_day" && a.include_in_total_days) {
             applyDayAdj(a.candidate_id, Number(a.days) || 0, a.affects_days_for, +1);
-          }
-          // PH-type lumpsum additions (e.g. "Paid Holidays") should still
-          // surface in the PH Days column for visibility. Each addition row
-          // represents one PH day (uses configured `days` if provided, else 1).
-          // Display-only: do NOT mutate tDays or recompute earnings — the
-          // lumpsum cash already accounts for the rupee value.
-          if (a.addition_type_id && phTypeIds.has(String(a.addition_type_id))) {
-            const phDelta = Math.max(1, Number(a.days) || 1);
-            phDisplayCountByCandidate.set(
-              a.candidate_id,
-              (phDisplayCountByCandidate.get(a.candidate_id) ?? 0) + phDelta,
-            );
           }
         }
         for (const d of ((dedsRes.data ?? []) as unknown as RawDed[])) {
@@ -534,8 +542,9 @@ function PayrollUnitPage() {
           if (phDisplay) totals.phDays = totals.phDays + phDisplay;
         }
         const resource = resourceByDesignation.get(did);
+        const phOverride = isPrimaryForAdj ? phCashByCandidate.get(c.id) : undefined;
         const wages = resource
-          ? computeWages(totals, resource, periodDates.length)
+          ? computeWages(totals, resource, periodDates.length, { phOverrideAmount: phOverride })
           : null;
         const isPrimary = (c.designation_id ?? null) === p.designationId;
         const candidateGender = ((c as unknown as { gender?: string | null }).gender ?? "").toString();
