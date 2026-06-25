@@ -208,6 +208,7 @@ export function InventoryOwnerDashboard() {
   const whsRaw = whsQ.data ?? [];
   const transfersRaw = transfersQ.data ?? [];
   const issuancesRaw = issuancesQ.data ?? [];
+  const demandsRaw = demandsQ.data ?? [];
   const canUseScopedData = !scope.isScoped || (!!scope.branchId && !scopeAssignmentsQ.isLoading);
 
   // ===== Branch-scope hard-filter =====
