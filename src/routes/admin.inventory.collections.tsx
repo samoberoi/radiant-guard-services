@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { postMovements, type LocationType } from "@/lib/inv-helpers";
 import { useAuth, SUPER_ADMIN_PHONE } from "@/lib/auth";
 
@@ -86,6 +87,29 @@ function CollectionsPanel({ me }: { me: Candidate }) {
     },
   });
 
+  // Units covered by this field officer, so Collections opens with unit coverage first.
+  const { data: coveredUnitIds = [] } = useQuery({
+    queryKey: ["collections", "fo-covered-units", me.id],
+    queryFn: async () => {
+      const [scopeRes, legacyRes] = await Promise.all([
+        supabase
+          .from("employee_scope_assignments" as never)
+          .select("scope_id,scope_type")
+          .eq("candidate_id", me.id)
+          .eq("scope_type", "unit"),
+        supabase
+          .from("candidate_units" as never)
+          .select("unit_id")
+          .eq("candidate_id", me.id),
+      ]);
+      if (scopeRes.error) throw scopeRes.error;
+      if (legacyRes.error) throw legacyRes.error;
+      const scoped = ((scopeRes.data ?? []) as unknown as { scope_id: string }[]).map((r) => r.scope_id);
+      const legacy = ((legacyRes.data ?? []) as unknown as { unit_id: string }[]).map((r) => r.unit_id);
+      return Array.from(new Set([...scoped, ...legacy]));
+    },
+  });
+
   // 2. Unit assignments (handles guards whose unit_id is null but who have scope_assignments)
   const guardIds = useMemo(() => guards.map((g) => g.id), [guards]);
   const { data: scopeUnits = [] } = useQuery({
@@ -109,7 +133,7 @@ function CollectionsPanel({ me }: { me: Candidate }) {
     return m;
   }, [guards, scopeUnits]);
 
-  const unitIds = useMemo(() => Array.from(new Set([...guardUnitMap.values()])), [guardUnitMap]);
+  const unitIds = useMemo(() => Array.from(new Set([...coveredUnitIds, ...guardUnitMap.values()])), [coveredUnitIds, guardUnitMap]);
 
   const { data: units = [] } = useQuery({
     queryKey: ["collections", "units", unitIds.join(",")],
@@ -169,6 +193,9 @@ function CollectionsPanel({ me }: { me: Candidate }) {
     });
     const m = new Map<string, Candidate[]>();
     const UNASSIGNED = "__unassigned__";
+    if (!s) {
+      for (const uid of coveredUnitIds) m.set(uid, []);
+    }
     for (const g of filteredGuards) {
       const uid = guardUnitMap.get(g.id) ?? UNASSIGNED;
       const arr = m.get(uid) ?? [];
@@ -181,7 +208,7 @@ function CollectionsPanel({ me }: { me: Candidate }) {
     }
     out.sort((a, b) => (a.unit?.name ?? "zzz").localeCompare(b.unit?.name ?? "zzz"));
     return out;
-  }, [guards, guardUnitMap, unitMap, q]);
+  }, [guards, guardUnitMap, unitMap, q, coveredUnitIds]);
 
   const totalGuards = guards.length;
   const guardsWithStock = useMemo(() => guards.filter((g) => (balByGuard.get(g.id)?.length ?? 0) > 0).length, [guards, balByGuard]);
@@ -343,7 +370,7 @@ function UnitBlock({ unit, guards, balByGuard, itemMap, onCollect }: {
                 <div className="flex items-center gap-2">
                   <div className="text-right text-[11px] text-muted-foreground">{totalQty} item{totalQty === 1 ? "" : "s"} held</div>
                   <Button size="sm" disabled={bals.length === 0} onClick={() => onCollect(g)} className="h-9 rounded-md">
-                    <PackageCheck className="mr-1.5 h-4 w-4" /> Collect
+                    <PackageCheck className="mr-1.5 h-4 w-4" /> Recover
                   </Button>
                 </div>
               </div>
@@ -371,19 +398,33 @@ function CollectDialog({ open, onOpenChange, guard, unit, balances, itemMap, onC
     for (const b of balances) m[`${b.item_id}|${b.size_value}`] = Number(b.qty || 0);
     return m;
   });
+  const [checkedMap, setCheckedMap] = useState<Record<string, boolean>>(() => {
+    const m: Record<string, boolean> = {};
+    for (const b of balances) m[`${b.item_id}|${b.size_value}`] = Number(b.qty || 0) > 0;
+    return m;
+  });
 
   const setAll = (mode: "all" | "none") => {
-    const m: Record<string, number> = {};
-    for (const b of balances) m[`${b.item_id}|${b.size_value}`] = mode === "all" ? Number(b.qty || 0) : 0;
-    setQtyMap(m);
+    const q: Record<string, number> = {};
+    const checked: Record<string, boolean> = {};
+    for (const b of balances) {
+      const key = `${b.item_id}|${b.size_value}`;
+      q[key] = mode === "all" ? Number(b.qty || 0) : 0;
+      checked[key] = mode === "all";
+    }
+    setQtyMap(q);
+    setCheckedMap(checked);
   };
 
-  const totalSelected = Object.values(qtyMap).reduce((s, n) => s + n, 0);
+  const totalSelected = balances.reduce((s, b) => {
+    const key = `${b.item_id}|${b.size_value}`;
+    return s + (checkedMap[key] ? Number(qtyMap[key] || 0) : 0);
+  }, 0);
 
   const handleConfirm = async () => {
     const rows = balances
       .map((b) => ({ item_id: b.item_id, size_value: b.size_value, qty: Math.min(Number(qtyMap[`${b.item_id}|${b.size_value}`] || 0), Number(b.qty || 0)) }))
-      .filter((r) => r.qty > 0);
+      .filter((r) => checkedMap[`${r.item_id}|${r.size_value}`] && r.qty > 0);
     if (!rows.length) return toast.error("Select at least one item");
     const allFull = rows.length === balances.length && rows.every((r) => {
       const b = balances.find((x) => x.item_id === r.item_id && x.size_value === r.size_value);
@@ -392,9 +433,9 @@ function CollectDialog({ open, onOpenChange, guard, unit, balances, itemMap, onC
     if (!(await confirmAction({
       title: "Confirm collection",
       description: allFull
-        ? `Take back everything from ${guard.full_name}? It will be removed from the guard and added to your field-officer stock.`
-        : `Take back ${rows.length} item${rows.length === 1 ? "" : "s"} from ${guard.full_name}?`,
-      confirmText: "Confirm Collected",
+        ? `Recover everything from ${guard.full_name}? It will be removed from the guard and added to your field-officer stock.`
+        : `Recover ${rows.length} selected item${rows.length === 1 ? "" : "s"} from ${guard.full_name}?`,
+      confirmText: "Mark Recovered",
     }))) return;
     onConfirm(rows);
   };
@@ -403,16 +444,16 @@ function CollectDialog({ open, onOpenChange, guard, unit, balances, itemMap, onC
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-xl">
         <DialogHeader>
-          <DialogTitle>Collect from {guard.full_name}</DialogTitle>
+          <DialogTitle>Recover stock from {guard.full_name}</DialogTitle>
           <div className="text-xs text-muted-foreground">
             {guard.employee_code ?? "—"}{unit ? ` · ${unit.code} · ${unit.name}` : ""}
           </div>
         </DialogHeader>
 
         <div className="flex items-center justify-between">
-          <div className="text-xs text-muted-foreground">Set the quantity you are taking back for each item.</div>
+          <div className="text-xs text-muted-foreground">Tick the items being recovered, then set the quantity.</div>
           <div className="flex gap-2">
-            <Button type="button" size="sm" variant="outline" className="h-7 rounded-md text-xs" onClick={() => setAll("all")}>Take all</Button>
+            <Button type="button" size="sm" variant="outline" className="h-7 rounded-md text-xs" onClick={() => setAll("all")}>Recover all</Button>
             <Button type="button" size="sm" variant="ghost" className="h-7 rounded-md text-xs" onClick={() => setAll("none")}>Clear</Button>
           </div>
         </div>
@@ -425,8 +466,20 @@ function CollectDialog({ open, onOpenChange, guard, unit, balances, itemMap, onC
             const item = itemMap.get(b.item_id);
             const max = Number(b.qty || 0);
             const val = qtyMap[key] ?? 0;
+            const checked = checkedMap[key] ?? false;
             return (
-              <div key={key} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card px-3 py-2">
+              <div key={key} className={`flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card px-3 py-2 transition ${checked ? "ring-1 ring-emerald-500/25" : "opacity-60"}`}>
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={(next) => {
+                    const isChecked = next === true;
+                    setCheckedMap((m) => ({ ...m, [key]: isChecked }));
+                    if (isChecked && Number(qtyMap[key] || 0) === 0) {
+                      setQtyMap((m) => ({ ...m, [key]: max }));
+                    }
+                  }}
+                  aria-label={`Recover ${item?.name ?? "item"}`}
+                />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium text-foreground">{item?.name ?? "—"}</div>
                   <div className="text-[11px] text-muted-foreground">
@@ -434,19 +487,21 @@ function CollectDialog({ open, onOpenChange, guard, unit, balances, itemMap, onC
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button type="button" size="sm" variant="outline" className="h-8 w-8 rounded-md p-0" onClick={() => setQtyMap((m) => ({ ...m, [key]: Math.max(0, (m[key] ?? 0) - 1) }))}>−</Button>
+                  <Button type="button" size="sm" variant="outline" disabled={!checked} className="h-8 w-8 rounded-md p-0" onClick={() => setQtyMap((m) => ({ ...m, [key]: Math.max(0, (m[key] ?? 0) - 1) }))}>−</Button>
                   <Input
                     type="number"
                     min={0}
                     max={max}
                     value={val}
+                    disabled={!checked}
                     onChange={(e) => {
                       const n = Math.max(0, Math.min(max, Number(e.target.value) || 0));
                       setQtyMap((m) => ({ ...m, [key]: n }));
+                      setCheckedMap((m) => ({ ...m, [key]: n > 0 }));
                     }}
                     className="h-8 w-16 rounded-md text-center"
                   />
-                  <Button type="button" size="sm" variant="outline" className="h-8 w-8 rounded-md p-0" onClick={() => setQtyMap((m) => ({ ...m, [key]: Math.min(max, (m[key] ?? 0) + 1) }))}>+</Button>
+                  <Button type="button" size="sm" variant="outline" disabled={!checked} className="h-8 w-8 rounded-md p-0" onClick={() => setQtyMap((m) => ({ ...m, [key]: Math.min(max, (m[key] ?? 0) + 1) }))}>+</Button>
                   <span className="ml-1 text-[11px] text-muted-foreground">/ {max}</span>
                 </div>
               </div>
@@ -460,7 +515,7 @@ function CollectDialog({ open, onOpenChange, guard, unit, balances, itemMap, onC
           </Button>
           <Button type="button" onClick={handleConfirm} disabled={submitting || totalSelected === 0} className="h-9 rounded-md">
             <PackageCheck className="mr-1.5 h-4 w-4" />
-            {submitting ? "Collecting…" : `Confirm collect (${totalSelected})`}
+            {submitting ? "Recovering…" : `Mark recovered (${totalSelected})`}
           </Button>
         </DialogFooter>
       </DialogContent>
