@@ -806,7 +806,7 @@ function useAllowanceTypes() {
     queryFn: async (): Promise<AllowanceType[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot,created_at")
+        .select("id,name,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot,formula_mode,formula_expression,formula_version,created_at")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data as unknown as Record<string, unknown>[])
@@ -824,6 +824,9 @@ function useAllowanceTypes() {
             : [],
           capAmount: r.cap_amount == null ? null : Number(r.cap_amount),
           includeInOt: r.include_in_ot == null ? true : Boolean(r.include_in_ot),
+          formulaMode: r.formula_mode == null ? null : String(r.formula_mode),
+          formulaExpression: r.formula_expression == null ? null : String(r.formula_expression),
+          formulaVersion: r.formula_version == null ? null : Number(r.formula_version),
         }));
     },
   });
