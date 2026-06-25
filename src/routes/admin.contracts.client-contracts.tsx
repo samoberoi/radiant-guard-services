@@ -3369,6 +3369,9 @@ function ResourceFormDialog({
           name: a.shortName || a.displayName,
           amount: 0,
           includeInOt: a.includeInOt,
+          formulaMode: a.formulaMode ?? null,
+          formulaExpression: a.formulaExpression ?? null,
+          formulaVersion: a.formulaVersion ?? null,
         };
         if (a.calcType === "percentage") {
           // Compute formula against existing components (excluding self by id).
