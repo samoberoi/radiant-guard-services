@@ -133,6 +133,9 @@ export type WageComponent = {
   includeInOt?: boolean | null;
   fixedCalcMethod?: FixedCalcMethod | null;
   fixedDutyComponents?: FixedDutyBucket[] | null;
+  formulaMode?: string | null;
+  formulaExpression?: string | null;
+  formulaVersion?: number | null;
 };
 export type BenefitLike = {
   name: string;
@@ -145,6 +148,9 @@ export type BenefitLike = {
   deductionCalcType?: "earned_salary" | "fixed_amount" | null;
   fixedCalcMethod?: FixedCalcMethod | null;
   fixedDutyComponents?: FixedDutyBucket[] | null;
+  formulaMode?: string | null;
+  formulaExpression?: string | null;
+  formulaVersion?: number | null;
 };
 
 
