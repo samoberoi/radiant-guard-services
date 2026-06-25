@@ -48,12 +48,20 @@ type Operator = "+" | "-";
 type BaseRef = { label: string; operator: Operator };
 type FixedCalcMethod = "flat" | "per_duty";
 type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
+type FixedDutyDivisor = "base_days" | "days_in_month" | "payable_days" | "fixed_26";
 
 const FIXED_DUTY_BUCKETS: { value: FixedDutyBucket; label: string; short: string }[] = [
   { value: "p_days", label: "P Days (present)", short: "P" },
   { value: "ot_days", label: "OT Days", short: "OT" },
   { value: "ph_days", label: "PH Days (public holiday)", short: "PH" },
   { value: "other_paid_days", label: "Other Paid Days", short: "OPL" },
+];
+
+const FIXED_DUTY_DIVISORS: { value: FixedDutyDivisor; label: string; short: string }[] = [
+  { value: "base_days",     label: "Base Days (contract — usually 26)",           short: "Base Days" },
+  { value: "days_in_month", label: "Total Days in Month (calendar days)",         short: "Days in Month" },
+  { value: "payable_days",  label: "Payable Days (P + Other Paid)",               short: "Payable Days" },
+  { value: "fixed_26",      label: "Fixed 26",                                    short: "26" },
 ];
 
 type CostComponent = {
