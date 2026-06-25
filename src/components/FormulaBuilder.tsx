@@ -186,6 +186,9 @@ export function FormulaBuilder({ value, onChange, availableBases }: Props) {
               {derivedBases.length > 0 && (
                 <ComponentGroup title="Derived Values" tone="success" items={derivedBases} selected={selectedNames} onAdd={addComponent} />
               )}
+              {daysBases.length > 0 && (
+                <ComponentGroup title="Days & Attendance" tone="primary" items={daysBases} selected={selectedNames} onAdd={addComponent} />
+              )}
               {otherBases.length > 0 && (
                 <ComponentGroup title="Allowances & Custom" tone="muted" items={otherBases} selected={selectedNames} onAdd={addComponent} />
               )}
