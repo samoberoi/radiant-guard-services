@@ -31,12 +31,6 @@ type ResourceShape = {
   [k: string]: unknown;
 };
 
-type ResourceShape = {
-  components: LineWithIds[];
-  benefits?: LineWithIds[];
-  deductions?: LineWithIds[];
-  employerContributions?: LineWithIds[];
-};
 
 export async function hydrateFormulasFromMaster<T extends ResourceShape>(
   resources: T[],
