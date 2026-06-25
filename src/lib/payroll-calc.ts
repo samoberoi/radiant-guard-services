@@ -121,6 +121,7 @@ export function computeAttendanceTotals(
 
 export type FixedCalcMethod = "flat" | "per_duty";
 export type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
+export type FixedDutyDivisor = "base_days" | "days_in_month" | "payable_days" | "fixed_26";
 
 export type WageComponent = {
   allowanceId?: string | null;
@@ -134,6 +135,7 @@ export type WageComponent = {
   includeInOt?: boolean | null;
   fixedCalcMethod?: FixedCalcMethod | null;
   fixedDutyComponents?: FixedDutyBucket[] | null;
+  fixedDutyDivisor?: FixedDutyDivisor | null;
   formulaMode?: string | null;
   formulaExpression?: string | null;
   formulaVersion?: number | null;
@@ -149,6 +151,7 @@ export type BenefitLike = {
   deductionCalcType?: "earned_salary" | "fixed_amount" | null;
   fixedCalcMethod?: FixedCalcMethod | null;
   fixedDutyComponents?: FixedDutyBucket[] | null;
+  fixedDutyDivisor?: FixedDutyDivisor | null;
   formulaMode?: string | null;
   formulaExpression?: string | null;
   formulaVersion?: number | null;
