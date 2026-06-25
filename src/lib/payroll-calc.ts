@@ -641,19 +641,29 @@ export function computeWages(
     return round2(Number(i.amount) || 0);
   };
   const scaleItemsRespectingFixed = (items: BenefitLike[]): WageComponent[] =>
-    items.map((i) => ({
-      ...i,
-      name: i.name,
-      amount: i.fixedCalcMethod === "per_duty"
+    items.map((i) => {
+      const fromFormula = tryFormulaAmount(i);
+      const amount = fromFormula != null
+        ? fromFormula
+        : i.fixedCalcMethod === "per_duty"
         ? computePerDutyAmount(i)
         : isFixedItem(i)
         ? resolveFixedAmount(i)
         : i.calcType === "percentage"
         ? benefitAmountFromConfig(i, components, resource.components, earnedSalaryRatio)
-        : round2((Number(i.amount) || 0) * earnedSalaryRatio),
-    }));
+        : round2((Number(i.amount) || 0) * earnedSalaryRatio);
+      return { ...i, name: i.name, amount };
+    });
 
-  const benefits = scaleItems(resource.benefits, ratio, computePerDutyAmount);
+  const benefits = (resource.benefits ?? []).map((i) => {
+    const fromFormula = tryFormulaAmount(i);
+    const amount = fromFormula != null
+      ? fromFormula
+      : i.fixedCalcMethod === "per_duty"
+      ? computePerDutyAmount(i)
+      : round2((Number(i.amount) || 0) * ratio);
+    return { ...i, name: i.name, amount } as WageComponent;
+  });
   const deductionsScaled = scaleItemsRespectingFixed(resource.deductions);
   const employerContributionsScaled = scaleItemsRespectingFixed(resource.employerContributions);
 
