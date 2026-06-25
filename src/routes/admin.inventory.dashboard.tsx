@@ -94,6 +94,7 @@ const inr = (n: number) =>
 
 export function InventoryOwnerDashboard() {
   const scope = useUserBranchScope();
+  const role = useCurrentUserRole();
   const [range, setRange] = useState<Range>("this_month");
   const [customFrom, setCustomFrom] = useState<string>(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
   const [customTo, setCustomTo] = useState<string>(() => new Date().toISOString().slice(0, 10));
