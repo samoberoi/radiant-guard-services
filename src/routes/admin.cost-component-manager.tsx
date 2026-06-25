@@ -193,6 +193,8 @@ function useCostComponents() {
       p.calc_type === "fixed" && p.fixed_calc_method === "per_duty"
         ? p.fixed_duty_components
         : [],
+    formula_mode: p.formula_mode,
+    formula_expression: p.formula_expression,
   });
 
 
