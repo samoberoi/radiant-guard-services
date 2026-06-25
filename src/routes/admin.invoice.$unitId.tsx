@@ -23,6 +23,7 @@ import {
 import { downloadCsv, writeXlsx } from "@/lib/csv-export";
 import { gstinStateCode } from "@/lib/gstin";
 import { fetchAttendanceEntriesForPeriod } from "@/lib/attendance-fetch";
+import { hydrateFormulasFromMaster } from "@/lib/contract-hydrate";
 
 const searchSchema = z.object({
   start: z.string(),
@@ -270,6 +271,7 @@ function PayrollUnitPage() {
             ? (r.components as {
                 name: string;
                 amount: number;
+                allowanceId?: string | null;
                 includeInOt?: boolean | null;
                 formulaMode?: string | null;
                 formulaExpression?: string | null;
@@ -277,6 +279,7 @@ function PayrollUnitPage() {
               }[]).map((c) => ({
                 name: String(c.name ?? ""),
                 amount: Number(c.amount) || 0,
+                allowanceId: c.allowanceId ?? null,
                 includeInOt: c.includeInOt,
                 formulaMode: c.formulaMode ?? null,
                 formulaExpression: c.formulaExpression ?? null,
@@ -284,14 +287,22 @@ function PayrollUnitPage() {
               }))
             : [],
           benefits: Array.isArray(r.benefits) ? (r.benefits as { name: string; amount: number }[]) : [],
-          deductions: Array.isArray(r.deductions) ? (r.deductions as { name: string; amount: number }[]) : [],
+          deductions: Array.isArray(r.deductions) ? (r.deductions as { name: string; amount: number; allowanceId?: string | null; costComponentId?: string | null }[]) : [],
           employerContributions: Array.isArray(r.employer_contributions)
-            ? (r.employer_contributions as { name: string; amount: number }[])
+            ? (r.employer_contributions as { name: string; amount: number; allowanceId?: string | null; costComponentId?: string | null }[])
             : [],
           payrollDayBase: r.payroll_day_base_id
             ? pdbMap.get(String(r.payroll_day_base_id)) ?? null
             : null,
         });
+      }
+
+      // Overlay latest formula_mode/expression/version from Control Center
+      // masters so paysheets/invoices reflect master-formula edits without
+      // requiring contracts to be re-saved.
+      const hydratedList = await hydrateFormulasFromMaster(Array.from(resourceByDesignation.values()));
+      for (const r of hydratedList) {
+        resourceByDesignation.set(r.designationId, r);
       }
 
       // 4. Build line items per (candidate, designation_id).
