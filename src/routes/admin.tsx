@@ -254,6 +254,9 @@ function AdminLayout() {
     }
     const hit = pathToModule.find((p) => pathname === p.prefix || pathname.startsWith(p.prefix + "/"));
     if (!hit) return;
+    if (hit.module === "inventory" && roleKey === "field_officer" && pathname.startsWith("/admin/inventory/collections")) {
+      return;
+    }
     if (!can(hit.module)) {
       const dest = firstAllowedPath();
       if (dest) navigate({ to: dest, replace: true });
@@ -262,6 +265,7 @@ function AdminLayout() {
     }
     if (hit.module === "inventory") {
       const activeChild = inventoryChildren.find((c) => c.sub && (pathname === c.to || pathname.startsWith(c.to + "/")));
+      if (activeChild?.to === "/admin/inventory/collections" && roleKey === "field_officer") return;
       if (activeChild?.sub && !canSub("inventory", activeChild.sub)) {
         navigate({ to: "/admin/inventory", replace: true });
       }
