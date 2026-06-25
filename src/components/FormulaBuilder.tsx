@@ -137,6 +137,7 @@ export function FormulaBuilder({ value, onChange, availableBases }: Props) {
                   let next: PresetBase;
                   if (k === "fixed_amount") next = { kind: "fixed_amount", value: 0 };
                   else if (k === "variable") next = { kind: "variable", name: "basic" };
+                  else if (k === "composite") next = { kind: "composite", components: [{ name: "Basic", operator: "+" }, { name: "DA", operator: "+" }] };
                   else next = { kind: k } as PresetBase;
                   updatePreset({ base: next });
                 }}
