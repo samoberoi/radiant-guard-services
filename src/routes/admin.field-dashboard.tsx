@@ -7,9 +7,7 @@ import {
   Building2,
   ChevronDown,
   ChevronRight,
-  ClipboardList,
   ShieldCheck,
-  UserPlus,
   Warehouse,
 } from "lucide-react";
 
