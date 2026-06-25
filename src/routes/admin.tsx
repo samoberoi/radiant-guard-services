@@ -328,9 +328,11 @@ function AdminLayout() {
     !can("invoice");
   const filteredInventoryChildren = useMemo(
     () => {
-      if (isSuperAdmin) return inventoryChildren;
+      const isInvAdmin = isSuperAdmin || roleKey === "inventory_manager" || roleKey === "inventory";
+      if (isSuperAdmin) return inventoryChildren.filter((c) => !c.adminOnly || isInvAdmin);
       const isFO = roleKey === "field_officer";
       const list = inventoryChildren.filter((c) => {
+        if (c.adminOnly) return isInvAdmin;
         // Collections is field-officer only — bypass sub-permission gating for FOs.
         if (c.to === "/admin/inventory/collections") return isFO;
         return !c.sub || canSub("inventory", c.sub);
