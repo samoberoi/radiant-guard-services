@@ -437,7 +437,7 @@ function DeductionForm() {
     queryFn: async (): Promise<Deduction | null> => {
       const { data, error } = await supabase
         .from("deductions" as never)
-        .select("id,candidate_id,deduction_type_id,deduction_date,deduction_name,calculation_type,amount,installments,description,status,min_duty,max_duty")
+        .select("id,candidate_id,deduction_type_id,deduction_date,deduction_name,calculation_type,amount,installments,description,status,min_duty,max_duty,entry_mode,days,per_day_amount,include_in_total_days,affects_days_for")
         .eq("id", search.id!)
         .maybeSingle();
       if (error) throw error;
@@ -449,6 +449,11 @@ function DeductionForm() {
   const [typeId, setTypeId] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [calc, setCalc] = useState<CalcType>("lumpsum");
+  const [entryMode, setEntryMode] = useState<EntryMode>("lumpsum");
+  const [days, setDays] = useState<string>("");
+  const [perDayAmount, setPerDayAmount] = useState<string>("");
+  const [includeInTotalDays, setIncludeInTotalDays] = useState(false);
+  const [affectsDaysFor, setAffectsDaysFor] = useState<DayBucket[]>(["present"]);
   const [amount, setAmount] = useState<string>("");
   const [installments, setInstallments] = useState<string>("1");
   const [description, setDescription] = useState("");
@@ -471,11 +476,26 @@ function DeductionForm() {
     setStatus(d.status);
     setMinDuty(String(d.min_duty ?? 0));
     setMaxDuty(String(d.max_duty ?? 0));
+    setEntryMode((d.entry_mode ?? "lumpsum") as EntryMode);
+    setDays(d.days != null ? String(d.days) : "");
+    setPerDayAmount(d.per_day_amount != null ? String(d.per_day_amount) : "");
+    setIncludeInTotalDays(Boolean(d.include_in_total_days));
+    setAffectsDaysFor(Array.isArray(d.affects_days_for) && d.affects_days_for.length > 0 ? d.affects_days_for : ["present"]);
     setHydrated(true);
   }
 
   const firstEmp = useMemo(() => (emps.data ?? []).find((e) => e.id === candidateIds[0]), [emps.data, candidateIds]);
   const type = useMemo(() => (types.data ?? []).find((t) => t.id === typeId), [types.data, typeId]);
+
+  const computedAmount = useMemo(() => {
+    if (entryMode === "days_x_per_day") {
+      return Math.round((Number(days) || 0) * (Number(perDayAmount) || 0) * 100) / 100;
+    }
+    return Number(amount) || 0;
+  }, [entryMode, days, perDayAmount, amount]);
+
+  const toggleBucket = (b: DayBucket) =>
+    setAffectsDaysFor((prev) => prev.includes(b) ? prev.filter((x) => x !== b) : [...prev, b]);
 
   // Auto-generated deduction name: "{emp_code} - {type} - {date}"
   const autoName = useMemo(() => {
@@ -492,10 +512,17 @@ function DeductionForm() {
     mutationFn: async () => {
       if (candidateIds.length === 0) throw new Error("Select at least one employee");
       if (!typeId) throw new Error("Select a deduction type");
-      const amt = Number(amount);
+      const amt = computedAmount;
       if (!Number.isFinite(amt) || amt < 0) throw new Error("Enter a valid amount");
       const inst = Math.max(1, parseInt(installments, 10) || 1);
       const typePart = type?.name || "Deduction";
+      const extras = {
+        entry_mode: entryMode,
+        days: entryMode === "days_x_per_day" ? (Number(days) || 0) : null,
+        per_day_amount: entryMode === "days_x_per_day" ? (Number(perDayAmount) || 0) : null,
+        include_in_total_days: entryMode === "days_x_per_day" ? includeInTotalDays : false,
+        affects_days_for: entryMode === "days_x_per_day" && includeInTotalDays ? affectsDaysFor : [],
+      };
       if (isEdit && search.id) {
         const payload = {
           candidate_id: candidateIds[0],
@@ -509,6 +536,7 @@ function DeductionForm() {
           status,
           min_duty: Math.max(0, Number(minDuty) || 0),
           max_duty: Math.max(0, Number(maxDuty) || 0),
+          ...extras,
         };
         const { error } = await supabase.from("deductions" as never).update(payload as never).eq("id", search.id);
         if (error) throw error;
@@ -529,6 +557,7 @@ function DeductionForm() {
             status,
             min_duty: Math.max(0, Number(minDuty) || 0),
             max_duty: Math.max(0, Number(maxDuty) || 0),
+            ...extras,
           };
         });
         const { error } = await supabase.from("deductions" as never).insert(rows as never);
