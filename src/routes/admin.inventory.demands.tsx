@@ -116,6 +116,16 @@ function DemandsPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Demand | null>(null);
   const [viewing, setViewing] = useState<Demand | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("new") === "1") {
+      setEditing(null);
+      setOpen(true);
+      url.searchParams.delete("new");
+      window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
