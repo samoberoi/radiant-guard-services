@@ -3446,6 +3446,35 @@ function ResourceFormDialog({
     });
   }, [components, benefits, allowanceTypes]);
 
+  // Overlay latest formula_mode / formula_expression from Cost Component master
+  // onto loaded benefits/deductions/employer rows so existing contracts pick up
+  // formula edits made in Control Center without needing to re-save the row.
+  useEffect(() => {
+    if (!costComponents.length) return;
+    const byId = new Map(costComponents.map((c) => [c.id, c]));
+    const overlay = (b: BenefitItem): BenefitItem => {
+      const m = byId.get(b.costComponentId);
+      if (!m) return b;
+      const expr = m.formulaExpression ?? null;
+      const mode = m.formulaMode ?? null;
+      const ver = m.formulaVersion ?? null;
+      if ((b.formulaExpression ?? null) === expr && (b.formulaMode ?? null) === mode && (b.formulaVersion ?? null) === ver) return b;
+      return { ...b, formulaMode: mode, formulaExpression: expr, formulaVersion: ver };
+    };
+    setBenefits((prev) => {
+      const next = prev.map(overlay);
+      return next.some((b, i) => b !== prev[i]) ? next : prev;
+    });
+    setDeductions((prev) => {
+      const next = prev.map(overlay);
+      return next.some((b, i) => b !== prev[i]) ? next : prev;
+    });
+    setEmployerContributions((prev) => {
+      const next = prev.map(overlay);
+      return next.some((b, i) => b !== prev[i]) ? next : prev;
+    });
+  }, [costComponents]);
+
   const PT_SYNTHETIC_ID = "__pt__";
   const ptSynthetic: CostComponentOption = {
     id: PT_SYNTHETIC_ID,
