@@ -1,86 +1,73 @@
 
-# Customizable Payroll Calculation Engine + MIS-style Payroll View
+# End-to-End Contract → Payroll Sync
 
-## 1. Hybrid Formula Engine (shared by Allowance Manager & Cost Component Manager)
+Wire the formula engine + control-center components into the payroll pipeline so that whatever is configured in Allowance Manager / Cost Component Manager flows into contracts, then into per-employee payroll based on attendance (P, OT, PH, paid leaves) and the Additions/Deductions module — and the same numbers appear in Payroll, MIS view, and Wage Register.
 
-Add a reusable `FormulaBuilder` component with two modes:
+## What's wrong today
 
-**Preset mode (default)** — visual row builder:
-- **Base**: `Basic`, `DA`, `Basic + DA`, `Gross`, `Fixed Amount` (manual input), `Previous Component` (reference another allowance/cost by code)
-- **Operator**: `% of`, `× per day`, `÷ by`, `flat`
-- **Divisor (day basis)**: `Fixed Days (client)`, `Fixed Days (month: 26/28/30/31)`, `Working Days`, `Payable Days`
-- **Multiplier (duty basis, multi-select with +)**: `Present Duties`, `Worked Duties`, `OT Duties`, `PH Duties`, `Weekly Off`, `Earned Leave`, `Paid Leave`
-- **Cap / Floor** (optional): min/max amount
-- Worked example for the user's WC case: Base=`Fixed Amount 200`, Operator=`÷ by`, Divisor=`Fixed Days (client)`, Multiplier=`Present + OT + PH`.
+- `src/lib/payroll-calc.ts → computeWages` is hard-coded:
+  - Earnings prorate as `componentAmount × P / baseDays` (Phase 2 formula engine is NOT called).
+  - PH = `gross/baseDays × PH_count`, OT = `(otBase/baseDays/8) × otHours` — fixed formulas, ignoring any custom formula on the allowance.
+  - Deductions/contributions follow legacy name-based heuristics (Uniform/LWF fixed, EPF/ESI special rules) instead of the configured formula.
+- `contract_resources` snapshots `amount / calc_type / percentage / base_components` but NOT `formula_mode / formula_expression / formula_version`, so contracts can't carry per-component formulas.
+- New contracts created after a master edit don't pull the latest formula; payroll has nothing to evaluate.
+- Additions/Deductions rows already exist (Phase 1) but `admin.payroll.$unitId.tsx` doesn't merge them into Net Pay or the MIS grid as first-class lines.
+- MIS sheet and Wage Register read different fields (MIS pulls live, Wage Register reads `payroll_runs.snapshot`) → they can drift.
 
-**Advanced mode** — free-form expression with variables:
-`{basic} {da} {gross} {fixed_amount} {fixed_days} {working_days} {payable_days} {present} {worked} {ot} {ph} {wo} {el} {pl}` and operators `+ - * / ( ) min() max()`. Live evaluator with sample inputs for validation; rejects unknown tokens.
+## Plan
 
-Stored as JSONB `formula` on `allowance_types` and `cost_components` (existing `calculation_type` column kept for back-compat; new rows default to `formula`). Add `formula_mode` (`preset` | `advanced`) and `formula_version` (int, bumped on every edit for audit).
+### 1. Snapshot formulas onto contracts
+- Migration: add `formula_mode text`, `formula_expression text`, `formula_version int` to `contract_resources` line items (extend the existing JSONB snapshots for allowances, cost components, employer contributions).
+- Update contract create/update in `admin.contracts.client-contracts.tsx` to copy `formula_mode / formula_expression / formula_version` from the master at the moment of save (snapshot semantics — existing contracts untouched, new contracts pick up latest).
+- Show a small "v{N}" tag next to each line so drift from master is visible.
 
-## 2. Sync Rules
+### 2. Drive payroll-calc from the formula engine
+Refactor `computeWages` in `src/lib/payroll-calc.ts`:
+- Build a `FormulaContext` per employee per period:
+  ```
+  basic, da, gross, fixed_amount,
+  fixed_days (=baseDays), working_days, payable_days,
+  present (P), worked (P + otherPaid), ot (otDays), ph (phDays),
+  wo, el, pl
+  ```
+- For every component / benefit / deduction / employer-contribution line on the contract:
+  - If it has a `formula_expression`, evaluate it via `evaluateFormula` and use the result.
+  - Else fall back to the existing legacy behaviour (so old contracts keep producing identical numbers).
+- Keep ESI/EPF/PT statutory overrides as a final post-pass (they're regulatory, not contract-formula territory) but make them opt-out via a `formula_mode = 'statutory'` marker so a user can force a custom formula if they choose.
+- Return a per-line `trace { expression, variables, amount }` so the MIS drawer can show "why".
 
-- **Master edit** → only **new contracts** snapshot the updated formula. Existing `contract_resources` keep their snapshot (already the pattern in `client_contracts`). Show a "version X" tag on contract lines so users can see drift.
-- **Payroll runs** read from the contract snapshot, never master. Guarantees finalized runs stay reproducible and a fix in Cost Manager only affects contracts created after the edit (and any payroll generated from those contracts).
-- **Sidebar nav**: Allowance Manager and Cost Component Manager stay where they are; the formula edit dialog gets the new builder.
+### 3. Fold Additions / Deductions into the run
+In `admin.payroll.$unitId.tsx`:
+- Already-fetched additions/deductions: split into
+  - **Day adjustments** (`include_in_total_days = true`) → bump the correct attendance bucket (`affects_days_for`) BEFORE `computeWages` runs (this part exists; verify it's correct for all 4 buckets).
+  - **Money lines** (`include_in_total_days = false`) → append as discrete lines in the MIS grid:
+    - Additions → extra earnings column group, added to Gross & Net.
+    - Deductions → extra deductions column group, subtracted from Net.
+- Persist them into `payroll_runs.snapshot` so the Wage Register reads the same numbers.
 
-## 3. Payroll Additions & Deductions (left-panel tabs under Payroll)
+### 4. Unify MIS / Payroll / Wage Register
+- Payroll detail (`admin.payroll.$unitId.tsx`), MIS sheet (already in same file), and Wage Register (`admin.payroll-manager.tsx` if present, or wherever the register lives) should all read from one helper: `buildPayrollRow(candidate, contractResource, totals, adjustments, ptCtx)` returning the full `WageComputation` + adds/deducts.
+- Wage Register switches to reading the saved `payroll_runs.snapshot` row when present; falls back to live compute when the run isn't finalized.
 
-Restructure `/admin/payroll`:
-- Add left-panel tabs: **Runs**, **Additions**, **Deductions**.
-- **Additions** and **Deductions** tabs are the existing pages (`admin.additions.tsx`, `admin.deductions.tsx`) re-mounted inside payroll, edited there, and writes invalidate payroll queries so they reflect immediately in the open run.
-- **Employee picker** on both pages: searchable **multi-select** (Command palette + checkboxes; "Apply to N employees" creates one row per selected employee).
-- **New fields** on `additions` / `deductions`:
-  - `entry_mode`: `days_x_per_day` | `lumpsum`
-  - `days` (numeric), `per_day_amount` (numeric) — computed `amount = days × per_day_amount` when in days mode
-  - `include_in_total_days` (bool) — when true, `days` adds to that employee's payable-days count for the run (and cascades into any formula using `{payable_days}`)
-  - `affects_days_for`: array of `present|worked|ot|ph` so the user controls which bucket the days flow into
+### 5. Recalculate button + activity log
+- Add "Recalculate" button on the run page that re-runs `buildPayrollRow` against current attendance + master formulas (only allowed when run is not finalized).
+- `logActivity("Payroll", ...)` on: formula edit (Allowance/Cost Manager), contract create/update, addition/deduction create/edit, recalculate, finalize.
 
-## 4. MIS-style Payroll Detail View (per unit)
+## Technical Notes
 
-Replace the current summary table on `admin.payroll.$unitId.tsx` with a wide, horizontally scrollable MIS sheet. One row per employee, frozen left columns (Emp Code, Name, Designation), then column groups:
+- **Schema migration** — single migration that:
+  - Adds the 3 formula columns to `contract_resources` snapshot JSON shape (no table-level columns needed if the snapshot is JSONB — just document the keys).
+  - Backfills `formula_mode = NULL` for existing rows so legacy fallback kicks in.
+- **Files edited**:
+  - `src/lib/payroll-calc.ts` — formula-driven engine, trace output, fallback path.
+  - `src/lib/contracts/...` and `admin.contracts.client-contracts.tsx` — snapshot formula on save, version tag display.
+  - `src/routes/admin.payroll.$unitId.tsx` — merge adds/deducts into MIS rows + Net, persist into snapshot, recalc button.
+  - `src/routes/admin.payroll-manager.tsx` (and any wage-register route) — read from snapshot.
+  - `src/routes/admin.allowance-manager.tsx`, `src/routes/admin.cost-component-manager.tsx` — version bump on formula edit, activity log.
+- **No changes to**: finalized runs, RBAC matrix, sidebar IA.
 
-```text
-| Attendance       | Earnings              | Deductions            | Adjustments      | Totals  |
-| FD P A WO PH OT  | Basic DA HRA <allow…> | PF ESI PT LWF <cost…> | Add+ Ded- Notes  | Gr Net  |
-```
+## Open Questions / Defaults
 
-- Columns derived dynamically from the active contract's allowance + cost components (so every configured component gets its own column).
-- Sticky header, sticky first 3 columns, tabular-nums, CSV/XLSX export of the exact grid, per-column totals row at the bottom.
-- Row click → side drawer with full formula trace: each component's formula, variable values, and computed amount (so when a number looks wrong you can trace it to the cost component and jump to fix it).
-
-## 5. Payroll Recalculation Flow
-
-- Run-level "Recalculate" button re-evaluates every employee using the formula engine against current attendance + adds/deducts. Finalized runs are read-only; recalc requires reopening.
-- Activity log entries on every formula edit, addition/deduction edit, and recalc (per Core memory rule).
-
-## Technical Details
-
-**Schema (migration):**
-- `allowance_types`: add `formula jsonb`, `formula_mode text`, `formula_version int default 1`.
-- `cost_components`: same three columns.
-- `additions`, `deductions`: add `entry_mode text default 'lumpsum'`, `days numeric`, `per_day_amount numeric`, `include_in_total_days bool default false`, `affects_days_for text[]`.
-- `contract_resources`: ensure each line snapshots `{allowance_id, formula, formula_version}` and `{cost_id, formula, formula_version}` JSON (extend existing snapshot columns).
-- GRANTs preserved for `authenticated` + `service_role`; RLS policies unchanged.
-
-**New lib:** `src/lib/formula-engine.ts`
-- `evaluateFormula(formula, ctx)` where `ctx` = `{ basic, da, gross, fixed_amount, fixed_days, working_days, payable_days, present, worked, ot, ph, wo, el, pl }`.
-- Preset compiler converts JSONB tree → expression; advanced mode uses a safe parser (no `eval`; use `expr-eval` or hand-written shunting-yard — `expr-eval` is ~5KB and Worker-safe).
-- Returns `{ amount, trace[] }` so the detail drawer can show steps.
-
-**New component:** `src/components/FormulaBuilder.tsx` — preset rows + advanced textarea + live preview with editable sample inputs.
-
-**Edited files:**
-- `src/routes/admin.allowance-manager.tsx`, `src/routes/admin.cost-component-manager.tsx` — replace existing calc-type select with `<FormulaBuilder/>`.
-- `src/routes/admin.payroll.tsx` — add Runs/Additions/Deductions tabs in the left panel.
-- `src/routes/admin.additions.tsx`, `src/routes/admin.deductions.tsx` — multi-select employee picker, days/per-day inputs, include-in-days toggle.
-- `src/routes/admin.payroll.$unitId.tsx` — new MIS grid + trace drawer + export.
-- `src/lib/payroll-calc.ts` — switch to formula engine; honor `include_in_total_days` and `affects_days_for`.
-- `src/lib/contracts/...` — snapshot formula + version when creating/updating contract resources.
-
-**Out of scope (will not touch):** existing finalized payroll runs, RBAC matrix, sidebar IA beyond the Payroll tabs.
-
-## Open Questions Left to Defaults
-
-- Advanced formula library: defaulting to `expr-eval` (small, Worker-safe). Swap on request.
-- Detail-view export: defaulting to CSV in MVP; XLSX can follow if needed.
+- Statutory overrides (ESI/EPF/PT) stay automatic by default — users can override per component by editing the formula. OK?
+- Recalculate scope: per-unit only (not cross-unit bulk) for MVP.
+- Wage Register: I'll locate the actual register route during build; if you have a preferred file name, tell me.
