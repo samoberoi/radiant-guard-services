@@ -36,13 +36,14 @@ type ItemSize = { item_id: string; size_value: string; reorder_level: number };
 type Vendor = { id: string; name: string; vendor_code: string; city: string };
 type RateCard = { vendor_id: string; item_id: string; size_value: string; unit_price: number };
 type POLine = { po_id: string; item_id: string; ordered_qty: number; accepted_qty: number; line_total: number; unit_price: number };
-type PO = { id: string; po_number: string; vendor_id: string; status: string; po_date: string; grand_total: number; destination_warehouse_id: string | null };
+type PO = { id: string; po_number: string; vendor_id: string; status: string; po_date: string; grand_total: number; destination_warehouse_id: string | null; created_at: string };
 type Cand = { id: string; full_name: string; employee_code: string; role_key: string; designation_id: string | null };
 type Branch = { id: string; name: string; code: string };
 type Designation = { id: string; name: string };
-type GRN = { id: string; receipt_date: string; po_id: string | null; vendor_id: string | null; status: string; branch_id: string | null };
+type GRN = { id: string; receipt_date: string; po_id: string | null; vendor_id: string | null; status: string; branch_id: string | null; created_at: string };
 
-type ScopedMovement = { id: string; status: string; source_type: string; source_id: string; destination_type: string; destination_id: string };
+type ScopedMovement = { id: string; status: string; source_type: string; source_id: string; destination_type: string; destination_id: string; created_at: string };
+type Demand = { id: string; demand_number: string; status: string; branch_id: string | null; warehouse_id: string | null; requester_candidate_id: string | null; demand_date: string; created_at: string; submitted_at: string | null };
 
 type Range = "this_month" | "last_month" | "last_quarter" | "custom";
 
