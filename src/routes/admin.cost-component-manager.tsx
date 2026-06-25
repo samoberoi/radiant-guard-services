@@ -699,10 +699,12 @@ function CostComponentDialog({
           </div>
 
 
-          <div className="rounded-lg border border-dashed border-border bg-secondary/30 px-3 py-2 text-sm">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">Preview · </span>
-            <span className="font-medium text-foreground">{preview}</span>
-          </div>
+          {preview && (
+            <div className="rounded-lg border border-dashed border-border bg-secondary/30 px-3 py-2 text-sm">
+              <span className="text-xs uppercase tracking-wider text-muted-foreground">Preview · </span>
+              <span className="font-medium text-foreground">{preview}</span>
+            </div>
+          )}
 
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
             <div>
