@@ -123,6 +123,7 @@ export type FixedCalcMethod = "flat" | "per_duty";
 export type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
 
 export type WageComponent = {
+  allowanceId?: string | null;
   name: string;
   amount: number;
   calcType?: "percentage" | "fixed" | string;
@@ -192,6 +193,47 @@ const ESI_EARNED_GROSS_CEILING = 21000;
 const EPF_NAME_RE = /\bepf\b/i;
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
+
+function hasConfiguredFormula(item: { formulaExpression?: string | null }): boolean {
+  return !!item.formulaExpression?.trim();
+}
+
+function normFormulaName(name: string): string {
+  return String(name ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function formulaNameAliases(name: string): string[] {
+  const raw = String(name ?? "").trim();
+  if (!raw) return [];
+  const canonical = canonicalComponentName(raw);
+  const keys = new Set(
+    [raw, canonical]
+      .flatMap((label) => [normFormulaName(label), slugifyVar(label)])
+      .filter(Boolean),
+  );
+  const compact = normFormulaName(canonical || raw);
+  const pairs: Record<string, string[]> = {
+    splallow: ["spl_allow", "specialallowance", "special_allowance"],
+    splallowance: ["spl_allowance", "specialallowance", "special_allowance"],
+    specialallowance: ["special_allowance", "splallow", "spl_allow", "splallowance", "spl_allowance"],
+    convallow: ["conv_allow", "conveyanceallowance", "conveyance_allowance"],
+    conveyanceallowance: ["conveyance_allowance", "convallow", "conv_allow"],
+    wa: ["washingallowance", "washing_allowance"],
+    washingallowance: ["washing_allowance", "wa"],
+    hra: ["houserentallowance", "house_rent_allowance"],
+    houserentallowance: ["house_rent_allowance", "hra"],
+  };
+  for (const alias of pairs[compact] ?? []) keys.add(alias);
+  return Array.from(keys);
+}
+
+function addFormulaContextAliases(ctx: FormulaContext, amount: number, name: string) {
+  for (const key of formulaNameAliases(name)) {
+    const slug = slugifyVar(key);
+    if (!slug) continue;
+    ctx[slug] = round2((ctx[slug] ?? 0) + amount);
+  }
+}
 
 function applyEsiRule(
   items: WageComponent[],
@@ -438,12 +480,11 @@ function benefitAmountFromConfig(
   if (!item) return 0;
   if (item.calcType !== "percentage") return round2(Number(item.amount) || 0);
 
-  const norm = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
   const amountMap = (items: WageComponent[]) => {
     const map = new Map<string, number>();
     for (const c of items) {
       const amount = Number(c.amount) || 0;
-      const keys = new Set([norm(c.name), norm(canonicalComponentName(c.name))].filter(Boolean));
+      const keys = new Set(formulaNameAliases(c.name));
       keys.forEach((key) => map.set(key, round2((map.get(key) ?? 0) + amount)));
     }
     return map;
@@ -454,7 +495,7 @@ function benefitAmountFromConfig(
   const contractGross = round2(contractComponents.reduce((sum, c) => sum + (Number(c.amount) || 0), 0));
   const bases = Array.isArray(item.baseComponents) ? item.baseComponents : [];
   const base = bases.reduce((sum, b) => {
-    const key = norm(String(b.label ?? ""));
+    const key = normFormulaName(String(b.label ?? ""));
     const contractValue =
       key === "gross" || key === "fgross" || key === "fixedgross" || key === "contractgross"
         ? contractGross
@@ -523,13 +564,9 @@ export function computeWages(
 
   // Build a FormulaContext shared by every line that opts into the engine.
   // Variables match what Allowance Manager / Cost Component Manager expose.
-  const findAmountByName = (re: RegExp): number => {
-    const hit = resource.components.find((c) => re.test(canonicalComponentName(c.name)));
-    return hit ? Number(hit.amount) || 0 : 0;
-  };
   const baseFormulaCtx: FormulaContext = {
-    basic: findAmountByName(/\bbasic\b/i),
-    da: findAmountByName(/\bda\b|dearness/i),
+    basic: 0,
+    da: 0,
     gross: contractGross,
     fixed_amount: 0,
     fixed_days: baseDays,
@@ -546,14 +583,12 @@ export function computeWages(
   // Expose every contract component as a slugified variable so formulas can
   // reference HRA, Special Allowance, Conveyance, etc. by name.
   for (const c of resource.components) {
-    const key = slugifyVar(c.name);
-    if (key && baseFormulaCtx[key] === undefined) {
-      baseFormulaCtx[key] = Number(c.amount) || 0;
-    }
+    addFormulaContextAliases(baseFormulaCtx, Number(c.amount) || 0, c.name);
   }
   const tryFormulaAmount = (
     item: { formulaMode?: string | null; formulaExpression?: string | null; amount?: number | string | null },
   ): number | null => {
+    if (!hasConfiguredFormula(item)) return null;
     const cfg = parseFormulaConfig(item.formulaMode, item.formulaExpression);
     if (!cfg) return null;
     if (cfg.mode === "advanced" && (!cfg.expression || !cfg.expression.trim())) return null;

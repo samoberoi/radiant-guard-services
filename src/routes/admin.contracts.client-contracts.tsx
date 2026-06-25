@@ -969,6 +969,94 @@ function contractTotalAmount(item: { name?: unknown; amount?: unknown }): number
   return isEsiItem(item) ? 0 : Number(item.amount) || 0;
 }
 
+function hasConfiguredFormula(item: { formulaExpression?: string | null }): boolean {
+  return !!item.formulaExpression?.trim();
+}
+
+function addFormulaAliases(ctx: FormulaContext, amount: number, labels: Array<string | null | undefined>) {
+  const keys = new Set<string>();
+  const compact = (label: string) => label.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+  const aliases: Record<string, string[]> = {
+    splallow: ["spl_allow", "specialallowance", "special_allowance"],
+    splallowance: ["spl_allowance", "specialallowance", "special_allowance"],
+    specialallowance: ["special_allowance", "splallow", "spl_allow", "splallowance", "spl_allowance"],
+    convallow: ["conv_allow", "conveyanceallowance", "conveyance_allowance"],
+    conveyanceallowance: ["conveyance_allowance", "convallow", "conv_allow"],
+    wa: ["washingallowance", "washing_allowance"],
+    washingallowance: ["washing_allowance", "wa"],
+    hra: ["houserentallowance", "house_rent_allowance"],
+    houserentallowance: ["house_rent_allowance", "hra"],
+  };
+  for (const label of labels) {
+    const raw = String(label ?? "").trim();
+    if (!raw) continue;
+    keys.add(slugifyVar(raw));
+    keys.add(compact(raw));
+    const canonical = raw
+      .replace(/[\s\-_]*[\(\[]?\s*\d+(?:\.\d+)?\s*%\s*[\)\]]?\s*$/gi, "")
+      .replace(/[\s\-_]+\d+(?:\.\d+)?\s*$/g, "")
+      .trim();
+    if (canonical) {
+      keys.add(slugifyVar(canonical));
+      keys.add(compact(canonical));
+      for (const alias of aliases[compact(canonical)] ?? []) keys.add(alias);
+    }
+  }
+  for (const key of keys) {
+    if (!key) continue;
+    ctx[key] = Math.round(((ctx[key] ?? 0) + amount) * 100) / 100;
+  }
+}
+
+function allowanceLabelKey(label: string | null | undefined): string {
+  return String(label ?? "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function findAllowanceForResourceComponent(
+  component: Pick<ResourceComponent, "allowanceId" | "name">,
+  allowanceTypes: AllowanceType[],
+): AllowanceType | undefined {
+  const byId = allowanceTypes.find((a) => a.id === component.allowanceId);
+  if (byId) return byId;
+
+  const componentKey = allowanceLabelKey(component.name);
+  if (!componentKey) return undefined;
+  const exact = allowanceTypes.find((a) =>
+    [a.name, a.displayName, a.shortName].some((label) => allowanceLabelKey(label) === componentKey),
+  );
+  if (exact) return exact;
+
+  const stripSuffix = (label: string) =>
+    allowanceLabelKey(
+      label
+        .replace(/[\s\-_]*[\(\[]?\s*\d+(?:\.\d+)?\s*%\s*[\)\]]?\s*$/gi, "")
+        .replace(/[\s\-_]+\d+(?:\.\d+)?\s*$/g, ""),
+    );
+  const canonicalKey = stripSuffix(component.name);
+  if (!canonicalKey) return undefined;
+  const candidates = allowanceTypes.filter((a) =>
+    [a.name, a.displayName, a.shortName].some((label) => stripSuffix(label) === canonicalKey),
+  );
+  return candidates.length === 1 ? candidates[0] : undefined;
+}
+
+function syncResourceComponentMasterFields(
+  component: ResourceComponent,
+  allowanceTypes: AllowanceType[],
+): ResourceComponent {
+  const at = findAllowanceForResourceComponent(component, allowanceTypes);
+  if (!at) return { ...component };
+  return {
+    ...component,
+    allowanceId: at.id,
+    name: at.shortName || at.displayName || at.name,
+    includeInOt: at.includeInOt,
+    formulaMode: at.formulaMode ?? null,
+    formulaExpression: at.formulaExpression ?? null,
+    formulaVersion: at.formulaVersion ?? null,
+  };
+}
+
 /** Compute benefit amount from a percentage component using the resource's wage components. */
 function computeBenefitAmount(
   benefit: Pick<BenefitItem, "calcType" | "percentage" | "baseComponents" | "capAmount" | "capFlatAmount" | "amount"> & {
@@ -984,25 +1072,30 @@ function computeBenefitAmount(
   // Formula-first: if the master record (allowance / cost component) has a
   // formula expression configured, evaluate it against a slugified context
   // built from the current wage components.
-  const cfg = parseFormulaConfig(benefit.formulaMode ?? null, benefit.formulaExpression ?? null);
+  const cfg = hasConfiguredFormula(benefit)
+    ? parseFormulaConfig(benefit.formulaMode ?? null, benefit.formulaExpression ?? null)
+    : null;
   if (cfg && !(cfg.mode === "advanced" && !cfg.expression?.trim())) {
+    const componentsTotal = wageComponents.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+    const benefitsTotal = benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+    const employerTotal = employerItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
     const ctx: FormulaContext = {
-      basic: 0, da: 0, gross: 0, fixed_amount: Number(benefit.amount) || 0,
+      basic: 0,
+      da: 0,
+      gross: componentsTotal + benefitsTotal,
+      ctc: componentsTotal + benefitsTotal + employerTotal,
+      fixed_amount: Number(benefit.amount) || 0,
     };
-    let gross = 0;
     for (const c of wageComponents) {
       const amt = Number(c.amount) || 0;
-      gross += amt;
-      const key = slugifyVar(c.name);
-      if (key && ctx[key] === undefined) ctx[key] = amt;
-      const lower = c.name.trim().toLowerCase();
-      if (/\bbasic\b/.test(lower)) ctx.basic = (ctx.basic || 0) + amt;
-      if (/\bda\b|dearness/.test(lower)) ctx.da = (ctx.da || 0) + amt;
+      const at = allowanceTypes.find((a) => a.id === c.allowanceId);
+      addFormulaAliases(ctx, amt, [c.name, at?.name, at?.displayName, at?.shortName]);
     }
-    ctx.gross = gross + benefitItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
     for (const b of benefitItems) {
-      const key = slugifyVar(b.name);
-      if (key && ctx[key] === undefined) ctx[key] = Number(b.amount) || 0;
+      addFormulaAliases(ctx, Number(b.amount) || 0, [b.name]);
+    }
+    for (const b of employerItems) {
+      addFormulaAliases(ctx, Number(b.amount) || 0, [b.name]);
     }
     const r = evaluateFormula(cfg, ctx);
     if (!r.error) return r.amount;
@@ -1013,6 +1106,7 @@ function computeBenefitAmount(
   const employerTotal = employerItems.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   if (isEsiItem(benefit as { name?: unknown })) return 0;
   const norm = (s: string) => s.trim().toLowerCase();
+  const compactNorm = (s: string) => s.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
   const grossOf = (label: string): number => {
     const l = norm(label);
     if (l === "gross") {
@@ -1023,6 +1117,7 @@ function computeBenefitAmount(
     }
     // Direct match on the wage component's stored name (often the short name)
     let match = wageComponents.find((c) => norm(c.name) === l);
+    if (!match) match = wageComponents.find((c) => compactNorm(c.name) === compactNorm(label));
     if (match) return Number(match.amount) || 0;
     // Resolve via allowance type aliases: name / displayName / shortName -> allowanceId
     const at = allowanceTypes.find(
@@ -3167,10 +3262,8 @@ function ResourceFormDialog({
     if (!open) return;
     if (initial) {
       const nextComponents = (() => {
-        const validIds = new Set(allowanceTypes.map((a) => a.id));
         return initial.components
-          .filter((c) => validIds.has(c.allowanceId))
-          .map((c) => ({ ...c }));
+          .map((c) => syncResourceComponentMasterFields(c, allowanceTypes));
       })();
       const nextBenefits = initial.benefits.map(cloneBenefitItem);
       const nextDeductions = (initial.deductions ?? []).map(cloneBenefitItem);
@@ -3257,9 +3350,9 @@ function ResourceFormDialog({
     setComponents((prev) => {
       let changed = false;
       const next = prev.map((c) => {
-        const at = allowanceTypes.find((a) => a.id === c.allowanceId);
+        const at = findAllowanceForResourceComponent(c, allowanceTypes);
         if (!at) return c;
-        const hasFormula = !!(at.formulaExpression && at.formulaExpression.trim());
+        const hasFormula = hasConfiguredFormula(at);
         if (!hasFormula && at.calcType !== "percentage") return c;
         const others = prev.filter((x) => x.allowanceId !== c.allowanceId);
         const newAmt = computeBenefitAmount(
@@ -3278,16 +3371,31 @@ function ResourceFormDialog({
           [],
           allowanceTypes,
         );
-        if (Math.abs((Number(c.amount) || 0) - newAmt) < 0.005) return c;
+        const synced = {
+          ...c,
+          includeInOt: at.includeInOt,
+          formulaMode: at.formulaMode ?? null,
+          formulaExpression: at.formulaExpression ?? null,
+          formulaVersion: at.formulaVersion ?? null,
+          amount: newAmt,
+        };
+        const metaChanged =
+          c.allowanceId !== synced.allowanceId ||
+          c.name !== synced.name ||
+          c.includeInOt !== synced.includeInOt ||
+          c.formulaMode !== synced.formulaMode ||
+          c.formulaExpression !== synced.formulaExpression ||
+          c.formulaVersion !== synced.formulaVersion;
+        if (!metaChanged && Math.abs((Number(c.amount) || 0) - newAmt) < 0.005) return c;
         changed = true;
-        return { ...c, amount: newAmt };
+        return synced;
       });
       return changed ? next : prev;
     });
   }, [components, allowanceTypes]);
 
   // Recompute percentage/formula benefits whenever wage components change
-  const hasFormula = (b: BenefitItem) => !!(b.formulaExpression && b.formulaExpression.trim());
+  const hasFormula = (b: BenefitItem) => hasConfiguredFormula(b);
   useEffect(() => {
     setBenefits((prev) =>
       prev.map((b) =>
@@ -3410,7 +3518,7 @@ function ResourceFormDialog({
           formulaExpression: a.formulaExpression ?? null,
           formulaVersion: a.formulaVersion ?? null,
         };
-        const hasF = !!(a.formulaExpression && a.formulaExpression.trim());
+        const hasF = hasConfiguredFormula(a);
         if (a.calcType === "percentage" || hasF) {
           next.amount = computeBenefitAmount(
             {
@@ -3454,7 +3562,7 @@ function ResourceFormDialog({
       formulaExpression: c.formulaExpression ?? null,
       formulaVersion: c.formulaVersion ?? null,
     };
-    const hasF = !!(benefit.formulaExpression && benefit.formulaExpression.trim());
+    const hasF = hasConfiguredFormula(benefit);
     if (benefit.calcType === "percentage" || hasF) {
       benefit.amount = computeBenefitAmount(benefit, components, [], allowanceTypes);
     }
@@ -3491,7 +3599,7 @@ function ResourceFormDialog({
       formulaExpression: c.formulaExpression ?? null,
       formulaVersion: c.formulaVersion ?? null,
     };
-    const hasF = !!(item.formulaExpression && item.formulaExpression.trim());
+    const hasF = hasConfiguredFormula(item);
     if (item.calcType === "percentage" || hasF) {
       item.amount = computeBenefitAmount(item, components, benefits, allowanceTypes);
     }
@@ -3528,7 +3636,7 @@ function ResourceFormDialog({
       formulaExpression: c.formulaExpression ?? null,
       formulaVersion: c.formulaVersion ?? null,
     };
-    const hasF = !!(item.formulaExpression && item.formulaExpression.trim());
+    const hasF = hasConfiguredFormula(item);
     if (item.calcType === "percentage" || hasF) {
       const l = (s: string) => s.trim().toLowerCase();
       const refsCtc = item.baseComponents.some(
