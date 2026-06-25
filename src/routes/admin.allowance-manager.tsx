@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Coins, Download, Edit2, Plus, Search, Trash2, X } from "lucide-react";
+import { Coins, Download, Edit2, Plus, Search, Trash2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { FormulaBuilderToggle } from "@/components/FormulaBuilder";
-import { parseFormulaConfig, serializeFormulaConfig, type FormulaConfig } from "@/lib/formula-engine";
+import { FormulaBuilder } from "@/components/FormulaBuilder";
+import { parseFormulaConfig, serializeFormulaConfig, type FormulaConfig, DEFAULT_PRESET } from "@/lib/formula-engine";
 import {
   Select,
   SelectContent,
