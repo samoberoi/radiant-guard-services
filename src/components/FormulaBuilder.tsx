@@ -73,7 +73,7 @@ const SAMPLE_CTX = {
   present: 24, worked: 24, ot: 2, ph: 1, wo: 4, el: 0, pl: 0,
 };
 
-const DEFAULT_AVAILABLE_BASES = ["Basic", "DA", "HRA", "Special Allowance", "Conveyance", "Gross"];
+const DEFAULT_AVAILABLE_BASES = ["Basic", "DA", "HRA", "Special Allowance", "Conveyance", "Gross", ...DAYS_LABELS];
 
 function asComposite(b: PresetBase): CompositeComponent[] {
   switch (b.kind) {
