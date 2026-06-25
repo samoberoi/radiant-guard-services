@@ -241,6 +241,16 @@ function baseToExpr(b: PresetBase): string {
     case "gross": return "gross";
     case "fixed_amount": return String(Number(b.value) || 0);
     case "variable": return String(b.name);
+    case "composite": {
+      const parts = (b.components ?? [])
+        .filter((c) => c && c.name)
+        .map((c, i) => {
+          const v = slugifyVar(c.name);
+          if (i === 0) return c.operator === "-" ? `-${v}` : v;
+          return `${c.operator === "-" ? "-" : "+"} ${v}`;
+        });
+      return parts.length ? `(${parts.join(" ")})` : "0";
+    }
   }
 }
 
