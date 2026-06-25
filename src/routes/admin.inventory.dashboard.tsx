@@ -640,7 +640,7 @@ export function InventoryOwnerDashboard() {
           <span className="hidden text-[10px] uppercase tracking-wider text-muted-foreground sm:inline">SLA: {SLA_DAYS} days</span>
         </div>
         <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {notifications.map((n) => <NotifTile key={n.key} {...n} sla={SLA_DAYS} />)}
+          {notifications.map(({ key, ...n }) => <NotifTile key={key} {...n} sla={SLA_DAYS} />)}
         </div>
       </div>
 
