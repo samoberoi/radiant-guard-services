@@ -1085,6 +1085,8 @@ function computeBenefitAmount(
       gross: componentsTotal + benefitsTotal,
       ctc: componentsTotal + benefitsTotal + employerTotal,
       fixed_amount: Number(benefit.amount) || 0,
+      days_in_month: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate(),
+      working_days: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate(),
     };
     for (const c of wageComponents) {
       const amt = Number(c.amount) || 0;
