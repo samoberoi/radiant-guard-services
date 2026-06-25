@@ -776,6 +776,7 @@ function CostComponentDialog({
                 deduction_calc_type: deductionCalcType,
                 fixed_calc_method: fixedCalcMethod,
                 fixed_duty_components: fixedDutyComponents,
+                fixed_duty_divisor: fixedDutyDivisor,
                 formula_mode: ser ? ser.mode : "preset",
                 formula_expression: ser ? ser.expression : null,
               });
