@@ -4503,7 +4503,7 @@ function SalaryBreakdownTable({
                     {b.name}
                     {b.calcType === "percentage" && (
                       <span className="ml-2 text-[11px] text-muted-foreground">
-                        {isEsiItem(b)
+                        {isStatutoryEsi(b)
                           ? `@ ${b.percentage}% · ${ESI_CONTRACT_NOTE}`
                           : `@ ${b.percentage}% of ${b.baseComponents
                               .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
@@ -4552,7 +4552,7 @@ function SalaryBreakdownTable({
                     {b.name}
                     {b.calcType === "percentage" && (
                       <span className="ml-2 text-[11px] text-muted-foreground">
-                        {isEsiItem(b)
+                        {isStatutoryEsi(b)
                           ? `@ ${b.percentage}% · ${ESI_CONTRACT_NOTE}`
                           : `@ ${b.percentage}% of ${b.baseComponents
                               .map((x, i) => (i === 0 ? x.label : `${x.operator} ${x.label}`))
