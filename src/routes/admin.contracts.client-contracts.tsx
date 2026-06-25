@@ -3156,6 +3156,9 @@ function ResourceFormDialog({
           name: a.shortName || a.displayName,
           amount: 0,
           includeInOt: a.includeInOt,
+          formulaMode: a.formulaMode ?? null,
+          formulaExpression: a.formulaExpression ?? null,
+          formulaVersion: a.formulaVersion ?? null,
         }));
       setDesignationId("");
       setServiceTypeId("");
