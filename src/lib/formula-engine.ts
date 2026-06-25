@@ -15,6 +15,7 @@ export type FormulaContext = {
   fixed_days?: number;
   working_days?: number;
   payable_days?: number;
+  days_in_month?: number;
   present?: number;
   worked?: number;
   ot?: number;
@@ -33,6 +34,7 @@ export const FORMULA_VARIABLES: { key: keyof FormulaContext; label: string; desc
   { key: "fixed_days",   label: "fixed_days",   desc: "Fixed days (client base)" },
   { key: "working_days", label: "working_days", desc: "Working days in the period" },
   { key: "payable_days", label: "payable_days", desc: "Payable days for this employee" },
+  { key: "days_in_month",label: "days_in_month",desc: "Calendar days in the payroll month (28/29/30/31)" },
   { key: "present",      label: "present",      desc: "Present duties" },
   { key: "worked",       label: "worked",       desc: "Worked duties (present + paid)" },
   { key: "ot",           label: "ot",           desc: "Overtime duties (OT hrs / 8)" },

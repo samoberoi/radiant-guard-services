@@ -49,7 +49,7 @@ const DIVISOR_OPTIONS: { value: string; label: string }[] = [
 
 const CORE_LABELS = new Set(["Basic", "DA", "HRA"]);
 const DERIVED_LABELS = new Set(["Gross", "CTC"]);
-const DAYS_LABELS = ["Working Days", "Payable Days", "Fixed Days", "Present", "Worked"];
+const DAYS_LABELS = ["Days in Month", "Working Days", "Payable Days", "Fixed Days", "Present", "Worked"];
 const DAYS_SET = new Set(DAYS_LABELS);
 
 function divisorFromUi(v: string): PresetDivisor {
@@ -69,7 +69,7 @@ const SAMPLE_CTX = {
   basic: 10000, da: 2000, spl_allow: 2000, splallow: 2000, special_allowance: 2000, specialallowance: 2000,
   conv_allow: 1200, conveyance_allowance: 1200, washing_allowance: 500, wa: 500,
   gross: 15000, fixed_amount: 200,
-  fixed_days: 26, working_days: 30, payable_days: 26,
+  fixed_days: 26, working_days: 30, payable_days: 26, days_in_month: 30,
   present: 24, worked: 24, ot: 2, ph: 1, wo: 4, el: 0, pl: 0,
 };
 
