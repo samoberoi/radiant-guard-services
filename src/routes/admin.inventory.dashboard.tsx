@@ -391,6 +391,64 @@ export function InventoryOwnerDashboard() {
     return v;
   }, [balances, itemMap, categoryFilter, warehouseFilter, transferLines, inTransitTransferIds, transferById]);
 
+  // ===== Inventory Caps =====
+  const caps = capsQ.data ?? [];
+  const capLookup = useMemo(() => {
+    const branchDefault = caps.find((c) => c.scope_type === "branch" && !c.scope_id) ?? null;
+    const foDefault = caps.find((c) => c.scope_type === "field_officer" && !c.scope_id) ?? null;
+    const overrides = new Map<string, { min_value: number; max_value: number }>();
+    for (const c of caps) if (c.scope_id) overrides.set(`${c.scope_type}:${c.scope_id}`, c);
+    return { branchDefault, foDefault, overrides };
+  }, [caps]);
+  const getCap = (kind: "branch" | "field_officer", id: string) => {
+    const ov = capLookup.overrides.get(`${kind}:${id}`);
+    const def = kind === "branch" ? capLookup.branchDefault : capLookup.foDefault;
+    return { min: ov?.min_value ?? def?.min_value ?? 0, max: ov?.max_value ?? def?.max_value ?? 0 };
+  };
+  // Value at a specific location only (matches Caps page math)
+  const locValue = (locType: "branch" | "field_officer" | "guard", locId: string) => {
+    let v = 0;
+    for (const b of balancesRaw) {
+      if (b.location_type !== locType || b.location_id !== locId) continue;
+      const it = itemMap.get(b.item_id); if (!it) continue;
+      v += Number(b.qty) * Number(it.standard_cost || 0);
+    }
+    return v;
+  };
+  // Scoped user's primary cap (branch for branch-roles, FO for field officers)
+  const myCap = useMemo(() => {
+    if (role.isFieldOfficer && role.candidateId) {
+      const { min, max } = getCap("field_officer", role.candidateId);
+      return { kind: "field_officer" as const, max, min, used: locValue("field_officer", role.candidateId) };
+    }
+    if (scope.isScoped && scope.branchId) {
+      const { min, max } = getCap("branch", scope.branchId);
+      return { kind: "branch" as const, max, min, used: locValue("branch", scope.branchId) };
+    }
+    return null;
+  }, [role.isFieldOfficer, role.candidateId, scope.isScoped, scope.branchId, caps, balancesRaw, itemMap]);
+
+  // For admin (non-scoped) — find branches/FOs at or beyond min threshold
+  const capAlerts = useMemo(() => {
+    if (scope.isScoped) return [] as { kind: "branch" | "field_officer"; id: string; name: string; used: number; min: number; max: number; status: "amber" | "red" }[];
+    const rows: { kind: "branch" | "field_officer"; id: string; name: string; used: number; min: number; max: number; status: "amber" | "red" }[] = [];
+    for (const b of branchesRaw) {
+      const { min, max } = getCap("branch", b.id);
+      if (max <= 0 && min <= 0) continue;
+      const used = locValue("branch", b.id);
+      const status: "amber" | "red" | null = max > 0 && used >= max ? "red" : min > 0 && used >= min ? "amber" : null;
+      if (status) rows.push({ kind: "branch", id: b.id, name: b.code ? `${b.code} – ${b.name}` : b.name, used, min, max, status });
+    }
+    for (const c of cands.filter((c) => c.role_key === "field_officer")) {
+      const { min, max } = getCap("field_officer", c.id);
+      if (max <= 0 && min <= 0) continue;
+      const used = locValue("field_officer", c.id);
+      const status: "amber" | "red" | null = max > 0 && used >= max ? "red" : min > 0 && used >= min ? "amber" : null;
+      if (status) rows.push({ kind: "field_officer", id: c.id, name: `${c.full_name}${c.employee_code ? ` · ${c.employee_code}` : ""}`, used, min, max, status });
+    }
+    return rows.sort((a, b) => (a.status === b.status ? b.used - a.used : a.status === "red" ? -1 : 1));
+  }, [scope.isScoped, branchesRaw, cands, caps, balancesRaw, itemMap]);
+
   const inPeriod = (d: string | Date) => {
     const x = new Date(d);
     return x >= w.from && x <= w.to;
