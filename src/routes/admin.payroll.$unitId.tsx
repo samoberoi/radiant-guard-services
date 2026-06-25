@@ -740,12 +740,18 @@ function PayrollUnitPage() {
       : "Draft";
 
     // ---- Wage Register headers (shared baseline) ----
+    // Days are broken out so PH (paid holidays), Other Paid (sick/EL) and OT
+    // are visible as separate columns instead of being lumped into a single
+    // "Duties" cell. Payroll additions that opt into "Include in total days"
+    // with affects_days_for=ph already roll into PH Days via day-adjustments.
     const wageHeaders = [
       "SI No", "Month", "Client ID", "Client Name", "Site Name",
       "Employee ID", "Employee Name", "Designation", "Date Of Joining",
       "ESI No", "UAN", "PAN",
       ...F_CONTRACT_COMPONENT_COLS,
-      "F Gross Salary", "Fixed Duties", "Duties", "OT Hours", "Over Time Duties",
+      "F Gross Salary",
+      "Fixed Duties", "Present Days", "PH Days", "Other Paid Days",
+      "OT Hours", "OT Duties", "Total Days",
       ...E_EARNED_COMPONENT_COLS,
       ...additionCols,
       "E Gross Salary",
@@ -770,7 +776,12 @@ function PayrollUnitPage() {
         ...contractComponentCols.map((c) => round2(lookup(contractComponents, c))),
         w ? round2(w.contractGross) : 0,
         w ? w.baseDays : 0,
-        round2(r.totals.tDays - r.totals.otDays), r.totals.otHours, r.totals.otDays,
+        round2(r.totals.pDays),
+        round2(r.totals.phDays),
+        round2(r.totals.otherPaidDays),
+        round2(r.totals.otHours),
+        round2(r.totals.otDays),
+        round2(r.totals.tDays),
         ...earnedComponentCols.map((c) => round2(lookup(earnedComponents, c))),
         ...additionCols.map((c) => round2(lookup(earnedAdditions, c))),
         w ? round2(w.earnedGross) : 0,
@@ -789,7 +800,9 @@ function PayrollUnitPage() {
 
     // ---- Totals row (numeric columns only) ----
     const numericHeaderSet = new Set<string>([
-      ...F_CONTRACT_COMPONENT_COLS, "F Gross Salary", "Fixed Duties", "Duties", "OT Hours", "Over Time Duties",
+      ...F_CONTRACT_COMPONENT_COLS, "F Gross Salary",
+      "Fixed Duties", "Present Days", "PH Days", "Other Paid Days",
+      "OT Hours", "OT Duties", "Total Days",
       ...E_EARNED_COMPONENT_COLS, ...additionCols, "E Gross Salary",
       ...DEDUCTION_HEADERS, "Total Deductions", "Net Pay",
     ]);
@@ -814,7 +827,7 @@ function PayrollUnitPage() {
     const paySheetStatutoryDed = STATUTORY_LABELS.filter((h) => DEDUCTION_HEADERS.includes(h));
     const paySheetHeaders = [
       "SI No", "Employee ID", "Employee Name", "Designation",
-      "Fixed Duties", "Duties", "OT Hours", "Over Time Duties",
+      "Fixed Duties", "Present Days", "PH Days", "OT Hours", "OT Duties", "Total Days",
       "F Gross Salary", "E Gross Salary",
       ...paySheetStatutoryDed,
       "Total Deductions", "Net Pay",
@@ -1011,7 +1024,10 @@ function PayrollUnitPage() {
                 <th className="px-4 py-3 font-medium">Emp ID</th>
                 <th className="px-4 py-3 font-medium">Name</th>
                 <th className="px-4 py-3 font-medium">Designation</th>
-                <th className="px-4 py-3 text-left font-medium">T Days</th>
+                <th className="px-4 py-3 font-medium" title="Present (worked) days">P Days</th>
+                <th className="px-4 py-3 font-medium" title="Paid Holiday days (incl. additions)">PH Days</th>
+                <th className="px-4 py-3 font-medium" title="OT Days = OT Hours / 8">OT Days</th>
+                <th className="px-4 py-3 font-medium" title="Total payable days (P + PH + Other Paid + OT)">T Days</th>
                 <th className="px-4 py-3 text-left font-medium">OT Hrs</th>
                 <th className="px-4 py-3 text-left font-medium" title="Full contract gross — what would be paid for a full month">Projected</th>
                 <th className="px-4 py-3 text-left font-medium" title="Per-day × T Days based on actual attendance">Earned gross</th>
@@ -1022,11 +1038,11 @@ function PayrollUnitPage() {
             </thead>
             <tbody className="divide-y divide-border/50">
               {isLoading ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">Computing wages…</td></tr>
+                <tr><td colSpan={14} className="px-4 py-10 text-center text-muted-foreground">Computing wages…</td></tr>
               ) : error ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
+                <tr><td colSpan={14} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={11} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
+                <tr><td colSpan={14} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
               ) : rows.map((r) => {
                 const isHighlighted = highlightCandidate === r.id;
                 const isExpanded = expandedRows.has(r.rowKey);
@@ -1053,8 +1069,11 @@ function PayrollUnitPage() {
                   <td className="px-4 py-3 font-mono text-xs">{r.employeeCode || "—"}</td>
                   <td className="px-4 py-3 font-medium">{r.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{r.designation}</td>
-                  <td className="px-4 py-3 text-left">{r.totals.tDays}</td>
-                  <td className="px-4 py-3 text-left">{r.totals.otHours}</td>
+                  <td className="px-4 py-3 text-left tabular-nums">{r.totals.pDays}</td>
+                  <td className="px-4 py-3 text-left tabular-nums">{r.totals.phDays}</td>
+                  <td className="px-4 py-3 text-left tabular-nums">{r.totals.otDays}</td>
+                  <td className="px-4 py-3 text-left tabular-nums font-medium">{r.totals.tDays}</td>
+                  <td className="px-4 py-3 text-left tabular-nums">{r.totals.otHours}</td>
                   <td className="px-4 py-3 text-left text-muted-foreground">{r.wages ? fmtINR(r.wages.contractGross) : <span className="text-xs text-amber-600">no contract</span>}</td>
                   <td className="px-4 py-3 text-left font-medium">{r.wages ? fmtINR(r.wages.earnedGross) : "—"}</td>
                   <td className="px-4 py-3 text-left">{r.wages ? fmtINR(r.wages.totalDeductions) : "—"}</td>
@@ -1063,7 +1082,7 @@ function PayrollUnitPage() {
                 </tr>
                 {isExpanded && r.wages && r.resource && (
                   <tr key={`${r.rowKey}-detail`} className="bg-secondary/20">
-                    <td colSpan={11} className="px-4 py-0">
+                    <td colSpan={14} className="px-4 py-0">
                       <div className="overflow-x-auto">
                         <table className="w-full text-xs my-3 rounded-lg border border-border/60 overflow-hidden">
                           <tbody>
