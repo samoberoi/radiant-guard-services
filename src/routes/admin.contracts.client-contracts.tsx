@@ -3495,6 +3495,7 @@ function ResourceFormDialog({
     deductionCalcType: "fixed_amount",
     fixedCalcMethod: "flat",
     fixedDutyComponents: [],
+    fixedDutyDivisor: "base_days",
   };
 
 
