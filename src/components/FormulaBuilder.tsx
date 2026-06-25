@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   DEFAULT_PRESET,
   FORMULA_VARIABLES,
+  slugifyVar,
+  type CompositeComponent,
   type FormulaConfig,
   type PresetBase,
   type PresetDivisor,
@@ -22,6 +24,7 @@ import {
 type Props = {
   value: FormulaConfig | null;
   onChange: (next: FormulaConfig | null) => void;
+  availableBases?: string[];
 };
 
 const MULTIPLIER_OPTIONS: { value: PresetMultiplier; label: string }[] = [
