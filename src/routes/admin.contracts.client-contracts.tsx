@@ -3286,11 +3286,12 @@ function ResourceFormDialog({
     });
   }, [components, allowanceTypes]);
 
-  // Recompute percentage benefits whenever wage components change
+  // Recompute percentage/formula benefits whenever wage components change
+  const hasFormula = (b: BenefitItem) => !!(b.formulaExpression && b.formulaExpression.trim());
   useEffect(() => {
     setBenefits((prev) =>
       prev.map((b) =>
-        b.calcType === "percentage"
+        b.calcType === "percentage" || hasFormula(b)
           ? { ...b, amount: computeBenefitAmount(b, components, [], allowanceTypes) }
           : b,
       ),
@@ -3301,7 +3302,7 @@ function ResourceFormDialog({
   useEffect(() => {
     setDeductions((prev) =>
       prev.map((b) =>
-        b.calcType === "percentage"
+        b.calcType === "percentage" || hasFormula(b)
           ? { ...b, amount: computeBenefitAmount(b, components, benefits, allowanceTypes) }
           : b,
       ),
@@ -3312,20 +3313,15 @@ function ResourceFormDialog({
           const l = x.label.trim().toLowerCase();
           return l === "ctc" || l === "total ctc";
         });
-      // Management Fee is a billing markup, not part of CTC — exclude from CTC base.
       const isMgmtFee = (b: BenefitItem) => /management\s*fee/i.test(b.name);
-      // First pass: compute all non-CTC-dependent employer items
       const firstPass = prev.map((b) =>
-        b.calcType === "percentage" && !refsCtc(b)
+        (b.calcType === "percentage" || hasFormula(b)) && !refsCtc(b)
           ? { ...b, amount: computeBenefitAmount(b, components, benefits, allowanceTypes) }
           : b,
       );
-      // Second pass: compute CTC-dependent items. CTC base = gross + core employer
-      // contributions (exclude CTC-dependent rows and Management Fee), matching the
-      // "Total CTC" shown in the contract preview.
       const ctcBase = firstPass.filter((b) => !refsCtc(b) && !isMgmtFee(b));
       return firstPass.map((b) =>
-        b.calcType === "percentage" && refsCtc(b)
+        (b.calcType === "percentage" || hasFormula(b)) && refsCtc(b)
           ? { ...b, amount: computeBenefitAmount(b, components, benefits, allowanceTypes, ctcBase) }
           : b,
       );
