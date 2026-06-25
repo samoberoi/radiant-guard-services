@@ -290,6 +290,7 @@ type CostComponentOption = {
   deductionCalcType: "earned_salary" | "fixed_amount";
   fixedCalcMethod: FixedCalcMethod;
   fixedDutyComponents: FixedDutyBucket[];
+  fixedDutyDivisor: FixedDutyDivisor;
   formulaMode?: string | null;
   formulaExpression?: string | null;
   formulaVersion?: number | null;
