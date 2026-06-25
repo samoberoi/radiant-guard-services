@@ -700,7 +700,7 @@ function CostComponentDialog({
                     </div>
                     <div className="rounded-md bg-secondary/40 px-3 py-2 text-[12px] text-foreground/80">
                       <span className="font-medium">Example:</span>{" "}
-                      ₹{amount || "200"} ÷ Base Days ×{" "}
+                      ₹{amount || "200"} ÷ {FIXED_DUTY_DIVISORS.find((d) => d.value === fixedDutyDivisor)?.short ?? "Base Days"} ×{" "}
                       ({fixedDutyComponents.length > 0
                         ? fixedDutyComponents
                             .map((b) => FIXED_DUTY_BUCKETS.find((x) => x.value === b)?.short ?? b)
