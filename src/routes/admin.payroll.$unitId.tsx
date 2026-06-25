@@ -315,11 +315,12 @@ function PayrollUnitPage() {
       const additionsByCandidate = new Map<string, PerEmpItem[]>();
       const deductionsByCandidate = new Map<string, PerEmpItem[]>();
       const dayAdjustmentByCandidate = new Map<string, DayAdj>();
+      const phDisplayCountByCandidate = new Map<string, number>();
       if (candidateIds.length > 0) {
-        const [addsRes, dedsRes] = await Promise.all([
+        const [addsRes, dedsRes, addTypesRes] = await Promise.all([
           supabase
             .from("additions" as never)
-            .select("candidate_id, addition_name, calculation_type, amount, installments, status, entry_mode, days, include_in_total_days, affects_days_for")
+            .select("candidate_id, addition_type_id, addition_name, calculation_type, amount, installments, status, entry_mode, days, include_in_total_days, affects_days_for")
             .in("candidate_id", candidateIds)
             .gte("addition_date", start)
             .lte("addition_date", end)
@@ -331,8 +332,14 @@ function PayrollUnitPage() {
             .gte("deduction_date", start)
             .lte("deduction_date", end)
             .eq("status", "active"),
+          supabase.from("addition_types").select("id, code"),
         ]);
-        type RawAdd = { candidate_id: string; addition_name: string; calculation_type: string; amount: number | string; installments: number; entry_mode?: string | null; days?: number | string | null; include_in_total_days?: boolean | null; affects_days_for?: string[] | null };
+        const phTypeIds = new Set<string>(
+          ((addTypesRes.data ?? []) as { id: string; code: string | null }[])
+            .filter((t) => (t.code ?? "").toLowerCase() === "paid_holidays")
+            .map((t) => t.id),
+        );
+        type RawAdd = { candidate_id: string; addition_type_id?: string | null; addition_name: string; calculation_type: string; amount: number | string; installments: number; entry_mode?: string | null; days?: number | string | null; include_in_total_days?: boolean | null; affects_days_for?: string[] | null };
         type RawDed = { candidate_id: string; deduction_name: string; calculation_type: string; amount: number | string; installments: number; entry_mode?: string | null; days?: number | string | null; include_in_total_days?: boolean | null; affects_days_for?: string[] | null };
         const applyDayAdj = (cid: string, dayDelta: number, buckets: string[] | null | undefined, sign: 1 | -1) => {
           if (!dayDelta) return;
@@ -374,6 +381,18 @@ function PayrollUnitPage() {
           }
           if (a.entry_mode === "days_x_per_day" && a.include_in_total_days) {
             applyDayAdj(a.candidate_id, Number(a.days) || 0, a.affects_days_for, +1);
+          }
+          // PH-type lumpsum additions (e.g. "Paid Holidays") should still
+          // surface in the PH Days column for visibility. Each addition row
+          // represents one PH day (uses configured `days` if provided, else 1).
+          // Display-only: do NOT mutate tDays or recompute earnings — the
+          // lumpsum cash already accounts for the rupee value.
+          if (a.addition_type_id && phTypeIds.has(String(a.addition_type_id))) {
+            const phDelta = Math.max(1, Number(a.days) || 1);
+            phDisplayCountByCandidate.set(
+              a.candidate_id,
+              (phDisplayCountByCandidate.get(a.candidate_id) ?? 0) + phDelta,
+            );
           }
         }
         for (const d of ((dedsRes.data ?? []) as unknown as RawDed[])) {
@@ -510,6 +529,9 @@ function PayrollUnitPage() {
             totals.otherPaidDays = Math.max(0, totals.otherPaidDays + adj.otherPaidDays);
             totals.tDays = Math.max(0, totals.tDays + adj.tDays);
           }
+          // Display-only PH count from PH-type lumpsum additions.
+          const phDisplay = phDisplayCountByCandidate.get(c.id) ?? 0;
+          if (phDisplay) totals.phDays = totals.phDays + phDisplay;
         }
         const resource = resourceByDesignation.get(did);
         const wages = resource
@@ -1037,8 +1059,8 @@ function PayrollUnitPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
-        <div className="overflow-x-auto overscroll-x-contain">
+      <div className="rounded-3xl border border-border/70 bg-card shadow-sm">
+        <div className="overflow-x-auto overscroll-x-contain rounded-3xl [scrollbar-gutter:stable] [&::-webkit-scrollbar]:h-2.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/40 [&::-webkit-scrollbar-track]:bg-muted/30">
           <table className="ios-table min-w-[1480px] table-auto text-sm">
             <thead className="border-b border-border/60 bg-secondary/40">
               <tr className="text-left text-xs uppercase tracking-[0.16em] text-muted-foreground">
