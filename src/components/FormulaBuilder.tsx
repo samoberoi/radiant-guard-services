@@ -49,6 +49,8 @@ const DIVISOR_OPTIONS: { value: string; label: string }[] = [
 
 const CORE_LABELS = new Set(["Basic", "DA", "HRA"]);
 const DERIVED_LABELS = new Set(["Gross", "CTC"]);
+const DAYS_LABELS = ["Working Days", "Payable Days", "Fixed Days", "Present", "Worked"];
+const DAYS_SET = new Set(DAYS_LABELS);
 
 function divisorFromUi(v: string): PresetDivisor {
   if (v.startsWith("month_")) {
@@ -71,7 +73,7 @@ const SAMPLE_CTX = {
   present: 24, worked: 24, ot: 2, ph: 1, wo: 4, el: 0, pl: 0,
 };
 
-const DEFAULT_AVAILABLE_BASES = ["Basic", "DA", "HRA", "Special Allowance", "Conveyance", "Gross"];
+const DEFAULT_AVAILABLE_BASES = ["Basic", "DA", "HRA", "Special Allowance", "Conveyance", "Gross", ...DAYS_LABELS];
 
 function asComposite(b: PresetBase): CompositeComponent[] {
   switch (b.kind) {
@@ -124,7 +126,8 @@ export function FormulaBuilder({ value, onChange, availableBases }: Props) {
 
   const coreBases = filteredBases.filter((b) => CORE_LABELS.has(b));
   const derivedBases = filteredBases.filter((b) => DERIVED_LABELS.has(b));
-  const otherBases = filteredBases.filter((b) => !CORE_LABELS.has(b) && !DERIVED_LABELS.has(b));
+  const daysBases = filteredBases.filter((b) => DAYS_SET.has(b));
+  const otherBases = filteredBases.filter((b) => !CORE_LABELS.has(b) && !DERIVED_LABELS.has(b) && !DAYS_SET.has(b));
 
   const compiledPreview = useMemo(() => {
     if (!value) return { expr: "", amount: 0, error: undefined as string | undefined };
@@ -182,6 +185,9 @@ export function FormulaBuilder({ value, onChange, availableBases }: Props) {
               )}
               {derivedBases.length > 0 && (
                 <ComponentGroup title="Derived Values" tone="success" items={derivedBases} selected={selectedNames} onAdd={addComponent} />
+              )}
+              {daysBases.length > 0 && (
+                <ComponentGroup title="Days & Attendance" tone="primary" items={daysBases} selected={selectedNames} onAdd={addComponent} />
               )}
               {otherBases.length > 0 && (
                 <ComponentGroup title="Allowances & Custom" tone="muted" items={otherBases} selected={selectedNames} onAdd={addComponent} />
