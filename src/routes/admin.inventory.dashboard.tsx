@@ -193,6 +193,11 @@ export function InventoryOwnerDashboard() {
     const { data, error } = await supabase.from("inv_demands" as never).select("id,demand_number,status,branch_id,warehouse_id,requester_candidate_id,demand_date,created_at,submitted_at");
     if (error) throw error; return (data as unknown as Demand[]) ?? [];
   }});
+  const capsQ = useQuery({ queryKey: ["dash2", "caps"], queryFn: async () => {
+    const { data, error } = await supabase.from("inv_caps" as never).select("scope_type,scope_id,min_value,max_value");
+    if (error) throw error;
+    return (data as unknown as { scope_type: "branch" | "field_officer"; scope_id: string | null; min_value: number; max_value: number }[]) ?? [];
+  }});
 
   const itemsRaw = itemsQ.data ?? [];
   const cats = catsQ.data ?? [];
