@@ -206,6 +206,10 @@ function useCostComponents() {
       p.calc_type === "fixed" && p.fixed_calc_method === "per_duty"
         ? p.fixed_duty_components
         : [],
+    fixed_duty_divisor:
+      p.calc_type === "fixed" && p.fixed_calc_method === "per_duty"
+        ? p.fixed_duty_divisor
+        : "base_days",
     formula_mode: p.formula_mode ?? "preset",
     formula_expression: p.formula_expression,
   });
