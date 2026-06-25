@@ -542,8 +542,9 @@ function PayrollUnitPage() {
           if (phDisplay) totals.phDays = totals.phDays + phDisplay;
         }
         const resource = resourceByDesignation.get(did);
+        const phOverride = isPrimaryForAdj ? phCashByCandidate.get(c.id) : undefined;
         const wages = resource
-          ? computeWages(totals, resource, periodDates.length)
+          ? computeWages(totals, resource, periodDates.length, { phOverrideAmount: phOverride })
           : null;
         const isPrimary = (c.designation_id ?? null) === p.designationId;
         const candidateGender = ((c as unknown as { gender?: string | null }).gender ?? "").toString();
