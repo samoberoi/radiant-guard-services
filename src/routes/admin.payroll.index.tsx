@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 
 import { PageHeader } from "@/components/PageHeader";
+import { PayrollTabs } from "@/components/PayrollTabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -353,11 +354,13 @@ function PayrollUnitsPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
+      <PayrollTabs />
       <PageHeader
         title="Payroll"
         description="Monthly payroll dashboard. Approved attendance sheets unlock wage computation; pending and draft sheets stay visible so you can track what's outstanding."
         crumbs={[{ label: "Payroll" }]}
       />
+
 
       <MonthlyDashboard
         year={year}
