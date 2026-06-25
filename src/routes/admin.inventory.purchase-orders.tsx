@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, Trash2, FileText, Edit2, Eye, AlertTriangle, Download } from "lucide-react";
 import { downloadPOPdf, type POPdfLine } from "@/lib/po-pdf";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -179,6 +179,16 @@ function POPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<PO | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("new") === "1") {
+      setEditing(null);
+      setOpen(true);
+      url.searchParams.delete("new");
+      window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

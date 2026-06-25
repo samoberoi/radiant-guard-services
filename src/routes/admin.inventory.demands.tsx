@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Plus, Search, ClipboardList, Eye, Trash2, Send } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -116,6 +116,16 @@ function DemandsPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Demand | null>(null);
   const [viewing, setViewing] = useState<Demand | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("new") === "1") {
+      setEditing(null);
+      setOpen(true);
+      url.searchParams.delete("new");
+      window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+    }
+  }, []);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

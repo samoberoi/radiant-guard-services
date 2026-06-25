@@ -4,10 +4,11 @@ import { useMemo, useState } from "react";
 import {
   AlertTriangle, Users, Building2, ShieldCheck, IndianRupee, ShoppingCart, TrendingUp, TrendingDown,
   ArrowRight, Boxes, Truck, Wallet, Warehouse, PackageOpen, ClipboardList,
-  UserPlus, FileText, Bell, Clock, ClipboardCheck,
+  UserPlus, FileText, Bell, Clock, ClipboardCheck, Zap,
 } from "lucide-react";
 import { useCurrentPermissions } from "@/lib/rbac";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
+import { useCurrentUserRole } from "@/lib/use-current-user-role";
 
 
 import {
@@ -93,6 +94,7 @@ const inr = (n: number) =>
 
 export function InventoryOwnerDashboard() {
   const scope = useUserBranchScope();
+  const role = useCurrentUserRole();
   const [range, setRange] = useState<Range>("this_month");
   const [customFrom, setCustomFrom] = useState<string>(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
   const [customTo, setCustomTo] = useState<string>(() => new Date().toISOString().slice(0, 10));
@@ -637,7 +639,26 @@ export function InventoryOwnerDashboard() {
               </div>
             </div>
           </div>
-          <span className="hidden text-[10px] uppercase tracking-wider text-muted-foreground sm:inline">SLA: {SLA_DAYS} days</span>
+          <div className="flex items-center gap-2">
+            {(scope.isScoped || role.isFieldOfficer || role.isBranchManager) ? (
+              <Link
+                to="/admin/inventory/demands"
+                search={{ new: "1" } as never}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-3 text-xs font-semibold text-white shadow-sm transition hover:opacity-90"
+              >
+                <Zap className="h-3.5 w-3.5" />Raise Demand
+              </Link>
+            ) : (
+              <Link
+                to="/admin/inventory/purchase-orders"
+                search={{ new: "1" } as never}
+                className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-3 text-xs font-semibold text-white shadow-sm transition hover:opacity-90"
+              >
+                <Zap className="h-3.5 w-3.5" />Raise Purchase Order
+              </Link>
+            )}
+            <span className="hidden text-[10px] uppercase tracking-wider text-muted-foreground sm:inline">SLA: {SLA_DAYS} days</span>
+          </div>
         </div>
         <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {notifications.map(({ key, ...n }) => <NotifTile key={key} {...n} sla={SLA_DAYS} />)}
