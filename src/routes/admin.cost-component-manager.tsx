@@ -116,6 +116,8 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
           FIXED_DUTY_BUCKETS.some((x) => x.value === b),
         ) as FixedDutyBucket[])
       : [],
+    formula_mode: r.formula_mode == null ? null : String(r.formula_mode),
+    formula_expression: r.formula_expression == null ? null : String(r.formula_expression),
   };
 }
 
