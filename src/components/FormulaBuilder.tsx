@@ -126,7 +126,8 @@ export function FormulaBuilder({ value, onChange, availableBases }: Props) {
 
   const coreBases = filteredBases.filter((b) => CORE_LABELS.has(b));
   const derivedBases = filteredBases.filter((b) => DERIVED_LABELS.has(b));
-  const otherBases = filteredBases.filter((b) => !CORE_LABELS.has(b) && !DERIVED_LABELS.has(b));
+  const daysBases = filteredBases.filter((b) => DAYS_SET.has(b));
+  const otherBases = filteredBases.filter((b) => !CORE_LABELS.has(b) && !DERIVED_LABELS.has(b) && !DAYS_SET.has(b));
 
   const compiledPreview = useMemo(() => {
     if (!value) return { expr: "", amount: 0, error: undefined as string | undefined };
