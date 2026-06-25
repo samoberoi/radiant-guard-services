@@ -827,7 +827,7 @@ function PayrollUnitPage() {
     const paySheetStatutoryDed = STATUTORY_LABELS.filter((h) => DEDUCTION_HEADERS.includes(h));
     const paySheetHeaders = [
       "SI No", "Employee ID", "Employee Name", "Designation",
-      "Fixed Duties", "Duties", "OT Hours", "Over Time Duties",
+      "Fixed Duties", "Present Days", "PH Days", "OT Hours", "OT Duties", "Total Days",
       "F Gross Salary", "E Gross Salary",
       ...paySheetStatutoryDed,
       "Total Deductions", "Net Pay",
