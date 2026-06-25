@@ -977,6 +977,50 @@ function WorkflowTile({ to, label, value, icon: Icon, accent, chips }: {
 }
 
 
+function NotifTile({ label, hint, to, icon: Icon, accent, count, breached, oldest, sla }: {
+  label: string; hint: string; to: string; icon: React.ComponentType<{ className?: string }>; accent: string;
+  count: number; breached: number; oldest: number; sla: number;
+}) {
+  const isClear = count === 0;
+  const isBreached = breached > 0;
+  return (
+    <Link to={to} className={`group relative flex flex-col gap-2 rounded-2xl border p-4 transition hover:bg-accent/5 ${isBreached ? "border-rose-500/40 bg-rose-500/5" : isClear ? "border-border bg-card" : "border-amber-500/30 bg-amber-500/5"}`}>
+      <div className="flex items-center justify-between">
+        <div className={`flex h-8 w-8 items-center justify-center rounded-lg bg-background/70 ${accent}`}><Icon className="h-4 w-4" /></div>
+        {!isClear && (
+          <span className={`inline-flex items-center justify-center rounded-full px-2 py-0.5 text-[10px] font-bold tabular-nums ${isBreached ? "bg-rose-500 text-white" : "bg-amber-500 text-white"}`}>
+            {count}
+          </span>
+        )}
+      </div>
+      <div>
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+        <div className="mt-0.5 text-xs text-muted-foreground">{hint}</div>
+      </div>
+      {isClear ? (
+        <div className="flex items-center gap-1 text-[11px] font-medium text-emerald-600">
+          <ClipboardCheck className="h-3 w-3" /> No pending actions
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+          <span className="inline-flex items-center gap-1 rounded-full bg-background/70 px-2 py-0.5 font-medium text-muted-foreground">
+            <Clock className="h-3 w-3" /> Oldest {oldest}d
+          </span>
+          {isBreached && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/15 px-2 py-0.5 font-semibold text-rose-700 dark:text-rose-300">
+              <AlertTriangle className="h-3 w-3" /> {breached} past {sla}d SLA
+            </span>
+          )}
+        </div>
+      )}
+      <ArrowRight className="absolute bottom-3 right-3 h-3.5 w-3.5 text-muted-foreground/40 transition group-hover:translate-x-0.5 group-hover:text-accent" />
+    </Link>
+  );
+}
+
+
+
+
 function ScopeBanner() {
   const scope = useUserBranchScope();
   if (!scope.isScoped) return null;
