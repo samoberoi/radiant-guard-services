@@ -3410,16 +3410,19 @@ function ResourceFormDialog({
           formulaExpression: a.formulaExpression ?? null,
           formulaVersion: a.formulaVersion ?? null,
         };
-        if (a.calcType === "percentage") {
-          // Compute formula against existing components (excluding self by id).
+        const hasF = !!(a.formulaExpression && a.formulaExpression.trim());
+        if (a.calcType === "percentage" || hasF) {
           next.amount = computeBenefitAmount(
             {
-              calcType: "percentage",
+              calcType: a.calcType,
               percentage: a.percentage,
               baseComponents: a.baseComponents,
               capAmount: a.capAmount,
               capFlatAmount: null,
               amount: 0,
+              formulaMode: a.formulaMode ?? null,
+              formulaExpression: a.formulaExpression ?? null,
+              name: a.shortName || a.displayName || a.name,
             },
             prev,
             [],
