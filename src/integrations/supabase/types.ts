@@ -1651,6 +1651,36 @@ export type Database = {
         }
         Relationships: []
       }
+      inv_caps: {
+        Row: {
+          created_at: string
+          id: string
+          max_value: number
+          min_value: number
+          scope_id: string | null
+          scope_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          max_value?: number
+          min_value?: number
+          scope_id?: string | null
+          scope_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          max_value?: number
+          min_value?: number
+          scope_id?: string | null
+          scope_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       inv_demand_lines: {
         Row: {
           created_at: string
@@ -4171,12 +4201,28 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_inventory_admin_user_ids: {
+        Args: never
+        Returns: {
+          user_id: string
+        }[]
+      }
       get_user_display_name: {
         Args: { _user_id: string }
         Returns: {
           full_name: string
           mobile: string
           role_key: string
+        }[]
+      }
+      get_user_id_by_candidate: {
+        Args: { _candidate_id: string }
+        Returns: string
+      }
+      get_user_ids_by_branch: {
+        Args: { _branch_id: string }
+        Returns: {
+          user_id: string
         }[]
       }
       get_user_ids_with_approve: {

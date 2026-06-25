@@ -19,6 +19,7 @@ import {
   FileText,
   Files,
   Fuel,
+  Gauge,
   Home,
   Inbox,
   LayoutDashboard,
@@ -66,6 +67,7 @@ type LeafItem = {
   icon: React.ComponentType<{ className?: string }>;
   search?: Record<string, unknown>;
   sub?: string; // optional sub-module key for RBAC filtering
+  adminOnly?: boolean; // only super admins & inventory managers
 };
 
 type GroupItem = {
@@ -122,7 +124,9 @@ const inventoryChildren: LeafItem[] = [
   { to: "/admin/inventory/stock", label: "Stock Report", icon: Wallet, sub: "stock_report" },
   { to: "/admin/inventory/stock-ledger", label: "Stock Ledger", icon: Banknote, sub: "stock_ledger" },
   { to: "/admin/inventory/rate-cards", label: "Vendor Rate Cards", icon: FileText, sub: "rate_cards" },
+  { to: "/admin/inventory/caps", label: "Inventory Cap", icon: Gauge, adminOnly: true },
 ];
+
 
 
 const payrollChildren: LeafItem[] = [
@@ -324,9 +328,11 @@ function AdminLayout() {
     !can("invoice");
   const filteredInventoryChildren = useMemo(
     () => {
-      if (isSuperAdmin) return inventoryChildren;
+      const isInvAdmin = isSuperAdmin || roleKey === "inventory_manager" || roleKey === "inventory";
+      if (isSuperAdmin) return inventoryChildren.filter((c) => !c.adminOnly || isInvAdmin);
       const isFO = roleKey === "field_officer";
       const list = inventoryChildren.filter((c) => {
+        if (c.adminOnly) return isInvAdmin;
         // Collections is field-officer only — bypass sub-permission gating for FOs.
         if (c.to === "/admin/inventory/collections") return isFO;
         return !c.sub || canSub("inventory", c.sub);
