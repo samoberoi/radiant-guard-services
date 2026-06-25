@@ -588,6 +588,7 @@ function CostComponentDialog({
         name,
         fixed_calc_method: fixedCalcMethod,
         fixed_duty_components: fixedDutyComponents,
+        fixed_duty_divisor: fixedDutyDivisor,
       })
     : "";
 
