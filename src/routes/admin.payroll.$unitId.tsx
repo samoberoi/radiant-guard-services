@@ -740,12 +740,18 @@ function PayrollUnitPage() {
       : "Draft";
 
     // ---- Wage Register headers (shared baseline) ----
+    // Days are broken out so PH (paid holidays), Other Paid (sick/EL) and OT
+    // are visible as separate columns instead of being lumped into a single
+    // "Duties" cell. Payroll additions that opt into "Include in total days"
+    // with affects_days_for=ph already roll into PH Days via day-adjustments.
     const wageHeaders = [
       "SI No", "Month", "Client ID", "Client Name", "Site Name",
       "Employee ID", "Employee Name", "Designation", "Date Of Joining",
       "ESI No", "UAN", "PAN",
       ...F_CONTRACT_COMPONENT_COLS,
-      "F Gross Salary", "Fixed Duties", "Duties", "OT Hours", "Over Time Duties",
+      "F Gross Salary",
+      "Fixed Duties", "Present Days", "PH Days", "Other Paid Days",
+      "OT Hours", "OT Duties", "Total Days",
       ...E_EARNED_COMPONENT_COLS,
       ...additionCols,
       "E Gross Salary",
@@ -770,7 +776,12 @@ function PayrollUnitPage() {
         ...contractComponentCols.map((c) => round2(lookup(contractComponents, c))),
         w ? round2(w.contractGross) : 0,
         w ? w.baseDays : 0,
-        round2(r.totals.tDays - r.totals.otDays), r.totals.otHours, r.totals.otDays,
+        round2(r.totals.pDays),
+        round2(r.totals.phDays),
+        round2(r.totals.otherPaidDays),
+        round2(r.totals.otHours),
+        round2(r.totals.otDays),
+        round2(r.totals.tDays),
         ...earnedComponentCols.map((c) => round2(lookup(earnedComponents, c))),
         ...additionCols.map((c) => round2(lookup(earnedAdditions, c))),
         w ? round2(w.earnedGross) : 0,
@@ -789,7 +800,9 @@ function PayrollUnitPage() {
 
     // ---- Totals row (numeric columns only) ----
     const numericHeaderSet = new Set<string>([
-      ...F_CONTRACT_COMPONENT_COLS, "F Gross Salary", "Fixed Duties", "Duties", "OT Hours", "Over Time Duties",
+      ...F_CONTRACT_COMPONENT_COLS, "F Gross Salary",
+      "Fixed Duties", "Present Days", "PH Days", "Other Paid Days",
+      "OT Hours", "OT Duties", "Total Days",
       ...E_EARNED_COMPONENT_COLS, ...additionCols, "E Gross Salary",
       ...DEDUCTION_HEADERS, "Total Deductions", "Net Pay",
     ]);
