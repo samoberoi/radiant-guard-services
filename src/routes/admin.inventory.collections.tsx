@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Search, PackageCheck, Inbox } from "lucide-react";
+import { Search, PackageCheck, Inbox, ShieldCheck, Warehouse, ChevronDown, ChevronRight, X } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -9,40 +9,32 @@ import { confirmAction } from "@/components/ConfirmProvider";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { postMovements, type LocationType } from "@/lib/inv-helpers";
 import { useAuth, SUPER_ADMIN_PHONE } from "@/lib/auth";
 
 export const Route = createFileRoute("/admin/inventory/collections")({ component: CollectionsPage });
 
 const MODULE = "Inventory Collections";
-const ENTITY = "inv_issuances";
+const ENTITY = "inv_stock_movements";
 
-type Candidate = { id: string; full_name: string; employee_code: string; role_key: string; unit_id: string | null; reports_to: string | null };
+type Candidate = { id: string; full_name: string; employee_code: string | null; mobile: string | null; role_key: string; unit_id: string | null; reports_to: string | null };
+type Unit = { id: string; code: string; name: string };
 type Item = { id: string; name: string; item_code: string; is_sized: boolean };
-type CollectionRow = {
-  id: string;
-  issuance_number: string;
-  issuance_date: string;
-  issued_at: string | null;
-  destination_id: string;
-  destination_type: string;
-  source_id: string;
-  notes: string;
-  lines: { item_id: string; size_value: string; qty: number }[];
-};
+type Balance = { location_type: string; location_id: string; item_id: string; size_value: string; qty: number };
 
 function CollectionsPage() {
   const { user } = useAuth();
   const myPhone = user?.phone?.replace(/\D/g, "").slice(-10) ?? "";
   const isSuperAdmin = myPhone === SUPER_ADMIN_PHONE;
 
-  const { data: me = null } = useQuery({
+  const { data: me = null, isLoading: meLoading } = useQuery({
     queryKey: ["candidate-by-phone", myPhone],
     enabled: !!myPhone && !isSuperAdmin,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("candidates" as never)
-        .select("id,full_name,employee_code,role_key,unit_id,reports_to")
+        .select("id,full_name,employee_code,mobile,role_key,unit_id,reports_to")
         .eq("mobile", myPhone)
         .maybeSingle();
       if (error) throw error;
@@ -50,219 +42,428 @@ function CollectionsPage() {
     },
   });
 
-  const { data: candidates = [] } = useQuery({
-    queryKey: ["candidates-active-min"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("candidates" as never)
-        .select("id,full_name,employee_code,role_key,unit_id,reports_to")
-        .eq("status", "active")
-        .order("full_name");
-      if (error) throw error;
-      return (data as unknown as Candidate[]) ?? [];
-    },
-  });
-  const { data: items = [] } = useQuery({
-    queryKey: ["inv", "items-list"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("inv_items" as never)
-        .select("id,name,item_code,is_sized")
-        .eq("enabled", true)
-        .order("name");
-      if (error) throw error;
-      return (data as unknown as Item[]) ?? [];
-    },
-  });
-
-  const candMap = useMemo(() => new Map(candidates.map((c) => [c.id, c])), [candidates]);
-  const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
-
   const isFieldOfficer = !isSuperAdmin && me?.role_key === "field_officer";
 
   return (
     <div>
       <PageHeader
         title="Collections"
-        description="Collect issued items back from guards. Confirming returns the stock to your field-officer inventory."
+        description="Collect items back from the guards reporting to you."
         crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Collections" }]}
       />
-      {!isFieldOfficer || !me ? (
+      {meLoading ? (
+        <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">Loading…</div>
+      ) : !isFieldOfficer || !me ? (
         <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
           <Inbox className="mx-auto mb-2 h-8 w-8 opacity-40" />
           Collections are available to field officers only.
         </div>
       ) : (
-        <CollectionsPanel me={me} candMap={candMap} itemMap={itemMap} />
+        <CollectionsPanel me={me} />
       )}
     </div>
   );
 }
 
-function CollectionsPanel({ me, candMap, itemMap }: {
-  me: Candidate;
-  candMap: Map<string, Candidate>;
-  itemMap: Map<string, Item>;
-}) {
+function CollectionsPanel({ me }: { me: Candidate }) {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
-  const [busy, setBusy] = useState<string | null>(null);
+  const [openGuard, setOpenGuard] = useState<string | null>(null);
 
-  const { data: rows = [], isLoading } = useQuery({
-    queryKey: ["inv", "collections", me.id],
+  // 1. Guards reporting to me
+  const { data: guards = [], isLoading: guardsLoading } = useQuery({
+    queryKey: ["collections", "guards", me.id],
     queryFn: async () => {
-      const { data: iss, error } = await supabase
-        .from("inv_issuances" as never)
-        .select("id,issuance_number,issuance_date,issued_at,source_id,source_type,destination_id,destination_type,notes,status,collected_at")
-        .eq("issuance_type", "fo_to_guard")
-        .eq("source_id", me.id)
-        .eq("status", "completed")
-        .is("collected_at", null)
-        .order("issued_at", { ascending: false });
+      const { data, error } = await supabase
+        .from("candidates" as never)
+        .select("id,full_name,employee_code,mobile,role_key,unit_id,reports_to")
+        .eq("reports_to", me.id)
+        .in("role_key", ["guard", "security_guard"])
+        .eq("status", "active")
+        .order("full_name");
       if (error) throw error;
-      const list = (iss as unknown as { id: string; issuance_number: string; issuance_date: string; issued_at: string | null; source_id: string; source_type: string; destination_id: string; destination_type: string; notes: string }[]) ?? [];
-      if (!list.length) return [] as CollectionRow[];
-      const ids = list.map((x) => x.id);
-      const { data: lns } = await supabase
-        .from("inv_issuance_lines" as never)
-        .select("issuance_id,item_id,size_value,qty")
-        .in("issuance_id", ids);
-      const byIss = new Map<string, { item_id: string; size_value: string; qty: number }[]>();
-      for (const l of (lns as unknown as { issuance_id: string; item_id: string; size_value: string | null; qty: number }[]) ?? []) {
-        const arr = byIss.get(l.issuance_id) ?? [];
-        arr.push({ item_id: l.item_id, size_value: l.size_value ?? "", qty: Number(l.qty ?? 0) });
-        byIss.set(l.issuance_id, arr);
-      }
-      return list.map<CollectionRow>((i) => ({
-        id: i.id,
-        issuance_number: i.issuance_number,
-        issuance_date: i.issuance_date,
-        issued_at: i.issued_at,
-        destination_id: i.destination_id,
-        destination_type: i.destination_type,
-        source_id: i.source_id,
-        notes: i.notes,
-        lines: byIss.get(i.id) ?? [],
-      }));
+      return (data as unknown as Candidate[]) ?? [];
     },
   });
 
-  const filtered = useMemo(() => {
+  // 2. Unit assignments (handles guards whose unit_id is null but who have scope_assignments)
+  const guardIds = useMemo(() => guards.map((g) => g.id), [guards]);
+  const { data: scopeUnits = [] } = useQuery({
+    queryKey: ["collections", "guard-scope-units", guardIds.join(",")],
+    enabled: guardIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employee_scope_assignments" as never)
+        .select("candidate_id,scope_id,scope_type")
+        .in("candidate_id", guardIds)
+        .eq("scope_type", "unit");
+      if (error) throw error;
+      return (data as unknown as { candidate_id: string; scope_id: string }[]) ?? [];
+    },
+  });
+
+  const guardUnitMap = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const g of guards) if (g.unit_id) m.set(g.id, g.unit_id);
+    for (const r of scopeUnits) if (!m.has(r.candidate_id)) m.set(r.candidate_id, r.scope_id);
+    return m;
+  }, [guards, scopeUnits]);
+
+  const unitIds = useMemo(() => Array.from(new Set([...guardUnitMap.values()])), [guardUnitMap]);
+
+  const { data: units = [] } = useQuery({
+    queryKey: ["collections", "units", unitIds.join(",")],
+    enabled: unitIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("units" as never).select("id,code,name").in("id", unitIds);
+      if (error) throw error;
+      return (data as unknown as Unit[]) ?? [];
+    },
+  });
+  const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
+
+  // 3. Stock at each guard
+  const { data: balances = [] } = useQuery({
+    queryKey: ["collections", "balances", guardIds.join(",")],
+    enabled: guardIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_stock_balances" as never)
+        .select("location_type,location_id,item_id,size_value,qty")
+        .in("location_type", ["guard", "security_guard"])
+        .in("location_id", guardIds)
+        .gt("qty", 0);
+      if (error) throw error;
+      return (data as unknown as Balance[]) ?? [];
+    },
+  });
+
+  const itemIds = useMemo(() => Array.from(new Set(balances.map((b) => b.item_id))), [balances]);
+  const { data: items = [] } = useQuery({
+    queryKey: ["collections", "items", itemIds.join(",")],
+    enabled: itemIds.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_items" as never).select("id,name,item_code,is_sized").in("id", itemIds);
+      if (error) throw error;
+      return (data as unknown as Item[]) ?? [];
+    },
+  });
+  const itemMap = useMemo(() => new Map(items.map((i) => [i.id, i])), [items]);
+
+  const balByGuard = useMemo(() => {
+    const m = new Map<string, Balance[]>();
+    for (const b of balances) {
+      const arr = m.get(b.location_id) ?? [];
+      arr.push(b);
+      m.set(b.location_id, arr);
+    }
+    return m;
+  }, [balances]);
+
+  // Group by unit
+  const grouped = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return rows;
-    return rows.filter((r) => {
-      const guard = candMap.get(r.destination_id)?.full_name?.toLowerCase() ?? "";
-      return r.issuance_number.toLowerCase().includes(s) || guard.includes(s);
+    const filteredGuards = guards.filter((g) => {
+      if (!s) return true;
+      return g.full_name.toLowerCase().includes(s) || (g.employee_code ?? "").toLowerCase().includes(s) || (g.mobile ?? "").includes(s);
     });
-  }, [rows, q, candMap]);
+    const m = new Map<string, Candidate[]>();
+    const UNASSIGNED = "__unassigned__";
+    for (const g of filteredGuards) {
+      const uid = guardUnitMap.get(g.id) ?? UNASSIGNED;
+      const arr = m.get(uid) ?? [];
+      arr.push(g);
+      m.set(uid, arr);
+    }
+    const out: { unit: Unit | null; guards: Candidate[] }[] = [];
+    for (const [uid, arr] of m) {
+      out.push({ unit: uid === UNASSIGNED ? null : unitMap.get(uid) ?? null, guards: arr });
+    }
+    out.sort((a, b) => (a.unit?.name ?? "zzz").localeCompare(b.unit?.name ?? "zzz"));
+    return out;
+  }, [guards, guardUnitMap, unitMap, q]);
+
+  const totalGuards = guards.length;
+  const guardsWithStock = useMemo(() => guards.filter((g) => (balByGuard.get(g.id)?.length ?? 0) > 0).length, [guards, balByGuard]);
+
+  const activeGuard = openGuard ? guards.find((g) => g.id === openGuard) ?? null : null;
+  const activeBalances = openGuard ? balByGuard.get(openGuard) ?? [] : [];
 
   const collectMut = useMutation({
-    mutationFn: async (r: CollectionRow) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const movs = r.lines.flatMap((l) => ([
+    mutationFn: async (payload: { guard: Candidate; rows: { item_id: string; size_value: string; qty: number }[] }) => {
+      const movs = payload.rows.flatMap((r) => ([
         {
           movement_type: "COLLECT_GUARD_OUT",
-          location_type: r.destination_type as LocationType,
-          location_id: r.destination_id,
-          item_id: l.item_id, size_value: l.size_value, qty_change: -l.qty,
-          reference_type: "collection", reference_id: r.id,
+          location_type: (payload.guard.role_key === "security_guard" ? "guard" : "guard") as LocationType,
+          location_id: payload.guard.id,
+          item_id: r.item_id, size_value: r.size_value, qty_change: -r.qty,
+          reference_type: "collection", reference_id: payload.guard.id,
         },
         {
           movement_type: "COLLECT_FO_IN",
           location_type: "field_officer" as LocationType,
           location_id: me.id,
-          item_id: l.item_id, size_value: l.size_value, qty_change: l.qty,
-          reference_type: "collection", reference_id: r.id,
+          item_id: r.item_id, size_value: r.size_value, qty_change: r.qty,
+          reference_type: "collection", reference_id: payload.guard.id,
         },
       ]));
       await postMovements(movs);
-      await supabase.from("inv_issuances" as never).update({
-        status: "collected",
-        collected_at: new Date().toISOString(),
-        collected_by: user?.id ?? null,
-      } as never).eq("id", r.id);
-      void logActivity({ module: MODULE, action: "acknowledge", entityType: ENTITY, entityId: r.id, entityLabel: `Collected ${r.issuance_number}` });
+      void logActivity({
+        module: MODULE, action: "collect", entityType: ENTITY, entityId: payload.guard.id,
+        entityLabel: `Collected from ${payload.guard.full_name} (${payload.rows.length} item${payload.rows.length === 1 ? "" : "s"})`,
+      });
     },
     onSuccess: () => {
       toast.success("Collected — stock returned to you");
-      qc.invalidateQueries({ queryKey: ["inv", "collections", me.id] });
+      qc.invalidateQueries({ queryKey: ["collections"] });
       qc.invalidateQueries({ queryKey: ["inv", "balances-sum"] });
-      qc.invalidateQueries({ queryKey: ["inv", "issuances"] });
+      qc.invalidateQueries({ queryKey: ["inv"] });
+      setOpenGuard(null);
     },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Failed"),
   });
-
-  async function collect(r: CollectionRow) {
-    if (!(await confirmAction({
-      title: "Confirm collection",
-      description: "Kindly confirm you have collected it. Items will be removed from the guard and added back to your stock.",
-      confirmText: "Confirm Collected",
-    }))) return;
-    setBusy(r.id);
-    try { await collectMut.mutateAsync(r); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); }
-    finally { setBusy(null); }
-  }
 
   return (
     <div>
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatTile icon={Warehouse} label="Units covered" value={unitIds.length} accent="from-cyan-500/20 to-cyan-500/5 text-cyan-600" />
+        <StatTile icon={ShieldCheck} label="Guards on duty" value={totalGuards} accent="from-emerald-500/20 to-emerald-500/5 text-emerald-600" />
+        <StatTile icon={PackageCheck} label="Guards with stock" value={guardsWithStock} accent="from-violet-500/20 to-violet-500/5 text-violet-600" />
+        <StatTile icon={Inbox} label="Total items at guards" value={balances.reduce((s, b) => s + Number(b.qty || 0), 0)} accent="from-amber-500/20 to-amber-500/5 text-amber-600" />
+      </div>
+
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search issuance # or guard…" className="h-10 rounded-lg pl-9" />
+          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search guard name, code or mobile…" className="h-10 rounded-lg pl-9" />
         </div>
-        <div className="text-xs text-muted-foreground">{filtered.length} pending</div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="overflow-x-clip">
-          <table className="ios-table w-full text-sm">
-            <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3">Issuance #</th>
-                <th className="px-5 py-3">From</th>
-                <th className="px-5 py-3">To (Guard)</th>
-                <th className="px-5 py-3">Issued On</th>
-                <th className="px-5 py-3">Items</th>
-                <th className="px-5 py-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {filtered.map((r) => {
-                const guard = candMap.get(r.destination_id);
-                return (
-                  <tr key={r.id} className="hover:bg-secondary/30">
-                    <td className="px-5 py-3 font-mono text-xs">{r.issuance_number}</td>
-                    <td className="px-5 py-3">{me.full_name}<div className="text-[11px] uppercase tracking-wider text-muted-foreground">Field Officer</div></td>
-                    <td className="px-5 py-3 font-medium">{guard?.full_name ?? "—"}<div className="text-[11px] uppercase tracking-wider text-muted-foreground">{guard?.employee_code ?? ""}</div></td>
-                    <td className="px-5 py-3 text-xs text-muted-foreground">{(r.issued_at ?? r.issuance_date).slice(0, 10)}</td>
-                    <td className="px-5 py-3 text-xs">
-                      {r.lines.map((l, idx) => (
-                        <div key={idx}>
-                          <span className="font-medium">{itemMap.get(l.item_id)?.name ?? "—"}</span>
-                          {l.size_value && <span className="text-muted-foreground"> · {l.size_value}</span>}
-                          <span className="text-muted-foreground"> × {l.qty}</span>
-                        </div>
-                      ))}
-                      {!r.lines.length && <span className="text-muted-foreground">—</span>}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <Button size="sm" disabled={busy === r.id} onClick={() => collect(r)} className="h-8 rounded-md">
-                        <PackageCheck className="mr-1.5 h-4 w-4" />{busy === r.id ? "Collecting…" : "Collect"}
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
-              {!filtered.length && (
-                <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-muted-foreground">
-                  <Inbox className="mx-auto mb-2 h-8 w-8 opacity-40" />
-                  {isLoading ? "Loading…" : "Nothing pending collection."}
-                </td></tr>
-              )}
-            </tbody>
-          </table>
+      {guardsLoading ? (
+        <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">Loading…</div>
+      ) : grouped.length === 0 ? (
+        <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
+          <ShieldCheck className="mx-auto mb-2 h-8 w-8 opacity-40" />
+          No guards are reporting to you yet.
         </div>
-      </div>
+      ) : (
+        <div className="space-y-4">
+          {grouped.map(({ unit, guards: gList }) => (
+            <UnitBlock
+              key={unit?.id ?? "__unassigned__"}
+              unit={unit}
+              guards={gList}
+              balByGuard={balByGuard}
+              itemMap={itemMap}
+              onCollect={(g) => setOpenGuard(g.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {activeGuard && (
+        <CollectDialog
+          open={!!activeGuard}
+          onOpenChange={(o) => !o && setOpenGuard(null)}
+          guard={activeGuard}
+          unit={unitMap.get(guardUnitMap.get(activeGuard.id) ?? "") ?? null}
+          balances={activeBalances}
+          itemMap={itemMap}
+          submitting={collectMut.isPending}
+          onConfirm={(rows) => collectMut.mutate({ guard: activeGuard, rows })}
+        />
+      )}
     </div>
+  );
+}
+
+function StatTile({ icon: Icon, label, value, accent }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent: string }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
+      <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-40 ${accent}`} />
+      <div className="flex items-center gap-2.5">
+        <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${accent}`}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</div>
+      </div>
+      <div className="mt-2 font-display text-2xl font-bold tabular-nums tracking-tight text-foreground">{value.toLocaleString()}</div>
+    </div>
+  );
+}
+
+function UnitBlock({ unit, guards, balByGuard, itemMap, onCollect }: {
+  unit: Unit | null;
+  guards: Candidate[];
+  balByGuard: Map<string, Balance[]>;
+  itemMap: Map<string, Item>;
+  onCollect: (g: Candidate) => void;
+}) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+      <button onClick={() => setOpen((o) => !o)} className="flex w-full items-center justify-between gap-3 border-b border-border/60 px-5 py-4 text-left transition hover:bg-secondary/30">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-600">
+            <Warehouse className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-foreground">{unit ? `${unit.code} · ${unit.name}` : "Unassigned guards"}</div>
+            <div className="text-[11px] text-muted-foreground">{guards.length} guard{guards.length === 1 ? "" : "s"}</div>
+          </div>
+        </div>
+        {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+      </button>
+      {open && (
+        <div className="divide-y divide-border/50">
+          {guards.map((g) => {
+            const bals = balByGuard.get(g.id) ?? [];
+            const totalQty = bals.reduce((s, b) => s + Number(b.qty || 0), 0);
+            return (
+              <div key={g.id} className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                    <ShieldCheck className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-foreground">{g.full_name}</div>
+                    <div className="text-[11px] text-muted-foreground">{g.employee_code ?? "—"}{g.mobile ? ` · +91 ${g.mobile}` : ""}</div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {bals.length === 0 && <span className="text-[11px] text-muted-foreground">Nothing assigned</span>}
+                      {bals.map((b, i) => (
+                        <span key={i} className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-0.5 text-[11px] font-medium text-foreground">
+                          {itemMap.get(b.item_id)?.name ?? "—"}
+                          {b.size_value ? <span className="text-muted-foreground">({b.size_value})</span> : null}
+                          <span className="text-muted-foreground">× {b.qty}</span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-right text-[11px] text-muted-foreground">{totalQty} item{totalQty === 1 ? "" : "s"} held</div>
+                  <Button size="sm" disabled={bals.length === 0} onClick={() => onCollect(g)} className="h-9 rounded-md">
+                    <PackageCheck className="mr-1.5 h-4 w-4" /> Collect
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CollectDialog({ open, onOpenChange, guard, unit, balances, itemMap, onConfirm, submitting }: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  guard: Candidate;
+  unit: Unit | null;
+  balances: Balance[];
+  itemMap: Map<string, Item>;
+  onConfirm: (rows: { item_id: string; size_value: string; qty: number }[]) => void;
+  submitting: boolean;
+}) {
+  // Default: take everything back
+  const [qtyMap, setQtyMap] = useState<Record<string, number>>(() => {
+    const m: Record<string, number> = {};
+    for (const b of balances) m[`${b.item_id}|${b.size_value}`] = Number(b.qty || 0);
+    return m;
+  });
+
+  const setAll = (mode: "all" | "none") => {
+    const m: Record<string, number> = {};
+    for (const b of balances) m[`${b.item_id}|${b.size_value}`] = mode === "all" ? Number(b.qty || 0) : 0;
+    setQtyMap(m);
+  };
+
+  const totalSelected = Object.values(qtyMap).reduce((s, n) => s + n, 0);
+
+  const handleConfirm = async () => {
+    const rows = balances
+      .map((b) => ({ item_id: b.item_id, size_value: b.size_value, qty: Math.min(Number(qtyMap[`${b.item_id}|${b.size_value}`] || 0), Number(b.qty || 0)) }))
+      .filter((r) => r.qty > 0);
+    if (!rows.length) return toast.error("Select at least one item");
+    const allFull = rows.length === balances.length && rows.every((r) => {
+      const b = balances.find((x) => x.item_id === r.item_id && x.size_value === r.size_value);
+      return b && r.qty === Number(b.qty || 0);
+    });
+    if (!(await confirmAction({
+      title: "Confirm collection",
+      description: allFull
+        ? `Take back everything from ${guard.full_name}? It will be removed from the guard and added to your field-officer stock.`
+        : `Take back ${rows.length} item${rows.length === 1 ? "" : "s"} from ${guard.full_name}?`,
+      confirmText: "Confirm Collected",
+    }))) return;
+    onConfirm(rows);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>Collect from {guard.full_name}</DialogTitle>
+          <div className="text-xs text-muted-foreground">
+            {guard.employee_code ?? "—"}{unit ? ` · ${unit.code} · ${unit.name}` : ""}
+          </div>
+        </DialogHeader>
+
+        <div className="flex items-center justify-between">
+          <div className="text-xs text-muted-foreground">Set the quantity you are taking back for each item.</div>
+          <div className="flex gap-2">
+            <Button type="button" size="sm" variant="outline" className="h-7 rounded-md text-xs" onClick={() => setAll("all")}>Take all</Button>
+            <Button type="button" size="sm" variant="ghost" className="h-7 rounded-md text-xs" onClick={() => setAll("none")}>Clear</Button>
+          </div>
+        </div>
+
+        <div className="max-h-[55vh] space-y-2 overflow-y-auto rounded-xl border border-border/70 bg-background p-3">
+          {balances.length === 0 ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">Nothing assigned to this guard.</div>
+          ) : balances.map((b) => {
+            const key = `${b.item_id}|${b.size_value}`;
+            const item = itemMap.get(b.item_id);
+            const max = Number(b.qty || 0);
+            const val = qtyMap[key] ?? 0;
+            return (
+              <div key={key} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-medium text-foreground">{item?.name ?? "—"}</div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {item?.item_code ?? ""}{b.size_value ? ` · Size ${b.size_value}` : ""} · Held: {max}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button type="button" size="sm" variant="outline" className="h-8 w-8 rounded-md p-0" onClick={() => setQtyMap((m) => ({ ...m, [key]: Math.max(0, (m[key] ?? 0) - 1) }))}>−</Button>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={max}
+                    value={val}
+                    onChange={(e) => {
+                      const n = Math.max(0, Math.min(max, Number(e.target.value) || 0));
+                      setQtyMap((m) => ({ ...m, [key]: n }));
+                    }}
+                    className="h-8 w-16 rounded-md text-center"
+                  />
+                  <Button type="button" size="sm" variant="outline" className="h-8 w-8 rounded-md p-0" onClick={() => setQtyMap((m) => ({ ...m, [key]: Math.min(max, (m[key] ?? 0) + 1) }))}>+</Button>
+                  <span className="ml-1 text-[11px] text-muted-foreground">/ {max}</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="h-9 rounded-md">
+            <X className="mr-1.5 h-4 w-4" /> Cancel
+          </Button>
+          <Button type="button" onClick={handleConfirm} disabled={submitting || totalSelected === 0} className="h-9 rounded-md">
+            <PackageCheck className="mr-1.5 h-4 w-4" />
+            {submitting ? "Collecting…" : `Confirm collect (${totalSelected})`}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
