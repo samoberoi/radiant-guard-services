@@ -36,6 +36,8 @@ export const Route = createFileRoute("/admin/additions")({
 
 type CalcType = "lumpsum" | "per_duty_amount" | "total_amount";
 type Status = "active" | "paused" | "completed" | "cancelled";
+type EntryMode = "lumpsum" | "days_x_per_day";
+type DayBucket = "present" | "worked" | "ot" | "ph";
 
 type Addition = {
   id: string;
@@ -48,6 +50,11 @@ type Addition = {
   installments: number;
   description: string;
   status: Status;
+  entry_mode?: EntryMode;
+  days?: number | null;
+  per_day_amount?: number | null;
+  include_in_total_days?: boolean;
+  affects_days_for?: DayBucket[];
 };
 
 type AType = { id: string; name: string; code: string; is_active: boolean };
