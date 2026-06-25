@@ -686,7 +686,16 @@ export function computeWages(
     const configured = Number(i.amount) || 0;
     const buckets = Array.isArray(i.fixedDutyComponents) ? i.fixedDutyComponents : [];
     const totalDuties = buckets.reduce((s, b) => s + dutyBucketValue(b), 0);
-    const perDuty = baseDays > 0 ? configured / baseDays : 0;
+    const divisor = (() => {
+      switch (i.fixedDutyDivisor) {
+        case "days_in_month": return periodDayCount;
+        case "payable_days":  return basePaidDays;
+        case "fixed_26":      return 26;
+        case "base_days":
+        default:              return baseDays;
+      }
+    })();
+    const perDuty = divisor > 0 ? configured / divisor : 0;
     return round2(perDuty * totalDuties);
   };
   const resolveFixedAmount = (i: BenefitLike): number => {
