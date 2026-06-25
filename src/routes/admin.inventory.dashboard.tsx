@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import {
   AlertTriangle, Users, Building2, ShieldCheck, IndianRupee, ShoppingCart, TrendingUp, TrendingDown,
   ArrowRight, Boxes, Truck, Wallet, Warehouse, PackageOpen, ClipboardList,
-  UserPlus, FileText,
+  UserPlus, FileText, Bell, Clock, ClipboardCheck,
 } from "lucide-react";
 import { useCurrentPermissions } from "@/lib/rbac";
 import { useUserBranchScope } from "@/lib/use-user-branch-scope";
