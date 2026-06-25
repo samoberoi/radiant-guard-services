@@ -5,6 +5,15 @@
 // contract resource's monthly gross divided by the configured payroll-day
 // base. Percentage deductions/contributions are recalculated from earned
 // component bases, while explicitly fixed statutory rows stay fixed.
+//
+// In addition, each contract line (component / benefit / deduction /
+// employer contribution) may carry a `formulaMode` + `formulaExpression`
+// snapshotted from Allowance Manager or Cost Component Manager. When
+// present, that formula is evaluated against a per-employee context and
+// REPLACES the legacy proration for that line. Statutory ESI/EPF/PT still
+// run as a final post-pass unless the line opts out of statutory via its
+// own formula.
+import { evaluateFormula, parseFormulaConfig, type FormulaContext } from "./formula-engine";
 
 export type AttendanceEntryLike = {
   candidate_id: string;
@@ -124,6 +133,9 @@ export type WageComponent = {
   includeInOt?: boolean | null;
   fixedCalcMethod?: FixedCalcMethod | null;
   fixedDutyComponents?: FixedDutyBucket[] | null;
+  formulaMode?: string | null;
+  formulaExpression?: string | null;
+  formulaVersion?: number | null;
 };
 export type BenefitLike = {
   name: string;
@@ -136,6 +148,9 @@ export type BenefitLike = {
   deductionCalcType?: "earned_salary" | "fixed_amount" | null;
   fixedCalcMethod?: FixedCalcMethod | null;
   fixedDutyComponents?: FixedDutyBucket[] | null;
+  formulaMode?: string | null;
+  formulaExpression?: string | null;
+  formulaVersion?: number | null;
 };
 
 
@@ -506,11 +521,47 @@ export function computeWages(
   const basePaidDays = totals.pDays + totals.otherPaidDays;
   const baseRatio = baseDays > 0 ? basePaidDays / baseDays : 0;
 
-  const components: WageComponent[] = resource.components.map((c) => ({
-    ...c,
-    name: c.name,
-    amount: round2((Number(c.amount) || 0) * baseRatio),
-  }));
+  // Build a FormulaContext shared by every line that opts into the engine.
+  // Variables match what Allowance Manager / Cost Component Manager expose.
+  const findAmountByName = (re: RegExp): number => {
+    const hit = resource.components.find((c) => re.test(canonicalComponentName(c.name)));
+    return hit ? Number(hit.amount) || 0 : 0;
+  };
+  const baseFormulaCtx: FormulaContext = {
+    basic: findAmountByName(/\bbasic\b/i),
+    da: findAmountByName(/\bda\b|dearness/i),
+    gross: contractGross,
+    fixed_amount: 0,
+    fixed_days: baseDays,
+    working_days: periodDayCount,
+    payable_days: basePaidDays,
+    present: totals.pDays,
+    worked: totals.pDays + totals.otherPaidDays,
+    ot: totals.otDays,
+    ph: totals.phDays,
+    wo: 0,
+    el: 0,
+    pl: totals.otherPaidDays,
+  };
+  const tryFormulaAmount = (
+    item: { formulaMode?: string | null; formulaExpression?: string | null; amount?: number | string | null },
+  ): number | null => {
+    const cfg = parseFormulaConfig(item.formulaMode, item.formulaExpression);
+    if (!cfg) return null;
+    if (cfg.mode === "advanced" && (!cfg.expression || !cfg.expression.trim())) return null;
+    const ctx: FormulaContext = { ...baseFormulaCtx, fixed_amount: Number(item.amount) || 0 };
+    const r = evaluateFormula(cfg, ctx);
+    return r.error ? null : r.amount;
+  };
+
+  const components: WageComponent[] = resource.components.map((c) => {
+    const fromFormula = tryFormulaAmount(c);
+    return {
+      ...c,
+      name: c.name,
+      amount: fromFormula != null ? fromFormula : round2((Number(c.amount) || 0) * baseRatio),
+    };
+  });
 
   const phAmount = round2(perDayRate * phCount);
   if (phAmount > 0) {
@@ -590,19 +641,29 @@ export function computeWages(
     return round2(Number(i.amount) || 0);
   };
   const scaleItemsRespectingFixed = (items: BenefitLike[]): WageComponent[] =>
-    items.map((i) => ({
-      ...i,
-      name: i.name,
-      amount: i.fixedCalcMethod === "per_duty"
+    items.map((i) => {
+      const fromFormula = tryFormulaAmount(i);
+      const amount = fromFormula != null
+        ? fromFormula
+        : i.fixedCalcMethod === "per_duty"
         ? computePerDutyAmount(i)
         : isFixedItem(i)
         ? resolveFixedAmount(i)
         : i.calcType === "percentage"
         ? benefitAmountFromConfig(i, components, resource.components, earnedSalaryRatio)
-        : round2((Number(i.amount) || 0) * earnedSalaryRatio),
-    }));
+        : round2((Number(i.amount) || 0) * earnedSalaryRatio);
+      return { ...i, name: i.name, amount };
+    });
 
-  const benefits = scaleItems(resource.benefits, ratio, computePerDutyAmount);
+  const benefits = (resource.benefits ?? []).map((i) => {
+    const fromFormula = tryFormulaAmount(i);
+    const amount = fromFormula != null
+      ? fromFormula
+      : i.fixedCalcMethod === "per_duty"
+      ? computePerDutyAmount(i)
+      : round2((Number(i.amount) || 0) * ratio);
+    return { ...i, name: i.name, amount } as WageComponent;
+  });
   const deductionsScaled = scaleItemsRespectingFixed(resource.deductions);
   const employerContributionsScaled = scaleItemsRespectingFixed(resource.employerContributions);
 

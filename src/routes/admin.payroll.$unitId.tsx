@@ -412,18 +412,21 @@ function PayrollUnitPage() {
         resourceByDesignation.set(did, {
           designationId: did,
           components: Array.isArray(r.components)
-            ? (r.components as { name: string; amount: number; includeInOt?: boolean }[]).map((c) => ({
+            ? (r.components as { name: string; amount: number; includeInOt?: boolean; formulaMode?: string | null; formulaExpression?: string | null; formulaVersion?: number | null }[]).map((c) => ({
                 name: String(c.name ?? ""),
                 amount: Number(c.amount) || 0,
                 includeInOt: c.includeInOt,
+                formulaMode: c.formulaMode ?? null,
+                formulaExpression: c.formulaExpression ?? null,
+                formulaVersion: c.formulaVersion ?? null,
               }))
             : [],
-          benefits: Array.isArray(r.benefits) ? (r.benefits as { name: string; amount: number }[]) : [],
+          benefits: Array.isArray(r.benefits) ? (r.benefits as { name: string; amount: number; formulaMode?: string | null; formulaExpression?: string | null }[]) : [],
           deductions: Array.isArray(r.deductions)
-            ? (r.deductions as { name: string; amount: number; deductionCalcType?: "earned_salary" | "fixed_amount" }[])
+            ? (r.deductions as { name: string; amount: number; deductionCalcType?: "earned_salary" | "fixed_amount"; formulaMode?: string | null; formulaExpression?: string | null }[])
             : [],
           employerContributions: Array.isArray(r.employer_contributions)
-            ? (r.employer_contributions as { name: string; amount: number; deductionCalcType?: "earned_salary" | "fixed_amount" }[])
+            ? (r.employer_contributions as { name: string; amount: number; deductionCalcType?: "earned_salary" | "fixed_amount"; formulaMode?: string | null; formulaExpression?: string | null }[])
             : [],
           payrollDayBase: r.payroll_day_base_id
             ? pdbMap.get(String(r.payroll_day_base_id)) ?? null
@@ -887,11 +890,27 @@ function PayrollUnitPage() {
               {unit?.customer_name} · Period {fmtPretty(start)} – {fmtPretty(end)}
             </div>
           </div>
-          {sheet?.status === "approved" && (
-            <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
-              Attendance approved
-            </span>
-          )}
+          <div className="flex items-center gap-2">
+            {sheet?.status === "approved" && (
+              <span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
+                Attendance approved
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                queryClient.invalidateQueries({ queryKey: ["admin", "payroll", "unit"] });
+                queryClient.invalidateQueries({ queryKey: ["admin", "additions"] });
+                queryClient.invalidateQueries({ queryKey: ["admin", "deductions"] });
+                queryClient.invalidateQueries({ queryKey: ["admin", "allowance-types"] });
+                queryClient.invalidateQueries({ queryKey: ["admin", "cost-components"] });
+                toast.success("Recalculating from latest contract, attendance, additions and deductions");
+              }}
+            >
+              Recalculate
+            </Button>
+          </div>
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-5">

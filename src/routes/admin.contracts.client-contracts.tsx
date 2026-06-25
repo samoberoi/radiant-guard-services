@@ -179,6 +179,9 @@ type AllowanceType = {
   baseComponents: { label: string; operator: "+" | "-" }[];
   capAmount: number | null;
   includeInOt: boolean;
+  formulaMode?: string | null;
+  formulaExpression?: string | null;
+  formulaVersion?: number | null;
 };
 
 type ResourceComponent = {
@@ -186,6 +189,9 @@ type ResourceComponent = {
   name: string;
   amount: number;
   includeInOt?: boolean;
+  formulaMode?: string | null;
+  formulaExpression?: string | null;
+  formulaVersion?: number | null;
 };
 
 type FixedCalcMethod = "flat" | "per_duty";
@@ -204,6 +210,9 @@ type BenefitItem = {
   deductionCalcType?: "earned_salary" | "fixed_amount";
   fixedCalcMethod?: FixedCalcMethod;
   fixedDutyComponents?: FixedDutyBucket[];
+  formulaMode?: string | null;
+  formulaExpression?: string | null;
+  formulaVersion?: number | null;
 };
 
 
@@ -273,6 +282,9 @@ type CostComponentOption = {
   deductionCalcType: "earned_salary" | "fixed_amount";
   fixedCalcMethod: FixedCalcMethod;
   fixedDutyComponents: FixedDutyBucket[];
+  formulaMode?: string | null;
+  formulaExpression?: string | null;
+  formulaVersion?: number | null;
 };
 
 
@@ -794,7 +806,7 @@ function useAllowanceTypes() {
     queryFn: async (): Promise<AllowanceType[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot,created_at")
+        .select("id,name,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot,formula_mode,formula_expression,formula_version,created_at")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data as unknown as Record<string, unknown>[])
@@ -812,6 +824,9 @@ function useAllowanceTypes() {
             : [],
           capAmount: r.cap_amount == null ? null : Number(r.cap_amount),
           includeInOt: r.include_in_ot == null ? true : Boolean(r.include_in_ot),
+          formulaMode: r.formula_mode == null ? null : String(r.formula_mode),
+          formulaExpression: r.formula_expression == null ? null : String(r.formula_expression),
+          formulaVersion: r.formula_version == null ? null : Number(r.formula_version),
         }));
     },
   });
@@ -881,7 +896,7 @@ function useCostComponentOptions() {
     queryFn: async (): Promise<CostComponentOption[]> => {
       const { data, error } = await supabase
         .from("cost_components" as never)
-        .select("id,name,calc_type,percentage,base_components,cap_amount,cap_flat_amount,amount,state,enabled,sort_order,deduction_calc_type,fixed_calc_method,fixed_duty_components")
+        .select("id,name,calc_type,percentage,base_components,cap_amount,cap_flat_amount,amount,state,enabled,sort_order,deduction_calc_type,fixed_calc_method,fixed_duty_components,formula_mode,formula_expression,formula_version")
         .order("sort_order")
         .order("name");
       if (error) throw error;
@@ -908,6 +923,9 @@ function useCostComponentOptions() {
                 ["p_days","ot_days","ph_days","other_paid_days"].includes(b),
               ) as FixedDutyBucket[])
             : [],
+          formulaMode: r.formula_mode == null ? null : String(r.formula_mode),
+          formulaExpression: r.formula_expression == null ? null : String(r.formula_expression),
+          formulaVersion: r.formula_version == null ? null : Number(r.formula_version),
         }));
     },
 
@@ -3138,6 +3156,9 @@ function ResourceFormDialog({
           name: a.shortName || a.displayName,
           amount: 0,
           includeInOt: a.includeInOt,
+          formulaMode: a.formulaMode ?? null,
+          formulaExpression: a.formulaExpression ?? null,
+          formulaVersion: a.formulaVersion ?? null,
         }));
       setDesignationId("");
       setServiceTypeId("");
@@ -3348,6 +3369,9 @@ function ResourceFormDialog({
           name: a.shortName || a.displayName,
           amount: 0,
           includeInOt: a.includeInOt,
+          formulaMode: a.formulaMode ?? null,
+          formulaExpression: a.formulaExpression ?? null,
+          formulaVersion: a.formulaVersion ?? null,
         };
         if (a.calcType === "percentage") {
           // Compute formula against existing components (excluding self by id).
@@ -3386,6 +3410,9 @@ function ResourceFormDialog({
       deductionCalcType: c.deductionCalcType,
       fixedCalcMethod: c.fixedCalcMethod,
       fixedDutyComponents: c.fixedDutyComponents,
+      formulaMode: c.formulaMode ?? null,
+      formulaExpression: c.formulaExpression ?? null,
+      formulaVersion: c.formulaVersion ?? null,
     };
     if (benefit.calcType === "percentage") {
       benefit.amount = computeBenefitAmount(benefit, components, [], allowanceTypes);
@@ -3419,6 +3446,9 @@ function ResourceFormDialog({
       deductionCalcType: c.deductionCalcType,
       fixedCalcMethod: c.fixedCalcMethod,
       fixedDutyComponents: c.fixedDutyComponents,
+      formulaMode: c.formulaMode ?? null,
+      formulaExpression: c.formulaExpression ?? null,
+      formulaVersion: c.formulaVersion ?? null,
     };
     if (item.calcType === "percentage") {
       item.amount = computeBenefitAmount(item, components, benefits, allowanceTypes);
@@ -3452,6 +3482,9 @@ function ResourceFormDialog({
       deductionCalcType: c.deductionCalcType,
       fixedCalcMethod: c.fixedCalcMethod,
       fixedDutyComponents: c.fixedDutyComponents,
+      formulaMode: c.formulaMode ?? null,
+      formulaExpression: c.formulaExpression ?? null,
+      formulaVersion: c.formulaVersion ?? null,
     };
     if (item.calcType === "percentage") {
       const l = (s: string) => s.trim().toLowerCase();
