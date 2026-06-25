@@ -3258,16 +3258,21 @@ function ResourceFormDialog({
       let changed = false;
       const next = prev.map((c) => {
         const at = allowanceTypes.find((a) => a.id === c.allowanceId);
-        if (!at || at.calcType !== "percentage") return c;
+        if (!at) return c;
+        const hasFormula = !!(at.formulaExpression && at.formulaExpression.trim());
+        if (!hasFormula && at.calcType !== "percentage") return c;
         const others = prev.filter((x) => x.allowanceId !== c.allowanceId);
         const newAmt = computeBenefitAmount(
           {
-            calcType: "percentage",
+            calcType: at.calcType,
             percentage: at.percentage,
             baseComponents: at.baseComponents,
             capAmount: at.capAmount,
             capFlatAmount: null,
             amount: 0,
+            formulaMode: at.formulaMode ?? null,
+            formulaExpression: at.formulaExpression ?? null,
+            name: at.shortName || at.displayName || at.name,
           },
           others,
           [],
