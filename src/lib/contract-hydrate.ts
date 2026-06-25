@@ -14,12 +14,20 @@ import { supabase } from "@/integrations/supabase/client";
 
 type LineWithIds = {
   name: string;
-  amount: number;
+  amount: number | string | null;
   allowanceId?: string | null;
   costComponentId?: string | null;
   formulaMode?: string | null;
   formulaExpression?: string | null;
   formulaVersion?: number | null;
+  [k: string]: unknown;
+};
+
+type ResourceShape = {
+  components: LineWithIds[];
+  benefits?: LineWithIds[];
+  deductions?: LineWithIds[];
+  employerContributions?: LineWithIds[];
   [k: string]: unknown;
 };
 
