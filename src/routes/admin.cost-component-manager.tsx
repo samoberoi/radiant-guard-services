@@ -506,10 +506,6 @@ function CostComponentDialog({
 }) {
   const [name, setName] = useState("");
   const [calcType, setCalcType] = useState<"percentage" | "fixed">("percentage");
-  const [percentage, setPercentage] = useState<string>("0");
-  const [baseRefs, setBaseRefs] = useState<BaseRef[]>([]);
-  const [capAmount, setCapAmount] = useState<string>("");
-  const [capFlatAmount, setCapFlatAmount] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [state, setState] = useState<string>("N/A");
   const [notes, setNotes] = useState("");
@@ -520,20 +516,11 @@ function CostComponentDialog({
   const [fixedCalcMethod, setFixedCalcMethod] = useState<FixedCalcMethod>("flat");
   const [fixedDutyComponents, setFixedDutyComponents] = useState<FixedDutyBucket[]>([]);
   const [saving, setSaving] = useState(false);
-  const [formulaEnabled, setFormulaEnabled] = useState(false);
   const [formulaCfg, setFormulaCfg] = useState<FormulaConfig | null>(null);
-
 
   useResetOnOpen(open, () => {
     setName(initial?.name ?? "");
     setCalcType(initial?.calc_type ?? "percentage");
-    setPercentage(String(initial?.percentage ?? 0));
-    const initialBase = initial?.base_components ?? [];
-    setBaseRefs(
-      initialBase.map((b) => (b.label === "Earned Gross" ? { ...b, label: "Gross" } : b)),
-    );
-    setCapAmount(initial?.cap_amount != null ? String(initial.cap_amount) : "");
-    setCapFlatAmount(initial?.cap_flat_amount != null ? String(initial.cap_flat_amount) : "");
     setAmount(initial?.amount != null ? String(initial.amount) : "");
     setState(initial?.state ?? "N/A");
     setNotes(initial?.notes ?? "");
@@ -542,25 +529,44 @@ function CostComponentDialog({
     setDeductionCalcType(initial?.deduction_calc_type ?? "earned_salary");
     setFixedCalcMethod(initial?.fixed_calc_method ?? "flat");
     setFixedDutyComponents(initial?.fixed_duty_components ?? []);
-    const cfg = parseFormulaConfig(initial?.formula_mode, initial?.formula_expression);
-    setFormulaEnabled(!!cfg);
+    // Seed formula: explicit formula_expression wins; else convert legacy
+    // calc_type=percentage + base_components + percentage into an advanced
+    // expression so old rows open cleanly in the new builder.
+    let cfg: FormulaConfig | null = parseFormulaConfig(initial?.formula_mode, initial?.formula_expression);
+    if (initial && (!cfg || (cfg.mode === "advanced" && !cfg.expression))) {
+      const bases = initial.base_components ?? [];
+      if (initial.calc_type === "percentage" && bases.length > 0) {
+        const parts = bases.map((b, i) => {
+          const lbl = b.label.toLowerCase().replace(/[^a-z0-9_]/g, "_");
+          return i === 0 ? lbl : `${b.operator === "-" ? "-" : "+"} ${lbl}`;
+        });
+        let expr = `(${parts.join(" ")}) * ${initial.percentage || 0} / 100`;
+        if (initial.cap_amount && initial.cap_amount > 0) expr = `min(${initial.cap_amount}, ${expr})`;
+        cfg = { mode: "advanced", expression: expr };
+      } else {
+        cfg = { mode: "preset", preset: DEFAULT_PRESET };
+      }
+    }
+    if (!cfg) cfg = { mode: "preset", preset: DEFAULT_PRESET };
     setFormulaCfg(cfg);
   });
 
 
   const stateOptions = useMemo(() => ["N/A", ...states.map((s) => s.name)], [states]);
 
-  const preview = buildDescription({
-    calc_type: calcType,
-    percentage: Number(percentage) || 0,
-    base_components: baseRefs,
-    cap_amount: capAmount ? Number(capAmount) : null,
-    cap_flat_amount: capFlatAmount ? Number(capFlatAmount) : null,
-    amount: amount ? Number(amount) : null,
-    name,
-    fixed_calc_method: fixedCalcMethod,
-    fixed_duty_components: fixedDutyComponents,
-  });
+  const preview = calcType === "fixed"
+    ? buildDescription({
+        calc_type: calcType,
+        percentage: 0,
+        base_components: [],
+        cap_amount: null,
+        cap_flat_amount: null,
+        amount: amount ? Number(amount) : null,
+        name,
+        fixed_calc_method: fixedCalcMethod,
+        fixed_duty_components: fixedDutyComponents,
+      })
+    : "";
 
 
   return (
