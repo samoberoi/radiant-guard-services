@@ -348,11 +348,13 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ConfirmProvider>
-        <Outlet />
-        <Toaster />
-        <ExportChooser />
-      </ConfirmProvider>
+      <LanguageProvider>
+        <ConfirmProvider>
+          <Outlet />
+          <Toaster />
+          <ExportChooser />
+        </ConfirmProvider>
+      </LanguageProvider>
     </QueryClientProvider>
   );
 }
