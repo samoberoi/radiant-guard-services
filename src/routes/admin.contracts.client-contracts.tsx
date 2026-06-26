@@ -4508,7 +4508,9 @@ function SalaryBreakdownTable({
       ? `${payrollDayBase.fixedDays ?? 0} Days`
       : payrollDayBase.method === "actual_minus_weekly_off"
         ? `${payableDays} Days (actual − weekly off)`
-        : `${payableDays} Days (actual)`
+        : payrollDayBase.method === "custom_weekdays"
+          ? `${payableDays} Days (custom weekdays)`
+          : `${payableDays} Days (actual)`
     : "—";
 
   const earnedFor = (amount: number) =>
