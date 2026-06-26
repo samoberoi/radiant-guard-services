@@ -400,7 +400,7 @@ function CandidateDetailsPage() {
             <NomineeSection form={form} setSection={setSection} />
           )}
           {active === "office_assets" && (
-            <OfficeAssetsSection candidateId={id} candidate={form} onToggleNonBillable={(v) => set("non_billable", v)} />
+            <OfficeAssetsSection candidateId={id} candidate={form} onToggleNonBillable={(v: boolean) => set("non_billable", v)} />
           )}
         </section>
       </div>
