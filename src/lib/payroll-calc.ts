@@ -125,7 +125,19 @@ export function computeAttendanceTotals(
 
 export type FixedCalcMethod = "flat" | "per_duty";
 export type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
-export type FixedDutyDivisor = "base_days" | "days_in_month" | "payable_days" | "fixed_26";
+// Built-ins: "base_days" | "days_in_month" | "payable_days" | "fixed_26".
+// Dynamic: "pdb:<uuid>" — references a Payroll Days Manager entry,
+// resolved at runtime via options.dayBases passed to computeWages.
+export type FixedDutyDivisor = string;
+
+export type PayrollDayBaseDef = {
+  id: string;
+  code?: string | null;
+  method: "actual_days" | "fixed_days" | "actual_minus_weekly_off" | "custom_weekdays";
+  fixedDays?: number | null;
+  weeklyOffDay?: number | null;
+  includedWeekdays?: number[] | null;
+};
 
 export type WageComponent = {
   allowanceId?: string | null;
@@ -534,7 +546,7 @@ export function computeWages(
   totals: AttendanceTotals,
   resource: ContractResourceLike,
   periodDayCount: number,
-  options?: { phOverrideAmount?: number; periodDates?: Date[] },
+  options?: { phOverrideAmount?: number; periodDates?: Date[]; dayBases?: PayrollDayBaseDef[] },
 ): WageComputation {
   const contractGross = resource.components.reduce(
     (s, c) => s + (Number(c.amount) || 0),
@@ -602,19 +614,58 @@ export function computeWages(
       default: return 0;
     }
   };
+  // Resolve a divisor key (built-in or "pdb:<uuid>" from Payroll Days
+  // Manager) to its day count. Falls back to baseDays when unknown.
+  const dayBasesById = new Map<string, PayrollDayBaseDef>();
+  for (const b of options?.dayBases ?? []) dayBasesById.set(b.id, b);
+  const resolveDayBaseCount = (base: PayrollDayBaseDef): number => {
+    switch (base.method) {
+      case "fixed_days":
+        return Number(base.fixedDays) > 0 ? Number(base.fixedDays) : baseDays;
+      case "actual_days":
+        return periodDayCount;
+      case "actual_minus_weekly_off": {
+        const wd = base.weeklyOffDay;
+        if (wd == null) return Math.max(periodDayCount - 4, 1);
+        if (options?.periodDates && options.periodDates.length > 0) {
+          return options.periodDates.reduce((n, d) => n + (d.getDay() === wd ? 0 : 1), 0);
+        }
+        return Math.max(periodDayCount - 4, 1);
+      }
+      case "custom_weekdays": {
+        const allowed = Array.isArray(base.includedWeekdays) ? base.includedWeekdays : [];
+        if (allowed.length === 0) return baseDays;
+        if (options?.periodDates && options.periodDates.length > 0) {
+          return options.periodDates.reduce((n, d) => n + (allowed.includes(d.getDay()) ? 1 : 0), 0);
+        }
+        return Math.max(Math.round((periodDayCount * allowed.length) / 7), 1);
+      }
+      default:
+        return baseDays;
+    }
+  };
+  const resolveDivisor = (key: FixedDutyDivisor | null | undefined): number => {
+    if (typeof key === "string" && key.startsWith("pdb:")) {
+      const base = dayBasesById.get(key.slice(4));
+      if (base) {
+        const n = resolveDayBaseCount(base);
+        return n > 0 ? n : baseDays;
+      }
+      return baseDays;
+    }
+    switch (key) {
+      case "days_in_month": return periodDayCount;
+      case "payable_days":  return basePaidDays;
+      case "fixed_26":      return 26;
+      case "base_days":
+      default:              return baseDays;
+    }
+  };
   const perDutyAmountEarly = (i: { amount?: number | string | null; fixedDutyComponents?: FixedDutyBucket[] | null; fixedDutyDivisor?: FixedDutyDivisor | null }): number => {
     const configured = Number(i.amount) || 0;
     const buckets = Array.isArray(i.fixedDutyComponents) ? i.fixedDutyComponents : [];
     const totalDuties = buckets.reduce((s, b) => s + dutyBucketValueEarly(b), 0);
-    const divisor = (() => {
-      switch (i.fixedDutyDivisor) {
-        case "days_in_month": return periodDayCount;
-        case "payable_days":  return basePaidDays;
-        case "fixed_26":      return 26;
-        case "base_days":
-        default:              return baseDays;
-      }
-    })();
+    const divisor = resolveDivisor(i.fixedDutyDivisor);
     const perDuty = divisor > 0 ? configured / divisor : 0;
     return round2(perDuty * totalDuties);
   };
@@ -745,15 +796,7 @@ export function computeWages(
     const configured = Number(i.amount) || 0;
     const buckets = Array.isArray(i.fixedDutyComponents) ? i.fixedDutyComponents : [];
     const totalDuties = buckets.reduce((s, b) => s + dutyBucketValue(b), 0);
-    const divisor = (() => {
-      switch (i.fixedDutyDivisor) {
-        case "days_in_month": return periodDayCount;
-        case "payable_days":  return basePaidDays;
-        case "fixed_26":      return 26;
-        case "base_days":
-        default:              return baseDays;
-      }
-    })();
+    const divisor = resolveDivisor(i.fixedDutyDivisor);
     const perDuty = divisor > 0 ? configured / divisor : 0;
     return round2(perDuty * totalDuties);
   };

@@ -48,7 +48,9 @@ type Operator = "+" | "-";
 type BaseRef = { label: string; operator: Operator };
 type FixedCalcMethod = "flat" | "per_duty";
 type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
-type FixedDutyDivisor = "base_days" | "days_in_month" | "payable_days" | "fixed_26";
+// Built-in divisor codes + "pdb:<uuid>" entries sourced from
+// Payroll Days Manager (control center).
+type FixedDutyDivisor = string;
 
 const FIXED_DUTY_BUCKETS: { value: FixedDutyBucket; label: string; short: string }[] = [
   { value: "p_days", label: "P Days (present)", short: "P" },
@@ -57,12 +59,55 @@ const FIXED_DUTY_BUCKETS: { value: FixedDutyBucket; label: string; short: string
   { value: "other_paid_days", label: "Other Paid Days", short: "OPL" },
 ];
 
-const FIXED_DUTY_DIVISORS: { value: FixedDutyDivisor; label: string; short: string }[] = [
-  { value: "base_days",     label: "Base Days (contract — usually 26)",           short: "Base Days" },
-  { value: "days_in_month", label: "Total Days in Month (calendar days)",         short: "Days in Month" },
-  { value: "payable_days",  label: "Payable Days (P + Other Paid)",               short: "Payable Days" },
-  { value: "fixed_26",      label: "Fixed 26",                                    short: "26" },
+const BUILTIN_DIVISORS: { value: FixedDutyDivisor; label: string; short: string }[] = [
+  { value: "base_days",     label: "Base Days (contract — usually 26)",   short: "Base Days" },
+  { value: "days_in_month", label: "Total Days in Month (calendar days)", short: "Days in Month" },
+  { value: "payable_days",  label: "Payable Days (P + Other Paid)",       short: "Payable Days" },
+  { value: "fixed_26",      label: "Fixed 26",                            short: "26" },
 ];
+
+type PayrollDayBaseOpt = { id: string; name: string; methodLabel: string };
+const METHOD_LABEL: Record<string, string> = {
+  actual_days: "Calendar days",
+  fixed_days: "Fixed days",
+  actual_minus_weekly_off: "Calendar − weekly off",
+  custom_weekdays: "Custom weekdays",
+};
+
+function usePayrollDayBaseOptions() {
+  const { data = [] } = useQuery({
+    queryKey: ["admin", "cost-components", "payroll-day-bases"],
+    queryFn: async (): Promise<PayrollDayBaseOpt[]> => {
+      const { data, error } = await supabase
+        .from("payroll_day_bases" as never)
+        .select("id,name,method,enabled,sort_order")
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return ((data as unknown) as Record<string, unknown>[])
+        .filter((r) => r.enabled !== false)
+        .map((r) => ({
+          id: String(r.id),
+          name: String(r.name ?? ""),
+          methodLabel: METHOD_LABEL[String(r.method ?? "")] ?? "Payroll day base",
+        }));
+    },
+  });
+  return data;
+}
+
+function buildDivisorOptions(bases: PayrollDayBaseOpt[]): { value: string; label: string; short: string }[] {
+  const dyn = bases.map((b) => ({
+    value: `pdb:${b.id}`,
+    label: `${b.name} — ${b.methodLabel}`,
+    short: b.name,
+  }));
+  return [...BUILTIN_DIVISORS, ...dyn];
+}
+
+function divisorShort(value: FixedDutyDivisor | null | undefined, options: { value: string; short: string }[]): string {
+  return options.find((d) => d.value === value)?.short ?? "Base Days";
+}
 
 type CostComponent = {
   id: string;
@@ -125,10 +170,7 @@ function rowToItem(r: Record<string, unknown>): CostComponent {
           FIXED_DUTY_BUCKETS.some((x) => x.value === b),
         ) as FixedDutyBucket[])
       : [],
-    fixed_duty_divisor:
-      (FIXED_DUTY_DIVISORS.some((x) => x.value === r.fixed_duty_divisor)
-        ? (r.fixed_duty_divisor as FixedDutyDivisor)
-        : "base_days"),
+    fixed_duty_divisor: (r.fixed_duty_divisor as string) || "base_days",
     formula_mode: r.formula_mode == null ? null : String(r.formula_mode),
     formula_expression: r.formula_expression == null ? null : String(r.formula_expression),
   };
@@ -142,7 +184,7 @@ function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "b
         .map((b) => FIXED_DUTY_BUCKETS.find((x) => x.value === b)?.short ?? b)
         .join(" + ") || "—";
       const amt = c.amount != null && c.amount > 0 ? `₹${c.amount.toLocaleString("en-IN")}` : "amount";
-      const divLabel = FIXED_DUTY_DIVISORS.find((x) => x.value === (c.fixed_duty_divisor ?? "base_days"))?.short ?? "Base Days";
+      const divLabel = BUILTIN_DIVISORS.find((x) => x.value === (c.fixed_duty_divisor ?? "base_days"))?.short ?? "Custom day base";
       return `${amt} ÷ ${divLabel} × (${buckets}) · per-duty`;
     }
 
@@ -534,6 +576,8 @@ function CostComponentDialog({
   const [fixedCalcMethod, setFixedCalcMethod] = useState<FixedCalcMethod>("flat");
   const [fixedDutyComponents, setFixedDutyComponents] = useState<FixedDutyBucket[]>([]);
   const [fixedDutyDivisor, setFixedDutyDivisor] = useState<FixedDutyDivisor>("base_days");
+  const payrollDayBases = usePayrollDayBaseOptions();
+  const divisorOptions = useMemo(() => buildDivisorOptions(payrollDayBases), [payrollDayBases]);
   const [saving, setSaving] = useState(false);
   const [formulaCfg, setFormulaCfg] = useState<FormulaConfig | null>(null);
 
@@ -663,7 +707,7 @@ function CostComponentDialog({
                     <Select value={fixedDutyDivisor} onValueChange={(v) => setFixedDutyDivisor(v as FixedDutyDivisor)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {FIXED_DUTY_DIVISORS.map((d) => (
+                        {divisorOptions.map((d) => (
                           <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
                         ))}
                       </SelectContent>
@@ -700,7 +744,7 @@ function CostComponentDialog({
                     </div>
                     <div className="rounded-md bg-secondary/40 px-3 py-2 text-[12px] text-foreground/80">
                       <span className="font-medium">Example:</span>{" "}
-                      ₹{amount || "200"} ÷ {FIXED_DUTY_DIVISORS.find((d) => d.value === fixedDutyDivisor)?.short ?? "Base Days"} ×{" "}
+                      ₹{amount || "200"} ÷ {divisorShort(fixedDutyDivisor, divisorOptions)} ×{" "}
                       ({fixedDutyComponents.length > 0
                         ? fixedDutyComponents
                             .map((b) => FIXED_DUTY_BUCKETS.find((x) => x.value === b)?.short ?? b)
