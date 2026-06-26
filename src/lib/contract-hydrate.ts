@@ -102,14 +102,15 @@ export async function hydrateFormulasFromMaster<T extends ResourceShape>(
     const m = masterById.get(String(id));
     if (!m) return line;
     const next: LineWithIds = { ...line };
-    if (m.expr && m.expr.trim()) {
-      next.formulaMode = m.mode;
-      next.formulaExpression = m.expr;
-      next.formulaVersion = m.version;
-    }
-    if (m.fixedCalcMethod) next.fixedCalcMethod = m.fixedCalcMethod;
-    if (m.fixedDutyComponents) next.fixedDutyComponents = m.fixedDutyComponents;
-    if (m.fixedDutyDivisor) next.fixedDutyDivisor = m.fixedDutyDivisor;
+    // Always overlay master formula state (including cleared/disabled formulas),
+    // so that "update master → click Sync on contract" reflects exactly what the
+    // master currently says.
+    next.formulaMode = m.mode;
+    next.formulaExpression = m.expr;
+    next.formulaVersion = m.version;
+    if (m.fixedCalcMethod !== undefined) next.fixedCalcMethod = m.fixedCalcMethod;
+    if (m.fixedDutyComponents !== undefined) next.fixedDutyComponents = m.fixedDutyComponents;
+    if (m.fixedDutyDivisor !== undefined) next.fixedDutyDivisor = m.fixedDutyDivisor;
     return next;
   };
 
