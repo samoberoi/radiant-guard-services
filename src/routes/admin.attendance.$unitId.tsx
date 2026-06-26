@@ -193,6 +193,7 @@ function MusterRollPage() {
   const todayStr = ymd(now.getFullYear(), now.getMonth(), now.getDate());
   const [year, setYear] = useState(search.year ?? now.getFullYear());
   const [monthIdx, setMonthIdx] = useState(search.month ?? now.getMonth());
+  const [musterQuery, setMusterQuery] = useState("");
 
   const { data: unit } = useQuery({
     queryKey: ["attendance-unit", unitId],
