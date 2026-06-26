@@ -717,6 +717,7 @@ function MobileGroup({
 }) {
   const [open, setOpen] = useState(isGroupActive);
   const Icon = group.icon;
+  const t = useT();
   if (!group.children || group.children.length === 0) {
     return (
       <Link
