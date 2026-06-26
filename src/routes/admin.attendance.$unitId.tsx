@@ -2022,16 +2022,16 @@ function MusterRollPage() {
       <Dialog open={otPickerOpen} onOpenChange={setOtPickerOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Set OT hours</DialogTitle>
+            <DialogTitle>Set OT days</DialogTitle>
             <DialogDescription>
-              {otPickerDates.length} day{otPickerDates.length > 1 ? "s" : ""} selected
+              0.5 = half OT day, 1 = one OT day. {otPickerDates.length} day{otPickerDates.length > 1 ? "s" : ""} selected
               {otPickerRowKey
                 ? ` for ${findRow(otPickerRowKey)?.emp.full_name ?? ""} — ${findRow(otPickerRowKey)?.designationName ?? ""}`
                 : ""}
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-4 gap-2">
-            {Array.from({ length: 16 }, (_, i) => i + 1).map((n) => (
+            {[0.5, 1, 1.5, 2].map((n) => (
               <button
                 key={n}
                 type="button"
