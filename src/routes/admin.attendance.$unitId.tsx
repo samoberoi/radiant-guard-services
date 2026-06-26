@@ -1014,26 +1014,8 @@ function MusterRollPage() {
       const contractDesigByNorm = new Map(
         contractDesignations.map((d) => [norm(d.designationName), d]),
       );
-      // Fuzzy match for common typos (e.g. "BMS OPREATOR" → "BMS Operator").
-      const levenshtein = (a: string, b: string): number => {
-        const m = a.length, n = b.length;
-        if (Math.abs(m - n) > 2) return 99;
-        const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
-        for (let j = 0; j <= n; j++) dp[0][j] = j;
-        for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
-          dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1]);
-        }
-        return dp[m][n];
-      };
-      const fuzzyDesigMatch = (n: string) => {
-        if (!n) return undefined;
-        const exact = contractDesigByNorm.get(n);
-        if (exact) return exact;
-        for (const [k, d] of contractDesigByNorm) {
-          if (levenshtein(k, n) <= 2) return d;
-        }
-        return undefined;
-      };
+      const fuzzyDesigMatch = (n: string) => contractDesigByNorm.get(n);
+
 
       const codeSet = new Map<string, string>();
       for (const c of codes) codeSet.set(c.code.toUpperCase(), c.code);
