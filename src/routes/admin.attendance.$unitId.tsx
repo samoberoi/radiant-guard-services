@@ -509,22 +509,12 @@ function MusterRollPage() {
       });
       seen.add(primaryKey);
 
-      // Additional designations from candidate master (multi-designation)
-      for (const cd of candDesignations) {
-        if (cd.candidate_id !== emp.id) continue;
-        const k = rowKey(emp.id, cd.designation_id);
-        if (seen.has(k)) continue;
-        seen.add(k);
-        const dName = desigNameMap.get(cd.designation_id) || "—";
-        out.push({
-          key: k,
-          candidateId: emp.id,
-          designationId: cd.designation_id,
-          designationName: dName,
-          emp,
-          isPrimary: false,
-        });
-      }
+      // Additional designations from candidate master are intentionally NOT auto-added
+      // here. They only surface in the muster when (a) attendance entries exist for that
+      // (candidate, designation) pair in this period, or (b) the user explicitly adds a
+      // line via "Add line item". This keeps the sheet free of empty designation rows.
+
+
 
       // Additional rows from any entries with a different designation
 
