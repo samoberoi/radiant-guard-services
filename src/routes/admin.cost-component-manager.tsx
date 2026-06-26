@@ -184,7 +184,7 @@ function buildDescription(c: Pick<CostComponent, "calc_type" | "percentage" | "b
         .map((b) => FIXED_DUTY_BUCKETS.find((x) => x.value === b)?.short ?? b)
         .join(" + ") || "—";
       const amt = c.amount != null && c.amount > 0 ? `₹${c.amount.toLocaleString("en-IN")}` : "amount";
-      const divLabel = FIXED_DUTY_DIVISORS.find((x) => x.value === (c.fixed_duty_divisor ?? "base_days"))?.short ?? "Base Days";
+      const divLabel = BUILTIN_DIVISORS.find((x) => x.value === (c.fixed_duty_divisor ?? "base_days"))?.short ?? "Custom day base";
       return `${amt} ÷ ${divLabel} × (${buckets}) · per-duty`;
     }
 
