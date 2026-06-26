@@ -608,6 +608,83 @@ function AllowanceFormDialog({
             <FormulaBuilder value={formulaCfg} onChange={setFormulaCfg} availableBases={baseLabels} />
           )}
 
+          {mode === "manual" && (
+            <div className="rounded-lg border border-border p-3 space-y-3">
+              <div className="grid gap-2">
+                <Label>Default Amount (₹) — optional</Label>
+                <Input type="number" value={defaultAmount} onChange={(e) => setDefaultAmount(e.target.value)} placeholder="e.g. 12.50" />
+                <p className="text-[11px] text-muted-foreground">Used only as a preview baseline below. The actual amount is entered per contract.</p>
+              </div>
+
+              <div className="grid gap-2">
+                <Label>Fixed Amount Formula</Label>
+                <Select value={fixedCalcMethod} onValueChange={(v) => setFixedCalcMethod(v as FixedCalcMethod)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="flat">Flat — use the amount as entered</SelectItem>
+                    <SelectItem value="per_duty">Per-Duty Proration — amount ÷ divisor × selected duties</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[11px] text-muted-foreground">
+                  Per-Duty divides the amount by your chosen day basis (e.g. amount ÷ 26 or ÷ days-in-month), then multiplies by the sum of the duty buckets you pick below. Use this for LWF, bonus, ex-gratia and similar items that prorate by attendance.
+                </p>
+              </div>
+
+              {fixedCalcMethod === "per_duty" && (
+                <>
+                  <div className="grid gap-2">
+                    <Label>Divisor (day basis)</Label>
+                    <Select value={fixedDutyDivisor} onValueChange={(v) => setFixedDutyDivisor(v as FixedDutyDivisor)}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {FIXED_DUTY_DIVISORS.map((d) => (
+                          <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Duty Buckets in &quot;Total Duties&quot;</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {FIXED_DUTY_BUCKETS.map((b) => {
+                        const active = fixedDutyComponents.includes(b.value);
+                        return (
+                          <button
+                            key={b.value}
+                            type="button"
+                            onClick={() =>
+                              setFixedDutyComponents((prev) =>
+                                active ? prev.filter((x) => x !== b.value) : [...prev, b.value],
+                              )
+                            }
+                            className={
+                              "rounded-md border px-2.5 py-1 text-xs transition-colors " +
+                              (active
+                                ? "border-accent bg-accent/15 text-accent-foreground font-medium"
+                                : "border-border bg-card hover:bg-accent/10")
+                            }
+                          >
+                            {active ? "✓ " : "+ "}{b.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="rounded-md bg-secondary/40 px-3 py-2 text-[12px] text-foreground/80">
+                      <span className="font-medium">Example:</span>{" "}
+                      ₹{defaultAmount || "12.50"} ÷ {FIXED_DUTY_DIVISORS.find((d) => d.value === fixedDutyDivisor)?.short ?? "Base Days"} ×{" "}
+                      ({fixedDutyComponents.length > 0
+                        ? fixedDutyComponents
+                            .map((b) => FIXED_DUTY_BUCKETS.find((x) => x.value === b)?.short ?? b)
+                            .join(" + ")
+                        : "select duties"})
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+
           <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2">
             <div>
               <div className="text-sm font-medium">Default</div>
