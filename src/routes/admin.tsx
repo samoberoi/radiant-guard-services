@@ -44,6 +44,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
+import { useT } from "@/lib/i18n";
 import { NotificationBell } from "@/components/NotificationBell";
 import {
   DropdownMenu,
