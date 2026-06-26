@@ -660,7 +660,7 @@ function AllowanceFormDialog({
                             className={
                               "rounded-md border px-2.5 py-1 text-xs transition-colors " +
                               (active
-                                ? "border-accent bg-accent/15 text-accent-foreground font-medium"
+                                ? "border-accent bg-accent/15 text-accent font-medium"
                                 : "border-border bg-card hover:bg-accent/10")
                             }
                           >
