@@ -104,6 +104,7 @@ function buildCandidatePayload(form: any) {
     contacts: form.contacts,
     kyc_completed: form.kyc_completed ?? false,
     status: form.status,
+    non_billable: form.non_billable ?? false,
     rejection_reason: form.rejection_reason ?? "",
   };
 }
