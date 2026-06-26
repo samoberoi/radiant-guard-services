@@ -1,71 +1,55 @@
 ## Goal
 
-In **Control Center → Cost Component Manager**, the "Per-Duty Proration" mode currently hard-divides by **Base Days** (26). The user wants the divisor to be **customizable per component** so Management Fee (and any other component) can be set as:
+Bring the same configurable **Per-Duty Proration** model (amount ÷ chosen day basis × selected duty buckets) that already exists in **Cost Component Manager** to the **Allowance Manager** so statutory/contractual items like **LWF**, **Bonus**, **Ex-Gratia** etc. can be set up as:
 
 ```
-amount ÷ <chosen day basis> × <selected duty buckets>
+amount  ÷  <Base Days | Days in Month | Payable Days | Fixed 26>
+        ×  <P + any combination of OT / PH / Other Paid days>
 ```
 
-Example requested: `amount ÷ Total Days in Month × Total Working Duties`.
+Then flow this through Contracts → Payroll so exports stay accurate.
 
 ## Changes
 
-### 1. Schema (`cost_components` + `contract_resources` snapshot)
+### 1. Schema — `allowance_types`
 
-Add one nullable column:
-- `fixed_duty_divisor text` — one of `base_days` | `days_in_month` | `payable_days` | `fixed_26` (default `base_days` to preserve current behaviour).
+Add three nullable columns mirroring `cost_components`:
 
-No data backfill needed; `NULL`/`base_days` keeps today's math.
+- `fixed_calc_method text` — `flat` | `per_duty` (default `flat`)
+- `fixed_duty_components text[]` — any subset of `p_days`, `ot_days`, `ph_days`, `other_paid_days`
+- `fixed_duty_divisor text` — `base_days` | `days_in_month` | `payable_days` | `fixed_26`
 
-### 2. Cost Component Manager UI (`src/routes/admin.cost-component-manager.tsx`)
+No backfill needed; `flat` keeps today's math.
 
-When `calc_type = fixed` and `fixed_calc_method = per_duty`, show a new "Divisor" select beside the existing duty-bucket checkboxes:
+### 2. Allowance Manager UI (`src/routes/admin.allowance-manager.tsx`)
 
-- **Base Days** (current default, ÷ baseDays e.g. 26)
-- **Total Days in Month** (÷ calendar days of the payroll period)
-- **Payable Days** (÷ P + Other Paid days)
-- **Fixed 26**
+When the allowance is amount-based (not %), show the same Per-Duty block already used in Cost Component Manager:
+- Calc Method select (Flat vs Per-Duty Proration)
+- Divisor select (Base Days / Days in Month / Payable Days / Fixed 26)
+- Duty bucket checkboxes (P, OT, PH, Other Paid) — must select at least one
+- Live preview line, e.g. `₹12.50 ÷ Base Days × (P + OT + PH)`
 
-Update `buildDescription()` so the row subtitle reads e.g. `₹10,000 ÷ Days in Month × (T) · per-duty` so the user sees exactly which divisor is in effect.
+Persist via the existing row mapper.
 
-Persist via `toRow()` / `rowToItem()`.
+### 3. Contracts (`src/routes/admin.contracts.client-contracts.tsx`)
 
-### 3. Payroll engine (`src/lib/payroll-calc.ts`)
+Extend the allowance fetch + snapshot mapper to carry `fixedCalcMethod`, `fixedDutyComponents`, `fixedDutyDivisor` (same fields already wired for cost components) into `contract_resources.components` / `benefits` / `employerContributions` JSON.
 
-`computePerDutyAmount()` currently does:
+### 4. Payroll engine (`src/lib/payroll-calc.ts`)
 
-```ts
-const perDuty = baseDays > 0 ? configured / baseDays : 0;
-```
+`computePerDutyAmount()` already supports the divisor + bucket logic generically; just ensure it's invoked for allowance lines too (currently only cost-component lines route through it). Specifically:
+- In the allowance/benefit branch where `calcType === "fixed"`, branch on `fixedCalcMethod === "per_duty"` and call the same helper instead of using a flat amount.
+- Hydrate the new fields in `src/lib/contract-hydrate.ts` so live edits to the Allowance master propagate without re-saving contracts.
 
-Replace with a divisor lookup driven by the new field:
+### 5. Verification
 
-```ts
-const divisor = (() => {
-  switch (i.fixedDutyDivisor) {
-    case "days_in_month": return periodDayCount;
-    case "payable_days":  return basePaidDays;
-    case "fixed_26":      return 26;
-    case "base_days":
-    default:              return baseDays;
-  }
-})();
-const perDuty = divisor > 0 ? configured / divisor : 0;
-```
-
-Thread `fixedDutyDivisor` through the `BenefitLike` / `WageComponent` types and the contract-hydrate snapshot (`src/lib/contract-hydrate.ts`) so it flows from `cost_components` → `contract_resources.components` → `computeWages`.
-
-Remove the special-case comment block that says "Management Fee is intentionally NOT fixed"; once Management Fee is configured as `per_duty` with divisor = `days_in_month` and bucket = `p_days + other_paid_days`, the engine handles it generically — no name-based logic needed.
-
-### 4. Verification
-
-- Edit Management Fee → set Per-Duty, Divisor = **Total Days in Month**, Buckets = **Working Duties (P + Other Paid)**, Amount = ₹X.
-- Re-run a unit payroll and confirm the Management Fee line equals `X / days_in_month × T` and exports correctly.
-- Existing rows without `fixed_duty_divisor` continue computing identically (÷ baseDays).
+- Create **LWF** in Allowance Manager: amount ₹12.50, Per-Duty, Divisor = Base Days (26), Buckets = P + OT + PH. Confirm preview reads `₹12.50 ÷ 26 × (P+OT+PH)`.
+- Attach to a contract → run unit payroll → LWF line equals `12.50 / 26 × (P+OT+PH)` and the export column matches.
+- Same flow for **Management Fee** under Cost Components (already working) — no regression.
+- Existing `flat` allowances compute identically.
 - Typecheck clean.
 
 ## Out of scope
 
-- No UI rework outside the Per-Duty section.
-- No changes to PH, OT, EPF/ESI/PT logic.
-- No retroactive recomputation of historical payroll runs.
+- No change to %-based allowances, EPF/ESI/PT slab logic, additions/deductions managers (those have their own per_duty system).
+- No retroactive recompute of historical payroll runs.
