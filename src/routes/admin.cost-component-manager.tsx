@@ -576,6 +576,8 @@ function CostComponentDialog({
   const [fixedCalcMethod, setFixedCalcMethod] = useState<FixedCalcMethod>("flat");
   const [fixedDutyComponents, setFixedDutyComponents] = useState<FixedDutyBucket[]>([]);
   const [fixedDutyDivisor, setFixedDutyDivisor] = useState<FixedDutyDivisor>("base_days");
+  const payrollDayBases = usePayrollDayBaseOptions();
+  const divisorOptions = useMemo(() => buildDivisorOptions(payrollDayBases), [payrollDayBases]);
   const [saving, setSaving] = useState(false);
   const [formulaCfg, setFormulaCfg] = useState<FormulaConfig | null>(null);
 
