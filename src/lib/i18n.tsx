@@ -19,37 +19,31 @@ async function googleTranslate(
 ): Promise<string[]> {
   // Endpoint has a length cap per request; send each string individually but
   // in parallel batches of 10 so latency stays low.
-  const results: string[] = new Array(texts.length).fill("");
-  const BATCH = 10;
-  for (let i = 0; i < texts.length; i += BATCH) {
-    const slice = texts.slice(i, i + BATCH);
-    const out = await Promise.all(
-      slice.map(async (text) => {
-        try {
-          const url =
-            "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=" +
-            target +
-            "&dt=t&q=" +
-            encodeURIComponent(text);
-          const res = await fetch(url);
-          if (!res.ok) return text;
-          const json = (await res.json()) as unknown;
-          // Response is a deeply-nested array; first element holds the translation chunks.
-          if (Array.isArray(json) && Array.isArray(json[0])) {
-            return (json[0] as Array<unknown>)
-              .map((row) =>
-                Array.isArray(row) && typeof row[0] === "string" ? row[0] : "",
-              )
-              .join("");
-          }
-          return text;
-        } catch {
-          return text;
+  // Fully parallel — fire all requests at once for fastest UI conversion.
+  const results = await Promise.all(
+    texts.map(async (text) => {
+      try {
+        const url =
+          "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=" +
+          target +
+          "&dt=t&q=" +
+          encodeURIComponent(text);
+        const res = await fetch(url);
+        if (!res.ok) return text;
+        const json = (await res.json()) as unknown;
+        if (Array.isArray(json) && Array.isArray(json[0])) {
+          return (json[0] as Array<unknown>)
+            .map((row) =>
+              Array.isArray(row) && typeof row[0] === "string" ? row[0] : "",
+            )
+            .join("");
         }
-      }),
-    );
-    out.forEach((v, k) => (results[i + k] = v || slice[k]));
-  }
+        return text;
+      } catch {
+        return text;
+      }
+    }),
+  );
   return results;
 }
 
@@ -266,7 +260,7 @@ function makeTranslator() {
       nodes.add(tn);
       applyToNode(tn);
     }
-    scheduleFlush();
+    scheduleFlush(true);
   };
 
   const restoreAll = () => {
@@ -278,16 +272,16 @@ function makeTranslator() {
     }
   };
 
-  const scheduleFlush = () => {
+  const scheduleFlush = (immediate = false) => {
     if (currentLang === "en" || pending.size === 0) return;
     if (flushTimer) window.clearTimeout(flushTimer);
-    flushTimer = window.setTimeout(flush, 250);
+    flushTimer = window.setTimeout(flush, immediate ? 0 : 60);
   };
 
   const flush = async () => {
     if (currentLang === "en" || inFlight) return;
     const lang = currentLang as "hi" | "mr";
-    const batch = Array.from(pending).slice(0, 80);
+    const batch = Array.from(pending).slice(0, 200);
     if (batch.length === 0) return;
     inFlight = true;
     try {
