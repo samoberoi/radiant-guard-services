@@ -546,7 +546,7 @@ export function computeWages(
   totals: AttendanceTotals,
   resource: ContractResourceLike,
   periodDayCount: number,
-  options?: { phOverrideAmount?: number; periodDates?: Date[] },
+  options?: { phOverrideAmount?: number; periodDates?: Date[]; dayBases?: PayrollDayBaseDef[] },
 ): WageComputation {
   const contractGross = resource.components.reduce(
     (s, c) => s + (Number(c.amount) || 0),
