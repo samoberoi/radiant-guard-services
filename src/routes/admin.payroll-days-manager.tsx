@@ -378,6 +378,7 @@ function PayrollDaysManagerPage() {
                   { key: "method", header: "Method" },
                   { key: "fixed_days", header: "Fixed Days" },
                   { key: "weekly_off", header: "Weekly Off" },
+                  { key: "custom_weekdays", header: "Custom Weekdays" },
                   { key: "default", header: "Default" },
                   { key: "enabled", header: "Enabled" },
                 ],
