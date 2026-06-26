@@ -232,6 +232,15 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
     const output = extractJsonObject(text);
 
     const validIds = new Set(data.employees.map((e) => e.id));
+    const validPairs = new Set(
+      data.employees.map((e) => `${e.id}|${e.designation_id ?? ""}`),
+    );
+    const primaryDesigByCand = new Map<string, string | null>();
+    for (const e of data.employees) {
+      if (!primaryDesigByCand.has(e.id)) {
+        primaryDesigByCand.set(e.id, e.designation_id ?? null);
+      }
+    }
     const validDates = new Set(data.dates);
     const validCodeMap = new Map(data.codes.map((c) => [c.code.trim().toUpperCase(), c.code]));
 
