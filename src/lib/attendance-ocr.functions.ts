@@ -12,10 +12,11 @@ const InputSchema = z.object({
         name: z.string(),
         employee_code: z.string().nullable().optional(),
         designation: z.string().nullable().optional(),
+        designation_id: z.string().nullable().optional(),
       }),
     )
     .min(1)
-    .max(500),
+    .max(1000),
   codes: z
     .array(
       z.object({
@@ -29,6 +30,7 @@ const InputSchema = z.object({
 
 export type AttendanceOcrRow = {
   candidate_id: string;
+  designation_id: string | null;
   entry_date: string;
   code: string;
   ot_hours: number;
@@ -37,6 +39,7 @@ export type AttendanceOcrRow = {
 
 export type AttendanceOcrRowSummary = {
   candidate_id: string;
+  designation_id: string | null;
   p_days: number | null;
   ot_days: number | null;
   t_days: number | null;
@@ -187,13 +190,13 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
     const employeeList = data.employees
       .map(
         (e) =>
-          `- ${e.id} | ${e.name}${e.employee_code ? ` | code=${e.employee_code}` : ""}${e.designation ? ` | ${e.designation}` : ""}`,
+          `- candidate_id=${e.id} | designation_id=${e.designation_id ?? ""} | ${e.name}${e.employee_code ? ` | code=${e.employee_code}` : ""}${e.designation ? ` | designation=${e.designation}` : ""}`,
       )
       .join("\n");
     const codeList = data.codes.map((c) => `${c.code} = ${c.label}`).join(", ");
     const dateList = data.dates.join(", ");
 
-    const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (these are the calendar dates of the month — ONLY emit rows for the dates whose day-of-month is actually visible as a column on the sheet; if the printed header stops at day 30, do NOT emit day 31 even though it appears below):\n${dateList}\n\nEmployees (use the UUID as candidate_id, match by name or employee_code only with 100% certainty):\n${employeeList}\n\nReminder: confident=true ONLY when the cell is unambiguous and the code is in the allowed list. When in doubt → confident=false. Also read the right-side row totals (P Days, OT, T Days) for each matched employee and return them in row_summaries. Return ONLY a JSON object in this shape:\n{"rows":[{"candidate_id":"uuid","entry_date":"YYYY-MM-DD","code":"P","ot_hours":0,"confident":true}],"row_summaries":[{"candidate_id":"uuid","p_days":26.5,"ot_days":18.5,"t_days":45,"confident":true}],"unmatched_names":[],"notes":"visible_days=NN"}`;
+    const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (ONLY emit rows for dates whose day-of-month is actually visible as a column on the sheet):\n${dateList}\n\nEmployees — each line is ONE allowed (candidate_id, designation_id) pair. The SAME person may appear multiple times with DIFFERENT designation_id values when they worked under more than one role this period. Match each printed muster row to the pair whose name/code AND printed designation column best match what is written on the sheet:\n${employeeList}\n\nIn output rows and row_summaries, ALWAYS include BOTH candidate_id AND designation_id from the matched pair above (copy the designation_id verbatim, or use empty string "" if the pair line shows designation_id=""). If the sheet shows a person under a designation that does NOT appear in any pair for that candidate, add the visible name to unmatched_names instead of guessing. Return ONLY a JSON object in this shape:\n{"rows":[{"candidate_id":"uuid","designation_id":"uuid-or-empty","entry_date":"YYYY-MM-DD","code":"P","ot_hours":0,"confident":true}],"row_summaries":[{"candidate_id":"uuid","designation_id":"uuid-or-empty","p_days":26.5,"ot_days":18.5,"t_days":45,"confident":true}],"unmatched_names":[],"notes":"visible_days=NN"}`;
 
     const gateway = createLovableAiGatewayProvider(key);
     // Use Gemini 3 Flash preview — multimodal, ~5-10x faster than 2.5-pro for OCR while keeping strong accuracy on handwritten musters.
@@ -229,6 +232,15 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
     const output = extractJsonObject(text);
 
     const validIds = new Set(data.employees.map((e) => e.id));
+    const validPairs = new Set(
+      data.employees.map((e) => `${e.id}|${e.designation_id ?? ""}`),
+    );
+    const primaryDesigByCand = new Map<string, string | null>();
+    for (const e of data.employees) {
+      if (!primaryDesigByCand.has(e.id)) {
+        primaryDesigByCand.set(e.id, e.designation_id ?? null);
+      }
+    }
     const validDates = new Set(data.dates);
     const validCodeMap = new Map(data.codes.map((c) => [c.code.trim().toUpperCase(), c.code]));
 
@@ -242,6 +254,9 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
       const candidate_id = String(
         (r as { candidate_id?: unknown }).candidate_id ?? "",
       );
+      const desigRaw = String(
+        (r as { designation_id?: unknown }).designation_id ?? "",
+      ).trim();
       const entry_date = String(
         (r as { entry_date?: unknown }).entry_date ?? "",
       );
@@ -250,7 +265,15 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
       const confidentRaw = toBoolean((r as { confident?: unknown }).confident);
 
       if (!validIds.has(candidate_id) || !validDates.has(entry_date)) continue;
-      // Hard drop any day beyond the visible columns the model reported
+      // Resolve designation: prefer model value if it matches a provided pair, else fall back to primary.
+      let designation_id: string | null = null;
+      if (desigRaw && validPairs.has(`${candidate_id}|${desigRaw}`)) {
+        designation_id = desigRaw;
+      } else if (validPairs.has(`${candidate_id}|`)) {
+        designation_id = null;
+      } else {
+        designation_id = primaryDesigByCand.get(candidate_id) ?? null;
+      }
       if (visibleDays !== null) {
         const dayNum = parseInt(entry_date.slice(8, 10), 10);
         if (Number.isFinite(dayNum) && dayNum > visibleDays) continue;
@@ -261,6 +284,7 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
       if (!code && ot_hours <= 0) continue;
       cleanedRows.push({
         candidate_id,
+        designation_id,
         entry_date,
         code,
         ot_hours,
@@ -273,6 +297,7 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
           .map((item) => {
             const summary = item as {
               candidate_id?: unknown;
+              designation_id?: unknown;
               p_days?: unknown;
               ot_days?: unknown;
               t_days?: unknown;
@@ -280,8 +305,18 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
             };
             const candidate_id = String(summary.candidate_id ?? "");
             if (!validIds.has(candidate_id)) return null;
+            const desigRaw = String(summary.designation_id ?? "").trim();
+            let designation_id: string | null = null;
+            if (desigRaw && validPairs.has(`${candidate_id}|${desigRaw}`)) {
+              designation_id = desigRaw;
+            } else if (validPairs.has(`${candidate_id}|`)) {
+              designation_id = null;
+            } else {
+              designation_id = primaryDesigByCand.get(candidate_id) ?? null;
+            }
             return {
               candidate_id,
+              designation_id,
               p_days: toDayNumber(summary.p_days),
               ot_days: toDayNumber(summary.ot_days),
               t_days: toDayNumber(summary.t_days),

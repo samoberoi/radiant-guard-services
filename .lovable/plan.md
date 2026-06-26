@@ -1,69 +1,45 @@
-# Office Assets Module
+# Per-Designation Attendance → Payroll
 
-A new top-level module mirroring the inventory module patterns (branch scoping, value/count rollups, beautiful PageHeader + KPI strips, activity logging). Scope is **non-billable resources only** (finance, HR, IT, etc.) — not security guards.
+## Goal
+A guard onboarded as Designation A at Unit A is paid on A's salary structure. If a Field Officer reassigns them to Designation B (same or different unit) mid-month, attendance from that point is logged under B and payroll automatically computes those days using B's contract line. When an attendance sheet is uploaded, OCR must read the designation written next to each row and split entries by designation accordingly.
 
-## Scope
+## Current state (already working)
+- `attendance_entries` is keyed by `(unit_id, candidate_id, designation_id, entry_date)` — multiple designations per candidate per period are already supported in storage.
+- `admin.payroll.$unitId.tsx` already groups payroll line items by `(candidate, designation_id)` and pulls the matching contract resource per designation, so once entries carry the right `designation_id`, payouts split automatically.
+- Muster builder already renders an extra row block for any non-primary designation it finds in existing entries.
 
-1. **Office Asset Inventory** — master catalog of asset types (Laptop, Chair, Mouse, Keyboard, Charger, Cable, Monitor, Desk, Light…) with category, brand/model, unit cost, depreciation life, and per-branch on-hand counts.
-2. **Allocations** — assign individual asset units (with serial/tag) to a non-billable resource at a branch; auto-reflect on the resource's profile.
-3. **Branch Rollup** — every branch shows count and value of office assets held + allocated.
-4. **Resource Profile Integration** — non-billable employee profile gets an "Office Assets" tab listing everything allocated to them.
-5. **Seed data** — one demo non-billable unit ("Radiant HQ – Non-Billable"), one finance-analyst resource with rate card, 2-3 assets allocated.
+## Gaps to fix
 
-## Data model
+### 1. Mid-period designation / unit reassignment (UI + write path)
+On the unit muster (`admin.attendance.$unitId.tsx`) and on the candidate profile, add a **"Reassign role"** action on each guard row:
+- Inputs: new Unit (default = current), new Designation, effective date (default = today).
+- On save:
+  - Update `candidates.designation_id` (and `candidate_units` mapping if unit changed) to the new values.
+  - Insert a tiny audit log entry via `logActivity` ("Attendance – Reassign role").
+  - Existing attendance rows are untouched (they keep the old `designation_id`), so historical days stay on Designation A's salary; new days get inserted under Designation B automatically.
+- The muster immediately shows a second row block for Designation B from the effective date forward; cells before that date stay editable only on the A row.
 
-```text
-office_asset_categories         category taxonomy (IT, Furniture, Electrical…)
-office_assets                   catalog: name, category, brand, model, unit_cost,
-                                depreciation_months, image_url, enabled
-office_asset_units              individual physical units: asset_id, tag/serial,
-                                branch_id, status (in_stock|allocated|scrap|repair),
-                                purchase_date, current_value
-office_asset_allocations        unit_id, candidate_id, branch_id, allocated_at,
-                                returned_at, condition_out, condition_in, notes
-```
+### 2. OCR: read designation per row from the uploaded sheet
+Update `src/lib/attendance-ocr.functions.ts`:
+- Accept a `roster` of `{ id, name, employee_code, designation_id, designation_name }` (every candidate × designation pair currently in the muster, not just primary).
+- Tighten the system prompt: each printed muster row has a designation column / header; the model must match the row to **one specific (candidate_id, designation_id) pair** from the provided list. If the sheet shows the same person twice under two designations, emit two separate row blocks.
+- Extend each output row with `designation_id` (validated against provided pairs); fall back to the candidate's primary designation only when the sheet shows no designation text.
+- `row_summaries` keyed by `(candidate_id, designation_id)` too.
 
-All four tables: RLS on, GRANT to authenticated + service_role, branch-scoped read for branch admins, full access for super_admin / inventory_manager / a new `office_assets_manager` role concept handled via existing RBAC (`office_assets` module key).
+Update the OCR apply step in `admin.attendance.$unitId.tsx` (`processAttendanceImage`):
+- Build `pairByKey` from all muster rows (not just primary).
+- Group OCR rows by `(candidate_id, designation_id)`; delete and re-upsert per pair using the existing `upsertEntries(candidateId, designationId, …)`.
+- If OCR returns a designation that isn't in the muster yet (genuine new assignment seen on the sheet), surface it as an unmatched-row warning and prompt the FO to run **Reassign role** first, then re-import.
 
-Activity logged on every create/update/allocate/return/scrap via `logActivity` with module label "Office Assets".
+### 3. Payroll verification (no logic change expected)
+- After the above lands, regenerate payroll for a candidate that has split days; confirm the line items show two rows (Designation A days × A rates, Designation B days × B rates) and that totals/exports reflect both.
+- If the contract is missing a resource line for Designation B at the unit, surface a clear warning row instead of silently zeroing — reuse the existing "missing contract" warning path.
 
-## UI surface (under `/admin/office-assets/*`)
+## Technical notes
+- No schema migration required: `attendance_entries.designation_id` and the unique key already support multi-designation per candidate.
+- `inv-doc-summary` / activity log conventions: log every reassign with module name "Attendance".
+- Keep all edits to frontend + the OCR server function; payroll calc stays untouched.
 
-- `admin.office-assets.tsx` — layout + dashboard hub
-  - KPIs: Total Asset Value, Total Units, Allocated %, Top 5 Branches by Value
-  - Branch holdings table (count / value / utilization)
-- `admin.office-assets.inventory.tsx` — catalog CRUD (asset types) + per-branch stock view, search, CSV export, value/count toggle
-- `admin.office-assets.allocations.tsx` — allocate / return dialog; dropdown of non-billable resources auto-fills branch + designation; list view with filters
-- `admin.office-assets.categories.tsx` — small category manager
-
-Reused components: `PageHeader`, `MiniStat`, shadcn Table/Dialog/Select, `confirmAction`, `downloadCsv`, `logActivity`.
-
-Left nav: new "Office Assets" section in `src/routes/admin.tsx` with sub-items Dashboard, Inventory, Allocations, Categories. Visible to super_admin, admin, and any role granted the `office_assets` module via RBAC.
-
-## Profile integration
-
-On the candidate details page (`admin.candidates.$id.details.tsx`), add an "Office Assets" card for non-billable resources only — list allocated units with tag, allocated date, condition, and a "Return" action.
-
-## RBAC
-
-Add `office_assets` module to `src/lib/rbac-modules.ts` with sub-modules: Dashboard, Inventory, Allocations, Categories.
-
-## Seed
-
-Single migration also seeds:
-- Category "IT Equipment", "Furniture"
-- Assets: Dell Latitude Laptop (₹85k), Logitech Mouse (₹800), Ergonomic Chair (₹12k)
-- One unit "Radiant HQ – Non-Billable" (non-billable flag on `units` if available, else a marker on the branch)
-- One candidate "Aarti Mehta" — Finance Analyst, non-billable, mapped to that unit
-- 3 office_asset_units allocated to her (laptop, mouse, chair)
-
-## Non-billable detection
-
-Existing `units` table has billing flags; we'll treat resources whose unit/designation is flagged non-billable as eligible. If no clean flag exists, add a `non_billable boolean default false` column to `candidates` in the same migration and set it true for the seed + expose a toggle on the candidate form (out of scope to retrofit existing data; only seeded resource will be non-billable initially).
-
-## Out of scope (this pass)
-
-- Depreciation schedule auto-calc beyond storing months
-- QR code generation for tags
-- Mobile scan-in/scan-out
-- Procurement workflow (separate from existing PO inventory)
+## Out of scope
+- Backfilling historical attendance to a new designation (explicitly preserved on the old designation per requirement).
+- Cross-branch transfer workflow (handled separately via the existing reports-to / scope flows).
