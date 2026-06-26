@@ -129,11 +129,18 @@ const tiles: Tile[] = [
     icon: FileSignature,
   },
   {
+    to: "/admin/roles-manager",
+    label: "Roles",
+    description: "Add, rename or remove roles. Updates RBAC role chips automatically.",
+    icon: ShieldCheck,
+  },
+  {
     to: "/admin/rbac",
     label: "Role-Based Access Control",
     description: "Define what each role can view, edit, and delete across modules.",
     icon: ShieldCheck,
   },
+
 ];
 
 function ControlCenterDashboard() {

@@ -116,7 +116,8 @@ export const RBAC_MODULES: ModuleDef[] = [
     path: "/admin/inventory",
     icon: Boxes,
     subModules: [
-      
+      { key: "inventory_dashboard", label: "Inventory Dashboard", path: "/admin/inventory/dashboard",       icon: LayoutDashboard },
+      { key: "inventory_workflows", label: "Inventory Workflows", path: "/admin/inventory/workflows",       icon: Sparkles },
       { key: "item_master",       label: "Products",          path: "/admin/inventory/items",           icon: PackageOpen },
       { key: "vendors",           label: "Vendors",           path: "/admin/inventory/vendors",         icon: ShoppingBag },
       { key: "warehouses",        label: "Warehouses",        path: "/admin/inventory/warehouses",      icon: Warehouse },
@@ -126,14 +127,15 @@ export const RBAC_MODULES: ModuleDef[] = [
       { key: "transfers",         label: "Transfers",         path: "/admin/inventory/transfers",       icon: Boxes },
       { key: "issuances",         label: "Issuances",         path: "/admin/inventory/issuances",       icon: UserPlus },
       { key: "collections",       label: "Collections",       path: "/admin/inventory/collections",     icon: UserPlus },
-      
+      { key: "inventory_caps",    label: "Inventory Caps",    path: "/admin/inventory/caps",            icon: ShieldCheck },
+      { key: "my_inventory",      label: "My Inventory",      path: "/admin/my-inventory",              icon: PackageOpen },
+      { key: "field_dashboard",   label: "Field Dashboard",   path: "/admin/field-dashboard",           icon: LayoutDashboard },
 
       { key: "stock_report",      label: "Stock Report",      path: "/admin/inventory/stock",           icon: Wallet },
       { key: "stock_ledger",      label: "Stock Ledger",      path: "/admin/inventory/stock-ledger",    icon: Wallet },
       { key: "rate_cards",        label: "Vendor Rate Cards", path: "/admin/inventory/rate-cards",      icon: FileText },
-
-      
     ],
+
   },
   {
     key: "attendance",
@@ -165,20 +167,27 @@ export const RBAC_MODULES: ModuleDef[] = [
       { key: "professional_tax_manager", label: "Professional Tax Manager", path: "/admin/professional-tax-manager", icon: ReceiptText },
       { key: "lwf_manager",              label: "Labour Welfare Fund",      path: "/admin/lwf-manager",              icon: HandCoins },
       { key: "duty_manager",             label: "Duty Manager",             path: "/admin/duty-manager",             icon: Clock },
+      { key: "attendance_code_manager",  label: "Attendance Code Manager",  path: "/admin/attendance-code-manager",  icon: CalendarDays },
       { key: "service_type_manager",     label: "Service Type Manager",     path: "/admin/service-type-manager",     icon: Briefcase },
       { key: "payroll_manager",          label: "Payroll Manager",          path: "/admin/payroll-manager",          icon: CalendarRange },
       { key: "payroll_days_manager",     label: "Payroll Days Manager",     path: "/admin/payroll-days-manager",     icon: CalendarDays },
       { key: "allowance_manager",        label: "Allowance Manager",        path: "/admin/allowance-manager",        icon: Coins },
+      { key: "addition_type_manager",    label: "Addition Type Manager",    path: "/admin/addition-type-manager",    icon: HandCoins },
+      { key: "deduction_type_manager",   label: "Deduction Type Manager",   path: "/admin/deduction-type-manager",   icon: HandCoins },
       { key: "billing_type_manager",     label: "Billing Type Manager",     path: "/admin/billing-type-manager",     icon: Receipt },
       { key: "designation_manager",      label: "Designation Manager",      path: "/admin/designation-manager",      icon: BadgeCheck },
       { key: "cost_component_manager",   label: "Cost Component Manager",   path: "/admin/cost-component-manager",   icon: Calculator },
       { key: "ex_service_manager",       label: "Ex-Service Manager",       path: "/admin/ex-service-manager",       icon: Shield },
       { key: "offboarding_reason_manager", label: "Offboarding Reason Manager", path: "/admin/offboarding-reason-manager", icon: LogOut },
+      { key: "esic_branch_manager",      label: "ESIC Branch Manager",      path: "/admin/esic-branch-manager",      icon: Building2 },
+      { key: "asset_manager",            label: "Asset Manager",            path: "/admin/asset-manager",            icon: PackageOpen },
       { key: "language_manager",         label: "Language Manager",         path: "/admin/language-manager",         icon: Languages },
       { key: "company_documents",        label: "Company Documents",        path: "/admin/company-documents",        icon: FileSignature },
+      { key: "roles_manager",            label: "Roles Manager",            path: "/admin/roles-manager",            icon: ShieldCheck },
       { key: "system_logs",              label: "System Logs",              path: "/admin/system-logs",              icon: ClipboardList },
     ],
   },
+
   {
     key: "notification_center",
     label: "Notification Center",
