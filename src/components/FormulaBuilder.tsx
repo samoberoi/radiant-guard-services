@@ -28,7 +28,6 @@ type Props = {
 
 const MULTIPLIER_OPTIONS: { value: PresetMultiplier; label: string }[] = [
   { value: "present", label: "Present Duties" },
-  { value: "worked",  label: "Worked Duties" },
   { value: "ot",      label: "OT Duties" },
   { value: "ph",      label: "PH Duties" },
   { value: "wo",      label: "Weekly Off" },

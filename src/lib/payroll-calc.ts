@@ -642,7 +642,7 @@ export function computeWages(
     payable_days: basePaidDays,
     days_in_month: periodDayCount,
     present: totals.pDays,
-    worked: totals.pDays + totals.otherPaidDays,
+    worked: totals.pDays, // alias of present (legacy)
     ot: totals.otDays,
     ph: totals.phDays,
     wo: 0,
