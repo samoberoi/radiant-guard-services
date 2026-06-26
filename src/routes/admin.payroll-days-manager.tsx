@@ -368,6 +368,7 @@ function PayrollDaysManagerPage() {
                   method: METHOD_META[i.method].label,
                   fixed_days: i.fixedDays ?? "",
                   weekly_off: i.weeklyOffDay == null ? "" : WEEKDAYS[i.weeklyOffDay],
+                  custom_weekdays: (i.includedWeekdays ?? []).map((d) => WEEKDAY_SHORT[d]).join(" "),
                   default: i.isDefault ? "Yes" : "No",
                   enabled: i.enabled ? "Yes" : "No",
                 })),
