@@ -297,6 +297,7 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
           .map((item) => {
             const summary = item as {
               candidate_id?: unknown;
+              designation_id?: unknown;
               p_days?: unknown;
               ot_days?: unknown;
               t_days?: unknown;
@@ -304,8 +305,18 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
             };
             const candidate_id = String(summary.candidate_id ?? "");
             if (!validIds.has(candidate_id)) return null;
+            const desigRaw = String(summary.designation_id ?? "").trim();
+            let designation_id: string | null = null;
+            if (desigRaw && validPairs.has(`${candidate_id}|${desigRaw}`)) {
+              designation_id = desigRaw;
+            } else if (validPairs.has(`${candidate_id}|`)) {
+              designation_id = null;
+            } else {
+              designation_id = primaryDesigByCand.get(candidate_id) ?? null;
+            }
             return {
               candidate_id,
+              designation_id,
               p_days: toDayNumber(summary.p_days),
               ot_days: toDayNumber(summary.ot_days),
               t_days: toDayNumber(summary.t_days),
