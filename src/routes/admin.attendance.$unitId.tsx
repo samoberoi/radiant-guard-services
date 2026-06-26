@@ -1087,7 +1087,7 @@ function MusterRollPage() {
         if (designationCol >= 0) {
           const desigCell = norm(String(row[designationCol] ?? ""));
           if (desigCell) {
-            const match = contractDesigByNorm.get(desigCell);
+            const match = fuzzyDesigMatch(desigCell);
             if (match) {
               if (match.designationId !== mr.designationId) {
                 targetDesignationId = match.designationId;
