@@ -1345,6 +1345,16 @@ function MusterRollPage() {
           >
             <Upload className="mr-1.5 h-4 w-4" /> Upload Attendance
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClearAll}
+            disabled={!editable || clearingAll}
+            title={editable ? "Delete every attendance entry on this sheet" : "Sheet locked"}
+            className="text-destructive hover:text-destructive"
+          >
+            {clearingAll ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1.5 h-4 w-4" />} Clear All
+          </Button>
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="mr-1.5 h-4 w-4" /> Print
           </Button>
