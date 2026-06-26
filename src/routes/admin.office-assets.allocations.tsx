@@ -45,12 +45,16 @@ function AllocationsPage() {
   }});
   const { data: candidates = [] } = useQuery({ queryKey: ["candidates-nonbillable"], queryFn: async () => {
     const { data, error } = await supabase.from("candidates" as never)
-      .select("id,full_name,employee_code,designation,non_billable,unit_id,mobile,status")
+      .select("id,full_name,employee_code,designation_id,non_billable,unit_id,mobile,status,designations:designation_id(name)")
       .eq("non_billable", true)
       .eq("status", "active")
       .order("full_name");
     if (error) throw error;
-    return data as unknown as Candidate[];
+    type Row = { id: string; full_name: string; employee_code: string | null; designation_id: string | null; non_billable: boolean; unit_id: string | null; mobile: string; designations: { name: string } | null };
+    return ((data as unknown as Row[]) ?? []).map((r) => ({
+      id: r.id, full_name: r.full_name, employee_code: r.employee_code, designation: r.designations?.name ?? null,
+      non_billable: r.non_billable, unit_id: r.unit_id, mobile: r.mobile,
+    })) as Candidate[];
   }});
   const { data: orgUnits = [] } = useQuery({ queryKey: ["org-units-lite"], queryFn: async () => {
     const { data, error } = await supabase.from("units" as never).select("id,name,branch_id");
