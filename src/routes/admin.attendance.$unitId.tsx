@@ -984,6 +984,7 @@ function MusterRollPage() {
       const byPair = new Map<string, { mr: typeof musterRows[number]; rows: Array<{ entry_date: string; code: string; ot_hours: number }> }>();
       const unmatchedNames: string[] = [];
       const designationsNotOnContract = new Set<string>();
+      const candidatesInSheet = new Set<string>();
       let secondaryDesigRowCount = 0;
       let filled = 0;
 
