@@ -131,7 +131,7 @@ function useAllowances() {
     queryFn: async (): Promise<Allowance[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,earning_type,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot,formula_mode,formula_expression")
+        .select("id,name,earning_type,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot,formula_mode,formula_expression,fixed_calc_method,fixed_duty_components,fixed_duty_divisor")
         .order("name", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
@@ -154,6 +154,15 @@ function useAllowances() {
     include_in_ot: p.include_in_ot,
     formula_mode: p.formula_mode ?? "preset",
     formula_expression: p.formula_expression,
+    fixed_calc_method: p.calc_type === "fixed" ? p.fixed_calc_method : "flat",
+    fixed_duty_components:
+      p.calc_type === "fixed" && p.fixed_calc_method === "per_duty"
+        ? p.fixed_duty_components
+        : [],
+    fixed_duty_divisor:
+      p.calc_type === "fixed" && p.fixed_calc_method === "per_duty"
+        ? p.fixed_duty_divisor
+        : "base_days",
   });
 
   const addMut = useMutation({
