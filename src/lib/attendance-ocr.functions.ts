@@ -30,6 +30,7 @@ const InputSchema = z.object({
 
 export type AttendanceOcrRow = {
   candidate_id: string;
+  designation_id: string | null;
   entry_date: string;
   code: string;
   ot_hours: number;
@@ -38,6 +39,7 @@ export type AttendanceOcrRow = {
 
 export type AttendanceOcrRowSummary = {
   candidate_id: string;
+  designation_id: string | null;
   p_days: number | null;
   ot_days: number | null;
   t_days: number | null;
