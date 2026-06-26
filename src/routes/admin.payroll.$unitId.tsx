@@ -554,7 +554,7 @@ function PayrollUnitPage() {
         const resource = resourceByDesignation.get(did);
         const phOverride = isPrimaryForAdj ? phCashByCandidate.get(c.id) : undefined;
         const wages = resource
-          ? computeWages(totals, resource, periodDates.length, { phOverrideAmount: phOverride, periodDates: periodDates.map((d) => new Date(d)) })
+          ? computeWages(totals, resource, periodDates.length, { phOverrideAmount: phOverride, periodDates: periodDates.map((d) => new Date(d)), dayBases })
           : null;
         const isPrimary = (c.designation_id ?? null) === p.designationId;
         const candidateGender = ((c as unknown as { gender?: string | null }).gender ?? "").toString();
