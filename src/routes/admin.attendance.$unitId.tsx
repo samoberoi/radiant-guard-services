@@ -1043,14 +1043,14 @@ function MusterRollPage() {
       }
 
 
-      const summary = `${filled} cell${filled === 1 ? "" : "s"} imported from ${uploadFile.name}${unmatchedNames.length ? ` · ${unmatchedNames.length} unmatched row${unmatchedNames.length === 1 ? "" : "s"}` : ""}`;
+      const summary = `${filled} cell${filled === 1 ? "" : "s"} imported from ${uploadFile.name}${secondaryDesigRowCount ? ` · ${secondaryDesigRowCount} row${secondaryDesigRowCount === 1 ? "" : "s"} on secondary designation` : ""}${unmatchedNames.length ? ` · ${unmatchedNames.length} unmatched row${unmatchedNames.length === 1 ? "" : "s"}` : ""}${designationsNotOnContract.size ? ` · ${designationsNotOnContract.size} designation${designationsNotOnContract.size === 1 ? "" : "s"} not on contract` : ""}`;
       setOcrSummary(summary);
       setUploadReadyToContinue(true);
       toast.success(summary);
       logActivity({
         module: "Attendance",
         action: "Upload attendance Excel",
-        details: { filled, unmatched: unmatchedNames.length, unit_id: unitId, file: uploadFile.name },
+        details: { filled, unmatched: unmatchedNames.length, secondaryDesigRowCount, notOnContract: Array.from(designationsNotOnContract), unit_id: unitId, file: uploadFile.name },
       }).catch(() => {});
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Excel import failed");
