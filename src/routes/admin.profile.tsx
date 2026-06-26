@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { computeWages, fmtINR, type ContractResourceLike } from "@/lib/payroll-calc";
 import { PageHeader } from "@/components/PageHeader";
+import { useI18n, LANG_LABELS, type LangCode } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -790,6 +791,9 @@ function ProfilePage() {
         description="Your personal record, role, documents, and uploads."
         crumbs={[{ label: "My Profile" }]}
       />
+
+      <LanguagePreferenceCard candidateId={profile.id} />
+
 
       {/* Hero card */}
       <div className="rounded-2xl border border-border bg-card p-6">
@@ -1662,6 +1666,63 @@ function ProfilePage() {
           </ul>
         )}
       </Section>
+    </div>
+  );
+}
+
+function LanguagePreferenceCard({ candidateId }: { candidateId: string }) {
+  const { lang, setLang, enabled } = useI18n();
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      const { data } = await supabase
+        .from("candidates")
+        .select("preferred_language")
+        .eq("id", candidateId)
+        .maybeSingle();
+      if (!alive) return;
+      const code = (data as { preferred_language?: string } | null)?.preferred_language as LangCode | undefined;
+      if (code && ["en", "hi", "mr"].includes(code)) setLang(code);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [candidateId, setLang]);
+
+  async function change(code: LangCode) {
+    setLang(code);
+    await supabase
+      .from("candidates")
+      .update({ preferred_language: code } as never)
+      .eq("id", candidateId);
+    toast.success("Language updated");
+  }
+
+  return (
+    <div className="rounded-2xl border border-border bg-card p-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="text-sm font-semibold text-foreground">Language Preference</div>
+          <p className="text-xs text-muted-foreground">Choose the language used across the portal.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {enabled.map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => change(code)}
+              className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                lang === code
+                  ? "border-accent bg-accent text-accent-foreground"
+                  : "border-border bg-card text-foreground hover:bg-accent/10"
+              }`}
+            >
+              {LANG_LABELS[code]}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

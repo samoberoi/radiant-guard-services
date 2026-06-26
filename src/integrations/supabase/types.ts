@@ -545,6 +545,7 @@ export type Database = {
           photo_url: string
           physical_health: Json
           preferred_joining_date: string | null
+          preferred_language: string | null
           present_address1: string
           present_address2: string
           present_city: string
@@ -630,6 +631,7 @@ export type Database = {
           photo_url?: string
           physical_health?: Json
           preferred_joining_date?: string | null
+          preferred_language?: string | null
           present_address1?: string
           present_address2?: string
           present_city?: string
@@ -715,6 +717,7 @@ export type Database = {
           photo_url?: string
           physical_health?: Json
           preferred_joining_date?: string | null
+          preferred_language?: string | null
           present_address1?: string
           present_address2?: string
           present_city?: string
