@@ -447,6 +447,23 @@ function MusterRollPage() {
 
   const codeMap = useMemo(() => new Map(codes.map((c) => [c.code, c])), [codes]);
 
+  // Multi-designation master: any additional designations a candidate carries
+  const candidateIds = useMemo(() => (employees ?? []).map((e) => e.id), [employees]);
+  const { data: candDesignations = [] } = useQuery({
+    queryKey: ["attendance-candidate-designations", unitId, candidateIds.join(",")],
+    queryFn: async () => {
+      if (!candidateIds.length) return [] as Array<{ candidate_id: string; designation_id: string; is_primary: boolean }>;
+      const { data, error } = await supabase
+        .from("candidate_designations" as never)
+        .select("candidate_id, designation_id, is_primary")
+        .in("candidate_id", candidateIds);
+      if (error) throw error;
+      return (data ?? []) as Array<{ candidate_id: string; designation_id: string; is_primary: boolean }>;
+    },
+    enabled: candidateIds.length > 0,
+  });
+
+
   const entriesQK = ["attendance-entries-v4", unitId, periodStart, periodEnd];
   const { data: entries = [] } = useQuery({
     queryKey: entriesQK,
@@ -491,7 +508,25 @@ function MusterRollPage() {
       });
       seen.add(primaryKey);
 
+      // Additional designations from candidate master (multi-designation)
+      for (const cd of candDesignations) {
+        if (cd.candidate_id !== emp.id) continue;
+        const k = rowKey(emp.id, cd.designation_id);
+        if (seen.has(k)) continue;
+        seen.add(k);
+        const dName = desigNameMap.get(cd.designation_id) || "—";
+        out.push({
+          key: k,
+          candidateId: emp.id,
+          designationId: cd.designation_id,
+          designationName: dName,
+          emp,
+          isPrimary: false,
+        });
+      }
+
       // Additional rows from any entries with a different designation
+
       for (const e of entries) {
         if (e.candidate_id !== emp.id) continue;
         const k = rowKey(e.candidate_id, e.designation_id);
@@ -527,7 +562,8 @@ function MusterRollPage() {
       }
     }
     return out;
-  }, [employees, entries, extraRows, contractDesignations]);
+  }, [employees, entries, extraRows, contractDesignations, candDesignations]);
+
 
   // ---- Mutations ----
 

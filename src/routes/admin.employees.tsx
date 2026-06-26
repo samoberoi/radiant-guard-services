@@ -3745,7 +3745,7 @@ function CandidateWizard({
                       </div>
                     </Field>
                   </div>
-                  <Field label="Designation">
+                  <Field label="Designation (Primary)">
                     <DesignationPicker
                       designations={designations}
                       value={form.designation_id}
@@ -3754,6 +3754,16 @@ function CandidateWizard({
                       emptyMessage={designationsError ? `Could not load designations: ${designationsError}` : "No designations found."}
                     />
                   </Field>
+                  {editing?.id ? (
+                    <Field label="Additional Designations">
+                      <CandidateDesignationsEditor
+                        candidateId={editing.id}
+                        primaryDesignationId={form.designation_id}
+                        designations={designations}
+                      />
+                    </Field>
+                  ) : null}
+
                   <Field label="Status">
                     <Select value={form.status} onValueChange={(v) => {
                       const isEmp = !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive");
@@ -5120,4 +5130,94 @@ function DesignationPicker({
 
 function toTitle(s: string) {
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
+
+function CandidateDesignationsEditor({
+  candidateId,
+  primaryDesignationId,
+  designations,
+}: {
+  candidateId: string;
+  primaryDesignationId: string | null;
+  designations: DesignationLite[];
+}) {
+  const qc = useQueryClient();
+  const qk = ["candidate-designations", candidateId];
+  const { data: rows = [] } = useQuery({
+    queryKey: qk,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("candidate_designations" as never)
+        .select("id, designation_id, is_primary")
+        .eq("candidate_id", candidateId);
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; designation_id: string; is_primary: boolean }>;
+    },
+  });
+  const [picker, setPicker] = useState("");
+  const extras = rows.filter((r) => r.designation_id !== primaryDesignationId);
+  const dMap = useMemo(() => new Map(designations.map((d) => [d.id, d.name])), [designations]);
+
+  const add = async () => {
+    if (!picker) return;
+    if (rows.some((r) => r.designation_id === picker)) {
+      toast.error("Already assigned");
+      return;
+    }
+    const { error } = await supabase
+      .from("candidate_designations" as never)
+      .insert({ candidate_id: candidateId, designation_id: picker, is_primary: false } as never);
+    if (error) { toast.error(error.message); return; }
+    void logActivity({
+      module: "Candidate Designations",
+      action: "Add additional designation",
+      entityType: "candidate_designations",
+      entityLabel: dMap.get(picker) ?? picker,
+      details: { candidate_id: candidateId, designation_id: picker },
+    });
+    setPicker("");
+    qc.invalidateQueries({ queryKey: qk });
+  };
+
+  const remove = async (id: string, did: string) => {
+    const { error } = await supabase.from("candidate_designations" as never).delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    void logActivity({
+      module: "Candidate Designations",
+      action: "Remove additional designation",
+      entityType: "candidate_designations",
+      entityLabel: dMap.get(did) ?? did,
+      details: { candidate_id: candidateId, designation_id: did },
+    });
+    qc.invalidateQueries({ queryKey: qk });
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1.5 rounded-md border border-input bg-muted/30 p-2 min-h-[44px]">
+        {extras.length === 0 ? (
+          <span className="self-center px-1 text-sm text-muted-foreground">No additional designations.</span>
+        ) : (
+          extras.map((r) => (
+            <Badge key={r.id} variant="secondary" className="font-normal gap-1">
+              {dMap.get(r.designation_id) ?? r.designation_id}
+              <button type="button" className="ml-1 text-muted-foreground hover:text-foreground" onClick={() => remove(r.id, r.designation_id)}>×</button>
+            </Badge>
+          ))
+        )}
+      </div>
+      <div className="flex gap-2">
+        <Select value={picker} onValueChange={setPicker}>
+          <SelectTrigger className="h-9"><SelectValue placeholder="Add another designation…" /></SelectTrigger>
+          <SelectContent>
+            {designations
+              .filter((d) => d.id !== primaryDesignationId && !rows.some((r) => r.designation_id === d.id))
+              .map((d) => (<SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>))}
+          </SelectContent>
+        </Select>
+        <Button type="button" size="sm" variant="outline" onClick={add} disabled={!picker}>Add</Button>
+      </div>
+      <p className="text-xs text-muted-foreground">Used by attendance to route days under different roles when this person works multiple designations.</p>
+    </div>
+  );
 }

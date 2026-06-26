@@ -450,6 +450,57 @@ export type Database = {
           },
         ]
       }
+      candidate_designations: {
+        Row: {
+          candidate_id: string
+          created_at: string
+          designation_id: string
+          effective_from: string | null
+          effective_to: string | null
+          id: string
+          is_primary: boolean
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          candidate_id: string
+          created_at?: string
+          designation_id: string
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          is_primary?: boolean
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          candidate_id?: string
+          created_at?: string
+          designation_id?: string
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          is_primary?: boolean
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_designations_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_designations_designation_id_fkey"
+            columns: ["designation_id"]
+            isOneToOne: false
+            referencedRelation: "designations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       candidate_units: {
         Row: {
           candidate_id: string

@@ -1,55 +1,67 @@
 ## Goal
 
-Two attendance-sheet fixes in `src/routes/admin.attendance.$unitId.tsx`:
+Two fixes after reviewing the FPL May 2026 muster (`FPL_Attendance_Report_on_52026 (13) (3).xlsx`):
 
-1. Add a **Clear All** button on the muster page that wipes every attendance entry for this unit + period in one click (with confirm).
-2. Make Excel import **authoritative to the sheet** — stop the "ghost row under Designation A" problem where a person ends up with attendance under both A and B even though the uploaded sheet only listed them under one designation.
+1. Correct the candidate master designations that don't match what the FPL sheet shows.
+2. Make designation assignment on a candidate a **multi-designation** master field, so the attendance system can pick the right one per day going forward (not just the single primary).
 
-## Why the ghost row appears today
+## Fix 1 — Master designation mismatches (FPL)
 
-When an Excel is imported, the importer only writes the cells it sees and routes each row to the matched `(candidate, designation)` pair. It never deletes any prior entries. So if that candidate previously had entries under another designation (from a prior import, an earlier OCR pass, or manual marking), those entries stay in the database and continue to render as a second row block on the muster — even though the freshly-uploaded sheet shows the person under only one designation.
+The sheet lists each employee's actual on-site designation in column D. Comparing every named row to `candidates.designation_id`, these five are wrong and will be corrected to match the sheet:
 
-The user's rule is explicit: "first review the sheet, then fill the data accordingly — do not add anything yourself." So the import must make the sheet the source of truth for every candidate the sheet covers.
+| Employee | Current in system | Sheet says (correct) |
+| --- | --- | --- |
+| Anurag Mahunta | Office Assistant | BMS Operator |
+| Dham Singhrawat | Security Guard | Security Supervisor |
+| Muralidhar Rangnath Chitragar | Security Guard | Security Supervisor |
+| Rohit Rajendra Rathod | BMS Operator | Admin Executive |
+| Vaishnavi Jaywant Kamble | Security Guard | Receptionist |
 
-## Fix 1 — Clear All button
+Every other named row in the sheet already matches the master.
 
-Add a destructive-styled button in the header action row next to "Upload Attendance" / "Export":
+Cleanup also: the `designations` table has both `BMS Operator` and `BMS OPREATOR` (typo duplicate from an old import). The typo row will be merged into the canonical `BMS Operator` — repoint any candidates / contract resources / attendance entries pointing at the typo, then delete the typo row. Kapil Mahakur (currently on the typo row) ends up on the canonical row.
 
-- Visible only when `editable` is true (draft / rejected sheets).
-- Click → `ConfirmProvider` confirm: "Clear all attendance for this period? This deletes every entry on this sheet and cannot be undone."
-- On confirm: `delete from attendance_entries where unit_id = :unitId and entry_date between :start and :end`.
-- After delete: `queryClient.invalidateQueries({ queryKey: entriesQK })`, toast "Cleared N entries", `logActivity({ module: "Attendance", action: "Clear all entries", details: { unit_id, period, deleted: N } })`.
+All changes via a single migration; `logActivity` entries written per candidate so the audit trail explains the rename.
 
-No schema change, no RLS change (existing delete policy already allows the FO / admin on this unit).
+## Fix 2 — Multi-designation on candidate master
 
-## Fix 2 — Sheet-authoritative import
+Today `candidates.designation_id` is a single column. The attendance muster already supports per-row (candidate × designation) entries — OCR/Excel will create a row block for any contract designation the sheet shows — but the **candidate master itself** only stores one. That's why a person who works two roles ends up looking "wrong" on the profile and why future imports have to guess the secondary designation from the contract roster.
 
-Change `processAttendanceExcel` so the sheet is the source of truth:
+Add a proper many-to-many master:
 
-1. While walking the sheet rows, collect `candidatesInSheet: Set<candidateId>` for every row that matched a muster employee (regardless of whether any cells were filled).
-2. After parsing, **before** the `upsertEntries` loop, delete all existing entries in this period for those candidates across **all** designations:
-   ```
-   delete from attendance_entries
-   where unit_id = :unitId
-     and candidate_id in (:candidatesInSheet)
-     and entry_date between :start and :end
-   ```
-3. Then run the existing `upsertEntries` loop, which writes only what was in the sheet, under exactly the `(candidate, designation)` pair the sheet listed.
-4. Result: if the sheet only has the person under Designation B, the prior Designation A entries are gone and only the B row block remains. If the sheet lists them under both A and B (two rows), both are preserved exactly as written.
+- New table `public.candidate_designations`
+  - `candidate_id uuid → candidates(id) on delete cascade`
+  - `designation_id uuid → designations(id) on delete restrict`
+  - `is_primary boolean default false`
+  - `effective_from date null`, `effective_to date null` (both optional; null = open-ended)
+  - `notes text null`
+  - unique `(candidate_id, designation_id)`
+  - one row with `is_primary = true` per candidate (partial unique index)
+  - standard `created_at`/`updated_at` with `set_updated_at` trigger
+  - GRANTs to `authenticated` + `service_role`, RLS mirroring `candidates` (admin/inventory-manager full, owning FO / branch-scope read+write for their guards, candidate read self).
+- Backfill on creation: insert one row per existing `candidates` row using their current `designation_id` as `is_primary = true`. `candidates.designation_id` stays as the convenience pointer to the primary so nothing else breaks; a trigger keeps it synced to the primary row.
+- Seed the five FPL employees from Fix 1 with their additional/correct designations.
 
-Candidates **not present** in the uploaded sheet are untouched.
+UI changes (candidate profile, `src/routes/admin.candidates.$id.details.tsx`):
 
-Update the success toast to include `cleared N stale entr(y/ies)` so the FO sees what happened. Extend the `logActivity` `details` with the cleared count and the candidate ids.
+- New "Designations" card under the existing role section: list current designations, mark which is primary, allow add/remove and date-range edit. The primary one drives `candidates.designation_id`.
+- Field Officer dashboard (`src/routes/admin.field-dashboard.tsx`): show all designations as chips on the guard tile.
 
-OCR import (`processAttendanceImage`) currently has the same gap. Apply the same "delete first for candidates the OCR matched, then upsert" treatment there so behaviour is consistent across both upload paths.
+Attendance integration (`src/routes/admin.attendance.$unitId.tsx`, `src/lib/attendance-ocr.functions.ts`):
+
+- When building the OCR/Excel candidate × designation pairs for a unit, include every active designation from `candidate_designations` (intersected with the contract's allowed designations), not just the primary. This makes future imports correctly route a person to the right designation row — exactly what the user asked for ("according to their attendance, assign them to their particular days and duties").
+- No payroll-calc change needed — it already groups by `(candidate, designation_id)` per entry.
 
 ## Out of scope
 
-- No payroll-calc changes.
-- No schema migration, no new tables, no RLS edits.
-- Designation auto-creation behaviour is unchanged — row blocks still appear from whatever entries exist after the import.
-- Manual cell edits and the per-row "Clear row" affordances stay as-is.
+- No change to attendance entries that are already correct in May.
+- No change to payroll math, contract structure, or RLS on existing tables beyond what's listed.
+- No reshuffle of `role_key` — that stays as the high-level access role; `designation` is the work-role used for attendance/payroll mapping.
 
-## Files touched
+## Files / migration
 
-- `src/routes/admin.attendance.$unitId.tsx` only — header action row (Clear All button + confirm), `processAttendanceExcel` (collect candidates, delete-before-upsert), `processAttendanceImage` (same delete-before-upsert).
+- Migration: rename typo designation merge, fix five candidates, create `candidate_designations` + RLS + backfill + sync trigger.
+- `src/routes/admin.candidates.$id.details.tsx` — Designations card.
+- `src/routes/admin.field-dashboard.tsx` — chips.
+- `src/routes/admin.attendance.$unitId.tsx` — pull pairs from `candidate_designations`.
+- `src/lib/attendance-ocr.functions.ts` — already takes pair list, no behaviour change (just receives the wider set).
