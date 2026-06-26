@@ -556,6 +556,43 @@ function MusterRollPage() {
     if (error) throw error;
   };
 
+  const confirm = useConfirm();
+  const [clearingAll, setClearingAll] = useState(false);
+  const handleClearAll = async () => {
+    if (!editable) { toast.error("Sheet is locked"); return; }
+    const ok = await confirm({
+      title: "Clear all attendance?",
+      description: `This deletes every attendance entry on this sheet for ${periodStart} → ${periodEnd}. This cannot be undone.`,
+      confirmText: "Clear all",
+      destructive: true,
+    });
+    if (!ok) return;
+    setClearingAll(true);
+    try {
+      const { error, count } = await supabase
+        .from("attendance_entries")
+        .delete({ count: "exact" })
+        .eq("unit_id", unitId)
+        .gte("entry_date", periodStart)
+        .lte("entry_date", periodEnd);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: entriesQK });
+      setUncertainCells(new Set());
+      const n = count ?? 0;
+      toast.success(`Cleared ${n} entr${n === 1 ? "y" : "ies"}`);
+      logActivity({
+        module: "Attendance",
+        action: "Clear all entries",
+        details: { unit_id: unitId, period_start: periodStart, period_end: periodEnd, deleted: n },
+      }).catch(() => {});
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to clear");
+    } finally {
+      setClearingAll(false);
+    }
+  };
+
+
   // Drag-to-select state — keyed by row (candidate|designation)
   const [dragRowKey, setDragRowKey] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
