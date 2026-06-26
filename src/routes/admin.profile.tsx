@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { computeWages, fmtINR, type ContractResourceLike } from "@/lib/payroll-calc";
 import { PageHeader } from "@/components/PageHeader";
+import { useI18n, LANG_LABELS, type LangCode } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
