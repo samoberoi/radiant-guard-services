@@ -25,6 +25,8 @@ import {
   Star,
   Plus,
   Trash2,
+  Briefcase,
+  Undo2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +66,7 @@ const SECTIONS = [
   { id: "identification", label: "Identification Proofs", icon: FileBadge },
   { id: "criminal", label: "Criminal History", icon: Gavel },
   { id: "nominee", label: "Nominee", icon: UserCheck },
+  { id: "office_assets", label: "Office Assets", icon: Briefcase },
 ] as const;
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -394,6 +397,9 @@ function CandidateDetailsPage() {
           )}
           {active === "nominee" && (
             <NomineeSection form={form} setSection={setSection} />
+          )}
+          {active === "office_assets" && (
+            <OfficeAssetsSection candidateId={id} candidate={form} onToggleNonBillable={(v) => set("non_billable", v)} />
           )}
         </section>
       </div>
