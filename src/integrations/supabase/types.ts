@@ -140,6 +140,9 @@ export type Database = {
           display_name: string
           earning_type: string
           enabled: boolean
+          fixed_calc_method: string
+          fixed_duty_components: string[]
+          fixed_duty_divisor: string | null
           formula: Json
           formula_expression: string | null
           formula_mode: string
@@ -164,6 +167,9 @@ export type Database = {
           display_name?: string
           earning_type?: string
           enabled?: boolean
+          fixed_calc_method?: string
+          fixed_duty_components?: string[]
+          fixed_duty_divisor?: string | null
           formula?: Json
           formula_expression?: string | null
           formula_mode?: string
@@ -188,6 +194,9 @@ export type Database = {
           display_name?: string
           earning_type?: string
           enabled?: boolean
+          fixed_calc_method?: string
+          fixed_duty_components?: string[]
+          fixed_duty_divisor?: string | null
           formula?: Json
           formula_expression?: string | null
           formula_mode?: string

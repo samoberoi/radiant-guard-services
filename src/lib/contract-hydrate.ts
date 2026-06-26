@@ -53,32 +53,45 @@ export async function hydrateFormulasFromMaster<T extends ResourceShape>(
     }
   }
 
-  type Master = { mode: string | null; expr: string | null; version: number | null };
+  type Master = {
+    mode: string | null;
+    expr: string | null;
+    version: number | null;
+    fixedCalcMethod?: string | null;
+    fixedDutyComponents?: string[] | null;
+    fixedDutyDivisor?: string | null;
+  };
   const masterById = new Map<string, Master>();
 
   if (allowanceIds.size > 0) {
     const { data } = await supabase
       .from("allowance_types")
-      .select("id, formula_mode, formula_expression, formula_version")
+      .select("id, formula_mode, formula_expression, formula_version, fixed_calc_method, fixed_duty_components, fixed_duty_divisor")
       .in("id", Array.from(allowanceIds));
-    for (const m of (data ?? []) as Array<{ id: string; formula_mode: string | null; formula_expression: string | null; formula_version: number | null }>) {
+    for (const m of (data ?? []) as Array<Record<string, unknown>>) {
       masterById.set(String(m.id), {
-        mode: m.formula_mode,
-        expr: m.formula_expression,
-        version: m.formula_version,
+        mode: (m.formula_mode as string | null) ?? null,
+        expr: (m.formula_expression as string | null) ?? null,
+        version: m.formula_version == null ? null : Number(m.formula_version),
+        fixedCalcMethod: (m.fixed_calc_method as string | null) ?? null,
+        fixedDutyComponents: Array.isArray(m.fixed_duty_components) ? (m.fixed_duty_components as string[]) : null,
+        fixedDutyDivisor: (m.fixed_duty_divisor as string | null) ?? null,
       });
     }
   }
   if (costIds.size > 0) {
     const { data } = await supabase
       .from("cost_components")
-      .select("id, formula_mode, formula_expression, formula_version")
+      .select("id, formula_mode, formula_expression, formula_version, fixed_calc_method, fixed_duty_components, fixed_duty_divisor")
       .in("id", Array.from(costIds));
-    for (const m of (data ?? []) as Array<{ id: string; formula_mode: string | null; formula_expression: string | null; formula_version: number | null }>) {
+    for (const m of (data ?? []) as Array<Record<string, unknown>>) {
       masterById.set(String(m.id), {
-        mode: m.formula_mode,
-        expr: m.formula_expression,
-        version: m.formula_version,
+        mode: (m.formula_mode as string | null) ?? null,
+        expr: (m.formula_expression as string | null) ?? null,
+        version: m.formula_version == null ? null : Number(m.formula_version),
+        fixedCalcMethod: (m.fixed_calc_method as string | null) ?? null,
+        fixedDutyComponents: Array.isArray(m.fixed_duty_components) ? (m.fixed_duty_components as string[]) : null,
+        fixedDutyDivisor: (m.fixed_duty_divisor as string | null) ?? null,
       });
     }
   }
@@ -87,13 +100,17 @@ export async function hydrateFormulasFromMaster<T extends ResourceShape>(
     const id = line.allowanceId ?? line.costComponentId;
     if (!id) return line;
     const m = masterById.get(String(id));
-    if (!m || !m.expr || !m.expr.trim()) return line;
-    return {
-      ...line,
-      formulaMode: m.mode,
-      formulaExpression: m.expr,
-      formulaVersion: m.version,
-    };
+    if (!m) return line;
+    const next: LineWithIds = { ...line };
+    if (m.expr && m.expr.trim()) {
+      next.formulaMode = m.mode;
+      next.formulaExpression = m.expr;
+      next.formulaVersion = m.version;
+    }
+    if (m.fixedCalcMethod) next.fixedCalcMethod = m.fixedCalcMethod;
+    if (m.fixedDutyComponents) next.fixedDutyComponents = m.fixedDutyComponents;
+    if (m.fixedDutyDivisor) next.fixedDutyDivisor = m.fixedDutyDivisor;
+    return next;
   };
 
   return resources.map((r) => ({

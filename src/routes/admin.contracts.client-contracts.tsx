@@ -188,6 +188,9 @@ type AllowanceType = {
   formulaMode?: string | null;
   formulaExpression?: string | null;
   formulaVersion?: number | null;
+  fixedCalcMethod?: "flat" | "per_duty";
+  fixedDutyComponents?: ("p_days" | "ot_days" | "ph_days" | "other_paid_days")[];
+  fixedDutyDivisor?: "base_days" | "days_in_month" | "payable_days" | "fixed_26";
 };
 
 type ResourceComponent = {
@@ -198,6 +201,9 @@ type ResourceComponent = {
   formulaMode?: string | null;
   formulaExpression?: string | null;
   formulaVersion?: number | null;
+  fixedCalcMethod?: "flat" | "per_duty";
+  fixedDutyComponents?: ("p_days" | "ot_days" | "ph_days" | "other_paid_days")[];
+  fixedDutyDivisor?: "base_days" | "days_in_month" | "payable_days" | "fixed_26";
 };
 
 type FixedCalcMethod = "flat" | "per_duty";
@@ -815,7 +821,7 @@ function useAllowanceTypes() {
     queryFn: async (): Promise<AllowanceType[]> => {
       const { data, error } = await supabase
         .from("allowance_types" as never)
-        .select("id,name,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot,formula_mode,formula_expression,formula_version,created_at")
+        .select("id,name,display_name,short_name,is_default,enabled,calc_type,percentage,base_components,cap_amount,include_in_ot,formula_mode,formula_expression,formula_version,fixed_calc_method,fixed_duty_components,fixed_duty_divisor,created_at")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return (data as unknown as Record<string, unknown>[])
@@ -836,6 +842,15 @@ function useAllowanceTypes() {
           formulaMode: r.formula_mode == null ? null : String(r.formula_mode),
           formulaExpression: r.formula_expression == null ? null : String(r.formula_expression),
           formulaVersion: r.formula_version == null ? null : Number(r.formula_version),
+          fixedCalcMethod: (String(r.fixed_calc_method ?? "flat") as "flat" | "per_duty"),
+          fixedDutyComponents: Array.isArray(r.fixed_duty_components)
+            ? ((r.fixed_duty_components as string[]).filter((b) =>
+                ["p_days","ot_days","ph_days","other_paid_days"].includes(b),
+              ) as ("p_days"|"ot_days"|"ph_days"|"other_paid_days")[])
+            : [],
+          fixedDutyDivisor: (["base_days","days_in_month","payable_days","fixed_26"].includes(String(r.fixed_duty_divisor))
+            ? (r.fixed_duty_divisor as "base_days"|"days_in_month"|"payable_days"|"fixed_26")
+            : "base_days"),
         }));
     },
   });
@@ -3304,6 +3319,9 @@ function ResourceFormDialog({
           formulaMode: a.formulaMode ?? null,
           formulaExpression: a.formulaExpression ?? null,
           formulaVersion: a.formulaVersion ?? null,
+          fixedCalcMethod: a.fixedCalcMethod ?? "flat",
+          fixedDutyComponents: a.fixedDutyComponents ?? [],
+          fixedDutyDivisor: a.fixedDutyDivisor ?? "base_days",
         }));
       setDesignationId("");
       setServiceTypeId("");
@@ -3563,6 +3581,9 @@ function ResourceFormDialog({
           formulaMode: a.formulaMode ?? null,
           formulaExpression: a.formulaExpression ?? null,
           formulaVersion: a.formulaVersion ?? null,
+          fixedCalcMethod: a.fixedCalcMethod ?? "flat",
+          fixedDutyComponents: a.fixedDutyComponents ?? [],
+          fixedDutyDivisor: a.fixedDutyDivisor ?? "base_days",
         };
         const hasF = hasConfiguredFormula(a);
         if (a.calcType === "percentage" || hasF) {
