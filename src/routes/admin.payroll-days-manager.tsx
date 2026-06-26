@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
+  CalendarCheck2,
   CalendarDays,
   CalendarMinus,
   CalendarRange,
@@ -11,6 +12,7 @@ import {
   Star,
   Trash2,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -54,7 +56,7 @@ export const Route = createFileRoute("/admin/payroll-days-manager")({
   component: PayrollDaysManagerPage,
 });
 
-type Method = "actual_days" | "fixed_days" | "actual_minus_weekly_off";
+type Method = "actual_days" | "fixed_days" | "actual_minus_weekly_off" | "custom_weekdays";
 
 type PayrollDayBase = {
   id: string;
@@ -63,6 +65,7 @@ type PayrollDayBase = {
   method: Method;
   fixedDays: number | null;
   weeklyOffDay: number | null;
+  includedWeekdays: number[] | null;
   description: string;
   isDefault: boolean;
   enabled: boolean;
@@ -80,6 +83,7 @@ const WEEKDAYS = [
   "Friday",
   "Saturday",
 ];
+const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const METHOD_META: Record<Method, { label: string; icon: typeof CalendarDays; tone: string }> = {
   actual_days: {
@@ -97,9 +101,15 @@ const METHOD_META: Record<Method, { label: string; icon: typeof CalendarDays; to
     icon: CalendarMinus,
     tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   },
+  custom_weekdays: {
+    label: "Custom — pick weekdays",
+    icon: CalendarCheck2,
+    tone: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  },
 };
 
 function rowToItem(r: Record<string, unknown>): PayrollDayBase {
+  const iw = r.included_weekdays;
   return {
     id: String(r.id),
     name: String(r.name ?? ""),
@@ -107,6 +117,9 @@ function rowToItem(r: Record<string, unknown>): PayrollDayBase {
     method: (r.method as Method) ?? "actual_days",
     fixedDays: r.fixed_days == null ? null : Number(r.fixed_days),
     weeklyOffDay: r.weekly_off_day == null ? null : Number(r.weekly_off_day),
+    includedWeekdays: Array.isArray(iw)
+      ? (iw as unknown[]).map((n) => Number(n)).filter((n) => n >= 0 && n <= 6)
+      : null,
     description: String(r.description ?? ""),
     isDefault: Boolean(r.is_default ?? false),
     enabled: Boolean(r.enabled ?? true),
@@ -124,6 +137,11 @@ function describeMethod(item: PayrollDayBase): string {
       const day = WEEKDAYS[item.weeklyOffDay ?? 0] ?? "Sunday";
       return `Salary ÷ (actual days of month − ${day}s in that month).`;
     }
+    case "custom_weekdays": {
+      const days = (item.includedWeekdays ?? []).slice().sort((a, b) => a - b);
+      if (!days.length) return "Salary ÷ count of selected weekdays (none picked yet).";
+      return `Salary ÷ count of ${days.map((d) => WEEKDAY_SHORT[d]).join(", ")} in that month.`;
+    }
   }
 }
 
@@ -134,7 +152,7 @@ function usePayrollDayBases() {
     queryFn: async (): Promise<PayrollDayBase[]> => {
       const { data, error } = await supabase
         .from("payroll_day_bases" as never)
-        .select("id,name,code,method,fixed_days,weekly_off_day,description,is_default,enabled,sort_order")
+        .select("id,name,code,method,fixed_days,weekly_off_day,included_weekdays,description,is_default,enabled,sort_order")
         .order("sort_order", { ascending: true })
         .order("name", { ascending: true });
       if (error) throw error;
@@ -159,6 +177,11 @@ function usePayrollDayBases() {
         throw new Error("Weekly off day is required");
       }
     }
+    if (p.method === "custom_weekdays") {
+      if (!p.includedWeekdays || p.includedWeekdays.length === 0) {
+        throw new Error("Pick at least one weekday for Custom Weekdays");
+      }
+    }
   };
 
   const toRow = (p: Payload) => ({
@@ -167,6 +190,10 @@ function usePayrollDayBases() {
     method: p.method,
     fixed_days: p.method === "fixed_days" ? p.fixedDays : null,
     weekly_off_day: p.method === "actual_minus_weekly_off" ? p.weeklyOffDay : null,
+    included_weekdays:
+      p.method === "custom_weekdays"
+        ? (p.includedWeekdays ?? []).slice().sort((a, b) => a - b)
+        : null,
     description: p.description.trim(),
     is_default: p.isDefault,
     enabled: p.enabled,
