@@ -2,7 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronLeft, Printer, Download, CheckCircle2, XCircle, Send, RotateCcw, Plus, X, Upload, Loader2, FileSpreadsheet, Image as ImageIcon } from "lucide-react";
+import { ChevronLeft, Printer, Download, CheckCircle2, XCircle, Send, RotateCcw, Plus, X, Upload, Loader2, FileSpreadsheet, Image as ImageIcon, Trash2 } from "lucide-react";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { toast } from "sonner";
 import { z } from "zod";
 import * as XLSX from "xlsx";
@@ -555,6 +556,43 @@ function MusterRollPage() {
     if (error) throw error;
   };
 
+  const confirm = useConfirm();
+  const [clearingAll, setClearingAll] = useState(false);
+  const handleClearAll = async () => {
+    if (!editable) { toast.error("Sheet is locked"); return; }
+    const ok = await confirm({
+      title: "Clear all attendance?",
+      description: `This deletes every attendance entry on this sheet for ${periodStart} → ${periodEnd}. This cannot be undone.`,
+      confirmText: "Clear all",
+      destructive: true,
+    });
+    if (!ok) return;
+    setClearingAll(true);
+    try {
+      const { error, count } = await supabase
+        .from("attendance_entries")
+        .delete({ count: "exact" })
+        .eq("unit_id", unitId)
+        .gte("entry_date", periodStart)
+        .lte("entry_date", periodEnd);
+      if (error) throw error;
+      await queryClient.invalidateQueries({ queryKey: entriesQK });
+      setUncertainCells(new Set());
+      const n = count ?? 0;
+      toast.success(`Cleared ${n} entr${n === 1 ? "y" : "ies"}`);
+      logActivity({
+        module: "Attendance",
+        action: "Clear all entries",
+        details: { unit_id: unitId, period_start: periodStart, period_end: periodEnd, deleted: n },
+      }).catch(() => {});
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to clear");
+    } finally {
+      setClearingAll(false);
+    }
+  };
+
+
   // Drag-to-select state — keyed by row (candidate|designation)
   const [dragRowKey, setDragRowKey] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -796,20 +834,23 @@ function MusterRollPage() {
         ...byPair.keys(),
       ]);
 
+      // Sheet-authoritative: for any candidate present in the uploaded sheet,
+      // wipe ALL prior entries for the period (across every designation),
+      // then re-write only what the sheet shows. Prevents phantom rows under
+      // a designation the sheet didn't include.
+      const candidatesInSheet = new Set<string>();
       for (const pk of sheetPairKeys) {
         const mr = pairByKey.get(pk);
-        if (!mr) continue;
-        let query = supabase
+        if (mr) candidatesInSheet.add(mr.candidateId);
+      }
+      if (candidatesInSheet.size) {
+        const { error } = await supabase
           .from("attendance_entries")
           .delete()
           .eq("unit_id", unitId)
-          .eq("candidate_id", mr.candidateId)
+          .in("candidate_id", Array.from(candidatesInSheet))
           .gte("entry_date", periodStart)
           .lte("entry_date", periodEnd);
-        query = mr.designationId
-          ? query.eq("designation_id", mr.designationId)
-          : query.is("designation_id", null);
-        const { error } = await query;
         if (error) throw error;
       }
 
@@ -943,6 +984,7 @@ function MusterRollPage() {
       const byPair = new Map<string, { mr: typeof musterRows[number]; rows: Array<{ entry_date: string; code: string; ot_hours: number }> }>();
       const unmatchedNames: string[] = [];
       const designationsNotOnContract = new Set<string>();
+      const candidatesInSheet = new Set<string>();
       let secondaryDesigRowCount = 0;
       let filled = 0;
 
@@ -975,6 +1017,8 @@ function MusterRollPage() {
           if (labelCell) unmatchedNames.push(labelCell);
           continue;
         }
+        candidatesInSheet.add(mr.candidateId);
+
 
         // Designation routing: if the sheet has a designation column and the
         // value matches a contract resource on this unit, save under that
@@ -1030,6 +1074,22 @@ function MusterRollPage() {
         }
       }
 
+      // Sheet-authoritative: wipe every prior entry in this period for any
+      // candidate present in the uploaded sheet (across all designations),
+      // then write only what the sheet shows.
+      let clearedStale = 0;
+      if (candidatesInSheet.size) {
+        const { error, count } = await supabase
+          .from("attendance_entries")
+          .delete({ count: "exact" })
+          .eq("unit_id", unitId)
+          .in("candidate_id", Array.from(candidatesInSheet))
+          .gte("entry_date", periodStart)
+          .lte("entry_date", periodEnd);
+        if (error) throw error;
+        clearedStale = count ?? 0;
+      }
+
       for (const { mr, rows } of byPair.values()) {
         await upsertEntries(mr.candidateId, mr.designationId, rows);
       }
@@ -1043,14 +1103,14 @@ function MusterRollPage() {
       }
 
 
-      const summary = `${filled} cell${filled === 1 ? "" : "s"} imported from ${uploadFile.name}${secondaryDesigRowCount ? ` · ${secondaryDesigRowCount} row${secondaryDesigRowCount === 1 ? "" : "s"} on secondary designation` : ""}${unmatchedNames.length ? ` · ${unmatchedNames.length} unmatched row${unmatchedNames.length === 1 ? "" : "s"}` : ""}${designationsNotOnContract.size ? ` · ${designationsNotOnContract.size} designation${designationsNotOnContract.size === 1 ? "" : "s"} not on contract` : ""}`;
+      const summary = `${filled} cell${filled === 1 ? "" : "s"} imported from ${uploadFile.name}${clearedStale ? ` · cleared ${clearedStale} stale entr${clearedStale === 1 ? "y" : "ies"}` : ""}${secondaryDesigRowCount ? ` · ${secondaryDesigRowCount} row${secondaryDesigRowCount === 1 ? "" : "s"} on secondary designation` : ""}${unmatchedNames.length ? ` · ${unmatchedNames.length} unmatched row${unmatchedNames.length === 1 ? "" : "s"}` : ""}${designationsNotOnContract.size ? ` · ${designationsNotOnContract.size} designation${designationsNotOnContract.size === 1 ? "" : "s"} not on contract` : ""}`;
       setOcrSummary(summary);
       setUploadReadyToContinue(true);
       toast.success(summary);
       logActivity({
         module: "Attendance",
         action: "Upload attendance Excel",
-        details: { filled, unmatched: unmatchedNames.length, secondaryDesigRowCount, notOnContract: Array.from(designationsNotOnContract), unit_id: unitId, file: uploadFile.name },
+        details: { filled, clearedStale, candidates: Array.from(candidatesInSheet), unmatched: unmatchedNames.length, secondaryDesigRowCount, notOnContract: Array.from(designationsNotOnContract), unit_id: unitId, file: uploadFile.name },
       }).catch(() => {});
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Excel import failed");
@@ -1306,6 +1366,16 @@ function MusterRollPage() {
             title={editable ? "Upload an attendance sheet image to auto-fill" : "Sheet locked"}
           >
             <Upload className="mr-1.5 h-4 w-4" /> Upload Attendance
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClearAll}
+            disabled={!editable || clearingAll}
+            title={editable ? "Delete every attendance entry on this sheet" : "Sheet locked"}
+            className="text-destructive hover:text-destructive"
+          >
+            {clearingAll ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Trash2 className="mr-1.5 h-4 w-4" />} Clear All
           </Button>
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="mr-1.5 h-4 w-4" /> Print
