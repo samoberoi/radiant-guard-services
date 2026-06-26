@@ -1014,6 +1014,26 @@ function MusterRollPage() {
       const contractDesigByNorm = new Map(
         contractDesignations.map((d) => [norm(d.designationName), d]),
       );
+      // Fuzzy match for common typos (e.g. "BMS OPREATOR" → "BMS Operator").
+      const levenshtein = (a: string, b: string): number => {
+        const m = a.length, n = b.length;
+        if (Math.abs(m - n) > 2) return 99;
+        const dp = Array.from({ length: m + 1 }, (_, i) => [i, ...Array(n).fill(0)]);
+        for (let j = 0; j <= n; j++) dp[0][j] = j;
+        for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) {
+          dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1]);
+        }
+        return dp[m][n];
+      };
+      const fuzzyDesigMatch = (n: string) => {
+        if (!n) return undefined;
+        const exact = contractDesigByNorm.get(n);
+        if (exact) return exact;
+        for (const [k, d] of contractDesigByNorm) {
+          if (levenshtein(k, n) <= 2) return d;
+        }
+        return undefined;
+      };
 
       const codeSet = new Map<string, string>();
       for (const c of codes) codeSet.set(c.code.toUpperCase(), c.code);
@@ -1067,7 +1087,7 @@ function MusterRollPage() {
         if (designationCol >= 0) {
           const desigCell = norm(String(row[designationCol] ?? ""));
           if (desigCell) {
-            const match = contractDesigByNorm.get(desigCell);
+            const match = fuzzyDesigMatch(desigCell);
             if (match) {
               if (match.designationId !== mr.designationId) {
                 targetDesignationId = match.designationId;
@@ -1089,7 +1109,12 @@ function MusterRollPage() {
           const cell = String(raw).trim().toUpperCase();
           const m = cell.match(/^([A-Z]+)(?:\s*,?\s*(\d+(?:\.\d+)?))?$/);
           if (!m) continue;
-          const canonical = codeSet.get(m[1]);
+          // FPL muster shorthand: "D" / "ED" mean Duty / Extra-Duty — both are a
+          // PRESENT day, with the trailing number being OT days for that date.
+          // Re-map to canonical "P" so payroll counts them as present.
+          let codeKey = m[1];
+          if (codeKey === "D" || codeKey === "ED") codeKey = "P";
+          const canonical = codeSet.get(codeKey);
           if (!canonical) continue;
           const ot = m[2] ? Number(m[2]) : 0;
           rows.push({ entry_date: h.date, code: canonical, ot_hours: Number.isFinite(ot) ? ot : 0 });
