@@ -201,11 +201,7 @@ function nodeAllowed(node: Node) {
   return true;
 }
 
-type TranslateFn = (data: { data: { texts: string[]; target: "hi" | "mr" } }) => Promise<{
-  translations: string[];
-}>;
-
-function makeTranslator(translate: TranslateFn) {
+function makeTranslator() {
   let currentLang: LangCode = "en";
   let cache: Record<string, string> = {};
   let observer: MutationObserver | null = null;
