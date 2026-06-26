@@ -641,7 +641,6 @@ function MusterRollPage() {
       // These are "virtual" musterRow stand-ins used purely for OCR resolution
       // + upsert; the real row block appears after entries are saved and
       // musterRows re-derives.
-      const contractDesigSet = new Set(contractDesignations.map((d) => d.designationId));
       const candidatesById = new Map(musterRows.map((m) => [m.candidateId, m]));
       const employeesPayload: Array<{ id: string; name: string; employee_code: string | null; designation: string | null; designation_id: string }> = [];
       const seenPair = new Set<string>();
