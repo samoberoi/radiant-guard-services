@@ -272,16 +272,16 @@ function makeTranslator() {
     }
   };
 
-  const scheduleFlush = () => {
+  const scheduleFlush = (immediate = false) => {
     if (currentLang === "en" || pending.size === 0) return;
     if (flushTimer) window.clearTimeout(flushTimer);
-    flushTimer = window.setTimeout(flush, 250);
+    flushTimer = window.setTimeout(flush, immediate ? 0 : 60);
   };
 
   const flush = async () => {
     if (currentLang === "en" || inFlight) return;
     const lang = currentLang as "hi" | "mr";
-    const batch = Array.from(pending).slice(0, 80);
+    const batch = Array.from(pending).slice(0, 200);
     if (batch.length === 0) return;
     inFlight = true;
     try {
