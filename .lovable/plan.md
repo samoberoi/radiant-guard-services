@@ -1,61 +1,50 @@
 ## Goal
 
-On the unit muster, a candidate can carry **multiple designations within the same unit** (e.g. Security Guard for day duty + Office Assistant for OT). Attendance entries are stored per `(candidate, designation)` and payroll automatically bills each block against the matching contract resource for that unit. **Unit changes are out of scope** — per your update, the candidate stays on their assigned unit and only the designation varies.
+When an Excel attendance sheet is uploaded (like the FPL muster you shared), each row's **"Designation / Department"** column drives where the entries land:
 
-## What already works (no change)
+- Row designation matches the candidate's primary on the unit → save under primary (no change).
+- Row designation matches a **different** designation that exists on this unit's active contract → save under that designation; the second row block appears automatically on the muster.
+- Same person appears twice in the sheet with two different designations → each block saves under its own (candidate, designation) pair.
+- Row designation isn't on the unit's contract → fall back to the candidate's primary and surface a clear warning toast listing the unmatched designations, so the FO knows to either add the designation to the contract or correct the sheet.
 
-- `attendance_entries` is keyed by `(unit_id, candidate_id, designation_id, entry_date)` — multi-designation per candidate already storable.
-- Payroll groups by `(candidate, designation_id)` and pulls the matching contract resource per designation.
-- Muster builder already renders a second row block whenever entries exist under a non-primary designation.
+## What's broken today
 
-## What changes
+In `processAttendanceExcel` (`src/routes/admin.attendance.$unitId.tsx`, ~L851):
 
-### 1. OCR auto-creates the second designation row (no manual reassign UI)
+1. The "Designation / Department" column is **ignored**. Every row is saved under the candidate's primary designation, even if the sheet clearly shows them under a different one.
+2. The cell parser regex `^([A-Z]+)(?:\s+(\d+(?:\.\d+)?))?$` doesn't match the FPL muster's actual format `D ,1` / `P ,0.5` / `ED ,1` (comma + optional space before the OT digit). Those cells silently drop.
+3. `byCandidate` is a flat `candidateId → rows` map, so a person appearing under two designations in the sheet has one set overwriting the other.
 
-Per your choice, no "Reassign role" dialog. When the FO uploads the attendance sheet:
+## Fix
 
-- `attendance-ocr.functions.ts` already receives every `(candidate_id, designation_id)` pair on the muster, but today only the candidate's *current* designation is sent. Extend the roster sent to OCR to include **every contract resource designation valid for this unit** for each candidate (i.e. all designations that have a resource line on the unit's active contract), not just their primary one.
-- OCR continues to return `designation_id` per row and per summary.
-- On apply in `admin.attendance.$unitId.tsx`:
-  - Group OCR rows by `(candidate_id, designation_id)`.
-  - For any `(candidate, designation)` pair that has no row block on the muster yet but IS a valid contract resource on this unit, **auto-create the second row block** and upsert entries into it.
-  - If OCR returns a designation that is **not on the unit's active contract**, block that row and surface a clear toast: *"Designation X is not on Unit A's contract — add it to the contract first, then re-import."* (Per your "Block with a warning" choice.)
+### 1. Designation-aware row resolution
+- After matching `mr` by employee code/name, read the **designation cell** for that row (auto-detect the column on the header row by matching headers like `Designation`, `Department`, `Designation / Department`).
+- Normalize and look up against `contractDesignations` (already loaded — list of `{ designationId, designationName }` for this unit's active contract).
+- If matched and it differs from `mr.designationId` → switch the target pair to `(candidateId, matchedDesignationId)`. The auto-create flow added earlier handles the rest: upsert creates the entries and `musterRows` re-derives the second row block.
+- If the cell is non-empty but doesn't match anything on the contract → save under primary, push the designation name into a `designationsNotOnContract` set, surface it via a warning toast at the end (same wording as the OCR path).
 
-### 2. Per-designation OT (separate cells per row)
+### 2. Per-(candidate, designation) grouping
+- Replace the `byCandidate` map with `byPair: Map<"candidateId|designationId", rows[]>`.
+- On apply, iterate the map and call `upsertEntries(candidateId, designationId, rows)` per pair, so two designation blocks for the same person save independently.
+- A single sheet row contributes to exactly one pair. The "same person on two designations" case is handled by the sheet having two separate rows for that person.
 
-Today OT is stored on `attendance_entries.ot_hours` keyed by `(candidate, designation, date)`, which already supports per-row OT — but the muster renders OT on the same date only against whichever row the FO is typing into. Confirm and tighten:
+### 3. Cell parser handles the FPL format
+- Update the regex to accept an optional comma and whitespace between the code and the OT digit: `^([A-Z]+)(?:\s*,?\s*(\d+(?:\.\d+)?))?$`.
+- Verified against the uploaded sheet — covers `P`, `A`, `W`, `D ,1`, `P ,0.5`, `ED ,1`, `W ,1`.
 
-- Each row block (one per designation) has its **own P/A and its own OT cell per day**. Day-duty hours can land on Designation A's row, OT hours on Designation B's row, for the same date.
-- OCR is updated so that when it sees an OT digit explicitly tagged to a second designation in the printed sheet, it emits that OT under the second designation's row.
-- Payroll already monetises OT per line item using that line's resource rate, so no calc changes — Designation A's day duty bills at A's rate, Designation B's OT bills at B's rate.
+### 4. Summary + activity log
+- Extend the toast: `"<n> cells imported · <n> rows on secondary designation · <n> unmatched designations (X, Y)"`.
+- `logActivity` with module `"Attendance"` includes the secondary-designation count.
 
-### 3. Inline "Add designation row" for manual entry
+## Out of scope (unchanged)
 
-For cases where the FO is typing the muster instead of uploading, add a small **"+ Add designation"** action on each candidate row that opens a picker listing only designations valid on this unit's active contract (excluding ones already on the muster for that candidate). Selecting one immediately creates the empty second row block so the FO can type P / OT into it. This is needed because OCR auto-create only fires on upload; without it the FO has no way to enter a second designation manually.
-
-### 4. Contract-resource guard (single source of truth)
-
-Add a tiny helper `getUnitContractDesignations(unitId, period)` that returns the set of `designation_id`s with a live resource on the unit's contract for that period. Used by:
-- OCR roster expansion (step 1).
-- Inline picker (step 3).
-- OCR apply validator (step 1, "Block with a warning").
-- Payroll already shows the missing-contract warning when entries point at a designation with no resource — keep that as a backstop.
-
-### 5. Payroll verification only (no calc change)
-
-After the above lands, a candidate with split days produces two payroll line items — Designation A days × A rates, Designation B days × B rates — using the existing logic. Verify on a test candidate; no code change expected in `payroll-calc.ts`.
-
-## Out of scope (per your direction)
-
-- Cross-unit reassignment / Unit changes mid-period.
-- Backfilling historical entries onto a new designation.
-- A "Reassign role" dialog.
+- OCR image flow (already designation-aware from the previous turn).
+- Payroll calc (already splits per `(candidate, designation_id)`).
+- Cross-unit reassignment.
+- Schema / contract-resource auto-creation — designations still must be added to the contract first.
 
 ## Files touched
 
-- `src/lib/attendance-ocr.functions.ts` — roster now spans all valid contract designations per candidate; system prompt already handles multi-pair output.
-- `src/routes/admin.attendance.$unitId.tsx` — extend roster build, auto-create row block on apply, inline "+ Add designation" picker, contract-guard validation + toast.
-- New small helper `src/lib/unit-contract-designations.ts` (or inline in the route) for the contract-resource lookup.
-- `logActivity` calls on inline add and on OCR auto-create ("Attendance – Added designation row").
+- `src/routes/admin.attendance.$unitId.tsx` — `processAttendanceExcel` only.
 
-No schema migration. No payroll calc change.
+No schema migration, no new files, no payroll changes.
