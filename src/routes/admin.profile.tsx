@@ -792,6 +792,9 @@ function ProfilePage() {
         crumbs={[{ label: "My Profile" }]}
       />
 
+      <LanguagePreferenceCard candidateId={profile.id} />
+
+
       {/* Hero card */}
       <div className="rounded-2xl border border-border bg-card p-6">
         <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
