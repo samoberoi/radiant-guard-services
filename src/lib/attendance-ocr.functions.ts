@@ -190,13 +190,13 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
     const employeeList = data.employees
       .map(
         (e) =>
-          `- ${e.id} | ${e.name}${e.employee_code ? ` | code=${e.employee_code}` : ""}${e.designation ? ` | ${e.designation}` : ""}`,
+          `- candidate_id=${e.id} | designation_id=${e.designation_id ?? ""} | ${e.name}${e.employee_code ? ` | code=${e.employee_code}` : ""}${e.designation ? ` | designation=${e.designation}` : ""}`,
       )
       .join("\n");
     const codeList = data.codes.map((c) => `${c.code} = ${c.label}`).join(", ");
     const dateList = data.dates.join(", ");
 
-    const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (these are the calendar dates of the month — ONLY emit rows for the dates whose day-of-month is actually visible as a column on the sheet; if the printed header stops at day 30, do NOT emit day 31 even though it appears below):\n${dateList}\n\nEmployees (use the UUID as candidate_id, match by name or employee_code only with 100% certainty):\n${employeeList}\n\nReminder: confident=true ONLY when the cell is unambiguous and the code is in the allowed list. When in doubt → confident=false. Also read the right-side row totals (P Days, OT, T Days) for each matched employee and return them in row_summaries. Return ONLY a JSON object in this shape:\n{"rows":[{"candidate_id":"uuid","entry_date":"YYYY-MM-DD","code":"P","ot_hours":0,"confident":true}],"row_summaries":[{"candidate_id":"uuid","p_days":26.5,"ot_days":18.5,"t_days":45,"confident":true}],"unmatched_names":[],"notes":"visible_days=NN"}`;
+    const promptText = `Allowed attendance codes:\n${codeList}\n\nPeriod dates (ONLY emit rows for dates whose day-of-month is actually visible as a column on the sheet):\n${dateList}\n\nEmployees — each line is ONE allowed (candidate_id, designation_id) pair. The SAME person may appear multiple times with DIFFERENT designation_id values when they worked under more than one role this period. Match each printed muster row to the pair whose name/code AND printed designation column best match what is written on the sheet:\n${employeeList}\n\nIn output rows and row_summaries, ALWAYS include BOTH candidate_id AND designation_id from the matched pair above (copy the designation_id verbatim, or use empty string "" if the pair line shows designation_id=""). If the sheet shows a person under a designation that does NOT appear in any pair for that candidate, add the visible name to unmatched_names instead of guessing. Return ONLY a JSON object in this shape:\n{"rows":[{"candidate_id":"uuid","designation_id":"uuid-or-empty","entry_date":"YYYY-MM-DD","code":"P","ot_hours":0,"confident":true}],"row_summaries":[{"candidate_id":"uuid","designation_id":"uuid-or-empty","p_days":26.5,"ot_days":18.5,"t_days":45,"confident":true}],"unmatched_names":[],"notes":"visible_days=NN"}`;
 
     const gateway = createLovableAiGatewayProvider(key);
     // Use Gemini 3 Flash preview — multimodal, ~5-10x faster than 2.5-pro for OCR while keeping strong accuracy on handwritten musters.
