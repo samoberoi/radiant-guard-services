@@ -707,7 +707,7 @@ function CostComponentDialog({
                     <Select value={fixedDutyDivisor} onValueChange={(v) => setFixedDutyDivisor(v as FixedDutyDivisor)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        {FIXED_DUTY_DIVISORS.map((d) => (
+                        {divisorOptions.map((d) => (
                           <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
                         ))}
                       </SelectContent>
