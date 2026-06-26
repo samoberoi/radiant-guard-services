@@ -1950,8 +1950,8 @@ function MusterRollPage() {
                   ];
                 })
               )}
-              {!isLoading && !rosterError && musterRows.length > 0 && (() => {
-                const grand = musterRows.reduce(
+              {!isLoading && !rosterError && visibleMusterRows.length > 0 && (() => {
+                const grand = visibleMusterRows.reduce(
                   (acc, mr) => {
                     const t = computeTotalsForRow(mr.key);
                     acc.pDays += t.pDays;
