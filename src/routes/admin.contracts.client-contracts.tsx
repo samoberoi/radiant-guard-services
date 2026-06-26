@@ -3581,6 +3581,9 @@ function ResourceFormDialog({
           formulaMode: a.formulaMode ?? null,
           formulaExpression: a.formulaExpression ?? null,
           formulaVersion: a.formulaVersion ?? null,
+          fixedCalcMethod: a.fixedCalcMethod ?? "flat",
+          fixedDutyComponents: a.fixedDutyComponents ?? [],
+          fixedDutyDivisor: a.fixedDutyDivisor ?? "base_days",
         };
         const hasF = hasConfiguredFormula(a);
         if (a.calcType === "percentage" || hasF) {
