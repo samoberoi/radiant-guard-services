@@ -48,7 +48,9 @@ type Operator = "+" | "-";
 type BaseRef = { label: string; operator: Operator };
 type FixedCalcMethod = "flat" | "per_duty";
 type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
-type FixedDutyDivisor = "base_days" | "days_in_month" | "payable_days" | "fixed_26";
+// Built-in divisor codes + "pdb:<uuid>" entries sourced from
+// Payroll Days Manager (control center).
+type FixedDutyDivisor = string;
 
 const FIXED_DUTY_BUCKETS: { value: FixedDutyBucket; label: string; short: string }[] = [
   { value: "p_days", label: "P Days (present)", short: "P" },
@@ -57,12 +59,55 @@ const FIXED_DUTY_BUCKETS: { value: FixedDutyBucket; label: string; short: string
   { value: "other_paid_days", label: "Other Paid Days", short: "OPL" },
 ];
 
-const FIXED_DUTY_DIVISORS: { value: FixedDutyDivisor; label: string; short: string }[] = [
-  { value: "base_days",     label: "Base Days (contract — usually 26)",           short: "Base Days" },
-  { value: "days_in_month", label: "Total Days in Month (calendar days)",         short: "Days in Month" },
-  { value: "payable_days",  label: "Payable Days (P + Other Paid)",               short: "Payable Days" },
-  { value: "fixed_26",      label: "Fixed 26",                                    short: "26" },
+const BUILTIN_DIVISORS: { value: FixedDutyDivisor; label: string; short: string }[] = [
+  { value: "base_days",     label: "Base Days (contract — usually 26)",   short: "Base Days" },
+  { value: "days_in_month", label: "Total Days in Month (calendar days)", short: "Days in Month" },
+  { value: "payable_days",  label: "Payable Days (P + Other Paid)",       short: "Payable Days" },
+  { value: "fixed_26",      label: "Fixed 26",                            short: "26" },
 ];
+
+type PayrollDayBaseOpt = { id: string; name: string; methodLabel: string };
+const METHOD_LABEL: Record<string, string> = {
+  actual_days: "Calendar days",
+  fixed_days: "Fixed days",
+  actual_minus_weekly_off: "Calendar − weekly off",
+  custom_weekdays: "Custom weekdays",
+};
+
+function usePayrollDayBaseOptions() {
+  const { data = [] } = useQuery({
+    queryKey: ["admin", "cost-components", "payroll-day-bases"],
+    queryFn: async (): Promise<PayrollDayBaseOpt[]> => {
+      const { data, error } = await supabase
+        .from("payroll_day_bases" as never)
+        .select("id,name,method,enabled,sort_order")
+        .order("sort_order", { ascending: true })
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return ((data as unknown) as Record<string, unknown>[])
+        .filter((r) => r.enabled !== false)
+        .map((r) => ({
+          id: String(r.id),
+          name: String(r.name ?? ""),
+          methodLabel: METHOD_LABEL[String(r.method ?? "")] ?? "Payroll day base",
+        }));
+    },
+  });
+  return data;
+}
+
+function buildDivisorOptions(bases: PayrollDayBaseOpt[]): { value: string; label: string; short: string }[] {
+  const dyn = bases.map((b) => ({
+    value: `pdb:${b.id}`,
+    label: `${b.name} — ${b.methodLabel}`,
+    short: b.name,
+  }));
+  return [...BUILTIN_DIVISORS, ...dyn];
+}
+
+function divisorShort(value: FixedDutyDivisor | null | undefined, options: { value: string; short: string }[]): string {
+  return options.find((d) => d.value === value)?.short ?? "Base Days";
+}
 
 type CostComponent = {
   id: string;
