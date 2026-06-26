@@ -526,6 +526,10 @@ function AllowanceFormDialog({
   const [includeInOt, setIncludeInOt] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formulaCfg, setFormulaCfg] = useState<FormulaConfig | null>(null);
+  const [fixedCalcMethod, setFixedCalcMethod] = useState<FixedCalcMethod>("flat");
+  const [fixedDutyComponents, setFixedDutyComponents] = useState<FixedDutyBucket[]>([]);
+  const [fixedDutyDivisor, setFixedDutyDivisor] = useState<FixedDutyDivisor>("base_days");
+  const [defaultAmount, setDefaultAmount] = useState<string>("");
 
   useResetOnOpen(open, () => {
     setName(initial?.name ?? "");
@@ -541,6 +545,10 @@ function AllowanceFormDialog({
       !!initial?.formula_expression;
     setMode(hasFormulaSemantics ? "formula" : "manual");
     setFormulaCfg(cfg ?? { mode: "preset", preset: DEFAULT_PRESET });
+    setFixedCalcMethod(initial?.fixed_calc_method ?? "flat");
+    setFixedDutyComponents(initial?.fixed_duty_components ?? []);
+    setFixedDutyDivisor(initial?.fixed_duty_divisor ?? "base_days");
+    setDefaultAmount("");
   });
 
   return (
