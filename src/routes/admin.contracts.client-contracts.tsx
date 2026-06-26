@@ -188,6 +188,9 @@ type AllowanceType = {
   formulaMode?: string | null;
   formulaExpression?: string | null;
   formulaVersion?: number | null;
+  fixedCalcMethod?: "flat" | "per_duty";
+  fixedDutyComponents?: ("p_days" | "ot_days" | "ph_days" | "other_paid_days")[];
+  fixedDutyDivisor?: "base_days" | "days_in_month" | "payable_days" | "fixed_26";
 };
 
 type ResourceComponent = {
@@ -198,6 +201,9 @@ type ResourceComponent = {
   formulaMode?: string | null;
   formulaExpression?: string | null;
   formulaVersion?: number | null;
+  fixedCalcMethod?: "flat" | "per_duty";
+  fixedDutyComponents?: ("p_days" | "ot_days" | "ph_days" | "other_paid_days")[];
+  fixedDutyDivisor?: "base_days" | "days_in_month" | "payable_days" | "fixed_26";
 };
 
 type FixedCalcMethod = "flat" | "per_duty";
