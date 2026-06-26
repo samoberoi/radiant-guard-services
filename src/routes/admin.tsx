@@ -622,7 +622,7 @@ function SidebarGroup({
         <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
           <Icon className="h-4 w-4" />
         </span>
-        {!collapsed && <span className="truncate">{group.label}</span>}
+        {!collapsed && <span className="truncate">{t(group.label)}</span>}
       </Link>
     );
   }
@@ -655,7 +655,7 @@ function SidebarGroup({
             <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
               <Icon className="h-4 w-4" />
             </span>
-            <span className="flex-1 truncate text-left">{group.label}</span>
+            <span className="flex-1 truncate text-left">{t(group.label)}</span>
           </Link>
           <button
             type="button"
@@ -675,7 +675,7 @@ function SidebarGroup({
           <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
             <Icon className="h-4 w-4" />
           </span>
-          <span className="flex-1 truncate text-left">{group.label}</span>
+          <span className="flex-1 truncate text-left">{t(group.label)}</span>
           <ChevronDown className={cn("h-3.5 w-3.5 opacity-50 transition-transform", open ? "rotate-0" : "-rotate-90")} />
         </button>
       )}
@@ -696,7 +696,7 @@ function SidebarGroup({
                 )}
               >
                 <c.icon className="h-3.5 w-3.5 opacity-70" />
-                <span className="truncate">{c.label}</span>
+                <span className="truncate">{t(c.label)}</span>
               </Link>
             );
           })}
@@ -729,7 +729,7 @@ function MobileGroup({
         )}
       >
         <Icon className="h-4 w-4" />
-        {group.label}
+        {t(group.label)}
       </Link>
     );
   }
@@ -746,7 +746,7 @@ function MobileGroup({
         >
           <Link to={group.to} className="flex flex-1 items-center gap-2.5 min-w-0">
             <Icon className="h-4 w-4" />
-            <span className="flex-1 truncate text-left">{group.label}</span>
+            <span className="flex-1 truncate text-left">{t(group.label)}</span>
           </Link>
           <button
             type="button"
@@ -769,7 +769,7 @@ function MobileGroup({
           )}
         >
           <Icon className="h-4 w-4" />
-          <span className="flex-1 text-left">{group.label}</span>
+          <span className="flex-1 text-left">{t(group.label)}</span>
           <ChevronDown className={cn("h-4 w-4 transition-transform", open ? "rotate-0" : "-rotate-90")} />
         </button>
       )}
@@ -790,7 +790,7 @@ function MobileGroup({
                 )}
               >
                 <c.icon className="h-4 w-4 opacity-80" />
-                <span className="truncate">{c.label}</span>
+                <span className="truncate">{t(c.label)}</span>
               </Link>
             );
           })}
@@ -830,8 +830,8 @@ function CollapsedGroupPopover({
       <PopoverTrigger asChild>
         <button
           type="button"
-          title={group.label}
-          aria-label={group.label}
+          title={t(group.label)}
+          aria-label={t(group.label)}
           aria-expanded={open}
           className={cn(itemBase, "justify-center px-2", groupActive ? itemActive : itemIdle)}
         >
@@ -848,7 +848,7 @@ function CollapsedGroupPopover({
           className="w-60 rounded-2xl border border-white/50 bg-white/95 p-2 shadow-2xl backdrop-blur-xl"
         >
           <div className="mb-1 px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-            {group.label}
+            {t(group.label)}
           </div>
           <div className="space-y-0.5">
             {group.children.map((c) => {
@@ -867,7 +867,7 @@ function CollapsedGroupPopover({
                   )}
                 >
                   <c.icon className="h-4 w-4" />
-                  <span className="truncate">{c.label}</span>
+                  <span className="truncate">{t(c.label)}</span>
                 </Link>
               );
             })}
