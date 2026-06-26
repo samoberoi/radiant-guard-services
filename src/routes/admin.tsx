@@ -39,6 +39,9 @@ import {
   Wind,
   Wrench,
   X,
+  Briefcase,
+  Tag,
+  UserCheck,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -107,6 +110,12 @@ const assetsChildren: LeafItem[] = [
   { to: "/admin/assets/expense-manager", label: "Expense Manager", icon: Receipt },
 ];
 
+const officeAssetsChildren: LeafItem[] = [
+  { to: "/admin/office-assets", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/admin/office-assets/inventory", label: "Inventory", icon: Boxes },
+  { to: "/admin/office-assets/allocations", label: "Allocations", icon: UserCheck },
+  { to: "/admin/office-assets/categories", label: "Categories", icon: Tag },
+];
 
 const inventoryChildren: LeafItem[] = [
   { to: "/admin/inventory", label: "Inventory Command Center", icon: LayoutDashboard },
@@ -185,6 +194,7 @@ function AdminLayout() {
     { prefix: "/admin/addition-type-manager", module: "control_center" },
     { prefix: "/admin/vehicles", module: "vehicles" },
     { prefix: "/admin/assets", module: "assets" },
+    { prefix: "/admin/office-assets", module: "office_assets" },
     { prefix: "/admin/inventory", module: "inventory" },
     { prefix: "/admin/attendance", module: "attendance" },
     { prefix: "/admin/payroll", module: "payroll" },
@@ -212,7 +222,7 @@ function AdminLayout() {
   ];
   const firstAllowedPath = () => {
     const order = [
-      "organizations","contracts","employees","vehicles","assets","inventory","attendance",
+      "organizations","contracts","employees","vehicles","assets","office_assets","inventory","attendance",
       "payroll","invoice","control_center","notification_center","rbac",
     ];
     const pathFor: Record<string, string> = {
@@ -221,6 +231,7 @@ function AdminLayout() {
       employees: "/admin/employees",
       vehicles: "/admin/vehicles/inventory",
       assets: "/admin/assets/inventory",
+      office_assets: "/admin/office-assets",
       inventory: "/admin/inventory",
       attendance: "/admin/attendance",
       payroll: "/admin/payroll",
@@ -314,6 +325,7 @@ function AdminLayout() {
       { key: "inventory", label: "Inventory", module: "inventory", icon: Boxes, children: inventoryChildren, activePrefixes: ["/admin/inventory"] },
       { key: "vehicles", label: "Vehicles", module: "vehicles", icon: Car, to: "/admin/vehicles", children: vehiclesChildren, activePrefixes: ["/admin/vehicles"] },
       { key: "assets", label: "Assets", module: "assets", icon: Home, to: "/admin/assets", children: assetsChildren, activePrefixes: ["/admin/assets"] },
+      { key: "office-assets", label: "Office Assets", module: "office_assets", icon: Briefcase, to: "/admin/office-assets", children: officeAssetsChildren, activePrefixes: ["/admin/office-assets"] },
       { key: "control", label: "Control Center", module: "control_center", icon: SlidersHorizontal, to: "/admin/control-center", activePrefixes: ["/admin/control-center"] },
     ],
     [dashboardHref],
