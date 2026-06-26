@@ -2124,6 +2124,17 @@ function ClientContractsPage() {
                         size="sm"
                         variant="ghost"
                         className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleSyncFormulas(c.id, c.contractCode || "contract")}
+                        disabled={syncingId === c.id}
+                        aria-label="Sync formulas from master"
+                        title="Sync formulas from Allowance / Cost Component Manager"
+                      >
+                        <RefreshCcw className={`h-4 w-4 ${syncingId === c.id ? "animate-spin" : ""}`} />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
                         onClick={() => {
                           setEditing(c);
                           setFormOpen(true);
