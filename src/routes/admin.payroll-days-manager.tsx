@@ -317,7 +317,7 @@ function PayrollDaysManagerPage() {
         ]}
       />
 
-      <div className="mb-4 grid gap-3 lg:grid-cols-3">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {(Object.keys(METHOD_META) as Method[]).map((m) => {
           const meta = METHOD_META[m];
           const Icon = meta.icon;
