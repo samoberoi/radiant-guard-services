@@ -1089,7 +1089,12 @@ function MusterRollPage() {
           const cell = String(raw).trim().toUpperCase();
           const m = cell.match(/^([A-Z]+)(?:\s*,?\s*(\d+(?:\.\d+)?))?$/);
           if (!m) continue;
-          const canonical = codeSet.get(m[1]);
+          // FPL muster shorthand: "D" / "ED" mean Duty / Extra-Duty — both are a
+          // PRESENT day, with the trailing number being OT days for that date.
+          // Re-map to canonical "P" so payroll counts them as present.
+          let codeKey = m[1];
+          if (codeKey === "D" || codeKey === "ED") codeKey = "P";
+          const canonical = codeSet.get(codeKey);
           if (!canonical) continue;
           const ot = m[2] ? Number(m[2]) : 0;
           rows.push({ entry_date: h.date, code: canonical, ot_hours: Number.isFinite(ot) ? ot : 0 });
