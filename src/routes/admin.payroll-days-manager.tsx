@@ -598,6 +598,7 @@ function PayrollDayBaseFormDialog({
   const [method, setMethod] = useState<Method>("actual_days");
   const [fixedDays, setFixedDays] = useState<string>("26");
   const [weeklyOffDay, setWeeklyOffDay] = useState<string>("0");
+  const [includedWeekdays, setIncludedWeekdays] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   const [description, setDescription] = useState("");
   const [isDefault, setIsDefault] = useState(false);
   const [enabled, setEnabled] = useState(true);
@@ -609,10 +610,20 @@ function PayrollDayBaseFormDialog({
     setMethod(initial?.method ?? "actual_days");
     setFixedDays(initial?.fixedDays != null ? String(initial.fixedDays) : "26");
     setWeeklyOffDay(initial?.weeklyOffDay != null ? String(initial.weeklyOffDay) : "0");
+    setIncludedWeekdays(
+      initial?.includedWeekdays && initial.includedWeekdays.length > 0
+        ? initial.includedWeekdays
+        : [1, 2, 3, 4, 5, 6],
+    );
     setDescription(initial?.description ?? "");
     setIsDefault(initial?.isDefault ?? false);
     setEnabled(initial?.enabled ?? true);
   });
+
+  const toggleWeekday = (d: number) =>
+    setIncludedWeekdays((cur) =>
+      cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d].sort((a, b) => a - b),
+    );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -648,6 +659,7 @@ function PayrollDayBaseFormDialog({
                 <SelectItem value="actual_days">Actual days in month</SelectItem>
                 <SelectItem value="fixed_days">Fixed number of days</SelectItem>
                 <SelectItem value="actual_minus_weekly_off">Actual days minus a weekly off</SelectItem>
+                <SelectItem value="custom_weekdays">Custom — pick weekdays</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -681,6 +693,39 @@ function PayrollDayBaseFormDialog({
               </Select>
               <p className="text-xs text-muted-foreground">
                 Salary ÷ (actual days of month − occurrences of this weekday).
+              </p>
+            </div>
+          )}
+
+          {method === "custom_weekdays" && (
+            <div className="grid gap-2">
+              <Label>Working weekdays *</Label>
+              <div className="flex flex-wrap gap-2">
+                {WEEKDAYS.map((d, idx) => {
+                  const checked = includedWeekdays.includes(idx);
+                  return (
+                    <label
+                      key={d}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${checked ? "border-violet-500/50 bg-violet-500/10 text-violet-700 dark:text-violet-300" : "border-border hover:bg-secondary/50"}`}
+                    >
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() => toggleWeekday(idx)}
+                      />
+                      {WEEKDAY_SHORT[idx]}
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setIncludedWeekdays([0, 1, 2, 3, 4, 5, 6])}>All 7 days</Button>
+                <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setIncludedWeekdays([1, 2, 3, 4, 5, 6])}>Mon–Sat</Button>
+                <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setIncludedWeekdays([1, 2, 3, 4, 5])}>Mon–Fri</Button>
+                <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setIncludedWeekdays([])}>Clear</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Salary ÷ count of these weekdays occurring in the payroll month
+                {includedWeekdays.length > 0 ? ` (${includedWeekdays.map((i) => WEEKDAY_SHORT[i]).join(", ")}).` : "."}
               </p>
             </div>
           )}
