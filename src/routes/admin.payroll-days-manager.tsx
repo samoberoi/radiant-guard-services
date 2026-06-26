@@ -729,6 +729,65 @@ function PayrollDayBaseFormDialog({
                 Salary ÷ count of these weekdays occurring in the payroll month
                 {includedWeekdays.length > 0 ? ` (${includedWeekdays.map((i) => WEEKDAY_SHORT[i]).join(", ")}).` : "."}
               </p>
+
+              {/* Visual month preview — click a date to toggle its weekday */}
+              {(() => {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = today.getMonth();
+                const firstDow = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const cells: (number | null)[] = [];
+                for (let i = 0; i < firstDow; i++) cells.push(null);
+                for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+                while (cells.length % 7 !== 0) cells.push(null);
+                const matchCount = cells.filter(
+                  (d) => d !== null && includedWeekdays.includes(new Date(year, month, d).getDay()),
+                ).length;
+                return (
+                  <div className="mt-2 rounded-lg border bg-secondary/30 p-3">
+                    <div className="mb-2 flex items-center justify-between">
+                      <div className="text-xs font-medium">
+                        {today.toLocaleString("default", { month: "long", year: "numeric" })} preview
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {matchCount} payable day{matchCount === 1 ? "" : "s"}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-muted-foreground">
+                      {WEEKDAY_SHORT.map((w) => (
+                        <div key={w} className="py-1">{w}</div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {cells.map((d, idx) => {
+                        if (d === null) return <div key={idx} className="aspect-square" />;
+                        const dow = new Date(year, month, d).getDay();
+                        const active = includedWeekdays.includes(dow);
+                        const isToday = d === today.getDate();
+                        return (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => toggleWeekday(dow)}
+                            title={`Toggle ${WEEKDAYS[dow]}`}
+                            className={`aspect-square rounded-md text-xs transition-colors ${
+                              active
+                                ? "bg-violet-500 text-white hover:bg-violet-600"
+                                : "bg-background text-muted-foreground hover:bg-secondary"
+                            } ${isToday ? "ring-2 ring-violet-400" : ""}`}
+                          >
+                            {d}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      Click any date to toggle that entire weekday on or off.
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
           )}
 
