@@ -553,7 +553,17 @@ function MusterRollPage() {
       }
     }
     return out;
-  }, [employees, entries, extraRows, contractDesignations, candDesignations]);
+  }, [employees, entries, extraRows, contractDesignations]);
+
+  // Client-side filter: name / employee_code / designation substring match.
+  const visibleMusterRows = useMemo(() => {
+    const q = musterQuery.trim().toLowerCase();
+    if (!q) return musterRows;
+    return musterRows.filter((r) => {
+      const hay = `${r.emp.full_name ?? ""} ${r.emp.employee_code ?? ""} ${r.designationName ?? ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [musterRows, musterQuery]);
 
 
   // ---- Mutations ----
