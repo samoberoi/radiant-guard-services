@@ -921,11 +921,29 @@ function MusterRollPage() {
         if (mr.emp.employee_code) byCode.set(norm(String(mr.emp.employee_code)), mr);
       }
 
+      // Locate the Designation column on the header row so we can route each
+      // row to a (candidate, designation) pair instead of always the primary.
+      const headerRow = aoa[headerRowIdx] || [];
+      let designationCol = -1;
+      for (let c = 0; c < headerRow.length; c++) {
+        const h = norm(String(headerRow[c] ?? ""));
+        if (!h) continue;
+        if (h.includes("designation") || h.includes("department")) {
+          designationCol = c;
+          break;
+        }
+      }
+      const contractDesigByNorm = new Map(
+        contractDesignations.map((d) => [norm(d.designationName), d]),
+      );
+
       const codeSet = new Map<string, string>();
       for (const c of codes) codeSet.set(c.code.toUpperCase(), c.code);
 
-      const byCandidate = new Map<string, Array<{ entry_date: string; code: string; ot_hours: number }>>();
+      const byPair = new Map<string, { mr: typeof musterRows[number]; rows: Array<{ entry_date: string; code: string; ot_hours: number }> }>();
       const unmatchedNames: string[] = [];
+      const designationsNotOnContract = new Set<string>();
+      let secondaryDesigRowCount = 0;
       let filled = 0;
 
       for (let r = headerRowIdx + 1; r < aoa.length; r++) {
@@ -958,13 +976,37 @@ function MusterRollPage() {
           continue;
         }
 
+        // Designation routing: if the sheet has a designation column and the
+        // value matches a contract resource on this unit, save under that
+        // designation. The auto-create row block already kicks in when
+        // musterRows re-derives from the new entries.
+        let targetDesignationId: string | null = mr.designationId;
+        let targetDesignationName: string = mr.designationName;
+        let isSecondary = false;
+        if (designationCol >= 0) {
+          const desigCell = norm(String(row[designationCol] ?? ""));
+          if (desigCell) {
+            const match = contractDesigByNorm.get(desigCell);
+            if (match) {
+              if (match.designationId !== mr.designationId) {
+                targetDesignationId = match.designationId;
+                targetDesignationName = match.designationName;
+                isSecondary = true;
+              }
+            } else {
+              designationsNotOnContract.add(String(row[designationCol]).trim());
+            }
+          }
+        }
+
         const rows: Array<{ entry_date: string; code: string; ot_hours: number }> = [];
         for (const h of headerDates) {
           if (h.date > todayStr) continue;
           const raw = row[h.col];
           if (raw == null || String(raw).trim() === "") continue;
+          // Accept "P", "D ,1", "P ,0.5", "ED ,1", "W ,1" etc.
           const cell = String(raw).trim().toUpperCase();
-          const m = cell.match(/^([A-Z]+)(?:\s+(\d+(?:\.\d+)?))?$/);
+          const m = cell.match(/^([A-Z]+)(?:\s*,?\s*(\d+(?:\.\d+)?))?$/);
           if (!m) continue;
           const canonical = codeSet.get(m[1]);
           if (!canonical) continue;
@@ -972,16 +1014,34 @@ function MusterRollPage() {
           rows.push({ entry_date: h.date, code: canonical, ot_hours: Number.isFinite(ot) ? ot : 0 });
         }
         if (rows.length) {
-          byCandidate.set(mr.candidateId, rows);
+          const key = `${mr.candidateId}|${targetDesignationId ?? ""}`;
+          const bucket = byPair.get(key);
+          // Synthetic mr clone so upsert uses the routed designation, not the primary.
+          const routedMr = isSecondary
+            ? { ...mr, key, designationId: targetDesignationId, designationName: targetDesignationName, isPrimary: false }
+            : mr;
+          if (bucket) {
+            bucket.rows.push(...rows);
+          } else {
+            byPair.set(key, { mr: routedMr, rows });
+          }
+          if (isSecondary) secondaryDesigRowCount += 1;
           filled += rows.length;
         }
       }
 
-      for (const [candidateId, rows] of byCandidate.entries()) {
-        const mr = primaryByCandidate.get(candidateId)!;
-        await upsertEntries(candidateId, mr.designationId, rows);
+      for (const { mr, rows } of byPair.values()) {
+        await upsertEntries(mr.candidateId, mr.designationId, rows);
       }
       await queryClient.invalidateQueries({ queryKey: entriesQK });
+
+      if (designationsNotOnContract.size) {
+        toast.warning(
+          `Skipped designation routing for ${Array.from(designationsNotOnContract).slice(0, 6).join(", ")} — not on this unit's active contract. Saved under each person's primary designation. Add to contract and re-import to split.`,
+          { duration: 8000 },
+        );
+      }
+
 
       const summary = `${filled} cell${filled === 1 ? "" : "s"} imported from ${uploadFile.name}${unmatchedNames.length ? ` · ${unmatchedNames.length} unmatched row${unmatchedNames.length === 1 ? "" : "s"}` : ""}`;
       setOcrSummary(summary);
