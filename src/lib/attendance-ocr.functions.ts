@@ -62,7 +62,7 @@ ABSOLUTE RULES:
 3. PRACTICAL CONFIDENCE — Extract as much real data as you can from visible cells. Set "confident": true when the code is the most likely reading and not meaningfully ambiguous. If the mark is visible but slightly messy, still extract it. Use "confident": false only when the symbol is genuinely unclear, contradictory, or too faint.
 4. Match each visible row to one employee in the list by name OR employee_code. Use candidate_id (UUID) in output, NEVER the name. Minor spelling differences, line breaks, or handwriting variation are OK if one employee is clearly the same person. If you truly cannot match a row, add the visible name to unmatched_names and DO NOT guess a candidate_id.
 5. "code" MUST correspond to one of the provided code strings. Prefer the closest exact code from the allowed list rather than leaving the cell blank, but only if the written mark clearly points to that code. If still unsure, set code to "" and confident to false.
-6. "ot_hours" is the overtime number for that day cell (OT sub-row under each day belongs to the same date). 0 if blank. If the OT digit is unclear, set confident=false for that cell.
+6. "ot_hours" is the OVERTIME-DAYS number for that day cell (OT sub-row under each day belongs to the same date). 0.5 means HALF an OT day, 1 means ONE OT day, 1.5 means one-and-a-half OT days. It is NOT hours. Typical max is 2. 0 if blank. If the digit is unclear, set confident=false for that cell.
 7. Cross-check each matched employee row against the handwritten/printed totals on the RIGHT side of the same row (P Days, OT, T Days). Use those totals as a validation hint, but DO NOT discard a clearly visible day cell only because the totals are slightly hard to read or do not fully reconcile.
 8. Return ONLY a single JSON object with exactly these top-level keys: rows, row_summaries, unmatched_names, notes. No markdown fences, no prose.
 9. Each row_summaries item uses keys: candidate_id, p_days, ot_days, t_days, confident.
@@ -280,7 +280,7 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
       }
       const code = codeRaw === "" ? "" : (validCodeMap.get(codeRaw.toUpperCase()) ?? "");
       const codeValid = codeRaw === "" || code !== "";
-      const ot_hours = Number.isFinite(ot) ? Math.max(0, Math.min(24, ot)) : 0;
+      const ot_hours = Number.isFinite(ot) ? Math.max(0, Math.min(2, ot)) : 0;
       if (!code && ot_hours <= 0) continue;
       cleanedRows.push({
         candidate_id,

@@ -1,67 +1,69 @@
 ## Goal
 
-Two fixes after reviewing the FPL May 2026 muster (`FPL_Attendance_Report_on_52026 (13) (3).xlsx`):
+Three fixes to the multi-designation attendance/payroll flow:
 
-1. Correct the candidate master designations that don't match what the FPL sheet shows.
-2. Make designation assignment on a candidate a **multi-designation** master field, so the attendance system can pick the right one per day going forward (not just the single primary).
+1. Muster + payroll should only show designation buckets that actually have attendance.
+2. Search box on the muster (name / employee code / designation).
+3. **OT cells are OT-DAYS, not OT-HOURS.** `0.5` = half OT day, `1` = one OT day. Fix the import and the payroll math accordingly.
 
-## Fix 1 — Master designation mismatches (FPL)
+## Rules of the system (no schema change)
 
-The sheet lists each employee's actual on-site designation in column D. Comparing every named row to `candidates.designation_id`, these five are wrong and will be corrected to match the sheet:
+- Primary designation per candidate drives `candidates.designation_id`.
+- Additional designations live in `candidate_designations`.
+- Attendance is per `(unit_id, candidate_id, designation_id, entry_date)` — already unique-keyed.
+- Payroll groups by `(candidate, designation_id)`.
 
-| Employee | Current in system | Sheet says (correct) |
-| --- | --- | --- |
-| Anurag Mahunta | Office Assistant | BMS Operator |
-| Dham Singhrawat | Security Guard | Security Supervisor |
-| Muralidhar Rangnath Chitragar | Security Guard | Security Supervisor |
-| Rohit Rajendra Rathod | BMS Operator | Admin Executive |
-| Vaishnavi Jaywant Kamble | Security Guard | Receptionist |
+## Fix 1 — Muster only shows designations with attendance (or the primary)
 
-Every other named row in the sheet already matches the master.
+`src/routes/admin.attendance.$unitId.tsx` currently builds the roster as the cross product of every candidate × every allowed designation they hold. Change the row builder to:
 
-Cleanup also: the `designations` table has both `BMS Operator` and `BMS OPREATOR` (typo duplicate from an old import). The typo row will be merged into the canonical `BMS Operator` — repoint any candidates / contract resources / attendance entries pointing at the typo, then delete the typo row. Kapil Mahakur (currently on the typo row) ends up on the canonical row.
+1. Always include the **primary** designation row.
+2. Include any non-primary designation row only if `attendance_entries` has at least one record for that `(candidate, designation_id)` in the selected period.
+3. After OCR/Excel apply, re-derive the row set from the freshly written entries so a designation that wasn't worked this month disappears on next render.
 
-All changes via a single migration; `logActivity` entries written per candidate so the audit trail explains the rename.
+The OCR pair list still receives every allowed `(candidate, designation_id)` so the model can route a printed designation column. The trimming is render-time only.
 
-## Fix 2 — Multi-designation on candidate master
+## Fix 2 — Payroll hides empty designation buckets
 
-Today `candidates.designation_id` is a single column. The attendance muster already supports per-row (candidate × designation) entries — OCR/Excel will create a row block for any contract designation the sheet shows — but the **candidate master itself** only stores one. That's why a person who works two roles ends up looking "wrong" on the profile and why future imports have to guess the secondary designation from the contract roster.
+`src/routes/admin.payroll.$unitId.tsx` builds one line item per `(candidate, designation_id)`. Skip any bucket where `P + PH + OT days === 0` AND no additions/deductions are tagged to that designation. Tagged manual entries keep their bucket as an override.
 
-Add a proper many-to-many master:
+## Fix 3 — Attendance search
 
-- New table `public.candidate_designations`
-  - `candidate_id uuid → candidates(id) on delete cascade`
-  - `designation_id uuid → designations(id) on delete restrict`
-  - `is_primary boolean default false`
-  - `effective_from date null`, `effective_to date null` (both optional; null = open-ended)
-  - `notes text null`
-  - unique `(candidate_id, designation_id)`
-  - one row with `is_primary = true` per candidate (partial unique index)
-  - standard `created_at`/`updated_at` with `set_updated_at` trigger
-  - GRANTs to `authenticated` + `service_role`, RLS mirroring `candidates` (admin/inventory-manager full, owning FO / branch-scope read+write for their guards, candidate read self).
-- Backfill on creation: insert one row per existing `candidates` row using their current `designation_id` as `is_primary = true`. `candidates.designation_id` stays as the convenience pointer to the primary so nothing else breaks; a trigger keeps it synced to the primary row.
-- Seed the five FPL employees from Fix 1 with their additional/correct designations.
+Add a single search input above the muster in `src/routes/admin.attendance.$unitId.tsx`. Case-insensitive substring match across full name, employee code, and the row's designation name. Client-side filter over loaded roster.
 
-UI changes (candidate profile, `src/routes/admin.candidates.$id.details.tsx`):
+## Fix 4 — OT values are days, not hours
 
-- New "Designations" card under the existing role section: list current designations, mark which is primary, allow add/remove and date-range edit. The primary one drives `candidates.designation_id`.
-- Field Officer dashboard (`src/routes/admin.field-dashboard.tsx`): show all designations as chips on the guard tile.
+Today `attendance_entries.ot_hours` is treated as hours throughout — OCR clamps to `0..24`, Excel import stores the raw cell as hours, and `src/lib/payroll-calc.ts` uses `ot_hours` directly. The user's musters write `0.5` to mean half an OT day and `1` to mean one OT day. Two clean options; going with **(B)** to keep the schema stable and avoid a data migration.
 
-Attendance integration (`src/routes/admin.attendance.$unitId.tsx`, `src/lib/attendance-ocr.functions.ts`):
+### (B) Reinterpret `ot_hours` as OT-days at the edges (chosen)
 
-- When building the OCR/Excel candidate × designation pairs for a unit, include every active designation from `candidate_designations` (intersected with the contract's allowed designations), not just the primary. This makes future imports correctly route a person to the right designation row — exactly what the user asked for ("according to their attendance, assign them to their particular days and duties").
-- No payroll-calc change needed — it already groups by `(candidate, designation_id)` per entry.
+Keep column name `ot_hours` (schema stays). Treat every read/write as **OT days** end-to-end:
+
+- `src/lib/attendance-ocr.functions.ts`: drop the "ot_hours is the overtime number" hours framing in the system prompt; document explicitly that the OT cell value is OT-days (`0.5` = half OT day, `1` = one OT day, max ~2). Clamp to `0..2` instead of `0..24`. Stop converting `D ,1` → `1` as hours — it's already days.
+- `src/routes/admin.attendance.$unitId.tsx` Excel importer: parse the OT sub-cell as days, not hours. Update the muster cell editor so the OT input is labeled "OT days" and accepts `0`, `0.5`, `1`, `1.5`, `2`. Update the row-total label from "OT Hrs" to "OT Days".
+- `src/lib/payroll-calc.ts`: OT-day count comes from `SUM(ot_hours)` rows treated as days. OT amount = `(Gross − Uniform) / divisor × OT_days` (already the formula the user confirmed earlier — but the input is now days, not hours/8). Remove any `/ 8` conversion if present.
+- `src/lib/attendance-fetch.ts`: no change — it just passes the number through.
+- Activity log entries written by the importer should say "OT days" in their summary so the audit trail matches.
+
+No DB migration. Historical rows that stored hours-as-hours (if any) get reinterpreted as days; the user confirmed the sheets they upload always meant days, so this matches reality.
 
 ## Out of scope
 
-- No change to attendance entries that are already correct in May.
-- No change to payroll math, contract structure, or RLS on existing tables beyond what's listed.
-- No reshuffle of `role_key` — that stays as the high-level access role; `designation` is the work-role used for attendance/payroll mapping.
+- No schema changes.
+- No rename of the `ot_hours` column (would cascade to types.ts and every consumer; not worth the churn).
+- No change to the candidate-master designations editor.
+- No payroll-math change beyond the OT-days reinterpretation and skipping empty buckets.
 
-## Files / migration
+## Files touched
 
-- Migration: rename typo designation merge, fix five candidates, create `candidate_designations` + RLS + backfill + sync trigger.
-- `src/routes/admin.candidates.$id.details.tsx` — Designations card.
-- `src/routes/admin.field-dashboard.tsx` — chips.
-- `src/routes/admin.attendance.$unitId.tsx` — pull pairs from `candidate_designations`.
-- `src/lib/attendance-ocr.functions.ts` — already takes pair list, no behaviour change (just receives the wider set).
+- `src/routes/admin.attendance.$unitId.tsx` — trim empty designation rows, post-apply re-derive, search box, OT label/parse as days, Clear All untouched.
+- `src/routes/admin.payroll.$unitId.tsx` — skip zero-activity buckets unless overridden.
+- `src/lib/attendance-ocr.functions.ts` — OT-days prompt + 0..2 clamp.
+- `src/lib/payroll-calc.ts` — treat `ot_hours` field as OT days; remove any hours→days conversion.
+
+## Verification after build
+
+1. Person with a master secondary designation but zero attendance under it this period → one muster row, one payroll line.
+2. Person with 3 receptionist + 23 guard days → two rows in muster, two payroll lines with their own gross.
+3. Search "anurag" filters the muster.
+4. Upload a sheet with OT cells `0.5` and `1` → OT Days column shows `0.5` and `1`, payroll OT amount = `(Gross − Uniform)/divisor × OT_days`.

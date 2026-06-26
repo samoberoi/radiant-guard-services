@@ -95,14 +95,16 @@ export function computeAttendanceTotals(
   }
 
   let pDays = 0;
-  let otHours = 0;
+  // NOTE: attendance_entries.ot_hours stores OT DAYS (0.5 = half OT day, 1 = one OT day).
+  // The legacy "Hours" label is kept on the column for schema stability; the value is days.
+  let otDaysSum = 0;
   let phCount = 0;
   let otherPaidDays = 0;
 
   for (const date of periodDates) {
     const e = entryMap.get(date);
     if (!e) continue;
-    otHours += Number(e.ot_hours) || 0;
+    otDaysSum += Number(e.ot_hours) || 0;
     const c = codeMap.get(e.code);
     if (!c) continue;
     if (e.code === "PH") {
@@ -114,7 +116,9 @@ export function computeAttendanceTotals(
   }
 
   const phDays = phCount * 2;
-  const otDays = Math.round((otHours / UNIT_DUTY_HOURS) * 100) / 100;
+  const otDays = Math.round(otDaysSum * 100) / 100;
+  // Keep `otHours` field mirrored to otDays for downstream display compat — both render as OT days.
+  const otHours = otDays;
   const tDays = pDays + phDays + otherPaidDays + otDays;
   return { pDays, otHours, otDays, phDays, otherPaidDays, tDays };
 }

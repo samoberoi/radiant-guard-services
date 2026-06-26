@@ -632,7 +632,15 @@ function PayrollUnitPage() {
         };
       });
 
-      rows.sort((a, b) => {
+      // Drop non-primary designation lines that ended up with zero attendance.
+      // Primary always stays — it carries per-candidate additions/deductions.
+      const visibleRows = rows.filter((r) => {
+        if (r.isPrimary) return true;
+        const t = r.totals;
+        return (t.pDays + t.phDays + t.otDays + t.otherPaidDays) > 0;
+      });
+
+      visibleRows.sort((a, b) => {
         const an = (a.employeeCode || a.name).localeCompare(b.employeeCode || b.name);
         if (an !== 0) return an;
         // primary first, then by designation name
@@ -640,7 +648,7 @@ function PayrollUnitPage() {
         return a.designation.localeCompare(b.designation);
       });
 
-      return rows;
+      return visibleRows;
     },
   });
 
@@ -1079,9 +1087,9 @@ function PayrollUnitPage() {
                 <th className="px-4 py-3 font-medium">Designation</th>
                 <th className="px-4 py-3 font-medium" title="Present (worked) days">P Days</th>
                 <th className="px-4 py-3 font-medium" title="Paid Holiday days (incl. additions)">PH Days</th>
-                <th className="px-4 py-3 font-medium" title="OT Days = OT Hours / 8">OT Days</th>
+                <th className="px-4 py-3 font-medium" title="OT Days (0.5 = half OT day, 1 = one OT day)">OT Days</th>
                 <th className="px-4 py-3 font-medium" title="Total payable days (P + PH + Other Paid + OT)">T Days</th>
-                <th className="px-4 py-3 text-left font-medium">OT Hrs</th>
+                <th className="px-4 py-3 text-left font-medium" title="Same as OT Days — raw stored value">OT (raw)</th>
                 <th className="px-4 py-3 text-left font-medium" title="Full contract gross — what would be paid for a full month">Projected</th>
                 <th className="px-4 py-3 text-left font-medium" title="Per-day × T Days based on actual attendance">Earned gross</th>
                 <th className="px-4 py-3 text-left font-medium">Deductions</th>
@@ -1361,7 +1369,7 @@ function MisDetailSheet({ rows }: { rows: MisRow[] }) {
                 <th className={cellHead + " " + grpAttClass}>P</th>
                 <th className={cellHead + " " + grpAttClass}>WO</th>
                 <th className={cellHead + " " + grpAttClass}>PH</th>
-                <th className={cellHead + " " + grpAttClass}>OT Hrs</th>
+                <th className={cellHead + " " + grpAttClass}>OT Days (raw)</th>
                 <th className={cellHead + " " + grpAttClass}>OT</th>
                 <th className={cellHead + " " + grpAttClass}>T Days</th>
                 {earnedCols.map((c) => (<th key={`e-${c}`} className={cellHead + " " + grpEarnClass}>{c}</th>))}

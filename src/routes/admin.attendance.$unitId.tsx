@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ChevronLeft, Printer, Download, CheckCircle2, XCircle, Send, RotateCcw, Plus, X, Upload, Loader2, FileSpreadsheet, Image as ImageIcon, Trash2 } from "lucide-react";
+import { ChevronLeft, Printer, Download, CheckCircle2, XCircle, Send, RotateCcw, Plus, X, Upload, Loader2, FileSpreadsheet, Image as ImageIcon, Trash2, Search } from "lucide-react";
 import { useConfirm } from "@/components/ConfirmProvider";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -193,6 +193,7 @@ function MusterRollPage() {
   const todayStr = ymd(now.getFullYear(), now.getMonth(), now.getDate());
   const [year, setYear] = useState(search.year ?? now.getFullYear());
   const [monthIdx, setMonthIdx] = useState(search.month ?? now.getMonth());
+  const [musterQuery, setMusterQuery] = useState("");
 
   const { data: unit } = useQuery({
     queryKey: ["attendance-unit", unitId],
@@ -508,22 +509,12 @@ function MusterRollPage() {
       });
       seen.add(primaryKey);
 
-      // Additional designations from candidate master (multi-designation)
-      for (const cd of candDesignations) {
-        if (cd.candidate_id !== emp.id) continue;
-        const k = rowKey(emp.id, cd.designation_id);
-        if (seen.has(k)) continue;
-        seen.add(k);
-        const dName = desigNameMap.get(cd.designation_id) || "—";
-        out.push({
-          key: k,
-          candidateId: emp.id,
-          designationId: cd.designation_id,
-          designationName: dName,
-          emp,
-          isPrimary: false,
-        });
-      }
+      // Additional designations from candidate master are intentionally NOT auto-added
+      // here. They only surface in the muster when (a) attendance entries exist for that
+      // (candidate, designation) pair in this period, or (b) the user explicitly adds a
+      // line via "Add line item". This keeps the sheet free of empty designation rows.
+
+
 
       // Additional rows from any entries with a different designation
 
@@ -562,7 +553,17 @@ function MusterRollPage() {
       }
     }
     return out;
-  }, [employees, entries, extraRows, contractDesignations, candDesignations]);
+  }, [employees, entries, extraRows, contractDesignations]);
+
+  // Client-side filter: name / employee_code / designation substring match.
+  const visibleMusterRows = useMemo(() => {
+    const q = musterQuery.trim().toLowerCase();
+    if (!q) return musterRows;
+    return musterRows.filter((r) => {
+      const hay = `${r.emp.full_name ?? ""} ${r.emp.employee_code ?? ""} ${r.designationName ?? ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [musterRows, musterQuery]);
 
 
   // ---- Mutations ----
@@ -829,7 +830,7 @@ function MusterRollPage() {
           if (meta.counts_as_present) pDays += 1;
           else if (meta.is_paid) otherPaidDays += 1;
         }
-        const otDays = roundHalf(otHours / 8);
+        const otDays = roundHalf(otHours);
         const tDays = roundHalf(pDays + otherPaidDays + phCount * 2 + otDays);
         return {
           candidate_id: "",
@@ -1261,7 +1262,7 @@ function MusterRollPage() {
       setOtDragRowKey(null);
       toast.success(
         hours > 0
-          ? `Set ${hours}h OT on ${otPickerDates.length} day${otPickerDates.length > 1 ? "s" : ""}`
+          ? `Set ${hours} OT day${hours === 1 ? "" : "s"} on ${otPickerDates.length} day${otPickerDates.length > 1 ? "s" : ""}`
           : `Cleared OT on ${otPickerDates.length} day${otPickerDates.length > 1 ? "s" : ""}`,
       );
     } catch (e) {
@@ -1269,17 +1270,15 @@ function MusterRollPage() {
     }
   };
 
-  const UNIT_DUTY_HOURS = 8;
-
   const computeTotalsForRow = (rk: string) => {
     let pDays = 0;
-    let otHours = 0;
+    let otDaysSum = 0;
     let phCount = 0;
     let otherPaidDays = 0;
     for (const cell of periodCells) {
       const e = entryMap.get(`${rk}|${cell.date}`);
       if (!e) continue;
-      otHours += Number(e.ot_hours) || 0;
+      otDaysSum += Number(e.ot_hours) || 0;
       const c = codeMap.get(e.code);
       if (!c) continue;
       if (e.code === "PH") { phCount += 1; continue; }
@@ -1287,10 +1286,13 @@ function MusterRollPage() {
       else if (c.is_paid) otherPaidDays += 1;
     }
     const phDays = phCount * 2;
-    const otDays = Math.round((otHours / UNIT_DUTY_HOURS) * 100) / 100;
+    const otDays = Math.round(otDaysSum * 100) / 100;
+    // OT cell value is OT-days; expose under both names for display compat.
+    const otHours = otDays;
     const tDays = pDays + phDays + otherPaidDays + otDays;
     return { pDays, otHours, otDays, phDays, tDays };
   };
+
 
   const principalEmployer = unit
     ? `${unit.customer_name || ""}${unit.code ? ` - ${unit.code}` : ""}`.trim()
@@ -1577,10 +1579,37 @@ function MusterRollPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground print:hidden">
-        Tip: click a cell to mark one day, click & drag to mark a range. Future dates are locked. Use{" "}
-        <strong>Add line item</strong> below to give an employee an extra designation (e.g. Priya covering Senior Guard shift) — each line is paid separately.
+      <div className="flex flex-wrap items-center gap-3 print:hidden">
+        <div className="flex flex-1 min-w-[260px] items-center gap-2 rounded-md border border-border/70 bg-card px-3 py-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            value={musterQuery}
+            onChange={(e) => setMusterQuery(e.target.value)}
+            placeholder="Search by name, employee code, or designation…"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          />
+          {musterQuery && (
+            <button
+              type="button"
+              onClick={() => setMusterQuery("")}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Clear
+            </button>
+          )}
+          {musterQuery && (
+            <span className="text-[11px] text-muted-foreground">
+              {visibleMusterRows.length}/{musterRows.length}
+            </span>
+          )}
+        </div>
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          Tip: click a cell to mark one day, click & drag to mark a range. Future dates are locked. Use{" "}
+          <strong>Add line item</strong> below to give an employee an extra designation — each line is paid separately.
+        </div>
       </div>
+
 
       {/* Add line item panel */}
       <div className="rounded-xl border border-border/70 bg-card p-3 print:hidden">
@@ -1652,7 +1681,7 @@ function MusterRollPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="ghost" onClick={clearOtSelection}>Clear</Button>
-            <Button size="sm" onClick={openOtPickerForSelection}>Set OT hours</Button>
+            <Button size="sm" onClick={openOtPickerForSelection}>Set OT days</Button>
           </div>
         </div>
       )}
@@ -1697,7 +1726,7 @@ function MusterRollPage() {
                 <th className="border border-slate-400 p-1 align-middle">DOJ</th>
                 <th className="border border-slate-400 p-1 align-middle" colSpan={dayCount}>Days</th>
                 <th className="border border-slate-400 p-1 align-middle" rowSpan={2}>P<br />Days</th>
-                <th className="border border-slate-400 p-1 align-middle">OT<br />Hrs</th>
+                <th className="border border-slate-400 p-1 align-middle">OT<br />Days</th>
                 <th className="border border-slate-400 p-1 align-middle" rowSpan={2}>PH<br />Days</th>
                 <th className="border border-slate-400 p-1 align-middle" rowSpan={2}>T<br />Days</th>
               </tr>
@@ -1735,12 +1764,15 @@ function MusterRollPage() {
                 <tr><td colSpan={9 + dayCount} className="p-6 text-red-600">Failed to load mapped employees for this unit.</td></tr>
               ) : musterRows.length === 0 ? (
                 <tr><td colSpan={9 + dayCount} className="p-6 text-slate-500">No active security guards are mapped to this unit.</td></tr>
+              ) : visibleMusterRows.length === 0 ? (
+                <tr><td colSpan={9 + dayCount} className="p-6 text-slate-500">No rows match &ldquo;{musterQuery}&rdquo;.</td></tr>
               ) : (
-                musterRows.flatMap((mr, idx) => {
+                visibleMusterRows.flatMap((mr, idx) => {
                   const cellBase = "border border-slate-400 align-middle";
                   const totals = computeTotalsForRow(mr.key);
                   return [
                     <tr key={mr.key + "-att"}>
+
                       <td className={cn(cellBase, "p-1 font-medium")} rowSpan={2}>{idx + 1}</td>
                       <td className={cn(cellBase, "p-1")} rowSpan={2}>{mr.emp.employee_code || "—"}</td>
                       <td className={cn(cellBase, "p-1 text-left")} rowSpan={2}>
@@ -1945,8 +1977,8 @@ function MusterRollPage() {
                   ];
                 })
               )}
-              {!isLoading && !rosterError && musterRows.length > 0 && (() => {
-                const grand = musterRows.reduce(
+              {!isLoading && !rosterError && visibleMusterRows.length > 0 && (() => {
+                const grand = visibleMusterRows.reduce(
                   (acc, mr) => {
                     const t = computeTotalsForRow(mr.key);
                     acc.pDays += t.pDays;
@@ -2017,16 +2049,16 @@ function MusterRollPage() {
       <Dialog open={otPickerOpen} onOpenChange={setOtPickerOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Set OT hours</DialogTitle>
+            <DialogTitle>Set OT days</DialogTitle>
             <DialogDescription>
-              {otPickerDates.length} day{otPickerDates.length > 1 ? "s" : ""} selected
+              0.5 = half OT day, 1 = one OT day. {otPickerDates.length} day{otPickerDates.length > 1 ? "s" : ""} selected
               {otPickerRowKey
                 ? ` for ${findRow(otPickerRowKey)?.emp.full_name ?? ""} — ${findRow(otPickerRowKey)?.designationName ?? ""}`
                 : ""}
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-4 gap-2">
-            {Array.from({ length: 16 }, (_, i) => i + 1).map((n) => (
+            {[0.5, 1, 1.5, 2].map((n) => (
               <button
                 key={n}
                 type="button"
