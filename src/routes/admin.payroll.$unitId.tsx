@@ -1369,7 +1369,7 @@ function MisDetailSheet({ rows }: { rows: MisRow[] }) {
                 <th className={cellHead + " " + grpAttClass}>P</th>
                 <th className={cellHead + " " + grpAttClass}>WO</th>
                 <th className={cellHead + " " + grpAttClass}>PH</th>
-                <th className={cellHead + " " + grpAttClass}>OT Hrs</th>
+                <th className={cellHead + " " + grpAttClass}>OT Days (raw)</th>
                 <th className={cellHead + " " + grpAttClass}>OT</th>
                 <th className={cellHead + " " + grpAttClass}>T Days</th>
                 {earnedCols.map((c) => (<th key={`e-${c}`} className={cellHead + " " + grpEarnClass}>{c}</th>))}
