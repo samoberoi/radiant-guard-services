@@ -830,7 +830,7 @@ function MusterRollPage() {
           if (meta.counts_as_present) pDays += 1;
           else if (meta.is_paid) otherPaidDays += 1;
         }
-        const otDays = roundHalf(otHours / 8);
+        const otDays = roundHalf(otHours);
         const tDays = roundHalf(pDays + otherPaidDays + phCount * 2 + otDays);
         return {
           candidate_id: "",
