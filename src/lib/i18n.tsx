@@ -412,9 +412,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!translatorRef.current) {
-      translatorRef.current = makeTranslator(
-        translateFn as unknown as TranslateFn,
-      );
+      translatorRef.current = makeTranslator();
     }
     const tr = translatorRef.current;
     document.documentElement.setAttribute("lang", lang);
@@ -424,7 +422,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       tr.stop();
       tr.start(lang);
     }
-  }, [lang, translateFn]);
+  }, [lang]);
 
   const setLang = useCallback((l: LangCode) => {
     setLangState(l);
