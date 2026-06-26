@@ -825,6 +825,7 @@ function CollapsedGroupPopover({
   Icon: GroupItem["icon"];
 }) {
   const [open, setOpen] = useState(false);
+  const t = useT();
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
