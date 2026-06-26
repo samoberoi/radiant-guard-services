@@ -280,7 +280,7 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
       }
       const code = codeRaw === "" ? "" : (validCodeMap.get(codeRaw.toUpperCase()) ?? "");
       const codeValid = codeRaw === "" || code !== "";
-      const ot_hours = Number.isFinite(ot) ? Math.max(0, Math.min(24, ot)) : 0;
+      const ot_hours = Number.isFinite(ot) ? Math.max(0, Math.min(2, ot)) : 0;
       if (!code && ot_hours <= 0) continue;
       cleanedRows.push({
         candidate_id,
