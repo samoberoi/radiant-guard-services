@@ -1579,10 +1579,37 @@ function MusterRollPage() {
         </DialogContent>
       </Dialog>
 
-      <div className="rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground print:hidden">
-        Tip: click a cell to mark one day, click & drag to mark a range. Future dates are locked. Use{" "}
-        <strong>Add line item</strong> below to give an employee an extra designation (e.g. Priya covering Senior Guard shift) — each line is paid separately.
+      <div className="flex flex-wrap items-center gap-3 print:hidden">
+        <div className="flex flex-1 min-w-[260px] items-center gap-2 rounded-md border border-border/70 bg-card px-3 py-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            value={musterQuery}
+            onChange={(e) => setMusterQuery(e.target.value)}
+            placeholder="Search by name, employee code, or designation…"
+            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          />
+          {musterQuery && (
+            <button
+              type="button"
+              onClick={() => setMusterQuery("")}
+              className="text-xs text-muted-foreground hover:text-foreground"
+            >
+              Clear
+            </button>
+          )}
+          {musterQuery && (
+            <span className="text-[11px] text-muted-foreground">
+              {visibleMusterRows.length}/{musterRows.length}
+            </span>
+          )}
+        </div>
+        <div className="rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+          Tip: click a cell to mark one day, click & drag to mark a range. Future dates are locked. Use{" "}
+          <strong>Add line item</strong> below to give an employee an extra designation — each line is paid separately.
+        </div>
       </div>
+
 
       {/* Add line item panel */}
       <div className="rounded-xl border border-border/70 bg-card p-3 print:hidden">
