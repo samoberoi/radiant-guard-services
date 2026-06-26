@@ -169,9 +169,10 @@ export type ContractResourceLike = {
   deductions: BenefitLike[];
   employerContributions: BenefitLike[];
   payrollDayBase: {
-    method: "actual_days" | "fixed_days" | "actual_minus_weekly_off";
+    method: "actual_days" | "fixed_days" | "actual_minus_weekly_off" | "custom_weekdays";
     fixedDays: number | null;
     weeklyOffDay: number | null;
+    includedWeekdays?: number[] | null;
   } | null;
 };
 
@@ -533,7 +534,7 @@ export function computeWages(
   totals: AttendanceTotals,
   resource: ContractResourceLike,
   periodDayCount: number,
-  options?: { phOverrideAmount?: number },
+  options?: { phOverrideAmount?: number; periodDates?: Date[] },
 ): WageComputation {
   const contractGross = resource.components.reduce(
     (s, c) => s + (Number(c.amount) || 0),
@@ -555,6 +556,20 @@ export function computeWages(
       baseDays = Math.max(periodDayCount - 4, 1);
     } else if (pdb.method === "actual_days") {
       baseDays = periodDayCount;
+    } else if (pdb.method === "custom_weekdays") {
+      const allowed = Array.isArray(pdb.includedWeekdays) ? pdb.includedWeekdays : [];
+      if (allowed.length === 0) {
+        baseDays = FALLBACK_BASE_DAYS;
+      } else if (options?.periodDates && options.periodDates.length > 0) {
+        baseDays = options.periodDates.reduce(
+          (n, d) => n + (allowed.includes(d.getDay()) ? 1 : 0),
+          0,
+        );
+      } else {
+        // No period dates available — approximate by ratio of allowed weekdays.
+        baseDays = Math.max(Math.round((periodDayCount * allowed.length) / 7), 1);
+      }
+      if (baseDays <= 0) baseDays = FALLBACK_BASE_DAYS;
     } else {
       baseDays = FALLBACK_BASE_DAYS;
     }

@@ -279,9 +279,10 @@ type PayrollDayBase = {
   id: string;
   name: string;
   code: string;
-  method: "actual_days" | "fixed_days" | "actual_minus_weekly_off";
+  method: "actual_days" | "fixed_days" | "actual_minus_weekly_off" | "custom_weekdays";
   fixedDays: number | null;
   weeklyOffDay: number | null;
+  includedWeekdays: number[] | null;
 };
 
 type CostComponentOption = {
@@ -896,7 +897,7 @@ function usePayrollDayBases() {
     queryFn: async (): Promise<PayrollDayBase[]> => {
       const { data, error } = await supabase
         .from("payroll_day_bases" as never)
-        .select("id,name,code,method,fixed_days,weekly_off_day,enabled,sort_order")
+        .select("id,name,code,method,fixed_days,weekly_off_day,included_weekdays,enabled,sort_order")
         .order("sort_order")
         .order("name");
       if (error) throw error;
@@ -909,6 +910,9 @@ function usePayrollDayBases() {
           method: r.method as PayrollDayBase["method"],
           fixedDays: r.fixed_days == null ? null : Number(r.fixed_days),
           weeklyOffDay: r.weekly_off_day == null ? null : Number(r.weekly_off_day),
+          includedWeekdays: Array.isArray(r.included_weekdays)
+            ? (r.included_weekdays as unknown[]).map((n) => Number(n)).filter((n) => n >= 0 && n <= 6)
+            : null,
         }));
     },
   });
@@ -976,6 +980,15 @@ function computePayableDays(base: PayrollDayBase | undefined, ref: Date = new Da
       if (new Date(year, month, d).getDay() === off) count++;
     }
     return daysInMonth - count;
+  }
+  if (base.method === "custom_weekdays") {
+    const allowed = base.includedWeekdays ?? [];
+    if (allowed.length === 0) return 0;
+    let count = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (allowed.includes(new Date(year, month, d).getDay())) count++;
+    }
+    return count;
   }
   return daysInMonth;
 }
@@ -4495,7 +4508,9 @@ function SalaryBreakdownTable({
       ? `${payrollDayBase.fixedDays ?? 0} Days`
       : payrollDayBase.method === "actual_minus_weekly_off"
         ? `${payableDays} Days (actual − weekly off)`
-        : `${payableDays} Days (actual)`
+        : payrollDayBase.method === "custom_weekdays"
+          ? `${payableDays} Days (custom weekdays)`
+          : `${payableDays} Days (actual)`
     : "—";
 
   const earnedFor = (amount: number) =>

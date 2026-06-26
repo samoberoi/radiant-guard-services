@@ -1,69 +1,55 @@
 ## Goal
 
-Three fixes to the multi-designation attendance/payroll flow:
+Extend **Payroll Days Manager** with a fully customizable "Custom Weekdays" method so users can pick which weekdays count as paid/working days (e.g. all 7, Mon–Sat only, or any combination). The existing dropdown in **Contract Resources → Payroll Day Base** already auto-lists every enabled entry, so newly created custom bases appear there instantly. Payroll calculation will then divide salary by the number of those weekdays falling in the payroll period.
 
-1. Muster + payroll should only show designation buckets that actually have attendance.
-2. Search box on the muster (name / employee code / designation).
-3. **OT cells are OT-DAYS, not OT-HOURS.** `0.5` = half OT day, `1` = one OT day. Fix the import and the payroll math accordingly.
+Existing methods (`actual_days`, `fixed_days`, `actual_minus_weekly_off`) stay untouched — only a new option is added.
 
-## Rules of the system (no schema change)
+## What the user gets
 
-- Primary designation per candidate drives `candidates.designation_id`.
-- Additional designations live in `candidate_designations`.
-- Attendance is per `(unit_id, candidate_id, designation_id, entry_date)` — already unique-keyed.
-- Payroll groups by `(candidate, designation_id)`.
+1. In **Control Center → Payroll Days Manager**, the Add/Edit dialog gains a new method **"Custom — pick weekdays"** that shows 7 checkboxes (Sun…Sat). User can tick any subset to define what counts as a paid/working weekday.
+2. Each such base saves the chosen weekday list. Updates / deletes / enable-disable already invalidate the React Query cache shared by the contract dropdown, so changes reflect live.
+3. In **Client Contracts → Resource editor → Payroll Day Base** dropdown, the new custom entries appear alongside existing ones (no UI change needed beyond what already exists). The little "payable days" preview next to the dropdown will compute correctly against the new method.
+4. **Payroll calculation** (`src/lib/payroll-calc.ts`) uses the custom weekday set: `baseDays = count of selected weekdays inside the payroll period`. Per-day salary, per-component proration, PH and OT all flow through this divisor exactly like today.
 
-## Fix 1 — Muster only shows designations with attendance (or the primary)
+## Schema change
 
-`src/routes/admin.attendance.$unitId.tsx` currently builds the roster as the cross product of every candidate × every allowed designation they hold. Change the row builder to:
+`payroll_day_bases` table:
 
-1. Always include the **primary** designation row.
-2. Include any non-primary designation row only if `attendance_entries` has at least one record for that `(candidate, designation_id)` in the selected period.
-3. After OCR/Excel apply, re-derive the row set from the freshly written entries so a designation that wasn't worked this month disappears on next render.
+- Add `included_weekdays smallint[]` (nullable). Holds 0–6 ints (0 = Sunday … 6 = Saturday) when `method = 'custom_weekdays'`. NULL for other methods.
+- Extend the `method` check (if any) to accept `'custom_weekdays'`. If no check constraint exists, no DB-level work beyond the new column.
 
-The OCR pair list still receives every allowed `(candidate, designation_id)` so the model can route a printed designation column. The trimming is render-time only.
+No data migration: existing rows are untouched.
 
-## Fix 2 — Payroll hides empty designation buckets
+## Code touch list
 
-`src/routes/admin.payroll.$unitId.tsx` builds one line item per `(candidate, designation_id)`. Skip any bucket where `P + PH + OT days === 0` AND no additions/deductions are tagged to that designation. Tagged manual entries keep their bucket as an override.
+- `src/routes/admin.payroll-days-manager.tsx`
+  - Add `"custom_weekdays"` to the `Method` union and `METHOD_META` (icon + label "Custom weekdays").
+  - Add `includedWeekdays: number[] | null` to `PayrollDayBase`, `rowToItem`, `toRow`, `validate` (require ≥ 1 day selected), and `describeMethod` ("Salary ÷ count of Mon, Tue, Wed… in that month").
+  - In the Add/Edit dialog, render a 7-checkbox row when method is `custom_weekdays`, plus quick presets ("All 7 days", "Mon–Sat", "Mon–Fri"). Pre-select sensible defaults (Mon–Sat) on first switch.
+  - Update CSV export column to show the picked weekdays for custom rows.
 
-## Fix 3 — Attendance search
+- `src/routes/admin.contracts.client-contracts.tsx`
+  - Extend the local `PayrollDayBase` type and `usePayrollDayBases` query to fetch `included_weekdays`.
+  - Update `computePayableDays(base, ref)` to handle `custom_weekdays`: iterate every day of `ref`'s month and count those whose `getDay()` is in `included_weekdays`.
+  - Update `basisLabel` to render the friendly description for the new method.
+  - Pass `includedWeekdays` through to the payroll-calc resource snapshot wherever `payrollDayBase` is built (so live preview matches actual payroll).
 
-Add a single search input above the muster in `src/routes/admin.attendance.$unitId.tsx`. Case-insensitive substring match across full name, employee code, and the row's designation name. Client-side filter over loaded roster.
+- `src/lib/payroll-calc.ts`
+  - Extend `ContractResourceLike.payrollDayBase` with `method: "actual_days" | "fixed_days" | "actual_minus_weekly_off" | "custom_weekdays"` and `includedWeekdays?: number[] | null`.
+  - In the `baseDays` resolution block (~line 549), add a branch for `custom_weekdays` that walks `periodFrom..periodTo` and counts days whose weekday is in `includedWeekdays`. Fallback to `FALLBACK_BASE_DAYS` if the list is empty.
+  - No change to per-component / per-duty / PH / OT math — they all derive from `baseDays`.
 
-## Fix 4 — OT values are days, not hours
-
-Today `attendance_entries.ot_hours` is treated as hours throughout — OCR clamps to `0..24`, Excel import stores the raw cell as hours, and `src/lib/payroll-calc.ts` uses `ot_hours` directly. The user's musters write `0.5` to mean half an OT day and `1` to mean one OT day. Two clean options; going with **(B)** to keep the schema stable and avoid a data migration.
-
-### (B) Reinterpret `ot_hours` as OT-days at the edges (chosen)
-
-Keep column name `ot_hours` (schema stays). Treat every read/write as **OT days** end-to-end:
-
-- `src/lib/attendance-ocr.functions.ts`: drop the "ot_hours is the overtime number" hours framing in the system prompt; document explicitly that the OT cell value is OT-days (`0.5` = half OT day, `1` = one OT day, max ~2). Clamp to `0..2` instead of `0..24`. Stop converting `D ,1` → `1` as hours — it's already days.
-- `src/routes/admin.attendance.$unitId.tsx` Excel importer: parse the OT sub-cell as days, not hours. Update the muster cell editor so the OT input is labeled "OT days" and accepts `0`, `0.5`, `1`, `1.5`, `2`. Update the row-total label from "OT Hrs" to "OT Days".
-- `src/lib/payroll-calc.ts`: OT-day count comes from `SUM(ot_hours)` rows treated as days. OT amount = `(Gross − Uniform) / divisor × OT_days` (already the formula the user confirmed earlier — but the input is now days, not hours/8). Remove any `/ 8` conversion if present.
-- `src/lib/attendance-fetch.ts`: no change — it just passes the number through.
-- Activity log entries written by the importer should say "OT days" in their summary so the audit trail matches.
-
-No DB migration. Historical rows that stored hours-as-hours (if any) get reinterpreted as days; the user confirmed the sheets they upload always meant days, so this matches reality.
-
-## Out of scope
-
-- No schema changes.
-- No rename of the `ot_hours` column (would cascade to types.ts and every consumer; not worth the churn).
-- No change to the candidate-master designations editor.
-- No payroll-math change beyond the OT-days reinterpretation and skipping empty buckets.
-
-## Files touched
-
-- `src/routes/admin.attendance.$unitId.tsx` — trim empty designation rows, post-apply re-derive, search box, OT label/parse as days, Clear All untouched.
-- `src/routes/admin.payroll.$unitId.tsx` — skip zero-activity buckets unless overridden.
-- `src/lib/attendance-ocr.functions.ts` — OT-days prompt + 0..2 clamp.
-- `src/lib/payroll-calc.ts` — treat `ot_hours` field as OT days; remove any hours→days conversion.
+- `src/routes/admin.payroll.$unitId.tsx` (if it builds the resource snapshot before calling `computeWages`): forward `includedWeekdays` from the contract's payroll-day-base into the call, mirroring how `method` and `fixedDays` are already forwarded.
 
 ## Verification after build
 
-1. Person with a master secondary designation but zero attendance under it this period → one muster row, one payroll line.
-2. Person with 3 receptionist + 23 guard days → two rows in muster, two payroll lines with their own gross.
-3. Search "anurag" filters the muster.
-4. Upload a sheet with OT cells `0.5` and `1` → OT Days column shows `0.5` and `1`, payroll OT amount = `(Gross − Uniform)/divisor × OT_days`.
+1. Payroll Days Manager → Add "Mon–Sat (6 days)" with `custom_weekdays` + checkboxes 1–6 ticked. Save. It appears in the table with the right description.
+2. Open a Client Contract → edit a Resource → Payroll Day Base dropdown lists the new entry. Switching to it updates the "payable days this month" preview to the count of Mon–Sat weekdays.
+3. Run a payroll for that contract → gross divides by that count (e.g. 27 in a month with 27 Mon–Sat days), and every per-component / per-duty / PH / OT line scales off the same divisor.
+4. Disable the entry in Payroll Days Manager → it disappears from the contract dropdown on the next refetch; existing contracts already pointing at it keep working (id reference is stable).
+
+## Out of scope
+
+- No rename / removal of existing methods.
+- No changes to OT divisor (still 26 per prior decision).
+- No bulk-migration of existing contracts to the new method.

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
+  CalendarCheck2,
   CalendarDays,
   CalendarMinus,
   CalendarRange,
@@ -11,6 +12,7 @@ import {
   Star,
   Trash2,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -54,7 +56,7 @@ export const Route = createFileRoute("/admin/payroll-days-manager")({
   component: PayrollDaysManagerPage,
 });
 
-type Method = "actual_days" | "fixed_days" | "actual_minus_weekly_off";
+type Method = "actual_days" | "fixed_days" | "actual_minus_weekly_off" | "custom_weekdays";
 
 type PayrollDayBase = {
   id: string;
@@ -63,6 +65,7 @@ type PayrollDayBase = {
   method: Method;
   fixedDays: number | null;
   weeklyOffDay: number | null;
+  includedWeekdays: number[] | null;
   description: string;
   isDefault: boolean;
   enabled: boolean;
@@ -80,6 +83,7 @@ const WEEKDAYS = [
   "Friday",
   "Saturday",
 ];
+const WEEKDAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const METHOD_META: Record<Method, { label: string; icon: typeof CalendarDays; tone: string }> = {
   actual_days: {
@@ -97,9 +101,15 @@ const METHOD_META: Record<Method, { label: string; icon: typeof CalendarDays; to
     icon: CalendarMinus,
     tone: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   },
+  custom_weekdays: {
+    label: "Custom — pick weekdays",
+    icon: CalendarCheck2,
+    tone: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
+  },
 };
 
 function rowToItem(r: Record<string, unknown>): PayrollDayBase {
+  const iw = r.included_weekdays;
   return {
     id: String(r.id),
     name: String(r.name ?? ""),
@@ -107,6 +117,9 @@ function rowToItem(r: Record<string, unknown>): PayrollDayBase {
     method: (r.method as Method) ?? "actual_days",
     fixedDays: r.fixed_days == null ? null : Number(r.fixed_days),
     weeklyOffDay: r.weekly_off_day == null ? null : Number(r.weekly_off_day),
+    includedWeekdays: Array.isArray(iw)
+      ? (iw as unknown[]).map((n) => Number(n)).filter((n) => n >= 0 && n <= 6)
+      : null,
     description: String(r.description ?? ""),
     isDefault: Boolean(r.is_default ?? false),
     enabled: Boolean(r.enabled ?? true),
@@ -124,6 +137,11 @@ function describeMethod(item: PayrollDayBase): string {
       const day = WEEKDAYS[item.weeklyOffDay ?? 0] ?? "Sunday";
       return `Salary ÷ (actual days of month − ${day}s in that month).`;
     }
+    case "custom_weekdays": {
+      const days = (item.includedWeekdays ?? []).slice().sort((a, b) => a - b);
+      if (!days.length) return "Salary ÷ count of selected weekdays (none picked yet).";
+      return `Salary ÷ count of ${days.map((d) => WEEKDAY_SHORT[d]).join(", ")} in that month.`;
+    }
   }
 }
 
@@ -134,7 +152,7 @@ function usePayrollDayBases() {
     queryFn: async (): Promise<PayrollDayBase[]> => {
       const { data, error } = await supabase
         .from("payroll_day_bases" as never)
-        .select("id,name,code,method,fixed_days,weekly_off_day,description,is_default,enabled,sort_order")
+        .select("id,name,code,method,fixed_days,weekly_off_day,included_weekdays,description,is_default,enabled,sort_order")
         .order("sort_order", { ascending: true })
         .order("name", { ascending: true });
       if (error) throw error;
@@ -159,6 +177,11 @@ function usePayrollDayBases() {
         throw new Error("Weekly off day is required");
       }
     }
+    if (p.method === "custom_weekdays") {
+      if (!p.includedWeekdays || p.includedWeekdays.length === 0) {
+        throw new Error("Pick at least one weekday for Custom Weekdays");
+      }
+    }
   };
 
   const toRow = (p: Payload) => ({
@@ -167,6 +190,10 @@ function usePayrollDayBases() {
     method: p.method,
     fixed_days: p.method === "fixed_days" ? p.fixedDays : null,
     weekly_off_day: p.method === "actual_minus_weekly_off" ? p.weeklyOffDay : null,
+    included_weekdays:
+      p.method === "custom_weekdays"
+        ? (p.includedWeekdays ?? []).slice().sort((a, b) => a - b)
+        : null,
     description: p.description.trim(),
     is_default: p.isDefault,
     enabled: p.enabled,
@@ -290,7 +317,7 @@ function PayrollDaysManagerPage() {
         ]}
       />
 
-      <div className="mb-4 grid gap-3 lg:grid-cols-3">
+      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {(Object.keys(METHOD_META) as Method[]).map((m) => {
           const meta = METHOD_META[m];
           const Icon = meta.icon;
@@ -341,6 +368,7 @@ function PayrollDaysManagerPage() {
                   method: METHOD_META[i.method].label,
                   fixed_days: i.fixedDays ?? "",
                   weekly_off: i.weeklyOffDay == null ? "" : WEEKDAYS[i.weeklyOffDay],
+                  custom_weekdays: (i.includedWeekdays ?? []).map((d) => WEEKDAY_SHORT[d]).join(" "),
                   default: i.isDefault ? "Yes" : "No",
                   enabled: i.enabled ? "Yes" : "No",
                 })),
@@ -350,6 +378,7 @@ function PayrollDaysManagerPage() {
                   { key: "method", header: "Method" },
                   { key: "fixed_days", header: "Fixed Days" },
                   { key: "weekly_off", header: "Weekly Off" },
+                  { key: "custom_weekdays", header: "Custom Weekdays" },
                   { key: "default", header: "Default" },
                   { key: "enabled", header: "Enabled" },
                 ],
@@ -571,6 +600,7 @@ function PayrollDayBaseFormDialog({
   const [method, setMethod] = useState<Method>("actual_days");
   const [fixedDays, setFixedDays] = useState<string>("26");
   const [weeklyOffDay, setWeeklyOffDay] = useState<string>("0");
+  const [includedWeekdays, setIncludedWeekdays] = useState<number[]>([1, 2, 3, 4, 5, 6]);
   const [description, setDescription] = useState("");
   const [isDefault, setIsDefault] = useState(false);
   const [enabled, setEnabled] = useState(true);
@@ -582,10 +612,20 @@ function PayrollDayBaseFormDialog({
     setMethod(initial?.method ?? "actual_days");
     setFixedDays(initial?.fixedDays != null ? String(initial.fixedDays) : "26");
     setWeeklyOffDay(initial?.weeklyOffDay != null ? String(initial.weeklyOffDay) : "0");
+    setIncludedWeekdays(
+      initial?.includedWeekdays && initial.includedWeekdays.length > 0
+        ? initial.includedWeekdays
+        : [1, 2, 3, 4, 5, 6],
+    );
     setDescription(initial?.description ?? "");
     setIsDefault(initial?.isDefault ?? false);
     setEnabled(initial?.enabled ?? true);
   });
+
+  const toggleWeekday = (d: number) =>
+    setIncludedWeekdays((cur) =>
+      cur.includes(d) ? cur.filter((x) => x !== d) : [...cur, d].sort((a, b) => a - b),
+    );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -621,6 +661,7 @@ function PayrollDayBaseFormDialog({
                 <SelectItem value="actual_days">Actual days in month</SelectItem>
                 <SelectItem value="fixed_days">Fixed number of days</SelectItem>
                 <SelectItem value="actual_minus_weekly_off">Actual days minus a weekly off</SelectItem>
+                <SelectItem value="custom_weekdays">Custom — pick weekdays</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -654,6 +695,39 @@ function PayrollDayBaseFormDialog({
               </Select>
               <p className="text-xs text-muted-foreground">
                 Salary ÷ (actual days of month − occurrences of this weekday).
+              </p>
+            </div>
+          )}
+
+          {method === "custom_weekdays" && (
+            <div className="grid gap-2">
+              <Label>Working weekdays *</Label>
+              <div className="flex flex-wrap gap-2">
+                {WEEKDAYS.map((d, idx) => {
+                  const checked = includedWeekdays.includes(idx);
+                  return (
+                    <label
+                      key={d}
+                      className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors ${checked ? "border-violet-500/50 bg-violet-500/10 text-violet-700 dark:text-violet-300" : "border-border hover:bg-secondary/50"}`}
+                    >
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={() => toggleWeekday(idx)}
+                      />
+                      {WEEKDAY_SHORT[idx]}
+                    </label>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setIncludedWeekdays([0, 1, 2, 3, 4, 5, 6])}>All 7 days</Button>
+                <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setIncludedWeekdays([1, 2, 3, 4, 5, 6])}>Mon–Sat</Button>
+                <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setIncludedWeekdays([1, 2, 3, 4, 5])}>Mon–Fri</Button>
+                <Button type="button" size="sm" variant="outline" className="h-7 text-xs" onClick={() => setIncludedWeekdays([])}>Clear</Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Salary ÷ count of these weekdays occurring in the payroll month
+                {includedWeekdays.length > 0 ? ` (${includedWeekdays.map((i) => WEEKDAY_SHORT[i]).join(", ")}).` : "."}
               </p>
             </div>
           )}
@@ -700,6 +774,7 @@ function PayrollDayBaseFormDialog({
                 fixedDays: method === "fixed_days" ? Number(fixedDays) || 0 : null,
                 weeklyOffDay:
                   method === "actual_minus_weekly_off" ? Number(weeklyOffDay) : null,
+                includedWeekdays: method === "custom_weekdays" ? includedWeekdays : null,
                 description,
                 isDefault,
                 enabled,

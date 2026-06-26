@@ -3382,6 +3382,7 @@ export type Database = {
           enabled: boolean
           fixed_days: number | null
           id: string
+          included_weekdays: number[] | null
           is_default: boolean
           method: string
           name: string
@@ -3396,6 +3397,7 @@ export type Database = {
           enabled?: boolean
           fixed_days?: number | null
           id?: string
+          included_weekdays?: number[] | null
           is_default?: boolean
           method: string
           name: string
@@ -3410,6 +3412,7 @@ export type Database = {
           enabled?: boolean
           fixed_days?: number | null
           id?: string
+          included_weekdays?: number[] | null
           is_default?: boolean
           method?: string
           name?: string
