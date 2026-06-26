@@ -14,6 +14,7 @@ import favicon from "../assets/radiant-logo-v2.png";
 import { Toaster } from "@/components/ui/sonner";
 import { ConfirmProvider } from "@/components/ConfirmProvider";
 import { ExportChooser } from "@/components/ExportChooser";
+import { LanguageProvider } from "@/lib/i18n";
 
 
 function NotFoundComponent() {
