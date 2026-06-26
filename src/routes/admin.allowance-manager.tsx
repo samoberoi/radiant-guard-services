@@ -104,6 +104,15 @@ function rowToItem(r: Record<string, unknown>): Allowance {
     include_in_ot: r.include_in_ot == null ? true : Boolean(r.include_in_ot),
     formula_mode: r.formula_mode == null ? null : String(r.formula_mode),
     formula_expression: r.formula_expression == null ? null : String(r.formula_expression),
+    fixed_calc_method: (String(r.fixed_calc_method ?? "flat") as FixedCalcMethod),
+    fixed_duty_components: Array.isArray(r.fixed_duty_components)
+      ? ((r.fixed_duty_components as string[]).filter((b) =>
+          FIXED_DUTY_BUCKETS.some((x) => x.value === b),
+        ) as FixedDutyBucket[])
+      : [],
+    fixed_duty_divisor: (FIXED_DUTY_DIVISORS.some((x) => x.value === r.fixed_duty_divisor)
+      ? (r.fixed_duty_divisor as FixedDutyDivisor)
+      : "base_days"),
   };
 }
 
