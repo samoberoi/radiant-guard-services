@@ -260,7 +260,7 @@ function makeTranslator() {
       nodes.add(tn);
       applyToNode(tn);
     }
-    scheduleFlush();
+    scheduleFlush(true);
   };
 
   const restoreAll = () => {
