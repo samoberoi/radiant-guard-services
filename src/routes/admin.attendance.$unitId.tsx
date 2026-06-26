@@ -1737,12 +1737,15 @@ function MusterRollPage() {
                 <tr><td colSpan={9 + dayCount} className="p-6 text-red-600">Failed to load mapped employees for this unit.</td></tr>
               ) : musterRows.length === 0 ? (
                 <tr><td colSpan={9 + dayCount} className="p-6 text-slate-500">No active security guards are mapped to this unit.</td></tr>
+              ) : visibleMusterRows.length === 0 ? (
+                <tr><td colSpan={9 + dayCount} className="p-6 text-slate-500">No rows match &ldquo;{musterQuery}&rdquo;.</td></tr>
               ) : (
-                musterRows.flatMap((mr, idx) => {
+                visibleMusterRows.flatMap((mr, idx) => {
                   const cellBase = "border border-slate-400 align-middle";
                   const totals = computeTotalsForRow(mr.key);
                   return [
                     <tr key={mr.key + "-att"}>
+
                       <td className={cn(cellBase, "p-1 font-medium")} rowSpan={2}>{idx + 1}</td>
                       <td className={cn(cellBase, "p-1")} rowSpan={2}>{mr.emp.employee_code || "—"}</td>
                       <td className={cn(cellBase, "p-1 text-left")} rowSpan={2}>
