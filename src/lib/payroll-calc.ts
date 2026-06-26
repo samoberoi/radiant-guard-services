@@ -125,7 +125,19 @@ export function computeAttendanceTotals(
 
 export type FixedCalcMethod = "flat" | "per_duty";
 export type FixedDutyBucket = "p_days" | "ot_days" | "ph_days" | "other_paid_days";
-export type FixedDutyDivisor = "base_days" | "days_in_month" | "payable_days" | "fixed_26";
+// Built-ins: "base_days" | "days_in_month" | "payable_days" | "fixed_26".
+// Dynamic: "pdb:<uuid>" — references a Payroll Days Manager entry,
+// resolved at runtime via options.dayBases passed to computeWages.
+export type FixedDutyDivisor = string;
+
+export type PayrollDayBaseDef = {
+  id: string;
+  code?: string | null;
+  method: "actual_days" | "fixed_days" | "actual_minus_weekly_off" | "custom_weekdays";
+  fixedDays?: number | null;
+  weeklyOffDay?: number | null;
+  includedWeekdays?: number[] | null;
+};
 
 export type WageComponent = {
   allowanceId?: string | null;
