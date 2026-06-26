@@ -595,6 +595,7 @@ function SidebarGroup({
 }) {
   const [open, setOpen] = useState(groupActive);
   const Icon = group.icon;
+  const t = useT();
 
   useEffect(() => {
     if (groupActive) setOpen(true);
