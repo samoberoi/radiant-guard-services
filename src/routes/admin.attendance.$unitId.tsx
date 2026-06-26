@@ -834,20 +834,23 @@ function MusterRollPage() {
         ...byPair.keys(),
       ]);
 
+      // Sheet-authoritative: for any candidate present in the uploaded sheet,
+      // wipe ALL prior entries for the period (across every designation),
+      // then re-write only what the sheet shows. Prevents phantom rows under
+      // a designation the sheet didn't include.
+      const candidatesInSheet = new Set<string>();
       for (const pk of sheetPairKeys) {
         const mr = pairByKey.get(pk);
-        if (!mr) continue;
-        let query = supabase
+        if (mr) candidatesInSheet.add(mr.candidateId);
+      }
+      if (candidatesInSheet.size) {
+        const { error } = await supabase
           .from("attendance_entries")
           .delete()
           .eq("unit_id", unitId)
-          .eq("candidate_id", mr.candidateId)
+          .in("candidate_id", Array.from(candidatesInSheet))
           .gte("entry_date", periodStart)
           .lte("entry_date", periodEnd);
-        query = mr.designationId
-          ? query.eq("designation_id", mr.designationId)
-          : query.is("designation_id", null);
-        const { error } = await query;
         if (error) throw error;
       }
 
