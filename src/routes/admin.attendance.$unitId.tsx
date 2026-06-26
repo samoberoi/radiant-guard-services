@@ -447,6 +447,23 @@ function MusterRollPage() {
 
   const codeMap = useMemo(() => new Map(codes.map((c) => [c.code, c])), [codes]);
 
+  // Multi-designation master: any additional designations a candidate carries
+  const candidateIds = useMemo(() => (employees ?? []).map((e) => e.id), [employees]);
+  const { data: candDesignations = [] } = useQuery({
+    queryKey: ["attendance-candidate-designations", unitId, candidateIds.join(",")],
+    queryFn: async () => {
+      if (!candidateIds.length) return [] as Array<{ candidate_id: string; designation_id: string; is_primary: boolean }>;
+      const { data, error } = await supabase
+        .from("candidate_designations" as never)
+        .select("candidate_id, designation_id, is_primary")
+        .in("candidate_id", candidateIds);
+      if (error) throw error;
+      return (data ?? []) as Array<{ candidate_id: string; designation_id: string; is_primary: boolean }>;
+    },
+    enabled: candidateIds.length > 0,
+  });
+
+
   const entriesQK = ["attendance-entries-v4", unitId, periodStart, periodEnd];
   const { data: entries = [] } = useQuery({
     queryKey: entriesQK,
