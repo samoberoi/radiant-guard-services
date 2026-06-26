@@ -632,7 +632,15 @@ function PayrollUnitPage() {
         };
       });
 
-      rows.sort((a, b) => {
+      // Drop non-primary designation lines that ended up with zero attendance.
+      // Primary always stays — it carries per-candidate additions/deductions.
+      const visibleRows = rows.filter((r) => {
+        if (r.isPrimary) return true;
+        const t = r.totals;
+        return (t.pDays + t.phDays + t.otDays + t.otherPaidDays) > 0;
+      });
+
+      visibleRows.sort((a, b) => {
         const an = (a.employeeCode || a.name).localeCompare(b.employeeCode || b.name);
         if (an !== 0) return an;
         // primary first, then by designation name
@@ -640,7 +648,7 @@ function PayrollUnitPage() {
         return a.designation.localeCompare(b.designation);
       });
 
-      return rows;
+      return visibleRows;
     },
   });
 
