@@ -1,55 +1,69 @@
-## Goal
+# Office Assets Module
 
-Bring the same configurable **Per-Duty Proration** model (amount ÷ chosen day basis × selected duty buckets) that already exists in **Cost Component Manager** to the **Allowance Manager** so statutory/contractual items like **LWF**, **Bonus**, **Ex-Gratia** etc. can be set up as:
+A new top-level module mirroring the inventory module patterns (branch scoping, value/count rollups, beautiful PageHeader + KPI strips, activity logging). Scope is **non-billable resources only** (finance, HR, IT, etc.) — not security guards.
 
+## Scope
+
+1. **Office Asset Inventory** — master catalog of asset types (Laptop, Chair, Mouse, Keyboard, Charger, Cable, Monitor, Desk, Light…) with category, brand/model, unit cost, depreciation life, and per-branch on-hand counts.
+2. **Allocations** — assign individual asset units (with serial/tag) to a non-billable resource at a branch; auto-reflect on the resource's profile.
+3. **Branch Rollup** — every branch shows count and value of office assets held + allocated.
+4. **Resource Profile Integration** — non-billable employee profile gets an "Office Assets" tab listing everything allocated to them.
+5. **Seed data** — one demo non-billable unit ("Radiant HQ – Non-Billable"), one finance-analyst resource with rate card, 2-3 assets allocated.
+
+## Data model
+
+```text
+office_asset_categories         category taxonomy (IT, Furniture, Electrical…)
+office_assets                   catalog: name, category, brand, model, unit_cost,
+                                depreciation_months, image_url, enabled
+office_asset_units              individual physical units: asset_id, tag/serial,
+                                branch_id, status (in_stock|allocated|scrap|repair),
+                                purchase_date, current_value
+office_asset_allocations        unit_id, candidate_id, branch_id, allocated_at,
+                                returned_at, condition_out, condition_in, notes
 ```
-amount  ÷  <Base Days | Days in Month | Payable Days | Fixed 26>
-        ×  <P + any combination of OT / PH / Other Paid days>
-```
 
-Then flow this through Contracts → Payroll so exports stay accurate.
+All four tables: RLS on, GRANT to authenticated + service_role, branch-scoped read for branch admins, full access for super_admin / inventory_manager / a new `office_assets_manager` role concept handled via existing RBAC (`office_assets` module key).
 
-## Changes
+Activity logged on every create/update/allocate/return/scrap via `logActivity` with module label "Office Assets".
 
-### 1. Schema — `allowance_types`
+## UI surface (under `/admin/office-assets/*`)
 
-Add three nullable columns mirroring `cost_components`:
+- `admin.office-assets.tsx` — layout + dashboard hub
+  - KPIs: Total Asset Value, Total Units, Allocated %, Top 5 Branches by Value
+  - Branch holdings table (count / value / utilization)
+- `admin.office-assets.inventory.tsx` — catalog CRUD (asset types) + per-branch stock view, search, CSV export, value/count toggle
+- `admin.office-assets.allocations.tsx` — allocate / return dialog; dropdown of non-billable resources auto-fills branch + designation; list view with filters
+- `admin.office-assets.categories.tsx` — small category manager
 
-- `fixed_calc_method text` — `flat` | `per_duty` (default `flat`)
-- `fixed_duty_components text[]` — any subset of `p_days`, `ot_days`, `ph_days`, `other_paid_days`
-- `fixed_duty_divisor text` — `base_days` | `days_in_month` | `payable_days` | `fixed_26`
+Reused components: `PageHeader`, `MiniStat`, shadcn Table/Dialog/Select, `confirmAction`, `downloadCsv`, `logActivity`.
 
-No backfill needed; `flat` keeps today's math.
+Left nav: new "Office Assets" section in `src/routes/admin.tsx` with sub-items Dashboard, Inventory, Allocations, Categories. Visible to super_admin, admin, and any role granted the `office_assets` module via RBAC.
 
-### 2. Allowance Manager UI (`src/routes/admin.allowance-manager.tsx`)
+## Profile integration
 
-When the allowance is amount-based (not %), show the same Per-Duty block already used in Cost Component Manager:
-- Calc Method select (Flat vs Per-Duty Proration)
-- Divisor select (Base Days / Days in Month / Payable Days / Fixed 26)
-- Duty bucket checkboxes (P, OT, PH, Other Paid) — must select at least one
-- Live preview line, e.g. `₹12.50 ÷ Base Days × (P + OT + PH)`
+On the candidate details page (`admin.candidates.$id.details.tsx`), add an "Office Assets" card for non-billable resources only — list allocated units with tag, allocated date, condition, and a "Return" action.
 
-Persist via the existing row mapper.
+## RBAC
 
-### 3. Contracts (`src/routes/admin.contracts.client-contracts.tsx`)
+Add `office_assets` module to `src/lib/rbac-modules.ts` with sub-modules: Dashboard, Inventory, Allocations, Categories.
 
-Extend the allowance fetch + snapshot mapper to carry `fixedCalcMethod`, `fixedDutyComponents`, `fixedDutyDivisor` (same fields already wired for cost components) into `contract_resources.components` / `benefits` / `employerContributions` JSON.
+## Seed
 
-### 4. Payroll engine (`src/lib/payroll-calc.ts`)
+Single migration also seeds:
+- Category "IT Equipment", "Furniture"
+- Assets: Dell Latitude Laptop (₹85k), Logitech Mouse (₹800), Ergonomic Chair (₹12k)
+- One unit "Radiant HQ – Non-Billable" (non-billable flag on `units` if available, else a marker on the branch)
+- One candidate "Aarti Mehta" — Finance Analyst, non-billable, mapped to that unit
+- 3 office_asset_units allocated to her (laptop, mouse, chair)
 
-`computePerDutyAmount()` already supports the divisor + bucket logic generically; just ensure it's invoked for allowance lines too (currently only cost-component lines route through it). Specifically:
-- In the allowance/benefit branch where `calcType === "fixed"`, branch on `fixedCalcMethod === "per_duty"` and call the same helper instead of using a flat amount.
-- Hydrate the new fields in `src/lib/contract-hydrate.ts` so live edits to the Allowance master propagate without re-saving contracts.
+## Non-billable detection
 
-### 5. Verification
+Existing `units` table has billing flags; we'll treat resources whose unit/designation is flagged non-billable as eligible. If no clean flag exists, add a `non_billable boolean default false` column to `candidates` in the same migration and set it true for the seed + expose a toggle on the candidate form (out of scope to retrofit existing data; only seeded resource will be non-billable initially).
 
-- Create **LWF** in Allowance Manager: amount ₹12.50, Per-Duty, Divisor = Base Days (26), Buckets = P + OT + PH. Confirm preview reads `₹12.50 ÷ 26 × (P+OT+PH)`.
-- Attach to a contract → run unit payroll → LWF line equals `12.50 / 26 × (P+OT+PH)` and the export column matches.
-- Same flow for **Management Fee** under Cost Components (already working) — no regression.
-- Existing `flat` allowances compute identically.
-- Typecheck clean.
+## Out of scope (this pass)
 
-## Out of scope
-
-- No change to %-based allowances, EPF/ESI/PT slab logic, additions/deductions managers (those have their own per_duty system).
-- No retroactive recompute of historical payroll runs.
+- Depreciation schedule auto-calc beyond storing months
+- QR code generation for tags
+- Mobile scan-in/scan-out
+- Procurement workflow (separate from existing PO inventory)
