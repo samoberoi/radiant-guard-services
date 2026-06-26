@@ -65,8 +65,7 @@ type Deduction = {
 };
 
 const DAY_BUCKETS: { value: DayBucket; label: string }[] = [
-  { value: "present", label: "Present" },
-  { value: "worked", label: "Worked" },
+  { value: "present", label: "Present Duties" },
   { value: "ot", label: "OT" },
   { value: "ph", label: "PH" },
 ];
