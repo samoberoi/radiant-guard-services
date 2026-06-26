@@ -562,7 +562,8 @@ function MusterRollPage() {
       }
     }
     return out;
-  }, [employees, entries, extraRows, contractDesignations]);
+  }, [employees, entries, extraRows, contractDesignations, candDesignations]);
+
 
   // ---- Mutations ----
 
