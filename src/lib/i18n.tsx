@@ -8,9 +8,50 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { translateBatch } from "@/lib/translate.functions";
+
+// Browser-side translation via Google's public unauthenticated endpoint.
+// Works on ANY hosting environment (Vercel, Lovable, self-hosted) with no
+// API key or server function — the endpoint accepts CORS browser calls.
+async function googleTranslate(
+  texts: string[],
+  target: "hi" | "mr",
+): Promise<string[]> {
+  // Endpoint has a length cap per request; send each string individually but
+  // in parallel batches of 10 so latency stays low.
+  const results: string[] = new Array(texts.length).fill("");
+  const BATCH = 10;
+  for (let i = 0; i < texts.length; i += BATCH) {
+    const slice = texts.slice(i, i + BATCH);
+    const out = await Promise.all(
+      slice.map(async (text) => {
+        try {
+          const url =
+            "https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=" +
+            target +
+            "&dt=t&q=" +
+            encodeURIComponent(text);
+          const res = await fetch(url);
+          if (!res.ok) return text;
+          const json = (await res.json()) as unknown;
+          // Response is a deeply-nested array; first element holds the translation chunks.
+          if (Array.isArray(json) && Array.isArray(json[0])) {
+            return (json[0] as Array<unknown>)
+              .map((row) =>
+                Array.isArray(row) && typeof row[0] === "string" ? row[0] : "",
+              )
+              .join("");
+          }
+          return text;
+        } catch {
+          return text;
+        }
+      }),
+    );
+    out.forEach((v, k) => (results[i + k] = v || slice[k]));
+  }
+  return results;
+}
 
 export type LangCode = "en" | "hi" | "mr";
 
