@@ -1074,6 +1074,22 @@ function MusterRollPage() {
         }
       }
 
+      // Sheet-authoritative: wipe every prior entry in this period for any
+      // candidate present in the uploaded sheet (across all designations),
+      // then write only what the sheet shows.
+      let clearedStale = 0;
+      if (candidatesInSheet.size) {
+        const { error, count } = await supabase
+          .from("attendance_entries")
+          .delete({ count: "exact" })
+          .eq("unit_id", unitId)
+          .in("candidate_id", Array.from(candidatesInSheet))
+          .gte("entry_date", periodStart)
+          .lte("entry_date", periodEnd);
+        if (error) throw error;
+        clearedStale = count ?? 0;
+      }
+
       for (const { mr, rows } of byPair.values()) {
         await upsertEntries(mr.candidateId, mr.designationId, rows);
       }
