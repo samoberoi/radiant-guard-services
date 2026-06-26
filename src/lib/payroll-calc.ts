@@ -576,42 +576,8 @@ export function computeWages(
   const basePaidDays = totals.pDays + totals.otherPaidDays;
   const baseRatio = baseDays > 0 ? basePaidDays / baseDays : 0;
 
-  // Build a FormulaContext shared by every line that opts into the engine.
-  // Variables match what Allowance Manager / Cost Component Manager expose.
-  const baseFormulaCtx: FormulaContext = {
-    basic: 0,
-    da: 0,
-    gross: contractGross,
-    fixed_amount: 0,
-    fixed_days: baseDays,
-    working_days: periodDayCount,
-    payable_days: basePaidDays,
-    days_in_month: periodDayCount,
-    present: totals.pDays,
-    worked: totals.pDays + totals.otherPaidDays,
-    ot: totals.otDays,
-    ph: totals.phDays,
-    wo: 0,
-    el: 0,
-    pl: totals.otherPaidDays,
-  };
-  // Expose every contract component as a slugified variable so formulas can
-  // reference HRA, Special Allowance, Conveyance, etc. by name.
-  for (const c of resource.components) {
-    addFormulaContextAliases(baseFormulaCtx, Number(c.amount) || 0, c.name);
-  }
-  const tryFormulaAmount = (
-    item: { formulaMode?: string | null; formulaExpression?: string | null; amount?: number | string | null },
-  ): number | null => {
-    if (!hasConfiguredFormula(item)) return null;
-    const cfg = parseFormulaConfig(item.formulaMode, item.formulaExpression);
-    if (!cfg) return null;
-    if (cfg.mode === "advanced" && (!cfg.expression || !cfg.expression.trim())) return null;
-    const ctx: FormulaContext = { ...baseFormulaCtx, fixed_amount: Number(item.amount) || 0 };
-    const r = evaluateFormula(cfg, ctx);
-    return r.error ? null : r.amount;
-  };
-
+  // Per-duty / duty-bucket helpers (used by both component proration and
+  // fixed-amount deductions/contributions further below).
   const dutyBucketValueEarly = (bucket: FixedDutyBucket): number => {
     switch (bucket) {
       case "p_days": return totals.pDays;
@@ -638,13 +604,60 @@ export function computeWages(
     return round2(perDuty * totalDuties);
   };
 
-  const components: WageComponent[] = resource.components.map((c) => {
+  // Pass 1: pro-rate every non-formula component so we know the earned
+  // base value for each (Basic, Spl Allow, ...) BEFORE evaluating any
+  // formula. This way a formula like `5% of (Basic + Spl Allow)` scales
+  // with attendance instead of always returning the full-month amount.
+  const componentEarnedAmounts: number[] = resource.components.map((c) => {
+    if (c.fixedCalcMethod === "per_duty") return perDutyAmountEarly(c);
+    return round2((Number(c.amount) || 0) * baseRatio);
+  });
+  const earnedContractGrossPreFormula = componentEarnedAmounts.reduce((s, v) => s + v, 0);
+
+  // FormulaContext shared by every line that opts into the engine.
+  // Variables match what Allowance Manager / Cost Component Manager expose.
+  const baseFormulaCtx: FormulaContext = {
+    basic: 0,
+    da: 0,
+    // `gross` exposed to formulas = earned gross (pro-rated).
+    gross: round2(earnedContractGrossPreFormula),
+    fixed_amount: 0,
+    fixed_days: baseDays,
+    working_days: periodDayCount,
+    payable_days: basePaidDays,
+    days_in_month: periodDayCount,
+    present: totals.pDays,
+    worked: totals.pDays + totals.otherPaidDays,
+    ot: totals.otDays,
+    ph: totals.phDays,
+    wo: 0,
+    el: 0,
+    pl: totals.otherPaidDays,
+  };
+  // Expose every contract component as a slugified variable, using the
+  // PRO-RATED earned amount (not the full-month contract amount).
+  resource.components.forEach((c, idx) => {
+    addFormulaContextAliases(baseFormulaCtx, componentEarnedAmounts[idx] ?? 0, c.name);
+  });
+
+  const tryFormulaAmount = (
+    item: { formulaMode?: string | null; formulaExpression?: string | null; amount?: number | string | null },
+  ): number | null => {
+    if (!hasConfiguredFormula(item)) return null;
+    const cfg = parseFormulaConfig(item.formulaMode, item.formulaExpression);
+    if (!cfg) return null;
+    if (cfg.mode === "advanced" && (!cfg.expression || !cfg.expression.trim())) return null;
+    // Flat-amount formulas also prorate: scale configured fixed_amount by ratio.
+    const fixedAmt = round2((Number(item.amount) || 0) * baseRatio);
+    const ctx: FormulaContext = { ...baseFormulaCtx, fixed_amount: fixedAmt };
+    const r = evaluateFormula(cfg, ctx);
+    return r.error ? null : r.amount;
+  };
+
+  // Pass 2: formula lines override the pass-1 pro-rated amount.
+  const components: WageComponent[] = resource.components.map((c, idx) => {
     const fromFormula = tryFormulaAmount(c);
-    const amount = fromFormula != null
-      ? fromFormula
-      : c.fixedCalcMethod === "per_duty"
-      ? perDutyAmountEarly(c)
-      : round2((Number(c.amount) || 0) * baseRatio);
+    const amount = fromFormula != null ? fromFormula : (componentEarnedAmounts[idx] ?? 0);
     return { ...c, name: c.name, amount };
   });
 
