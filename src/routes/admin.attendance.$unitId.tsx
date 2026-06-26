@@ -622,17 +622,24 @@ function MusterRollPage() {
     setOcrSummary(null);
     setUploadReadyToContinue(false);
     try {
-      const primaryByCandidate = new Map<string, typeof musterRows[number]>();
+      // Send EVERY (candidate, designation) pair currently on the muster so
+      // OCR can split a person across designations within the same period.
+      const pairByKey = new Map<string, typeof musterRows[number]>();
       for (const mr of musterRows) {
-        if (mr.isPrimary && !primaryByCandidate.has(mr.candidateId)) {
-          primaryByCandidate.set(mr.candidateId, mr);
-        }
+        pairByKey.set(`${mr.candidateId}|${mr.designationId ?? ""}`, mr);
       }
-      const employeesPayload = Array.from(primaryByCandidate.values()).map((mr) => ({
+      const candidatePairs = new Map<string, Array<typeof musterRows[number]>>();
+      for (const mr of musterRows) {
+        const list = candidatePairs.get(mr.candidateId) ?? [];
+        list.push(mr);
+        candidatePairs.set(mr.candidateId, list);
+      }
+      const employeesPayload = musterRows.map((mr) => ({
         id: mr.candidateId,
         name: mr.emp.full_name,
         employee_code: mr.emp.employee_code ?? null,
         designation: mr.designationName ?? null,
+        designation_id: mr.designationId ?? "",
       }));
       const result = await runOcr({
         data: {
@@ -644,22 +651,33 @@ function MusterRollPage() {
       });
 
       const validDates = new Set(periodCells.map((c) => c.date));
-      const byCandidate = new Map<string, typeof result.rows>();
+      const pairKey = (cid: string, did: string | null) => `${cid}|${did ?? ""}`;
+      const resolvePairKey = (cid: string, did: string | null): string | null => {
+        const direct = pairKey(cid, did);
+        if (pairByKey.has(direct)) return direct;
+        // Fall back to the candidate's primary pair if OCR couldn't place a designation.
+        const list = candidatePairs.get(cid);
+        if (!list || list.length === 0) return null;
+        const primary = list.find((m) => m.isPrimary) ?? list[0];
+        return primary.key;
+      };
+      const byPair = new Map<string, typeof result.rows>();
       const uncertainNext = new Set<string>();
-      const totalsMismatchCandidates = new Set<string>();
+      const totalsMismatchPairs = new Set<string>();
       let confidentCount = 0;
       let uncertainCount = 0;
 
       for (const r of result.rows) {
         if (!validDates.has(r.entry_date)) continue;
         if (r.entry_date > todayStr) continue;
-        const mr = primaryByCandidate.get(r.candidate_id);
-        if (!mr) continue;
+        const pk = resolvePairKey(r.candidate_id, r.designation_id);
+        if (!pk) continue;
+        const mr = pairByKey.get(pk)!;
         const cellKey = `${mr.key}|${r.entry_date}`;
         if (r.confident && r.code) {
-          const list = byCandidate.get(r.candidate_id) ?? [];
+          const list = byPair.get(pk) ?? [];
           list.push(r);
-          byCandidate.set(r.candidate_id, list);
+          byPair.set(pk, list);
           confidentCount += 1;
         } else {
           uncertainNext.add(cellKey);
@@ -694,41 +712,44 @@ function MusterRollPage() {
         };
       };
 
-      const summaryByCandidate = new Map(
-        (result.row_summaries ?? []).map((summary) => [summary.candidate_id, summary as OcrRowSummary]),
+      const summaryByPair = new Map(
+        (result.row_summaries ?? []).map((summary) => {
+          const pk = resolvePairKey(summary.candidate_id, summary.designation_id) ?? pairKey(summary.candidate_id, summary.designation_id);
+          return [pk, summary as OcrRowSummary];
+        }),
       );
 
-      for (const [candidateId, rows] of Array.from(byCandidate.entries())) {
-        const expected = summaryByCandidate.get(candidateId);
+      for (const [pk, rows] of Array.from(byPair.entries())) {
+        const expected = summaryByPair.get(pk);
         if (!expected?.confident) continue;
         const actual = computeImportedSummary(rows);
         const totalsCheck = isSummaryClose(actual, expected);
         if (!totalsCheck.ok) {
-          totalsMismatchCandidates.add(candidateId);
+          totalsMismatchPairs.add(pk);
         }
       }
 
-      for (const candidateId of totalsMismatchCandidates) {
-        const mr = primaryByCandidate.get(candidateId);
+      for (const pk of totalsMismatchPairs) {
+        const mr = pairByKey.get(pk);
         if (!mr) continue;
         for (const cell of periodCells) {
           uncertainNext.add(`${mr.key}|${cell.date}`);
         }
       }
 
-      const sheetCandidateIds = new Set<string>([
-        ...summaryByCandidate.keys(),
-        ...byCandidate.keys(),
+      const sheetPairKeys = new Set<string>([
+        ...summaryByPair.keys(),
+        ...byPair.keys(),
       ]);
 
-      for (const candidateId of sheetCandidateIds) {
-        const mr = primaryByCandidate.get(candidateId);
+      for (const pk of sheetPairKeys) {
+        const mr = pairByKey.get(pk);
         if (!mr) continue;
         let query = supabase
           .from("attendance_entries")
           .delete()
           .eq("unit_id", unitId)
-          .eq("candidate_id", candidateId)
+          .eq("candidate_id", mr.candidateId)
           .gte("entry_date", periodStart)
           .lte("entry_date", periodEnd);
         query = mr.designationId
@@ -738,13 +759,13 @@ function MusterRollPage() {
         if (error) throw error;
       }
 
-      confidentCount = Array.from(byCandidate.values()).reduce((sum, rows) => sum + rows.length, 0);
+      confidentCount = Array.from(byPair.values()).reduce((sum, rows) => sum + rows.length, 0);
       uncertainCount = uncertainNext.size;
 
-      for (const [candidateId, rows] of byCandidate.entries()) {
-        const mr = primaryByCandidate.get(candidateId)!;
+      for (const [pk, rows] of byPair.entries()) {
+        const mr = pairByKey.get(pk)!;
         await upsertEntries(
-          candidateId,
+          mr.candidateId,
           mr.designationId,
           rows.map((r) => ({ entry_date: r.entry_date, code: r.code, ot_hours: r.ot_hours })),
         );
@@ -757,7 +778,7 @@ function MusterRollPage() {
         return next;
       });
 
-      const summary = `${confidentCount} cell${confidentCount === 1 ? "" : "s"} auto-filled · ${uncertainCount} flagged for review${totalsMismatchCandidates.size ? ` · ${totalsMismatchCandidates.size} row${totalsMismatchCandidates.size === 1 ? "" : "s"} marked for totals review` : ""}${result.unmatched_names.length ? ` · ${result.unmatched_names.length} unmatched row${result.unmatched_names.length === 1 ? "" : "s"}` : ""}`;
+      const summary = `${confidentCount} cell${confidentCount === 1 ? "" : "s"} auto-filled · ${uncertainCount} flagged for review${totalsMismatchPairs.size ? ` · ${totalsMismatchPairs.size} row${totalsMismatchPairs.size === 1 ? "" : "s"} marked for totals review` : ""}${result.unmatched_names.length ? ` · ${result.unmatched_names.length} unmatched row${result.unmatched_names.length === 1 ? "" : "s"}` : ""}`;
       setOcrSummary(summary);
       setUploadReadyToContinue(true);
       toast.success(summary);
