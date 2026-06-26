@@ -25,6 +25,7 @@ import { ContractApprovalDialog, type ApprovalMode } from "@/components/Contract
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { hydrateFormulasFromMaster } from "@/lib/contract-hydrate";
 import { useCurrentPermissions } from "@/lib/rbac";
 import { notifyApprovers } from "@/lib/notifications";
 import { csvDate, downloadCsv } from "@/lib/csv-export";
@@ -1675,6 +1676,42 @@ function ClientContractsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ClientContract | null>(null);
   const [deleting, setDeleting] = useState<ClientContract | null>(null);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
+
+  async function handleSyncFormulas(contractId: string, label: string) {
+    setSyncingId(contractId);
+    try {
+      const { data, error } = await supabase
+        .from("contract_resources" as never)
+        .select("id,designation_id,service_type_id,quantity,components,sort_order,payroll_day_base_id,benefits,deductions,employer_contributions")
+        .eq("contract_id", contractId)
+        .order("sort_order");
+      if (error) throw error;
+      const current: ContractResource[] = (data as unknown as Record<string, unknown>[]).map((r) => ({
+        id: String(r.id),
+        designationId: r.designation_id ? String(r.designation_id) : "",
+        serviceTypeId: r.service_type_id ? String(r.service_type_id) : "",
+        quantity: Number(r.quantity ?? 1),
+        components: Array.isArray(r.components) ? (r.components as ResourceComponent[]) : [],
+        payrollDayBaseId: r.payroll_day_base_id ? String(r.payroll_day_base_id) : null,
+        benefits: Array.isArray(r.benefits) ? (r.benefits as BenefitItem[]) : [],
+        deductions: Array.isArray(r.deductions) ? (r.deductions as BenefitItem[]) : [],
+        employerContributions: Array.isArray(r.employer_contributions) ? (r.employer_contributions as BenefitItem[]) : [],
+      }));
+      if (current.length === 0) {
+        toast.info("No resource lines to sync on this contract.");
+        return;
+      }
+      const hydrated = await hydrateFormulasFromMaster(current);
+      await persistResources(contractId, hydrated);
+      await qc.invalidateQueries({ queryKey: ["admin", "contract-resources", contractId] });
+      toast.success(`Formulas synced from master for ${label}`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not sync formulas");
+    } finally {
+      setSyncingId(null);
+    }
+  }
   const [tab, setTab] = useState<RecordType>("client");
   const [approvalTarget, setApprovalTarget] = useState<{
     contract: ClientContract;
@@ -2082,6 +2119,17 @@ function ClientContractsPage() {
                         title="Export to Excel"
                       >
                         <FileSpreadsheet className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleSyncFormulas(c.id, c.contractCode || "contract")}
+                        disabled={syncingId === c.id}
+                        aria-label="Sync formulas from master"
+                        title="Sync formulas from Allowance / Cost Component Manager"
+                      >
+                        <RefreshCcw className={`h-4 w-4 ${syncingId === c.id ? "animate-spin" : ""}`} />
                       </Button>
                       <Button
                         size="sm"
