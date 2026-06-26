@@ -254,6 +254,9 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
       const candidate_id = String(
         (r as { candidate_id?: unknown }).candidate_id ?? "",
       );
+      const desigRaw = String(
+        (r as { designation_id?: unknown }).designation_id ?? "",
+      ).trim();
       const entry_date = String(
         (r as { entry_date?: unknown }).entry_date ?? "",
       );
@@ -262,7 +265,15 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
       const confidentRaw = toBoolean((r as { confident?: unknown }).confident);
 
       if (!validIds.has(candidate_id) || !validDates.has(entry_date)) continue;
-      // Hard drop any day beyond the visible columns the model reported
+      // Resolve designation: prefer model value if it matches a provided pair, else fall back to primary.
+      let designation_id: string | null = null;
+      if (desigRaw && validPairs.has(`${candidate_id}|${desigRaw}`)) {
+        designation_id = desigRaw;
+      } else if (validPairs.has(`${candidate_id}|`)) {
+        designation_id = null;
+      } else {
+        designation_id = primaryDesigByCand.get(candidate_id) ?? null;
+      }
       if (visibleDays !== null) {
         const dayNum = parseInt(entry_date.slice(8, 10), 10);
         if (Number.isFinite(dayNum) && dayNum > visibleDays) continue;
@@ -273,6 +284,7 @@ export const extractAttendanceFromImage = createServerFn({ method: "POST" })
       if (!code && ot_hours <= 0) continue;
       cleanedRows.push({
         candidate_id,
+        designation_id,
         entry_date,
         code,
         ot_hours,
