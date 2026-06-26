@@ -1087,9 +1087,9 @@ function PayrollUnitPage() {
                 <th className="px-4 py-3 font-medium">Designation</th>
                 <th className="px-4 py-3 font-medium" title="Present (worked) days">P Days</th>
                 <th className="px-4 py-3 font-medium" title="Paid Holiday days (incl. additions)">PH Days</th>
-                <th className="px-4 py-3 font-medium" title="OT Days = OT Hours / 8">OT Days</th>
+                <th className="px-4 py-3 font-medium" title="OT Days (0.5 = half OT day, 1 = one OT day)">OT Days</th>
                 <th className="px-4 py-3 font-medium" title="Total payable days (P + PH + Other Paid + OT)">T Days</th>
-                <th className="px-4 py-3 text-left font-medium">OT Hrs</th>
+                <th className="px-4 py-3 text-left font-medium" title="Same as OT Days — raw stored value">OT (raw)</th>
                 <th className="px-4 py-3 text-left font-medium" title="Full contract gross — what would be paid for a full month">Projected</th>
                 <th className="px-4 py-3 text-left font-medium" title="Per-day × T Days based on actual attendance">Earned gross</th>
                 <th className="px-4 py-3 text-left font-medium">Deductions</th>
