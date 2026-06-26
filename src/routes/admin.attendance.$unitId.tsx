@@ -1017,6 +1017,8 @@ function MusterRollPage() {
           if (labelCell) unmatchedNames.push(labelCell);
           continue;
         }
+        candidatesInSheet.add(mr.candidateId);
+
 
         // Designation routing: if the sheet has a designation column and the
         // value matches a contract resource on this unit, save under that
