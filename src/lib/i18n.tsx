@@ -291,7 +291,7 @@ function makeTranslator() {
     if (batch.length === 0) return;
     inFlight = true;
     try {
-      const { translations } = await translate({ data: { texts: batch, target: lang } });
+      const translations = await googleTranslate(batch, lang);
       batch.forEach((src, i) => {
         const out = translations[i];
         if (out && typeof out === "string") cache[src] = out;
