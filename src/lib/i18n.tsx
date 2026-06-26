@@ -376,7 +376,6 @@ function makeTranslator() {
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<LangCode>("en");
   const [enabled, setEnabled] = useState<LangCode[]>(["en", "hi", "mr"]);
-  const translateFn = useServerFn(translateBatch);
   const translatorRef = useRef<ReturnType<typeof makeTranslator> | null>(null);
 
   useEffect(() => {
