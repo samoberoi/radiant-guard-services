@@ -1,5 +1,16 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
+import { translateBatch } from "@/lib/translate.functions";
 
 export type LangCode = "en" | "hi" | "mr";
 
@@ -16,87 +27,73 @@ export const NAME_TO_CODE: Record<string, LangCode> = {
 };
 
 const STORAGE_KEY = "rg.lang";
+const CACHE_PREFIX = "rg.tr.";
 
-// Dictionary — keys are English source strings. Untranslated strings fall back to English.
-const DICT: Record<LangCode, Record<string, string>> = {
-  en: {},
+// Static seed dictionary so common chrome translates instantly without an API call.
+const SEED: Record<Exclude<LangCode, "en">, Record<string, string>> = {
   hi: {
-    "Dashboard": "डैशबोर्ड",
-    "Organizations": "संगठन",
-    "Contracts": "अनुबंध",
-    "Employees": "कर्मचारी",
-    "Attendance": "उपस्थिति",
-    "Payroll": "वेतन",
-    "Invoice": "चालान",
-    "Inventory": "इन्वेंट्री",
-    "Vehicles": "वाहन",
-    "Assets": "संपत्तियाँ",
+    Dashboard: "डैशबोर्ड",
+    Organizations: "संगठन",
+    Contracts: "अनुबंध",
+    Employees: "कर्मचारी",
+    Attendance: "उपस्थिति",
+    Payroll: "वेतन",
+    Invoice: "चालान",
+    Inventory: "इन्वेंट्री",
+    Vehicles: "वाहन",
+    Assets: "संपत्तियाँ",
     "Office Assets": "कार्यालय संपत्तियाँ",
     "Control Center": "नियंत्रण केंद्र",
     "My Profile": "मेरी प्रोफ़ाइल",
     "My Inventory": "मेरी इन्वेंट्री",
-    "Logout": "लॉग आउट",
+    Logout: "लॉग आउट",
     "Sign out": "साइन आउट",
-    "Search": "खोजें",
-    "Save": "सहेजें",
-    "Cancel": "रद्द करें",
+    Search: "खोजें",
+    Save: "सहेजें",
+    Cancel: "रद्द करें",
     "Add New": "नया जोड़ें",
-    "Edit": "संपादित करें",
-    "Delete": "हटाएँ",
-    "Export": "निर्यात",
-    "Status": "स्थिति",
-    "Name": "नाम",
-    "Actions": "क्रियाएँ",
-    "Language": "भाषा",
-    "Settings": "सेटिंग्स",
-    "Notifications": "सूचनाएँ",
-    "Profile": "प्रोफ़ाइल",
-    "Open": "खोलें",
-    "Enabled": "सक्षम",
-    "Disabled": "अक्षम",
-    "Yes": "हाँ",
-    "No": "नहीं",
-    "Loading…": "लोड हो रहा है…",
-    "No data": "कोई डेटा नहीं",
+    Edit: "संपादित करें",
+    Delete: "हटाएँ",
+    Export: "निर्यात",
+    Status: "स्थिति",
+    Name: "नाम",
+    Actions: "क्रियाएँ",
+    Language: "भाषा",
+    Settings: "सेटिंग्स",
+    Notifications: "सूचनाएँ",
+    Profile: "प्रोफ़ाइल",
   },
   mr: {
-    "Dashboard": "डॅशबोर्ड",
-    "Organizations": "संस्था",
-    "Contracts": "करार",
-    "Employees": "कर्मचारी",
-    "Attendance": "उपस्थिती",
-    "Payroll": "पगारपत्रक",
-    "Invoice": "चलन",
-    "Inventory": "साठा",
-    "Vehicles": "वाहने",
-    "Assets": "मालमत्ता",
+    Dashboard: "डॅशबोर्ड",
+    Organizations: "संस्था",
+    Contracts: "करार",
+    Employees: "कर्मचारी",
+    Attendance: "उपस्थिती",
+    Payroll: "पगारपत्रक",
+    Invoice: "चलन",
+    Inventory: "साठा",
+    Vehicles: "वाहने",
+    Assets: "मालमत्ता",
     "Office Assets": "कार्यालयीन मालमत्ता",
     "Control Center": "नियंत्रण केंद्र",
     "My Profile": "माझे प्रोफाइल",
     "My Inventory": "माझा साठा",
-    "Logout": "बाहेर पडा",
+    Logout: "बाहेर पडा",
     "Sign out": "बाहेर पडा",
-    "Search": "शोधा",
-    "Save": "जतन करा",
-    "Cancel": "रद्द करा",
+    Search: "शोधा",
+    Save: "जतन करा",
+    Cancel: "रद्द करा",
     "Add New": "नवीन जोडा",
-    "Edit": "संपादित करा",
-    "Delete": "हटवा",
-    "Export": "निर्यात",
-    "Status": "स्थिती",
-    "Name": "नाव",
-    "Actions": "क्रिया",
-    "Language": "भाषा",
-    "Settings": "सेटिंग्ज",
-    "Notifications": "सूचना",
-    "Profile": "प्रोफाइल",
-    "Open": "उघडा",
-    "Enabled": "सक्षम",
-    "Disabled": "अक्षम",
-    "Yes": "होय",
-    "No": "नाही",
-    "Loading…": "लोड होत आहे…",
-    "No data": "डेटा नाही",
+    Edit: "संपादित करा",
+    Delete: "हटवा",
+    Export: "निर्यात",
+    Status: "स्थिती",
+    Name: "नाव",
+    Actions: "क्रिया",
+    Language: "भाषा",
+    Settings: "सेटिंग्ज",
+    Notifications: "सूचना",
+    Profile: "प्रोफाइल",
   },
 };
 
@@ -114,9 +111,236 @@ const I18nCtx = createContext<Ctx>({
   enabled: ["en", "hi", "mr"],
 });
 
+// ============================================================================
+// DOM auto-translator
+// ----------------------------------------------------------------------------
+// Walks every visible text node and translates it to the target language using
+// the Lovable AI Gateway, with persistent localStorage cache so each unique
+// string is paid for at most once. Originals are stashed on the node so we can
+// restore English without a reload.
+// ============================================================================
+
+const ORIG_KEY = "__rgOrig";
+const SKIP_TAGS = new Set([
+  "SCRIPT",
+  "STYLE",
+  "NOSCRIPT",
+  "CODE",
+  "PRE",
+  "SVG",
+  "PATH",
+  "TEXTAREA",
+  "INPUT",
+  "SELECT",
+  "OPTION",
+]);
+
+// Strings that look like data, not UI labels.
+const DATA_RE =
+  /^[\s\d\W_]*$|^[A-Z0-9]{2,}-\d+$|^https?:\/\/|@[\w.-]+\.[a-z]+|^\+?\d[\d\s().-]{4,}$/i;
+const HAS_LETTER = /[A-Za-z]/;
+
+function isTranslatable(s: string) {
+  const t = s.trim();
+  if (t.length < 2) return false;
+  if (!HAS_LETTER.test(t)) return false;
+  if (DATA_RE.test(t)) return false;
+  return true;
+}
+
+function nodeAllowed(node: Node) {
+  let p: Node | null = node.parentNode;
+  while (p && p.nodeType === 1) {
+    const el = p as HTMLElement;
+    if (SKIP_TAGS.has(el.tagName)) return false;
+    if (el.getAttribute && el.getAttribute("data-no-translate") !== null) return false;
+    if (el.isContentEditable) return false;
+    p = el.parentNode;
+  }
+  return true;
+}
+
+type TranslateFn = (data: { data: { texts: string[]; target: "hi" | "mr" } }) => Promise<{
+  translations: string[];
+}>;
+
+function makeTranslator(translate: TranslateFn) {
+  let currentLang: LangCode = "en";
+  let cache: Record<string, string> = {};
+  let observer: MutationObserver | null = null;
+  const nodes = new Set<Text>();
+  const pending = new Set<string>();
+  let flushTimer: number | null = null;
+  let inFlight = false;
+
+  const loadCache = (lang: Exclude<LangCode, "en">) => {
+    try {
+      const raw = window.localStorage.getItem(CACHE_PREFIX + lang);
+      cache = raw ? JSON.parse(raw) : {};
+    } catch {
+      cache = {};
+    }
+    // Merge static seed.
+    for (const [k, v] of Object.entries(SEED[lang])) {
+      if (!cache[k]) cache[k] = v;
+    }
+  };
+
+  const saveCache = (lang: Exclude<LangCode, "en">) => {
+    try {
+      window.localStorage.setItem(CACHE_PREFIX + lang, JSON.stringify(cache));
+    } catch {
+      /* quota — ignore */
+    }
+  };
+
+  const applyToNode = (node: Text) => {
+    if (currentLang === "en") return;
+    const orig: string =
+      (node as unknown as Record<string, string>)[ORIG_KEY] ?? node.nodeValue ?? "";
+    if (!isTranslatable(orig)) return;
+    const key = orig.trim();
+    const translated = cache[key];
+    if (!translated) {
+      pending.add(key);
+      return;
+    }
+    if (!(node as unknown as Record<string, string>)[ORIG_KEY]) {
+      (node as unknown as Record<string, string>)[ORIG_KEY] = orig;
+    }
+    // Preserve leading/trailing whitespace.
+    const lead = orig.match(/^\s*/)?.[0] ?? "";
+    const trail = orig.match(/\s*$/)?.[0] ?? "";
+    const next = lead + translated + trail;
+    if (node.nodeValue !== next) node.nodeValue = next;
+  };
+
+  const collect = (root: Node) => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: (n) => {
+        if (!n.nodeValue || !isTranslatable(n.nodeValue)) return NodeFilter.FILTER_REJECT;
+        if (!nodeAllowed(n)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      },
+    });
+    let n: Node | null;
+    while ((n = walker.nextNode())) {
+      const tn = n as Text;
+      nodes.add(tn);
+      applyToNode(tn);
+    }
+    scheduleFlush();
+  };
+
+  const restoreAll = () => {
+    for (const n of nodes) {
+      const o = (n as unknown as Record<string, string>)[ORIG_KEY];
+      if (o != null) {
+        n.nodeValue = o;
+      }
+    }
+  };
+
+  const scheduleFlush = () => {
+    if (currentLang === "en" || pending.size === 0) return;
+    if (flushTimer) window.clearTimeout(flushTimer);
+    flushTimer = window.setTimeout(flush, 250);
+  };
+
+  const flush = async () => {
+    if (currentLang === "en" || inFlight) return;
+    const lang = currentLang as "hi" | "mr";
+    const batch = Array.from(pending).slice(0, 80);
+    if (batch.length === 0) return;
+    inFlight = true;
+    try {
+      const { translations } = await translate({ data: { texts: batch, target: lang } });
+      batch.forEach((src, i) => {
+        const out = translations[i];
+        if (out && typeof out === "string") cache[src] = out;
+        pending.delete(src);
+      });
+      saveCache(lang);
+      // Re-apply to all known nodes.
+      for (const n of nodes) applyToNode(n);
+    } catch (e) {
+      console.warn("translate batch failed", e);
+      // Drop this batch so we don't loop forever.
+      batch.forEach((s) => pending.delete(s));
+    } finally {
+      inFlight = false;
+      if (pending.size > 0) scheduleFlush();
+    }
+  };
+
+  const start = (lang: Exclude<LangCode, "en">) => {
+    currentLang = lang;
+    loadCache(lang);
+    nodes.clear();
+    pending.clear();
+    collect(document.body);
+    if (observer) observer.disconnect();
+    observer = new MutationObserver((muts) => {
+      for (const m of muts) {
+        if (m.type === "characterData" && m.target.nodeType === 3) {
+          const tn = m.target as Text;
+          // If we caused this change ourselves, the value matches cache — skip.
+          const orig = (tn as unknown as Record<string, string>)[ORIG_KEY];
+          if (orig && tn.nodeValue !== orig) {
+            const translated = cache[orig.trim()];
+            const lead = orig.match(/^\s*/)?.[0] ?? "";
+            const trail = orig.match(/\s*$/)?.[0] ?? "";
+            if (translated && tn.nodeValue === lead + translated + trail) continue;
+          }
+          // Text changed externally — reset original tracking.
+          delete (tn as unknown as Record<string, string>)[ORIG_KEY];
+          nodes.add(tn);
+          applyToNode(tn);
+        } else {
+          m.addedNodes.forEach((n) => {
+            if (n.nodeType === 1 || n.nodeType === 3) collect(n);
+            if (n.nodeType === 3) {
+              const tn = n as Text;
+              if (tn.nodeValue && isTranslatable(tn.nodeValue) && nodeAllowed(tn)) {
+                nodes.add(tn);
+                applyToNode(tn);
+              }
+            }
+          });
+        }
+      }
+      scheduleFlush();
+    });
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+  };
+
+  const stop = () => {
+    currentLang = "en";
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+    }
+    if (flushTimer) {
+      window.clearTimeout(flushTimer);
+      flushTimer = null;
+    }
+    restoreAll();
+    nodes.clear();
+    pending.clear();
+  };
+
+  return { start, stop };
+}
+
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<LangCode>("en");
   const [enabled, setEnabled] = useState<LangCode[]>(["en", "hi", "mr"]);
+  const translateFn = useServerFn(translateBatch);
+  const translatorRef = useRef<ReturnType<typeof makeTranslator> | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -148,6 +372,24 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Drive the DOM translator whenever language changes.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!translatorRef.current) {
+      translatorRef.current = makeTranslator(
+        translateFn as unknown as TranslateFn,
+      );
+    }
+    const tr = translatorRef.current;
+    document.documentElement.setAttribute("lang", lang);
+    if (lang === "en") {
+      tr.stop();
+    } else {
+      tr.stop();
+      tr.start(lang);
+    }
+  }, [lang, translateFn]);
+
   const setLang = useCallback((l: LangCode) => {
     setLangState(l);
     if (typeof window !== "undefined") window.localStorage.setItem(STORAGE_KEY, l);
@@ -156,7 +398,18 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const t = useCallback(
     (s: string) => {
       if (lang === "en") return s;
-      return DICT[lang][s] ?? s;
+      const seed = SEED[lang]?.[s];
+      if (seed) return seed;
+      try {
+        const raw = window.localStorage.getItem(CACHE_PREFIX + lang);
+        if (raw) {
+          const cache = JSON.parse(raw) as Record<string, string>;
+          if (cache[s]) return cache[s];
+        }
+      } catch {
+        /* ignore */
+      }
+      return s;
     },
     [lang],
   );
