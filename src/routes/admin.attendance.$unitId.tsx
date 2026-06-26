@@ -1654,7 +1654,7 @@ function MusterRollPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button size="sm" variant="ghost" onClick={clearOtSelection}>Clear</Button>
-            <Button size="sm" onClick={openOtPickerForSelection}>Set OT hours</Button>
+            <Button size="sm" onClick={openOtPickerForSelection}>Set OT days</Button>
           </div>
         </div>
       )}
