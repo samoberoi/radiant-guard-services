@@ -772,6 +772,7 @@ function PayrollDayBaseFormDialog({
                 fixedDays: method === "fixed_days" ? Number(fixedDays) || 0 : null,
                 weeklyOffDay:
                   method === "actual_minus_weekly_off" ? Number(weeklyOffDay) : null,
+                includedWeekdays: method === "custom_weekdays" ? includedWeekdays : null,
                 description,
                 isDefault,
                 enabled,
