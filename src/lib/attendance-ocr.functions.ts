@@ -12,10 +12,11 @@ const InputSchema = z.object({
         name: z.string(),
         employee_code: z.string().nullable().optional(),
         designation: z.string().nullable().optional(),
+        designation_id: z.string().nullable().optional(),
       }),
     )
     .min(1)
-    .max(500),
+    .max(1000),
   codes: z
     .array(
       z.object({
