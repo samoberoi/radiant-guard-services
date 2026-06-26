@@ -1014,7 +1014,20 @@ function MusterRollPage() {
       const contractDesigByNorm = new Map(
         contractDesignations.map((d) => [norm(d.designationName), d]),
       );
-      const fuzzyDesigMatch = (n: string) => contractDesigByNorm.get(n);
+      // Letter-sorted key catches single-letter transpositions/typos like
+      // "OPREATOR" vs "OPERATOR" (same letters, different order) without
+      // doing broad fuzzy matching across unrelated designations.
+      const sortLetters = (s: string) => s.split("").sort().join("");
+      const contractDesigBySorted = new Map<string, typeof contractDesignations[number]>();
+      for (const d of contractDesignations) {
+        const key = sortLetters(norm(d.designationName));
+        if (!contractDesigBySorted.has(key)) contractDesigBySorted.set(key, d);
+      }
+      const fuzzyDesigMatch = (n: string) => {
+        const exact = contractDesigByNorm.get(n);
+        if (exact) return exact;
+        return contractDesigBySorted.get(sortLetters(n));
+      };
 
 
       const codeSet = new Map<string, string>();
