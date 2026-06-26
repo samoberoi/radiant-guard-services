@@ -3745,7 +3745,7 @@ function CandidateWizard({
                       </div>
                     </Field>
                   </div>
-                  <Field label="Designation">
+                  <Field label="Designation (Primary)">
                     <DesignationPicker
                       designations={designations}
                       value={form.designation_id}
@@ -3754,6 +3754,16 @@ function CandidateWizard({
                       emptyMessage={designationsError ? `Could not load designations: ${designationsError}` : "No designations found."}
                     />
                   </Field>
+                  {editing?.id ? (
+                    <Field label="Additional Designations">
+                      <CandidateDesignationsEditor
+                        candidateId={editing.id}
+                        primaryDesignationId={form.designation_id}
+                        designations={designations}
+                      />
+                    </Field>
+                  ) : null}
+
                   <Field label="Status">
                     <Select value={form.status} onValueChange={(v) => {
                       const isEmp = !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive");
