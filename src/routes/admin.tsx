@@ -222,10 +222,16 @@ function AdminLayout() {
   ];
   const firstAllowedPath = () => {
     const order = [
-      "organizations","contracts","employees","vehicles","assets","inventory","attendance",
+      "organizations","contracts","employees","vehicles","assets","office_assets","inventory","attendance",
       "payroll","invoice","control_center","notification_center","rbac",
     ];
     const pathFor: Record<string, string> = {
+      organizations: "/admin/customers",
+      contracts: "/admin/contracts/client-contracts",
+      employees: "/admin/employees",
+      vehicles: "/admin/vehicles/inventory",
+      assets: "/admin/assets/inventory",
+      office_assets: "/admin/office-assets",
       organizations: "/admin/customers",
       contracts: "/admin/contracts/client-contracts",
       employees: "/admin/employees",
