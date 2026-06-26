@@ -608,13 +608,40 @@ export function computeWages(
     return r.error ? null : r.amount;
   };
 
+  const dutyBucketValueEarly = (bucket: FixedDutyBucket): number => {
+    switch (bucket) {
+      case "p_days": return totals.pDays;
+      case "ot_days": return totals.otDays;
+      case "ph_days": return totals.phDays;
+      case "other_paid_days": return totals.otherPaidDays;
+      default: return 0;
+    }
+  };
+  const perDutyAmountEarly = (i: { amount?: number | string | null; fixedDutyComponents?: FixedDutyBucket[] | null; fixedDutyDivisor?: FixedDutyDivisor | null }): number => {
+    const configured = Number(i.amount) || 0;
+    const buckets = Array.isArray(i.fixedDutyComponents) ? i.fixedDutyComponents : [];
+    const totalDuties = buckets.reduce((s, b) => s + dutyBucketValueEarly(b), 0);
+    const divisor = (() => {
+      switch (i.fixedDutyDivisor) {
+        case "days_in_month": return periodDayCount;
+        case "payable_days":  return basePaidDays;
+        case "fixed_26":      return 26;
+        case "base_days":
+        default:              return baseDays;
+      }
+    })();
+    const perDuty = divisor > 0 ? configured / divisor : 0;
+    return round2(perDuty * totalDuties);
+  };
+
   const components: WageComponent[] = resource.components.map((c) => {
     const fromFormula = tryFormulaAmount(c);
-    return {
-      ...c,
-      name: c.name,
-      amount: fromFormula != null ? fromFormula : round2((Number(c.amount) || 0) * baseRatio),
-    };
+    const amount = fromFormula != null
+      ? fromFormula
+      : c.fixedCalcMethod === "per_duty"
+      ? perDutyAmountEarly(c)
+      : round2((Number(c.amount) || 0) * baseRatio);
+    return { ...c, name: c.name, amount };
   });
 
   // Paid Holiday line: when the caller provides a cash override (i.e. the
