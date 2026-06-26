@@ -1262,7 +1262,7 @@ function MusterRollPage() {
       setOtDragRowKey(null);
       toast.success(
         hours > 0
-          ? `Set ${hours}h OT on ${otPickerDates.length} day${otPickerDates.length > 1 ? "s" : ""}`
+          ? `Set ${hours} OT day${hours === 1 ? "" : "s"} on ${otPickerDates.length} day${otPickerDates.length > 1 ? "s" : ""}`
           : `Cleared OT on ${otPickerDates.length} day${otPickerDates.length > 1 ? "s" : ""}`,
       );
     } catch (e) {
@@ -1270,17 +1270,15 @@ function MusterRollPage() {
     }
   };
 
-  const UNIT_DUTY_HOURS = 8;
-
   const computeTotalsForRow = (rk: string) => {
     let pDays = 0;
-    let otHours = 0;
+    let otDaysSum = 0;
     let phCount = 0;
     let otherPaidDays = 0;
     for (const cell of periodCells) {
       const e = entryMap.get(`${rk}|${cell.date}`);
       if (!e) continue;
-      otHours += Number(e.ot_hours) || 0;
+      otDaysSum += Number(e.ot_hours) || 0;
       const c = codeMap.get(e.code);
       if (!c) continue;
       if (e.code === "PH") { phCount += 1; continue; }
@@ -1288,10 +1286,13 @@ function MusterRollPage() {
       else if (c.is_paid) otherPaidDays += 1;
     }
     const phDays = phCount * 2;
-    const otDays = Math.round((otHours / UNIT_DUTY_HOURS) * 100) / 100;
+    const otDays = Math.round(otDaysSum * 100) / 100;
+    // OT cell value is OT-days; expose under both names for display compat.
+    const otHours = otDays;
     const tDays = pDays + phDays + otherPaidDays + otDays;
     return { pDays, otHours, otDays, phDays, tDays };
   };
+
 
   const principalEmployer = unit
     ? `${unit.customer_name || ""}${unit.code ? ` - ${unit.code}` : ""}`.trim()
