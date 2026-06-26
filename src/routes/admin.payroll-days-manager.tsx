@@ -629,14 +629,14 @@ function PayrollDayBaseFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90vh] flex-col sm:max-w-lg">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>
             Choose how monthly salary days are computed. This drives every payroll formula.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-2">
+        <div className="-mx-6 grid flex-1 gap-4 overflow-y-auto px-6 py-2">
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
               <Label>Name *</Label>
