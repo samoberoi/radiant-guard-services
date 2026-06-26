@@ -622,25 +622,64 @@ function MusterRollPage() {
     setOcrSummary(null);
     setUploadReadyToContinue(false);
     try {
-      // Send EVERY (candidate, designation) pair currently on the muster so
-      // OCR can split a person across designations within the same period.
+      // Build the set of allowed (candidate × designation) pairs. The roster
+      // sent to OCR includes EVERY designation on this unit's active contract
+      // for each candidate, not just the row blocks currently on the muster —
+      // so OCR can place a guard's OT under "Office Assistant" even if the FO
+      // never manually added that row block yet. New pairs picked up from the
+      // sheet are auto-created on apply. Out-of-contract designations are
+      // blocked with a warning toast.
       const pairByKey = new Map<string, typeof musterRows[number]>();
-      for (const mr of musterRows) {
-        pairByKey.set(`${mr.candidateId}|${mr.designationId ?? ""}`, mr);
-      }
       const candidatePairs = new Map<string, Array<typeof musterRows[number]>>();
       for (const mr of musterRows) {
+        pairByKey.set(`${mr.candidateId}|${mr.designationId ?? ""}`, mr);
         const list = candidatePairs.get(mr.candidateId) ?? [];
         list.push(mr);
         candidatePairs.set(mr.candidateId, list);
       }
-      const employeesPayload = musterRows.map((mr) => ({
-        id: mr.candidateId,
-        name: mr.emp.full_name,
-        employee_code: mr.emp.employee_code ?? null,
-        designation: mr.designationName ?? null,
-        designation_id: mr.designationId ?? "",
-      }));
+      // Synthetic pairs for contract designations not already on the muster.
+      // These are "virtual" musterRow stand-ins used purely for OCR resolution
+      // + upsert; the real row block appears after entries are saved and
+      // musterRows re-derives.
+      const contractDesigSet = new Set(contractDesignations.map((d) => d.designationId));
+      const candidatesById = new Map(musterRows.map((m) => [m.candidateId, m]));
+      const employeesPayload: Array<{ id: string; name: string; employee_code: string | null; designation: string | null; designation_id: string }> = [];
+      const seenPair = new Set<string>();
+      for (const mr of musterRows) {
+        const k = `${mr.candidateId}|${mr.designationId ?? ""}`;
+        if (seenPair.has(k)) continue;
+        seenPair.add(k);
+        employeesPayload.push({
+          id: mr.candidateId,
+          name: mr.emp.full_name,
+          employee_code: mr.emp.employee_code ?? null,
+          designation: mr.designationName ?? null,
+          designation_id: mr.designationId ?? "",
+        });
+      }
+      for (const [candidateId, anyMr] of candidatesById) {
+        for (const d of contractDesignations) {
+          const k = `${candidateId}|${d.designationId}`;
+          if (seenPair.has(k)) continue;
+          seenPair.add(k);
+          employeesPayload.push({
+            id: candidateId,
+            name: anyMr.emp.full_name,
+            employee_code: anyMr.emp.employee_code ?? null,
+            designation: d.designationName,
+            designation_id: d.designationId,
+          });
+          // Virtual musterRow for resolution / upsert (mirrors structure of real rows).
+          pairByKey.set(k, {
+            ...anyMr,
+            key: `${candidateId}|${d.designationId}`,
+            designationId: d.designationId,
+            designationName: d.designationName,
+            isPrimary: false,
+          });
+        }
+      }
+
       const result = await runOcr({
         data: {
           imageDataUrl: uploadPreview,
@@ -652,10 +691,19 @@ function MusterRollPage() {
 
       const validDates = new Set(periodCells.map((c) => c.date));
       const pairKey = (cid: string, did: string | null) => `${cid}|${did ?? ""}`;
+      const blockedDesigNames = new Set<string>();
       const resolvePairKey = (cid: string, did: string | null): string | null => {
         const direct = pairKey(cid, did);
         if (pairByKey.has(direct)) return direct;
-        // Fall back to the candidate's primary pair if OCR couldn't place a designation.
+        // OCR returned a designation that isn't a resource on this unit's
+        // contract — block per "Block with a warning" rule.
+        if (did) {
+          // Try to label it for the warning.
+          const dname = contractDesignations.find((d) => d.designationId === did)?.designationName ?? did;
+          blockedDesigNames.add(dname);
+          return null;
+        }
+        // OCR couldn't place a designation at all — fall back to primary.
         const list = candidatePairs.get(cid);
         if (!list || list.length === 0) return null;
         const primary = list.find((m) => m.isPrimary) ?? list[0];
@@ -683,6 +731,13 @@ function MusterRollPage() {
           uncertainNext.add(cellKey);
           uncertainCount += 1;
         }
+      }
+
+      if (blockedDesigNames.size) {
+        toast.warning(
+          `Skipped rows for ${Array.from(blockedDesigNames).join(", ")} — not on this unit's active contract. Add the designation to the contract first, then re-import.`,
+          { duration: 8000 },
+        );
       }
 
       const computeImportedSummary = (rows: Array<{ entry_date: string; code: string; ot_hours: number }>): OcrRowSummary => {
