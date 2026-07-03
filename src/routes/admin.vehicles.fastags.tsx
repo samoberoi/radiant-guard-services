@@ -119,7 +119,7 @@ function FastTagManagerPage() {
       if (!p.vehicle_id) throw new Error("Vehicle is required");
       const row = toRow(p);
       const { error } = await supabase.from("vehicle_fastags" as never).insert(row as never);
-      if (error) throw error;
+      if (error) throw new Error(error.message || "Insert failed");
       void logActivity({ module: MODULE, action: "create", entityType: ENTITY, entityLabel: row.fastag_number || "FastTag", details: row as Record<string, unknown> });
     },
     onSuccess: invalidate,
@@ -128,7 +128,7 @@ function FastTagManagerPage() {
   const updateMut = useMutation({
     mutationFn: async ({ id, p }: { id: string; p: Payload }) => {
       const { error } = await supabase.from("vehicle_fastags" as never).update(toRow(p) as never).eq("id", id);
-      if (error) throw error;
+      if (error) throw new Error(error.message || "Update failed");
       void logActivity({ module: MODULE, action: "update", entityType: ENTITY, entityId: id, entityLabel: p.fastag_number, details: p as Record<string, unknown> });
     },
     onSuccess: invalidate,
@@ -136,7 +136,7 @@ function FastTagManagerPage() {
   const toggleMut = useMutation({
     mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
       const { error } = await supabase.from("vehicle_fastags" as never).update({ enabled } as never).eq("id", id);
-      if (error) throw error;
+      if (error) throw new Error(error.message || "Update failed");
       void logActivity({ module: MODULE, action: enabled ? "enable" : "disable", entityType: ENTITY, entityId: id, details: { enabled } });
     },
     onSuccess: invalidate,
@@ -144,7 +144,7 @@ function FastTagManagerPage() {
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("vehicle_fastags" as never).delete().eq("id", id);
-      if (error) throw error;
+      if (error) throw new Error(error.message || "Delete failed");
       void logActivity({ module: MODULE, action: "delete", entityType: ENTITY, entityId: id });
     },
     onSuccess: invalidate,
