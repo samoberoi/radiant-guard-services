@@ -119,7 +119,7 @@ function FastTagManagerPage() {
       if (!p.vehicle_id) throw new Error("Vehicle is required");
       const row = toRow(p);
       const { error } = await supabase.from("vehicle_fastags" as never).insert(row as never);
-      if (error) throw error;
+      if (error) throw new Error(error.message || "Insert failed");
       void logActivity({ module: MODULE, action: "create", entityType: ENTITY, entityLabel: row.fastag_number || "FastTag", details: row as Record<string, unknown> });
     },
     onSuccess: invalidate,
