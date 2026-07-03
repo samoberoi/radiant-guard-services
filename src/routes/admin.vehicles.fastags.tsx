@@ -53,6 +53,18 @@ const LOGIN_TYPES = [
 ];
 const BANKS = ["ICICI Bank", "HDFC Bank", "Axis Bank", "SBI", "Paytm Payments Bank", "IDFC FIRST Bank", "Kotak Mahindra Bank", "IndusInd Bank", "Bank of Baroda", "Federal Bank", "Other"];
 
+function errorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === "object") {
+    const maybe = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown };
+    const parts = [maybe.message, maybe.details, maybe.hint, maybe.code]
+      .filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+    if (parts.length) return parts.join(" — ");
+  }
+  if (typeof error === "string" && error.trim()) return error;
+  return fallback;
+}
+
 function rowTo(r: Record<string, unknown>): FastTag {
   return {
     id: String(r.id),
@@ -387,11 +399,11 @@ function FastTagManagerPage() {
 
       <FastTagFormDialog
         open={addOpen} onOpenChange={setAddOpen} vehicles={vehicles} title="Add FastTag"
-        onSubmit={async (p) => { try { await addMut.mutateAsync(p); toast.success("FastTag added"); return null; } catch (e) { return e instanceof Error ? e.message : "Could not add"; } }}
+        onSubmit={async (p) => { try { await addMut.mutateAsync(p); toast.success("FastTag added"); return null; } catch (e) { return errorMessage(e, "Could not add"); } }}
       />
       <FastTagFormDialog
         open={!!editing} initial={editing} vehicles={vehicles} onOpenChange={(o) => !o && setEditing(null)} title="Edit FastTag"
-        onSubmit={async (p) => { if (!editing) return null; try { await updateMut.mutateAsync({ id: editing.id, p }); toast.success("FastTag updated"); setEditing(null); return null; } catch (e) { return e instanceof Error ? e.message : "Could not update"; } }}
+        onSubmit={async (p) => { if (!editing) return null; try { await updateMut.mutateAsync({ id: editing.id, p }); toast.success("FastTag updated"); setEditing(null); return null; } catch (e) { return errorMessage(e, "Could not update"); } }}
       />
 
       <AlertDialog open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
@@ -405,7 +417,7 @@ function FastTagManagerPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={async () => { if (!deleting) return; try { await deleteMut.mutateAsync(deleting.id); toast.success("Deleted"); setDeleting(null); } catch (e) { toast.error(e instanceof Error ? e.message : "Delete failed"); } }}
+              onClick={async () => { if (!deleting) return; try { await deleteMut.mutateAsync(deleting.id); toast.success("Deleted"); setDeleting(null); } catch (e) { toast.error(errorMessage(e, "Delete failed")); } }}
             >Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
