@@ -216,7 +216,9 @@ export type WageComputation = {
 
 const ESI_NAME_RE = /\besi(c)?\b/i;
 const ESI_EARNED_GROSS_CEILING = 21000;
-const EPF_NAME_RE = /\bepf\b/i;
+const EPF_NAME_RE = /\bepf\b|provident\s*fund|\bpf\b/i;
+const BONUS_NAME_RE = /\bbonus\b/i;
+const GRATUITY_NAME_RE = /\bgratuity\b/i;
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
