@@ -92,6 +92,7 @@ function useAttendanceCodes() {
     counts_as_present: p.counts_as_present,
     is_paid: p.is_paid,
     is_leave: p.is_leave,
+    day_value: Number.isFinite(Number(p.day_value)) ? Number(p.day_value) : 1,
     sort_order: Number(p.sort_order) || 0,
     enabled: p.enabled,
   });
