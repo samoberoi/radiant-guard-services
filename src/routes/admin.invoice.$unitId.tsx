@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import {
   applyEsiToWageComputation,
+  applyLwfToWageComputation,
   applyPtToWageComputation,
   computeAttendanceTotals,
   computeWages,
@@ -20,6 +21,7 @@ import {
   type PincodeRangeLike,
   type PtSlabLike,
 } from "@/lib/payroll-calc";
+import { resolveLwf, type LwfRow } from "@/lib/lwf-lookup";
 import { downloadCsv, writeXlsx } from "@/lib/csv-export";
 import { gstinStateCode } from "@/lib/gstin";
 import { fetchAttendanceEntriesForPeriod } from "@/lib/attendance-fetch";
@@ -160,12 +162,23 @@ function PayrollUnitPage() {
     },
   });
 
+  const { data: lwfRows } = useQuery({
+    queryKey: ["labour_welfare_funds_invoice"],
+    queryFn: async (): Promise<LwfRow[]> => {
+      const { data, error } = await supabase
+        .from("labour_welfare_funds")
+        .select("id, state, deduction_months, frequency, employee_contribution, employer_contribution, enabled, notes");
+      if (error) throw error;
+      return (data ?? []) as LwfRow[];
+    },
+  });
+
   const unitState = (unit as { billing_state?: string | null } | null | undefined)?.billing_state ?? null;
   const unitPincode = (unit as { billing_pincode?: string | null } | null | undefined)?.billing_pincode ?? null;
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["payroll-compute", unitId, start, end, unitState, unitPincode, (ptSlabs?.length ?? 0), (pincodeRanges?.length ?? 0)],
-    enabled: !!ptSlabs && !!pincodeRanges,
+    queryKey: ["payroll-compute", unitId, start, end, unitState, unitPincode, (ptSlabs?.length ?? 0), (pincodeRanges?.length ?? 0), (lwfRows?.length ?? 0)],
+    enabled: !!ptSlabs && !!pincodeRanges && !!lwfRows,
     queryFn: async () => {
       // 1. Roster: candidates mapped to this unit (primary + secondary).
       const [{ data: primary }, { data: links }] = await Promise.all([
@@ -497,6 +510,24 @@ function PayrollUnitPage() {
             ranges: (pincodeRanges ?? []) as PincodeRangeLike[],
           });
           Object.assign(wages, applyPtToWageComputation(wages, pt.amount));
+
+          // LWF from Control Center master (live-synced with payroll).
+          if (lwfRows && pincodeRanges) {
+            const lwfRes = resolveLwf(String(unitPincode ?? ""), pincodeRanges as never, lwfRows);
+            const periodMonth = new Date(start).getMonth() + 1;
+            let applies = false;
+            let employee = 0;
+            let employer = 0;
+            if (lwfRes.kind === "match" && lwfRes.lwf.enabled) {
+              const months = Array.isArray(lwfRes.lwf.deduction_months) ? lwfRes.lwf.deduction_months : [];
+              if (months.length === 0 || months.includes(periodMonth)) {
+                applies = true;
+                employee = Number(lwfRes.lwf.employee_contribution) || 0;
+                employer = Number(lwfRes.lwf.employer_contribution) || 0;
+              }
+            }
+            Object.assign(wages, applyLwfToWageComputation(wages, { employee, employer, applies }));
+          }
         }
 
         // Merge split components (e.g. "HRA 5%" + "HRA 15%" -> "HRA") across

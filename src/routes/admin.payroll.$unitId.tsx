@@ -21,6 +21,7 @@ import { logActivity } from "@/lib/activity-log";
 import { hydrateFormulasFromMaster } from "@/lib/contract-hydrate";
 import {
   applyEsiToWageComputation,
+  applyLwfToWageComputation,
   applyPtToWageComputation,
   computeAttendanceTotals,
   computeWages,
@@ -33,6 +34,7 @@ import {
   type PincodeRangeLike,
   type PtSlabLike,
 } from "@/lib/payroll-calc";
+import { resolveLwf, type LwfRow } from "@/lib/lwf-lookup";
 import { openExport } from "@/lib/csv-export";
 import { fetchAttendanceEntriesForPeriod } from "@/lib/attendance-fetch";
 
@@ -137,6 +139,19 @@ function PayrollUnitPage() {
     },
   });
 
+  // LWF Master: live-synced so editing LWF Manager in Control Center
+  // affects the very next payroll run.
+  const { data: lwfRows } = useQuery({
+    queryKey: ["labour_welfare_funds_payroll"],
+    queryFn: async (): Promise<LwfRow[]> => {
+      const { data, error } = await supabase
+        .from("labour_welfare_funds")
+        .select("id, state, deduction_months, frequency, employee_contribution, employer_contribution, enabled, notes");
+      if (error) throw error;
+      return (data ?? []) as LwfRow[];
+    },
+  });
+
   const { data: sheet } = useQuery({
     queryKey: ["payroll-sheet", unitId, start, end],
     queryFn: async () => {
@@ -232,8 +247,8 @@ function PayrollUnitPage() {
   const unitPincode = (unit as { billing_pincode?: string | null } | null | undefined)?.billing_pincode ?? null;
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["payroll-compute", unitId, start, end, unitState, unitPincode, (ptSlabs?.length ?? 0), (pincodeRanges?.length ?? 0)],
-    enabled: !!ptSlabs && !!pincodeRanges,
+    queryKey: ["payroll-compute", unitId, start, end, unitState, unitPincode, (ptSlabs?.length ?? 0), (pincodeRanges?.length ?? 0), (lwfRows?.length ?? 0)],
+    enabled: !!ptSlabs && !!pincodeRanges && !!lwfRows,
     queryFn: async () => {
       // 1. Roster: candidates mapped to this unit (primary + secondary).
       const candidateCols =
@@ -587,6 +602,28 @@ function PayrollUnitPage() {
           });
           Object.assign(wages, applyPtToWageComputation(wages, ptResolved.amount));
         }
+
+        // Resolve LWF from Control Center master (pincode → state → LWF row).
+        // Only fires if this period's month is in the master's deduction_months
+        // and the master row is enabled. Otherwise LWF rows are zeroed.
+        if (wages && isPrimary && lwfRows && pincodeRanges) {
+          const lwfRes = resolveLwf(String(unitPincode ?? ""), pincodeRanges as never, lwfRows);
+          const periodMonth = new Date(start).getMonth() + 1; // 1-12
+          let applies = false;
+          let employee = 0;
+          let employer = 0;
+          if (lwfRes.kind === "match" && lwfRes.lwf.enabled) {
+            const months = Array.isArray(lwfRes.lwf.deduction_months) ? lwfRes.lwf.deduction_months : [];
+            if (months.length === 0 || months.includes(periodMonth)) {
+              applies = true;
+              employee = Number(lwfRes.lwf.employee_contribution) || 0;
+              employer = Number(lwfRes.lwf.employer_contribution) || 0;
+            }
+          }
+          Object.assign(wages, applyLwfToWageComputation(wages, { employee, employer, applies }));
+        }
+
+
 
 
         // Collapse variants like "HRA 5%" / "HRA 15%" into a single "HRA"

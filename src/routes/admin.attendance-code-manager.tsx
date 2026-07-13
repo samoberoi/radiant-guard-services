@@ -45,6 +45,7 @@ type AttendanceCode = {
   counts_as_present: boolean;
   is_paid: boolean;
   is_leave: boolean;
+  day_value: number;
   sort_order: number;
   enabled: boolean;
 };
@@ -61,6 +62,7 @@ function rowToItem(r: Record<string, unknown>): AttendanceCode {
     counts_as_present: Boolean(r.counts_as_present),
     is_paid: Boolean(r.is_paid),
     is_leave: Boolean(r.is_leave),
+    day_value: r.day_value == null ? 1 : Number(r.day_value),
     sort_order: Number(r.sort_order ?? 0),
     enabled: Boolean(r.enabled ?? true),
   };
@@ -73,7 +75,7 @@ function useAttendanceCodes() {
     queryFn: async (): Promise<AttendanceCode[]> => {
       const { data, error } = await supabase
         .from("attendance_codes" as never)
-        .select("id,code,label,description,color,counts_as_present,is_paid,is_leave,sort_order,enabled")
+        .select("id,code,label,description,color,counts_as_present,is_paid,is_leave,day_value,sort_order,enabled")
         .order("sort_order", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
@@ -90,6 +92,7 @@ function useAttendanceCodes() {
     counts_as_present: p.counts_as_present,
     is_paid: p.is_paid,
     is_leave: p.is_leave,
+    day_value: Number.isFinite(Number(p.day_value)) ? Number(p.day_value) : 1,
     sort_order: Number(p.sort_order) || 0,
     enabled: p.enabled,
   });
@@ -387,6 +390,7 @@ function CodeFormDialog({
   const [isPaid, setIsPaid] = useState(false);
   const [isLeave, setIsLeave] = useState(false);
   const [sortOrder, setSortOrder] = useState<string>("0");
+  const [dayValue, setDayValue] = useState<string>("1");
   const [enabled, setEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -399,6 +403,7 @@ function CodeFormDialog({
     setIsPaid(initial?.is_paid ?? false);
     setIsLeave(initial?.is_leave ?? false);
     setSortOrder(String(initial?.sort_order ?? 0));
+    setDayValue(String(initial?.day_value ?? 1));
     setEnabled(initial?.enabled ?? true);
   });
 
@@ -441,6 +446,21 @@ function CodeFormDialog({
             </div>
           </div>
           <div className="grid gap-2">
+            <Label>Day value</Label>
+            <Input
+              type="number"
+              step="0.25"
+              min="0"
+              max="2"
+              value={dayValue}
+              onChange={(e) => setDayValue(e.target.value)}
+              placeholder="1.0 (HD=0.5, WO/A=0)"
+            />
+            <p className="text-xs text-muted-foreground">
+              Fractional day this code contributes to payable days. Half-Day = 0.5, full day = 1, unpaid absence = 0.
+            </p>
+          </div>
+          <div className="grid gap-2">
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Optional description" />
           </div>
@@ -465,6 +485,7 @@ function CodeFormDialog({
                 counts_as_present: countsPresent,
                 is_paid: isPaid,
                 is_leave: isLeave,
+                day_value: Number.isFinite(Number(dayValue)) ? Number(dayValue) : 1,
                 sort_order: Number(sortOrder) || 0,
                 enabled,
               });
