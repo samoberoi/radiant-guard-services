@@ -2986,6 +2986,11 @@ function CandidateWizard({
   const persist = async (status: string, successMsg: string) => {
     const payload = buildPayload(status);
     if (editing) {
+      const wasRejected = editing.status === "rejected";
+      const isResubmit = wasRejected && status === "pending";
+      const patched = isResubmit
+        ? { ...(payload as Record<string, unknown>), rejection_reason: "", rejected_at: null }
+        : (payload as Record<string, unknown>);
       const { data: before } = await supabase
         .from("candidates" as never)
         .select("*")
@@ -2993,19 +2998,29 @@ function CandidateWizard({
         .maybeSingle();
       const { error } = await supabase
         .from("candidates" as never)
-        .update(payload as never)
+        .update(patched as never)
         .eq("id", editing.id);
       if (error) throw error;
       await syncCandidateUnits(editing.id);
       await logActivity({
         module: "Employees",
-        action: "update",
+        action: isResubmit ? "resubmit" : "update",
         entityType: "candidate",
         entityId: editing.id,
         entityLabel: payload.full_name,
         before: (before as unknown as Record<string, unknown>) ?? null,
-        after: { ...(payload as unknown as Record<string, unknown>), unit_ids: form.unit_ids },
+        after: { ...(patched as Record<string, unknown>), unit_ids: form.unit_ids },
       });
+      if (isResubmit) {
+        await notifyOnboardingApprovers({
+          type: "candidate_pending_approval",
+          title: "Candidate re-submitted after fixes",
+          message: `${payload.full_name || "A candidate"} has been updated and re-submitted for approval.`,
+          link: "/admin/employees",
+          entityType: "candidate",
+          entityId: editing.id,
+        }).catch((e: unknown) => console.error("notifyOnboardingApprovers resubmit failed", e));
+      }
     } else {
       const { data: authData } = await supabase.auth.getUser();
       const creatorId = authData.user?.id ?? null;
@@ -3027,19 +3042,20 @@ function CandidateWizard({
         after: { ...(payload as unknown as Record<string, unknown>), unit_ids: form.unit_ids },
       });
       if (status === "pending") {
-        await notifyAdmins({
+        await notifyOnboardingApprovers({
           type: "candidate_pending_approval",
           title: "New candidate awaiting approval",
           message: `${payload.full_name || "A new candidate"} has been submitted and needs your approval.`,
           link: "/admin/employees",
           entityType: "candidate",
           entityId: newId,
-        });
+        }).catch((e: unknown) => console.error("notifyOnboardingApprovers submit failed", e));
       }
     }
     toast.success(successMsg);
     qc.invalidateQueries({ queryKey: QK });
   };
+
 
   const saveDraft = async () => {
     setSavingDraft(true);
