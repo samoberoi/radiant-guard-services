@@ -171,3 +171,74 @@ export async function notifyApprovers(input: {
   }
   return recipients.length;
 }
+
+/**
+ * Auth user IDs of every active approver of the onboarding workflow:
+ * HR, Leadership, Admin, Super Admin. Uses a security-definer RPC so
+ * we don't leak the auth.users table to client roles.
+ */
+export async function getOnboardingApproverUserIds(): Promise<string[]> {
+  const { data, error } = await supabase.rpc(
+    "get_onboarding_approver_user_ids" as never,
+  );
+  if (error) {
+    console.error("getOnboardingApproverUserIds error", error);
+    return [];
+  }
+  return ((data as unknown) as Array<{ user_id: string }>).map((r) => r.user_id);
+}
+
+/**
+ * Fan out a notification to every onboarding approver, skipping the actor
+ * (so a super-admin approving their own submission doesn't get pinged).
+ */
+export async function notifyOnboardingApprovers(input: {
+  type: string;
+  title: string;
+  message: string;
+  link?: string;
+  entityType?: string;
+  entityId?: string;
+}) {
+  const [actor, ids] = await Promise.all([
+    currentUserId(),
+    getOnboardingApproverUserIds(),
+  ]);
+  const recipients = ids.filter((id) => id !== actor);
+  if (recipients.length === 0) return 0;
+  const rows = recipients.map((uid) => ({
+    user_id: uid,
+    actor_id: actor,
+    type: input.type,
+    title: input.title,
+    message: input.message,
+    link: input.link ?? "",
+    entity_type: input.entityType ?? "",
+    entity_id: input.entityId ?? "",
+  }));
+  const { error } = await supabase.from("notifications" as never).insert(rows as never);
+  if (error) {
+    console.error("notifyOnboardingApprovers insert error", error);
+    return 0;
+  }
+  return recipients.length;
+}
+
+/**
+ * Send one notification to a specific user (e.g. the field officer who
+ * submitted a candidate, when the request is approved or rejected).
+ */
+export async function notifyUser(
+  userId: string | null | undefined,
+  input: {
+    type: string;
+    title: string;
+    message: string;
+    link?: string;
+    entityType?: string;
+    entityId?: string;
+  },
+) {
+  if (!userId) return;
+  await createNotification({ userId, ...input });
+}
