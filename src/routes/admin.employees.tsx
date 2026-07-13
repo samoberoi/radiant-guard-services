@@ -308,6 +308,7 @@ type UnitLite = {
   code: string;
   name: string;
   customer_id: string | null;
+  branch_id: string | null;
   customer_name?: string;
 };
 
