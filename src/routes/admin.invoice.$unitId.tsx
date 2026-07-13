@@ -41,12 +41,23 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+// Ledger names for one-off additions/deductions are stored as
+// "<code> - <name> - <date>". Only the middle "<name>" segment is user-facing.
+function cleanLedgerName(raw: string | null | undefined): string {
+  const s = String(raw ?? "").trim();
+  if (!s) return "";
+  const parts = s.split(/\s+-\s+/);
+  if (parts.length >= 3) return parts[1].trim() || s;
+  return s;
+}
+
 const ESI_COMPONENT_RE = /\besi(c)?\b/i;
 const PT_COMPONENT_RE = /\bprofessional\s*tax\b|\bpt\b/i;
 const isEsiItem = (item: { name?: unknown }) => ESI_COMPONENT_RE.test(String(item.name ?? ""));
 const isPtItem = (item: { name?: unknown }) => PT_COMPONENT_RE.test(String(item.name ?? ""));
 const contractTotalAmount = (item: { name?: unknown; amount?: unknown }) =>
   isEsiItem(item) || isPtItem(item) ? 0 : Number(item.amount) || 0;
+
 
 function fmtPretty(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
