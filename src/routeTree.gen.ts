@@ -23,6 +23,7 @@ import { Route as AdminProfessionalTaxManagerRouteImport } from './routes/admin.
 import { Route as AdminPayrollManagerRouteImport } from './routes/admin.payroll-manager'
 import { Route as AdminPayrollDaysManagerRouteImport } from './routes/admin.payroll-days-manager'
 import { Route as AdminPayrollRouteImport } from './routes/admin.payroll'
+import { Route as AdminOrgSettingsRouteImport } from './routes/admin.org-settings'
 import { Route as AdminOfficeAssetsRouteImport } from './routes/admin.office-assets'
 import { Route as AdminOffboardingReasonManagerRouteImport } from './routes/admin.offboarding-reason-manager'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
@@ -162,6 +163,11 @@ const AdminPayrollDaysManagerRoute = AdminPayrollDaysManagerRouteImport.update({
 const AdminPayrollRoute = AdminPayrollRouteImport.update({
   id: '/payroll',
   path: '/payroll',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOrgSettingsRoute = AdminOrgSettingsRouteImport.update({
+  id: '/org-settings',
+  path: '/org-settings',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminOfficeAssetsRoute = AdminOfficeAssetsRouteImport.update({
@@ -566,6 +572,7 @@ export interface FileRoutesByFullPath {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offboarding-reason-manager': typeof AdminOffboardingReasonManagerRoute
   '/admin/office-assets': typeof AdminOfficeAssetsRouteWithChildren
+  '/admin/org-settings': typeof AdminOrgSettingsRoute
   '/admin/payroll': typeof AdminPayrollRouteWithChildren
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
@@ -649,6 +656,7 @@ export interface FileRoutesByTo {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offboarding-reason-manager': typeof AdminOffboardingReasonManagerRoute
   '/admin/office-assets': typeof AdminOfficeAssetsRouteWithChildren
+  '/admin/org-settings': typeof AdminOrgSettingsRoute
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
   '/admin/professional-tax-manager': typeof AdminProfessionalTaxManagerRoute
@@ -734,6 +742,7 @@ export interface FileRoutesById {
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/offboarding-reason-manager': typeof AdminOffboardingReasonManagerRoute
   '/admin/office-assets': typeof AdminOfficeAssetsRouteWithChildren
+  '/admin/org-settings': typeof AdminOrgSettingsRoute
   '/admin/payroll': typeof AdminPayrollRouteWithChildren
   '/admin/payroll-days-manager': typeof AdminPayrollDaysManagerRoute
   '/admin/payroll-manager': typeof AdminPayrollManagerRoute
@@ -821,6 +830,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/offboarding-reason-manager'
     | '/admin/office-assets'
+    | '/admin/org-settings'
     | '/admin/payroll'
     | '/admin/payroll-days-manager'
     | '/admin/payroll-manager'
@@ -904,6 +914,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/offboarding-reason-manager'
     | '/admin/office-assets'
+    | '/admin/org-settings'
     | '/admin/payroll-days-manager'
     | '/admin/payroll-manager'
     | '/admin/professional-tax-manager'
@@ -988,6 +999,7 @@ export interface FileRouteTypes {
     | '/admin/notifications'
     | '/admin/offboarding-reason-manager'
     | '/admin/office-assets'
+    | '/admin/org-settings'
     | '/admin/payroll'
     | '/admin/payroll-days-manager'
     | '/admin/payroll-manager'
@@ -1145,6 +1157,13 @@ declare module '@tanstack/react-router' {
       path: '/payroll'
       fullPath: '/admin/payroll'
       preLoaderRoute: typeof AdminPayrollRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/org-settings': {
+      id: '/admin/org-settings'
+      path: '/org-settings'
+      fullPath: '/admin/org-settings'
+      preLoaderRoute: typeof AdminOrgSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/office-assets': {
@@ -1818,6 +1837,7 @@ interface AdminRouteChildren {
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminOffboardingReasonManagerRoute: typeof AdminOffboardingReasonManagerRoute
   AdminOfficeAssetsRoute: typeof AdminOfficeAssetsRouteWithChildren
+  AdminOrgSettingsRoute: typeof AdminOrgSettingsRoute
   AdminPayrollRoute: typeof AdminPayrollRouteWithChildren
   AdminPayrollDaysManagerRoute: typeof AdminPayrollDaysManagerRoute
   AdminPayrollManagerRoute: typeof AdminPayrollManagerRoute
@@ -1862,6 +1882,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminOffboardingReasonManagerRoute: AdminOffboardingReasonManagerRoute,
   AdminOfficeAssetsRoute: AdminOfficeAssetsRouteWithChildren,
+  AdminOrgSettingsRoute: AdminOrgSettingsRoute,
   AdminPayrollRoute: AdminPayrollRouteWithChildren,
   AdminPayrollDaysManagerRoute: AdminPayrollDaysManagerRoute,
   AdminPayrollManagerRoute: AdminPayrollManagerRoute,
