@@ -139,6 +139,7 @@ const tiles: Tile[] = [
     label: "Role-Based Access Control",
     description: "Define what each role can view, edit, and delete across modules.",
     icon: ShieldCheck,
+  },
   {
     to: "/admin/org-settings",
     label: "Company Settings",
