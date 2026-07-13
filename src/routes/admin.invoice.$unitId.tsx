@@ -957,18 +957,20 @@ function PayrollUnitPage() {
                 <th className="px-4 py-3 font-medium">Designation</th>
                 <th className="px-4 py-3 text-right font-medium">T Days</th>
                 <th className="px-4 py-3 text-right font-medium">OT Hrs</th>
+                <th className="px-4 py-3 text-right font-medium" title={`Unit of billing based on billing mode "${billingMode}"`}>Qty</th>
+                <th className="px-4 py-3 text-right font-medium" title="Per-unit rate = actual billable / Qty">Rate</th>
                 <th className="px-4 py-3 text-right font-medium" title="Full billable total — what would be invoiced for full attendance">Projected total</th>
-                <th className="px-4 py-3 text-right font-medium" title="Per-day × T Days — actual billable total based on attendance">Actual total</th>
+                <th className="px-4 py-3 text-right font-medium" title="Rate × Qty — actual billable total based on attendance">Actual total</th>
                 <th className="px-4 py-3 text-right font-medium" title="Projected − Actual (not billable due to absence)">Shortfall</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/50">
               {isLoading ? (
-                <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">Computing invoice…</td></tr>
+                <tr><td colSpan={10} className="px-4 py-10 text-center text-muted-foreground">Computing invoice…</td></tr>
               ) : error ? (
-                <tr><td colSpan={8} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
+                <tr><td colSpan={10} className="px-4 py-10 text-center text-destructive">{error instanceof Error ? error.message : "Failed"}</td></tr>
               ) : rows.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
+                <tr><td colSpan={10} className="px-4 py-10 text-center text-muted-foreground">No employees mapped to this unit.</td></tr>
               ) : rows.map((r) => {
                 const isHighlighted = highlightCandidate === r.id;
                 const projTotal = r.resource
@@ -977,6 +979,15 @@ function PayrollUnitPage() {
                   : 0;
                 const actualTotal = billableFor(r);
                 const shortfall = r.wages ? Math.round((projTotal - actualTotal) * 100) / 100 : 0;
+                const baseDays = r.wages?.baseDays || 30;
+                const paidDays = r.totals.pDays + r.totals.phDays + r.totals.otherPaidDays;
+                let qty = 0;
+                let qtyLabel = "";
+                if (billingMode === "man_days") { qty = r.totals.tDays; qtyLabel = "days"; }
+                else if (billingMode === "man_hours") { qty = paidDays * UNIT_DUTY_HOURS + r.totals.otHours; qtyLabel = "hrs"; }
+                else if (billingMode === "man_months") { qty = baseDays > 0 ? Math.min(1, paidDays / baseDays) : 0; qtyLabel = "mo"; }
+                else { qty = 1; qtyLabel = "lump"; }
+                const rate = qty > 0 && r.wages ? actualTotal / qty : 0;
                 return (
                 <tr
                   key={r.rowKey}
@@ -988,6 +999,8 @@ function PayrollUnitPage() {
                   <td className="px-4 py-3 text-muted-foreground">{r.designation}</td>
                   <td className="px-4 py-3 text-right">{r.totals.tDays}</td>
                   <td className="px-4 py-3 text-right">{r.totals.otHours}</td>
+                  <td className="px-4 py-3 text-right text-xs text-muted-foreground">{r.wages ? `${Math.round(qty * 100) / 100} ${qtyLabel}` : "—"}</td>
+                  <td className="px-4 py-3 text-right text-xs">{r.wages && qty > 0 ? fmtINR(Math.round(rate * 100) / 100) : "—"}</td>
                   <td className="px-4 py-3 text-right text-muted-foreground">{r.wages ? fmtINR(projTotal) : <span className="text-xs text-amber-600">no contract</span>}</td>
                   <td className="px-4 py-3 text-right font-semibold text-emerald-700">{r.wages ? fmtINR(actualTotal) : "—"}</td>
                   <td className={`px-4 py-3 text-right ${shortfall > 0 ? "text-rose-600" : "text-muted-foreground"}`}>{r.wages ? (shortfall > 0 ? `− ${fmtINR(shortfall)}` : fmtINR(0)) : "—"}</td>
@@ -998,7 +1011,7 @@ function PayrollUnitPage() {
             {rows.length > 0 && (
               <tfoot className="border-t border-border/60 bg-secondary/30 text-sm font-semibold">
                 <tr>
-                  <td className="px-4 py-3" colSpan={5}>Totals</td>
+                  <td className="px-4 py-3" colSpan={7}>Totals</td>
                   <td className="px-4 py-3 text-right text-muted-foreground">{fmtINR(totals.projectedTotal)}</td>
                   <td className="px-4 py-3 text-right text-emerald-700">{fmtINR(totals.actualTotal)}</td>
                   <td className="px-4 py-3 text-right text-rose-600">− {fmtINR(Math.max(0, totals.projectedTotal - totals.actualTotal))}</td>
