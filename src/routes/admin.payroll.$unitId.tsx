@@ -21,6 +21,7 @@ import { logActivity } from "@/lib/activity-log";
 import { hydrateFormulasFromMaster } from "@/lib/contract-hydrate";
 import {
   applyEsiToWageComputation,
+  applyLwfToWageComputation,
   applyPtToWageComputation,
   computeAttendanceTotals,
   computeWages,
@@ -33,6 +34,7 @@ import {
   type PincodeRangeLike,
   type PtSlabLike,
 } from "@/lib/payroll-calc";
+import { resolveLwf, type LwfRow } from "@/lib/lwf-lookup";
 import { openExport } from "@/lib/csv-export";
 import { fetchAttendanceEntriesForPeriod } from "@/lib/attendance-fetch";
 
