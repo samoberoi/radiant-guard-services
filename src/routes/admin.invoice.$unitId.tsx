@@ -505,6 +505,7 @@ function PayrollUnitPage() {
             })
           : null;
         const candidateGender = ((c as unknown as { gender?: string | null }).gender ?? "").toString();
+        const candidateIsDisabled = Boolean((c as unknown as { is_disabled?: boolean | null }).is_disabled);
         if (wages && isPrimary) {
           const extraAdds = additionsByCandidate.get(c.id) ?? [];
           const extraDeds = deductionsByCandidate.get(c.id) ?? [];
@@ -514,7 +515,7 @@ function PayrollUnitPage() {
           }
           const addTotal = extraAdds.reduce((s, a) => s + a.amount, 0);
           wages.earnedGross = Math.round((wages.earnedGross + addTotal) * 100) / 100;
-          Object.assign(wages, applyEsiToWageComputation(wages));
+          Object.assign(wages, applyEsiToWageComputation(wages, { isDisabled: candidateIsDisabled }));
           const pt = resolvePtAmount({
             state: unitState,
             pincode: unitPincode,
@@ -542,6 +543,9 @@ function PayrollUnitPage() {
             }
             Object.assign(wages, applyLwfToWageComputation(wages, { employee, employer, applies }));
           }
+
+          // Statutory EPF employer split (EPS + EPF); total unchanged.
+          Object.assign(wages, applyEpfBreakdownToWageComputation(wages));
         }
 
         // Merge split components (e.g. "HRA 5%" + "HRA 15%" -> "HRA") across
