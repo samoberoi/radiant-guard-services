@@ -410,7 +410,7 @@ function useUnits() {
       const { data, error } = await runWithQueryTimeout("Units", async (signal) =>
         await supabase
           .from("units" as never)
-          .select("id,code,name,customer_id")
+          .select("id,code,name,customer_id,branch_id")
           .order("name", { ascending: true })
           .limit(2000)
           .abortSignal(signal),
