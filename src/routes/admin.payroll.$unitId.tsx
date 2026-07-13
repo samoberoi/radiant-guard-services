@@ -603,6 +603,28 @@ function PayrollUnitPage() {
           Object.assign(wages, applyPtToWageComputation(wages, ptResolved.amount));
         }
 
+        // Resolve LWF from Control Center master (pincode → state → LWF row).
+        // Only fires if this period's month is in the master's deduction_months
+        // and the master row is enabled. Otherwise LWF rows are zeroed.
+        if (wages && isPrimary && lwfRows && pincodeRanges) {
+          const lwfRes = resolveLwf(String(unitPincode ?? ""), pincodeRanges as never, lwfRows);
+          const periodMonth = new Date(start).getMonth() + 1; // 1-12
+          let applies = false;
+          let employee = 0;
+          let employer = 0;
+          if (lwfRes.kind === "match" && lwfRes.lwf.enabled) {
+            const months = Array.isArray(lwfRes.lwf.deduction_months) ? lwfRes.lwf.deduction_months : [];
+            if (months.length === 0 || months.includes(periodMonth)) {
+              applies = true;
+              employee = Number(lwfRes.lwf.employee_contribution) || 0;
+              employer = Number(lwfRes.lwf.employer_contribution) || 0;
+            }
+          }
+          Object.assign(wages, applyLwfToWageComputation(wages, { employee, employer, applies }));
+        }
+
+
+
 
         // Collapse variants like "HRA 5%" / "HRA 15%" into a single "HRA"
         // entry so columns and breakdowns are de-duplicated everywhere
