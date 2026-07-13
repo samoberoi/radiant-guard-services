@@ -233,13 +233,25 @@ function PayrollUnitPage() {
       // 3. Contract resources for this unit's active contract.
       const { data: contracts } = await supabase
         .from("client_contracts")
-        .select("id, payroll_window_id")
+        .select("id, payroll_window_id, billing_type_id")
         .eq("unit_id", unitId)
         .eq("record_type", "client")
         .eq("status", "active")
         .order("start_date", { ascending: false })
         .limit(1);
       const contractId = contracts?.[0]?.id;
+      const billingTypeId = contracts?.[0]?.billing_type_id ?? null;
+
+      let billingMode: "man_days" | "man_hours" | "man_months" | "lumpsum" = "man_days";
+      if (billingTypeId) {
+        const { data: bt } = await supabase
+          .from("billing_types" as never)
+          .select("code")
+          .eq("id", billingTypeId)
+          .maybeSingle();
+        const code = ((bt as unknown) as { code?: string | null } | null)?.code ?? "man_days";
+        if (code === "man_hours" || code === "man_months" || code === "lumpsum") billingMode = code;
+      }
 
       let resources: Record<string, unknown>[] = [];
       if (contractId) {
