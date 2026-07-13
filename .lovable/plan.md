@@ -1,43 +1,94 @@
+## Goal
 
-## What I'll build (single shipping pass)
+Make the Employee Onboarding flow production-tight and role-correct:
 
-### 1. Disability flag on candidate → ESI ₹25,000 ceiling
-- Migration: add `is_disabled BOOLEAN DEFAULT false` to `public.candidates`.
-- Wire the flag through: candidate profile edit form gets a "Person with disability (ESI ceiling ₹25,000)" checkbox.
-- Payroll + invoice pass `isDisabled` into the existing `applyEsiToWageComputation` (the parameter already exists in the engine).
+- **Field Officer (FO)** onboards candidates, restricted to the units in their scope.
+- **HR, Leadership, Super Admin** can also onboard directly (same wizard), *and* are the only roles that see/handle approvals.
+- Submissions notify HR + Leadership + Super Admin (not "all admins" indiscriminately).
+- Reject requires a written reason → notifies the FO who submitted it.
+- FO can fix a rejected candidate and re-submit → status returns to `pending`, approvers are re-notified.
+- On approve → employee code assigned, FO is notified.
+- Verify end-to-end with a scripted browser run.
 
-### 2. EPS / EDLI / Admin split (single "EPF" contract line → 4 employer sub-lines)
-- Engine (`payroll-calc.ts`): when a contract row is tagged EPF, expand the single employer contribution into 4 tracked lines in the result:
-  - **EPF employer** 3.67% (of capped basic+DA)
-  - **EPS** 8.33%, capped at ₹1,250
-  - **EDLI** 0.5%, capped at ₹75
-  - **EPF Admin** 0.5%, min ₹500
-- Total employer cost is unchanged (still ~13%), but the paysheet + invoice now show the statutory breakdown.
-- Employee side (12%) stays as-is.
+## Current State (audit)
 
-### 3. GST breakdown on-screen (CGST/SGST vs IGST from company state)
-- Migration: create `public.org_settings` (singleton) with `company_gstin`, `company_state`, `company_state_code`. Seed one row.
-- New tiny admin page `admin.org-settings.tsx` (in Control Center) to edit company GSTIN + state.
-- Invoice route: compare unit `billing_state` vs company state — if same, CGST+SGST split (each half of GST %), else IGST full. Render breakdown in the invoice header and totals card, not just Tally export.
+- Table: `candidates` uses `status ∈ draft | pending | rejected | approved | active | inactive` with `rejection_reason`.
+- `admin.employees.tsx` already: FO sees only own submissions; submit sets status `pending`; approve/reject mutations exist; a reject-reason dialog exists; `notifyAdmins()` fans out on submit/approve/reject.
+- Gaps to fix:
+  1. `notifyAdmins` uses `get_admin_user_ids` (super-admin phones + role `admin/super_admin`) — **misses HR & Leadership**.
+  2. Approve/Reject buttons on pending rows are shown to any viewer of the Candidates tab — should be gated to HR / Leadership / Super Admin / Admin.
+  3. FO unit picker in the wizard shows all units — should be filtered to the FO's scoped units (branch/unit assignments in `employee_scope_assignments`).
+  4. Reject dialog does not enforce a non-empty reason.
+  5. FO doesn't get a notification on approve/reject of their own submission.
+  6. Re-submit path: editing a `rejected` candidate should clear `rejection_reason` and move back to `pending` + re-notify approvers (today it goes to `pending` but `rejection_reason` isn't cleared and the approver notification isn't guaranteed on the edit path).
 
-### 4. Billing-type variants (man_days / man_hours / man_months / lumpsum)
-- Migration: add `code TEXT` to `billing_types` with values `man_days | man_hours | man_months | lumpsum`; backfill existing rows by name; add `code` to Billing Type Manager UI (readonly-ish select).
-- Contracts already reference `billing_type_id`. Invoice engine (`admin.invoice.$unitId.tsx`) branches per resource's contract billing_type:
-  - `man_days` (current) — per-day rate × attended (fractional-day-aware).
-  - `man_hours` — per-hour rate × (attended-hours + OT hours), where per-hour = monthly / (baseDays × dutyHours).
-  - `man_months` — flat monthly, prorated only by LOP (baseDays−pDays)/baseDays, ignores partial-attendance.
-  - `lumpsum` — flat contract-line amount, no attendance math.
-- Line-level indicator showing which mode was applied so the operator can verify.
+## Changes
 
-### 5. Regression re-check
-After all four land, I re-run the calculation sanity script (scenarios A–D from last audit + one man-hours + one man-months + one intra-state GST + one PwD-ESI) and paste the pass/fail table.
+### 1. Notifications — new helper `notifyOnboardingApprovers`
 
-## Technical details
-- Files touched: 2 migrations, `payroll-calc.ts`, `admin.invoice.$unitId.tsx`, `admin.payroll.$unitId.tsx`, `admin.billing-type-manager.tsx`, `admin.candidates.$id.details.tsx`, new `admin.org-settings.tsx`, control center link.
-- All engine changes remain opt-in: missing billing_type code → falls back to `man_days`; missing company state → falls back to IGST-only (current behavior).
-- No breaking changes to already-approved payroll snapshots (they hold their own frozen amounts).
+Add in `src/lib/notifications.ts`:
+- New RPC-backed helper that returns auth user IDs whose `candidates.role_key ∈ ('hr','leadership','super_admin','admin')` and are `status='active'`, plus the hard-coded super-admin phones (reuse pattern from `get_admin_user_ids`).
+- Wrapper `notifyOnboardingApprovers({title, message, link, entityId})` that inserts one notification per recipient (dedupe by uid, skip actor).
+- Wrapper `notifyUser(userId, {...})` for one-off notifications back to the FO.
 
-## Not in scope
-- Full GST invoice number series / e-invoice / IRN generation.
-- Statutory PF challan file export.
-- Historical payroll re-computation (existing rows keep their snapshot values).
+If the SQL function doesn't exist, add it via migration:
+
+```text
+get_onboarding_approver_user_ids() → TABLE(user_id uuid)
+  SECURITY DEFINER, SET search_path=public
+  Returns admins + candidates.role_key in ('hr','leadership','super_admin','admin')
+```
+
+### 2. `admin.employees.tsx` — permissions & routing of notifications
+
+- Add `const canApproveOnboarding = isSuperAdmin || ['hr','leadership','admin','super_admin'].includes(roleKey ?? '');`
+- Gate the two icon buttons on the candidate row (Approve/Reject) and the wizard's Approve/Reject buttons behind `canApproveOnboarding`. Non-approvers still see the row & wizard read-only view but no action buttons.
+- Replace `notifyAdmins(...)` calls on submit/approve/reject with `notifyOnboardingApprovers(...)`.
+- On **approve**: also call `notifyUser(candidate.created_by)` with an "Approved — Employee Code EMP-xxx assigned" message (link to `/admin/employees`).
+- On **reject**: also `notifyUser(candidate.created_by)` with the rejection reason and a link back to their candidate.
+
+### 3. FO onboarding — unit scoping
+
+- In the wizard's Unit picker, filter `units` to those whose `id` is in FO's scope, OR whose `branch_id` matches an FO branch-scope entry. Use existing `useScopeAssignments()` + `units` join already loaded on the page.
+- If FO has no scope assignments, show a clear empty state: "You have no units assigned. Ask your admin to assign a branch/unit before onboarding."
+- Guardrail on submit: reject the insert client-side if the selected unit isn't in scope (defence in depth; RLS still authoritative).
+
+### 4. Re-submit after rejection
+
+- In `persist(...)` when the editing candidate's status was `rejected` and it's being re-submitted, set `status='pending'`, `rejection_reason=''`, `rejected_at=null`, and always call `notifyOnboardingApprovers({title: "Candidate re-submitted after fixes", ...})`.
+- FO-side badge on their row: keep showing the previous rejection reason until the record moves back to `pending`.
+
+### 5. Reject dialog — mandatory reason
+
+- Disable the "Reject" confirm button until `rejectReason.trim().length >= 5`.
+- Show inline helper "Explain what needs to be corrected so the field officer can fix it."
+
+### 6. HR / Leadership onboarding path
+
+Confirm (no code change needed if already true) that the "Add candidate" button in the Candidates tab is visible to these roles too — today it's gated by `isFieldOfficer` in one place; ensure the button is shown to `canApproveOnboarding` as well. Their submissions still land in `pending` (they can then approve their own if they choose, but a small polish: pre-select their unit-less flow and let HR pick any unit).
+
+## End-to-End Verification (Playwright, sandbox)
+
+Script `/tmp/browser/onboarding/run.py` that uses `LOVABLE_BROWSER_SUPABASE_*` to swap sessions for three seeded users (FO, HR, Super Admin — reuse existing accounts if present, otherwise create via a one-off SQL insert into `candidates` + auth users if needed and note it in the report).
+
+Steps captured with screenshots:
+
+1. Login as **FO** → open `/admin/employees` → Candidate tab → Add candidate with random valid data → Submit for approval → screenshot the "Pending" row.
+2. Login as **HR** → notification bell shows unread → click → opens candidate → click Reject → try empty reason (button disabled) → enter "Aadhaar image blurred, re-upload" → Reject → screenshot.
+3. Login as **FO** → notification bell shows "Candidate rejected: <reason>" → open the rejected row → edit → change the flagged fields → Submit → screenshot pending again.
+4. Login as **Super Admin** → notification of re-submission → open → Approve → screenshot the row now `active` with `EMP-xxx` code.
+5. Login as **FO** → notification "Candidate approved (EMP-xxx)" → screenshot.
+
+Report includes: pass/fail per step, screenshot filenames, and any console/network errors caught during the run.
+
+## Out of scope
+
+- No changes to payroll/invoice modules.
+- No new offboarding logic.
+- No changes to `candidates` table columns beyond what's already present (`rejection_reason`, `rejected_at`, `created_by`, `approved_at`, `employee_code`).
+
+## Technical notes
+
+- Files touched: `src/lib/notifications.ts`, `src/routes/admin.employees.tsx`, one Supabase migration (only if the approver RPC is missing).
+- No RLS changes required — approvers already have update rights on `candidates` via existing policies; the migration only adds a `SECURITY DEFINER` helper for recipient lookup.
+- Uses existing `logActivity` calls; adds an `action: 'resubmit'` event on the re-submit path.
