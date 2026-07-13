@@ -368,7 +368,7 @@ function CandidateDetailsPage() {
           {active === "basic" && <BasicSection form={form} />}
           {active === "units" && <UnitMappingSection candidateId={id} primaryUnitId={form.unit_id ?? null} />}
           {active === "physical" && (
-            <PhysicalSection form={form} setSection={setSection} />
+            <PhysicalSection form={form} setSection={setSection} set={set} />
           )}
           {active === "compliance" && (
             <ComplianceSection form={form} setSection={setSection} esicBranches={esicBranches} />
