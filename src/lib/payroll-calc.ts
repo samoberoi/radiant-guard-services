@@ -909,10 +909,29 @@ export function computeWages(
   const deductionsScaled = scaleItemsRespectingFixed(resource.deductions);
   const employerContributionsScaled = scaleItemsRespectingFixed(resource.employerContributions);
 
+  // Statutory defaults: EPF caps base at ₹15,000 unless the contract
+  // explicitly overrides the cap. This ensures every EPF contribution
+  // respects the PF wage ceiling without requiring admins to remember to
+  // type 15000 in Cost Component Manager.
+  const applyEpfDefaults = (i: BenefitLike | undefined): BenefitLike | undefined => {
+    if (!i) return i;
+    if (hasConfiguredFormula(i)) return i;
+    const cap = Number(i.capAmount) || 0;
+    return {
+      ...i,
+      calcType: i.calcType ?? "percentage",
+      percentage: Number(i.percentage) > 0 ? i.percentage : i.calcType === "percentage" ? 12 : i.percentage,
+      capAmount: cap > 0 ? cap : EPF_WAGE_CEILING,
+      baseComponents:
+        Array.isArray(i.baseComponents) && i.baseComponents.length > 0
+          ? i.baseComponents
+          : [{ label: "Basic", operator: "+" }, { label: "DA", operator: "+" }],
+    };
+  };
   const findEpf = (items: BenefitLike[]) =>
     items.find((i) => EPF_NAME_RE.test(i.name));
-  const employeeEpfItem = findEpf(resource.deductions);
-  const employerEpfItem = findEpf(resource.employerContributions);
+  const employeeEpfItem = applyEpfDefaults(findEpf(resource.deductions));
+  const employerEpfItem = applyEpfDefaults(findEpf(resource.employerContributions));
   const employeeEpfAmount = benefitAmountFromConfig(
     employeeEpfItem,
     components,
@@ -942,6 +961,92 @@ export function computeWages(
       return { ...i, amount };
     });
   };
+
+  // ---- Statutory Bonus (Payment of Bonus Act) ----
+  // Rule: 8.33% of Basic+DA capped at ₹7,000 (or contract's minimum wage
+  // if higher). Contract can override percentage/cap; we only fill in
+  // sensible defaults when the row is a plain percentage line with no
+  // explicit cap. Statutory bonus is typically employer-borne, so it
+  // appears in employer_contributions in most contracts.
+  const applyBonusDefaults = (i: BenefitLike | undefined): BenefitLike | undefined => {
+    if (!i) return i;
+    if (hasConfiguredFormula(i)) return i;
+    const cap = Number(i.capAmount) || 0;
+    return {
+      ...i,
+      calcType: i.calcType ?? "percentage",
+      percentage: Number(i.percentage) > 0 ? i.percentage : BONUS_RATE_MIN * 100,
+      capAmount: cap > 0 ? cap : BONUS_CAP,
+      baseComponents:
+        Array.isArray(i.baseComponents) && i.baseComponents.length > 0
+          ? i.baseComponents
+          : [{ label: "Basic", operator: "+" }, { label: "DA", operator: "+" }],
+    };
+  };
+  const findBonus = (items: BenefitLike[]) =>
+    items.find((i) => BONUS_NAME_RE.test(i.name));
+  const employeeBonusItem = applyBonusDefaults(findBonus(resource.deductions));
+  const employerBonusItem = applyBonusDefaults(findBonus(resource.employerContributions));
+  const employeeBonusAmount = benefitAmountFromConfig(
+    employeeBonusItem,
+    components,
+    resource.components,
+    earnedSalaryRatio,
+  );
+  const employerBonusAmount = benefitAmountFromConfig(
+    employerBonusItem,
+    components,
+    resource.components,
+    earnedSalaryRatio,
+  );
+  const applyBonusRule = (items: WageComponent[], amount: number) => {
+    let placed = false;
+    return items.map((i) => {
+      if (!BONUS_NAME_RE.test(i.name)) return i;
+      if (hasConfiguredFormula(i)) return i;
+      if (placed) return { ...i, amount: 0 };
+      placed = true;
+      return { ...i, amount };
+    });
+  };
+
+  // ---- Statutory Gratuity (Payment of Gratuity Act) ----
+  // Rule: 4.81% (= 15/26/12) of Basic+DA, no statutory cap on monthly
+  // accrual. Only employer-side; auto-fills percentage when contract line
+  // is a plain percentage row without an explicit value.
+  const applyGratuityDefaults = (i: BenefitLike | undefined): BenefitLike | undefined => {
+    if (!i) return i;
+    if (hasConfiguredFormula(i)) return i;
+    return {
+      ...i,
+      calcType: i.calcType ?? "percentage",
+      percentage: Number(i.percentage) > 0 ? i.percentage : GRATUITY_RATE * 100,
+      baseComponents:
+        Array.isArray(i.baseComponents) && i.baseComponents.length > 0
+          ? i.baseComponents
+          : [{ label: "Basic", operator: "+" }, { label: "DA", operator: "+" }],
+    };
+  };
+  const findGratuity = (items: BenefitLike[]) =>
+    items.find((i) => GRATUITY_NAME_RE.test(i.name));
+  const employerGratuityItem = applyGratuityDefaults(findGratuity(resource.employerContributions));
+  const employerGratuityAmount = benefitAmountFromConfig(
+    employerGratuityItem,
+    components,
+    resource.components,
+    earnedSalaryRatio,
+  );
+  const applyGratuityRule = (items: WageComponent[], amount: number) => {
+    let placed = false;
+    return items.map((i) => {
+      if (!GRATUITY_NAME_RE.test(i.name)) return i;
+      if (hasConfiguredFormula(i)) return i;
+      if (placed) return { ...i, amount: 0 };
+      placed = true;
+      return { ...i, amount };
+    });
+  };
+
 
 
   // ---- Statutory ESI override ----
