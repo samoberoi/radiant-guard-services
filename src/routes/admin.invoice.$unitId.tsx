@@ -162,12 +162,23 @@ function PayrollUnitPage() {
     },
   });
 
+  const { data: lwfRows } = useQuery({
+    queryKey: ["labour_welfare_funds_invoice"],
+    queryFn: async (): Promise<LwfRow[]> => {
+      const { data, error } = await supabase
+        .from("labour_welfare_funds")
+        .select("id, state, deduction_months, frequency, employee_contribution, employer_contribution, enabled, notes");
+      if (error) throw error;
+      return (data ?? []) as LwfRow[];
+    },
+  });
+
   const unitState = (unit as { billing_state?: string | null } | null | undefined)?.billing_state ?? null;
   const unitPincode = (unit as { billing_pincode?: string | null } | null | undefined)?.billing_pincode ?? null;
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["payroll-compute", unitId, start, end, unitState, unitPincode, (ptSlabs?.length ?? 0), (pincodeRanges?.length ?? 0)],
-    enabled: !!ptSlabs && !!pincodeRanges,
+    queryKey: ["payroll-compute", unitId, start, end, unitState, unitPincode, (ptSlabs?.length ?? 0), (pincodeRanges?.length ?? 0), (lwfRows?.length ?? 0)],
+    enabled: !!ptSlabs && !!pincodeRanges && !!lwfRows,
     queryFn: async () => {
       // 1. Roster: candidates mapped to this unit (primary + secondary).
       const [{ data: primary }, { data: links }] = await Promise.all([
