@@ -672,6 +672,23 @@ function EmployeesPage() {
   const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const desigMap = useMemo(() => new Map(designations.map((d) => [d.id, d])), [designations]);
 
+  const { candidateId: currentCandidateId } = useCurrentUserRole();
+  const scopedUnitsForWizard = useMemo(() => {
+    if (!isFieldOfficer) return units;
+    if (!currentCandidateId) return [] as typeof units;
+    const mine = scopeAssignments.filter((s) => s.candidate_id === currentCandidateId);
+    const unitIds = new Set(mine.filter((s) => s.scope_type === "unit").map((s) => s.scope_id));
+    const branchIds = new Set(mine.filter((s) => s.scope_type === "branch").map((s) => s.scope_id));
+    const customerIds = new Set(mine.filter((s) => s.scope_type === "customer").map((s) => s.scope_id));
+    return units.filter((u) => {
+      if (unitIds.has(u.id)) return true;
+      const anyU = u as unknown as { branch_id?: string | null; customer_id?: string | null };
+      if (anyU.branch_id && branchIds.has(anyU.branch_id)) return true;
+      if (anyU.customer_id && customerIds.has(anyU.customer_id)) return true;
+      return false;
+    });
+  }, [isFieldOfficer, currentCandidateId, scopeAssignments, units]);
+
   const matchesSearch = (c: CandidateListItem) => {
     const q = search.trim().toLowerCase();
     if (!q) return true;
