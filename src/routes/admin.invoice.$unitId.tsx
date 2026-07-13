@@ -605,6 +605,33 @@ function PayrollUnitPage() {
 
 
 
+  const { data: orgSettings } = useOrgSettings();
+  const COMPANY_STATE = (orgSettings?.company_state ?? "Maharashtra").trim();
+  const COMPANY_STATE_SHORT = COMPANY_STATE.slice(0, 4);
+
+  // Per-mode billable amount for one invoice row. `man_days` (default) uses
+  // the payroll engine's employerCost so invoice == payroll register. Other
+  // modes are re-derived from the contract's projected monthly and attendance.
+  const UNIT_DUTY_HOURS = 8;
+  const billableFor = (r: (typeof rows)[number]): number => {
+    if (!r.wages || !r.resource) return 0;
+    if (billingMode === "man_days") return r.wages.employerCost;
+    const monthly =
+      r.resource.components.reduce((s, c) => s + (Number(c.amount) || 0), 0) +
+      r.resource.employerContributions.reduce((s, c) => s + contractTotalAmount(c), 0);
+    const baseDays = r.wages.baseDays || 30;
+    const paidDays = r.totals.pDays + r.totals.phDays + r.totals.otherPaidDays;
+    if (billingMode === "lumpsum") return Math.round(monthly * 100) / 100;
+    if (billingMode === "man_months") {
+      const ratio = baseDays > 0 ? Math.min(1, paidDays / baseDays) : 0;
+      return Math.round(monthly * ratio * 100) / 100;
+    }
+    // man_hours
+    const perHour = monthly / (baseDays * UNIT_DUTY_HOURS);
+    const workedHours = paidDays * UNIT_DUTY_HOURS + r.totals.otHours;
+    return Math.round(perHour * workedHours * 100) / 100;
+  };
+
   const totals = useMemo(() => {
     return rows.reduce(
       (acc, r) => {
@@ -613,14 +640,25 @@ function PayrollUnitPage() {
           (r.resource?.components.reduce((s, c) => s + (Number(c.amount) || 0), 0) ?? 0) +
           (r.resource?.employerContributions.reduce((s, c) => s + contractTotalAmount(c), 0) ?? 0);
         acc.projectedTotal += projTotal;
-        acc.actualTotal += r.wages.employerCost;
+        acc.actualTotal += billableFor(r);
         acc.tDays += r.totals.tDays;
         acc.otHours += r.totals.otHours;
         return acc;
       },
       { projectedTotal: 0, actualTotal: 0, tDays: 0, otHours: 0 },
     );
-  }, [rows]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, billingMode]);
+
+  // GST split: intra-state (customer in company state) → CGST + SGST; else IGST.
+  const isIntraStateCurrent =
+    (unitState ?? "").trim().toLowerCase() === COMPANY_STATE.toLowerCase();
+  const GST_RATE = 18;
+  const gstAmount = Math.round(totals.actualTotal * (GST_RATE / 100) * 100) / 100;
+  const cgstAmount = isIntraStateCurrent ? Math.round(gstAmount / 2 * 100) / 100 : 0;
+  const sgstAmount = isIntraStateCurrent ? Math.round(gstAmount / 2 * 100) / 100 : 0;
+  const igstAmount = isIntraStateCurrent ? 0 : gstAmount;
+  const grandTotal = Math.round((totals.actualTotal + gstAmount) * 100) / 100;
 
   const exportCsv = () => {
     const headers = [
@@ -634,7 +672,7 @@ function PayrollUnitPage() {
         ? r.resource.components.reduce((s, c) => s + (Number(c.amount) || 0), 0) +
           r.resource.employerContributions.reduce((s, c) => s + contractTotalAmount(c), 0)
         : 0;
-      const actualTotal = w?.employerCost ?? 0;
+      const actualTotal = billableFor(r);
       const shortfall = w ? Math.round((projTotal - actualTotal) * 100) / 100 : "";
       const cells: Record<string, unknown> = {
         "Emp ID": r.employeeCode,
@@ -654,8 +692,7 @@ function PayrollUnitPage() {
     downloadCsv(`invoice-${unit?.code ?? unitId}-${start}-${end}`, dataRows, columns);
   };
 
-  const COMPANY_STATE = "Maharashtra"; // company HO state for intra/inter detection
-  const COMPANY_STATE_SHORT = "Maha";
+
 
   const exportTallyBilling = async () => {
     if (!unit) return;
