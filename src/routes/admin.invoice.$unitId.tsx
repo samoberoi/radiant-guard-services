@@ -253,14 +253,13 @@ function PayrollUnitPage() {
         for (const d of extraDs ?? []) desigMap.set(d.id, d.name as string);
       }
 
-      const pdbIds = Array.from(
-        new Set(resources.map((r) => r.payroll_day_base_id).filter(Boolean)),
-      ) as string[];
+      // Load ALL enabled payroll day bases (referenced by contract resources
+      // AND by cost-component / allowance divisors pdb:<uuid>). Mirrors the
+      // payroll route so invoice base-day math never diverges from payroll.
       const { data: pdbs } = await supabase
         .from("payroll_day_bases")
-        .select("id, method, fixed_days, weekly_off_day")
-        .in("id", pdbIds.length ? pdbIds : ["00000000-0000-0000-0000-000000000000"]);
-      type PdbMethod = "actual_days" | "fixed_days" | "actual_minus_weekly_off";
+        .select("id, method, fixed_days, weekly_off_day, included_weekdays, enabled");
+      type PdbMethod = "actual_days" | "fixed_days" | "actual_minus_weekly_off" | "custom_weekdays";
       const pdbMap = new Map<string, NonNullable<ContractResourceLike["payrollDayBase"]>>(
         (pdbs ?? []).map((p) => [
           p.id,
@@ -268,9 +267,22 @@ function PayrollUnitPage() {
             method: p.method as PdbMethod,
             fixedDays: p.fixed_days,
             weeklyOffDay: p.weekly_off_day,
+            includedWeekdays: Array.isArray((p as unknown as { included_weekdays?: unknown }).included_weekdays)
+              ? ((p as unknown as { included_weekdays: unknown[] }).included_weekdays.map((n) => Number(n)).filter((n) => n >= 0 && n <= 6))
+              : null,
           },
         ]),
       );
+      const dayBases = (pdbs ?? []).map((p) => ({
+        id: String(p.id),
+        method: p.method as PdbMethod,
+        fixedDays: p.fixed_days,
+        weeklyOffDay: p.weekly_off_day,
+        includedWeekdays: Array.isArray((p as unknown as { included_weekdays?: unknown }).included_weekdays)
+          ? ((p as unknown as { included_weekdays: unknown[] }).included_weekdays.map((n) => Number(n)).filter((n) => n >= 0 && n <= 6))
+          : null,
+      }));
+
 
       const resourceByDesignation = new Map<string, ContractResourceLike>();
       for (const r of resources) {
