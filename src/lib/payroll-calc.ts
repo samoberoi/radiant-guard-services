@@ -115,16 +115,18 @@ export function computeAttendanceTotals(
       phCount += 1;
       continue;
     }
-    if (c.counts_as_present) pDays += 1;
-    else if (c.is_paid) otherPaidDays += 1;
+    // Fractional day contribution: HD = 0.5, full-day codes = 1, WO/A/etc = 0.
+    // Default to 1 for legacy rows that don't have day_value populated.
+    const dv = c.day_value == null || Number.isNaN(Number(c.day_value)) ? 1 : Number(c.day_value);
+    if (c.counts_as_present) pDays += dv;
+    else if (c.is_paid) otherPaidDays += dv;
   }
 
   const phDays = phCount * 2;
   const otDays = Math.round(otDaysSum * 100) / 100;
-  // Keep `otHours` field mirrored to otDays for downstream display compat — both render as OT days.
   const otHours = otDays;
-  const tDays = pDays + phDays + otherPaidDays + otDays;
-  return { pDays, otHours, otDays, phDays, otherPaidDays, tDays };
+  const tDays = round2(pDays) + phDays + round2(otherPaidDays) + otDays;
+  return { pDays: round2(pDays), otHours, otDays, phDays, otherPaidDays: round2(otherPaidDays), tDays };
 }
 
 export type FixedCalcMethod = "flat" | "per_duty";
