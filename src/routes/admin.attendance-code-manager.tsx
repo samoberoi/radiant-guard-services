@@ -446,6 +446,21 @@ function CodeFormDialog({
             </div>
           </div>
           <div className="grid gap-2">
+            <Label>Day value</Label>
+            <Input
+              type="number"
+              step="0.25"
+              min="0"
+              max="2"
+              value={dayValue}
+              onChange={(e) => setDayValue(e.target.value)}
+              placeholder="1.0 (HD=0.5, WO/A=0)"
+            />
+            <p className="text-xs text-muted-foreground">
+              Fractional day this code contributes to payable days. Half-Day = 0.5, full day = 1, unpaid absence = 0.
+            </p>
+          </div>
+          <div className="grid gap-2">
             <Label>Description</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} placeholder="Optional description" />
           </div>
