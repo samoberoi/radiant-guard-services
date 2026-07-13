@@ -492,6 +492,69 @@ export function applyPtToWageComputation(
   };
 }
 
+// ---- Labour Welfare Fund (LWF) ----
+// Live-synced from the LWF Master (Control Center) via `labour_welfare_funds`.
+// Matches any deduction / employer-contribution row whose name mentions LWF or
+// "Labour Welfare". If no matching row exists, does nothing (contracts opt in
+// by including an LWF cost-component). Only fires in the configured
+// deduction_months and only when the master row is enabled.
+const LWF_NAME_RE = /\blwf\b|labour\s*welfare/i;
+
+export type LwfApplyInput = {
+  employee: number;
+  employer: number;
+  applies: boolean; // false => zero out both sides (out of window / disabled)
+};
+
+function applyLwfRule(items: WageComponent[], amount: number, applies: boolean): WageComponent[] {
+  let placed = false;
+  return items.map((i) => {
+    if (!LWF_NAME_RE.test(i.name)) return i;
+    if (hasConfiguredFormula(i)) return i; // custom formula wins
+    if (!applies) return { ...i, amount: 0 };
+    if (placed) return { ...i, amount: 0 };
+    placed = true;
+    return { ...i, amount: round2(amount) };
+  });
+}
+
+export function applyLwfToWageComputation(
+  wages: WageComputation,
+  lwf: LwfApplyInput,
+): WageComputation {
+  const deductions = applyLwfRule(wages.deductions, lwf.employee, lwf.applies);
+  const employerContributions = applyLwfRule(
+    wages.employerContributions,
+    lwf.employer,
+    lwf.applies,
+  );
+  const totalDeductions = deductions.reduce((s, d) => s + d.amount, 0);
+  const totalEmployerContributions = employerContributions.reduce((s, d) => s + d.amount, 0);
+  return {
+    ...wages,
+    deductions,
+    employerContributions,
+    totalDeductions: round2(totalDeductions),
+    totalEmployerContributions: round2(totalEmployerContributions),
+    netPay: Math.max(0, round2(wages.earnedGross - totalDeductions)),
+    employerCost: round2(wages.earnedGross + totalEmployerContributions),
+  };
+}
+
+// ---- Statutory constants (industry defaults, exported for future engine work) ----
+// These are the standard India statutory limits. They are exported here so
+// downstream code can reference a single source of truth. The engine currently
+// respects contract-configured percentages and caps for backward-compat; use
+// these constants when hardening EPF / Bonus / Gratuity in a follow-up.
+export const EPF_WAGE_CEILING = 15000;      // ₹15,000 monthly wage ceiling
+export const EPS_CAP = 1250;                // 8.33% of 15,000 employer share cap
+export const EDLI_RATE = 0.005;             // 0.5% of wages (capped by EPF ceiling)
+export const EDLI_ADMIN_RATE = 0.005;       // 0.5% administrative charges
+export const BONUS_CAP = 7000;              // Statutory bonus salary cap
+export const BONUS_RATE_MIN = 0.0833;       // 8.33% minimum bonus
+export const GRATUITY_RATE = 0.0481;        // 4.81% monthly accrual (15/26 of Basic per year)
+export const ESI_DISABILITY_CEILING = 25000;// ₹25,000 ceiling for disabled workers
+
 function scaleItems(items: BenefitLike[], ratio: number, perDuty?: (i: BenefitLike) => number): WageComponent[] {
   return items.map((i) => ({
     ...i,
