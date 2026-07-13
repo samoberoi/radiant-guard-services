@@ -968,7 +968,7 @@ export function computeWages(
     0,
   );
 
-  const netPay = round2(earnedGross - totalDeductions);
+  const netPay = Math.max(0, round2(earnedGross - totalDeductions));
   const employerCost =
     round2(earnedGross + totalEmployerContributions);
 
