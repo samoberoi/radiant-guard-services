@@ -311,17 +311,23 @@ export function calculateEsiAmounts(
   };
 }
 
-export function applyEsiToWageComputation(wages: WageComputation): WageComputation {
+export function applyEsiToWageComputation(
+  wages: WageComputation,
+  opts: { isDisabled?: boolean } = {},
+): WageComputation {
   const firstEsi = (items: WageComponent[]) => items.find((i) => ESI_NAME_RE.test(i.name));
   const employeeEsi = firstEsi(wages.deductions);
   const employerEsi = firstEsi(wages.employerContributions);
+  // Statutory disability workers get raised ceiling of ₹25,000.
+  const configuredCeiling =
+    Number(employeeEsi?.capAmount) || Number(employerEsi?.capAmount) || ESI_EARNED_GROSS_CEILING;
+  const ceiling = opts.isDisabled
+    ? Math.max(configuredCeiling, ESI_DISABILITY_CEILING)
+    : configuredCeiling;
   const esi = calculateEsiAmounts(wages.earnedGross, wages.components, {
     employeePct: Number(employeeEsi?.percentage) || 0.75,
     employerPct: Number(employerEsi?.percentage) || 3.25,
-    ceiling:
-      Number(employeeEsi?.capAmount) ||
-      Number(employerEsi?.capAmount) ||
-      ESI_EARNED_GROSS_CEILING,
+    ceiling,
   });
   const deductions = applyEsiRule(wages.deductions, esi.employee, "ESI Employee Contribution");
   const employerContributions = applyEsiRule(
