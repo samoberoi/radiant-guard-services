@@ -4533,6 +4533,12 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_onboarding_approver_user_ids: {
+        Args: never
+        Returns: {
+          user_id: string
+        }[]
+      }
       get_user_display_name: {
         Args: { _user_id: string }
         Returns: {

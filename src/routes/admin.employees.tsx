@@ -9,7 +9,7 @@ import {
   ListSection,
   NomineeSection,
 } from "@/components/candidate-extra-sections";
-import { notifyAdmins } from "@/lib/notifications";
+import { notifyOnboardingApprovers, notifyUser } from "@/lib/notifications";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClientOnlyFn, useServerFn } from "@tanstack/react-start";
@@ -54,6 +54,7 @@ import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentPermissions } from "@/lib/rbac";
+import { useCurrentUserRole } from "@/lib/use-current-user-role";
 import { extractAadhaar, type AadhaarExtraction } from "@/lib/aadhaar.functions";
 import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
@@ -307,6 +308,7 @@ type UnitLite = {
   code: string;
   name: string;
   customer_id: string | null;
+  branch_id: string | null;
   customer_name?: string;
 };
 
@@ -408,7 +410,7 @@ function useUnits() {
       const { data, error } = await runWithQueryTimeout("Units", async (signal) =>
         await supabase
           .from("units" as never)
-          .select("id,code,name,customer_id")
+          .select("id,code,name,customer_id,branch_id")
           .order("name", { ascending: true })
           .limit(2000)
           .abortSignal(signal),
@@ -539,6 +541,8 @@ function EmployeesPage() {
 
   const { roleKey, isSuperAdmin } = useCurrentPermissions();
   const isFieldOfficer = roleKey === "field_officer" && !isSuperAdmin;
+  const canApproveOnboarding =
+    isSuperAdmin || ["hr", "leadership", "admin", "super_admin"].includes(roleKey ?? "");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
@@ -668,6 +672,22 @@ function EmployeesPage() {
 
   const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const desigMap = useMemo(() => new Map(designations.map((d) => [d.id, d])), [designations]);
+
+  const { candidateId: currentCandidateId } = useCurrentUserRole();
+  const scopedUnitsForWizard = useMemo(() => {
+    if (!isFieldOfficer) return units;
+    if (!currentCandidateId) return [] as typeof units;
+    const mine = scopeAssignments.filter((s) => s.candidate_id === currentCandidateId);
+    const unitIds = new Set(mine.filter((s) => s.scope_type === "unit").map((s) => s.scope_id));
+    const branchIds = new Set(mine.filter((s) => s.scope_type === "branch").map((s) => s.scope_id));
+    const customerIds = new Set(mine.filter((s) => s.scope_type === "customer").map((s) => s.scope_id));
+    return units.filter((u) => {
+      if (unitIds.has(u.id)) return true;
+      if (u.branch_id && branchIds.has(u.branch_id)) return true;
+      if (u.customer_id && customerIds.has(u.customer_id)) return true;
+      return false;
+    });
+  }, [isFieldOfficer, currentCandidateId, scopeAssignments, units]);
 
   const matchesSearch = (c: CandidateListItem) => {
     const q = search.trim().toLowerCase();
@@ -1223,6 +1243,7 @@ function EmployeesPage() {
         .select("id,employee_code,full_name")
         .single();
       if (error) throw error;
+      const empCode = (data as { employee_code?: string })?.employee_code ?? "";
       await logActivity({
         module: "Employees",
         action: "approve",
@@ -1231,14 +1252,25 @@ function EmployeesPage() {
         entityLabel: c.full_name || c.aadhaar_number,
         after: data as unknown as Record<string, unknown>,
       });
-      await notifyAdmins({
+      const label = c.full_name || c.aadhaar_number || "Candidate";
+      await notifyOnboardingApprovers({
         type: "candidate_approved",
         title: "Candidate approved",
-        message: `${c.full_name || c.aadhaar_number || "Candidate"} was approved${(data as { employee_code?: string })?.employee_code ? ` (${(data as { employee_code?: string }).employee_code})` : ""}.`,
+        message: `${label} was approved${empCode ? ` (${empCode})` : ""}.`,
         link: "/admin/employees",
         entityType: "candidate",
         entityId: c.id,
-      }).catch((e) => console.error("notifyAdmins approve failed", e));
+      }).catch((e: unknown) => console.error("notifyOnboardingApprovers approve failed", e));
+      if (c.created_by) {
+        await notifyUser(c.created_by, {
+          type: "candidate_approved",
+          title: "Your candidate was approved",
+          message: `${label} was approved${empCode ? ` — Employee Code ${empCode}` : ""}.`,
+          link: "/admin/employees",
+          entityType: "candidate",
+          entityId: c.id,
+        }).catch((e: unknown) => console.error("notifyUser approve failed", e));
+      }
       return data as { employee_code: string };
     },
     onSuccess: (data) => {
@@ -1263,14 +1295,25 @@ function EmployeesPage() {
         entityLabel: c.full_name || c.aadhaar_number,
         after: { rejection_reason: reason },
       });
-      await notifyAdmins({
+      const label = c.full_name || c.aadhaar_number || "Candidate";
+      await notifyOnboardingApprovers({
         type: "candidate_rejected",
         title: "Candidate rejected",
-        message: `${c.full_name || c.aadhaar_number || "Candidate"} was rejected. Reason: ${reason}`,
+        message: `${label} was rejected. Reason: ${reason}`,
         link: "/admin/employees",
         entityType: "candidate",
         entityId: c.id,
-      }).catch((e) => console.error("notifyAdmins reject failed", e));
+      }).catch((e: unknown) => console.error("notifyOnboardingApprovers reject failed", e));
+      if (c.created_by) {
+        await notifyUser(c.created_by, {
+          type: "candidate_rejected",
+          title: "Your candidate needs changes",
+          message: `${label} was rejected. Reason: ${reason}`,
+          link: "/admin/employees",
+          entityType: "candidate",
+          entityId: c.id,
+        }).catch((e: unknown) => console.error("notifyUser reject failed", e));
+      }
     },
     onSuccess: () => {
       toast.success("Candidate rejected");
@@ -1584,7 +1627,7 @@ function EmployeesPage() {
 
 
 
-              {mode === "candidate" && c.status === "pending" && (
+              {mode === "candidate" && c.status === "pending" && canApproveOnboarding && (
                 <>
                   <Button
                     size="icon"
@@ -2097,9 +2140,15 @@ function EmployeesPage() {
           if (!v) setEditing(null);
         }}
         editing={editing}
-        units={units}
-        unitsLoading={unitsQuery.isLoading}
-        unitsError={unitsQuery.error instanceof Error ? unitsQuery.error.message : null}
+        units={scopedUnitsForWizard}
+        unitsLoading={unitsQuery.isLoading || (isFieldOfficer && scopeQuery.isLoading)}
+        unitsError={
+          unitsQuery.error instanceof Error
+            ? unitsQuery.error.message
+            : isFieldOfficer && !scopeQuery.isLoading && scopedUnitsForWizard.length === 0
+              ? "You have no units assigned. Ask your admin to assign a branch or unit before onboarding."
+              : null
+        }
         designations={designations}
         designationsLoading={designationsQuery.isLoading}
         designationsError={designationsQuery.error instanceof Error ? designationsQuery.error.message : null}
@@ -2108,7 +2157,7 @@ function EmployeesPage() {
         esicBranches={esicBranches}
         offboardReasons={offboardReasons}
         assets={assets}
-        canReview={!!editing && editing.status === "pending"}
+        canReview={!!editing && editing.status === "pending" && canApproveOnboarding}
         isApproving={approveMut.isPending}
         onApprove={() => {
           if (!editing) return;
@@ -2204,6 +2253,9 @@ function EmployeesPage() {
               placeholder="e.g. Aadhaar details could not be verified…"
               rows={4}
             />
+            <p className="text-xs text-muted-foreground">
+              Explain what needs to be corrected so the field officer can fix it (min 5 characters).
+            </p>
           </div>
           <DialogFooter>
             <Button
@@ -2218,13 +2270,13 @@ function EmployeesPage() {
             <Button
               onClick={() => {
                 if (!rejectTarget) return;
-                if (!rejectReason.trim()) {
-                  toast.error("Please enter a rejection reason");
+                if (rejectReason.trim().length < 5) {
+                  toast.error("Please enter a rejection reason (min 5 characters)");
                   return;
                 }
                 rejectMut.mutate({ c: rejectTarget, reason: rejectReason.trim() });
               }}
-              disabled={rejectMut.isPending}
+              disabled={rejectMut.isPending || rejectReason.trim().length < 5}
               className="bg-rose-600 text-white hover:bg-rose-700"
             >
               {rejectMut.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <X className="mr-1 h-4 w-4" />}
@@ -2963,6 +3015,11 @@ function CandidateWizard({
   const persist = async (status: string, successMsg: string) => {
     const payload = buildPayload(status);
     if (editing) {
+      const wasRejected = editing.status === "rejected";
+      const isResubmit = wasRejected && status === "pending";
+      const patched = isResubmit
+        ? { ...(payload as Record<string, unknown>), rejection_reason: "", rejected_at: null }
+        : (payload as Record<string, unknown>);
       const { data: before } = await supabase
         .from("candidates" as never)
         .select("*")
@@ -2970,19 +3027,29 @@ function CandidateWizard({
         .maybeSingle();
       const { error } = await supabase
         .from("candidates" as never)
-        .update(payload as never)
+        .update(patched as never)
         .eq("id", editing.id);
       if (error) throw error;
       await syncCandidateUnits(editing.id);
       await logActivity({
         module: "Employees",
-        action: "update",
+        action: isResubmit ? "resubmit" : "update",
         entityType: "candidate",
         entityId: editing.id,
         entityLabel: payload.full_name,
         before: (before as unknown as Record<string, unknown>) ?? null,
-        after: { ...(payload as unknown as Record<string, unknown>), unit_ids: form.unit_ids },
+        after: { ...(patched as Record<string, unknown>), unit_ids: form.unit_ids },
       });
+      if (isResubmit) {
+        await notifyOnboardingApprovers({
+          type: "candidate_pending_approval",
+          title: "Candidate re-submitted after fixes",
+          message: `${payload.full_name || "A candidate"} has been updated and re-submitted for approval.`,
+          link: "/admin/employees",
+          entityType: "candidate",
+          entityId: editing.id,
+        }).catch((e: unknown) => console.error("notifyOnboardingApprovers resubmit failed", e));
+      }
     } else {
       const { data: authData } = await supabase.auth.getUser();
       const creatorId = authData.user?.id ?? null;
@@ -3004,19 +3071,20 @@ function CandidateWizard({
         after: { ...(payload as unknown as Record<string, unknown>), unit_ids: form.unit_ids },
       });
       if (status === "pending") {
-        await notifyAdmins({
+        await notifyOnboardingApprovers({
           type: "candidate_pending_approval",
           title: "New candidate awaiting approval",
           message: `${payload.full_name || "A new candidate"} has been submitted and needs your approval.`,
           link: "/admin/employees",
           entityType: "candidate",
           entityId: newId,
-        });
+        }).catch((e: unknown) => console.error("notifyOnboardingApprovers submit failed", e));
       }
     }
     toast.success(successMsg);
     qc.invalidateQueries({ queryKey: QK });
   };
+
 
   const saveDraft = async () => {
     setSavingDraft(true);
