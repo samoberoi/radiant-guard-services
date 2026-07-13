@@ -905,9 +905,22 @@ function PayrollUnitPage() {
           <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 px-2.5 py-1 font-semibold uppercase tracking-wider text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-200">
             Billing mode: {billingMode.replace("_", " ")}
           </span>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 font-semibold uppercase tracking-wider text-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 font-semibold uppercase tracking-wider text-slate-700 dark:bg-slate-800/60 dark:text-slate-200"
+            title={`Company state: ${COMPANY_STATE} · Unit state: ${unitState ?? "—"}`}
+          >
             {isIntraStateCurrent ? `Intra-state (${COMPANY_STATE}) · CGST + SGST` : `Inter-state · IGST`}
           </span>
+          {orgSettings?.company_gstin && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 font-mono font-semibold tracking-wider text-amber-800 dark:bg-amber-500/20 dark:text-amber-200">
+              Company GSTIN: {orgSettings.company_gstin}
+            </span>
+          )}
+          {unit?.gstin && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-teal-100 px-2.5 py-1 font-mono font-semibold tracking-wider text-teal-800 dark:bg-teal-500/20 dark:text-teal-200">
+              Customer GSTIN: {unit.gstin}
+            </span>
+          )}
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
