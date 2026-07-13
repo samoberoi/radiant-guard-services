@@ -2253,6 +2253,9 @@ function EmployeesPage() {
               placeholder="e.g. Aadhaar details could not be verified…"
               rows={4}
             />
+            <p className="text-xs text-muted-foreground">
+              Explain what needs to be corrected so the field officer can fix it (min 5 characters).
+            </p>
           </div>
           <DialogFooter>
             <Button
@@ -2267,13 +2270,13 @@ function EmployeesPage() {
             <Button
               onClick={() => {
                 if (!rejectTarget) return;
-                if (!rejectReason.trim()) {
-                  toast.error("Please enter a rejection reason");
+                if (rejectReason.trim().length < 5) {
+                  toast.error("Please enter a rejection reason (min 5 characters)");
                   return;
                 }
                 rejectMut.mutate({ c: rejectTarget, reason: rejectReason.trim() });
               }}
-              disabled={rejectMut.isPending}
+              disabled={rejectMut.isPending || rejectReason.trim().length < 5}
               className="bg-rose-600 text-white hover:bg-rose-700"
             >
               {rejectMut.isPending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <X className="mr-1 h-4 w-4" />}
