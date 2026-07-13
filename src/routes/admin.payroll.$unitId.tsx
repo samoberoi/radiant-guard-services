@@ -139,6 +139,19 @@ function PayrollUnitPage() {
     },
   });
 
+  // LWF Master: live-synced so editing LWF Manager in Control Center
+  // affects the very next payroll run.
+  const { data: lwfRows } = useQuery({
+    queryKey: ["labour_welfare_funds_payroll"],
+    queryFn: async (): Promise<LwfRow[]> => {
+      const { data, error } = await supabase
+        .from("labour_welfare_funds")
+        .select("id, state, deduction_months, frequency, employee_contribution, employer_contribution, enabled, notes");
+      if (error) throw error;
+      return (data ?? []) as LwfRow[];
+    },
+  });
+
   const { data: sheet } = useQuery({
     queryKey: ["payroll-sheet", unitId, start, end],
     queryFn: async () => {
