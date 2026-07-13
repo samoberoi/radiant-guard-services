@@ -887,11 +887,36 @@ function PayrollUnitPage() {
           )}
         </div>
 
+        <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-100 px-2.5 py-1 font-semibold uppercase tracking-wider text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-200">
+            Billing mode: {billingMode.replace("_", " ")}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 font-semibold uppercase tracking-wider text-slate-700 dark:bg-slate-800/60 dark:text-slate-200">
+            {isIntraStateCurrent ? `Intra-state (${COMPANY_STATE}) · CGST + SGST` : `Inter-state · IGST`}
+          </span>
+        </div>
+
         <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
           <Stat label="T Days" value={String(Math.round(totals.tDays * 100) / 100)} />
           <Stat label="OT hours" value={String(Math.round(totals.otHours * 100) / 100)} />
           <Stat label="Projected total" value={fmtINR(totals.projectedTotal)} />
           <Stat label="Actual billable total" value={fmtINR(totals.actualTotal)} tone="emerald" />
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {isIntraStateCurrent ? (
+            <>
+              <Stat label={`CGST @ ${GST_RATE / 2}%`} value={fmtINR(cgstAmount)} />
+              <Stat label={`SGST @ ${GST_RATE / 2}%`} value={fmtINR(sgstAmount)} />
+            </>
+          ) : (
+            <>
+              <Stat label={`IGST @ ${GST_RATE}%`} value={fmtINR(igstAmount)} />
+              <div />
+            </>
+          )}
+          <Stat label={`Total GST @ ${GST_RATE}%`} value={fmtINR(gstAmount)} />
+          <Stat label="Invoice grand total" value={fmtINR(grandTotal)} tone="emerald" />
         </div>
       </div>
 
