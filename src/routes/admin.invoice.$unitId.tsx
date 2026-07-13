@@ -948,7 +948,7 @@ function PayrollUnitPage() {
                   ? r.resource.components.reduce((s, c) => s + (Number(c.amount) || 0), 0) +
                     r.resource.employerContributions.reduce((s, c) => s + contractTotalAmount(c), 0)
                   : 0;
-                const actualTotal = r.wages?.employerCost ?? 0;
+                const actualTotal = billableFor(r);
                 const shortfall = r.wages ? Math.round((projTotal - actualTotal) * 100) / 100 : 0;
                 return (
                 <tr
