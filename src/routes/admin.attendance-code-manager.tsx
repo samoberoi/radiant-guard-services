@@ -390,6 +390,7 @@ function CodeFormDialog({
   const [isPaid, setIsPaid] = useState(false);
   const [isLeave, setIsLeave] = useState(false);
   const [sortOrder, setSortOrder] = useState<string>("0");
+  const [dayValue, setDayValue] = useState<string>("1");
   const [enabled, setEnabled] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -402,6 +403,7 @@ function CodeFormDialog({
     setIsPaid(initial?.is_paid ?? false);
     setIsLeave(initial?.is_leave ?? false);
     setSortOrder(String(initial?.sort_order ?? 0));
+    setDayValue(String(initial?.day_value ?? 1));
     setEnabled(initial?.enabled ?? true);
   });
 
