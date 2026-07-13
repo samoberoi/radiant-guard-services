@@ -4190,6 +4190,7 @@ function ResourceFormDialog({
                               ? "bg-accent/15 text-accent"
                               : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
                           )}
+                          title={hasConfiguredFormula(b) ? String(b.formulaExpression ?? "") : undefined}
                         >
                           {hasConfiguredFormula(b)
                             ? "Formula"
@@ -4197,8 +4198,13 @@ function ResourceFormDialog({
                             ? `${b.percentage}%`
                             : "Fixed"}
                         </span>
+                        {hasConfiguredFormula(b) && b.formulaVersion != null && (
+                          <span className="rounded bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-mono text-violet-700 dark:text-violet-300" title="Formula master version">
+                            v{b.formulaVersion}
+                          </span>
+                        )}
                       </div>
-                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                      <div className="mt-0.5 text-[11px] text-muted-foreground" title={hasConfiguredFormula(b) ? String(b.formulaExpression ?? "") : undefined}>
                         {hasConfiguredFormula(b)
                           ? `Custom formula · ${b.formulaExpression?.slice(0, 60) ?? ""}${(b.formulaExpression?.length ?? 0) > 60 ? "…" : ""}`
                           : b.calcType === "percentage"
@@ -4340,6 +4346,7 @@ function ResourceFormDialog({
                                 ? "bg-primary/15 text-primary"
                                 : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
                           )}
+                          title={hasConfiguredFormula(b) ? String(b.formulaExpression ?? "") : undefined}
                         >
                           {hasConfiguredFormula(b)
                             ? "Formula"
@@ -4349,8 +4356,13 @@ function ResourceFormDialog({
                               ? "Prorated"
                               : "Fixed"}
                         </span>
+                        {hasConfiguredFormula(b) && b.formulaVersion != null && (
+                          <span className="rounded bg-violet-500/10 px-1.5 py-0.5 text-[10px] font-mono text-violet-700 dark:text-violet-300" title="Formula master version">
+                            v{b.formulaVersion}
+                          </span>
+                        )}
                       </div>
-                      <div className="mt-0.5 text-[11px] text-muted-foreground">
+                      <div className="mt-0.5 text-[11px] text-muted-foreground" title={hasConfiguredFormula(b) ? String(b.formulaExpression ?? "") : undefined}>
                         {hasConfiguredFormula(b)
                           ? `Custom formula · ${b.formulaExpression?.slice(0, 60) ?? ""}${(b.formulaExpression?.length ?? 0) > 60 ? "…" : ""}`
                           : b.calcType === "percentage"

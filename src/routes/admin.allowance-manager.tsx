@@ -326,8 +326,13 @@ function AllowanceManagerPage() {
                   <td className="px-5 py-3 text-foreground/90">{i.earning_type || "—"}</td>
                   <td className="px-5 py-3 text-foreground/90">{i.short_name || "—"}</td>
                   <td className="px-5 py-3 text-foreground/80">
-                    {i.calc_type === "percentage" ? (
-                      <span className="inline-flex items-center gap-2">
+                    {i.formula_mode && i.formula_mode !== "preset" && i.formula_expression ? (
+                      <span className="inline-flex items-center gap-2" title={i.formula_expression}>
+                        <span className="rounded-md bg-violet-500/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-violet-700 dark:text-violet-300">Custom</span>
+                        <span className="max-w-[280px] truncate font-mono text-[11px]">{i.formula_expression}</span>
+                      </span>
+                    ) : i.calc_type === "percentage" ? (
+                      <span className="inline-flex items-center gap-2" title={buildFormulaPreview(i)}>
                         <span className="rounded-md bg-accent/15 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-accent">Formula</span>
                         {buildFormulaPreview(i)}
                       </span>
