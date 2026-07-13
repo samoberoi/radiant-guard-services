@@ -624,6 +624,12 @@ function PayrollUnitPage() {
           Object.assign(wages, applyLwfToWageComputation(wages, { employee, employer, applies }));
         }
 
+        // Split EPF employer contribution into statutory (EPS + EPF) sub-lines.
+        // Total employer cost is preserved.
+        if (wages && isPrimary) {
+          Object.assign(wages, applyEpfBreakdownToWageComputation(wages));
+        }
+
 
 
 
