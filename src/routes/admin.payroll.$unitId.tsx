@@ -20,6 +20,7 @@ import { useCurrentPermissions } from "@/lib/rbac";
 import { logActivity } from "@/lib/activity-log";
 import { hydrateFormulasFromMaster } from "@/lib/contract-hydrate";
 import {
+  applyEpfBreakdownToWageComputation,
   applyEsiToWageComputation,
   applyLwfToWageComputation,
   applyPtToWageComputation,
