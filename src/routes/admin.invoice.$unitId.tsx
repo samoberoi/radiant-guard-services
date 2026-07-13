@@ -833,7 +833,7 @@ function PayrollUnitPage() {
           "Batch": "",
           "Qty ": qty,
           "Incluse": "",
-          "Rate": Math.round(perDay * 1000000) / 1000000,
+          "Rate": Math.round(rate * 1000000) / 1000000,
           "Amt": amt,
           "Additional Ledger": "",
           "Amount": "",
