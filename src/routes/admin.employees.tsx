@@ -539,10 +539,11 @@ function EmployeesPage() {
   const candidatesError = candidatesQuery.error;
   const qc = useQueryClient();
 
-  const { roleKey, isSuperAdmin } = useCurrentPermissions();
+  const { roleKey, isSuperAdmin, can } = useCurrentPermissions();
   const isFieldOfficer = roleKey === "field_officer" && !isSuperAdmin;
-  const canApproveOnboarding =
-    isSuperAdmin || ["hr", "leadership", "admin", "super_admin"].includes(roleKey ?? "");
+  // Approval capability is now driven entirely by RBAC (Employees → Approve).
+  // Super admin implicitly gets true via useCurrentPermissions.
+  const canApproveOnboarding = can("employees", "approve");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => setCurrentUserId(data.user?.id ?? null));
