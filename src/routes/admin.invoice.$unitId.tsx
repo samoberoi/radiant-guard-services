@@ -454,13 +454,39 @@ function PayrollUnitPage() {
           lineEntries as AttendanceEntryLike[],
           (codes ?? []) as AttendanceCodeLike[],
         );
-        const resource = resourceByDesignation.get(did);
-        const wages = resource
-          ? computeWages(totals, resource, periodDates.length)
-          : null;
         const isPrimary = (c.designation_id ?? null) === p.designationId;
+        // Apply per-employee day adjustments — primary designation line only.
+        if (isPrimary) {
+          const adj = dayAdjustmentByCandidate.get(c.id);
+          if (adj) {
+            totals.pDays = Math.max(0, totals.pDays + adj.pDays);
+            totals.otDays = Math.max(0, totals.otDays + adj.otDays);
+            totals.phDays = Math.max(0, totals.phDays + adj.phDays);
+            totals.otherPaidDays = Math.max(0, totals.otherPaidDays + adj.otherPaidDays);
+            totals.tDays = Math.max(0, totals.tDays + adj.tDays);
+          }
+          const phDisplay = phDisplayCountByCandidate.get(c.id) ?? 0;
+          if (phDisplay) totals.phDays = totals.phDays + phDisplay;
+        }
+        const resource = resourceByDesignation.get(did);
+        const phOverride = isPrimary ? phCashByCandidate.get(c.id) : undefined;
+        const wages = resource
+          ? computeWages(totals, resource, periodDates.length, {
+              phOverrideAmount: phOverride,
+              periodDates: periodDates.map((d) => new Date(d)),
+              dayBases,
+            })
+          : null;
         const candidateGender = ((c as unknown as { gender?: string | null }).gender ?? "").toString();
         if (wages && isPrimary) {
+          const extraAdds = additionsByCandidate.get(c.id) ?? [];
+          const extraDeds = deductionsByCandidate.get(c.id) ?? [];
+          (wages as unknown as { additions: PerEmpItem[] }).additions = extraAdds;
+          if (extraDeds.length > 0) {
+            wages.deductions = [...wages.deductions, ...extraDeds];
+          }
+          const addTotal = extraAdds.reduce((s, a) => s + a.amount, 0);
+          wages.earnedGross = Math.round((wages.earnedGross + addTotal) * 100) / 100;
           Object.assign(wages, applyEsiToWageComputation(wages));
           const pt = resolvePtAmount({
             state: unitState,
@@ -472,6 +498,7 @@ function PayrollUnitPage() {
           });
           Object.assign(wages, applyPtToWageComputation(wages, pt.amount));
         }
+
         // Merge split components (e.g. "HRA 5%" + "HRA 15%" -> "HRA") across
         // contract config and computed wages so invoice tables/exports show
         // a single column per canonical component. Totals are unchanged.
