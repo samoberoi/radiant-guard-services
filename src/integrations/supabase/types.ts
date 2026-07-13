@@ -251,6 +251,7 @@ export type Database = {
           color: string
           counts_as_present: boolean
           created_at: string
+          day_value: number
           description: string
           enabled: boolean
           id: string
@@ -265,6 +266,7 @@ export type Database = {
           color?: string
           counts_as_present?: boolean
           created_at?: string
+          day_value?: number
           description?: string
           enabled?: boolean
           id?: string
@@ -279,6 +281,7 @@ export type Database = {
           color?: string
           counts_as_present?: boolean
           created_at?: string
+          day_value?: number
           description?: string
           enabled?: boolean
           id?: string
