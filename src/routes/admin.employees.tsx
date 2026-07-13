@@ -1609,7 +1609,7 @@ function EmployeesPage() {
 
 
 
-              {mode === "candidate" && c.status === "pending" && (
+              {mode === "candidate" && c.status === "pending" && canApproveOnboarding && (
                 <>
                   <Button
                     size="icon"
