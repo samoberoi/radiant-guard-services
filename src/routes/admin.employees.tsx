@@ -683,9 +683,8 @@ function EmployeesPage() {
     const customerIds = new Set(mine.filter((s) => s.scope_type === "customer").map((s) => s.scope_id));
     return units.filter((u) => {
       if (unitIds.has(u.id)) return true;
-      const anyU = u as unknown as { branch_id?: string | null; customer_id?: string | null };
-      if (anyU.branch_id && branchIds.has(anyU.branch_id)) return true;
-      if (anyU.customer_id && customerIds.has(anyU.customer_id)) return true;
+      if (u.branch_id && branchIds.has(u.branch_id)) return true;
+      if (u.customer_id && customerIds.has(u.customer_id)) return true;
       return false;
     });
   }, [isFieldOfficer, currentCandidateId, scopeAssignments, units]);
