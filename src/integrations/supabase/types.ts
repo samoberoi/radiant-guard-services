@@ -390,6 +390,7 @@ export type Database = {
       }
       billing_types: {
         Row: {
+          code: string | null
           created_at: string
           description: string
           enabled: boolean
@@ -398,6 +399,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          code?: string | null
           created_at?: string
           description?: string
           enabled?: boolean
@@ -406,6 +408,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          code?: string | null
           created_at?: string
           description?: string
           enabled?: boolean
@@ -572,6 +575,7 @@ export type Database = {
           gender: string
           id: string
           identification_proofs: Json
+          is_disabled: boolean
           is_enabled: boolean
           is_ex_service: boolean
           kyc_completed: boolean
@@ -658,6 +662,7 @@ export type Database = {
           gender?: string
           id?: string
           identification_proofs?: Json
+          is_disabled?: boolean
           is_enabled?: boolean
           is_ex_service?: boolean
           kyc_completed?: boolean
@@ -744,6 +749,7 @@ export type Database = {
           gender?: string
           id?: string
           identification_proofs?: Json
+          is_disabled?: boolean
           is_enabled?: boolean
           is_ex_service?: boolean
           kyc_completed?: boolean
@@ -3376,6 +3382,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      org_settings: {
+        Row: {
+          company_gstin: string | null
+          company_name: string | null
+          company_state: string | null
+          company_state_code: string | null
+          created_at: string
+          id: string
+          singleton: boolean
+          updated_at: string
+        }
+        Insert: {
+          company_gstin?: string | null
+          company_name?: string | null
+          company_state?: string | null
+          company_state_code?: string | null
+          created_at?: string
+          id?: string
+          singleton?: boolean
+          updated_at?: string
+        }
+        Update: {
+          company_gstin?: string | null
+          company_name?: string | null
+          company_state?: string | null
+          company_state_code?: string | null
+          created_at?: string
+          id?: string
+          singleton?: boolean
+          updated_at?: string
+        }
+        Relationships: []
       }
       payroll_day_bases: {
         Row: {

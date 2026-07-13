@@ -105,6 +105,7 @@ function buildCandidatePayload(form: any) {
     kyc_completed: form.kyc_completed ?? false,
     status: form.status,
     non_billable: form.non_billable ?? false,
+    is_disabled: form.is_disabled ?? false,
     rejection_reason: form.rejection_reason ?? "",
   };
 }
@@ -367,7 +368,7 @@ function CandidateDetailsPage() {
           {active === "basic" && <BasicSection form={form} />}
           {active === "units" && <UnitMappingSection candidateId={id} primaryUnitId={form.unit_id ?? null} />}
           {active === "physical" && (
-            <PhysicalSection form={form} setSection={setSection} />
+            <PhysicalSection form={form} setSection={setSection} set={set} />
           )}
           {active === "compliance" && (
             <ComplianceSection form={form} setSection={setSection} esicBranches={esicBranches} />

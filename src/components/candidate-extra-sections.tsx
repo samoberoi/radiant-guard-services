@@ -67,7 +67,7 @@ export function Field({ label, children }: { label: string; children: React.Reac
 type SetSection = (k: string, v: any) => void;
 type SetField = (k: string, v: any) => void;
 
-export function PhysicalSection({ form, setSection }: { form: any; setSection: SetSection }) {
+export function PhysicalSection({ form, setSection, set }: { form: any; setSection: SetSection; set?: SetField }) {
   const ph = form.physical_health ?? {};
   return (
     <div>
@@ -110,6 +110,17 @@ export function PhysicalSection({ form, setSection }: { form: any; setSection: S
           />
         </Field>
       </div>
+      {set && (
+        <div className="mt-6 flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-4 py-3">
+          <div>
+            <div className="text-sm font-medium">Person with Disability (PwD)</div>
+            <p className="text-xs text-muted-foreground">
+              Raises the ESI wage ceiling to ₹25,000 for this employee (statutory).
+            </p>
+          </div>
+          <Switch checked={Boolean(form.is_disabled)} onCheckedChange={(v) => set("is_disabled", v)} />
+        </div>
+      )}
     </div>
   );
 }

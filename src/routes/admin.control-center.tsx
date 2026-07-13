@@ -140,6 +140,12 @@ const tiles: Tile[] = [
     description: "Define what each role can view, edit, and delete across modules.",
     icon: ShieldCheck,
   },
+  {
+    to: "/admin/org-settings",
+    label: "Company Settings",
+    description: "Company name, GSTIN and home state — drives CGST/SGST vs IGST split on invoices.",
+    icon: Building2,
+  },
 
 ];
 

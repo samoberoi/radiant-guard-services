@@ -20,6 +20,7 @@ import { useCurrentPermissions } from "@/lib/rbac";
 import { logActivity } from "@/lib/activity-log";
 import { hydrateFormulasFromMaster } from "@/lib/contract-hydrate";
 import {
+  applyEpfBreakdownToWageComputation,
   applyEsiToWageComputation,
   applyLwfToWageComputation,
   applyPtToWageComputation,
@@ -252,7 +253,7 @@ function PayrollUnitPage() {
     queryFn: async () => {
       // 1. Roster: candidates mapped to this unit (primary + secondary).
       const candidateCols =
-        "id, employee_code, full_name, designation_id, gender, bank_account_holder, bank_account_number, bank_ifsc, bank_name, bank_branch, approved_at, preferred_joining_date, application_date, pan_number, compliance";
+        "id, employee_code, full_name, designation_id, gender, is_disabled, bank_account_holder, bank_account_number, bank_ifsc, bank_name, bank_branch, approved_at, preferred_joining_date, application_date, pan_number, compliance";
       const [{ data: primary }, { data: links }] = await Promise.all([
         supabase
           .from("candidates")
@@ -573,6 +574,7 @@ function PayrollUnitPage() {
           : null;
         const isPrimary = (c.designation_id ?? null) === p.designationId;
         const candidateGender = ((c as unknown as { gender?: string | null }).gender ?? "").toString();
+        const candidateIsDisabled = Boolean((c as unknown as { is_disabled?: boolean | null }).is_disabled);
 
         // Fold per-employee additions/deductions onto the primary line only so
         // we don't double-count across multiple designation lines for one person.
@@ -586,7 +588,7 @@ function PayrollUnitPage() {
           }
           const addTotal = extraAdds.reduce((s, a) => s + a.amount, 0);
           wages.earnedGross = Math.round((wages.earnedGross + addTotal) * 100) / 100;
-          Object.assign(wages, applyEsiToWageComputation(wages));
+          Object.assign(wages, applyEsiToWageComputation(wages, { isDisabled: candidateIsDisabled }));
         }
 
         // Resolve Professional Tax for this employee from state/gender/earnedGross slabs.
@@ -621,6 +623,12 @@ function PayrollUnitPage() {
             }
           }
           Object.assign(wages, applyLwfToWageComputation(wages, { employee, employer, applies }));
+        }
+
+        // Split EPF employer contribution into statutory (EPS + EPF) sub-lines.
+        // Total employer cost is preserved.
+        if (wages && isPrimary) {
+          Object.assign(wages, applyEpfBreakdownToWageComputation(wages));
         }
 
 
