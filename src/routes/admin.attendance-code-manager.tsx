@@ -485,6 +485,7 @@ function CodeFormDialog({
                 counts_as_present: countsPresent,
                 is_paid: isPaid,
                 is_leave: isLeave,
+                day_value: Number.isFinite(Number(dayValue)) ? Number(dayValue) : 1,
                 sort_order: Number(sortOrder) || 0,
                 enabled,
               });
