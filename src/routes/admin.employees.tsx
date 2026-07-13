@@ -2133,7 +2133,7 @@ function EmployeesPage() {
         esicBranches={esicBranches}
         offboardReasons={offboardReasons}
         assets={assets}
-        canReview={!!editing && editing.status === "pending"}
+        canReview={!!editing && editing.status === "pending" && canApproveOnboarding}
         isApproving={approveMut.isPending}
         onApprove={() => {
           if (!editing) return;
