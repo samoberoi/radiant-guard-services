@@ -510,6 +510,24 @@ function PayrollUnitPage() {
             ranges: (pincodeRanges ?? []) as PincodeRangeLike[],
           });
           Object.assign(wages, applyPtToWageComputation(wages, pt.amount));
+
+          // LWF from Control Center master (live-synced with payroll).
+          if (lwfRows && pincodeRanges) {
+            const lwfRes = resolveLwf(String(unitPincode ?? ""), pincodeRanges as never, lwfRows);
+            const periodMonth = new Date(start).getMonth() + 1;
+            let applies = false;
+            let employee = 0;
+            let employer = 0;
+            if (lwfRes.kind === "match" && lwfRes.lwf.enabled) {
+              const months = Array.isArray(lwfRes.lwf.deduction_months) ? lwfRes.lwf.deduction_months : [];
+              if (months.length === 0 || months.includes(periodMonth)) {
+                applies = true;
+                employee = Number(lwfRes.lwf.employee_contribution) || 0;
+                employer = Number(lwfRes.lwf.employer_contribution) || 0;
+              }
+            }
+            Object.assign(wages, applyLwfToWageComputation(wages, { employee, employer, applies }));
+          }
         }
 
         // Merge split components (e.g. "HRA 5%" + "HRA 15%" -> "HRA") across
