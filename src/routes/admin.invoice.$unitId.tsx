@@ -186,7 +186,7 @@ function PayrollUnitPage() {
       const [{ data: primary }, { data: links }] = await Promise.all([
         supabase
           .from("candidates")
-          .select("id, employee_code, full_name, designation_id, gender")
+          .select("id, employee_code, full_name, designation_id, gender, is_disabled")
           .eq("unit_id", unitId)
           .eq("is_enabled", true)
           .eq("status", "active"),
@@ -197,7 +197,7 @@ function PayrollUnitPage() {
       if (linkIds.length > 0) {
         const { data } = await supabase
           .from("candidates")
-          .select("id, employee_code, full_name, designation_id, gender")
+          .select("id, employee_code, full_name, designation_id, gender, is_disabled")
           .in("id", linkIds)
           .eq("is_enabled", true)
           .eq("status", "active");
