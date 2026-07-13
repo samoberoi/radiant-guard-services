@@ -45,6 +45,7 @@ type AttendanceCode = {
   counts_as_present: boolean;
   is_paid: boolean;
   is_leave: boolean;
+  day_value: number;
   sort_order: number;
   enabled: boolean;
 };
@@ -61,6 +62,7 @@ function rowToItem(r: Record<string, unknown>): AttendanceCode {
     counts_as_present: Boolean(r.counts_as_present),
     is_paid: Boolean(r.is_paid),
     is_leave: Boolean(r.is_leave),
+    day_value: r.day_value == null ? 1 : Number(r.day_value),
     sort_order: Number(r.sort_order ?? 0),
     enabled: Boolean(r.enabled ?? true),
   };
