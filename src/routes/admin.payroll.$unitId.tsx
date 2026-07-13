@@ -573,6 +573,7 @@ function PayrollUnitPage() {
           : null;
         const isPrimary = (c.designation_id ?? null) === p.designationId;
         const candidateGender = ((c as unknown as { gender?: string | null }).gender ?? "").toString();
+        const candidateIsDisabled = Boolean((c as unknown as { is_disabled?: boolean | null }).is_disabled);
 
         // Fold per-employee additions/deductions onto the primary line only so
         // we don't double-count across multiple designation lines for one person.
@@ -586,7 +587,7 @@ function PayrollUnitPage() {
           }
           const addTotal = extraAdds.reduce((s, a) => s + a.amount, 0);
           wages.earnedGross = Math.round((wages.earnedGross + addTotal) * 100) / 100;
-          Object.assign(wages, applyEsiToWageComputation(wages));
+          Object.assign(wages, applyEsiToWageComputation(wages, { isDisabled: candidateIsDisabled }));
         }
 
         // Resolve Professional Tax for this employee from state/gender/earnedGross slabs.
