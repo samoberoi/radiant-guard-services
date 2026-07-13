@@ -488,7 +488,7 @@ export function applyPtToWageComputation(
     ...wages,
     deductions,
     totalDeductions: round2(totalDeductions),
-    netPay: round2(wages.earnedGross - totalDeductions),
+    netPay: Math.max(0, round2(wages.earnedGross - totalDeductions)),
   };
 }
 
