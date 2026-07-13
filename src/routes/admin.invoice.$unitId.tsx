@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import {
   applyEsiToWageComputation,
+  applyLwfToWageComputation,
   applyPtToWageComputation,
   computeAttendanceTotals,
   computeWages,
@@ -20,6 +21,7 @@ import {
   type PincodeRangeLike,
   type PtSlabLike,
 } from "@/lib/payroll-calc";
+import { resolveLwf, type LwfRow } from "@/lib/lwf-lookup";
 import { downloadCsv, writeXlsx } from "@/lib/csv-export";
 import { gstinStateCode } from "@/lib/gstin";
 import { fetchAttendanceEntriesForPeriod } from "@/lib/attendance-fetch";
