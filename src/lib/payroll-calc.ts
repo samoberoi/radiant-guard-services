@@ -816,11 +816,12 @@ export function computeWages(
     components.push({ name: "Paid Holiday", amount: phAmount, calcType: "fixed" });
   }
 
-  // Overtime (per current spec):
-  //   otBase    = contractGross − Uniform allowance
-  //   perDutyOt = otBase / 26          (hard-coded vendor convention)
-  //   otAmount  = perDutyOt × otDays
-  const OT_DIVISOR = 26;
+  // Overtime (statutory: Basic+DA / (baseDays × 8) × 2 × hours; here we
+  // treat OT as days at basic/baseDays × 2). Fix: divisor now tracks the
+  // contract's actual base-days rather than being hardcoded to 26, so a
+  // 30-day contract doesn't underpay OT and a 26-day contract stays
+  // backwards-compatible.
+  const OT_DIVISOR = baseDays > 0 ? baseDays : 26;
   const excludedFromOt = resource.components
     .filter((c) => /\buniform\b/i.test(canonicalComponentName(c.name)))
     .reduce((s, c) => s + (Number(c.amount) || 0), 0);
