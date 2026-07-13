@@ -767,9 +767,23 @@ function PayrollUnitPage() {
           (r.resource!.components.reduce((s, c) => s + (Number(c.amount) || 0), 0)) +
           (r.resource!.employerContributions.reduce((s, c) => s + contractTotalAmount(c), 0));
         const baseDays = r.wages!.baseDays || 30;
-        const perDay = monthly / baseDays;
-        const qty = r.totals.tDays;
-        const amt = Math.round(perDay * qty * 100) / 100;
+        const amt = billableFor(r);
+        // Qty & rate presented per billing mode for auditability in Tally.
+        let qty: number;
+        let rate: number;
+        if (billingMode === "man_hours") {
+          qty = Math.round((r.totals.pDays + r.totals.phDays + r.totals.otherPaidDays) * UNIT_DUTY_HOURS + r.totals.otHours);
+          rate = monthly / (baseDays * UNIT_DUTY_HOURS);
+        } else if (billingMode === "man_months") {
+          qty = 1;
+          rate = amt;
+        } else if (billingMode === "lumpsum") {
+          qty = 1;
+          rate = amt;
+        } else {
+          qty = r.totals.tDays;
+          rate = monthly / baseDays;
+        }
         const cgstAmt = Math.round(amt * (cgstRate / 100) * 100) / 100;
         const sgstAmt = Math.round(amt * (sgstRate / 100) * 100) / 100;
         const igstAmt = Math.round(amt * (igstRate / 100) * 100) / 100;
