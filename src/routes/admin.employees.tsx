@@ -2140,9 +2140,15 @@ function EmployeesPage() {
           if (!v) setEditing(null);
         }}
         editing={editing}
-        units={units}
-        unitsLoading={unitsQuery.isLoading}
-        unitsError={unitsQuery.error instanceof Error ? unitsQuery.error.message : null}
+        units={scopedUnitsForWizard}
+        unitsLoading={unitsQuery.isLoading || (isFieldOfficer && scopeQuery.isLoading)}
+        unitsError={
+          unitsQuery.error instanceof Error
+            ? unitsQuery.error.message
+            : isFieldOfficer && !scopeQuery.isLoading && scopedUnitsForWizard.length === 0
+              ? "You have no units assigned. Ask your admin to assign a branch or unit before onboarding."
+              : null
+        }
         designations={designations}
         designationsLoading={designationsQuery.isLoading}
         designationsError={designationsQuery.error instanceof Error ? designationsQuery.error.message : null}
