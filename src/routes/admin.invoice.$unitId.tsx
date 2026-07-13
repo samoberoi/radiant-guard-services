@@ -588,13 +588,14 @@ function PayrollUnitPage() {
         return a.designation.localeCompare(b.designation);
       });
 
-      return rows;
+      return { rows, billingMode };
     },
   });
 
 
 
-  const rows = data ?? [];
+  const rows = data?.rows ?? [];
+  const billingMode = data?.billingMode ?? "man_days";
 
   useEffect(() => {
     if (!highlightCandidate || rows.length === 0) return;
