@@ -26,6 +26,10 @@ export type AttendanceCodeLike = {
   code: string;
   counts_as_present: boolean;
   is_paid: boolean;
+  // Fractional day contributed to the payable-day bucket. HD (Half-Day) = 0.5,
+  // full-day codes = 1.0 (default), non-paid absence codes should be 0.
+  // Backfilled by migration; older code rows that predate the column read as 1.0.
+  day_value?: number | null;
 };
 
 export type AttendanceTotals = {
