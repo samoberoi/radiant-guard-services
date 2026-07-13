@@ -1065,15 +1065,24 @@ export function computeWages(
       ESI_EARNED_GROSS_CEILING,
   });
 
-  const deductions = applyEsiRule(
-    applyEpfRule(deductionsScaled, employeeEpfAmount),
-    esi.employee,
-    "ESI Employee Contribution",
+  const deductions = applyBonusRule(
+    applyEsiRule(
+      applyEpfRule(deductionsScaled, employeeEpfAmount),
+      esi.employee,
+      "ESI Employee Contribution",
+    ),
+    employeeBonusAmount,
   );
-  const employerContributions = applyEsiRule(
-    applyEpfRule(employerContributionsScaled, employerEpfAmount),
-    esi.employer,
-    "ESI Employer Contribution",
+  const employerContributions = applyGratuityRule(
+    applyBonusRule(
+      applyEsiRule(
+        applyEpfRule(employerContributionsScaled, employerEpfAmount),
+        esi.employer,
+        "ESI Employer Contribution",
+      ),
+      employerBonusAmount,
+    ),
+    employerGratuityAmount,
   );
 
   const totalDeductions = deductions.reduce((s, d) => s + d.amount, 0);
