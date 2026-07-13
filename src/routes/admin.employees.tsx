@@ -1223,6 +1223,7 @@ function EmployeesPage() {
         .select("id,employee_code,full_name")
         .single();
       if (error) throw error;
+      const empCode = (data as { employee_code?: string })?.employee_code ?? "";
       await logActivity({
         module: "Employees",
         action: "approve",
@@ -1231,14 +1232,25 @@ function EmployeesPage() {
         entityLabel: c.full_name || c.aadhaar_number,
         after: data as unknown as Record<string, unknown>,
       });
-      await notifyAdmins({
+      const label = c.full_name || c.aadhaar_number || "Candidate";
+      await notifyOnboardingApprovers({
         type: "candidate_approved",
         title: "Candidate approved",
-        message: `${c.full_name || c.aadhaar_number || "Candidate"} was approved${(data as { employee_code?: string })?.employee_code ? ` (${(data as { employee_code?: string }).employee_code})` : ""}.`,
+        message: `${label} was approved${empCode ? ` (${empCode})` : ""}.`,
         link: "/admin/employees",
         entityType: "candidate",
         entityId: c.id,
-      }).catch((e) => console.error("notifyAdmins approve failed", e));
+      }).catch((e: unknown) => console.error("notifyOnboardingApprovers approve failed", e));
+      if (c.created_by) {
+        await notifyUser(c.created_by, {
+          type: "candidate_approved",
+          title: "Your candidate was approved",
+          message: `${label} was approved${empCode ? ` — Employee Code ${empCode}` : ""}.`,
+          link: "/admin/employees",
+          entityType: "candidate",
+          entityId: c.id,
+        }).catch((e: unknown) => console.error("notifyUser approve failed", e));
+      }
       return data as { employee_code: string };
     },
     onSuccess: (data) => {
@@ -1263,14 +1275,25 @@ function EmployeesPage() {
         entityLabel: c.full_name || c.aadhaar_number,
         after: { rejection_reason: reason },
       });
-      await notifyAdmins({
+      const label = c.full_name || c.aadhaar_number || "Candidate";
+      await notifyOnboardingApprovers({
         type: "candidate_rejected",
         title: "Candidate rejected",
-        message: `${c.full_name || c.aadhaar_number || "Candidate"} was rejected. Reason: ${reason}`,
+        message: `${label} was rejected. Reason: ${reason}`,
         link: "/admin/employees",
         entityType: "candidate",
         entityId: c.id,
-      }).catch((e) => console.error("notifyAdmins reject failed", e));
+      }).catch((e: unknown) => console.error("notifyOnboardingApprovers reject failed", e));
+      if (c.created_by) {
+        await notifyUser(c.created_by, {
+          type: "candidate_rejected",
+          title: "Your candidate needs changes",
+          message: `${label} was rejected. Reason: ${reason}`,
+          link: "/admin/employees",
+          entityType: "candidate",
+          entityId: c.id,
+        }).catch((e: unknown) => console.error("notifyUser reject failed", e));
+      }
     },
     onSuccess: () => {
       toast.success("Candidate rejected");
