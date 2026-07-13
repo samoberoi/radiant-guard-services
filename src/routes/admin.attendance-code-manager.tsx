@@ -75,7 +75,7 @@ function useAttendanceCodes() {
     queryFn: async (): Promise<AttendanceCode[]> => {
       const { data, error } = await supabase
         .from("attendance_codes" as never)
-        .select("id,code,label,description,color,counts_as_present,is_paid,is_leave,sort_order,enabled")
+        .select("id,code,label,description,color,counts_as_present,is_paid,is_leave,day_value,sort_order,enabled")
         .order("sort_order", { ascending: true });
       if (error) throw error;
       return ((data as unknown) as Record<string, unknown>[]).map(rowToItem);
