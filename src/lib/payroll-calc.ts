@@ -335,7 +335,7 @@ export function applyEsiToWageComputation(wages: WageComputation): WageComputati
     employerContributions,
     totalDeductions: round2(totalDeductions),
     totalEmployerContributions: round2(totalEmployerContributions),
-    netPay: round2(wages.earnedGross - totalDeductions),
+    netPay: Math.max(0, round2(wages.earnedGross - totalDeductions)),
     employerCost: round2(wages.earnedGross + totalEmployerContributions),
   };
 }
