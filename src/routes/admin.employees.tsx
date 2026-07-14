@@ -674,7 +674,7 @@ function EmployeesPage() {
   const unitMap = useMemo(() => new Map(units.map((u) => [u.id, u])), [units]);
   const desigMap = useMemo(() => new Map(designations.map((d) => [d.id, d])), [designations]);
 
-  const { candidateId: currentCandidateId } = useCurrentUserRole();
+  const { candidateId: currentCandidateId, isLoading: roleLoading } = useCurrentUserRole();
   const scopedUnitsForWizard = useMemo(() => {
     if (!isFieldOfficer) return units;
     if (!currentCandidateId) return [] as typeof units;
@@ -689,6 +689,7 @@ function EmployeesPage() {
       return false;
     });
   }, [isFieldOfficer, currentCandidateId, scopeAssignments, units]);
+  const scopeStillLoading = isFieldOfficer && (roleLoading || scopeQuery.isLoading || !currentCandidateId);
 
   const matchesSearch = (c: CandidateListItem) => {
     const q = search.trim().toLowerCase();
