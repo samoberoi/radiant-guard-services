@@ -2776,8 +2776,9 @@ function CandidateWizard({
     queryFn: async (): Promise<string[]> => {
       const { data: contracts, error: cErr } = await supabase
         .from("client_contracts" as never)
-        .select("id,unit_id")
-        .in("unit_id", form.unit_ids);
+        .select("id,unit_id,status")
+        .in("unit_id", form.unit_ids)
+        .eq("status", "active");
       if (cErr) throw cErr;
       const contractIds = ((contracts ?? []) as { id: string }[]).map((c) => c.id);
       if (contractIds.length === 0) return [];
