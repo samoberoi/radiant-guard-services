@@ -739,9 +739,20 @@ function UnitFormDialog({
           onSubmit={async (e) => {
             e.preventDefault();
             setError(null);
-            const err = await onSubmit(form);
-            if (err) setError(err);
-            else onOpenChange(false);
+            const result = await onSubmit(form);
+            if (result.error) {
+              setError(result.error);
+              return;
+            }
+            if (result.id) {
+              const syncErr = await syncFieldOfficerAssignments(result.id);
+              if (syncErr) {
+                setError(syncErr);
+                toast.error(syncErr);
+                return;
+              }
+            }
+            onOpenChange(false);
           }}
           className="space-y-5"
         >
