@@ -502,7 +502,7 @@ function UnitFormDialog({
   onOpenChange: (o: boolean) => void;
   editing: Unit | null;
   units: Unit[];
-  onSubmit: (data: Omit<Unit, "id">) => Promise<string | null>;
+  onSubmit: (data: Omit<Unit, "id">) => Promise<{ error: string | null; id: string | null }>;
 }) {
   const { branches } = useBranches();
   const { customers } = useCustomers();
@@ -510,6 +510,8 @@ function UnitFormDialog({
 
   const [form, setForm] = useState<Omit<Unit, "id">>(() => emptyUnit(nextUnitCode(units)));
   const [error, setError] = useState<string | null>(null);
+  const [assignedFoIds, setAssignedFoIds] = useState<string[]>([]);
+  const [foSyncing, setFoSyncing] = useState(false);
 
   useEffect(() => {
     if (!open) return;
