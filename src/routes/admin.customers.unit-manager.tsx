@@ -2,9 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, ChevronsUpDown, Download, Edit2, MapPin, Plus, Search, Warehouse, X } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Download, Edit2, MapPin, Plus, Search, Warehouse, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DeleteGuardButton } from "@/components/DeleteGuardButton";
 import { csvDate, csvJoin, csvMapLink, csvStatus, csvYesNo, downloadCsv } from "@/lib/csv-export";
@@ -516,6 +514,7 @@ function UnitFormDialog({
   const [form, setForm] = useState<Omit<Unit, "id">>(() => emptyUnit(nextUnitCode(units)));
   const [error, setError] = useState<string | null>(null);
   const [assignedFoIds, setAssignedFoIds] = useState<string[]>([]);
+  const [selectedFoToAdd, setSelectedFoToAdd] = useState("");
   const [foSyncing, setFoSyncing] = useState(false);
 
   useEffect(() => {
@@ -528,6 +527,7 @@ function UnitFormDialog({
       setForm(emptyUnit(nextUnitCode(units)));
     }
     setError(null);
+    setSelectedFoToAdd("");
   }, [open, editing, units]);
 
   const set = <K extends keyof Omit<Unit, "id">>(k: K, v: Omit<Unit, "id">[K]) =>
@@ -658,6 +658,17 @@ function UnitFormDialog({
 
   const toggleFo = (id: string) =>
     setAssignedFoIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const availableFieldOfficers = useMemo(
+    () => (fosQuery.data ?? []).filter((fo) => !assignedFoIds.includes(fo.id)),
+    [fosQuery.data, assignedFoIds],
+  );
+
+  const addSelectedFieldOfficer = () => {
+    if (!selectedFoToAdd || assignedFoIds.includes(selectedFoToAdd)) return;
+    setAssignedFoIds((prev) => [...prev, selectedFoToAdd]);
+    setSelectedFoToAdd("");
+  };
 
   const syncFieldOfficerAssignments = async (unitId: string): Promise<string | null> => {
     try {
@@ -1078,51 +1089,36 @@ function UnitFormDialog({
               </div>
             ) : (
               <div className="space-y-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      role="combobox"
-                      className="w-full justify-between font-normal"
-                    >
-                      <span className="truncate text-left">
-                        {assignedFoIds.length === 0
-                          ? "Select field officers…"
-                          : `${assignedFoIds.length} field officer${assignedFoIds.length === 1 ? "" : "s"} selected`}
-                      </span>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search field officer by name or code…" />
-                      <CommandList>
-                        <CommandEmpty>No field officer found.</CommandEmpty>
-                        <CommandGroup>
-                          {(fosQuery.data ?? []).map((fo) => {
-                            const checked = assignedFoIds.includes(fo.id);
-                            return (
-                              <CommandItem
-                                key={fo.id}
-                                value={`${fo.full_name} ${fo.employee_code ?? ""} ${fo.mobile ?? ""}`}
-                                onSelect={() => toggleFo(fo.id)}
-                              >
-                                <Check className={cn("mr-2 h-4 w-4", checked ? "opacity-100" : "opacity-0")} />
-                                <span className="flex-1 truncate">{fo.full_name}</span>
-                                {fo.employee_code && (
-                                  <span className="ml-2 font-mono text-[10px] text-muted-foreground">
-                                    {fo.employee_code}
-                                  </span>
-                                )}
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <select
+                    value={selectedFoToAdd}
+                    onChange={(e) => setSelectedFoToAdd(e.target.value)}
+                    disabled={availableFieldOfficers.length === 0}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none transition-colors focus:border-ring focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label="Select field officer"
+                  >
+                    <option value="">
+                      {availableFieldOfficers.length === 0
+                        ? "All field officers selected"
+                        : "Select field officer to assign…"}
+                    </option>
+                    {availableFieldOfficers.map((fo) => (
+                      <option key={fo.id} value={fo.id}>
+                        {fo.full_name}{fo.employee_code ? ` — ${fo.employee_code}` : ""}{fo.mobile ? ` (${fo.mobile})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addSelectedFieldOfficer}
+                    disabled={!selectedFoToAdd}
+                    className="h-10"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Assign
+                  </Button>
+                </div>
                 {assignedFoIds.length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {assignedFoIds.map((id) => {
