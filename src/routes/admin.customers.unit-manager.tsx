@@ -1077,30 +1077,73 @@ function UnitFormDialog({
                 No active field officers found. Onboard a field officer from the Employees module first.
               </div>
             ) : (
-              <div className="grid max-h-56 gap-1.5 overflow-y-auto rounded-lg border border-border bg-background p-2 sm:grid-cols-2">
-                {(fosQuery.data ?? []).map((fo) => {
-                  const checked = assignedFoIds.includes(fo.id);
-                  return (
-                    <label
-                      key={fo.id}
-                      className={cn(
-                        "flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs transition",
-                        checked ? "border-primary bg-primary/5" : "border-transparent hover:bg-secondary/40",
-                      )}
+              <div className="space-y-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      role="combobox"
+                      className="w-full justify-between font-normal"
                     >
-                      <input
-                        type="checkbox"
-                        className="h-3.5 w-3.5 accent-primary"
-                        checked={checked}
-                        onChange={() => toggleFo(fo.id)}
-                      />
-                      <span className="font-medium text-foreground">{fo.full_name}</span>
-                      {fo.employee_code && (
-                        <span className="font-mono text-[10px] text-muted-foreground">{fo.employee_code}</span>
-                      )}
-                    </label>
-                  );
-                })}
+                      <span className="truncate text-left">
+                        {assignedFoIds.length === 0
+                          ? "Select field officers…"
+                          : `${assignedFoIds.length} field officer${assignedFoIds.length === 1 ? "" : "s"} selected`}
+                      </span>
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search field officer by name or code…" />
+                      <CommandList>
+                        <CommandEmpty>No field officer found.</CommandEmpty>
+                        <CommandGroup>
+                          {(fosQuery.data ?? []).map((fo) => {
+                            const checked = assignedFoIds.includes(fo.id);
+                            return (
+                              <CommandItem
+                                key={fo.id}
+                                value={`${fo.full_name} ${fo.employee_code ?? ""} ${fo.mobile ?? ""}`}
+                                onSelect={() => toggleFo(fo.id)}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", checked ? "opacity-100" : "opacity-0")} />
+                                <span className="flex-1 truncate">{fo.full_name}</span>
+                                {fo.employee_code && (
+                                  <span className="ml-2 font-mono text-[10px] text-muted-foreground">
+                                    {fo.employee_code}
+                                  </span>
+                                )}
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                {assignedFoIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {assignedFoIds.map((id) => {
+                      const fo = (fosQuery.data ?? []).find((f) => f.id === id);
+                      if (!fo) return null;
+                      return (
+                        <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                          <span>{fo.full_name}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleFo(id)}
+                            className="rounded-sm p-0.5 hover:bg-background/60"
+                            aria-label={`Remove ${fo.full_name}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
             {!editing && (
