@@ -414,10 +414,10 @@ function UnitManagerPage() {
         units={units}
         onSubmit={async (data) => {
           const r = editing ? await updateUnit(editing.id, data) : await addUnit(data);
-          if (!r.ok) return r.error;
+          if (!r.ok) return { error: r.error, id: null };
           void logActivity({ module: "Unit Manager", action: editing ? "update" : "create", entityType: "units", entityId: editing?.id, entityLabel: String((data as Record<string, unknown>).code ?? (data as Record<string, unknown>).name ?? ""), details: data as Record<string, unknown> });
           toast.success(editing ? "Unit updated" : "Unit added");
-          return null;
+          return { error: null, id: editing ? editing.id : (("id" in r ? r.id : undefined) ?? null) };
         }}
       />
 
