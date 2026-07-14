@@ -1062,6 +1062,52 @@ function UnitFormDialog({
             </div>
           </Section>
 
+          <Section title="Assign field officers (system users)">
+            <p className="text-xs text-muted-foreground">
+              Select onboarded field officers who should have this unit in their scope. They will be able to
+              onboard employees, mark attendance, and manage deployment for this unit.
+            </p>
+            {fosQuery.isLoading ? (
+              <div className="text-xs text-muted-foreground">Loading field officers…</div>
+            ) : (fosQuery.data ?? []).length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+                No active field officers found. Onboard a field officer from the Employees module first.
+              </div>
+            ) : (
+              <div className="grid max-h-56 gap-1.5 overflow-y-auto rounded-lg border border-border bg-background p-2 sm:grid-cols-2">
+                {(fosQuery.data ?? []).map((fo) => {
+                  const checked = assignedFoIds.includes(fo.id);
+                  return (
+                    <label
+                      key={fo.id}
+                      className={cn(
+                        "flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs transition",
+                        checked ? "border-primary bg-primary/5" : "border-transparent hover:bg-secondary/40",
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-3.5 w-3.5 accent-primary"
+                        checked={checked}
+                        onChange={() => toggleFo(fo.id)}
+                      />
+                      <span className="font-medium text-foreground">{fo.full_name}</span>
+                      {fo.employee_code && (
+                        <span className="font-mono text-[10px] text-muted-foreground">{fo.employee_code}</span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+            {!editing && (
+              <p className="text-[11px] italic text-muted-foreground">
+                Assignments will be saved after the unit is created.
+              </p>
+            )}
+            {foSyncing && <p className="text-[11px] text-muted-foreground">Saving field officer assignments…</p>}
+          </Section>
+
           {/* OTHER */}
           <Section title="Other details">
             <div className="grid gap-3 sm:grid-cols-2">
