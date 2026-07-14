@@ -866,6 +866,33 @@ function PayrollUnitPage() {
     });
   };
 
+  const invoiceUnlocked = sheet?.status === "approved";
+  if (!invoiceUnlocked) {
+    const attStatus = sheet?.status ?? null;
+    return (
+      <div className="space-y-4 p-4 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Link to="/admin/invoice" className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground">
+            <ChevronLeft className="h-4 w-4" /> Back to invoice units
+          </Link>
+        </div>
+        <div className="rounded-3xl border border-amber-200 bg-amber-50 p-8 text-amber-900 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-[0.16em]">Invoice locked</div>
+          <h1 className="mt-1 text-2xl font-semibold">{unit?.name || unit?.code || "Unit"}</h1>
+          <p className="mt-3 text-sm">
+            Invoice for {fmtPretty(start)} – {fmtPretty(end)} cannot be generated because attendance is
+            {attStatus ? ` "${attStatus}"` : " not yet submitted"}. Invoices only run against <strong>approved</strong> attendance.
+          </p>
+          <div className="mt-4">
+            <Link to="/admin/attendance/$unitId" params={{ unitId }} search={{ month: new Date(start).getMonth(), year: new Date(start).getFullYear() }}>
+              <Button size="sm">Open attendance sheet</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 p-4 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">

@@ -348,6 +348,7 @@ export type Database = {
           rejected_at: string | null
           rejected_by: string | null
           rejection_reason: string
+          review_proof_url: string | null
           status: string
           submitted_at: string | null
           submitted_by: string | null
@@ -364,6 +365,7 @@ export type Database = {
           rejected_at?: string | null
           rejected_by?: string | null
           rejection_reason?: string
+          review_proof_url?: string | null
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null
@@ -380,6 +382,7 @@ export type Database = {
           rejected_at?: string | null
           rejected_by?: string | null
           rejection_reason?: string
+          review_proof_url?: string | null
           status?: string
           submitted_at?: string | null
           submitted_by?: string | null

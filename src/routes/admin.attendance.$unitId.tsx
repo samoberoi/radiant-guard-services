@@ -9,6 +9,7 @@ import { z } from "zod";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { notifyApprovers, notifyUser } from "@/lib/notifications";
 import { extractAttendanceFromImage } from "@/lib/attendance-ocr.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -361,14 +362,20 @@ function MusterRollPage() {
   const canApprove = can("attendance", "approve");
 
   type SheetStatus = "draft" | "submitted" | "approved" | "rejected";
-  type SheetRow = { id: string; status: SheetStatus; rejection_reason: string };
+  type SheetRow = {
+    id: string;
+    status: SheetStatus;
+    rejection_reason: string;
+    review_proof_url: string | null;
+    submitted_by: string | null;
+  };
   const sheetQK = ["attendance-sheet", unitId, periodStart, periodEnd];
   const { data: sheet } = useQuery({
     queryKey: sheetQK,
     queryFn: async (): Promise<SheetRow | null> => {
       const { data, error } = await supabase
         .from("attendance_sheets" as never)
-        .select("id, status, rejection_reason")
+        .select("id, status, rejection_reason, review_proof_url, submitted_by")
         .eq("unit_id", unitId)
         .eq("period_start", periodStart)
         .eq("period_end", periodEnd)
@@ -379,13 +386,17 @@ function MusterRollPage() {
     enabled: Boolean(unitId && periodStart && periodEnd),
   });
   const status: SheetStatus = sheet?.status ?? "draft";
-  const editable = status === "draft" || status === "rejected";
+  // FO/admin edit when draft or rejected. Approver may also edit inline while
+  // the sheet is submitted (HR can fix in place instead of bouncing back).
+  const editable = status === "draft" || status === "rejected" || (status === "submitted" && canApprove);
 
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [rejectProof, setRejectProof] = useState<File | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
 
   const transitionSheet = useMutation({
-    mutationFn: async (next: { status: SheetStatus; reason?: string }) => {
+    mutationFn: async (next: { status: SheetStatus; reason?: string; proofFile?: File | null }) => {
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth?.user?.id ?? null;
       const ts = new Date().toISOString();
@@ -400,8 +411,25 @@ function MusterRollPage() {
       if (next.status === "rejected") {
         base.rejected_at = ts; base.rejected_by = uid;
         base.rejection_reason = next.reason ?? "";
+        // Upload the optional proof image and store its path.
+        if (next.proofFile) {
+          setUploadingProof(true);
+          try {
+            const ext = next.proofFile.name.split(".").pop() || "png";
+            const path = `${unitId}/${periodStart}_${periodEnd}/${Date.now()}.${ext}`;
+            const up = await supabase.storage.from("attendance-review-proofs").upload(path, next.proofFile, { upsert: true });
+            if (up.error) throw up.error;
+            base.review_proof_url = path;
+          } finally {
+            setUploadingProof(false);
+          }
+        }
       }
-      if (next.status === "draft") { base.rejection_reason = ""; }
+      if (next.status === "draft" || next.status === "submitted") {
+        // Resubmit after fix — clear prior rejection metadata.
+        base.rejection_reason = "";
+        base.review_proof_url = null;
+      }
       if (sheet?.id) {
         const { error } = await supabase
           .from("attendance_sheets" as never)
@@ -421,6 +449,30 @@ function MusterRollPage() {
         entityLabel: `${unitId} ${periodStart} → ${periodEnd}`,
         details: { unit_id: unitId, period_start: periodStart, period_end: periodEnd, status: next.status, reason: next.reason ?? "" },
       });
+      // Fan out notifications.
+      const link = `/admin/attendance/${unitId}?month=${new Date(periodStart).getMonth()}&year=${new Date(periodStart).getFullYear()}`;
+      if (next.status === "submitted") {
+        void notifyApprovers({
+          moduleKey: "attendance",
+          type: "attendance_submitted",
+          title: "Attendance awaiting approval",
+          message: `Attendance for ${periodStart} → ${periodEnd} was submitted for review.`,
+          link,
+          entityType: "attendance_sheets",
+          entityId: sheet?.id ?? "",
+        }).catch(() => undefined);
+      } else if (next.status === "approved" || next.status === "rejected") {
+        void notifyUser(sheet?.submitted_by ?? null, {
+          type: next.status === "approved" ? "attendance_approved" : "attendance_rejected",
+          title: next.status === "approved" ? "Attendance approved" : "Attendance rejected",
+          message: next.status === "approved"
+            ? `Your attendance for ${periodStart} → ${periodEnd} was approved.`
+            : `Your attendance for ${periodStart} → ${periodEnd} was rejected. Reason: ${next.reason ?? ""}`,
+          link,
+          entityType: "attendance_sheets",
+          entityId: sheet?.id ?? "",
+        }).catch(() => undefined);
+      }
     },
     onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: sheetQK });
@@ -1545,6 +1597,21 @@ function MusterRollPage() {
           {status === "rejected" && sheet?.rejection_reason && (
             <span className="text-xs text-rose-700">Reason: {sheet.rejection_reason}</span>
           )}
+          {status === "rejected" && sheet?.review_proof_url && (
+            <button
+              type="button"
+              className="text-xs font-semibold text-rose-700 underline underline-offset-2"
+              onClick={async () => {
+                const { data, error } = await supabase.storage
+                  .from("attendance-review-proofs")
+                  .createSignedUrl(sheet.review_proof_url as string, 300);
+                if (error || !data?.signedUrl) { toast.error("Could not open proof image"); return; }
+                window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+              }}
+            >
+              View HR proof image
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {(status === "draft" || status === "rejected") && (
@@ -1579,22 +1646,46 @@ function MusterRollPage() {
           This attendance sheet is {status === "approved" ? "approved" : "submitted"} and locked for editing. {status === "submitted" ? "Reject it to allow further edits." : "Reopen it to make changes."}
         </div>
       )}
+      {status === "submitted" && canApprove && (
+        <div className="rounded-md border border-sky-300/60 bg-sky-50 px-3 py-2 text-xs text-sky-800 print:hidden">
+          You can edit this attendance in place, or reject with a note so the submitter can fix it.
+        </div>
+      )}
 
-      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
-        <DialogContent className="max-w-sm">
+      <Dialog open={rejectOpen} onOpenChange={(o) => { setRejectOpen(o); if (!o) { setRejectReason(""); setRejectProof(null); } }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Reject attendance</DialogTitle>
-            <DialogDescription>Provide a reason so the submitter knows what to fix.</DialogDescription>
+            <DialogDescription>Give a clear reason and optionally attach a proof image (photo of physical register, WhatsApp screenshot, etc.).</DialogDescription>
           </DialogHeader>
-          <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Reason for rejection…" rows={4} />
+          <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Reason for rejection (min 5 characters)…" rows={4} />
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Proof image (optional)</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setRejectProof(e.target.files?.[0] ?? null)}
+              className="block w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-xs file:font-semibold hover:file:bg-secondary/80"
+            />
+            {rejectProof && (
+              <div className="text-[11px] text-muted-foreground">{rejectProof.name} ({Math.round(rejectProof.size / 1024)} KB)</div>
+            )}
+          </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" onClick={() => setRejectOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => {
-              if (!rejectReason.trim()) { toast.error("Reason required"); return; }
-              transitionSheet.mutate({ status: "rejected", reason: rejectReason.trim() }, {
-                onSuccess: () => { setRejectOpen(false); setRejectReason(""); },
-              });
-            }}>Reject</Button>
+            <Button variant="ghost" onClick={() => setRejectOpen(false)} disabled={uploadingProof || transitionSheet.isPending}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={uploadingProof || transitionSheet.isPending}
+              onClick={() => {
+                if (rejectReason.trim().length < 5) { toast.error("Reason must be at least 5 characters"); return; }
+                transitionSheet.mutate(
+                  { status: "rejected", reason: rejectReason.trim(), proofFile: rejectProof },
+                  { onSuccess: () => { setRejectOpen(false); setRejectReason(""); setRejectProof(null); } },
+                );
+              }}
+            >
+              {uploadingProof || transitionSheet.isPending ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Rejecting…</> : "Reject"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
