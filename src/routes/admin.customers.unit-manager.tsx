@@ -631,16 +631,22 @@ function UnitFormDialog({
     },
   });
 
+  const fieldOfficerIds = useMemo(
+    () => (fosQuery.data ?? []).map((fo) => fo.id),
+    [fosQuery.data],
+  );
+
   const existingAssignQuery = useQuery({
-    queryKey: ["unit-form", "assignments", editing?.id ?? "new"],
-    enabled: open && !!editing?.id,
+    queryKey: ["unit-form", "assignments", editing?.id ?? "new", fieldOfficerIds.join(",")],
+    enabled: open && !!editing?.id && !fosQuery.isLoading,
     queryFn: async () => {
+      if (fieldOfficerIds.length === 0) return [];
       const { data, error } = await supabase
         .from("employee_scope_assignments")
-        .select("id,candidate_id,candidates!inner(role_key)")
+        .select("id,candidate_id")
         .eq("scope_type", "unit")
         .eq("scope_id", editing!.id)
-        .eq("candidates.role_key", "field_officer");
+        .in("candidate_id", fieldOfficerIds);
       if (error) throw error;
       return (data ?? []) as Array<{ id: string; candidate_id: string }>;
     },
