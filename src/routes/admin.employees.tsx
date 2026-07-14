@@ -3867,13 +3867,32 @@ function CandidateWizard({
                       </div>
                     </Field>
                   </div>
-                  <Field label="Designation (Primary)">
+                  <Field
+                    label={
+                      form.unit_ids.length === 0
+                        ? "Designation (Primary) — select a unit first"
+                        : `Designation (Primary) — ${filteredDesignations.length} available in unit contract${form.unit_ids.length > 1 ? "s" : ""}`
+                    }
+                  >
                     <DesignationPicker
-                      designations={designations}
+                      designations={filteredDesignations}
                       value={form.designation_id}
                       onChange={(id) => set("designation_id", id)}
-                      disabled={designationsLoading || !!designationsError}
-                      emptyMessage={designationsError ? `Could not load designations: ${designationsError}` : "No designations found."}
+                      disabled={
+                        designationsLoading ||
+                        !!designationsError ||
+                        form.unit_ids.length === 0 ||
+                        contractDesigQuery.isLoading
+                      }
+                      emptyMessage={
+                        designationsError
+                          ? `Could not load designations: ${designationsError}`
+                          : form.unit_ids.length === 0
+                            ? "Select a unit above to see the designations available in that unit's contract."
+                            : contractDesigQuery.isLoading
+                              ? "Loading designations from unit contract…"
+                              : "No designations found in the selected unit's contract. Ask an admin to add resources to the contract."
+                      }
                     />
                   </Field>
                   {editing?.id ? (
