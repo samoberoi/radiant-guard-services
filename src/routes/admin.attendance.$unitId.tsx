@@ -362,14 +362,20 @@ function MusterRollPage() {
   const canApprove = can("attendance", "approve");
 
   type SheetStatus = "draft" | "submitted" | "approved" | "rejected";
-  type SheetRow = { id: string; status: SheetStatus; rejection_reason: string };
+  type SheetRow = {
+    id: string;
+    status: SheetStatus;
+    rejection_reason: string;
+    review_proof_url: string | null;
+    submitted_by: string | null;
+  };
   const sheetQK = ["attendance-sheet", unitId, periodStart, periodEnd];
   const { data: sheet } = useQuery({
     queryKey: sheetQK,
     queryFn: async (): Promise<SheetRow | null> => {
       const { data, error } = await supabase
         .from("attendance_sheets" as never)
-        .select("id, status, rejection_reason")
+        .select("id, status, rejection_reason, review_proof_url, submitted_by")
         .eq("unit_id", unitId)
         .eq("period_start", periodStart)
         .eq("period_end", periodEnd)
@@ -380,13 +386,17 @@ function MusterRollPage() {
     enabled: Boolean(unitId && periodStart && periodEnd),
   });
   const status: SheetStatus = sheet?.status ?? "draft";
-  const editable = status === "draft" || status === "rejected";
+  // FO/admin edit when draft or rejected. Approver may also edit inline while
+  // the sheet is submitted (HR can fix in place instead of bouncing back).
+  const editable = status === "draft" || status === "rejected" || (status === "submitted" && canApprove);
 
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [rejectProof, setRejectProof] = useState<File | null>(null);
+  const [uploadingProof, setUploadingProof] = useState(false);
 
   const transitionSheet = useMutation({
-    mutationFn: async (next: { status: SheetStatus; reason?: string }) => {
+    mutationFn: async (next: { status: SheetStatus; reason?: string; proofFile?: File | null }) => {
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth?.user?.id ?? null;
       const ts = new Date().toISOString();
@@ -401,8 +411,25 @@ function MusterRollPage() {
       if (next.status === "rejected") {
         base.rejected_at = ts; base.rejected_by = uid;
         base.rejection_reason = next.reason ?? "";
+        // Upload the optional proof image and store its path.
+        if (next.proofFile) {
+          setUploadingProof(true);
+          try {
+            const ext = next.proofFile.name.split(".").pop() || "png";
+            const path = `${unitId}/${periodStart}_${periodEnd}/${Date.now()}.${ext}`;
+            const up = await supabase.storage.from("attendance-review-proofs").upload(path, next.proofFile, { upsert: true });
+            if (up.error) throw up.error;
+            base.review_proof_url = path;
+          } finally {
+            setUploadingProof(false);
+          }
+        }
       }
-      if (next.status === "draft") { base.rejection_reason = ""; }
+      if (next.status === "draft" || next.status === "submitted") {
+        // Resubmit after fix — clear prior rejection metadata.
+        base.rejection_reason = "";
+        base.review_proof_url = null;
+      }
       if (sheet?.id) {
         const { error } = await supabase
           .from("attendance_sheets" as never)
@@ -422,6 +449,30 @@ function MusterRollPage() {
         entityLabel: `${unitId} ${periodStart} → ${periodEnd}`,
         details: { unit_id: unitId, period_start: periodStart, period_end: periodEnd, status: next.status, reason: next.reason ?? "" },
       });
+      // Fan out notifications.
+      const link = `/admin/attendance/${unitId}?month=${new Date(periodStart).getMonth()}&year=${new Date(periodStart).getFullYear()}`;
+      if (next.status === "submitted") {
+        void notifyApprovers({
+          moduleKey: "attendance",
+          type: "attendance_submitted",
+          title: "Attendance awaiting approval",
+          message: `Attendance for ${periodStart} → ${periodEnd} was submitted for review.`,
+          link,
+          entityType: "attendance_sheets",
+          entityId: sheet?.id ?? "",
+        }).catch(() => undefined);
+      } else if (next.status === "approved" || next.status === "rejected") {
+        void notifyUser(sheet?.submitted_by ?? null, {
+          type: next.status === "approved" ? "attendance_approved" : "attendance_rejected",
+          title: next.status === "approved" ? "Attendance approved" : "Attendance rejected",
+          message: next.status === "approved"
+            ? `Your attendance for ${periodStart} → ${periodEnd} was approved.`
+            : `Your attendance for ${periodStart} → ${periodEnd} was rejected. Reason: ${next.reason ?? ""}`,
+          link,
+          entityType: "attendance_sheets",
+          entityId: sheet?.id ?? "",
+        }).catch(() => undefined);
+      }
     },
     onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: sheetQK });
