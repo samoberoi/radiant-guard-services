@@ -2143,11 +2143,11 @@ function EmployeesPage() {
         }}
         editing={editing}
         units={scopedUnitsForWizard}
-        unitsLoading={unitsQuery.isLoading || (isFieldOfficer && scopeQuery.isLoading)}
+        unitsLoading={unitsQuery.isLoading || scopeStillLoading}
         unitsError={
           unitsQuery.error instanceof Error
             ? unitsQuery.error.message
-            : isFieldOfficer && !scopeQuery.isLoading && scopedUnitsForWizard.length === 0
+            : isFieldOfficer && !scopeStillLoading && scopedUnitsForWizard.length === 0
               ? "You have no units assigned. Ask your admin to assign a branch or unit before onboarding."
               : null
         }
