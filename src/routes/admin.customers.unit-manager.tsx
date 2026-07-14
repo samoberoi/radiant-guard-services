@@ -637,9 +637,10 @@ function UnitFormDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("employee_scope_assignments")
-        .select("id,candidate_id")
+        .select("id,candidate_id,candidates!inner(role_key)")
         .eq("scope_type", "unit")
-        .eq("scope_id", editing!.id);
+        .eq("scope_id", editing!.id)
+        .eq("candidates.role_key", "field_officer");
       if (error) throw error;
       return (data ?? []) as Array<{ id: string; candidate_id: string }>;
     },
