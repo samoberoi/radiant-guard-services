@@ -4511,6 +4511,7 @@ export type Database = {
       current_user_assigned_guard_ids: { Args: never; Returns: string[] }
       current_user_branch_id: { Args: never; Returns: string }
       current_user_branch_scope_ids: { Args: never; Returns: string[] }
+      current_user_can_edit_organizations: { Args: never; Returns: boolean }
       current_user_can_manage_unit_scope_assignment: {
         Args: { _unit_id: string }
         Returns: boolean
@@ -4573,6 +4574,10 @@ export type Database = {
         Returns: {
           user_id: string
         }[]
+      }
+      is_active_field_officer: {
+        Args: { _candidate_id: string }
+        Returns: boolean
       }
       is_admin_user: { Args: never; Returns: boolean }
       is_candidate_in_current_user_branch: {
