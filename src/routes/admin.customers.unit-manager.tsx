@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Download, Edit2, MapPin, Plus, Search, Warehouse, X } from "lucide-react";
 import { DeleteGuardButton } from "@/components/DeleteGuardButton";
 import { csvDate, csvJoin, csvMapLink, csvStatus, csvYesNo, downloadCsv } from "@/lib/csv-export";
@@ -414,10 +416,10 @@ function UnitManagerPage() {
         units={units}
         onSubmit={async (data) => {
           const r = editing ? await updateUnit(editing.id, data) : await addUnit(data);
-          if (!r.ok) return r.error;
+          if (!r.ok) return { error: r.error, id: null };
           void logActivity({ module: "Unit Manager", action: editing ? "update" : "create", entityType: "units", entityId: editing?.id, entityLabel: String((data as Record<string, unknown>).code ?? (data as Record<string, unknown>).name ?? ""), details: data as Record<string, unknown> });
           toast.success(editing ? "Unit updated" : "Unit added");
-          return null;
+          return { error: null, id: editing ? editing.id : (("id" in r ? r.id : undefined) ?? null) };
         }}
       />
 
@@ -502,7 +504,7 @@ function UnitFormDialog({
   onOpenChange: (o: boolean) => void;
   editing: Unit | null;
   units: Unit[];
-  onSubmit: (data: Omit<Unit, "id">) => Promise<string | null>;
+  onSubmit: (data: Omit<Unit, "id">) => Promise<{ error: string | null; id: string | null }>;
 }) {
   const { branches } = useBranches();
   const { customers } = useCustomers();
@@ -510,6 +512,8 @@ function UnitFormDialog({
 
   const [form, setForm] = useState<Omit<Unit, "id">>(() => emptyUnit(nextUnitCode(units)));
   const [error, setError] = useState<string | null>(null);
+  const [assignedFoIds, setAssignedFoIds] = useState<string[]>([]);
+  const [foSyncing, setFoSyncing] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -608,6 +612,99 @@ function UnitFormDialog({
     }));
   }, [form.shippingSameAsOrg, selectedOrg]);
 
+  // ---- Field officer assignment (scope_type='unit') ----
+  const qc = useQueryClient();
+  const fosQuery = useQuery({
+    queryKey: ["unit-form", "field-officers"],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("candidates")
+        .select("id,full_name,employee_code,mobile,status")
+        .eq("role_key", "field_officer")
+        .in("status", ["approved", "active"])
+        .order("full_name");
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; full_name: string; employee_code: string | null; mobile: string | null; status: string }>;
+    },
+  });
+
+  const existingAssignQuery = useQuery({
+    queryKey: ["unit-form", "assignments", editing?.id ?? "new"],
+    enabled: open && !!editing?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employee_scope_assignments")
+        .select("id,candidate_id")
+        .eq("scope_type", "unit")
+        .eq("scope_id", editing!.id);
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; candidate_id: string }>;
+    },
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    if (editing?.id) {
+      setAssignedFoIds((existingAssignQuery.data ?? []).map((r) => r.candidate_id));
+    } else {
+      setAssignedFoIds([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing?.id, existingAssignQuery.data]);
+
+  const toggleFo = (id: string) =>
+    setAssignedFoIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const syncFieldOfficerAssignments = async (unitId: string): Promise<string | null> => {
+    try {
+      setFoSyncing(true);
+      const existing = editing?.id
+        ? (existingAssignQuery.data ?? [])
+        : [];
+      const currentIds = new Set(existing.map((r) => r.candidate_id));
+      const desired = new Set(assignedFoIds);
+      const toRemove = existing.filter((r) => !desired.has(r.candidate_id));
+      const toAdd = assignedFoIds.filter((id) => !currentIds.has(id));
+      const scopeLabel = `${form.code}${form.name ? ` – ${form.name}` : ""}`.trim();
+      if (toRemove.length) {
+        const { error } = await supabase
+          .from("employee_scope_assignments")
+          .delete()
+          .in("id", toRemove.map((r) => r.id));
+        if (error) throw error;
+      }
+      if (toAdd.length) {
+        const rows = toAdd.map((cid) => ({
+          candidate_id: cid,
+          scope_type: "unit",
+          scope_id: unitId,
+          scope_label: scopeLabel,
+        }));
+        const { error } = await supabase
+          .from("employee_scope_assignments")
+          .insert(rows as never);
+        if (error) throw error;
+      }
+      if (toRemove.length || toAdd.length) {
+        void logActivity({
+          module: "Unit Manager",
+          action: "assign_field_officers",
+          entityType: "units",
+          entityId: unitId,
+          entityLabel: scopeLabel,
+          after: { added: toAdd, removed: toRemove.map((r) => r.candidate_id) },
+        });
+        qc.invalidateQueries({ queryKey: ["admin", "employee_scope_assignments"] });
+      }
+      return null;
+    } catch (e) {
+      return e instanceof Error ? e.message : "Failed to save field officer assignments";
+    } finally {
+      setFoSyncing(false);
+    }
+  };
+
   const addOfficer = () =>
     set("reportingOfficers", [...form.reportingOfficers, { name: "", isPrimary: false, isActive: true }]);
 
@@ -642,9 +739,20 @@ function UnitFormDialog({
           onSubmit={async (e) => {
             e.preventDefault();
             setError(null);
-            const err = await onSubmit(form);
-            if (err) setError(err);
-            else onOpenChange(false);
+            const result = await onSubmit(form);
+            if (result.error) {
+              setError(result.error);
+              return;
+            }
+            if (result.id) {
+              const syncErr = await syncFieldOfficerAssignments(result.id);
+              if (syncErr) {
+                setError(syncErr);
+                toast.error(syncErr);
+                return;
+              }
+            }
+            onOpenChange(false);
           }}
           className="space-y-5"
         >
@@ -952,6 +1060,52 @@ function UnitFormDialog({
                 <Plus className="mr-1 h-3.5 w-3.5" /> Add officer
               </Button>
             </div>
+          </Section>
+
+          <Section title="Assign field officers (system users)">
+            <p className="text-xs text-muted-foreground">
+              Select onboarded field officers who should have this unit in their scope. They will be able to
+              onboard employees, mark attendance, and manage deployment for this unit.
+            </p>
+            {fosQuery.isLoading ? (
+              <div className="text-xs text-muted-foreground">Loading field officers…</div>
+            ) : (fosQuery.data ?? []).length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+                No active field officers found. Onboard a field officer from the Employees module first.
+              </div>
+            ) : (
+              <div className="grid max-h-56 gap-1.5 overflow-y-auto rounded-lg border border-border bg-background p-2 sm:grid-cols-2">
+                {(fosQuery.data ?? []).map((fo) => {
+                  const checked = assignedFoIds.includes(fo.id);
+                  return (
+                    <label
+                      key={fo.id}
+                      className={cn(
+                        "flex cursor-pointer items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs transition",
+                        checked ? "border-primary bg-primary/5" : "border-transparent hover:bg-secondary/40",
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        className="h-3.5 w-3.5 accent-primary"
+                        checked={checked}
+                        onChange={() => toggleFo(fo.id)}
+                      />
+                      <span className="font-medium text-foreground">{fo.full_name}</span>
+                      {fo.employee_code && (
+                        <span className="font-mono text-[10px] text-muted-foreground">{fo.employee_code}</span>
+                      )}
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+            {!editing && (
+              <p className="text-[11px] italic text-muted-foreground">
+                Assignments will be saved after the unit is created.
+              </p>
+            )}
+            {foSyncing && <p className="text-[11px] text-muted-foreground">Saving field officer assignments…</p>}
           </Section>
 
           {/* OTHER */}
