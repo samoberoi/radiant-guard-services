@@ -620,13 +620,12 @@ function UnitFormDialog({
     queryKey: ["unit-form", "field-officers"],
     enabled: open,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("candidates")
-        .select("id,full_name,employee_code,mobile,status")
-        .eq("role_key", "field_officer")
-        .in("status", ["approved", "active"])
-        .order("full_name");
-      if (error) throw error;
+      // Uses a SECURITY DEFINER RPC so branch-scoped viewers (HR, leadership,
+      // branch managers) can still see all onboarded field officers to assign.
+      const { data, error } = await (supabase as unknown as {
+        rpc: (fn: string) => Promise<{ data: unknown; error: unknown }>;
+      }).rpc("list_active_field_officers");
+      if (error) throw error as Error;
       return (data ?? []) as Array<{ id: string; full_name: string; employee_code: string | null; mobile: string | null; status: string }>;
     },
   });
