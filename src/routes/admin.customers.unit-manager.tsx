@@ -610,6 +610,99 @@ function UnitFormDialog({
     }));
   }, [form.shippingSameAsOrg, selectedOrg]);
 
+  // ---- Field officer assignment (scope_type='unit') ----
+  const qc = useQueryClient();
+  const fosQuery = useQuery({
+    queryKey: ["unit-form", "field-officers"],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("candidates")
+        .select("id,full_name,employee_code,mobile,status")
+        .eq("role_key", "field_officer")
+        .in("status", ["approved", "active"])
+        .order("full_name");
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; full_name: string; employee_code: string | null; mobile: string | null; status: string }>;
+    },
+  });
+
+  const existingAssignQuery = useQuery({
+    queryKey: ["unit-form", "assignments", editing?.id ?? "new"],
+    enabled: open && !!editing?.id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("employee_scope_assignments")
+        .select("id,candidate_id")
+        .eq("scope_type", "unit")
+        .eq("scope_id", editing!.id);
+      if (error) throw error;
+      return (data ?? []) as Array<{ id: string; candidate_id: string }>;
+    },
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    if (editing?.id) {
+      setAssignedFoIds((existingAssignQuery.data ?? []).map((r) => r.candidate_id));
+    } else {
+      setAssignedFoIds([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editing?.id, existingAssignQuery.data]);
+
+  const toggleFo = (id: string) =>
+    setAssignedFoIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const syncFieldOfficerAssignments = async (unitId: string): Promise<string | null> => {
+    try {
+      setFoSyncing(true);
+      const existing = editing?.id
+        ? (existingAssignQuery.data ?? [])
+        : [];
+      const currentIds = new Set(existing.map((r) => r.candidate_id));
+      const desired = new Set(assignedFoIds);
+      const toRemove = existing.filter((r) => !desired.has(r.candidate_id));
+      const toAdd = assignedFoIds.filter((id) => !currentIds.has(id));
+      const scopeLabel = `${form.code}${form.name ? ` – ${form.name}` : ""}`.trim();
+      if (toRemove.length) {
+        const { error } = await supabase
+          .from("employee_scope_assignments")
+          .delete()
+          .in("id", toRemove.map((r) => r.id));
+        if (error) throw error;
+      }
+      if (toAdd.length) {
+        const rows = toAdd.map((cid) => ({
+          candidate_id: cid,
+          scope_type: "unit",
+          scope_id: unitId,
+          scope_label: scopeLabel,
+        }));
+        const { error } = await supabase
+          .from("employee_scope_assignments")
+          .insert(rows as never);
+        if (error) throw error;
+      }
+      if (toRemove.length || toAdd.length) {
+        void logActivity({
+          module: "Unit Manager",
+          action: "assign_field_officers",
+          entityType: "units",
+          entityId: unitId,
+          entityLabel: scopeLabel,
+          after: { added: toAdd, removed: toRemove.map((r) => r.candidate_id) },
+        });
+        qc.invalidateQueries({ queryKey: ["admin", "employee_scope_assignments"] });
+      }
+      return null;
+    } catch (e) {
+      return e instanceof Error ? e.message : "Failed to save field officer assignments";
+    } finally {
+      setFoSyncing(false);
+    }
+  };
+
   const addOfficer = () =>
     set("reportingOfficers", [...form.reportingOfficers, { name: "", isPrimary: false, isActive: true }]);
 
