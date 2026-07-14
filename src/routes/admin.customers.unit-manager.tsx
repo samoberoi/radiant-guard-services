@@ -1,5 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { Download, Edit2, MapPin, Plus, Search, Warehouse, X } from "lucide-react";
 import { DeleteGuardButton } from "@/components/DeleteGuardButton";
 import { csvDate, csvJoin, csvMapLink, csvStatus, csvYesNo, downloadCsv } from "@/lib/csv-export";
