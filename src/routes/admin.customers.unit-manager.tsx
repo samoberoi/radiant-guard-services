@@ -1044,45 +1044,7 @@ function UnitFormDialog({
             />
           </Section>
 
-          <Section title="Field officer / Operational manager">
-            <div className="space-y-2">
-              {form.reportingOfficers.map((o, i) => (
-                <div
-                  key={i}
-                  className="grid items-center gap-2 rounded-lg border border-border bg-background p-3 sm:grid-cols-[1fr_auto_auto_auto]"
-                >
-                  <Input
-                    value={o.name}
-                    onChange={(e) => updateOfficer(i, { name: e.target.value })}
-                    placeholder="Officer name"
-                  />
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Switch checked={o.isPrimary} onCheckedChange={(v) => updateOfficer(i, { isPrimary: v })} />
-                    Primary
-                  </label>
-                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Switch checked={o.isActive} onCheckedChange={(v) => updateOfficer(i, { isActive: v })} />
-                    Active
-                  </label>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => removeOfficer(i)}
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                    aria-label="Remove"
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
-              <Button type="button" size="sm" variant="outline" onClick={addOfficer}>
-                <Plus className="mr-1 h-3.5 w-3.5" /> Add officer
-              </Button>
-            </div>
-          </Section>
-
-          <Section title="Assign field officers (system users)">
+          <Section title="Field officer assignment (dropdown)">
             <p className="text-xs text-muted-foreground">
               Select onboarded field officers who should have this unit in their scope. They will be able to
               onboard employees, mark attendance, and manage deployment for this unit.
@@ -1154,6 +1116,44 @@ function UnitFormDialog({
               </p>
             )}
             {foSyncing && <p className="text-[11px] text-muted-foreground">Saving field officer assignments…</p>}
+          </Section>
+
+          <Section title="Reporting officers (manual contact list)">
+            <div className="space-y-2">
+              {form.reportingOfficers.map((o, i) => (
+                <div
+                  key={i}
+                  className="grid items-center gap-2 rounded-lg border border-border bg-background p-3 sm:grid-cols-[1fr_auto_auto_auto]"
+                >
+                  <Input
+                    value={o.name}
+                    onChange={(e) => updateOfficer(i, { name: e.target.value })}
+                    placeholder="Officer name"
+                  />
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Switch checked={o.isPrimary} onCheckedChange={(v) => updateOfficer(i, { isPrimary: v })} />
+                    Primary
+                  </label>
+                  <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Switch checked={o.isActive} onCheckedChange={(v) => updateOfficer(i, { isActive: v })} />
+                    Active
+                  </label>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => removeOfficer(i)}
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                    aria-label="Remove"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              <Button type="button" size="sm" variant="outline" onClick={addOfficer}>
+                <Plus className="mr-1 h-3.5 w-3.5" /> Add officer
+              </Button>
+            </div>
           </Section>
 
           {/* OTHER */}
