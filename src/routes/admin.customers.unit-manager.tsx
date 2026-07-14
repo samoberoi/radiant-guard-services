@@ -473,6 +473,17 @@ function StatusBadge({ active }: { active: boolean }) {
   );
 }
 
+function readableError(e: unknown, fallback: string): string {
+  if (e && typeof e === "object") {
+    const record = e as Record<string, unknown>;
+    for (const key of ["message", "details", "hint", "code"] as const) {
+      const value = record[key];
+      if (typeof value === "string" && value.trim()) return value;
+    }
+  }
+  return e instanceof Error && e.message ? e.message : fallback;
+}
+
 function StatCard({ label, value, accent }: { label: string; value: number; accent?: boolean }) {
   return (
     <div className="rounded-2xl border border-border bg-card p-4">
@@ -721,7 +732,7 @@ function UnitFormDialog({
       }
       return null;
     } catch (e) {
-      return e instanceof Error ? e.message : "Failed to save field officer assignments";
+      return readableError(e, "Failed to save field officer assignments");
     } finally {
       setFoSyncing(false);
     }
