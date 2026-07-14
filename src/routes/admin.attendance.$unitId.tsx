@@ -1646,22 +1646,46 @@ function MusterRollPage() {
           This attendance sheet is {status === "approved" ? "approved" : "submitted"} and locked for editing. {status === "submitted" ? "Reject it to allow further edits." : "Reopen it to make changes."}
         </div>
       )}
+      {status === "submitted" && canApprove && (
+        <div className="rounded-md border border-sky-300/60 bg-sky-50 px-3 py-2 text-xs text-sky-800 print:hidden">
+          You can edit this attendance in place, or reject with a note so the submitter can fix it.
+        </div>
+      )}
 
-      <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
-        <DialogContent className="max-w-sm">
+      <Dialog open={rejectOpen} onOpenChange={(o) => { setRejectOpen(o); if (!o) { setRejectReason(""); setRejectProof(null); } }}>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Reject attendance</DialogTitle>
-            <DialogDescription>Provide a reason so the submitter knows what to fix.</DialogDescription>
+            <DialogDescription>Give a clear reason and optionally attach a proof image (photo of physical register, WhatsApp screenshot, etc.).</DialogDescription>
           </DialogHeader>
-          <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Reason for rejection…" rows={4} />
+          <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Reason for rejection (min 5 characters)…" rows={4} />
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Proof image (optional)</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setRejectProof(e.target.files?.[0] ?? null)}
+              className="block w-full text-xs file:mr-3 file:rounded-md file:border-0 file:bg-secondary file:px-3 file:py-1.5 file:text-xs file:font-semibold hover:file:bg-secondary/80"
+            />
+            {rejectProof && (
+              <div className="text-[11px] text-muted-foreground">{rejectProof.name} ({Math.round(rejectProof.size / 1024)} KB)</div>
+            )}
+          </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="ghost" onClick={() => setRejectOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => {
-              if (!rejectReason.trim()) { toast.error("Reason required"); return; }
-              transitionSheet.mutate({ status: "rejected", reason: rejectReason.trim() }, {
-                onSuccess: () => { setRejectOpen(false); setRejectReason(""); },
-              });
-            }}>Reject</Button>
+            <Button variant="ghost" onClick={() => setRejectOpen(false)} disabled={uploadingProof || transitionSheet.isPending}>Cancel</Button>
+            <Button
+              variant="destructive"
+              disabled={uploadingProof || transitionSheet.isPending}
+              onClick={() => {
+                if (rejectReason.trim().length < 5) { toast.error("Reason must be at least 5 characters"); return; }
+                transitionSheet.mutate(
+                  { status: "rejected", reason: rejectReason.trim(), proofFile: rejectProof },
+                  { onSuccess: () => { setRejectOpen(false); setRejectReason(""); setRejectProof(null); } },
+                );
+              }}
+            >
+              {uploadingProof || transitionSheet.isPending ? <><Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> Rejecting…</> : "Reject"}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
