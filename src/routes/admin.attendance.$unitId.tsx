@@ -1597,6 +1597,21 @@ function MusterRollPage() {
           {status === "rejected" && sheet?.rejection_reason && (
             <span className="text-xs text-rose-700">Reason: {sheet.rejection_reason}</span>
           )}
+          {status === "rejected" && sheet?.review_proof_url && (
+            <button
+              type="button"
+              className="text-xs font-semibold text-rose-700 underline underline-offset-2"
+              onClick={async () => {
+                const { data, error } = await supabase.storage
+                  .from("attendance-review-proofs")
+                  .createSignedUrl(sheet.review_proof_url as string, 300);
+                if (error || !data?.signedUrl) { toast.error("Could not open proof image"); return; }
+                window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+              }}
+            >
+              View HR proof image
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {(status === "draft" || status === "rejected") && (
