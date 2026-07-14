@@ -2,14 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Check, ChevronsUpDown, Download, Edit2, MapPin, Plus, Search, Warehouse, X } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Download, Edit2, MapPin, Plus, Search, Warehouse, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DeleteGuardButton } from "@/components/DeleteGuardButton";
 import { csvDate, csvJoin, csvMapLink, csvStatus, csvYesNo, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
-import { confirmAction } from "@/components/ConfirmProvider";
 import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -516,6 +513,7 @@ function UnitFormDialog({
   const [form, setForm] = useState<Omit<Unit, "id">>(() => emptyUnit(nextUnitCode(units)));
   const [error, setError] = useState<string | null>(null);
   const [assignedFoIds, setAssignedFoIds] = useState<string[]>([]);
+  const [selectedFoToAdd, setSelectedFoToAdd] = useState("");
   const [foSyncing, setFoSyncing] = useState(false);
 
   useEffect(() => {
@@ -528,6 +526,7 @@ function UnitFormDialog({
       setForm(emptyUnit(nextUnitCode(units)));
     }
     setError(null);
+    setSelectedFoToAdd("");
   }, [open, editing, units]);
 
   const set = <K extends keyof Omit<Unit, "id">>(k: K, v: Omit<Unit, "id">[K]) =>
@@ -632,15 +631,22 @@ function UnitFormDialog({
     },
   });
 
+  const fieldOfficerIds = useMemo(
+    () => (fosQuery.data ?? []).map((fo) => fo.id),
+    [fosQuery.data],
+  );
+
   const existingAssignQuery = useQuery({
-    queryKey: ["unit-form", "assignments", editing?.id ?? "new"],
-    enabled: open && !!editing?.id,
+    queryKey: ["unit-form", "assignments", editing?.id ?? "new", fieldOfficerIds.join(",")],
+    enabled: open && !!editing?.id && !fosQuery.isLoading,
     queryFn: async () => {
+      if (fieldOfficerIds.length === 0) return [];
       const { data, error } = await supabase
         .from("employee_scope_assignments")
         .select("id,candidate_id")
         .eq("scope_type", "unit")
-        .eq("scope_id", editing!.id);
+        .eq("scope_id", editing!.id)
+        .in("candidate_id", fieldOfficerIds);
       if (error) throw error;
       return (data ?? []) as Array<{ id: string; candidate_id: string }>;
     },
@@ -658,6 +664,17 @@ function UnitFormDialog({
 
   const toggleFo = (id: string) =>
     setAssignedFoIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+
+  const availableFieldOfficers = useMemo(
+    () => (fosQuery.data ?? []).filter((fo) => !assignedFoIds.includes(fo.id)),
+    [fosQuery.data, assignedFoIds],
+  );
+
+  const addSelectedFieldOfficer = () => {
+    if (!selectedFoToAdd || assignedFoIds.includes(selectedFoToAdd)) return;
+    setAssignedFoIds((prev) => [...prev, selectedFoToAdd]);
+    setSelectedFoToAdd("");
+  };
 
   const syncFieldOfficerAssignments = async (unitId: string): Promise<string | null> => {
     try {
@@ -1027,7 +1044,81 @@ function UnitFormDialog({
             />
           </Section>
 
-          <Section title="Field officer / Operational manager">
+          <Section title="Field officer assignment (dropdown)">
+            <p className="text-xs text-muted-foreground">
+              Select onboarded field officers who should have this unit in their scope. They will be able to
+              onboard employees, mark attendance, and manage deployment for this unit.
+            </p>
+            {fosQuery.isLoading ? (
+              <div className="text-xs text-muted-foreground">Loading field officers…</div>
+            ) : (fosQuery.data ?? []).length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+                No active field officers found. Onboard a field officer from the Employees module first.
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+                  <select
+                    value={selectedFoToAdd}
+                    onChange={(e) => setSelectedFoToAdd(e.target.value)}
+                    disabled={availableFieldOfficers.length === 0}
+                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none transition-colors focus:border-ring focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    aria-label="Select field officer"
+                  >
+                    <option value="">
+                      {availableFieldOfficers.length === 0
+                        ? "All field officers selected"
+                        : "Select field officer to assign…"}
+                    </option>
+                    {availableFieldOfficers.map((fo) => (
+                      <option key={fo.id} value={fo.id}>
+                        {fo.full_name}{fo.employee_code ? ` — ${fo.employee_code}` : ""}{fo.mobile ? ` (${fo.mobile})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addSelectedFieldOfficer}
+                    disabled={!selectedFoToAdd}
+                    className="h-10"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Assign
+                  </Button>
+                </div>
+                {assignedFoIds.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {assignedFoIds.map((id) => {
+                      const fo = (fosQuery.data ?? []).find((f) => f.id === id);
+                      if (!fo) return null;
+                      return (
+                        <Badge key={id} variant="secondary" className="gap-1 pr-1">
+                          <span>{fo.full_name}</span>
+                          <button
+                            type="button"
+                            onClick={() => toggleFo(id)}
+                            className="rounded-sm p-0.5 hover:bg-background/60"
+                            aria-label={`Remove ${fo.full_name}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+            {!editing && (
+              <p className="text-[11px] italic text-muted-foreground">
+                Assignments will be saved after the unit is created.
+              </p>
+            )}
+            {foSyncing && <p className="text-[11px] text-muted-foreground">Saving field officer assignments…</p>}
+          </Section>
+
+          <Section title="Reporting officers (manual contact list)">
             <div className="space-y-2">
               {form.reportingOfficers.map((o, i) => (
                 <div
@@ -1063,95 +1154,6 @@ function UnitFormDialog({
                 <Plus className="mr-1 h-3.5 w-3.5" /> Add officer
               </Button>
             </div>
-          </Section>
-
-          <Section title="Assign field officers (system users)">
-            <p className="text-xs text-muted-foreground">
-              Select onboarded field officers who should have this unit in their scope. They will be able to
-              onboard employees, mark attendance, and manage deployment for this unit.
-            </p>
-            {fosQuery.isLoading ? (
-              <div className="text-xs text-muted-foreground">Loading field officers…</div>
-            ) : (fosQuery.data ?? []).length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
-                No active field officers found. Onboard a field officer from the Employees module first.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      role="combobox"
-                      className="w-full justify-between font-normal"
-                    >
-                      <span className="truncate text-left">
-                        {assignedFoIds.length === 0
-                          ? "Select field officers…"
-                          : `${assignedFoIds.length} field officer${assignedFoIds.length === 1 ? "" : "s"} selected`}
-                      </span>
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-                    <Command>
-                      <CommandInput placeholder="Search field officer by name or code…" />
-                      <CommandList>
-                        <CommandEmpty>No field officer found.</CommandEmpty>
-                        <CommandGroup>
-                          {(fosQuery.data ?? []).map((fo) => {
-                            const checked = assignedFoIds.includes(fo.id);
-                            return (
-                              <CommandItem
-                                key={fo.id}
-                                value={`${fo.full_name} ${fo.employee_code ?? ""} ${fo.mobile ?? ""}`}
-                                onSelect={() => toggleFo(fo.id)}
-                              >
-                                <Check className={cn("mr-2 h-4 w-4", checked ? "opacity-100" : "opacity-0")} />
-                                <span className="flex-1 truncate">{fo.full_name}</span>
-                                {fo.employee_code && (
-                                  <span className="ml-2 font-mono text-[10px] text-muted-foreground">
-                                    {fo.employee_code}
-                                  </span>
-                                )}
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                {assignedFoIds.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5">
-                    {assignedFoIds.map((id) => {
-                      const fo = (fosQuery.data ?? []).find((f) => f.id === id);
-                      if (!fo) return null;
-                      return (
-                        <Badge key={id} variant="secondary" className="gap-1 pr-1">
-                          <span>{fo.full_name}</span>
-                          <button
-                            type="button"
-                            onClick={() => toggleFo(id)}
-                            className="rounded-sm p-0.5 hover:bg-background/60"
-                            aria-label={`Remove ${fo.full_name}`}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-            {!editing && (
-              <p className="text-[11px] italic text-muted-foreground">
-                Assignments will be saved after the unit is created.
-              </p>
-            )}
-            {foSyncing && <p className="text-[11px] text-muted-foreground">Saving field officer assignments…</p>}
           </Section>
 
           {/* OTHER */}
