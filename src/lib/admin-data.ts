@@ -781,10 +781,15 @@ export function useUnits() {
   const invalidate = () => qc.invalidateQueries({ queryKey: QK_UNITS });
 
   const addMut = useMutation({
-    mutationFn: async (data: Omit<Unit, "id">) => {
-      const { error } = await supabase.from("units").insert(unitToRow(data));
+    mutationFn: async (data: Omit<Unit, "id">): Promise<string> => {
+      const { data: inserted, error } = await supabase
+        .from("units")
+        .insert(unitToRow(data))
+        .select("id")
+        .single();
       if (error) throw error;
       void logActivity({ module: "Unit Manager", action: "create", entityType: "units", entityLabel: (data as unknown as { name?: string; code?: string }).name || (data as unknown as { code?: string }).code || "", details: data as unknown as Record<string, unknown> });
+      return (inserted as { id: string }).id;
     },
     onSuccess: invalidate,
   });
@@ -812,8 +817,8 @@ export function useUnits() {
 
   const addUnit = async (data: Omit<Unit, "id">): Promise<Result> => {
     try {
-      await addMut.mutateAsync(data);
-      return { ok: true };
+      const id = await addMut.mutateAsync(data);
+      return { ok: true, id };
     } catch (e) {
       return { ok: false, error: friendlyDbError(e, "unit") };
     }
