@@ -4579,6 +4579,16 @@ export type Database = {
         Args: { _unit_id: string }
         Returns: boolean
       }
+      list_active_field_officers: {
+        Args: never
+        Returns: {
+          employee_code: string
+          full_name: string
+          id: string
+          mobile: string
+          status: string
+        }[]
+      }
       nextval: { Args: { sequence_name: string }; Returns: number }
     }
     Enums: {
