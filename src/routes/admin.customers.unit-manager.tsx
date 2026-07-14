@@ -702,7 +702,10 @@ function UnitFormDialog({
         }));
         const { error } = await supabase
           .from("employee_scope_assignments")
-          .insert(rows as never);
+          .upsert(rows as never, {
+            onConflict: "candidate_id,scope_type,scope_id",
+            ignoreDuplicates: true,
+          });
         if (error) throw error;
       }
       if (toRemove.length || toAdd.length) {
