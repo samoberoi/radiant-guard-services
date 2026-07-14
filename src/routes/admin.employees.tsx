@@ -2765,6 +2765,58 @@ function CandidateWizard({
   const primaryUnitId = form.unit_ids[0] ?? null;
   const unit = primaryUnitId ? units.find((u) => u.id === primaryUnitId) : undefined;
 
+  // Restrict the Designation dropdown to designations present in the contracts
+  // of the selected units. Field officer or not — a unit's contract resources
+  // define the valid designations for that unit.
+  const selectedUnitIdsKey = form.unit_ids.slice().sort().join(",");
+  const contractDesigQuery = useQuery({
+    queryKey: ["wizard-contract-designations", selectedUnitIdsKey],
+    enabled: form.unit_ids.length > 0,
+    staleTime: 30_000,
+    queryFn: async (): Promise<string[]> => {
+      const { data: contracts, error: cErr } = await supabase
+        .from("client_contracts" as never)
+        .select("id,unit_id")
+        .in("unit_id", form.unit_ids);
+      if (cErr) throw cErr;
+      const contractIds = ((contracts ?? []) as { id: string }[]).map((c) => c.id);
+      if (contractIds.length === 0) return [];
+      const { data: res, error: rErr } = await supabase
+        .from("contract_resources" as never)
+        .select("designation_id")
+        .in("contract_id", contractIds);
+      if (rErr) throw rErr;
+      const ids = Array.from(
+        new Set(
+          ((res ?? []) as { designation_id: string | null }[])
+            .map((r) => r.designation_id)
+            .filter((x): x is string => !!x),
+        ),
+      );
+      return ids;
+    },
+  });
+  const allowedDesignationIds = contractDesigQuery.data ?? [];
+  const filteredDesignations = useMemo(() => {
+    if (form.unit_ids.length === 0) return designations;
+    if (contractDesigQuery.isLoading) return designations;
+    const allow = new Set(allowedDesignationIds);
+    return designations.filter((d) => allow.has(d.id));
+  }, [designations, form.unit_ids.length, contractDesigQuery.isLoading, allowedDesignationIds]);
+
+  // If the currently selected designation is no longer allowed by the units'
+  // contracts, clear it so the user picks a valid one.
+  useEffect(() => {
+    if (form.unit_ids.length === 0) return;
+    if (contractDesigQuery.isLoading) return;
+    if (!form.designation_id) return;
+    if (!allowedDesignationIds.includes(form.designation_id)) {
+      setForm((f) => ({ ...f, designation_id: null }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUnitIdsKey, contractDesigQuery.isLoading, allowedDesignationIds.join(",")]);
+
+
   // ----- File upload helper ----- //
   const uploadFile = async (file: File, slot: "photo" | "signature" | "aadhaar" | "pan"): Promise<string> => {
     const ext = file.name.split(".").pop() || "png";
