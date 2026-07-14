@@ -94,7 +94,7 @@ export const INDUSTRY_TYPES = [
   "Other",
 ] as const;
 
-type Result = { ok: true } | { ok: false; error: string };
+type Result = { ok: true; id?: string } | { ok: false; error: string };
 type AddResult = { ok: true; id: string } | { ok: false; error: string };
 
 const QK = {
