@@ -9,6 +9,7 @@ import { z } from "zod";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
+import { notifyApprovers, notifyUser } from "@/lib/notifications";
 import { extractAttendanceFromImage } from "@/lib/attendance-ocr.functions";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
