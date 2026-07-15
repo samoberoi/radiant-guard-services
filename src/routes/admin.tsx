@@ -665,6 +665,7 @@ function AdminLayout() {
         </div>
       </main>
     </div>
+    </TooltipProvider>
   );
 }
 
