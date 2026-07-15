@@ -40,6 +40,11 @@ export function HeroTile({
         className,
       )}
     >
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-accent via-accent to-accent-secondary" />
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent/[0.08] via-transparent to-accent-secondary/[0.06]" />
+      <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
+      <div className="pointer-events-none absolute -left-16 -bottom-24 h-56 w-56 rounded-full bg-accent-secondary/15 blur-3xl" />
+
 
 
       <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
