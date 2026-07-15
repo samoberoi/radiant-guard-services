@@ -1084,13 +1084,19 @@ function EmployeesPage() {
         "employee_code",
         "candidate_code",
         "approved_at",
+        "approved_by",
         "rejected_at",
         "rejection_reason",
       ].forEach((k) => delete stripped[k]);
       const today = new Date().toISOString().slice(0, 10);
-      // Reset offboarding + lifecycle fields for the new active record
-      stripped.status = "active";
-      stripped.is_enabled = true;
+
+      // FO / non-approver roles can only insert rows as 'pending' per RLS.
+      const canDirectActivate = isSuperAdmin || ["admin", "super_admin", "hr", "leadership"].includes(roleKey ?? "");
+      const newStatus = canDirectActivate ? "active" : "pending";
+
+      // Reset offboarding + lifecycle fields for the new record
+      stripped.status = newStatus;
+      stripped.is_enabled = canDirectActivate;
       stripped.no_hire = false;
       stripped.offboarding_reason_id = null;
       stripped.offboarded_at = null;
@@ -1099,14 +1105,16 @@ function EmployeesPage() {
       stripped.preferred_joining_date = today;
       stripped.employee_code = "";
       stripped.candidate_code = "";
+      // created_by must be the current user for RLS insert check on non-admin paths.
+      stripped.created_by = currentUserId ?? source.created_by ?? null;
 
       const { data: inserted, error: insertErr } = await supabase
         .from("candidates" as never)
         .insert(stripped as unknown as never)
-        .select("id,employee_code,full_name")
+        .select("id,employee_code,full_name,status")
         .single();
       if (insertErr) throw insertErr;
-      const newRec = inserted as unknown as { id: string; employee_code: string; full_name: string };
+      const newRec = inserted as unknown as { id: string; employee_code: string; full_name: string; status: string };
 
       // Copy candidate_units mapping to the new candidate
       const { data: units } = await supabase
@@ -1134,12 +1142,16 @@ function EmployeesPage() {
         entityId: newRec.id,
         entityLabel: newRec.full_name || newRec.employee_code,
         before: { source_id: candidate.id, source_employee_code: candidate.employee_code },
-        after: { new_employee_code: newRec.employee_code, joining_date: today },
+        after: { new_employee_code: newRec.employee_code, joining_date: today, status: newRec.status },
       });
       return newRec;
     },
     onSuccess: (rec) => {
-      toast.success(`Reactivated as ${rec.employee_code || "new employee"}`);
+      if (rec.status === "pending") {
+        toast.success("Reactivation submitted for HR/Admin approval");
+      } else {
+        toast.success(`Reactivated as ${rec.employee_code || "new employee"}`);
+      }
       qc.invalidateQueries({ queryKey: QK });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Reactivation failed"),
