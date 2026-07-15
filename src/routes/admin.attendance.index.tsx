@@ -55,6 +55,7 @@ import {
 } from "@/components/ui/select";
 import { classifyAttendanceEmployee, matchesAttendanceScope, type AttendanceScopeAssignment, type AttendanceUnitContext } from "@/lib/attendance";
 import { supabase } from "@/integrations/supabase/client";
+import { useFieldOfficerUnitScope } from "@/lib/use-fo-unit-scope";
 
 export const Route = createFileRoute("/admin/attendance/")({
   component: AttendanceUnitsPage,
