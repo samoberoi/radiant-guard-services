@@ -1247,33 +1247,42 @@ function EmployeesPage() {
         .single();
       if (error) throw error;
       const empCode = (data as { employee_code?: string })?.employee_code ?? "";
-      await logActivity({
-        module: "Employees",
-        action: "approve",
-        entityType: "candidate",
-        entityId: c.id,
-        entityLabel: c.full_name || c.aadhaar_number,
-        after: data as unknown as Record<string, unknown>,
-      });
       const label = c.full_name || c.aadhaar_number || "Candidate";
-      await notifyOnboardingApprovers({
-        type: "candidate_approved",
-        title: "Candidate approved",
-        message: `${label} was approved${empCode ? ` (${empCode})` : ""}.`,
-        link: "/admin/employees",
-        entityType: "candidate",
-        entityId: c.id,
-      }).catch((e: unknown) => console.error("notifyOnboardingApprovers approve failed", e));
-      if (c.created_by) {
-        await notifyUser(c.created_by, {
-          type: "candidate_approved",
-          title: "Your candidate was approved",
-          message: `${label} was approved${empCode ? ` — Employee Code ${empCode}` : ""}.`,
-          link: "/admin/employees",
-          entityType: "candidate",
-          entityId: c.id,
-        }).catch((e: unknown) => console.error("notifyUser approve failed", e));
-      }
+      // Fire-and-forget: activity log + notifications should not block the UI.
+      void (async () => {
+        try {
+          await Promise.allSettled([
+            logActivity({
+              module: "Employees",
+              action: "approve",
+              entityType: "candidate",
+              entityId: c.id,
+              entityLabel: c.full_name || c.aadhaar_number,
+              after: data as unknown as Record<string, unknown>,
+            }),
+            notifyOnboardingApprovers({
+              type: "candidate_approved",
+              title: "Candidate approved",
+              message: `${label} was approved${empCode ? ` (${empCode})` : ""}.`,
+              link: "/admin/employees",
+              entityType: "candidate",
+              entityId: c.id,
+            }),
+            c.created_by
+              ? notifyUser(c.created_by, {
+                  type: "candidate_approved",
+                  title: "Your candidate was approved",
+                  message: `${label} was approved${empCode ? ` — Employee Code ${empCode}` : ""}.`,
+                  link: "/admin/employees",
+                  entityType: "candidate",
+                  entityId: c.id,
+                })
+              : Promise.resolve(),
+          ]);
+        } catch (e) {
+          console.error("post-approve side effects failed", e);
+        }
+      })();
       return data as { employee_code: string };
     },
     onSuccess: (data) => {
@@ -1290,33 +1299,41 @@ function EmployeesPage() {
         .update({ status: "rejected", rejection_reason: reason } as unknown as never)
         .eq("id", c.id);
       if (error) throw error;
-      await logActivity({
-        module: "Employees",
-        action: "reject",
-        entityType: "candidate",
-        entityId: c.id,
-        entityLabel: c.full_name || c.aadhaar_number,
-        after: { rejection_reason: reason },
-      });
       const label = c.full_name || c.aadhaar_number || "Candidate";
-      await notifyOnboardingApprovers({
-        type: "candidate_rejected",
-        title: "Candidate rejected",
-        message: `${label} was rejected. Reason: ${reason}`,
-        link: "/admin/employees",
-        entityType: "candidate",
-        entityId: c.id,
-      }).catch((e: unknown) => console.error("notifyOnboardingApprovers reject failed", e));
-      if (c.created_by) {
-        await notifyUser(c.created_by, {
-          type: "candidate_rejected",
-          title: "Your candidate needs changes",
-          message: `${label} was rejected. Reason: ${reason}`,
-          link: "/admin/employees",
-          entityType: "candidate",
-          entityId: c.id,
-        }).catch((e: unknown) => console.error("notifyUser reject failed", e));
-      }
+      void (async () => {
+        try {
+          await Promise.allSettled([
+            logActivity({
+              module: "Employees",
+              action: "reject",
+              entityType: "candidate",
+              entityId: c.id,
+              entityLabel: c.full_name || c.aadhaar_number,
+              after: { rejection_reason: reason },
+            }),
+            notifyOnboardingApprovers({
+              type: "candidate_rejected",
+              title: "Candidate rejected",
+              message: `${label} was rejected. Reason: ${reason}`,
+              link: "/admin/employees",
+              entityType: "candidate",
+              entityId: c.id,
+            }),
+            c.created_by
+              ? notifyUser(c.created_by, {
+                  type: "candidate_rejected",
+                  title: "Your candidate needs changes",
+                  message: `${label} was rejected. Reason: ${reason}`,
+                  link: "/admin/employees",
+                  entityType: "candidate",
+                  entityId: c.id,
+                })
+              : Promise.resolve(),
+          ]);
+        } catch (e) {
+          console.error("post-reject side effects failed", e);
+        }
+      })();
     },
     onSuccess: () => {
       toast.success("Candidate rejected");
