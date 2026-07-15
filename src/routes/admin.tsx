@@ -925,19 +925,27 @@ function CollapsedGroupPopover({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          title={t(group.label)}
-          aria-label={t(group.label)}
-          aria-expanded={open}
-          className={cn(itemBase, "justify-center px-2", groupActive ? itemActive : itemIdle)}
-        >
-          <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
-            <Icon className="h-4 w-4" />
-          </span>
-        </button>
-      </PopoverTrigger>
+      <Tooltip>
+        <PopoverTrigger asChild>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={t(group.label)}
+              aria-expanded={open}
+              className={cn(itemBase, "justify-center px-2", groupActive ? itemActive : itemIdle)}
+            >
+              <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
+                <Icon className="h-4 w-4" />
+              </span>
+            </button>
+          </TooltipTrigger>
+        </PopoverTrigger>
+        {!open && (
+          <TooltipContent side="right" sideOffset={10} className="font-medium">
+            {t(group.label)}
+          </TooltipContent>
+        )}
+      </Tooltip>
       {group.children && (
         <PopoverContent
           side="right"
