@@ -429,19 +429,52 @@ function AdminLayout() {
           )}
         </div>
 
-        {/* Nav */}
+        {/* Nav — grouped like the reference portal (Menu / Operations / Finance / Admin) */}
         <nav className="scrollbar-hide flex-1 overflow-y-auto px-2.5 pb-3">
-          <div className="space-y-[3px]">
-            {visibleGroups.map((g) => (
-              <SidebarGroup
-                key={g.key}
-                group={g}
-                collapsed={collapsed}
-                isActive={isActive}
-                groupActive={isGroupActive(g)}
-              />
-            ))}
-          </div>
+          {(() => {
+            const sections: Array<{ label: string; keys: string[] }> = [
+              { label: "Menu", keys: ["dashboard", "my-inventory", "profile"] },
+              { label: "Operations", keys: ["organizations", "contracts", "employees", "attendance", "inventory", "vehicles", "assets", "office-assets"] },
+              { label: "Finance", keys: ["payroll", "invoice"] },
+              { label: "Admin", keys: ["control"] },
+            ];
+            const used = new Set<string>();
+            return (
+              <div className="space-y-3">
+                {sections.map((s) => {
+                  const items = visibleGroups.filter((g) => s.keys.includes(g.key));
+                  if (items.length === 0) return null;
+                  items.forEach((g) => used.add(g.key));
+                  return (
+                    <div key={s.label} className="space-y-[3px]">
+                      {!collapsed && (
+                        <div className="px-2.5 pt-1 pb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground/70">
+                          {s.label}
+                        </div>
+                      )}
+                      {items.map((g) => (
+                        <SidebarGroup key={g.key} group={g} collapsed={collapsed} isActive={isActive} groupActive={isGroupActive(g)} />
+                      ))}
+                    </div>
+                  );
+                })}
+                {(() => {
+                  const rest = visibleGroups.filter((g) => !used.has(g.key));
+                  if (rest.length === 0) return null;
+                  return (
+                    <div className="space-y-[3px]">
+                      {!collapsed && (
+                        <div className="px-2.5 pt-1 pb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground/70">More</div>
+                      )}
+                      {rest.map((g) => (
+                        <SidebarGroup key={g.key} group={g} collapsed={collapsed} isActive={isActive} groupActive={isGroupActive(g)} />
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          })()}
         </nav>
 
         {/* Footer: user + collapse */}
@@ -569,8 +602,17 @@ function AdminLayout() {
 
       {/* Main */}
       <main className={cn("relative z-10 px-4 py-6 sm:px-6 lg:py-8 lg:pr-6", mainPad)}>
-        {/* Desktop top utility bar (notifications) */}
-        <div className="mb-4 hidden items-center justify-end gap-2 lg:flex">
+        {/* Desktop top utility bar — global search + notifications */}
+        <div className="mb-4 hidden items-center gap-3 lg:flex">
+          <div className="flex h-10 flex-1 items-center gap-2 rounded-full border border-white/60 bg-white/70 px-4 text-sm text-muted-foreground backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_10px_30px_-18px_rgba(15,23,42,0.18)]">
+            <svg className="h-4 w-4 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input
+              type="search"
+              placeholder="Search employees, units, invoices…"
+              className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
+            />
+            <kbd className="hidden rounded-md border border-border/60 bg-white/80 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground sm:inline-flex">⌘K</kbd>
+          </div>
           <NotificationBell />
         </div>
         <div className="mx-auto max-w-[1500px]">
@@ -609,13 +651,13 @@ function SidebarGroup({
   }, [groupActive]);
 
   const itemBase =
-    "group relative flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium transition-colors";
-  const itemIdle = "text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground";
+    "group relative flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-[13px] font-medium transition-all";
+  const itemIdle = "text-foreground/70 hover:bg-foreground/[0.05] hover:text-foreground";
   const itemActive =
-    "bg-accent/10 text-accent font-semibold before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-accent";
+    "bg-foreground text-background shadow-[0_10px_28px_-14px_rgba(15,23,42,0.55)]";
 
-  const iconSpanBase = "grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors";
-  const iconSpanActive = "bg-accent text-accent-foreground";
+  const iconSpanBase = "grid h-7 w-7 shrink-0 place-items-center rounded-xl transition-colors";
+  const iconSpanActive = "bg-white/15 text-background";
   const iconSpanIdle = "text-foreground/60 group-hover:text-foreground";
 
   if (!group.children || group.children.length === 0) {
