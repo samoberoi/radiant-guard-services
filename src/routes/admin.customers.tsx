@@ -121,42 +121,20 @@ function CustomersDashboard() {
     <div>
       <PageHeader
         title="Organizations Dashboard"
+        eyebrow="Organizations"
+        icon={Network}
         description="Live overview of organizations, branches and operational units across India."
         crumbs={[{ label: "Organizations" }]}
+        kpis={
+          <>
+            <PageStat label="Organizations" value={customers.length} icon={Users} tone="accent" trend={{ delta: `${activeCustomers} active`, direction: "flat" }} />
+            <PageStat label="Units" value={units.length} icon={Warehouse} trend={{ delta: `${activeUnits} active`, direction: "flat" }} />
+            <PageStat label="Branches" value={branches.length} icon={Building2} trend={{ delta: `${states.length} states`, direction: "flat" }} />
+            <PageStat label="States" value={states.length} icon={MapPin} tone="success" />
+          </>
+        }
       />
 
-      {/* Stat tiles */}
-      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile
-          label="Organizations"
-          value={customers.length}
-          sub={`${activeCustomers} active`}
-          icon={Users}
-          to="/admin/customers/customer-manager"
-          accent
-        />
-        <StatTile
-          label="Units"
-          value={units.length}
-          sub={`${activeUnits} active`}
-          icon={Warehouse}
-          to="/admin/customers/unit-manager"
-        />
-        <StatTile
-          label="Branches"
-          value={branches.length}
-          sub={`${states.length} states`}
-          icon={Building2}
-          to="/admin/customers/branch-manager"
-        />
-        <StatTile
-          label="States"
-          value={states.length}
-          sub="across India"
-          icon={MapPin}
-          to="/admin/customers/state-manager"
-        />
-      </div>
 
       <div className="mb-4 flex justify-end gap-2">
         <Button
