@@ -3,11 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Building2,
-  CalendarCheck,
   ChevronDown,
   ChevronRight,
   ClipboardList,
+  Mail,
+  MapPin,
   PackageSearch,
+  Phone,
   ShieldCheck,
   TrendingDown,
   TrendingUp,
@@ -15,9 +17,11 @@ import {
   Warehouse,
   UserPlus,
   Activity,
+  ArrowUpRight,
+  Sparkles,
 } from "lucide-react";
 
-import { HeroTile } from "@/components/HeroTile";
+import { DashboardShell } from "@/components/LiveFeed";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentPermissions } from "@/lib/rbac";
 
@@ -45,18 +49,29 @@ function isoDaysAgo(days: number) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("") || "FO";
+}
+
 function FieldOfficerDashboard() {
   const { roleKey, isSuperAdmin } = useCurrentPermissions();
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
   const [phone, setPhone] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
 
   useEffect(() => {
     void supabase.auth.getUser().then(({ data }) => {
       setUserId(data.user?.id ?? null);
-      const email = data.user?.email ?? "";
-      const m = email.match(/phone-(\d{10})@/);
+      const em = data.user?.email ?? "";
+      const m = em.match(/phone-(\d{10})@/);
       setPhone(m?.[1] ?? "");
+      setEmail(em);
     });
   }, []);
 
@@ -67,41 +82,30 @@ function FieldOfficerDashboard() {
   }, [roleKey, isSuperAdmin, navigate]);
 
   const dashQ = useQuery({
-    queryKey: ["field-officer-dashboard-v3", phone, userId],
+    queryKey: ["field-officer-dashboard-v4", phone, userId],
     enabled: !!phone,
     queryFn: async () => {
       const { data: me } = await supabase
         .from("candidates")
-        .select("id,full_name")
+        .select("id,full_name,employee_code,designation_id")
         .eq("mobile", phone)
         .maybeSingle();
       const meId = (me as { id?: string } | null)?.id ?? null;
       const meName = (me as { full_name?: string } | null)?.full_name ?? "";
+      const meCode = (me as { employee_code?: string } | null)?.employee_code ?? "";
       const empty = {
-        meName,
+        meName, meCode,
         units: [] as UnitNode[],
-        guardsTotal: 0,
-        joinedThisWeek: 0,
-        joinedLastWeek: 0,
-        attendanceRateToday: 0,
-        attendanceRateYesterday: 0,
-        pendingOnboardingTotal: 0,
-        pendingOnboardingLastWeek: 0,
-        openDemandsTotal: 0,
-        inventoryItemsTotal: 0,
+        guardsTotal: 0, joinedThisWeek: 0, joinedLastWeek: 0,
+        attendanceRateToday: 0, attendanceRateYesterday: 0,
+        pendingOnboardingTotal: 0, pendingOnboardingLastWeek: 0,
+        openDemandsTotal: 0, inventoryItemsTotal: 0,
       };
       if (!meId) return empty;
 
       const [scopeRes, cuRes] = await Promise.all([
-        supabase
-          .from("employee_scope_assignments")
-          .select("scope_id,scope_type")
-          .eq("candidate_id", meId)
-          .eq("scope_type", "unit"),
-        supabase
-          .from("candidate_units")
-          .select("unit_id,is_primary")
-          .eq("candidate_id", meId),
+        supabase.from("employee_scope_assignments").select("scope_id,scope_type").eq("candidate_id", meId).eq("scope_type", "unit"),
+        supabase.from("candidate_units").select("unit_id,is_primary").eq("candidate_id", meId),
       ]);
       const scopeUnitIds = ((scopeRes.data ?? []) as Array<{ scope_id: string }>).map((r) => r.scope_id);
       const legacyUnits = ((cuRes.data ?? []) as Array<{ unit_id: string; is_primary: boolean }>);
@@ -112,8 +116,7 @@ function FieldOfficerDashboard() {
         .from("candidates")
         .select("id,full_name,designation_id,unit_id,role_key,status,is_enabled,reports_to,created_by,created_at")
         .in("role_key", ["guard", "security_guard"])
-        .eq("status", "active")
-        .eq("is_enabled", true);
+        .eq("status", "active").eq("is_enabled", true);
       const teamFilters = [`reports_to.eq.${meId}`];
       if (userId) teamFilters.push(`created_by.eq.${userId}`);
       if (unitIds.length) teamFilters.push(`unit_id.in.(${unitIds.join(",")})`);
@@ -124,11 +127,7 @@ function FieldOfficerDashboard() {
       const guardsMissingUnit = guardList.filter((g) => !g.unit_id).map((g) => g.id);
       const guardScopeUnit = new Map<string, string>();
       if (guardsMissingUnit.length) {
-        const { data: gs } = await supabase
-          .from("employee_scope_assignments")
-          .select("candidate_id,scope_id,scope_type")
-          .in("candidate_id", guardsMissingUnit)
-          .eq("scope_type", "unit");
+        const { data: gs } = await supabase.from("employee_scope_assignments").select("candidate_id,scope_id,scope_type").in("candidate_id", guardsMissingUnit).eq("scope_type", "unit");
         for (const r of (gs ?? []) as Array<{ candidate_id: string; scope_id: string }>) {
           if (!guardScopeUnit.has(r.candidate_id)) guardScopeUnit.set(r.candidate_id, r.scope_id);
         }
@@ -144,10 +143,7 @@ function FieldOfficerDashboard() {
           : Promise.resolve({ data: [] as Array<{ id: string; code: string; name: string; customer_id: string | null }> }),
         supabase.from("customers").select("id,name"),
         userId
-          ? supabase
-              .from("candidates")
-              .select("id,status,unit_id,created_by,created_at")
-              .eq("created_by", userId)
+          ? supabase.from("candidates").select("id,status,unit_id,created_by,created_at").eq("created_by", userId)
           : Promise.resolve({ data: [] as Array<{ id: string; status: string; unit_id: string | null; created_by: string | null; created_at: string | null }> }),
         supabase.from("designations").select("id,name"),
         supabase.from("attendance_codes").select("code,counts_as_present"),
@@ -155,11 +151,7 @@ function FieldOfficerDashboard() {
 
       const desigMap = new Map(((desigsRes.data ?? []) as Array<{ id: string; name: string }>).map((d) => [d.id, d.name]));
       const custMap = new Map(((custRes.data ?? []) as Array<{ id: string; name: string }>).map((c) => [c.id, c.name]));
-      const presentCodes = new Set(
-        ((codesRes.data ?? []) as Array<{ code: string; counts_as_present: boolean }>)
-          .filter((c) => c.counts_as_present)
-          .map((c) => c.code),
-      );
+      const presentCodes = new Set(((codesRes.data ?? []) as Array<{ code: string; counts_as_present: boolean }>).filter((c) => c.counts_as_present).map((c) => c.code));
 
       const guardsByUnit = new Map<string, Guard[]>();
       const UNASSIGNED = "__unassigned__";
@@ -168,39 +160,24 @@ function FieldOfficerDashboard() {
         const uid = g.unit_id ?? guardScopeUnit.get(g.id) ?? UNASSIGNED;
         guardIdToUnit.set(g.id, uid);
         const arr = guardsByUnit.get(uid) ?? [];
-        arr.push({
-          id: g.id,
-          full_name: g.full_name,
-          designation: (g.designation_id && desigMap.get(g.designation_id)) || "—",
-        });
+        arr.push({ id: g.id, full_name: g.full_name, designation: (g.designation_id && desigMap.get(g.designation_id)) || "—" });
         guardsByUnit.set(uid, arr);
       }
 
-      // Attendance today vs yesterday → rate (%)
       const today = isoDaysAgo(0);
       const yday = isoDaysAgo(1);
       const guardIds = guardList.map((g) => g.id);
       let presentToday = 0, totalToday = 0, presentYday = 0, totalYday = 0;
       if (guardIds.length) {
-        const { data: entries } = await supabase
-          .from("attendance_entries")
-          .select("candidate_id,code,entry_date")
-          .in("entry_date", [today, yday])
-          .in("candidate_id", guardIds);
+        const { data: entries } = await supabase.from("attendance_entries").select("candidate_id,code,entry_date").in("entry_date", [today, yday]).in("candidate_id", guardIds);
         for (const e of (entries ?? []) as Array<{ candidate_id: string; code: string; entry_date: string }>) {
-          if (e.entry_date === today) {
-            totalToday += 1;
-            if (presentCodes.has(e.code)) presentToday += 1;
-          } else {
-            totalYday += 1;
-            if (presentCodes.has(e.code)) presentYday += 1;
-          }
+          if (e.entry_date === today) { totalToday += 1; if (presentCodes.has(e.code)) presentToday += 1; }
+          else { totalYday += 1; if (presentCodes.has(e.code)) presentYday += 1; }
         }
       }
       const attendanceRateToday = totalToday ? Math.round((presentToday / totalToday) * 100) : 0;
       const attendanceRateYesterday = totalYday ? Math.round((presentYday / totalYday) * 100) : 0;
 
-      // Onboarding trend — this week vs last week (candidates submitted by this FO)
       const mine = (mineRes.data ?? []) as Array<{ status: string; unit_id: string | null; created_at: string | null }>;
       const weekAgoIso = isoDaysAgo(7);
       const twoWeeksAgoIso = isoDaysAgo(14);
@@ -216,7 +193,6 @@ function FieldOfficerDashboard() {
         pendingByUnit.set(uid, (pendingByUnit.get(uid) ?? 0) + 1);
       }
 
-      // Joined this / last week (from active guards' created_at)
       let joinedThisWeek = 0, joinedLastWeek = 0;
       for (const g of guardList) {
         const d = g.created_at ?? "";
@@ -225,18 +201,13 @@ function FieldOfficerDashboard() {
         else if (d >= twoWeeksAgoIso) joinedLastWeek += 1;
       }
 
-      // Open inventory demands per unit
       const demandsByUnit = new Map<string, number>();
       const inventoryByUnit = new Map<string, number>();
       try {
         const teamIds = [meId, ...guardIds];
         const orClauses = [`requested_by.in.(${teamIds.join(",")})`];
         if (unitIds.length) orClauses.push(`unit_id.in.(${unitIds.join(",")})`);
-        const { data: demands } = await supabase
-          .from("inv_demands" as never)
-          .select("id,status,unit_id,requested_by")
-          .or(orClauses.join(","))
-          .in("status", ["pending", "approved", "partial", "open", "raised", "submitted"]);
+        const { data: demands } = await supabase.from("inv_demands" as never).select("id,status,unit_id,requested_by").or(orClauses.join(",")).in("status", ["pending", "approved", "partial", "open", "raised", "submitted"]);
         for (const d of (demands ?? []) as Array<{ unit_id: string | null }>) {
           const uid = d.unit_id ?? UNASSIGNED;
           demandsByUnit.set(uid, (demandsByUnit.get(uid) ?? 0) + 1);
@@ -244,11 +215,7 @@ function FieldOfficerDashboard() {
       } catch { /* ignore */ }
       try {
         if (guardIds.length) {
-          const { data: bal } = await supabase
-            .from("inv_stock_balances" as never)
-            .select("location_type,location_id,qty")
-            .in("location_type", ["guard", "security_guard", "field_officer"])
-            .in("location_id", [meId, ...guardIds]);
+          const { data: bal } = await supabase.from("inv_stock_balances" as never).select("location_type,location_id,qty").in("location_type", ["guard", "security_guard", "field_officer"]).in("location_id", [meId, ...guardIds]);
           for (const b of (bal ?? []) as Array<{ location_id: string; qty: number }>) {
             const uid = guardIdToUnit.get(b.location_id) ?? UNASSIGNED;
             if (b.qty > 0) inventoryByUnit.set(uid, (inventoryByUnit.get(uid) ?? 0) + 1);
@@ -258,9 +225,7 @@ function FieldOfficerDashboard() {
 
       const rawUnits = (unitsRes.data ?? []) as Array<{ id: string; code: string; name: string; customer_id: string | null }>;
       const units: UnitNode[] = rawUnits.map((u) => ({
-        id: u.id,
-        code: u.code,
-        name: u.name,
+        id: u.id, code: u.code, name: u.name,
         customer_name: (u.customer_id && custMap.get(u.customer_id)) || "—",
         is_primary: primaryMap.get(u.id) ?? false,
         guards: guardsByUnit.get(u.id) ?? [],
@@ -273,15 +238,9 @@ function FieldOfficerDashboard() {
       const orphPending = pendingByUnit.get(UNASSIGNED) ?? 0;
       if (orphaned.length || orphPending) {
         units.push({
-          id: UNASSIGNED,
-          code: "—",
-          name: "Unassigned",
-          customer_name: "Map these to a unit",
-          is_primary: false,
-          guards: orphaned,
-          pending_onboarding: orphPending,
-          open_demands: demandsByUnit.get(UNASSIGNED) ?? 0,
-          inventory_items: inventoryByUnit.get(UNASSIGNED) ?? 0,
+          id: UNASSIGNED, code: "—", name: "Unassigned", customer_name: "Map these to a unit",
+          is_primary: false, guards: orphaned, pending_onboarding: orphPending,
+          open_demands: demandsByUnit.get(UNASSIGNED) ?? 0, inventory_items: inventoryByUnit.get(UNASSIGNED) ?? 0,
         });
       }
 
@@ -289,17 +248,9 @@ function FieldOfficerDashboard() {
       const openDemandsTotal = units.reduce((s, u) => s + u.open_demands, 0);
       const inventoryItemsTotal = units.reduce((s, u) => s + u.inventory_items, 0);
       return {
-        meName,
-        units,
-        guardsTotal,
-        joinedThisWeek,
-        joinedLastWeek,
-        attendanceRateToday,
-        attendanceRateYesterday,
-        pendingOnboardingTotal,
-        pendingOnboardingLastWeek,
-        openDemandsTotal,
-        inventoryItemsTotal,
+        meName, meCode, units, guardsTotal, joinedThisWeek, joinedLastWeek,
+        attendanceRateToday, attendanceRateYesterday, pendingOnboardingTotal,
+        pendingOnboardingLastWeek, openDemandsTotal, inventoryItemsTotal,
       };
     },
   });
@@ -308,67 +259,128 @@ function FieldOfficerDashboard() {
   const isLoading = dashQ.isLoading;
   const units = useMemo(() => data?.units ?? [], [data?.units]);
 
+  const primaryUnit = units.find((u) => u.is_primary) ?? units[0];
+  const teamDelta = (data?.joinedThisWeek ?? 0) - (data?.joinedLastWeek ?? 0);
+  const attnDelta = (data?.attendanceRateToday ?? 0) - (data?.attendanceRateYesterday ?? 0);
+  const onbDelta = (data?.pendingOnboardingTotal ?? 0) - (data?.pendingOnboardingLastWeek ?? 0);
+  const totalListings = data?.guardsTotal ?? 0;
+  const attnPresent = Math.round(((data?.attendanceRateToday ?? 0) / 100) * totalListings);
+  const totalItems = data?.inventoryItemsTotal ?? 0;
+
   return (
-    <div className="space-y-6 p-4 sm:p-6">
-      <HeroTile
-        eyebrow="Field operations"
-        title={data?.meName || "Welcome"}
-        description="Your team, today's attendance, and open items at a glance."
-      />
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <TrendCard
-          icon={ShieldCheck}
-          label="Team size"
-          value={String(data?.guardsTotal ?? 0)}
-          delta={(data?.joinedThisWeek ?? 0) - (data?.joinedLastWeek ?? 0)}
-          deltaSuffix=" new"
-          hint={`${data?.joinedThisWeek ?? 0} joined this week`}
-          accent="from-emerald-500/20 to-emerald-500/5 text-emerald-600"
-        />
-        <TrendCard
-          icon={Activity}
-          label="Attendance today"
-          value={`${data?.attendanceRateToday ?? 0}%`}
-          delta={(data?.attendanceRateToday ?? 0) - (data?.attendanceRateYesterday ?? 0)}
-          deltaSuffix="pp"
-          hint={`Yesterday ${data?.attendanceRateYesterday ?? 0}%`}
-          accent="from-sky-500/20 to-sky-500/5 text-sky-600"
-        />
-        <TrendCard
-          icon={ClipboardList}
-          label="Pending onboarding"
-          value={String(data?.pendingOnboardingTotal ?? 0)}
-          delta={(data?.pendingOnboardingTotal ?? 0) - (data?.pendingOnboardingLastWeek ?? 0)}
-          deltaSuffix=""
-          invertColor
-          hint="vs last week"
-          accent="from-amber-500/20 to-amber-500/5 text-amber-600"
-          to="/admin/employees"
-        />
-        <TrendCard
-          icon={PackageSearch}
-          label="Open demands"
-          value={String(data?.openDemandsTotal ?? 0)}
-          delta={0}
-          deltaSuffix=""
-          hint={`${data?.inventoryItemsTotal ?? 0} inventory items on team`}
-          accent="from-violet-500/20 to-violet-500/5 text-violet-600"
-          to="/admin/my-inventory"
-          hideDelta
-        />
+    <DashboardShell>
+      {/* Page title (mirrors "My Activity") */}
+      <div className="flex items-end justify-between gap-4">
+        <h1 className="font-display text-4xl font-bold tracking-tight text-foreground sm:text-[44px]">
+          My Activity
+        </h1>
+        <div className="hidden items-center gap-2 sm:flex">
+          <QuickChip to="/admin/employees" icon={UserPlus} label="Onboard" />
+          <QuickChip to="/admin/my-inventory" icon={PackageSearch} label="Inventory" />
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        <QuickAction to="/admin/employees" icon={UserPlus} label="Onboard employee" />
-        <QuickAction to="/admin/my-inventory" icon={PackageSearch} label="My inventory" />
-      </div>
+      {/* Profile hero card — avatar + identity + 3 stat bars */}
+      <section className="rounded-[32px] border border-white/60 bg-white/85 p-6 shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_28px_70px_-38px_rgba(15,23,42,0.24)] backdrop-blur-2xl sm:p-7">
+        <div className="grid gap-6 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
+          <div className="relative shrink-0">
+            <div className="grid h-28 w-28 place-items-center rounded-[28px] bg-gradient-to-br from-accent/25 via-accent/10 to-sky-200/40 font-display text-3xl font-bold text-accent shadow-inner ring-1 ring-white/70 sm:h-32 sm:w-32">
+              {initials(data?.meName || "FO")}
+            </div>
+            <span className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-white text-emerald-500 shadow ring-1 ring-emerald-500/30">
+              <ShieldCheck className="h-4 w-4" />
+            </span>
+          </div>
 
-      <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-sm">
-        <div className="flex items-center justify-between border-b border-border/60 px-5 py-5">
+          <div className="min-w-0 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-[26px]">
+                  {data?.meName || (isLoading ? "…" : "Welcome")}
+                </div>
+                <div className="mt-0.5 text-sm text-muted-foreground">
+                  <span className="font-semibold text-foreground/80">Field Officer</span>
+                  {data?.meCode ? <span className="opacity-70"> · {data.meCode}</span> : null}
+                  <span className="opacity-70"> · {units.length} unit{units.length === 1 ? "" : "s"}</span>
+                </div>
+              </div>
+              <Link
+                to="/admin/profile"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border/70 bg-white px-3 text-xs font-semibold text-foreground/80 shadow-sm transition hover:border-accent/40 hover:text-accent"
+              >
+                Edit profile <ArrowUpRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            <div className="grid gap-x-6 gap-y-2 text-sm text-foreground/80 sm:grid-cols-2">
+              {phone && (
+                <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" /><span className="tabular-nums">+91 {phone}</span></div>
+              )}
+              {email && (
+                <div className="flex items-center gap-2 min-w-0"><Mail className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="truncate">{email}</span></div>
+              )}
+              {primaryUnit && (
+                <div className="flex items-center gap-2 min-w-0"><MapPin className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="truncate">{primaryUnit.name}</span></div>
+              )}
+              {primaryUnit && (
+                <div className="flex items-center gap-2 min-w-0"><Building2 className="h-4 w-4 shrink-0 text-muted-foreground" /><span className="truncate">{primaryUnit.customer_name}</span></div>
+              )}
+            </div>
+
+            <div className="mt-2 grid grid-cols-3 gap-6 border-t border-border/40 pt-4">
+              <StatBar label="Team size" value={totalListings} bar="bg-gradient-to-r from-rose-300 to-rose-400" />
+              <StatBar label="Present today" value={attnPresent} bar="bg-gradient-to-r from-emerald-300 to-teal-400" />
+              <StatBar label="Items on team" value={totalItems} bar="bg-gradient-to-r from-lime-300 to-lime-400" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Pastel summary tiles — "My Summary" */}
+      <section>
+        <div className="mb-3 flex items-end justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-foreground">My units</h2>
-            <p className="text-sm text-muted-foreground">Tap a unit to see the team and take action.</p>
+            <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Overview</div>
+            <h2 className="mt-0.5 font-display text-2xl font-bold tracking-tight text-foreground">My Summary</h2>
+          </div>
+          <span className="rounded-full border border-border/70 bg-white px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">This week</span>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <PastelTile
+            palette="lime"
+            label="Team size"
+            value={totalListings}
+            hint={`${data?.joinedThisWeek ?? 0} joined this week`}
+            delta={teamDelta} deltaSuffix=" new"
+            icon={ShieldCheck}
+          />
+          <PastelTile
+            palette="teal"
+            label="Attendance today"
+            value={`${data?.attendanceRateToday ?? 0}%`}
+            hint={`Yesterday ${data?.attendanceRateYesterday ?? 0}%`}
+            delta={attnDelta} deltaSuffix="pp"
+            icon={Activity}
+          />
+          <PastelTile
+            palette="rose"
+            label="Pending onboarding"
+            value={data?.pendingOnboardingTotal ?? 0}
+            hint="vs last week"
+            delta={onbDelta} deltaSuffix="" invertColor
+            icon={ClipboardList}
+            to="/admin/employees"
+          />
+        </div>
+      </section>
+
+      {/* Units list */}
+      <section className="overflow-hidden rounded-[28px] border border-border/70 bg-card/90 shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_20px_50px_-30px_rgba(15,23,42,0.2)] backdrop-blur-xl">
+        <div className="flex items-center justify-between border-b border-border/60 px-5 py-4 sm:px-6 sm:py-5">
+          <div>
+            <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">New objects ({units.length})</div>
+            <h2 className="mt-0.5 font-display text-xl font-bold text-foreground">My units</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">Tap to see the team and take action.</p>
           </div>
           <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-muted-foreground">
             {units.length} unit{units.length === 1 ? "" : "s"}
@@ -378,81 +390,97 @@ function FieldOfficerDashboard() {
           {isLoading ? (
             <div className="p-8 text-center text-sm text-muted-foreground">Loading…</div>
           ) : units.length === 0 ? (
-            <div className="p-10 text-center text-sm text-muted-foreground">
-              No units assigned to you yet. Ask HR to map you to your unit(s).
+            <div className="flex flex-col items-center gap-2 p-12 text-center">
+              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-accent/10 text-accent"><Sparkles className="h-5 w-5" /></div>
+              <div className="text-sm font-semibold text-foreground">No units yet</div>
+              <div className="text-xs text-muted-foreground">Ask HR to map you to your unit(s).</div>
             </div>
           ) : (
             units.map((u) => <UnitRow key={u.id} unit={u} />)
           )}
         </div>
-      </div>
+      </section>
+    </DashboardShell>
+  );
+}
+
+function QuickChip({ to, icon: Icon, label }: { to: string; icon: React.ComponentType<{ className?: string }>; label: string }) {
+  return (
+    <Link
+      to={to}
+      className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-white/85 px-3.5 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:border-accent/50 hover:text-accent"
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </Link>
+  );
+}
+
+function StatBar({ label, value, bar }: { label: string; value: number | string; bar: string }) {
+  return (
+    <div className="min-w-0">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</div>
+      <div className="mt-1 font-display text-3xl font-bold tabular-nums tracking-tight text-foreground">{value}</div>
+      <div className={`mt-2 h-1 w-full rounded-full ${bar}`} />
     </div>
   );
 }
 
-function TrendCard({
-  icon: Icon,
-  label,
-  value,
-  delta,
-  deltaSuffix,
-  hint,
-  accent,
-  to,
-  invertColor,
-  hideDelta,
+function PastelTile({
+  palette, label, value, hint, delta, deltaSuffix, invertColor, icon: Icon, to,
 }: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string;
-  delta: number;
-  deltaSuffix: string;
-  hint: string;
-  accent: string;
-  to?: string;
-  invertColor?: boolean;
-  hideDelta?: boolean;
+  palette: "lime" | "teal" | "rose";
+  label: string; value: number | string; hint: string;
+  delta: number; deltaSuffix: string; invertColor?: boolean;
+  icon: React.ComponentType<{ className?: string }>; to?: string;
 }) {
+  const bg = {
+    lime: "bg-[oklch(0.94_0.09_130)]",
+    teal: "bg-[oklch(0.92_0.06_190)]",
+    rose: "bg-[oklch(0.92_0.05_20)]",
+  }[palette];
+  const ring = {
+    lime: "ring-[oklch(0.86_0.13_130/0.4)]",
+    teal: "ring-[oklch(0.82_0.08_190/0.45)]",
+    rose: "ring-[oklch(0.82_0.07_20/0.45)]",
+  }[palette];
   const positive = invertColor ? delta < 0 : delta > 0;
   const negative = invertColor ? delta > 0 : delta < 0;
   const TrendIcon = delta === 0 ? Minus : delta > 0 ? TrendingUp : TrendingDown;
   const trendCls = delta === 0
-    ? "bg-muted text-muted-foreground"
-    : positive
-      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"
-      : negative
-        ? "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300"
-        : "bg-muted text-muted-foreground";
+    ? "bg-white/70 text-foreground/60"
+    : positive ? "bg-white/85 text-emerald-700"
+    : negative ? "bg-white/85 text-rose-700"
+    : "bg-white/70 text-foreground/60";
+
   const inner = (
-    <>
-      <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-40 ${accent}`} />
-      <div className="flex items-center justify-between">
-        <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br ${accent}`}>
-          <Icon className="h-5 w-5" />
+    <div className={`relative flex h-full min-h-[152px] flex-col justify-between overflow-hidden rounded-[26px] p-5 ring-1 ring-inset transition-transform hover:-translate-y-0.5 ${bg} ${ring}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="text-[13px] font-semibold text-foreground/80">{label}</div>
+          <div className="mt-0.5 text-[11px] text-foreground/55">{hint}</div>
         </div>
-        {!hideDelta && (
-          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${trendCls}`}>
+        <span className="grid h-9 w-9 place-items-center rounded-full bg-white/80 text-foreground/70 shadow-sm">
+          <ArrowUpRight className="h-4 w-4" />
+        </span>
+      </div>
+      <div className="flex items-end justify-between gap-3">
+        <div className="font-display text-[44px] font-bold leading-none tabular-nums tracking-tight text-foreground">
+          {value}
+        </div>
+        <div className="flex flex-col items-end gap-1.5">
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${trendCls}`}>
             <TrendIcon className="h-3 w-3" />
             {delta > 0 ? "+" : ""}{delta}{deltaSuffix}
           </span>
-        )}
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-white/70 text-foreground/70">
+            <Icon className="h-3.5 w-3.5" />
+          </span>
+        </div>
       </div>
-      <div className="mt-3 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</div>
-      <div className="mt-1 font-display text-3xl font-bold tabular-nums tracking-tight text-foreground">{value}</div>
-      <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
-    </>
+    </div>
   );
-  const cls = "group relative block overflow-hidden rounded-3xl border border-border/70 bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md";
-  return to ? <Link to={to} className={cls}>{inner}</Link> : <div className={cls}>{inner}</div>;
-}
-
-function QuickAction({ to, icon: Icon, label }: { to: string; icon: React.ComponentType<{ className?: string }>; label: string }) {
-  return (
-    <Link to={to} className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium shadow-sm transition hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-md">
-      <Icon className="h-4 w-4 text-muted-foreground" />
-      {label}
-    </Link>
-  );
+  return to ? <Link to={to} className="block">{inner}</Link> : inner;
 }
 
 function UnitRow({ unit }: { unit: UnitNode }) {
@@ -463,43 +491,44 @@ function UnitRow({ unit }: { unit: UnitNode }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left hover:bg-secondary/30"
+        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left transition hover:bg-secondary/40 sm:px-6"
       >
         <div className="flex min-w-0 items-center gap-3">
-          {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
-          <Building2 className="h-4 w-4 text-muted-foreground" />
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent">
+            {open ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </span>
           <div className="min-w-0">
-            <div className="truncate text-sm font-semibold">
+            <div className="flex items-center gap-2 truncate text-sm font-semibold">
               {unit.name}
               {unit.is_primary && (
-                <span className="ml-2 inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Primary</span>
+                <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Primary</span>
               )}
             </div>
             <div className="truncate text-xs text-muted-foreground">{unit.customer_name} · <span className="font-mono">{unit.code}</span></div>
           </div>
         </div>
         <div className="hidden shrink-0 items-center gap-2 text-[11px] font-medium sm:flex">
-          <Pill icon={ShieldCheck} tone="slate" value={total} label="team" />
-          <Pill icon={CalendarCheck} tone="amber" value={unit.pending_onboarding} label="pending" />
-          <Pill icon={PackageSearch} tone="violet" value={unit.open_demands} label="demands" />
-          <Pill icon={Warehouse} tone="cyan" value={unit.inventory_items} label="items" />
+          <Pill tone="slate" value={total} label="team" />
+          <Pill tone="amber" value={unit.pending_onboarding} label="pending" />
+          <Pill tone="violet" value={unit.open_demands} label="demands" />
+          <Pill tone="cyan" value={unit.inventory_items} label="items" />
         </div>
       </button>
       {open && (
-        <div className="space-y-3 border-t border-border/40 bg-secondary/20 px-5 py-4">
+        <div className="space-y-3 border-t border-border/40 bg-secondary/20 px-5 py-4 sm:px-6">
           <div className="grid grid-cols-2 gap-2 sm:hidden">
-            <Pill icon={ShieldCheck} tone="slate" value={total} label="team" />
-            <Pill icon={CalendarCheck} tone="amber" value={unit.pending_onboarding} label="pending" />
-            <Pill icon={PackageSearch} tone="violet" value={unit.open_demands} label="demands" />
-            <Pill icon={Warehouse} tone="cyan" value={unit.inventory_items} label="items" />
+            <Pill tone="slate" value={total} label="team" />
+            <Pill tone="amber" value={unit.pending_onboarding} label="pending" />
+            <Pill tone="violet" value={unit.open_demands} label="demands" />
+            <Pill tone="cyan" value={unit.inventory_items} label="items" />
           </div>
           <div className="flex flex-wrap gap-2 text-xs">
             {unit.id !== "__unassigned__" && (
               <>
-                <Link to="/admin/attendance/$unitId" params={{ unitId: unit.id }} className="rounded-full border border-border bg-card px-3 py-1 font-medium hover:bg-secondary">
+                <Link to="/admin/attendance/$unitId" params={{ unitId: unit.id }} className="rounded-full border border-border bg-white px-3 py-1 font-medium hover:border-accent/40 hover:text-accent">
                   Mark attendance
                 </Link>
-                <Link to="/admin/employees" className="rounded-full border border-border bg-card px-3 py-1 font-medium hover:bg-secondary">
+                <Link to="/admin/employees" className="rounded-full border border-border bg-white px-3 py-1 font-medium hover:border-accent/40 hover:text-accent">
                   Onboard employee
                 </Link>
               </>
@@ -528,7 +557,7 @@ function UnitRow({ unit }: { unit: UnitNode }) {
   );
 }
 
-function Pill({ icon: Icon, tone, value, label }: { icon: React.ComponentType<{ className?: string }>; tone: "slate" | "amber" | "violet" | "cyan"; value: number; label: string }) {
+function Pill({ tone, value, label }: { tone: "slate" | "amber" | "violet" | "cyan"; value: number; label: string }) {
   const toneCls = {
     slate: "bg-slate-100 text-slate-700",
     amber: "bg-amber-100 text-amber-700",
@@ -537,7 +566,6 @@ function Pill({ icon: Icon, tone, value, label }: { icon: React.ComponentType<{ 
   }[tone];
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${toneCls}`}>
-      <Icon className="h-3 w-3" />
       <span className="tabular-nums font-semibold">{value}</span>
       <span className="opacity-70">{label}</span>
     </span>

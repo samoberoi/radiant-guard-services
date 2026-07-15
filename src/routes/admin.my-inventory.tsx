@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, SUPER_ADMIN_PHONE } from "@/lib/auth";
 import { logActivity } from "@/lib/activity-log";
 import { PageHeader } from "@/components/PageHeader";
+import { DashboardShell } from "@/components/LiveFeed";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -143,7 +144,7 @@ function MyInventoryPage() {
   if (!me) return <div className="text-sm text-muted-foreground">No employee profile found for this phone.</div>;
 
   return (
-    <div className="space-y-6">
+    <DashboardShell>
       <PageHeader title="My Inventory" description="Items assigned to you and pending confirmations." crumbs={[{ label: "My Inventory" }]} />
 
       {pending.length > 0 && (

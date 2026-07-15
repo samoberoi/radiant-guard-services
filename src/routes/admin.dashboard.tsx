@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { PageHeader } from "@/components/PageHeader";
+import { DashboardShell } from "@/components/LiveFeed";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -476,19 +477,22 @@ function DashboardPage() {
 
   if (showInventoryDashboard) {
     return (
-      <div className="space-y-6 p-4 sm:p-6">
-        <PageHeader
-          title="Inventory Dashboard"
-          description="Live inventory overview with stock value, quantities, procurement, transfers, and issuances."
-          crumbs={[{ label: "Dashboard" }]}
-        />
-        <InventoryOwnerDashboard />
+      <div className="p-4 sm:p-6">
+        <DashboardShell>
+          <PageHeader
+            title="Inventory Dashboard"
+            description="Live inventory overview with stock value, quantities, procurement, transfers, and issuances."
+            crumbs={[{ label: "Dashboard" }]}
+          />
+          <InventoryOwnerDashboard />
+        </DashboardShell>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
+    <div className="p-4 sm:p-6">
+      <DashboardShell>
       <PageHeader
         title="Dashboard"
         description="Live snapshot of everything you have access to — tiles, counts, and P&L for the selected cycle."
@@ -693,6 +697,7 @@ function DashboardPage() {
           </div>
         </div>
       )}
+      </DashboardShell>
     </div>
   );
 }
