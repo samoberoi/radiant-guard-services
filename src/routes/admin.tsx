@@ -42,6 +42,8 @@ import {
   Briefcase,
   Tag,
   UserCheck,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
 import { useT } from "@/lib/i18n";
@@ -60,6 +62,8 @@ import { useCurrentPermissions } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTheme } from "@/lib/use-theme";
+
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
