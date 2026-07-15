@@ -435,15 +435,16 @@ function PastelTile({
   icon: React.ComponentType<{ className?: string }>; to?: string;
 }) {
   const bg = {
-    lime: "bg-[oklch(0.94_0.09_130)]",
-    teal: "bg-[oklch(0.92_0.06_190)]",
-    rose: "bg-[oklch(0.92_0.05_20)]",
+    lime: "bg-[color-mix(in_oklab,oklch(0.75_0.16_140)_18%,var(--card))]",
+    teal: "bg-[color-mix(in_oklab,oklch(0.75_0.12_195)_18%,var(--card))]",
+    rose: "bg-[color-mix(in_oklab,oklch(0.72_0.16_20)_18%,var(--card))]",
   }[palette];
   const ring = {
-    lime: "ring-[oklch(0.86_0.13_130/0.4)]",
-    teal: "ring-[oklch(0.82_0.08_190/0.45)]",
-    rose: "ring-[oklch(0.82_0.07_20/0.45)]",
+    lime: "ring-[color-mix(in_oklab,oklch(0.75_0.16_140)_35%,transparent)]",
+    teal: "ring-[color-mix(in_oklab,oklch(0.75_0.12_195)_35%,transparent)]",
+    rose: "ring-[color-mix(in_oklab,oklch(0.72_0.16_20)_35%,transparent)]",
   }[palette];
+
   const positive = invertColor ? delta < 0 : delta > 0;
   const negative = invertColor ? delta > 0 : delta < 0;
   const TrendIcon = delta === 0 ? Minus : delta > 0 ? TrendingUp : TrendingDown;
