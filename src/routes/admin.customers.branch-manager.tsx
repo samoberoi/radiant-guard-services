@@ -119,14 +119,14 @@ function BranchManagerPage() {
       />
 
       {/* Toolbar */}
-      <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/60 bg-white/60 p-2.5 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-border/60 bg-card/60 p-2.5 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by code, state, description…"
-            className="h-10 rounded-xl border-transparent bg-white/80 pl-9 shadow-sm focus-visible:border-accent/30"
+            className="h-10 rounded-xl border-transparent bg-card/80 pl-9 shadow-sm focus-visible:border-accent/30"
           />
         </div>
         <div className="flex gap-2">
@@ -170,7 +170,7 @@ function BranchManagerPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.7)_inset,0_18px_40px_-30px_rgba(15,23,42,0.18)]">
+      <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/70 backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.7)_inset,0_18px_40px_-30px_rgba(15,23,42,0.18)]">
         <div className="flex items-center justify-between border-b border-border/60 bg-gradient-to-r from-accent/[0.08] via-transparent to-transparent px-5 py-2.5 text-xs text-foreground">
           <span className="inline-flex items-center gap-2"><span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] text-primary-foreground">{rows.length}</span><span className="uppercase tracking-[0.14em] text-muted-foreground">Total {rows.length === 1 ? "row" : "rows"}</span></span>
         </div>

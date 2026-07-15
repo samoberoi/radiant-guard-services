@@ -53,18 +53,18 @@ export function PageHeader({
         </ol>
       </nav>
 
-      <div className="relative overflow-hidden rounded-[28px] border border-white/60 bg-gradient-to-br from-white/85 via-white/65 to-accent/[0.05] p-5 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_20px_50px_-32px_rgba(10,20,40,0.18)] sm:p-6">
+      <div className="relative overflow-hidden rounded-[28px] border border-border/60 bg-gradient-to-br from-card/85 via-card/65 to-accent/[0.05] p-5 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_20px_50px_-32px_rgba(10,20,40,0.18)] sm:p-6">
         <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[oklch(0.65_0.22_262/0.18)] blur-3xl" />
         <div className="pointer-events-none absolute -left-16 -bottom-24 h-56 w-56 rounded-full bg-[oklch(0.78_0.13_200/0.14)] blur-3xl" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
-        <div className="pointer-events-none absolute inset-0 rounded-[28px] ring-1 ring-inset ring-white/40" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-card/80 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 rounded-[28px] ring-1 ring-inset ring-border/40" />
 
         <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
           <div className="flex min-w-0 items-start gap-3.5">
             {Icon && (
               <div className="relative mt-0.5 hidden shrink-0 sm:block">
                 <div className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-br from-accent/35 to-accent/0 blur-lg" />
-                <div className="grid h-11 w-11 place-items-center rounded-2xl border border-white/70 bg-gradient-to-br from-white to-accent/[0.10] text-accent shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_8px_18px_-10px_color-mix(in_oklab,var(--accent)_40%,transparent)]">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl border border-border/70 bg-gradient-to-br from-card to-accent/[0.10] text-accent shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_8px_18px_-10px_color-mix(in_oklab,var(--accent)_40%,transparent)]">
                   <Icon className="h-[18px] w-[18px]" />
                 </div>
               </div>
@@ -131,7 +131,7 @@ export function PageStat({
         ? "text-muted-foreground bg-muted ring-border"
         : "text-emerald-600 bg-emerald-500/10 ring-emerald-500/20";
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border/70 bg-white/90 px-3.5 py-3 shadow-sm backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-md">
+    <div className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card/90 px-3.5 py-3 shadow-sm backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-md">
       <div className="pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full bg-accent/5 blur-xl" />
       <div className="relative flex items-center gap-2.5">
         {Icon && (

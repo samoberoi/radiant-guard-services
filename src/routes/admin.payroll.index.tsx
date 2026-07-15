@@ -682,7 +682,7 @@ function MonthlyDashboard({
     <div className="relative overflow-hidden rounded-[28px] border border-border/70 bg-card/85 backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.7)_inset,0_20px_60px_-30px_rgba(10,20,40,0.18)]">
       <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[oklch(0.7_0.16_262/0.18)] blur-3xl" />
       <div className="pointer-events-none absolute -left-20 -bottom-24 h-64 w-64 rounded-full bg-[oklch(0.75_0.12_200/0.15)] blur-3xl" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-card/80 to-transparent" />
 
       <div className="relative grid gap-6 p-6 sm:p-7 lg:grid-cols-[1.1fr_1.4fr]">
         {/* Left: month hero */}
@@ -829,7 +829,7 @@ function DashStat({
   return (
     <Cmp
       onClick={onClick}
-      className={`group relative w-full text-left overflow-hidden rounded-2xl border bg-white/85 p-3 shadow-sm backdrop-blur transition hover:border-accent/50 hover:bg-white ${active ? "border-accent/60 ring-2 ring-accent/30" : "border-border/70"} ${onClick ? "cursor-pointer" : ""}`}
+      className={`group relative w-full text-left overflow-hidden rounded-2xl border bg-card/85 p-3 shadow-sm backdrop-blur transition hover:border-accent/50 hover:bg-white ${active ? "border-accent/60 ring-2 ring-accent/30" : "border-border/70"} ${onClick ? "cursor-pointer" : ""}`}
     >
       <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-30 ${accentMap[accent]}`} />
       <div className="flex items-center gap-2">
@@ -922,7 +922,7 @@ function EmployeeSpotlight({
       <div className="relative flex flex-col gap-5 p-6 sm:p-7">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 text-xl font-semibold text-white shadow-lg shadow-amber-500/20 ring-4 ring-white/60">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-rose-500 text-xl font-semibold text-white shadow-lg shadow-amber-500/20 ring-4 ring-border/60">
               {initials}
             </div>
             <div className="space-y-1">
@@ -932,7 +932,7 @@ function EmployeeSpotlight({
               <div className="text-xl font-semibold text-foreground sm:text-2xl">{employee.name}</div>
               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                 {employee.code && (
-                  <span className="inline-flex rounded-md bg-white/80 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-foreground shadow-sm">
+                  <span className="inline-flex rounded-md bg-card/80 px-2 py-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-foreground shadow-sm">
                     {employee.code}
                   </span>
                 )}
@@ -950,7 +950,7 @@ function EmployeeSpotlight({
         </div>
 
         {units.length === 0 ? (
-          <div className="rounded-2xl bg-white/60 px-4 py-6 text-center text-sm text-muted-foreground">
+          <div className="rounded-2xl bg-card/60 px-4 py-6 text-center text-sm text-muted-foreground">
             This employee is mapped to units, but none have approved attendance yet.
           </div>
         ) : (
@@ -960,7 +960,7 @@ function EmployeeSpotlight({
               return (
                 <div
                   key={u.id}
-                  className="group relative flex flex-col gap-3 rounded-2xl border border-white/80 bg-white/85 p-4 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="group relative flex flex-col gap-3 rounded-2xl border border-border/80 bg-card/85 p-4 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">

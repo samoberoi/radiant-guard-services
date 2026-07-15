@@ -281,13 +281,13 @@ function FieldOfficerDashboard() {
       </div>
 
       {/* Profile hero card — avatar + identity + 3 stat bars */}
-      <section className="rounded-[32px] border border-white/60 bg-white/85 p-6 shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_28px_70px_-38px_rgba(15,23,42,0.24)] backdrop-blur-2xl sm:p-7">
+      <section className="rounded-[32px] border border-border/60 bg-card/85 p-6 shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_28px_70px_-38px_rgba(15,23,42,0.24)] backdrop-blur-2xl sm:p-7">
         <div className="grid gap-6 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
           <div className="relative shrink-0">
-            <div className="grid h-28 w-28 place-items-center rounded-[28px] bg-gradient-to-br from-accent/25 via-accent/10 to-sky-200/40 font-display text-3xl font-bold text-accent shadow-inner ring-1 ring-white/70 sm:h-32 sm:w-32">
+            <div className="grid h-28 w-28 place-items-center rounded-[28px] bg-gradient-to-br from-accent/25 via-accent/10 to-sky-200/40 font-display text-3xl font-bold text-accent shadow-inner ring-1 ring-border/70 sm:h-32 sm:w-32">
               {initials(data?.meName || "FO")}
             </div>
-            <span className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-white text-emerald-500 shadow ring-1 ring-emerald-500/30">
+            <span className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-card text-emerald-500 shadow ring-1 ring-emerald-500/30">
               <ShieldCheck className="h-4 w-4" />
             </span>
           </div>
@@ -306,7 +306,7 @@ function FieldOfficerDashboard() {
               </div>
               <Link
                 to="/admin/profile"
-                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border/70 bg-white px-3 text-xs font-semibold text-foreground/80 shadow-sm transition hover:border-accent/40 hover:text-accent"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border/70 bg-card px-3 text-xs font-semibold text-foreground/80 shadow-sm transition hover:border-accent/40 hover:text-accent"
               >
                 Edit profile <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
@@ -343,7 +343,7 @@ function FieldOfficerDashboard() {
             <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Overview</div>
             <h2 className="mt-0.5 font-display text-2xl font-bold tracking-tight text-foreground">My Summary</h2>
           </div>
-          <span className="rounded-full border border-border/70 bg-white px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">This week</span>
+          <span className="rounded-full border border-border/70 bg-card px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">This week</span>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <PastelTile
@@ -408,7 +408,7 @@ function QuickChip({ to, icon: Icon, label }: { to: string; icon: React.Componen
   return (
     <Link
       to={to}
-      className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-white/85 px-3.5 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:border-accent/50 hover:text-accent"
+      className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/85 px-3.5 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:border-accent/50 hover:text-accent"
     >
       <Icon className="h-3.5 w-3.5" />
       {label}
@@ -435,23 +435,25 @@ function PastelTile({
   icon: React.ComponentType<{ className?: string }>; to?: string;
 }) {
   const bg = {
-    lime: "bg-[oklch(0.94_0.09_130)]",
-    teal: "bg-[oklch(0.92_0.06_190)]",
-    rose: "bg-[oklch(0.92_0.05_20)]",
+    lime: "bg-[color-mix(in_oklab,oklch(0.75_0.16_140)_18%,var(--card))]",
+    teal: "bg-[color-mix(in_oklab,oklch(0.75_0.12_195)_18%,var(--card))]",
+    rose: "bg-[color-mix(in_oklab,oklch(0.72_0.16_20)_18%,var(--card))]",
   }[palette];
   const ring = {
-    lime: "ring-[oklch(0.86_0.13_130/0.4)]",
-    teal: "ring-[oklch(0.82_0.08_190/0.45)]",
-    rose: "ring-[oklch(0.82_0.07_20/0.45)]",
+    lime: "ring-[color-mix(in_oklab,oklch(0.75_0.16_140)_35%,transparent)]",
+    teal: "ring-[color-mix(in_oklab,oklch(0.75_0.12_195)_35%,transparent)]",
+    rose: "ring-[color-mix(in_oklab,oklch(0.72_0.16_20)_35%,transparent)]",
   }[palette];
+
   const positive = invertColor ? delta < 0 : delta > 0;
   const negative = invertColor ? delta > 0 : delta < 0;
   const TrendIcon = delta === 0 ? Minus : delta > 0 ? TrendingUp : TrendingDown;
   const trendCls = delta === 0
-    ? "bg-white/70 text-foreground/60"
-    : positive ? "bg-white/85 text-emerald-700"
-    : negative ? "bg-white/85 text-rose-700"
-    : "bg-white/70 text-foreground/60";
+    ? "bg-card/70 text-foreground/60"
+    : positive ? "bg-card/85 text-emerald-700 dark:text-emerald-300"
+    : negative ? "bg-card/85 text-rose-700 dark:text-rose-300"
+    : "bg-card/70 text-foreground/60";
+
 
   const inner = (
     <div className={`relative flex h-full min-h-[152px] flex-col justify-between overflow-hidden rounded-[26px] p-5 ring-1 ring-inset transition-transform hover:-translate-y-0.5 ${bg} ${ring}`}>
@@ -460,7 +462,7 @@ function PastelTile({
           <div className="text-[13px] font-semibold text-foreground/80">{label}</div>
           <div className="mt-0.5 text-[11px] text-foreground/55">{hint}</div>
         </div>
-        <span className="grid h-9 w-9 place-items-center rounded-full bg-white/80 text-foreground/70 shadow-sm">
+        <span className="grid h-9 w-9 place-items-center rounded-full bg-card/80 text-foreground/70 shadow-sm">
           <ArrowUpRight className="h-4 w-4" />
         </span>
       </div>
@@ -473,7 +475,7 @@ function PastelTile({
             <TrendIcon className="h-3 w-3" />
             {delta > 0 ? "+" : ""}{delta}{deltaSuffix}
           </span>
-          <span className="grid h-7 w-7 place-items-center rounded-full bg-white/70 text-foreground/70">
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-card/70 text-foreground/70">
             <Icon className="h-3.5 w-3.5" />
           </span>
         </div>
@@ -501,7 +503,7 @@ function UnitRow({ unit }: { unit: UnitNode }) {
             <div className="flex items-center gap-2 truncate text-sm font-semibold">
               {unit.name}
               {unit.is_primary && (
-                <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Primary</span>
+                <span className="inline-flex rounded-full bg-emerald-500/15 dark:bg-emerald-400/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Primary</span>
               )}
             </div>
             <div className="truncate text-xs text-muted-foreground">{unit.customer_name} · <span className="font-mono">{unit.code}</span></div>
@@ -525,10 +527,10 @@ function UnitRow({ unit }: { unit: UnitNode }) {
           <div className="flex flex-wrap gap-2 text-xs">
             {unit.id !== "__unassigned__" && (
               <>
-                <Link to="/admin/attendance/$unitId" params={{ unitId: unit.id }} className="rounded-full border border-border bg-white px-3 py-1 font-medium hover:border-accent/40 hover:text-accent">
+                <Link to="/admin/attendance/$unitId" params={{ unitId: unit.id }} className="rounded-full border border-border bg-card px-3 py-1 font-medium hover:border-accent/40 hover:text-accent">
                   Mark attendance
                 </Link>
-                <Link to="/admin/employees" className="rounded-full border border-border bg-white px-3 py-1 font-medium hover:border-accent/40 hover:text-accent">
+                <Link to="/admin/employees" className="rounded-full border border-border bg-card px-3 py-1 font-medium hover:border-accent/40 hover:text-accent">
                   Onboard employee
                 </Link>
               </>
@@ -560,7 +562,7 @@ function UnitRow({ unit }: { unit: UnitNode }) {
 function Pill({ tone, value, label }: { tone: "slate" | "amber" | "violet" | "cyan"; value: number; label: string }) {
   const toneCls = {
     slate: "bg-slate-100 text-slate-700",
-    amber: "bg-amber-100 text-amber-700",
+    amber: "bg-amber-500/15 dark:bg-amber-400/20 text-amber-700 dark:text-amber-300",
     violet: "bg-violet-100 text-violet-700",
     cyan: "bg-cyan-100 text-cyan-700",
   }[tone];
