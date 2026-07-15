@@ -2299,6 +2299,8 @@ function EmployeesPage() {
         assets={assets}
         initialReasonId={offboardReasonId}
         isSubmitting={offboardMut.isPending}
+        currentUserCandidateId={currentCandidateId}
+        isFieldOfficer={isFieldOfficer}
         onClose={() => { setOffboardTarget(null); setOffboardReasonId(""); }}
         onSubmit={({ reasonId, details, noHire }) => {
           if (!offboardTarget) return;
