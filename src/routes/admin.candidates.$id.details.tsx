@@ -53,6 +53,8 @@ import {
   IdentificationSection,
   NomineeSection,
 } from "@/components/candidate-extra-sections";
+import { useCurrentPermissions } from "@/lib/rbac";
+
 
 const MODULE = "Candidate Details";
 
@@ -173,8 +175,16 @@ function CandidateDetailsPage() {
     return JSON.stringify(buildCandidatePayload(form)) !== baselinePayload;
   }, [form, baselinePayload]);
 
+  const { roleKey, isSuperAdmin } = useCurrentPermissions();
+  const canEditInactiveProfile = isSuperAdmin || roleKey === "leadership" || roleKey === "super_admin";
+  const editLocked = form?.status === "inactive" && !canEditInactiveProfile;
+
   const handleSave = async (closeAfter = false) => {
     if (!form) return;
+    if (editLocked) {
+      toast.error("Only leadership or super admin can edit an inactive employee's profile.");
+      return;
+    }
     setSaving(true);
     try {
       const payload = buildCandidatePayload(form);
@@ -196,6 +206,7 @@ function CandidateDetailsPage() {
       setSaving(false);
     }
   };
+
 
   // markKyc removed per product decision
 
@@ -318,15 +329,16 @@ function CandidateDetailsPage() {
           </Button>
           {dirty && (
             <>
-              <Button size="sm" onClick={() => handleSave(false)} disabled={saving}>
+              <Button size="sm" onClick={() => handleSave(false)} disabled={saving || editLocked} title={editLocked ? "Only leadership or super admin can edit an inactive profile." : undefined}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Save
               </Button>
-              <Button size="sm" onClick={() => handleSave(true)} disabled={saving}>
+              <Button size="sm" onClick={() => handleSave(true)} disabled={saving || editLocked} title={editLocked ? "Only leadership or super admin can edit an inactive profile." : undefined}>
                 Save & Close
               </Button>
             </>
           )}
+
         </div>
       </div>
 

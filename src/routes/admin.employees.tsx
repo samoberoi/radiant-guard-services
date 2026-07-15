@@ -1622,6 +1622,8 @@ function EmployeesPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Reject failed"),
   });
 
+  const canEditInactiveProfile = isSuperAdmin || roleKey === "leadership" || roleKey === "super_admin";
+
   const openEditor = async (candidateId: string) => {
     setOpeningCandidateId(candidateId);
     try {
@@ -1631,7 +1633,12 @@ function EmployeesPage() {
         .eq("id", candidateId)
         .single();
       if (error) throw error;
-      setEditing((data as Candidate) ?? null);
+      const record = (data as Candidate) ?? null;
+      if (record && record.status === "inactive" && !canEditInactiveProfile) {
+        toast.error("Only leadership or super admin can edit an inactive employee's profile.");
+        return;
+      }
+      setEditing(record);
       setOpenWizard(true);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not open candidate");
@@ -1639,6 +1646,7 @@ function EmployeesPage() {
       setOpeningCandidateId(null);
     }
   };
+
 
   const renderRows = (rows: CandidateListItem[], mode: "employee" | "candidate") => {
     const empCols = 4 + Object.values(columnsVisible).filter(Boolean).length;
@@ -1971,31 +1979,54 @@ function EmployeesPage() {
                 </>
               )}
               <div className="flex flex-nowrap items-center gap-1">
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  title="Open the full 10-section editor"
-                >
-                  <Link to="/admin/candidates/$id/details" params={{ id: c.id }}>
-                    <FileText className="h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => void openEditor(c.id)}
-                  disabled={openingCandidateId === c.id}
-                  className="h-7 w-7 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  title="Quick edit"
-                >
-                  {openingCandidateId === c.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Edit2 className="h-4 w-4" />
-                  )}
-                </Button>
+                {(() => {
+                  const editLocked = c.status === "inactive" && !canEditInactiveProfile;
+                  const lockedTitle = "Inactive profile — only leadership or super admin can edit.";
+                  return (
+                    <>
+                      {editLocked ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          disabled
+                          className="h-7 w-7 rounded-md text-muted-foreground opacity-50"
+                          title={lockedTitle}
+                          aria-label={lockedTitle}
+                        >
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button
+                          asChild
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+                          title="Open the full 10-section editor"
+                        >
+                          <Link to="/admin/candidates/$id/details" params={{ id: c.id }}>
+                            <FileText className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => void openEditor(c.id)}
+                        disabled={openingCandidateId === c.id || editLocked}
+                        className="h-7 w-7 rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground disabled:opacity-50"
+                        title={editLocked ? lockedTitle : "Quick edit"}
+                        aria-label={editLocked ? lockedTitle : "Quick edit"}
+                      >
+                        {openingCandidateId === c.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Edit2 className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </>
+                  );
+                })()}
+
                 {mode === "candidate" && (
                   <Button
                     variant="ghost"
