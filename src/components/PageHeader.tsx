@@ -28,7 +28,7 @@ export function PageHeader({
   return (
     <div className={cn("relative mb-6", className)}>
       <nav aria-label="Breadcrumb" className="mb-3">
-        <ol className="flex flex-wrap items-center gap-1.5 text-[10.5px] uppercase tracking-[0.16em] text-muted-foreground/80">
+        <ol className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
           <li>
             <Link
               to="/admin/customers"
@@ -40,13 +40,13 @@ export function PageHeader({
           </li>
           {crumbs.map((c, i) => (
             <li key={`${c.label}-${i}`} className="flex items-center gap-1.5">
-              <ChevronRight className="h-3 w-3 opacity-40" />
+              <ChevronRight className="h-3 w-3 opacity-60" />
               {c.to && i < crumbs.length - 1 ? (
                 <Link to={c.to} className="transition-colors hover:text-foreground">
                   {c.label}
                 </Link>
               ) : (
-                <span className="text-foreground/90">{c.label}</span>
+                <span className="text-foreground">{c.label}</span>
               )}
             </li>
           ))}
