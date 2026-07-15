@@ -5028,7 +5028,12 @@ function OffboardingDialog({
             Cancel
           </Button>
           <Button
-            disabled={!reasonId || !dateOfOffboarding || isSubmitting}
+            disabled={
+              !reasonId ||
+              !dateOfOffboarding ||
+              isSubmitting ||
+              (invReturns.some((r) => r.qty_returned > 0) && !returnDestKey)
+            }
             onClick={() => {
               onSubmit({
                 reasonId,
@@ -5042,6 +5047,7 @@ function OffboardingDialog({
                   reason_text: reasonText.trim(),
                   review: review.trim(),
                   asset_returns: assetReturns,
+                  inventory_returns: invReturns.filter((r) => r.qty_returned > 0),
                   rating,
                   rating_remarks: ratingRemarks.trim(),
                 },
