@@ -25,7 +25,7 @@ const PATH_FOR: Record<string,string> = {
 function Index() {
   const navigate = useNavigate();
   const { user, isReady } = useAuth();
-  const { can, isLoading, isSuperAdmin } = useCurrentPermissions();
+  const { can, isLoading, isSuperAdmin, roleKey } = useCurrentPermissions();
 
   useEffect(() => {
     if (!isReady) return;
@@ -34,8 +34,23 @@ function Index() {
       return;
     }
     if (isLoading) return;
+
+    // Role-based dashboard landing
+    if (roleKey === "guard" && !isSuperAdmin) {
+      navigate({ to: "/admin/my-inventory", replace: true });
+      return;
+    }
+    if (roleKey === "field_officer" && !isSuperAdmin) {
+      navigate({ to: "/admin/field-dashboard", replace: true });
+      return;
+    }
     if (isSuperAdmin) {
-      navigate({ to: "/admin/customers", replace: true });
+      navigate({ to: "/admin/dashboard", replace: true });
+      return;
+    }
+    // Other roles: prefer dashboard if allowed, else first accessible module
+    if (can("dashboard") || can("organizations") || can("employees")) {
+      navigate({ to: "/admin/dashboard", replace: true });
       return;
     }
     for (const m of ORDER) {
@@ -45,7 +60,8 @@ function Index() {
       }
     }
     navigate({ to: "/admin/profile", replace: true });
-  }, [user, isReady, isLoading, isSuperAdmin, can, navigate]);
+  }, [user, isReady, isLoading, isSuperAdmin, roleKey, can, navigate]);
+
 
   return <div className="min-h-screen bg-background" />;
 }
