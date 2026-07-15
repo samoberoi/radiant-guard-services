@@ -71,15 +71,15 @@ export function PageHeader({
             )}
             <div className="min-w-0">
               {eyebrow && (
-                <div className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-white/70 px-2.5 py-0.5 text-[9.5px] uppercase tracking-[0.22em] text-accent/90 backdrop-blur">
+                <div className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.22em] text-accent">
                   {eyebrow}
                 </div>
               )}
-              <h1 className="truncate font-display text-[24px] leading-[1.1] tracking-tight text-foreground sm:text-[28px]">
+              <h1 className="truncate font-display text-[24px] font-semibold leading-[1.1] tracking-tight text-foreground sm:text-[28px]">
                 {title}
               </h1>
               {description && (
-                <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
+                <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-foreground/70">
                   {description}
                 </p>
               )}
