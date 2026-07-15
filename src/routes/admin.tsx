@@ -418,7 +418,7 @@ function AdminLayout() {
       {/* Desktop vertical sidebar — glass / iPadOS */}
       <aside
         className={cn(
-          "fixed inset-y-3 left-3 z-30 hidden flex-col rounded-[26px] border border-white/50 bg-white/65 shadow-[0_10px_40px_-16px_rgba(15,23,42,0.18)] backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex animate-slide-in-left",
+          "fixed inset-y-3 left-3 z-30 hidden flex-col rounded-[26px] border border-border/50 bg-card/65 shadow-[0_10px_40px_-16px_rgba(15,23,42,0.18)] backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex animate-slide-in-left",
           sidebarWidth,
         )}
       >
@@ -484,13 +484,13 @@ function AdminLayout() {
         </nav>
 
         {/* Footer: user + collapse */}
-        <div className="border-t border-white/40 p-3">
+        <div className="border-t border-border/40 p-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
                 className={cn(
-                  "flex w-full items-center gap-2.5 rounded-2xl border border-white/40 bg-white/60 p-2 text-sm font-semibold text-foreground transition hover:bg-white/80",
+                  "flex w-full items-center gap-2.5 rounded-2xl border border-border/40 bg-card/60 p-2 text-sm font-semibold text-foreground transition hover:bg-card/80",
                   collapsed && "justify-center p-1.5",
                 )}
               >
@@ -535,7 +535,7 @@ function AdminLayout() {
             onClick={toggleTheme}
             aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             className={cn(
-              "mt-2 flex w-full items-center gap-2 rounded-xl border border-white/40 bg-white/60 px-2.5 py-2 text-[12px] font-semibold text-foreground hover:bg-white/80 transition",
+              "mt-2 flex w-full items-center gap-2 rounded-xl border border-border/40 bg-card/60 px-2.5 py-2 text-[12px] font-semibold text-foreground hover:bg-card/80 transition",
               collapsed && "justify-center px-1.5",
             )}
           >
@@ -553,7 +553,7 @@ function AdminLayout() {
             type="button"
             onClick={() => setCollapsed((v) => !v)}
             className={cn(
-              "mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-muted-foreground hover:bg-white/60 hover:text-foreground",
+              "mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-muted-foreground hover:bg-card/60 hover:text-foreground",
             )}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -564,11 +564,11 @@ function AdminLayout() {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-white/40 bg-white/60 px-4 backdrop-blur-2xl backdrop-saturate-150 lg:hidden animate-slide-in-top">
+      <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border/40 bg-card/60 px-4 backdrop-blur-2xl backdrop-saturate-150 lg:hidden animate-slide-in-top">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
-          className="grid h-9 w-9 place-items-center rounded-xl border border-white/50 bg-white/70 text-foreground"
+          className="grid h-9 w-9 place-items-center rounded-xl border border-border/50 bg-card/70 text-foreground"
           aria-label="Open menu"
         >
           <Menu className="h-5 w-5" />
@@ -585,13 +585,13 @@ function AdminLayout() {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute inset-y-2 left-2 w-[86%] max-w-sm overflow-y-auto rounded-3xl border border-white/40 bg-white/80 p-4 shadow-2xl backdrop-blur-2xl">
+          <aside className="absolute inset-y-2 left-2 w-[86%] max-w-sm overflow-y-auto rounded-3xl border border-border/40 bg-card/80 p-4 shadow-2xl backdrop-blur-2xl">
             <div className="mb-4 flex items-center justify-between">
               <BrandMark />
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="grid h-9 w-9 place-items-center rounded-xl bg-white/70 text-foreground"
+                className="grid h-9 w-9 place-items-center rounded-xl bg-card/70 text-foreground"
                 aria-label="Close menu"
               >
                 <X className="h-5 w-5" />
@@ -601,23 +601,23 @@ function AdminLayout() {
               {visibleGroups.map((g) => (
                 <MobileGroup key={g.key} group={g} isActive={isActive} isGroupActive={isGroupActive(g)} />
               ))}
-              <div className="my-2 border-t border-white/40" />
+              <div className="my-2 border-t border-border/40" />
               <Link
                 to="/admin/profile"
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-white/70"
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-card/70"
               >
                 <Users className="h-4 w-4" /> My Profile
               </Link>
               <Link
                 to="/admin/notifications"
-                className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-white/70"
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-card/70"
               >
                 <Bell className="h-4 w-4" /> Notifications
               </Link>
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-white/70"
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-card/70"
               >
                 {themeMounted && theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 {themeMounted && theme === "dark" ? "Light mode" : "Dark mode"}
@@ -639,14 +639,14 @@ function AdminLayout() {
       <main className={cn("relative z-10 px-4 py-6 sm:px-6 lg:py-8 lg:pr-6", mainPad)}>
         {/* Desktop top utility bar — global search + notifications */}
         <div className="mb-4 hidden items-center gap-3 lg:flex animate-slide-in-top">
-          <div className="flex h-10 flex-1 items-center gap-2 rounded-full border border-white/60 bg-white/70 px-4 text-sm text-muted-foreground backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_10px_30px_-18px_rgba(15,23,42,0.18)]">
+          <div className="flex h-10 flex-1 items-center gap-2 rounded-full border border-border/60 bg-card/70 px-4 text-sm text-muted-foreground backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_10px_30px_-18px_rgba(15,23,42,0.18)]">
             <svg className="h-4 w-4 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
             <input
               type="search"
               placeholder="Search employees, units, invoices…"
               className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
             />
-            <kbd className="hidden rounded-md border border-border/60 bg-white/80 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground sm:inline-flex">⌘K</kbd>
+            <kbd className="hidden rounded-md border border-border/60 bg-card/80 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground sm:inline-flex">⌘K</kbd>
           </div>
           <NotificationBell />
         </div>
@@ -692,7 +692,7 @@ function SidebarGroup({
     "bg-foreground text-background shadow-[0_10px_28px_-14px_rgba(15,23,42,0.55)]";
 
   const iconSpanBase = "grid h-7 w-7 shrink-0 place-items-center rounded-xl transition-colors";
-  const iconSpanActive = "bg-white/15 text-background";
+  const iconSpanActive = "bg-card/15 text-background";
   const iconSpanIdle = "text-foreground/60 group-hover:text-foreground";
 
   if (!group.children || group.children.length === 0) {
@@ -931,7 +931,7 @@ function CollapsedGroupPopover({
           side="right"
           align="start"
           sideOffset={12}
-          className="w-60 rounded-2xl border border-white/50 bg-white/95 p-2 shadow-2xl backdrop-blur-xl"
+          className="w-60 rounded-2xl border border-border/50 bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
         >
           <div className="mb-1 px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
             {t(group.label)}
