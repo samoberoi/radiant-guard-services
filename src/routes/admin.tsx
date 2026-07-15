@@ -57,6 +57,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/auth";
 import { useCurrentPermissions } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
@@ -408,6 +409,7 @@ function AdminLayout() {
   const mainPad = collapsed ? "lg:pl-[92px]" : "lg:pl-[264px]";
 
   return (
+    <TooltipProvider delayDuration={150} skipDelayDuration={100}>
     <div className="relative min-h-screen">
       {/* Soft tinted canvas — clean glass backdrop, no grid */}
       <div className="pointer-events-none fixed inset-0 z-0 app-canvas" />
@@ -663,6 +665,7 @@ function AdminLayout() {
         </div>
       </main>
     </div>
+    </TooltipProvider>
   );
 }
 
@@ -696,7 +699,7 @@ function SidebarGroup({
   const iconSpanIdle = "text-foreground/60 group-hover:text-foreground";
 
   if (!group.children || group.children.length === 0) {
-    return (
+    const link = (
       <Link
         to={group.to!}
         aria-label={collapsed ? group.label : undefined}
@@ -708,6 +711,15 @@ function SidebarGroup({
         </span>
         {!collapsed && <span className="truncate">{t(group.label)}</span>}
       </Link>
+    );
+    if (!collapsed) return link;
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right" sideOffset={10} className="font-medium">
+          {t(group.label)}
+        </TooltipContent>
+      </Tooltip>
     );
   }
 
@@ -913,19 +925,27 @@ function CollapsedGroupPopover({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          title={t(group.label)}
-          aria-label={t(group.label)}
-          aria-expanded={open}
-          className={cn(itemBase, "justify-center px-2", groupActive ? itemActive : itemIdle)}
-        >
-          <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
-            <Icon className="h-4 w-4" />
-          </span>
-        </button>
-      </PopoverTrigger>
+      <Tooltip>
+        <PopoverTrigger asChild>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              aria-label={t(group.label)}
+              aria-expanded={open}
+              className={cn(itemBase, "justify-center px-2", groupActive ? itemActive : itemIdle)}
+            >
+              <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
+                <Icon className="h-4 w-4" />
+              </span>
+            </button>
+          </TooltipTrigger>
+        </PopoverTrigger>
+        {!open && (
+          <TooltipContent side="right" sideOffset={10} className="font-medium">
+            {t(group.label)}
+          </TooltipContent>
+        )}
+      </Tooltip>
       {group.children && (
         <PopoverContent
           side="right"
