@@ -683,64 +683,6 @@ function HierarchyTreeDialog({
   );
 }
 
-function StatTile({
-  label,
-  value,
-  sub,
-  icon: Icon,
-  to,
-  accent,
-  onCount,
-  countTitle,
-}: {
-  label: string;
-  value: number;
-  sub?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  to: string;
-  accent?: boolean;
-  onCount?: () => void;
-  countTitle?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "group relative overflow-hidden rounded-2xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_40px_-12px_color-mix(in_oklab,var(--accent)_30%,transparent)]",
-        accent ? "border-accent/40" : "border-border hover:border-accent/40",
-      )}
-    >
-      <div className="flex items-start justify-between">
-        <div className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-          {label}
-        </div>
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15 text-accent">
-          <Icon className="h-4 w-4" />
-        </div>
-      </div>
-      {onCount ? (
-        <button
-          type="button"
-          onClick={onCount}
-          title={countTitle}
-          className="mt-2 block text-left font-display text-3xl font-bold text-foreground transition-colors hover:text-accent"
-        >
-          {value}
-        </button>
-      ) : (
-        <div className="mt-2 font-display text-3xl font-bold text-foreground">{value}</div>
-      )}
-      <div className="mt-1 flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">{sub}</span>
-        <Link
-          to={to}
-          className="font-semibold text-accent opacity-70 transition-opacity hover:opacity-100"
-        >
-          Manage →
-        </Link>
-      </div>
-    </div>
-  );
-}
 
 function StatusBadge({ status }: { status: CustomerStatus }) {
   return (
