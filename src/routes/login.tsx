@@ -155,50 +155,50 @@ function LoginPage() {
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10 sm:px-6">
         <div className="w-full max-w-[440px]">
           {/* Brand */}
-          <div className="mb-6 flex flex-col items-center gap-3 text-center">
-            <div className="grid h-14 w-14 place-items-center rounded-2xl bg-primary shadow-[0_20px_50px_-15px_color-mix(in_oklab,var(--primary)_60%,transparent)] ring-1 ring-primary-foreground/10">
-              <img src={logo} alt="Radiant" className="h-9 w-9 object-contain" />
+          <div className="mb-8 flex flex-col items-center gap-4 text-center">
+            <div className="grid h-20 w-20 place-items-center rounded-[22px] bg-white shadow-[0_20px_50px_-15px_color-mix(in_oklab,var(--primary)_35%,transparent)] ring-1 ring-black/5">
+              <img src={logo} alt="Radiant" className="h-14 w-14 object-contain" />
             </div>
             <div>
-              <div className="font-display text-[15px] font-semibold tracking-tight text-foreground">
+              <div className="font-display text-[17px] font-semibold tracking-tight text-foreground">
                 Radiant Guard
               </div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
                 Services Pvt. Ltd.
               </div>
             </div>
           </div>
 
           {/* Glass card */}
-          <div className="relative overflow-hidden rounded-[28px] border border-white/60 bg-white/55 p-7 shadow-[0_30px_80px_-20px_color-mix(in_oklab,var(--primary)_35%,transparent)] backdrop-blur-2xl sm:p-9">
+          <div className="relative overflow-hidden rounded-[28px] border border-white/70 bg-white/80 p-7 shadow-[0_30px_80px_-20px_color-mix(in_oklab,var(--primary)_30%,transparent)] backdrop-blur-2xl sm:p-9">
             {/* inner highlight */}
             <div
               aria-hidden
               className="pointer-events-none absolute inset-x-0 top-0 h-px"
               style={{
                 background:
-                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent)",
+                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.95), transparent)",
               }}
             />
             {/* soft accent halo inside card */}
             <div
               aria-hidden
-              className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full opacity-40 blur-3xl"
-              style={{ background: "radial-gradient(circle, color-mix(in oklab, var(--accent) 60%, transparent), transparent 70%)" }}
+              className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full opacity-30 blur-3xl"
+              style={{ background: "radial-gradient(circle, color-mix(in oklab, var(--accent) 50%, transparent), transparent 70%)" }}
             />
 
             <div className="relative">
-              <div className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-white/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground backdrop-blur">
+              <div className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-white/80 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground backdrop-blur">
                 {step === "phone" ? (
-                  <><Sparkles className="h-3 w-3 text-accent" /> Welcome back</>
+                  <><Sparkles className="h-3.5 w-3.5 text-accent" /> Welcome back</>
                 ) : (
-                  <><ShieldCheck className="h-3 w-3 text-accent" /> Almost there</>
+                  <><ShieldCheck className="h-3.5 w-3.5 text-accent" /> Almost there</>
                 )}
               </div>
-              <h1 className="font-display text-[28px] font-semibold leading-tight tracking-tight text-foreground">
+              <h1 className="font-display text-[30px] font-semibold leading-[1.1] tracking-tight text-foreground">
                 {step === "phone" ? "Sign in to continue" : "Verify your number"}
               </h1>
-              <p className="mt-1.5 text-[13.5px] text-muted-foreground">
+              <p className="mt-2 text-[14.5px] leading-relaxed text-muted-foreground">
                 {step === "phone"
                   ? "Enter your mobile number to receive a one-time code."
                   : `We sent a 6-digit code to +91 ••• ••• ${phone.slice(-4)}.`}
