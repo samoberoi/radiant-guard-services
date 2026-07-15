@@ -429,19 +429,52 @@ function AdminLayout() {
           )}
         </div>
 
-        {/* Nav */}
+        {/* Nav — grouped like the reference portal (Menu / Operations / Finance / Admin) */}
         <nav className="scrollbar-hide flex-1 overflow-y-auto px-2.5 pb-3">
-          <div className="space-y-[3px]">
-            {visibleGroups.map((g) => (
-              <SidebarGroup
-                key={g.key}
-                group={g}
-                collapsed={collapsed}
-                isActive={isActive}
-                groupActive={isGroupActive(g)}
-              />
-            ))}
-          </div>
+          {(() => {
+            const sections: Array<{ label: string; keys: string[] }> = [
+              { label: "Menu", keys: ["dashboard", "my-inventory", "profile"] },
+              { label: "Operations", keys: ["organizations", "contracts", "employees", "attendance", "inventory", "vehicles", "assets", "office-assets"] },
+              { label: "Finance", keys: ["payroll", "invoice"] },
+              { label: "Admin", keys: ["control"] },
+            ];
+            const used = new Set<string>();
+            return (
+              <div className="space-y-3">
+                {sections.map((s) => {
+                  const items = visibleGroups.filter((g) => s.keys.includes(g.key));
+                  if (items.length === 0) return null;
+                  items.forEach((g) => used.add(g.key));
+                  return (
+                    <div key={s.label} className="space-y-[3px]">
+                      {!collapsed && (
+                        <div className="px-2.5 pt-1 pb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground/70">
+                          {s.label}
+                        </div>
+                      )}
+                      {items.map((g) => (
+                        <SidebarGroup key={g.key} group={g} collapsed={collapsed} isActive={isActive} groupActive={isGroupActive(g)} />
+                      ))}
+                    </div>
+                  );
+                })}
+                {(() => {
+                  const rest = visibleGroups.filter((g) => !used.has(g.key));
+                  if (rest.length === 0) return null;
+                  return (
+                    <div className="space-y-[3px]">
+                      {!collapsed && (
+                        <div className="px-2.5 pt-1 pb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground/70">More</div>
+                      )}
+                      {rest.map((g) => (
+                        <SidebarGroup key={g.key} group={g} collapsed={collapsed} isActive={isActive} groupActive={isGroupActive(g)} />
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          })()}
         </nav>
 
         {/* Footer: user + collapse */}
