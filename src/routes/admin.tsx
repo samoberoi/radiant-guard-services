@@ -642,13 +642,13 @@ function SidebarGroup({
   }, [groupActive]);
 
   const itemBase =
-    "group relative flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-medium transition-colors";
-  const itemIdle = "text-foreground/70 hover:bg-foreground/[0.04] hover:text-foreground";
+    "group relative flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-[13px] font-medium transition-all";
+  const itemIdle = "text-foreground/70 hover:bg-foreground/[0.05] hover:text-foreground";
   const itemActive =
-    "bg-accent/10 text-accent font-semibold before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-accent";
+    "bg-foreground text-background shadow-[0_10px_28px_-14px_rgba(15,23,42,0.55)]";
 
-  const iconSpanBase = "grid h-7 w-7 shrink-0 place-items-center rounded-lg transition-colors";
-  const iconSpanActive = "bg-accent text-accent-foreground";
+  const iconSpanBase = "grid h-7 w-7 shrink-0 place-items-center rounded-xl transition-colors";
+  const iconSpanActive = "bg-white/15 text-background";
   const iconSpanIdle = "text-foreground/60 group-hover:text-foreground";
 
   if (!group.children || group.children.length === 0) {
