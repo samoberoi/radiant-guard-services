@@ -622,17 +622,17 @@ function DashboardPage() {
             </div>
             {data && (
               <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[13px] sm:grid-cols-4 lg:flex lg:flex-col lg:items-end lg:gap-1">
-                <div className="flex items-center justify-between gap-3 lg:gap-4"><span className="text-muted-foreground">Contract</span><span className="num font-semibold">{fmtINR(data.pnlTotals.contract)}</span></div>
-                <div className="flex items-center justify-between gap-3 lg:gap-4"><span className="text-muted-foreground">Invoice</span><span className="num font-semibold">{fmtINR(data.pnlTotals.invoice)}</span></div>
-                <div className="flex items-center justify-between gap-3 lg:gap-4"><span className="text-muted-foreground">Payroll</span><span className="num font-semibold">{fmtINR(data.pnlTotals.payroll)}</span></div>
-                <div className="flex items-center justify-between gap-3 lg:gap-4">
+                <div className="flex items-center justify-between gap-3 whitespace-nowrap lg:gap-4"><span className="text-muted-foreground">Contract</span><span className="num font-semibold">{fmtINR(data.pnlTotals.contract)}</span></div>
+                <div className="flex items-center justify-between gap-3 whitespace-nowrap lg:gap-4"><span className="text-muted-foreground">Invoice</span><span className="num font-semibold">{fmtINR(data.pnlTotals.invoice)}</span></div>
+                <div className="flex items-center justify-between gap-3 whitespace-nowrap lg:gap-4"><span className="text-muted-foreground">Payroll</span><span className="num font-semibold">{fmtINR(data.pnlTotals.payroll)}</span></div>
+                <div className="flex items-center justify-between gap-3 whitespace-nowrap lg:gap-4">
                   <span className="text-muted-foreground">Variance</span>
                   <span className={`num font-semibold ${(data.pnlTotals.invoice - data.pnlTotals.payroll) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{fmtINR(data.pnlTotals.invoice - data.pnlTotals.payroll)}</span>
                 </div>
               </div>
             )}
           </div>
-          <div className="overflow-x-clip">
+          <div className="overflow-x-auto">
             <table className="ios-table min-w-[1040px]">
               <colgroup>
                 <col className="w-[22%]" />
