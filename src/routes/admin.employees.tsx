@@ -322,7 +322,9 @@ type ReactivationResult = {
   full_name: string;
   status: string;
   reusedExisting?: boolean;
+  mode?: "reuse" | "new";
 };
+
 
 type RoleLite = { key: string; name: string };
 
