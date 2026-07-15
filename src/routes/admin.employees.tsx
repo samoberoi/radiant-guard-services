@@ -314,7 +314,7 @@ type CandidateListItem = Pick<
   | "unit_id"
   | "designation_id"
   | "status"
-> & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null; offboarding_reason_id: string | null; offboarded_at: string | null; assigned_asset_ids: string[]; no_hire: boolean; offboarding_details: OffboardingDetails; date_of_birth: string | null; preferred_joining_date: string | null; approved_at: string | null; created_by: string | null };
+> & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null; offboarding_reason_id: string | null; offboarded_at: string | null; assigned_asset_ids: string[]; no_hire: boolean; offboarding_details: OffboardingDetails; date_of_birth: string | null; preferred_joining_date: string | null; approved_at: string | null; created_by: string | null; created_at: string | null; updated_at: string | null };
 
 type ReactivationResult = {
   id: string;
@@ -361,6 +361,46 @@ function getMutationErrorMessage(error: unknown, fallback: string) {
   }
   if (typeof error === "string" && error.trim()) return error;
   return fallback;
+}
+
+function toTime(value: string | null | undefined) {
+  if (!value) return 0;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : 0;
+}
+
+function employeeCodeNumber(code: string | null | undefined) {
+  const match = (code ?? "").match(/(\d+)$/);
+  return match ? Number(match[1]) : 0;
+}
+
+function employeeLifecycleTime(candidate: CandidateListItem) {
+  return (
+    toTime(candidate.approved_at) ||
+    toTime(candidate.created_at) ||
+    toTime(candidate.updated_at) ||
+    toTime(candidate.offboarded_at)
+  );
+}
+
+function employeeStatusRank(candidate: CandidateListItem) {
+  if (candidate.status !== "inactive" && candidate.is_enabled) return 4;
+  if (candidate.status === "active") return 3;
+  if (candidate.status === "approved") return 2;
+  return 1;
+}
+
+function newestEmployeeRecordFirst(a: CandidateListItem, b: CandidateListItem) {
+  return (
+    employeeCodeNumber(b.employee_code) - employeeCodeNumber(a.employee_code) ||
+    employeeLifecycleTime(b) - employeeLifecycleTime(a) ||
+    toTime(b.created_at) - toTime(a.created_at) ||
+    b.id.localeCompare(a.id)
+  );
+}
+
+function preferredEmployeeRecordFirst(a: CandidateListItem, b: CandidateListItem) {
+  return employeeStatusRank(b) - employeeStatusRank(a) || newestEmployeeRecordFirst(a, b);
 }
 
 function useSignedDocsSummary() {
@@ -428,7 +468,7 @@ function useCandidates() {
       const { data, error } = await runWithQueryTimeout("Employees", async (signal) =>
         await supabase
           .from("candidates" as never)
-          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key,is_enabled,reports_to,offboarding_reason_id,offboarded_at,assigned_asset_ids,no_hire,offboarding_details,date_of_birth,preferred_joining_date,approved_at,created_by")
+          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key,is_enabled,reports_to,offboarding_reason_id,offboarded_at,assigned_asset_ids,no_hire,offboarding_details,date_of_birth,preferred_joining_date,approved_at,created_by,created_at,updated_at")
           .order("created_at", { ascending: false })
           .limit(250)
           .abortSignal(signal),
@@ -772,39 +812,35 @@ function EmployeesPage() {
 
   const isEmployeeStatus = (s: string) => s === "approved" || s === "active" || s === "inactive";
 
-  const supersededInactiveEmployeeIds = useMemo(() => {
-    const liveRecordByMobile = new Map<string, CandidateListItem>();
+  const supersededEmployeeIds = useMemo(() => {
+    const recordsByMobile = new Map<string, CandidateListItem[]>();
     for (const c of candidates) {
       const mobile = c.mobile?.trim();
-      if (!mobile || c.status === "inactive") continue;
-      liveRecordByMobile.set(mobile, c);
-    }
-
-    // Group all inactive records by mobile so we can dedupe them.
-    const inactiveByMobile = new Map<string, CandidateListItem[]>();
-    for (const c of candidates) {
-      const mobile = c.mobile?.trim();
-      if (!mobile || c.status !== "inactive") continue;
-      if (!inactiveByMobile.has(mobile)) inactiveByMobile.set(mobile, []);
-      inactiveByMobile.get(mobile)!.push(c);
+      if (!mobile) continue;
+      if (!recordsByMobile.has(mobile)) recordsByMobile.set(mobile, []);
+      recordsByMobile.get(mobile)!.push(c);
     }
 
     const ids = new Set<string>();
-    for (const [mobile, list] of inactiveByMobile) {
-      const liveRecord = liveRecordByMobile.get(mobile);
-      if (liveRecord) {
-        // A live (non-inactive) record exists → hide ALL inactive records for this mobile.
-        for (const c of list) ids.add(c.id);
+    for (const list of recordsByMobile.values()) {
+      const employeeRecords = list.filter((c) => isEmployeeStatus(c.status));
+      if (employeeRecords.length <= 1) continue;
+
+      const nonInactiveRecords = list.filter((c) => c.status !== "inactive");
+      const visibleEmployee = nonInactiveRecords
+        .filter((c) => isEmployeeStatus(c.status))
+        .sort(preferredEmployeeRecordFirst)[0];
+
+      if (nonInactiveRecords.length > 0 && !visibleEmployee) {
+        // A pending reactivation/onboarding exists for this mobile; hide older inactive employee cards.
+        for (const c of employeeRecords) ids.add(c.id);
         continue;
       }
-      // No live record → keep only the most recently created inactive record; hide the rest.
-      if (list.length <= 1) continue;
-      const sorted = [...list].sort((a, b) => {
-        const at = (a as CandidateListItem & { created_at?: string }).created_at ?? "";
-        const bt = (b as CandidateListItem & { created_at?: string }).created_at ?? "";
-        return bt.localeCompare(at);
-      });
-      for (let i = 1; i < sorted.length; i++) ids.add(sorted[i].id);
+
+      const keep = visibleEmployee ?? [...employeeRecords].sort(preferredEmployeeRecordFirst)[0];
+      for (const c of employeeRecords) {
+        if (c.id !== keep.id) ids.add(c.id);
+      }
     }
     return ids;
   }, [candidates]);
@@ -812,7 +848,7 @@ function EmployeesPage() {
   const employees = useMemo(
     () => candidates.filter((c) => {
       if (!isEmployeeStatus(c.status)) return false;
-      if (supersededInactiveEmployeeIds.has(c.id)) return false;
+      if (supersededEmployeeIds.has(c.id)) return false;
       if (!matchesSearch(c)) return false;
       if (!matchesFilters(c)) return false;
       if (isFieldOfficer) {
@@ -822,7 +858,7 @@ function EmployeesPage() {
       return true;
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, supersededInactiveEmployeeIds, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations, isFieldOfficer, scopedUnitIdSet],
+    [candidates, supersededEmployeeIds, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations, isFieldOfficer, scopedUnitIdSet],
   );
   const candidateRows = useMemo(
     () => candidates.filter((c) => {
@@ -1036,7 +1072,7 @@ function EmployeesPage() {
     const candRejected = candidateOnly.filter((c) => c.status === "rejected").length;
 
     // Employee-tab stats (employees only)
-    const employeeOnly = candidates.filter((c) => isEmployeeStatus(c.status) && !supersededInactiveEmployeeIds.has(c.id));
+    const employeeOnly = candidates.filter((c) => isEmployeeStatus(c.status) && !supersededEmployeeIds.has(c.id));
     const empTotal = employeeOnly.length;
     const empActive = employeeOnly.filter((c) => c.is_enabled && c.status !== "inactive").length;
     const empInactive = empTotal - empActive;
@@ -1047,7 +1083,7 @@ function EmployeesPage() {
       candTotal, candDrafts, candPending, candRejected,
       empTotal, empActive, empInactive, empNdaSigned, empAlSigned,
     };
-  }, [candidates, signedByCandidate, supersededInactiveEmployeeIds]);
+  }, [candidates, signedByCandidate, supersededEmployeeIds]);
 
   const deleteMut = useMutation({
     mutationFn: async (c: CandidateListItem) => {
