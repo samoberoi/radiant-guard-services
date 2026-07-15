@@ -209,8 +209,8 @@ function LoginPage() {
                       <span className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                         Mobile number
                       </span>
-                      <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center gap-2 pl-5 pr-3">
+                      <div className="flex h-14 w-full items-center overflow-hidden rounded-2xl border border-border/70 bg-white/85 backdrop-blur transition-all focus-within:border-accent focus-within:bg-white focus-within:ring-4 focus-within:ring-accent/15">
+                        <div className="flex items-center gap-3 pl-5 pr-3">
                           <span className="text-[15px] font-semibold text-foreground">
                             +91
                           </span>
@@ -225,7 +225,7 @@ function LoginPage() {
                           onChange={(e) =>
                             setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
                           }
-                          className="h-14 w-full rounded-2xl border border-border/70 bg-white/85 pl-[74px] pr-5 text-[16px] font-medium tracking-wide text-foreground placeholder:text-muted-foreground/60 backdrop-blur transition-all focus:border-accent focus:bg-white focus:outline-none focus:ring-4 focus:ring-accent/15"
+                          className="h-full flex-1 bg-transparent pr-5 text-[16px] font-medium tracking-wide text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
                         />
                       </div>
                     </label>
