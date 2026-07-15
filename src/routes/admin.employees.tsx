@@ -1622,6 +1622,8 @@ function EmployeesPage() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Reject failed"),
   });
 
+  const canEditInactiveProfile = isSuperAdmin || roleKey === "leadership" || roleKey === "super_admin";
+
   const openEditor = async (candidateId: string) => {
     setOpeningCandidateId(candidateId);
     try {
@@ -1631,7 +1633,12 @@ function EmployeesPage() {
         .eq("id", candidateId)
         .single();
       if (error) throw error;
-      setEditing((data as Candidate) ?? null);
+      const record = (data as Candidate) ?? null;
+      if (record && record.status === "inactive" && !canEditInactiveProfile) {
+        toast.error("Only leadership or super admin can edit an inactive employee's profile.");
+        return;
+      }
+      setEditing(record);
       setOpenWizard(true);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not open candidate");
@@ -1639,6 +1646,7 @@ function EmployeesPage() {
       setOpeningCandidateId(null);
     }
   };
+
 
   const renderRows = (rows: CandidateListItem[], mode: "employee" | "candidate") => {
     const empCols = 4 + Object.values(columnsVisible).filter(Boolean).length;
