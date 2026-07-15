@@ -219,7 +219,7 @@ function VendorsPage() {
                 <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">{k.label}</div>
                 <div className="mt-1 font-display text-2xl font-bold tabular-nums text-foreground">{k.value}</div>
               </div>
-              <div className="grid h-9 w-9 place-items-center rounded-xl bg-white/70 ring-1 ring-border/60 backdrop-blur">
+              <div className="grid h-9 w-9 place-items-center rounded-xl bg-card/70 ring-1 ring-border/60 backdrop-blur">
                 <k.icon className="h-4 w-4" />
               </div>
             </div>

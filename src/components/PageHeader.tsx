@@ -57,7 +57,7 @@ export function PageHeader({
         <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[oklch(0.65_0.22_262/0.18)] blur-3xl" />
         <div className="pointer-events-none absolute -left-16 -bottom-24 h-56 w-56 rounded-full bg-[oklch(0.78_0.13_200/0.14)] blur-3xl" />
         <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-card/80 to-transparent" />
-        <div className="pointer-events-none absolute inset-0 rounded-[28px] ring-1 ring-inset ring-white/40" />
+        <div className="pointer-events-none absolute inset-0 rounded-[28px] ring-1 ring-inset ring-border/40" />
 
         <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
           <div className="flex min-w-0 items-start gap-3.5">
