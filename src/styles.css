@@ -267,21 +267,22 @@
     min-height: 168px;
     padding: 1.25rem;
     border-radius: 22px;
-    background: color-mix(in oklab, white 58%, transparent);
-    border: 1px solid color-mix(in oklab, white 65%, transparent);
+    background: rgb(var(--surface) / var(--surface-glass-alpha));
+    border: 1px solid rgb(var(--surface-hairline) / var(--surface-border-alpha));
     backdrop-filter: blur(22px) saturate(160%);
     box-shadow:
-      0 1px 0 0 color-mix(in oklab, white 75%, transparent) inset,
-      0 1px 2px rgba(15,23,42,0.04),
-      0 14px 36px -20px rgba(15,23,42,0.16);
+      0 1px 0 0 rgb(var(--surface-hairline) / 0.24) inset,
+      0 1px 2px rgb(var(--surface-shadow) / 0.06),
+      0 14px 36px -20px rgb(var(--surface-shadow) / 0.32);
     transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+    color: var(--foreground);
   }
   .tile-interactive:hover {
     transform: translateY(-2px);
     border-color: color-mix(in oklab, var(--accent) 40%, transparent);
     box-shadow:
-      0 1px 0 0 color-mix(in oklab, white 80%, transparent) inset,
-      0 22px 48px -22px color-mix(in oklab, var(--accent) 35%, transparent);
+      0 1px 0 0 rgb(var(--surface-hairline) / 0.28) inset,
+      0 22px 48px -22px color-mix(in oklab, var(--accent) 45%, transparent);
   }
   .tile-icon {
     display: inline-flex;
@@ -290,10 +291,11 @@
     height: 2.25rem;
     width: 2.25rem;
     border-radius: 0.75rem;
-    background: color-mix(in oklab, var(--accent) 12%, white);
+    background: color-mix(in oklab, var(--accent) 18%, var(--card));
     color: var(--accent);
-    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 18%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 24%, transparent);
   }
+
 
   @keyframes shake {
     0%, 100% { transform: translateX(0); }
