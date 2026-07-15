@@ -153,8 +153,21 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
     letter-spacing: -0.015em;
+    font-weight: 500;
+  }
+
+  strong, b {
+    font-weight: 500;
   }
 }
+
+@layer utilities {
+  /* Global weight cap — no thick/bold anywhere. */
+  .font-bold { font-weight: 500 !important; }
+  .font-extrabold { font-weight: 500 !important; }
+  .font-black { font-weight: 500 !important; }
+  .font-semibold { font-weight: 500 !important; }
+  .font-medium { font-weight: 450 !important; }
 
 @layer utilities {
   .scrollbar-hide::-webkit-scrollbar { display: none; }
