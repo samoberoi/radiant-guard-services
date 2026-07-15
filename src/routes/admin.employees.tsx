@@ -1064,10 +1064,7 @@ function EmployeesPage() {
 
   const reactivateMut = useMutation({
     mutationFn: async ({ candidate }: { candidate: CandidateListItem }) => {
-      if (candidate.no_hire) {
-        throw new Error("Employee is flagged Do not re-hire and cannot be reactivated.");
-      }
-      // Fetch full source row
+      // Fetch fresh source row so we don't act on stale cache (e.g. no_hire just toggled)
       const { data: src, error: fetchErr } = await supabase
         .from("candidates" as never)
         .select("*")
@@ -1075,6 +1072,9 @@ function EmployeesPage() {
         .single();
       if (fetchErr) throw fetchErr;
       const source = src as unknown as Record<string, unknown>;
+      if (source.no_hire === true) {
+        throw new Error("Employee is flagged Do not re-hire. Uncheck it on the profile and save before reactivating.");
+      }
       const stripped: Record<string, unknown> = { ...source };
       // Remove system / unique columns so a fresh record is created
       [
