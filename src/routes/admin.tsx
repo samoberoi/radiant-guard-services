@@ -409,6 +409,7 @@ function AdminLayout() {
   const mainPad = collapsed ? "lg:pl-[92px]" : "lg:pl-[264px]";
 
   return (
+    <TooltipProvider delayDuration={150} skipDelayDuration={100}>
     <div className="relative min-h-screen">
       {/* Soft tinted canvas — clean glass backdrop, no grid */}
       <div className="pointer-events-none fixed inset-0 z-0 app-canvas" />
