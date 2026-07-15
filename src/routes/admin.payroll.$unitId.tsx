@@ -436,6 +436,19 @@ function PayrollUnitPage() {
       }
 
 
+      // Coerce attendance entries missing a designation to the candidate's
+      // primary designation so they roll into a real contract-resource line
+      // instead of a phantom "no designation" row that shows ₹0.
+      const primaryDesigByCandidate = new Map(
+        roster.map((c) => [c.id, c.designation_id ?? null] as const),
+      );
+      for (const e of entries) {
+        if (!e.designation_id) {
+          const primary = primaryDesigByCandidate.get(e.candidate_id) ?? null;
+          if (primary) e.designation_id = primary;
+        }
+      }
+
       // Make sure we know the names of any designation_ids referenced by entries
       // that weren't in the roster's primary designation list.
       const allDesigIds = new Set<string>(designationIds);
