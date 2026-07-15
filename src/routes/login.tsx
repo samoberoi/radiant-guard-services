@@ -210,7 +210,7 @@ function LoginPage() {
                         Mobile number
                       </span>
                       <div className="relative">
-                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center gap-2 pl-5 pr-3">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center gap-2 pl-5 pr-3">
                           <span className="text-[15px] font-semibold text-foreground">
                             +91
                           </span>
