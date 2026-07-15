@@ -4574,6 +4574,8 @@ function OffboardingDialog({
   assets,
   initialReasonId,
   isSubmitting,
+  currentUserCandidateId,
+  isFieldOfficer,
   onClose,
   onSubmit,
 }: {
@@ -4583,6 +4585,8 @@ function OffboardingDialog({
   assets: { id: string; name: string; category: string }[];
   initialReasonId: string;
   isSubmitting: boolean;
+  currentUserCandidateId: string | null;
+  isFieldOfficer: boolean;
   onClose: () => void;
   onSubmit: (args: { reasonId: string; details: OffboardingDetails; noHire: boolean }) => void;
 }) {
@@ -4596,10 +4600,51 @@ function OffboardingDialog({
   const [reasonText, setReasonText] = useState<string>("");
   const [review, setReview] = useState<string>("");
   const [assetReturns, setAssetReturns] = useState<OffboardingAssetReturn[]>([]);
+  const [invReturns, setInvReturns] = useState<OffboardingInventoryReturn[]>([]);
+  const [returnDestKey, setReturnDestKey] = useState<string>(""); // "type:id"
   const [rating, setRating] = useState<number>(0);
   const [ratingRemarks, setRatingRemarks] = useState<string>("");
   const [noHire, setNoHire] = useState<boolean>(false);
   const [noHireTouched, setNoHireTouched] = useState<boolean>(false);
+
+  // Fetch inventory currently held by this guard (balances at guard location = candidate.id)
+  const balancesQ = useQuery({
+    queryKey: ["offboard-inv-balances", target?.id],
+    enabled: !!target?.id,
+    staleTime: 15_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_stock_balances" as never)
+        .select("item_id,size_value,qty,inv_items(name,unit)")
+        .eq("location_type", "guard")
+        .eq("location_id", target!.id)
+        .gt("qty", 0);
+      if (error) throw error;
+      return ((data as unknown) as Array<{
+        item_id: string;
+        size_value: string;
+        qty: number;
+        inv_items: { name: string; unit: string } | null;
+      }>) ?? [];
+    },
+  });
+
+  // Fetch warehouses for return destination selection
+  const warehousesQ = useQuery({
+    queryKey: ["offboard-warehouses"],
+    enabled: !!target?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_warehouses" as never)
+        .select("id,name,is_default,enabled")
+        .eq("enabled", true)
+        .order("is_default", { ascending: false })
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return ((data as unknown) as Array<{ id: string; name: string; is_default: boolean }>) ?? [];
+    },
+  });
 
   // Reset when target changes
   useEffect(() => {
