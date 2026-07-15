@@ -218,6 +218,6 @@ function MyInventoryPage() {
           </table>
         )}
       </section>
-    </div>
+    </DashboardShell>
   );
 }
