@@ -42,6 +42,8 @@ import {
   Briefcase,
   Tag,
   UserCheck,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { BrandMark } from "@/components/BrandMark";
 import { useT } from "@/lib/i18n";
@@ -60,6 +62,8 @@ import { useCurrentPermissions } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTheme } from "@/lib/use-theme";
+
 
 export const Route = createFileRoute("/admin")({
   component: AdminLayout,
@@ -164,7 +168,9 @@ function AdminLayout() {
 
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
+  const { theme, toggle: toggleTheme, mounted: themeMounted } = useTheme();
+
 
   // One-time backfill of stored public URLs → signed URLs after buckets were privatized.
   useEffect(() => {
@@ -526,6 +532,25 @@ function AdminLayout() {
 
           <button
             type="button"
+            onClick={toggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            className={cn(
+              "mt-2 flex w-full items-center gap-2 rounded-xl border border-white/40 bg-white/60 px-2.5 py-2 text-[12px] font-semibold text-foreground hover:bg-white/80 transition",
+              collapsed && "justify-center px-1.5",
+            )}
+          >
+            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-foreground/[0.06] text-foreground/70">
+              {themeMounted && theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+            </span>
+            {!collapsed && (
+              <span className="flex-1 text-left text-[12px]">
+                {themeMounted && theme === "dark" ? "Light mode" : "Dark mode"}
+              </span>
+            )}
+          </button>
+
+          <button
+            type="button"
             onClick={() => setCollapsed((v) => !v)}
             className={cn(
               "mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-muted-foreground hover:bg-white/60 hover:text-foreground",
@@ -534,6 +559,7 @@ function AdminLayout() {
           >
             {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><ChevronsLeft className="h-4 w-4" /> Collapse</>}
           </button>
+
         </div>
       </aside>
 
@@ -588,6 +614,15 @@ function AdminLayout() {
               >
                 <Bell className="h-4 w-4" /> Notifications
               </Link>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-white/70"
+              >
+                {themeMounted && theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                {themeMounted && theme === "dark" ? "Light mode" : "Dark mode"}
+              </button>
+
               <button
                 type="button"
                 onClick={handleLogout}
