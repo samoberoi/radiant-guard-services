@@ -108,6 +108,7 @@ import {
   type ScopeType,
 } from "@/lib/deployment";
 import { useBranches, useCustomers, useStates } from "@/lib/admin-data";
+import { postMovements, type LocationType } from "@/lib/inv-helpers";
 
 export const Route = createFileRoute("/admin/employees")({
   component: EmployeesPage,
