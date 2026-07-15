@@ -384,6 +384,23 @@
   }
   .aurora-blob { animation: aurora-float 18s ease-in-out infinite; }
 
+  /* Dialog: centered fade + subtle zoom from center (no corner slide) */
+  .dialog-content-centered {
+    transform: translate(-50%, -50%);
+    transform-origin: center center;
+    will-change: transform, opacity;
+  }
+  @keyframes dialog-in {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.96); }
+    100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  }
+  @keyframes dialog-out {
+    0%   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(0.97); }
+  }
+  .animate-dialog-in  { animation: dialog-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-dialog-out { animation: dialog-out 160ms cubic-bezier(0.4, 0, 1, 1) both; }
+
   /* Soft tinted canvas — clean, no grid; token-driven so it flips per theme */
   .app-canvas {
     background:
