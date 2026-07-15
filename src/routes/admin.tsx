@@ -412,7 +412,7 @@ function AdminLayout() {
       {/* Desktop vertical sidebar — glass / iPadOS */}
       <aside
         className={cn(
-          "fixed inset-y-3 left-3 z-30 hidden flex-col rounded-[26px] border border-white/50 bg-white/65 shadow-[0_10px_40px_-16px_rgba(15,23,42,0.18)] backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex",
+          "fixed inset-y-3 left-3 z-30 hidden flex-col rounded-[26px] border border-white/50 bg-white/65 shadow-[0_10px_40px_-16px_rgba(15,23,42,0.18)] backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex animate-slide-in-left",
           sidebarWidth,
         )}
       >
@@ -538,7 +538,7 @@ function AdminLayout() {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-white/40 bg-white/60 px-4 backdrop-blur-2xl backdrop-saturate-150 lg:hidden">
+      <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-white/40 bg-white/60 px-4 backdrop-blur-2xl backdrop-saturate-150 lg:hidden animate-slide-in-top">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
@@ -603,7 +603,7 @@ function AdminLayout() {
       {/* Main */}
       <main className={cn("relative z-10 px-4 py-6 sm:px-6 lg:py-8 lg:pr-6", mainPad)}>
         {/* Desktop top utility bar — global search + notifications */}
-        <div className="mb-4 hidden items-center gap-3 lg:flex">
+        <div className="mb-4 hidden items-center gap-3 lg:flex animate-slide-in-top">
           <div className="flex h-10 flex-1 items-center gap-2 rounded-full border border-white/60 bg-white/70 px-4 text-sm text-muted-foreground backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_10px_30px_-18px_rgba(15,23,42,0.18)]">
             <svg className="h-4 w-4 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
             <input

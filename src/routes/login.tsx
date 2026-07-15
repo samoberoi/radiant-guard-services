@@ -85,7 +85,8 @@ function LoginPage() {
       await login(`+91${phone}`);
       toast.success("Signed in");
       setRevealing(true);
-      setTimeout(() => navigate({ to: "/", replace: true }), 700);
+      // Wait for the slide-up animation to play before navigating.
+      setTimeout(() => navigate({ to: "/", replace: true }), 640);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not start session. Try again.",
@@ -144,15 +145,12 @@ function LoginPage() {
         }}
       />
 
-      {/* Reveal overlay */}
-      <div
-        className={`pointer-events-none fixed inset-0 z-50 origin-bottom bg-background transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-          revealing ? "translate-y-0" : "translate-y-full"
-        }`}
-      />
+      {/* Content wrapper — slides up on successful sign-in to reveal the CRM */}
+      <div className={revealing ? "animate-slide-out-up" : ""}>
 
       {/* Centered glass card */}
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10 sm:px-6">
+
         <div className="w-full max-w-[440px]">
           {/* Brand */}
           <div className="mb-8 flex flex-col items-center gap-4 text-center">
@@ -322,7 +320,7 @@ function LoginPage() {
               {/* trust row */}
               <div className="mt-7 flex items-center justify-center gap-2 rounded-2xl border border-border/60 bg-white/70 px-3 py-2.5 text-[12px] text-muted-foreground backdrop-blur">
                 <ShieldCheck className="h-4 w-4 text-accent" />
-                <span>Encrypted end-to-end · No password required</span>
+                <span>Encrypted end-to-end · Secure OTP verification</span>
               </div>
             </div>
           </div>
@@ -338,6 +336,7 @@ function LoginPage() {
             </span>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
