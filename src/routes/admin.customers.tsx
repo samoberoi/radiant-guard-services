@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { csvDate, csvJoin, csvMapLink, csvStatus, downloadCsv } from "@/lib/csv-export";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader, PageStat } from "@/components/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -121,42 +121,20 @@ function CustomersDashboard() {
     <div>
       <PageHeader
         title="Organizations Dashboard"
+        eyebrow="Organizations"
+        icon={Network}
         description="Live overview of organizations, branches and operational units across India."
         crumbs={[{ label: "Organizations" }]}
+        kpis={
+          <>
+            <PageStat label="Organizations" value={customers.length} icon={Users} tone="accent" trend={{ delta: `${activeCustomers} active`, direction: "flat" }} />
+            <PageStat label="Units" value={units.length} icon={Warehouse} trend={{ delta: `${activeUnits} active`, direction: "flat" }} />
+            <PageStat label="Branches" value={branches.length} icon={Building2} trend={{ delta: `${states.length} states`, direction: "flat" }} />
+            <PageStat label="States" value={states.length} icon={MapPin} tone="success" />
+          </>
+        }
       />
 
-      {/* Stat tiles */}
-      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatTile
-          label="Organizations"
-          value={customers.length}
-          sub={`${activeCustomers} active`}
-          icon={Users}
-          to="/admin/customers/customer-manager"
-          accent
-        />
-        <StatTile
-          label="Units"
-          value={units.length}
-          sub={`${activeUnits} active`}
-          icon={Warehouse}
-          to="/admin/customers/unit-manager"
-        />
-        <StatTile
-          label="Branches"
-          value={branches.length}
-          sub={`${states.length} states`}
-          icon={Building2}
-          to="/admin/customers/branch-manager"
-        />
-        <StatTile
-          label="States"
-          value={states.length}
-          sub="across India"
-          icon={MapPin}
-          to="/admin/customers/state-manager"
-        />
-      </div>
 
       <div className="mb-4 flex justify-end gap-2">
         <Button
@@ -705,64 +683,6 @@ function HierarchyTreeDialog({
   );
 }
 
-function StatTile({
-  label,
-  value,
-  sub,
-  icon: Icon,
-  to,
-  accent,
-  onCount,
-  countTitle,
-}: {
-  label: string;
-  value: number;
-  sub?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  to: string;
-  accent?: boolean;
-  onCount?: () => void;
-  countTitle?: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "group relative overflow-hidden rounded-2xl border bg-card p-4 transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_40px_-12px_color-mix(in_oklab,var(--accent)_30%,transparent)]",
-        accent ? "border-accent/40" : "border-border hover:border-accent/40",
-      )}
-    >
-      <div className="flex items-start justify-between">
-        <div className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-          {label}
-        </div>
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/15 text-accent">
-          <Icon className="h-4 w-4" />
-        </div>
-      </div>
-      {onCount ? (
-        <button
-          type="button"
-          onClick={onCount}
-          title={countTitle}
-          className="mt-2 block text-left font-display text-3xl font-bold text-foreground transition-colors hover:text-accent"
-        >
-          {value}
-        </button>
-      ) : (
-        <div className="mt-2 font-display text-3xl font-bold text-foreground">{value}</div>
-      )}
-      <div className="mt-1 flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">{sub}</span>
-        <Link
-          to={to}
-          className="font-semibold text-accent opacity-70 transition-opacity hover:opacity-100"
-        >
-          Manage →
-        </Link>
-      </div>
-    </div>
-  );
-}
 
 function StatusBadge({ status }: { status: CustomerStatus }) {
   return (

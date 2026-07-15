@@ -38,7 +38,7 @@ import {
 import { DeleteGuardButton } from "@/components/DeleteGuardButton";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmProvider";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader, PageStat } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -1808,19 +1808,23 @@ function ClientContractsPage() {
 
   return (
     <div>
-      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <StatCard label="Clients + Prospects" value={overview.total} tone="default" />
-        <StatCard label="Active Clients" value={overview.activeClients} tone="active" />
-        <StatCard label="Inactive / Expired" value={overview.inactiveClients} tone="inactive" />
-        <StatCard label="Awaiting Approval" value={overview.pendingProspects} tone="inactive" />
-        <StatCard label="Rejected" value={overview.rejectedProspects} tone="expired" />
-        <StatCard label="Lost" value={overview.lostProspects} tone="expired" />
-      </div>
       <PageHeader
         title="Client Contracts"
+        eyebrow="Contracts"
         description="Manage client contracts across organisations and units."
         crumbs={[{ label: "Contracts" }, { label: "Client Contracts" }]}
+        kpis={
+          <>
+            <PageStat label="Clients + Prospects" value={overview.total} />
+            <PageStat label="Active Clients" value={overview.activeClients} tone="accent" />
+            <PageStat label="Inactive / Expired" value={overview.inactiveClients} tone="warning" />
+            <PageStat label="Awaiting Approval" value={overview.pendingProspects} tone="warning" />
+            <PageStat label="Rejected" value={overview.rejectedProspects} tone="destructive" />
+            <PageStat label="Lost" value={overview.lostProspects} tone="destructive" />
+          </>
+        }
       />
+
 
       <Tabs
         value={tab}
@@ -2307,32 +2311,6 @@ function LostBadge() {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone: "default" | "active" | "inactive" | "expired";
-}) {
-  const toneClass: Record<typeof tone, string> = {
-    default: "text-foreground",
-    active: "text-accent",
-    inactive: "text-muted-foreground",
-    expired: "text-destructive",
-  };
-  return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="text-xs uppercase tracking-wide text-muted-foreground">
-        {label}
-      </div>
-      <div className={cn("mt-1 text-2xl font-semibold", toneClass[tone])}>
-        {value}
-      </div>
-    </div>
-  );
-}
 
 function StatusBadge({ status }: { status: ContractStatus }) {
   const map: Record<ContractStatus, string> = {
