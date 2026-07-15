@@ -368,6 +368,7 @@ function AdminLayout() {
     { key: "my-inventory", label: "My Inventory", icon: Boxes, to: "/admin/my-inventory", activePrefixes: ["/admin/my-inventory"] },
     { key: "profile", label: "My Profile", icon: Users, to: "/admin/profile", activePrefixes: ["/admin/profile"] },
   ], []);
+  const isFieldOfficer = !isSuperAdmin && roleKey === "field_officer";
   const visibleGroups = (() => {
     if (isGuard) return guardGroups;
     if (isInventoryOnly) {
@@ -380,9 +381,17 @@ function AdminLayout() {
         exact: idx === 0,
       }));
     }
-    return groups
+    const base = groups
       .filter((g) => !g.module || can(g.module))
       .map((g) => (g.key === "inventory" ? { ...g, children: filteredInventoryChildren } : g));
+    if (isFieldOfficer) {
+      const myUnits: GroupItem = { key: "my-units", label: "My Units", icon: Warehouse, to: "/admin/field-dashboard", activePrefixes: ["/admin/field-dashboard"] };
+      const dashIdx = base.findIndex((g) => g.key === "dashboard");
+      const out = [...base];
+      out.splice(dashIdx + 1, 0, myUnits);
+      return out;
+    }
+    return base;
   })();
 
   const isGroupActive = (g: GroupItem) =>
