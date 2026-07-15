@@ -62,34 +62,36 @@ function StateManagerPage() {
     <div>
       <PageHeader
         title="State Manager"
-        description="All states served by Radiant Guard. Used as the source of truth for branch mappings."
+        eyebrow="Organizations"
+        icon={MapPin}
+        description="All states served by Radiant Guard. Source of truth for branch mappings."
         crumbs={[
           { label: "Organizations", to: "/admin/customers" },
           { label: "State Manager" },
         ]}
+        kpis={
+          <>
+            <PageStat label="Total states" value={states.length} icon={MapPin} />
+            <PageStat label="Mapped to branches" value={mappedCount} icon={Link2} tone="accent" />
+            <PageStat
+              label="Available"
+              value={states.length - mappedCount}
+              icon={Plus}
+              tone="success"
+            />
+          </>
+        }
       />
 
-      {/* Stats */}
-      <div className="mb-5 grid gap-3 sm:grid-cols-3">
-        <StatCard label="Total states" value={states.length} icon={MapPin} />
-        <StatCard label="Mapped to branches" value={mappedCount} icon={Link2} />
-        <StatCard
-          label="Available"
-          value={states.length - mappedCount}
-          icon={Plus}
-          accent
-        />
-      </div>
-
       {/* Toolbar */}
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/60 bg-white/60 p-2.5 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search states…"
-            className="h-10 rounded-lg pl-9"
+            className="h-10 rounded-xl border-transparent bg-white/80 pl-9 shadow-sm focus-visible:border-accent/30"
           />
         </div>
         <div className="flex gap-2">
@@ -121,14 +123,14 @@ function StateManagerPage() {
               )
             }
             disabled={states.length === 0}
-            className="h-10 rounded-lg"
+            className="h-10 rounded-xl"
           >
             <Download className="mr-1.5 h-4 w-4" />
             Export
           </Button>
           <Button
             onClick={() => setAddOpen(true)}
-            className="h-10 rounded-lg bg-primary font-semibold text-primary-foreground hover:bg-primary/90"
+            className="h-10 rounded-xl bg-primary text-primary-foreground shadow-[0_8px_20px_-10px_color-mix(in_oklab,var(--primary)_60%,transparent)] hover:bg-primary/90"
           >
             <Plus className="mr-1.5 h-4 w-4" />
             Add state
@@ -137,10 +139,11 @@ function StateManagerPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="flex items-center justify-between border-b border-border bg-accent/10 px-5 py-2.5 text-xs font-medium text-foreground">
-          <span className="inline-flex items-center gap-2"><span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-bold text-primary-foreground">{filtered.length}</span><span className="uppercase tracking-[0.14em] text-muted-foreground">Total {filtered.length === 1 ? "row" : "rows"}</span></span>
+      <div className="overflow-hidden rounded-2xl border border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.7)_inset,0_18px_40px_-30px_rgba(15,23,42,0.18)]">
+        <div className="flex items-center justify-between border-b border-border/60 bg-gradient-to-r from-accent/[0.08] via-transparent to-transparent px-5 py-2.5 text-xs text-foreground">
+          <span className="inline-flex items-center gap-2"><span className="rounded-full bg-primary px-2.5 py-0.5 text-[11px] text-primary-foreground">{filtered.length}</span><span className="uppercase tracking-[0.14em] text-muted-foreground">Total {filtered.length === 1 ? "row" : "rows"}</span></span>
         </div>
+
         <div className="overflow-x-clip">
           <table className="ios-table w-full table-fixed text-sm">
             <thead className="bg-secondary/60 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
