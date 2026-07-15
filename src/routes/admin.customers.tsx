@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { csvDate, csvJoin, csvMapLink, csvStatus, downloadCsv } from "@/lib/csv-export";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader, PageStat } from "@/components/PageHeader";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
