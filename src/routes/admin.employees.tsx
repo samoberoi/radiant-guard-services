@@ -1072,7 +1072,7 @@ function EmployeesPage() {
     const candRejected = candidateOnly.filter((c) => c.status === "rejected").length;
 
     // Employee-tab stats (employees only)
-    const employeeOnly = candidates.filter((c) => isEmployeeStatus(c.status) && !supersededInactiveEmployeeIds.has(c.id));
+    const employeeOnly = candidates.filter((c) => isEmployeeStatus(c.status) && !supersededEmployeeIds.has(c.id));
     const empTotal = employeeOnly.length;
     const empActive = employeeOnly.filter((c) => c.is_enabled && c.status !== "inactive").length;
     const empInactive = empTotal - empActive;
@@ -1083,7 +1083,7 @@ function EmployeesPage() {
       candTotal, candDrafts, candPending, candRejected,
       empTotal, empActive, empInactive, empNdaSigned, empAlSigned,
     };
-  }, [candidates, signedByCandidate, supersededInactiveEmployeeIds]);
+  }, [candidates, signedByCandidate, supersededEmployeeIds]);
 
   const deleteMut = useMutation({
     mutationFn: async (c: CandidateListItem) => {
