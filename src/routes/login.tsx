@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Loader2, ShieldCheck, MapPin, Users, Sparkles } from "lucide-react";
+import { ArrowRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,10 +27,31 @@ export const Route = createFileRoute("/login")({
 
 type Step = "phone" | "otp";
 
+function useClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const fmt = (tz: string) =>
+    new Intl.DateTimeFormat("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+      timeZone: tz,
+    }).format(now);
+  return {
+    ist: fmt("Asia/Kolkata"),
+    bst: fmt("Europe/London"),
+    edt: fmt("America/New_York"),
+  };
+}
+
 function LoginPage() {
   const navigate = useNavigate();
   const { user, login } = useAuth();
   const verifyInFlightRef = useRef(false);
+  const clock = useClock();
 
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -57,7 +78,7 @@ function LoginPage() {
     e?.preventDefault();
     if (!phoneValid) return;
     setSending(true);
-    await new Promise((r) => setTimeout(r, 600));
+    await new Promise((r) => setTimeout(r, 500));
     setSending(false);
     setStep("otp");
     setResendIn(30);
@@ -84,7 +105,7 @@ function LoginPage() {
       await login(`+91${phone}`);
       toast.success("Signed in");
       setRevealing(true);
-      setTimeout(() => navigate({ to: "/", replace: true }), 900);
+      setTimeout(() => navigate({ to: "/", replace: true }), 700);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not start session. Try again.",
@@ -97,143 +118,132 @@ function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[#0b0f1a]">
-      {/* Ambient aurora */}
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#eeb15a] p-4 sm:p-8 lg:p-12">
+      {/* subtle grain on the amber ground */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-80"
-        style={{
-          background:
-            "radial-gradient(ellipse 60% 50% at 18% 20%, rgba(37,99,235,0.28), transparent 60%), radial-gradient(ellipse 50% 40% at 90% 85%, rgba(99,102,241,0.22), transparent 60%), radial-gradient(ellipse 40% 30% at 50% 50%, rgba(56,189,248,0.10), transparent 70%)",
-        }}
-      />
-      {/* dot grid */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.12]"
+        className="pointer-events-none absolute inset-0 opacity-[0.18] mix-blend-overlay"
         style={{
           backgroundImage:
-            "radial-gradient(circle, rgba(255,255,255,0.6) 1px, transparent 1px)",
-          backgroundSize: "28px 28px",
+            "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.6), transparent 50%), radial-gradient(circle at 80% 80%, rgba(120,60,20,0.4), transparent 55%)",
         }}
       />
 
       {/* Reveal overlay */}
       <div
-        className={`pointer-events-none absolute inset-0 z-50 origin-bottom bg-white transition-transform duration-[850ms] ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        className={`pointer-events-none fixed inset-0 z-50 origin-bottom bg-[#eeb15a] transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
           revealing ? "translate-y-0" : "translate-y-full"
         }`}
       />
 
-      <div className="relative grid min-h-screen w-full overflow-hidden bg-white/[0.02] backdrop-blur-2xl lg:grid-cols-[1.05fr_1fr]">
-        {/* LEFT — brand panel */}
-        <div className="relative hidden flex-col justify-between overflow-hidden p-8 xl:p-12 lg:flex">
-          {/* gradient backdrop */}
+      {/* Framed dark stage */}
+      <div className="relative mx-auto grid min-h-[calc(100vh-2rem)] max-w-[1400px] overflow-hidden rounded-[28px] border border-black/40 bg-[#0d0d10] shadow-[0_40px_80px_-20px_rgba(120,50,10,0.55)] sm:min-h-[calc(100vh-4rem)] lg:grid-cols-[1.35fr_1fr]">
+        {/* LEFT — hero canvas */}
+        <div className="relative flex min-h-[420px] flex-col justify-between overflow-hidden p-6 sm:p-10">
+          {/* fabric-like warm gradient */}
           <div
             aria-hidden
             className="absolute inset-0"
             style={{
               background:
-                "linear-gradient(160deg, #0b1220 0%, #0f1d36 45%, #1a3a6e 100%)",
+                "radial-gradient(ellipse 90% 70% at 70% 55%, #f2913a 0%, #c85422 35%, #6b1f18 65%, #2a0e12 90%), linear-gradient(115deg, #2a1830 0%, transparent 55%)",
             }}
           />
-          {/* aurora blobs */}
+          {/* woven texture */}
           <div
             aria-hidden
-            className="aurora-blob absolute -left-20 -top-20 h-80 w-80 rounded-full opacity-50 blur-3xl"
-            style={{ background: "radial-gradient(circle, #2563eb, transparent 70%)" }}
+            className="absolute inset-0 opacity-[0.35] mix-blend-overlay"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 1px, transparent 1px 3px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.15) 0 1px, transparent 1px 3px)",
+            }}
           />
+          {/* violet bleed */}
           <div
             aria-hidden
-            className="aurora-blob absolute -right-24 bottom-0 h-96 w-96 rounded-full opacity-40 blur-3xl"
-            style={{ background: "radial-gradient(circle, #38bdf8, transparent 70%)" }}
-          />
-          {/* subtle shield watermark */}
-          <ShieldCheck
-            aria-hidden
-            className="absolute -right-10 top-1/2 h-[420px] w-[420px] -translate-y-1/2 text-white/[0.04]"
-            strokeWidth={1}
+            className="absolute -left-24 top-1/4 h-[420px] w-[420px] rounded-full opacity-60 blur-3xl"
+            style={{ background: "radial-gradient(circle, #4b1e5a, transparent 70%)" }}
           />
 
-          {/* Logo top-left */}
-          <div className="relative flex items-center gap-3">
-            <div className="grid h-12 w-12 place-items-center rounded-2xl bg-white/95 shadow-lg">
-              <img src={logo} alt="Radiant Guard" className="h-9 w-9 object-contain" />
+          {/* top-left brand */}
+          <div className="relative flex items-center gap-2.5">
+            <div className="grid h-9 w-9 place-items-center rounded-lg bg-[#f3e6d0]">
+              <img src={logo} alt="Radiant" className="h-6 w-6 object-contain" />
             </div>
-            <div className="leading-tight">
-              <div className="font-display text-lg font-bold tracking-tight text-white">
-                Radiant Guard
+            <div className="leading-tight text-[#f3e6d0]">
+              <div className="text-[13px] font-semibold tracking-tight">
+                radiant<span className="opacity-60">.</span>
               </div>
-              <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/60">
-                Services Pvt. Ltd.
+              <div className="text-[9px] font-medium uppercase tracking-[0.2em] opacity-60">
+                guard services
               </div>
             </div>
           </div>
 
-          {/* Headline */}
-          <div className="relative max-w-md">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80 backdrop-blur">
-              <Sparkles className="h-3 w-3" /> Operations portal
+          {/* bottom hero row */}
+          <div className="relative flex flex-wrap items-end justify-between gap-6 text-[#f3e6d0]">
+            <div className="font-display text-[clamp(3rem,8vw,6.5rem)] font-semibold leading-[0.9] tracking-tight">
+              RGS
             </div>
-            <h1 className="font-display text-[clamp(2rem,4vw,3.25rem)] font-extrabold leading-[1.04] tracking-tight text-white">
-              Command your<br />
-              <span className="text-white">
-                Guard Force.
-              </span>
-            </h1>
-            <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-white/70">
-              Sign in to manage employees, units, attendance, payroll and
-              compliance — all in one place.
-            </p>
+
+            {/* clock cluster */}
+            <div className="flex items-center gap-3">
+              <div className="relative h-6 w-6">
+                <div className="absolute inset-0 rounded-full border border-[#f3e6d0]/60" />
+                <div
+                  className="absolute inset-0 origin-center animate-spin rounded-full border border-transparent border-t-[#f3e6d0]"
+                  style={{ animationDuration: "6s" }}
+                />
+              </div>
+              <div className="grid grid-cols-[auto_auto] gap-x-2 font-mono text-[11px] leading-[1.35] tabular-nums opacity-90">
+                <span>{clock.ist}</span><span className="opacity-60">IST</span>
+                <span>{clock.bst}</span><span className="opacity-60">BST</span>
+                <span>{clock.edt}</span><span className="opacity-60">EDT</span>
+              </div>
+            </div>
+
+            <div className="font-display text-[clamp(2rem,5.5vw,4.25rem)] font-semibold leading-[0.9] tracking-tight">
+              REAL<span className="opacity-70">:</span>TIME
+            </div>
           </div>
-
-          {/* floating glass pills */}
-          {/* floating glass pills removed */}
-          <div />
-
         </div>
 
-        {/* RIGHT — white form card */}
-        <div className="relative flex min-h-screen items-center justify-center bg-white px-5 py-10 sm:px-10 lg:px-12">
-          <div className="w-full max-w-[420px]">
-            {/* mobile logo */}
-            <div className="mb-8 flex items-center gap-2 lg:hidden">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#0b1220]">
-                <img src={logo} alt="Radiant" className="h-7 w-7 object-contain" />
-              </div>
-              <div className="leading-tight">
-                <div className="font-display text-base font-bold tracking-tight text-neutral-900">
-                  Radiant Guard
+        {/* RIGHT — stacked floating panels */}
+        <div className="relative flex flex-col gap-3 p-4 sm:p-6 lg:p-5">
+          {/* INFO pill */}
+          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[#0d0d10] px-5 py-3.5 text-[#f3e6d0]">
+            <span className="text-[13px] font-semibold tracking-wide">INFO</span>
+            <ArrowRight className="h-4 w-4" />
+          </div>
+
+          {/* SIGN IN panel — primary */}
+          <div className="relative flex-1 overflow-hidden rounded-2xl border border-white/10 bg-[#0d0d10] p-6 text-[#f3e6d0]">
+            {/* subtle amber wash */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-16 -bottom-16 h-56 w-56 rounded-full opacity-40 blur-3xl"
+              style={{ background: "radial-gradient(circle, #f2913a, transparent 70%)" }}
+            />
+
+            <div className="relative flex items-start justify-between">
+              <div>
+                <div className="text-[15px] font-semibold tracking-wide">
+                  {step === "phone" ? "SIGN IN" : "VERIFY OTP"}
                 </div>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-neutral-500">
-                  Services Pvt. Ltd.
-                </div>
+                <ArrowRight className="mt-1.5 h-4 w-4" />
               </div>
+              <div className="grid h-5 w-5 place-items-center rounded-full border border-[#f3e6d0]/40 text-[10px] leading-none">−</div>
             </div>
 
-            {/* Heading */}
-            <div className="mb-8">
-              <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-[#0b1220]/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#0b1220]/70">
-                {step === "phone" ? "Welcome back" : "Almost there"}
+            <div className="mt-6 border-t border-[#f3e6d0]/10 pt-4">
+              <div className="mb-3 text-[10px] font-medium uppercase tracking-[0.22em] opacity-60">
+                {step === "phone" ? "Mobile" : `Code sent to +91 ••• ${phone.slice(-4)}`}
               </div>
-              <h2 className="font-display text-[clamp(2rem,5vw,2.5rem)] font-extrabold leading-[1.05] tracking-tight text-neutral-900">
-                {step === "phone" ? "Sign in" : "Verify OTP"}
-              </h2>
-              <p className="mt-2 text-[14px] text-neutral-500">
-                {step === "phone"
-                  ? "Enter your mobile number to receive a one-time code."
-                  : `We sent a 6-digit code to +91 ••• ••• ${phone.slice(-4)}.`}
-              </p>
-            </div>
 
-            {step === "phone" ? (
-              <form onSubmit={sendOtp} className="space-y-4">
-                <label className="block">
-                  <span className="mb-1.5 block text-[11px] font-bold uppercase tracking-[0.16em] text-neutral-500">
-                    Mobile number
-                  </span>
+              {step === "phone" ? (
+                <form onSubmit={sendOtp} className="space-y-3">
                   <div className="relative">
-                    <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-[15px] font-semibold text-neutral-400">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 font-mono text-[13px] text-[#f3e6d0]/60">
                       +91
                     </span>
                     <input
@@ -245,120 +255,138 @@ function LoginPage() {
                       onChange={(e) =>
                         setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
                       }
-                      className="h-14 w-full rounded-2xl border border-neutral-200 bg-neutral-50 pl-14 pr-5 text-[15px] font-medium tracking-wide text-neutral-900 placeholder:text-neutral-400 transition-all focus:border-[#2563eb] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#2563eb]/12"
+                      className="h-12 w-full rounded-xl border border-[#f3e6d0]/15 bg-black/40 pl-12 pr-4 font-mono text-[14px] tracking-wide text-[#f3e6d0] placeholder:text-[#f3e6d0]/30 focus:border-[#f2913a] focus:outline-none focus:ring-2 focus:ring-[#f2913a]/30"
                     />
                   </div>
-                </label>
 
-                <Button
-                  type="submit"
-                  disabled={!phoneValid || sending}
-                  className="group h-14 w-full rounded-2xl bg-[#0b1220] text-[15px] font-semibold text-white shadow-[0_18px_40px_-12px_rgba(11,18,32,0.55)] transition-all hover:bg-[#111a30] hover:shadow-[0_22px_44px_-12px_rgba(11,18,32,0.65)] disabled:opacity-50"
-                >
-                  {sending ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <>
-                      Send OTP
-                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                    </>
-                  )}
-                </Button>
-
-                <p className="pt-1 text-center text-[12.5px] text-neutral-500">
-                  No password required — we'll text you a code.
-                </p>
-              </form>
-            ) : (
-              <div className="space-y-5">
-                <div className={error ? "animate-shake" : ""}>
-                  <InputOTP
-                    maxLength={6}
-                    value={otp}
-                    onChange={(v) => {
-                      setOtp(v);
-                      setError(null);
-                      if (v.length === 6) handleVerify(v);
-                    }}
-                    containerClassName="justify-between gap-2"
+                  <Button
+                    type="submit"
+                    disabled={!phoneValid || sending}
+                    className="group h-12 w-full rounded-xl bg-[#f3e6d0] text-[13px] font-semibold tracking-wide text-[#0d0d10] hover:bg-white disabled:opacity-40"
                   >
-                    <InputOTPGroup className="flex w-full justify-between gap-2">
-                      {[0, 1, 2, 3, 4, 5].map((i) => (
-                        <InputOTPSlot
-                          key={i}
-                          index={i}
-                          className="h-14 w-12 rounded-2xl border border-neutral-200 bg-neutral-50 text-xl font-bold tabular-nums text-neutral-900 first:rounded-l-2xl last:rounded-r-2xl data-[active=true]:border-[#2563eb] data-[active=true]:bg-white data-[active=true]:ring-4 data-[active=true]:ring-[#2563eb]/12"
-                        />
-                      ))}
-                    </InputOTPGroup>
-                  </InputOTP>
+                    {sending ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <>
+                        SEND OTP
+                        <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                      </>
+                    )}
+                  </Button>
+                </form>
+              ) : (
+                <div className="space-y-3">
+                  <div className={error ? "animate-shake" : ""}>
+                    <InputOTP
+                      maxLength={6}
+                      value={otp}
+                      onChange={(v) => {
+                        setOtp(v);
+                        setError(null);
+                        if (v.length === 6) handleVerify(v);
+                      }}
+                      containerClassName="justify-between gap-1.5"
+                    >
+                      <InputOTPGroup className="flex w-full justify-between gap-1.5">
+                        {[0, 1, 2, 3, 4, 5].map((i) => (
+                          <InputOTPSlot
+                            key={i}
+                            index={i}
+                            className="h-12 w-full rounded-lg border border-[#f3e6d0]/15 bg-black/40 font-mono text-[16px] font-semibold tabular-nums text-[#f3e6d0] first:rounded-l-lg last:rounded-r-lg data-[active=true]:border-[#f2913a] data-[active=true]:ring-2 data-[active=true]:ring-[#f2913a]/30"
+                          />
+                        ))}
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
 
-                  {error ? (
-                    <p className="mt-3 text-center text-sm font-medium text-red-500">
-                      {error}
-                    </p>
-                  ) : (
-                    <p className="mt-3 text-center text-xs text-neutral-500">
-                      Demo code:{" "}
-                      <span className="font-mono font-semibold text-neutral-900">
-                        {DEMO_OTP_HINT}
-                      </span>
-                    </p>
-                  )}
+                  <Button
+                    onClick={() => handleVerify()}
+                    disabled={otp.length !== 6 || verifying}
+                    className="h-12 w-full rounded-xl bg-[#f3e6d0] text-[13px] font-semibold tracking-wide text-[#0d0d10] hover:bg-white disabled:opacity-40"
+                  >
+                    {verifying ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "VERIFY & SIGN IN"
+                    )}
+                  </Button>
                 </div>
-
-                <Button
-                  onClick={() => handleVerify()}
-                  disabled={otp.length !== 6 || verifying}
-                  className="h-14 w-full rounded-2xl bg-[#0b1220] text-[15px] font-semibold text-white shadow-[0_18px_40px_-12px_rgba(11,18,32,0.55)] hover:bg-[#111a30] disabled:opacity-50"
-                >
-                  {verifying ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    "Verify & sign in"
-                  )}
-                </Button>
-
-                <div className="flex items-center justify-between text-sm">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep("phone");
-                      setOtp("");
-                      setError(null);
-                    }}
-                    className="font-medium text-neutral-500 hover:text-neutral-900"
-                  >
-                    ← Change number
-                  </button>
-                  <button
-                    type="button"
-                    disabled={resendIn > 0 || sending}
-                    onClick={() => sendOtp()}
-                    className="font-semibold text-[#2563eb] hover:opacity-80 disabled:cursor-not-allowed disabled:text-neutral-400"
-                  >
-                    {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend OTP"}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {step === "phone" && (
-              <p className="mt-10 text-center text-[12px] leading-relaxed text-neutral-500">
-                By signing in you agree to Radiant's{" "}
-                <span className="font-semibold text-neutral-700">Terms of Service</span>{" "}
-                and{" "}
-                <span className="font-semibold text-neutral-700">Privacy Policy</span>.
-              </p>
-            )}
-
-            {/* Powered by slot */}
-            <div className="mt-8 flex items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-neutral-400">
-              <span>Powered by</span>
-              <span className="rounded-md border border-neutral-200 px-2 py-0.5 text-neutral-600">
-                HyperRevamp
-              </span>
+              )}
             </div>
+
+            {/* progress hairline */}
+            <div className="relative mt-5">
+              <div className="h-[3px] w-full overflow-hidden rounded-full bg-[#f3e6d0]/10">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: step === "phone" ? "50%" : "100%",
+                    background: "linear-gradient(90deg, #b23a1a, #f2913a, #f3e6d0)",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* footer row */}
+            <div className="relative mt-4 flex items-center justify-between text-[10px] uppercase tracking-[0.2em] opacity-70">
+              <div className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-[#f2913a] shadow-[0_0_10px_#f2913a]" />
+                <span>Secure session</span>
+              </div>
+              {step === "otp" && (
+                <button
+                  type="button"
+                  disabled={resendIn > 0 || sending}
+                  onClick={() => sendOtp()}
+                  className="font-semibold tracking-[0.18em] text-[#f2913a] hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {resendIn > 0 ? `Resend ${resendIn}s` : "Resend"}
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* STATUS panel */}
+          <div className="rounded-2xl border border-white/10 bg-[#0d0d10] p-5 text-[#f3e6d0]">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-[13px] font-semibold tracking-wide">
+                  {step === "phone" ? "WELCOME" : "ALMOST THERE"}
+                </div>
+                <ArrowRight className="mt-1 h-3.5 w-3.5" />
+              </div>
+              <div className="grid h-5 w-5 place-items-center rounded-full border border-[#f3e6d0]/40 text-[10px] leading-none">−</div>
+            </div>
+            <div className="mt-4 flex items-center justify-between border-t border-[#f3e6d0]/10 pt-3">
+              <div className="text-[10px] font-medium uppercase tracking-[0.2em] opacity-60">
+                Demo Code
+              </div>
+              <div className="font-mono text-[11px] tabular-nums opacity-80">
+                {DEMO_OTP_HINT}
+              </div>
+            </div>
+            {step === "otp" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("phone");
+                  setOtp("");
+                  setError(null);
+                }}
+                className="mt-3 text-[10px] uppercase tracking-[0.2em] opacity-60 hover:opacity-100"
+              >
+                ← Change number
+              </button>
+            )}
+            {error && (
+              <div className="mt-3 text-[11px] text-[#f2913a]">{error}</div>
+            )}
+          </div>
+
+          {/* powered-by chip */}
+          <div className="flex items-center justify-between px-1 text-[9px] font-medium uppercase tracking-[0.22em] text-[#f3e6d0]/50">
+            <span>Radiant Ops Portal</span>
+            <span>Powered · HyperRevamp</span>
           </div>
         </div>
       </div>
