@@ -602,8 +602,17 @@ function AdminLayout() {
 
       {/* Main */}
       <main className={cn("relative z-10 px-4 py-6 sm:px-6 lg:py-8 lg:pr-6", mainPad)}>
-        {/* Desktop top utility bar (notifications) */}
-        <div className="mb-4 hidden items-center justify-end gap-2 lg:flex">
+        {/* Desktop top utility bar — global search + notifications */}
+        <div className="mb-4 hidden items-center gap-3 lg:flex">
+          <div className="flex h-10 flex-1 items-center gap-2 rounded-full border border-white/60 bg-white/70 px-4 text-sm text-muted-foreground backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_10px_30px_-18px_rgba(15,23,42,0.18)]">
+            <svg className="h-4 w-4 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+            <input
+              type="search"
+              placeholder="Search employees, units, invoices…"
+              className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
+            />
+            <kbd className="hidden rounded-md border border-border/60 bg-white/80 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground sm:inline-flex">⌘K</kbd>
+          </div>
           <NotificationBell />
         </div>
         <div className="mx-auto max-w-[1500px]">
