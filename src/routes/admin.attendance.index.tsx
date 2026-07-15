@@ -366,10 +366,34 @@ function AttendanceUnitsPage() {
     },
   });
 
-  const units = data?.units ?? [];
-  const organizations = data?.organizations ?? [];
-  const employeesByCustomer = data?.employeesByCustomer ?? {};
-  const summary = data?.summary ?? { organizations: 0, units: 0, activeEmployees: 0 };
+  const foScope = useFieldOfficerUnitScope();
+  const rawUnits = data?.units ?? [];
+  const units = useMemo(
+    () => (foScope.isFieldOfficer ? rawUnits.filter((u) => foScope.unitIds.has(u.id)) : rawUnits),
+    [rawUnits, foScope.isFieldOfficer, foScope.unitIds],
+  );
+  const organizations = useMemo(() => {
+    const all = data?.organizations ?? [];
+    if (!foScope.isFieldOfficer) return all;
+    const allowed = new Set(units.map((u) => u.customer_id));
+    return all.filter((o) => allowed.has(o.id));
+  }, [data?.organizations, foScope.isFieldOfficer, units]);
+  const employeesByCustomer = useMemo(() => {
+    const src = data?.employeesByCustomer ?? {};
+    if (!foScope.isFieldOfficer) return src;
+    const out: Record<string, typeof src[string]> = {};
+    for (const [cid, emps] of Object.entries(src)) {
+      const filtered = emps.filter((e) => foScope.unitIds.has(e.unit_id));
+      if (filtered.length) out[cid] = filtered;
+    }
+    return out;
+  }, [data?.employeesByCustomer, foScope.isFieldOfficer, foScope.unitIds]);
+  const summary = useMemo(
+    () => (foScope.isFieldOfficer
+      ? { organizations: organizations.length, units: units.length, activeEmployees: units.reduce((s, r) => s + r.active_employee_count, 0) }
+      : data?.summary ?? { organizations: 0, units: 0, activeEmployees: 0 }),
+    [foScope.isFieldOfficer, organizations, units, data?.summary],
+  );
 
   const queryClient = useQueryClient();
   const { can } = useCurrentPermissions();
