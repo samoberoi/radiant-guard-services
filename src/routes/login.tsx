@@ -99,12 +99,17 @@ function LoginPage() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-background text-foreground">
-      {/* Background image — soft wavy blur */}
+      {/* Background image — soft wavy blur, dialed back so text stays crisp */}
       <img
         src={loginBg.url}
         alt=""
         aria-hidden
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-80"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-50"
+      />
+      {/* Soft scrim to separate the busy background from the card */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/30 via-white/10 to-white/30"
       />
       {/* Ambient overlay — soft mesh + orbs */}
       <div
@@ -112,27 +117,27 @@ function LoginPage() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 70% 55% at 15% 15%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 60%), radial-gradient(ellipse 60% 50% at 85% 85%, color-mix(in oklab, var(--primary) 14%, transparent), transparent 60%), radial-gradient(ellipse 40% 35% at 50% 100%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 70%)",
+            "radial-gradient(ellipse 70% 55% at 15% 15%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 60%), radial-gradient(ellipse 60% 50% at 85% 85%, color-mix(in oklab, var(--primary) 12%, transparent), transparent 60%), radial-gradient(ellipse 40% 35% at 50% 100%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 70%)",
         }}
       />
       {/* floating orbs */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -left-24 top-1/4 h-[420px] w-[420px] rounded-full opacity-60 blur-3xl animate-[pulse_8s_ease-in-out_infinite]"
-        style={{ background: "radial-gradient(circle, color-mix(in oklab, var(--accent) 55%, transparent), transparent 70%)" }}
+        className="pointer-events-none absolute -left-24 top-1/4 h-[420px] w-[420px] rounded-full opacity-50 blur-3xl animate-[pulse_8s_ease-in-out_infinite]"
+        style={{ background: "radial-gradient(circle, color-mix(in oklab, var(--accent) 45%, transparent), transparent 70%)" }}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-32 bottom-0 h-[520px] w-[520px] rounded-full opacity-50 blur-3xl animate-[pulse_10s_ease-in-out_infinite]"
-        style={{ background: "radial-gradient(circle, color-mix(in oklab, var(--primary) 40%, transparent), transparent 70%)" }}
+        className="pointer-events-none absolute -right-32 bottom-0 h-[520px] w-[520px] rounded-full opacity-40 blur-3xl animate-[pulse_10s_ease-in-out_infinite]"
+        style={{ background: "radial-gradient(circle, color-mix(in oklab, var(--primary) 30%, transparent), transparent 70%)" }}
       />
       {/* fine grid */}
       <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-[0.25]"
         style={{
           backgroundImage:
-            "linear-gradient(to right, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px)",
+            "linear-gradient(to right, color-mix(in oklab, var(--foreground) 5%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 5%, transparent) 1px, transparent 1px)",
           backgroundSize: "48px 48px",
           maskImage:
             "radial-gradient(ellipse 70% 60% at 50% 50%, black, transparent 80%)",
