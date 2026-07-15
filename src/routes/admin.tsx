@@ -699,7 +699,7 @@ function SidebarGroup({
   const iconSpanIdle = "text-foreground/60 group-hover:text-foreground";
 
   if (!group.children || group.children.length === 0) {
-    return (
+    const link = (
       <Link
         to={group.to!}
         aria-label={collapsed ? group.label : undefined}
@@ -711,6 +711,15 @@ function SidebarGroup({
         </span>
         {!collapsed && <span className="truncate">{t(group.label)}</span>}
       </Link>
+    );
+    if (!collapsed) return link;
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{link}</TooltipTrigger>
+        <TooltipContent side="right" sideOffset={10} className="font-medium">
+          {t(group.label)}
+        </TooltipContent>
+      </Tooltip>
     );
   }
 
