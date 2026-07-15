@@ -4659,12 +4659,67 @@ function OffboardingDialog({
     setReview("");
     const prefill = (target.assigned_asset_ids ?? []).map((id) => ({ asset_id: id, returned: false, remarks: "" }));
     setAssetReturns(prefill);
+    setInvReturns([]);
+    setReturnDestKey("");
     setRating(0);
     setRatingRemarks("");
     setNoHire(false);
     setNoHireTouched(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target?.id]);
+
+  // Build default destination + inv return rows once balances/warehouses load
+  useEffect(() => {
+    if (!target) return;
+    const bal = balancesQ.data ?? [];
+    if (bal.length === 0) {
+      setInvReturns([]);
+    } else {
+      // Default destination: FO → own field_officer bucket; else default warehouse if available
+      let destType: LocationType = "warehouse";
+      let destId = "";
+      let destLabel = "";
+      if (isFieldOfficer && currentUserCandidateId) {
+        destType = "field_officer";
+        destId = currentUserCandidateId;
+        destLabel = "My inventory (field officer)";
+      } else {
+        const wh = warehousesQ.data ?? [];
+        const def = wh.find((w) => w.is_default) ?? wh[0];
+        if (def) { destId = def.id; destLabel = `Warehouse · ${def.name}`; }
+      }
+      const key = destId ? `${destType}:${destId}` : "";
+      setReturnDestKey(key);
+      setInvReturns(
+        bal.map((b) => ({
+          item_id: b.item_id,
+          item_name: b.inv_items?.name ?? "Item",
+          size_value: b.size_value ?? "",
+          unit: b.inv_items?.unit ?? "pcs",
+          on_hand: Number(b.qty ?? 0),
+          qty_returned: Number(b.qty ?? 0),
+          destination_type: destType,
+          destination_id: destId,
+          destination_label: destLabel,
+          remarks: "",
+        })),
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target?.id, balancesQ.data, warehousesQ.data]);
+
+  // Propagate destination change to all rows
+  useEffect(() => {
+    if (!returnDestKey) return;
+    const [type, id] = returnDestKey.split(":") as [LocationType, string];
+    let label = "";
+    if (type === "field_officer") label = "My inventory (field officer)";
+    else if (type === "warehouse") {
+      const w = (warehousesQ.data ?? []).find((x) => x.id === id);
+      label = w ? `Warehouse · ${w.name}` : "Warehouse";
+    } else if (type === "scrap") label = "Scrap / Write-off";
+    setInvReturns((rows) => rows.map((r) => ({ ...r, destination_type: type, destination_id: id, destination_label: label })));
+  }, [returnDestKey, warehousesQ.data]);
 
   const selectedReason = reasons.find((r) => r.id === reasonId);
   const isAbsconding = !!selectedReason && ABSCONDING_NAMES.has(selectedReason.name.trim().toLowerCase());
