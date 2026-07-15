@@ -380,7 +380,7 @@
   }
   .ios-table thead th {
     position: sticky; top: 0;
-    background: color-mix(in oklab, white 80%, transparent);
+    background: color-mix(in oklab, var(--card) 88%, transparent);
     backdrop-filter: blur(12px);
     font-size: 10px;
     font-weight: 700;
