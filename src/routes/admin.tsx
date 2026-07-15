@@ -616,6 +616,15 @@ function AdminLayout() {
               </Link>
               <button
                 type="button"
+                onClick={toggleTheme}
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-white/70"
+              >
+                {themeMounted && theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                {themeMounted && theme === "dark" ? "Light mode" : "Dark mode"}
+              </button>
+
+              <button
+                type="button"
                 onClick={handleLogout}
                 className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-destructive hover:bg-destructive/10"
               >
