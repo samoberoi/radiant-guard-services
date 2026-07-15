@@ -287,7 +287,7 @@ function FieldOfficerDashboard() {
             <div className="grid h-28 w-28 place-items-center rounded-[28px] bg-gradient-to-br from-accent/25 via-accent/10 to-sky-200/40 font-display text-3xl font-bold text-accent shadow-inner ring-1 ring-border/70 sm:h-32 sm:w-32">
               {initials(data?.meName || "FO")}
             </div>
-            <span className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-white text-emerald-500 shadow ring-1 ring-emerald-500/30">
+            <span className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-card text-emerald-500 shadow ring-1 ring-emerald-500/30">
               <ShieldCheck className="h-4 w-4" />
             </span>
           </div>
@@ -306,7 +306,7 @@ function FieldOfficerDashboard() {
               </div>
               <Link
                 to="/admin/profile"
-                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border/70 bg-white px-3 text-xs font-semibold text-foreground/80 shadow-sm transition hover:border-accent/40 hover:text-accent"
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-border/70 bg-card px-3 text-xs font-semibold text-foreground/80 shadow-sm transition hover:border-accent/40 hover:text-accent"
               >
                 Edit profile <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
@@ -343,7 +343,7 @@ function FieldOfficerDashboard() {
             <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Overview</div>
             <h2 className="mt-0.5 font-display text-2xl font-bold tracking-tight text-foreground">My Summary</h2>
           </div>
-          <span className="rounded-full border border-border/70 bg-white px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">This week</span>
+          <span className="rounded-full border border-border/70 bg-card px-3 py-1 text-xs font-semibold text-muted-foreground shadow-sm">This week</span>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <PastelTile
@@ -525,10 +525,10 @@ function UnitRow({ unit }: { unit: UnitNode }) {
           <div className="flex flex-wrap gap-2 text-xs">
             {unit.id !== "__unassigned__" && (
               <>
-                <Link to="/admin/attendance/$unitId" params={{ unitId: unit.id }} className="rounded-full border border-border bg-white px-3 py-1 font-medium hover:border-accent/40 hover:text-accent">
+                <Link to="/admin/attendance/$unitId" params={{ unitId: unit.id }} className="rounded-full border border-border bg-card px-3 py-1 font-medium hover:border-accent/40 hover:text-accent">
                   Mark attendance
                 </Link>
-                <Link to="/admin/employees" className="rounded-full border border-border bg-white px-3 py-1 font-medium hover:border-accent/40 hover:text-accent">
+                <Link to="/admin/employees" className="rounded-full border border-border bg-card px-3 py-1 font-medium hover:border-accent/40 hover:text-accent">
                   Onboard employee
                 </Link>
               </>
