@@ -1159,7 +1159,7 @@ function EmployeesPage() {
       details: OffboardingDetails;
       noHire: boolean;
     }) => {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from("candidates" as never)
         .update({
           is_enabled: false,
@@ -1169,8 +1169,13 @@ function EmployeesPage() {
           offboarding_details: details,
           no_hire: noHire,
         } as unknown as never)
-        .eq("id", candidate.id);
+        .eq("id", candidate.id)
+        .select("id");
       if (error) throw error;
+      if (!updated || (updated as unknown as unknown[]).length === 0) {
+        throw new Error("You don't have permission to offboard this employee, or the record could not be updated.");
+      }
+
 
       // Post inventory return movements: negative at guard, positive at destination
       const returns = (details.inventory_returns ?? []).filter((r) => r.qty_returned > 0);
