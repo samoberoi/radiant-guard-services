@@ -780,12 +780,31 @@ function EmployeesPage() {
       liveRecordByMobile.set(mobile, c);
     }
 
-    const ids = new Set<string>();
+    // Group all inactive records by mobile so we can dedupe them.
+    const inactiveByMobile = new Map<string, CandidateListItem[]>();
     for (const c of candidates) {
       const mobile = c.mobile?.trim();
       if (!mobile || c.status !== "inactive") continue;
+      if (!inactiveByMobile.has(mobile)) inactiveByMobile.set(mobile, []);
+      inactiveByMobile.get(mobile)!.push(c);
+    }
+
+    const ids = new Set<string>();
+    for (const [mobile, list] of inactiveByMobile) {
       const liveRecord = liveRecordByMobile.get(mobile);
-      if (liveRecord && liveRecord.id !== c.id) ids.add(c.id);
+      if (liveRecord) {
+        // A live (non-inactive) record exists → hide ALL inactive records for this mobile.
+        for (const c of list) ids.add(c.id);
+        continue;
+      }
+      // No live record → keep only the most recently created inactive record; hide the rest.
+      if (list.length <= 1) continue;
+      const sorted = [...list].sort((a, b) => {
+        const at = (a as CandidateListItem & { created_at?: string }).created_at ?? "";
+        const bt = (b as CandidateListItem & { created_at?: string }).created_at ?? "";
+        return bt.localeCompare(at);
+      });
+      for (let i = 1; i < sorted.length; i++) ids.add(sorted[i].id);
     }
     return ids;
   }, [candidates]);
