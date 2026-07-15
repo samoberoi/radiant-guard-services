@@ -168,7 +168,9 @@ function AdminLayout() {
 
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
+  const { theme, toggle: toggleTheme, mounted: themeMounted } = useTheme();
+
 
   // One-time backfill of stored public URLs → signed URLs after buckets were privatized.
   useEffect(() => {
