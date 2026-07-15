@@ -173,8 +173,16 @@ function CandidateDetailsPage() {
     return JSON.stringify(buildCandidatePayload(form)) !== baselinePayload;
   }, [form, baselinePayload]);
 
+  const { roleKey, isSuperAdmin } = useCurrentPermissions();
+  const canEditInactiveProfile = isSuperAdmin || roleKey === "leadership" || roleKey === "super_admin";
+  const editLocked = form?.status === "inactive" && !canEditInactiveProfile;
+
   const handleSave = async (closeAfter = false) => {
     if (!form) return;
+    if (editLocked) {
+      toast.error("Only leadership or super admin can edit an inactive employee's profile.");
+      return;
+    }
     setSaving(true);
     try {
       const payload = buildCandidatePayload(form);
@@ -196,6 +204,7 @@ function CandidateDetailsPage() {
       setSaving(false);
     }
   };
+
 
   // markKyc removed per product decision
 
