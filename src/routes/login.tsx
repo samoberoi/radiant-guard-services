@@ -118,28 +118,18 @@ function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[#eeb15a] p-4 sm:p-8 lg:p-12">
-      {/* subtle grain on the amber ground */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.18] mix-blend-overlay"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle at 30% 20%, rgba(255,255,255,0.6), transparent 50%), radial-gradient(circle at 80% 80%, rgba(120,60,20,0.4), transparent 55%)",
-        }}
-      />
-
+    <div className="relative min-h-screen w-full overflow-hidden bg-[#0d0d10]">
       {/* Reveal overlay */}
       <div
-        className={`pointer-events-none fixed inset-0 z-50 origin-bottom bg-[#eeb15a] transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+        className={`pointer-events-none fixed inset-0 z-50 origin-bottom bg-[#0d0d10] transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
           revealing ? "translate-y-0" : "translate-y-full"
         }`}
       />
 
-      {/* Framed dark stage */}
-      <div className="relative mx-auto grid min-h-[calc(100vh-2rem)] max-w-[1400px] overflow-hidden rounded-[28px] border border-black/40 bg-[#0d0d10] shadow-[0_40px_80px_-20px_rgba(120,50,10,0.55)] sm:min-h-[calc(100vh-4rem)] lg:grid-cols-[1.35fr_1fr]">
+      {/* Full-bleed stage */}
+      <div className="relative grid min-h-screen w-full overflow-hidden bg-[#0d0d10] lg:grid-cols-[1.35fr_1fr]">
         {/* LEFT — hero canvas */}
-        <div className="relative flex min-h-[420px] flex-col justify-between overflow-hidden p-6 sm:p-10">
+        <div className="relative flex min-h-[420px] flex-col justify-between overflow-hidden p-6 sm:p-10 lg:p-14">
           {/* fabric-like warm gradient */}
           <div
             aria-hidden
