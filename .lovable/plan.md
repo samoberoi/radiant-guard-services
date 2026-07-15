@@ -1,94 +1,60 @@
-## Goal
+## End-to-end UI/UX refinement pass
 
-Make the Employee Onboarding flow production-tight and role-correct:
+Acting as senior product designer, this pass fixes the readability, contrast, and layout issues visible in the three screenshots and rolls the same fixes across every role and page.
 
-- **Field Officer (FO)** onboards candidates, restricted to the units in their scope.
-- **HR, Leadership, Super Admin** can also onboard directly (same wizard), *and* are the only roles that see/handle approvals.
-- Submissions notify HR + Leadership + Super Admin (not "all admins" indiscriminately).
-- Reject requires a written reason → notifies the FO who submitted it.
-- FO can fix a rejected candidate and re-submit → status returns to `pending`, approvers are re-notified.
-- On approve → employee code assigned, FO is notified.
-- Verify end-to-end with a scripted browser run.
+### Problems seen in screenshots
 
-## Current State (audit)
+1. **P&L dashboard table** — numbers like `₹21,27,549` wrap across 3 lines in the header; variance pill wraps `(0.0%)` and `₹0` onto separate lines. Column widths are wrong and text is not `whitespace-nowrap` / `tabular-nums`.
+2. **Payroll KPI tiles** — pastel yellow / mint / pink / blue tiles with same-tone labels give very low text contrast (fails WCAG AA). Numbers ("0") also sit on tinted backgrounds without enough weight.
+3. **Client Contracts hero** — huge translucent white hero with pale grey KPI labels/values on near-white background; `AWAITING APPROVAL 0`, `REJECTED 0`, `LOST 1` almost invisible. Same glass-on-glass problem across all `PageHeader` KPIs.
+4. **General** — buttons in hero (Export / Import / Create) sit on white with soft shadows and low separation; breadcrumbs and eyebrow labels too faint; some tab pills also low contrast.
 
-- Table: `candidates` uses `status ∈ draft | pending | rejected | approved | active | inactive` with `rejection_reason`.
-- `admin.employees.tsx` already: FO sees only own submissions; submit sets status `pending`; approve/reject mutations exist; a reject-reason dialog exists; `notifyAdmins()` fans out on submit/approve/reject.
-- Gaps to fix:
-  1. `notifyAdmins` uses `get_admin_user_ids` (super-admin phones + role `admin/super_admin`) — **misses HR & Leadership**.
-  2. Approve/Reject buttons on pending rows are shown to any viewer of the Candidates tab — should be gated to HR / Leadership / Super Admin / Admin.
-  3. FO unit picker in the wizard shows all units — should be filtered to the FO's scoped units (branch/unit assignments in `employee_scope_assignments`).
-  4. Reject dialog does not enforce a non-empty reason.
-  5. FO doesn't get a notification on approve/reject of their own submission.
-  6. Re-submit path: editing a `rejected` candidate should clear `rejection_reason` and move back to `pending` + re-notify approvers (today it goes to `pending` but `rejection_reason` isn't cleared and the approver notification isn't guaranteed on the edit path).
+### Fix strategy (design tokens first, then targeted layout fixes)
 
-## Changes
+**A. Contrast + readability (global, one edit reaches every page)**
 
-### 1. Notifications — new helper `notifyOnboardingApprovers`
+- `src/components/PageHeader.tsx`
+  - Darken `eyebrow` (accent → `text-accent` at full strength, not `/90`) and breadcrumb text (`text-muted-foreground` not `/80`, active crumb `text-foreground`).
+  - Description: bump from `text-muted-foreground` (light) to a darker token, tighten leading.
+  - `PageStat`: replace white/70 glass with a more opaque surface (`bg-white/85` + stronger border) and use `text-foreground` for value, `text-muted-foreground` (not lighter) for label. Ensure value uses `font-semibold` not just display font weight cap.
+- `src/routes/admin.payroll.*` KPI pastel tiles — swap pastel fills for the shared `PageStat` component (or restyle to `bg-white/85` with a small colored icon chip) so labels/values inherit the fixed contrast tokens. Keep the accent color only on the icon chip, not the whole tile.
+- `src/styles.css` — nudge `--muted-foreground` one step darker so every "faint grey" label across the app becomes readable (single change, app-wide effect). Verify against light background; keep dark-mode variant unchanged.
 
-Add in `src/lib/notifications.ts`:
-- New RPC-backed helper that returns auth user IDs whose `candidates.role_key ∈ ('hr','leadership','super_admin','admin')` and are `status='active'`, plus the hard-coded super-admin phones (reuse pattern from `get_admin_user_ids`).
-- Wrapper `notifyOnboardingApprovers({title, message, link, entityId})` that inserts one notification per recipient (dedupe by uid, skip actor).
-- Wrapper `notifyUser(userId, {...})` for one-off notifications back to the FO.
+**B. Table / number wrapping (P&L and every data table)**
 
-If the SQL function doesn't exist, add it via migration:
+- `src/routes/admin.dashboard.tsx` P&L table:
+  - Header summary block: put `Contract / Invoice / Payroll / Variance` in a proper 2-col grid with `whitespace-nowrap tabular-nums` on values, right-aligned, so ₹21,27,549 stays on one line.
+  - Table columns: add `whitespace-nowrap` to numeric cells, `tabular-nums`, right-align money columns; give the Variance pill `inline-flex whitespace-nowrap` so `↗ ₹0 (0.0%)` stays on a single line; constrain unit/org text columns with `min-w-0` + `truncate` + `title` attr for overflow.
+- Sweep other data-heavy tables (payroll sheets, client contracts list, vehicles, inventory) for the same pattern: numeric cells → `whitespace-nowrap tabular-nums`, text cells → `min-w-0 truncate` with tooltip.
 
-```text
-get_onboarding_approver_user_ids() → TABLE(user_id uuid)
-  SECURITY DEFINER, SET search_path=public
-  Returns admins + candidates.role_key in ('hr','leadership','super_admin','admin')
-```
+**C. Hero + button polish**
 
-### 2. `admin.employees.tsx` — permissions & routing of notifications
+- `PageHeader` action slot: give primary action (`Create …`) a solid accent background with `text-accent-foreground` for clear affordance; keep Export/Import as outline with a visible border (`border-border` not `border-white/60`) so they don't disappear on white.
+- Reduce hero vertical padding on desktop; the Client Contracts hero currently eats ~40% of viewport. Tighten `p-5 sm:p-6` → `p-4 sm:p-5` and cap KPI grid to 4-up on lg (already true) but shrink pill height.
 
-- Add `const canApproveOnboarding = isSuperAdmin || ['hr','leadership','admin','super_admin'].includes(roleKey ?? '');`
-- Gate the two icon buttons on the candidate row (Approve/Reject) and the wizard's Approve/Reject buttons behind `canApproveOnboarding`. Non-approvers still see the row & wizard read-only view but no action buttons.
-- Replace `notifyAdmins(...)` calls on submit/approve/reject with `notifyOnboardingApprovers(...)`.
-- On **approve**: also call `notifyUser(candidate.created_by)` with an "Approved — Employee Code EMP-xxx assigned" message (link to `/admin/employees`).
-- On **reject**: also `notifyUser(candidate.created_by)` with the rejection reason and a link back to their candidate.
+**D. Navigation / sidebar sanity check**
 
-### 3. FO onboarding — unit scoping
+- Sidebar active pill is fine, but the phone chip at the bottom (`+91 … 0002`) is on solid black — leave it; verify hover/focus tokens on collapsed state have visible contrast.
 
-- In the wizard's Unit picker, filter `units` to those whose `id` is in FO's scope, OR whose `branch_id` matches an FO branch-scope entry. Use existing `useScopeAssignments()` + `units` join already loaded on the page.
-- If FO has no scope assignments, show a clear empty state: "You have no units assigned. Ask your admin to assign a branch/unit before onboarding."
-- Guardrail on submit: reject the insert client-side if the selected unit isn't in scope (defence in depth; RLS still authoritative).
+**E. Accessibility sweep**
 
-### 4. Re-submit after rejection
+- All icon-only buttons: verify `aria-label`.
+- Ensure `PageStat` value/label pair meets 4.5:1 on the glass background after the token bump.
+- Add `min-h-11 min-w-11` to primary tap targets in hero actions.
 
-- In `persist(...)` when the editing candidate's status was `rejected` and it's being re-submitted, set `status='pending'`, `rejection_reason=''`, `rejected_at=null`, and always call `notifyOnboardingApprovers({title: "Candidate re-submitted after fixes", ...})`.
-- FO-side badge on their row: keep showing the previous rejection reason until the record moves back to `pending`.
+### Verification
 
-### 5. Reject dialog — mandatory reason
+- `tsgo --noEmit` after edits.
+- Playwright screenshot of `/admin/dashboard`, `/admin/payroll`, `/admin/contracts/client-contracts` at 1440px and 1024px; confirm no wrapped numbers and readable KPIs.
+- Spot-check one page per role cluster (Attendance, Inventory, Vehicles, Assets, Org Settings) that inherit `PageHeader` + `PageStat` — no per-page edits needed unless they override tokens.
 
-- Disable the "Reject" confirm button until `rejectReason.trim().length >= 5`.
-- Show inline helper "Explain what needs to be corrected so the field officer can fix it."
+### Files expected to change
 
-### 6. HR / Leadership onboarding path
+- `src/styles.css` (muted-foreground token)
+- `src/components/PageHeader.tsx` (contrast, eyebrow, PageStat surface, action button treatment)
+- `src/routes/admin.dashboard.tsx` (P&L header + table nowrap/tabular)
+- `src/routes/admin.payroll.index.tsx` (KPI tile restyle)
+- `src/routes/admin.contracts.client-contracts.tsx` (hero density + KPI contrast if not fully covered by PageHeader change)
+- Minor sweeps in tables flagged during Playwright review
 
-Confirm (no code change needed if already true) that the "Add candidate" button in the Candidates tab is visible to these roles too — today it's gated by `isFieldOfficer` in one place; ensure the button is shown to `canApproveOnboarding` as well. Their submissions still land in `pending` (they can then approve their own if they choose, but a small polish: pre-select their unit-less flow and let HR pick any unit).
-
-## End-to-End Verification (Playwright, sandbox)
-
-Script `/tmp/browser/onboarding/run.py` that uses `LOVABLE_BROWSER_SUPABASE_*` to swap sessions for three seeded users (FO, HR, Super Admin — reuse existing accounts if present, otherwise create via a one-off SQL insert into `candidates` + auth users if needed and note it in the report).
-
-Steps captured with screenshots:
-
-1. Login as **FO** → open `/admin/employees` → Candidate tab → Add candidate with random valid data → Submit for approval → screenshot the "Pending" row.
-2. Login as **HR** → notification bell shows unread → click → opens candidate → click Reject → try empty reason (button disabled) → enter "Aadhaar image blurred, re-upload" → Reject → screenshot.
-3. Login as **FO** → notification bell shows "Candidate rejected: <reason>" → open the rejected row → edit → change the flagged fields → Submit → screenshot pending again.
-4. Login as **Super Admin** → notification of re-submission → open → Approve → screenshot the row now `active` with `EMP-xxx` code.
-5. Login as **FO** → notification "Candidate approved (EMP-xxx)" → screenshot.
-
-Report includes: pass/fail per step, screenshot filenames, and any console/network errors caught during the run.
-
-## Out of scope
-
-- No changes to payroll/invoice modules.
-- No new offboarding logic.
-- No changes to `candidates` table columns beyond what's already present (`rejection_reason`, `rejected_at`, `created_by`, `approved_at`, `employee_code`).
-
-## Technical notes
-
-- Files touched: `src/lib/notifications.ts`, `src/routes/admin.employees.tsx`, one Supabase migration (only if the approver RPC is missing).
-- No RLS changes required — approvers already have update rights on `candidates` via existing policies; the migration only adds a `SECURITY DEFINER` helper for recipient lookup.
-- Uses existing `logActivity` calls; adds an `action: 'resubmit'` event on the re-submit path.
+Out of scope: business logic, data model, route structure.
