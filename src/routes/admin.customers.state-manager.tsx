@@ -278,37 +278,7 @@ function StateManagerPage() {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  accent,
-}: {
-  label: string;
-  value: number;
-  icon: React.ComponentType<{ className?: string }>;
-  accent?: boolean;
-}) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-          {label}
-        </span>
-        <span
-          className={
-            accent
-              ? "flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent-foreground"
-              : "flex h-9 w-9 items-center justify-center rounded-lg bg-secondary text-foreground"
-          }
-        >
-          <Icon className="h-4 w-4" />
-        </span>
-      </div>
-      <div className="mt-3 font-display text-3xl font-bold text-foreground">{value}</div>
-    </div>
-  );
-}
+
 
 function StateFormDialog({
   open,
