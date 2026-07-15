@@ -329,15 +329,16 @@ function CandidateDetailsPage() {
           </Button>
           {dirty && (
             <>
-              <Button size="sm" onClick={() => handleSave(false)} disabled={saving}>
+              <Button size="sm" onClick={() => handleSave(false)} disabled={saving || editLocked} title={editLocked ? "Only leadership or super admin can edit an inactive profile." : undefined}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Save
               </Button>
-              <Button size="sm" onClick={() => handleSave(true)} disabled={saving}>
+              <Button size="sm" onClick={() => handleSave(true)} disabled={saving || editLocked} title={editLocked ? "Only leadership or super admin can edit an inactive profile." : undefined}>
                 Save & Close
               </Button>
             </>
           )}
+
         </div>
       </div>
 
