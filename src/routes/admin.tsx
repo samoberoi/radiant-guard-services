@@ -412,7 +412,7 @@ function AdminLayout() {
       {/* Desktop vertical sidebar — glass / iPadOS */}
       <aside
         className={cn(
-          "fixed inset-y-3 left-3 z-30 hidden flex-col rounded-[26px] border border-white/50 bg-white/65 shadow-[0_10px_40px_-16px_rgba(15,23,42,0.18)] backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex",
+          "fixed inset-y-3 left-3 z-30 hidden flex-col rounded-[26px] border border-white/50 bg-white/65 shadow-[0_10px_40px_-16px_rgba(15,23,42,0.18)] backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex animate-slide-in-left",
           sidebarWidth,
         )}
       >
