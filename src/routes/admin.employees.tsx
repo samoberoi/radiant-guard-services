@@ -339,6 +339,19 @@ const QK_LANGUAGES = ["admin", "languages-lite"] as const;
 const QK_ESIC_BRANCHES = ["admin", "esic-branches-lite"] as const;
 const QK_SIGNED_DOCS = ["admin", "signed-docs-summary"] as const;
 
+function getMutationErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  if (error && typeof error === "object") {
+    const record = error as Record<string, unknown>;
+    for (const key of ["message", "details", "hint", "code"]) {
+      const value = record[key];
+      if (typeof value === "string" && value.trim()) return value;
+    }
+  }
+  if (typeof error === "string" && error.trim()) return error;
+  return fallback;
+}
+
 function useSignedDocsSummary() {
   return useQuery({
     queryKey: QK_SIGNED_DOCS,
@@ -1113,7 +1126,13 @@ function EmployeesPage() {
         .insert(stripped as unknown as never)
         .select("id,employee_code,full_name,status")
         .single();
-      if (insertErr) throw insertErr;
+      if (insertErr) {
+        const message = getMutationErrorMessage(insertErr, "Reactivation failed");
+        if (message.includes("candidates_mobile_unique") || message.toLowerCase().includes("duplicate key")) {
+          throw new Error("This phone number is already used by another active employee or pending onboarding record.");
+        }
+        throw new Error(message);
+      }
       const newRec = inserted as unknown as { id: string; employee_code: string; full_name: string; status: string };
 
       // Copy candidate_units mapping to the new candidate
@@ -1123,7 +1142,7 @@ function EmployeesPage() {
         .eq("candidate_id", candidate.id);
       const unitsArr = (units as unknown as { unit_id: string; is_primary: boolean; sort_order: number }[] | null) ?? [];
       if (unitsArr.length > 0) {
-        await supabase
+        const { error: unitsErr } = await supabase
           .from("candidate_units" as never)
           .insert(
             unitsArr.map((u) => ({
@@ -1133,6 +1152,7 @@ function EmployeesPage() {
               sort_order: u.sort_order,
             })) as unknown as never,
           );
+        if (unitsErr) throw new Error(getMutationErrorMessage(unitsErr, "Reactivation created the employee record but failed to copy unit assignments."));
       }
 
       await logActivity({
@@ -1154,7 +1174,7 @@ function EmployeesPage() {
       }
       qc.invalidateQueries({ queryKey: QK });
     },
-    onError: (e) => toast.error(e instanceof Error ? e.message : "Reactivation failed"),
+    onError: (e) => toast.error(getMutationErrorMessage(e, "Reactivation failed")),
   });
 
   const offboardMut = useMutation({
