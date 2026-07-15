@@ -259,10 +259,10 @@ function LoginPage() {
                       >
                         <InputOTPGroup className="flex w-full justify-between gap-2">
                           {[0, 1, 2, 3, 4, 5].map((i) => (
-                            <InputOTPSlot
+                          <InputOTPSlot
                               key={i}
                               index={i}
-                              className="h-14 w-full rounded-2xl border border-border/70 bg-white/70 text-xl font-semibold tabular-nums text-foreground backdrop-blur first:rounded-l-2xl last:rounded-r-2xl data-[active=true]:border-accent data-[active=true]:bg-white data-[active=true]:ring-4 data-[active=true]:ring-accent/15"
+                              className="h-14 w-full rounded-2xl border border-border/70 bg-white/85 text-xl font-semibold tabular-nums text-foreground backdrop-blur first:rounded-l-2xl last:rounded-r-2xl data-[active=true]:border-accent data-[active=true]:bg-white data-[active=true]:ring-4 data-[active=true]:ring-accent/15"
                             />
                           ))}
                         </InputOTPGroup>
@@ -273,7 +273,7 @@ function LoginPage() {
                           {error}
                         </p>
                       ) : (
-                        <p className="mt-3 text-center text-xs text-muted-foreground">
+                        <p className="mt-3 text-center text-[13px] text-muted-foreground">
                           Demo code:{" "}
                           <span className="font-mono font-semibold text-foreground">
                             {DEMO_OTP_HINT}
@@ -285,7 +285,7 @@ function LoginPage() {
                     <Button
                       onClick={() => handleVerify()}
                       disabled={otp.length !== 6 || verifying}
-                      className="h-14 w-full rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground shadow-[0_18px_40px_-12px_color-mix(in_oklab,var(--primary)_60%,transparent)] hover:bg-primary/90 disabled:opacity-50"
+                      className="h-14 w-full rounded-2xl bg-primary text-[16px] font-semibold text-primary-foreground shadow-[0_18px_40px_-12px_color-mix(in_oklab,var(--primary)_60%,transparent)] hover:bg-primary/90 disabled:opacity-50"
                     >
                       {verifying ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
