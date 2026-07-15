@@ -2444,7 +2444,8 @@ function EmployeesPage() {
           <div className="grid gap-3 py-2">
             <button
               type="button"
-              className="rounded-lg border border-border p-3 text-left transition hover:border-primary hover:bg-accent/40"
+              disabled={reactivateMut.isPending}
+              className="rounded-lg border-2 border-border bg-background p-3 text-left transition hover:border-primary hover:bg-accent/40 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => {
                 if (!reactivateTarget) return;
                 const target = reactivateTarget;
@@ -2452,14 +2453,15 @@ function EmployeesPage() {
                 reactivateMut.mutate({ candidate: target, mode: "reuse" });
               }}
             >
-              <div className="font-semibold">Reactivate the same record</div>
-              <div className="text-xs text-muted-foreground">
+              <div className="font-semibold text-foreground">Reactivate the same record</div>
+              <div className="mt-1 text-xs text-muted-foreground">
                 Keeps the existing employee ID <span className="font-mono">{reactivateTarget?.employee_code || "—"}</span>. Clears offboarding fields and rehires them on the same profile.
               </div>
             </button>
             <button
               type="button"
-              className="rounded-lg border border-border p-3 text-left transition hover:border-primary hover:bg-accent/40"
+              disabled={reactivateMut.isPending}
+              className="rounded-lg border-2 border-border bg-background p-3 text-left transition hover:border-primary hover:bg-accent/40 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
               onClick={() => {
                 if (!reactivateTarget) return;
                 const target = reactivateTarget;
@@ -2467,15 +2469,16 @@ function EmployeesPage() {
                 reactivateMut.mutate({ candidate: target, mode: "new" });
               }}
             >
-              <div className="font-semibold">Create a new employee record</div>
-              <div className="text-xs text-muted-foreground">
+              <div className="font-semibold text-foreground">Create a new employee record</div>
+              <div className="mt-1 text-xs text-muted-foreground">
                 A brand-new employee ID will be generated. All KYC/documents are copied over; the original record ({reactivateTarget?.employee_code || "—"}) stays archived for audit.
               </div>
             </button>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setReactivateTarget(null)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setReactivateTarget(null)} disabled={reactivateMut.isPending}>Cancel</Button>
           </DialogFooter>
+
         </DialogContent>
       </Dialog>
 
