@@ -200,24 +200,24 @@
   .font-heading { font-family: var(--font-heading); }
   .font-display { font-family: var(--font-display); }
 
-  /* ============ Glassmorphism system ============ */
+  /* ============ Glassmorphism system (theme-aware) ============ */
   .glass {
-    background: color-mix(in oklab, white 55%, transparent);
+    background: rgb(var(--surface) / var(--surface-glass-alpha));
     backdrop-filter: blur(22px) saturate(160%);
-    border: 1px solid color-mix(in oklab, white 60%, transparent);
+    border: 1px solid rgb(var(--surface-hairline) / var(--surface-border-alpha));
     box-shadow:
-      0 1px 0 0 color-mix(in oklab, white 70%, transparent) inset,
-      0 1px 2px rgba(15, 23, 42, 0.04),
-      0 12px 32px -16px rgba(15, 23, 42, 0.14);
+      0 1px 0 0 rgb(var(--surface-hairline) / 0.22) inset,
+      0 1px 2px rgb(var(--surface-shadow) / 0.06),
+      0 12px 32px -16px rgb(var(--surface-shadow) / 0.28);
   }
   .glass-strong {
-    background: color-mix(in oklab, white 72%, transparent);
+    background: rgb(var(--surface-strong) / var(--surface-glass-strong-alpha));
     backdrop-filter: blur(28px) saturate(180%);
-    border: 1px solid color-mix(in oklab, white 75%, transparent);
+    border: 1px solid rgb(var(--surface-hairline) / calc(var(--surface-border-alpha) + 0.08));
     box-shadow:
-      0 1px 0 0 color-mix(in oklab, white 85%, transparent) inset,
-      0 2px 4px rgba(15, 23, 42, 0.05),
-      0 24px 48px -20px rgba(15, 23, 42, 0.18);
+      0 1px 0 0 rgb(var(--surface-hairline) / 0.28) inset,
+      0 2px 4px rgb(var(--surface-shadow) / 0.07),
+      0 24px 48px -20px rgb(var(--surface-shadow) / 0.32);
   }
   .glass-dark {
     background: color-mix(in oklab, oklch(0.18 0.03 260) 70%, transparent);
@@ -225,6 +225,7 @@
     border: 1px solid color-mix(in oklab, white 12%, transparent);
     color: white;
   }
+
 
   .text-gradient-accent {
     background-clip: text;
