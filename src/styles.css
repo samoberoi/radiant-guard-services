@@ -355,14 +355,15 @@
   }
   .aurora-blob { animation: aurora-float 18s ease-in-out infinite; }
 
-  /* Soft tinted canvas — clean, no grid */
+  /* Soft tinted canvas — clean, no grid; token-driven so it flips per theme */
   .app-canvas {
     background:
-      radial-gradient(ellipse 70% 55% at 5% -10%, color-mix(in oklab, var(--accent) 11%, transparent) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 45% at 100% 15%, oklch(0.9 0.06 200 / 0.6) 0%, transparent 65%),
-      radial-gradient(ellipse 80% 60% at 50% 115%, oklch(0.93 0.05 320 / 0.5) 0%, transparent 60%),
-      linear-gradient(180deg, oklch(0.985 0.006 250) 0%, oklch(0.96 0.014 240) 100%);
+      radial-gradient(ellipse 70% 55% at 5% -10%, color-mix(in oklab, var(--accent) 12%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 45% at 100% 15%, color-mix(in oklab, var(--accent-secondary) 10%, transparent) 0%, transparent 65%),
+      radial-gradient(ellipse 80% 60% at 50% 115%, color-mix(in oklab, var(--primary) 8%, transparent) 0%, transparent 60%),
+      linear-gradient(180deg, var(--background) 0%, color-mix(in oklab, var(--background) 92%, var(--foreground)) 100%);
   }
+
   /* Grid removed — kept as no-op so existing usages stay safe */
   .app-canvas-grid { background-image: none; }
 
