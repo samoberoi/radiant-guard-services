@@ -385,14 +385,12 @@ function AdminLayout() {
       .filter((g) => !g.module || can(g.module))
       .map((g) => (g.key === "inventory" ? { ...g, children: filteredInventoryChildren } : g));
     if (isFieldOfficer) {
-      const myUnits: GroupItem = { key: "my-units", label: "My Units", icon: Warehouse, to: "/admin/field-dashboard", activePrefixes: ["/admin/field-dashboard"] };
-      const dashIdx = base.findIndex((g) => g.key === "dashboard");
-      const out = [...base];
-      out.splice(dashIdx + 1, 0, myUnits);
-      return out;
+      // FO gets a single dashboard entry that already shows their units and team.
+      return base;
     }
     return base;
   })();
+
 
   const isGroupActive = (g: GroupItem) =>
     (g.activePrefixes ?? []).some((p) => {
