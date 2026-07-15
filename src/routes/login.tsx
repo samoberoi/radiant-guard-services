@@ -99,13 +99,20 @@ function LoginPage() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-background text-foreground">
-      {/* Ambient background — soft mesh + orbs */}
+      {/* Background image — soft wavy blur */}
+      <img
+        src={loginBg.url}
+        alt=""
+        aria-hidden
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-80"
+      />
+      {/* Ambient overlay — soft mesh + orbs */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 70% 55% at 15% 15%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 60%), radial-gradient(ellipse 60% 50% at 85% 85%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 60%), radial-gradient(ellipse 40% 35% at 50% 100%, color-mix(in oklab, var(--accent) 15%, transparent), transparent 70%)",
+            "radial-gradient(ellipse 70% 55% at 15% 15%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 60%), radial-gradient(ellipse 60% 50% at 85% 85%, color-mix(in oklab, var(--primary) 14%, transparent), transparent 60%), radial-gradient(ellipse 40% 35% at 50% 100%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 70%)",
         }}
       />
       {/* floating orbs */}
