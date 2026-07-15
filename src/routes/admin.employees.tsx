@@ -599,6 +599,8 @@ function EmployeesPage() {
   const [signTarget, setSignTarget] = useState<{ id: string; docType: DocType } | null>(null);
   const [offboardTarget, setOffboardTarget] = useState<CandidateListItem | null>(null);
   const [offboardReasonId, setOffboardReasonId] = useState<string>("");
+  const [reactivateTarget, setReactivateTarget] = useState<CandidateListItem | null>(null);
+
 
   const offboardReasonsQuery = useQuery({
     queryKey: ["offboarding_reasons_lite"],
