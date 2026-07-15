@@ -812,39 +812,35 @@ function EmployeesPage() {
 
   const isEmployeeStatus = (s: string) => s === "approved" || s === "active" || s === "inactive";
 
-  const supersededInactiveEmployeeIds = useMemo(() => {
-    const liveRecordByMobile = new Map<string, CandidateListItem>();
+  const supersededEmployeeIds = useMemo(() => {
+    const recordsByMobile = new Map<string, CandidateListItem[]>();
     for (const c of candidates) {
       const mobile = c.mobile?.trim();
-      if (!mobile || c.status === "inactive") continue;
-      liveRecordByMobile.set(mobile, c);
-    }
-
-    // Group all inactive records by mobile so we can dedupe them.
-    const inactiveByMobile = new Map<string, CandidateListItem[]>();
-    for (const c of candidates) {
-      const mobile = c.mobile?.trim();
-      if (!mobile || c.status !== "inactive") continue;
-      if (!inactiveByMobile.has(mobile)) inactiveByMobile.set(mobile, []);
-      inactiveByMobile.get(mobile)!.push(c);
+      if (!mobile) continue;
+      if (!recordsByMobile.has(mobile)) recordsByMobile.set(mobile, []);
+      recordsByMobile.get(mobile)!.push(c);
     }
 
     const ids = new Set<string>();
-    for (const [mobile, list] of inactiveByMobile) {
-      const liveRecord = liveRecordByMobile.get(mobile);
-      if (liveRecord) {
-        // A live (non-inactive) record exists → hide ALL inactive records for this mobile.
-        for (const c of list) ids.add(c.id);
+    for (const list of recordsByMobile.values()) {
+      const employeeRecords = list.filter((c) => isEmployeeStatus(c.status));
+      if (employeeRecords.length <= 1) continue;
+
+      const nonInactiveRecords = list.filter((c) => c.status !== "inactive");
+      const visibleEmployee = nonInactiveRecords
+        .filter((c) => isEmployeeStatus(c.status))
+        .sort(preferredEmployeeRecordFirst)[0];
+
+      if (nonInactiveRecords.length > 0 && !visibleEmployee) {
+        // A pending reactivation/onboarding exists for this mobile; hide older inactive employee cards.
+        for (const c of employeeRecords) ids.add(c.id);
         continue;
       }
-      // No live record → keep only the most recently created inactive record; hide the rest.
-      if (list.length <= 1) continue;
-      const sorted = [...list].sort((a, b) => {
-        const at = (a as CandidateListItem & { created_at?: string }).created_at ?? "";
-        const bt = (b as CandidateListItem & { created_at?: string }).created_at ?? "";
-        return bt.localeCompare(at);
-      });
-      for (let i = 1; i < sorted.length; i++) ids.add(sorted[i].id);
+
+      const keep = visibleEmployee ?? [...employeeRecords].sort(preferredEmployeeRecordFirst)[0];
+      for (const c of employeeRecords) {
+        if (c.id !== keep.id) ids.add(c.id);
+      }
     }
     return ids;
   }, [candidates]);
@@ -852,7 +848,7 @@ function EmployeesPage() {
   const employees = useMemo(
     () => candidates.filter((c) => {
       if (!isEmployeeStatus(c.status)) return false;
-      if (supersededInactiveEmployeeIds.has(c.id)) return false;
+      if (supersededEmployeeIds.has(c.id)) return false;
       if (!matchesSearch(c)) return false;
       if (!matchesFilters(c)) return false;
       if (isFieldOfficer) {
@@ -862,7 +858,7 @@ function EmployeesPage() {
       return true;
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, supersededInactiveEmployeeIds, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations, isFieldOfficer, scopedUnitIdSet],
+    [candidates, supersededEmployeeIds, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations, isFieldOfficer, scopedUnitIdSet],
   );
   const candidateRows = useMemo(
     () => candidates.filter((c) => {
