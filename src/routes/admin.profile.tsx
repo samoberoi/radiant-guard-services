@@ -812,7 +812,7 @@ function ProfilePage() {
                   className="h-full w-full object-cover"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-3xl font-bold text-muted-foreground">
+                <div className="flex h-full w-full items-center justify-center text-2xl font-bold text-muted-foreground">
                   {(profile.full_name || "?").slice(0, 1).toUpperCase()}
                 </div>
               )}

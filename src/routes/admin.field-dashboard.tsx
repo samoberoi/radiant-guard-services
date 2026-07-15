@@ -271,7 +271,7 @@ function FieldOfficerDashboard() {
     <DashboardShell>
       {/* Page title (mirrors "My Activity") */}
       <div className="flex items-end justify-between gap-4">
-        <h1 className="font-display text-4xl font-bold tracking-tight text-foreground sm:text-[44px]">
+        <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-2xl">
           My Activity
         </h1>
         <div className="hidden items-center gap-2 sm:flex">
@@ -284,7 +284,7 @@ function FieldOfficerDashboard() {
       <section className="rounded-[32px] border border-border/60 bg-card/85 p-6 shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_28px_70px_-38px_rgba(15,23,42,0.24)] backdrop-blur-2xl sm:p-7">
         <div className="grid gap-6 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
           <div className="relative shrink-0">
-            <div className="grid h-28 w-28 place-items-center rounded-[28px] bg-gradient-to-br from-accent/25 via-accent/10 to-sky-200/40 font-display text-3xl font-bold text-accent shadow-inner ring-1 ring-border/70 sm:h-32 sm:w-32">
+            <div className="grid h-28 w-28 place-items-center rounded-[28px] bg-gradient-to-br from-accent/25 via-accent/10 to-sky-200/40 font-display text-2xl font-bold text-accent shadow-inner ring-1 ring-border/70 sm:h-32 sm:w-32">
               {initials(data?.meName || "FO")}
             </div>
             <span className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-card text-emerald-500 shadow ring-1 ring-emerald-500/30">
@@ -420,7 +420,7 @@ function StatBar({ label, value, bar }: { label: string; value: number | string;
   return (
     <div className="min-w-0">
       <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</div>
-      <div className="mt-1 font-display text-3xl font-bold tabular-nums tracking-tight text-foreground">{value}</div>
+      <div className="mt-1 font-display text-2xl font-bold tabular-nums tracking-tight text-foreground">{value}</div>
       <div className={`mt-2 h-1 w-full rounded-full ${bar}`} />
     </div>
   );

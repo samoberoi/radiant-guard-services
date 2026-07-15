@@ -712,7 +712,7 @@ function MonthlyDashboard({
               <CalendarDays className="h-3.5 w-3.5 text-accent" /> Invoice month
             </div>
             <div className="flex items-end gap-3">
-              <div className="font-display text-5xl font-bold tracking-tight text-foreground sm:text-6xl">{monthName}</div>
+              <div className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-2xl">{monthName}</div>
               <div className="pb-2 text-2xl font-semibold text-muted-foreground/80">{year}</div>
               {isCurrent && (
                 <span className="mb-2 inline-flex rounded-full bg-accent/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent ring-1 ring-inset ring-accent/30">
@@ -858,7 +858,7 @@ function DashStat({
         </div>
         <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
       </div>
-      <div className={`mt-1 font-display font-bold tabular-nums tracking-tight text-foreground ${compact ? "text-2xl" : "text-3xl"}`}>
+      <div className={`mt-1 font-display font-bold tabular-nums tracking-tight text-foreground ${compact ? "text-2xl" : "text-2xl"}`}>
         {loading ? <span className="text-muted-foreground/40">—</span> : value.toLocaleString()}
       </div>
     </Cmp>
@@ -909,7 +909,7 @@ function Tile({
           <Icon className="h-6 w-6" />
         </div>
         <div>
-          <div className="text-4xl font-semibold tracking-tight text-foreground">{value}</div>
+          <div className="text-2xl font-semibold tracking-tight text-foreground">{value}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">{label}</div>
         </div>
       </div>
