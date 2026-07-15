@@ -85,7 +85,8 @@ function LoginPage() {
       await login(`+91${phone}`);
       toast.success("Signed in");
       setRevealing(true);
-      setTimeout(() => navigate({ to: "/", replace: true }), 700);
+      // Wait for the slide-up animation to play before navigating.
+      setTimeout(() => navigate({ to: "/", replace: true }), 640);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not start session. Try again.",
