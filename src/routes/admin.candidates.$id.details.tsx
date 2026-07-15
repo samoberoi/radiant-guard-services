@@ -53,6 +53,8 @@ import {
   IdentificationSection,
   NomineeSection,
 } from "@/components/candidate-extra-sections";
+import { useCurrentPermissions } from "@/lib/rbac";
+
 
 const MODULE = "Candidate Details";
 
