@@ -25,11 +25,11 @@ export function LiveFeed({ className }: { className?: string }) {
   return (
     <aside
       className={cn(
-        "sticky top-6 flex h-fit max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-[28px] border border-white/60 bg-white/70 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]",
+        "sticky top-6 flex h-fit max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-[28px] border border-border/60 bg-card/70 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]",
         className,
       )}
     >
-      <div className="flex items-center justify-between border-b border-white/50 bg-gradient-to-b from-white/80 to-white/40 px-5 py-4">
+      <div className="flex items-center justify-between border-b border-border/50 bg-gradient-to-b from-card/80 to-card/40 px-5 py-4">
         <div className="min-w-0">
           <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
             Live feed
@@ -48,7 +48,7 @@ export function LiveFeed({ className }: { className?: string }) {
             type="button"
             onClick={() => refetch()}
             aria-label="Refresh"
-            className="grid h-8 w-8 place-items-center rounded-full border border-white/70 bg-white/80 text-muted-foreground transition hover:text-foreground"
+            className="grid h-8 w-8 place-items-center rounded-full border border-border/70 bg-card/80 text-muted-foreground transition hover:text-foreground"
           >
             <RotateCw className={cn("h-3.5 w-3.5", isFetching && "animate-spin")} />
           </button>
@@ -60,7 +60,7 @@ export function LiveFeed({ className }: { className?: string }) {
               qc.invalidateQueries({ queryKey: NQK });
             }}
             aria-label="Mark all read"
-            className="grid h-8 w-8 place-items-center rounded-full border border-white/70 bg-white/80 text-muted-foreground transition hover:text-foreground disabled:opacity-40"
+            className="grid h-8 w-8 place-items-center rounded-full border border-border/70 bg-card/80 text-muted-foreground transition hover:text-foreground disabled:opacity-40"
           >
             <CheckCheck className="h-3.5 w-3.5" />
           </button>
@@ -94,7 +94,7 @@ export function LiveFeed({ className }: { className?: string }) {
                       if (n.link && typeof window !== "undefined") window.location.href = n.link;
                     }}
                     className={cn(
-                      "group flex w-full items-start gap-3 rounded-2xl px-3 py-2.5 text-left transition-all hover:bg-white",
+                      "group flex w-full items-start gap-3 rounded-2xl px-3 py-2.5 text-left transition-all hover:bg-card",
                       !n.readAt && "bg-accent/[0.06]",
                     )}
                   >
@@ -134,7 +134,7 @@ export function LiveFeed({ className }: { className?: string }) {
         )}
       </div>
 
-      <div className="border-t border-white/50 bg-white/50 px-4 py-2.5 text-center">
+      <div className="border-t border-border/50 bg-card/50 px-4 py-2.5 text-center">
         <Link
           to="/admin/notifications"
           className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:text-foreground"
