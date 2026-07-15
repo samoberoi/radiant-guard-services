@@ -53,11 +53,8 @@ export function PageHeader({
         </ol>
       </nav>
 
-      <div className="relative overflow-hidden rounded-[28px] border border-border/60 bg-gradient-to-br from-card/85 via-card/65 to-accent/[0.05] p-5 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_20px_50px_-32px_rgba(10,20,40,0.18)] sm:p-6">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[oklch(0.65_0.22_262/0.18)] blur-3xl" />
-        <div className="pointer-events-none absolute -left-16 -bottom-24 h-56 w-56 rounded-full bg-[oklch(0.78_0.13_200/0.14)] blur-3xl" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-card/80 to-transparent" />
-        <div className="pointer-events-none absolute inset-0 rounded-[28px] ring-1 ring-inset ring-border/40" />
+      <div className="relative overflow-hidden rounded-[28px] border border-border bg-card p-5 shadow-sm sm:p-6">
+
 
         <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
           <div className="flex min-w-0 items-start gap-3.5">
