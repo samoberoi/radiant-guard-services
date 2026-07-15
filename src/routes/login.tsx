@@ -204,15 +204,15 @@ function LoginPage() {
                   : `We sent a 6-digit code to +91 ••• ••• ${phone.slice(-4)}.`}
               </p>
 
-              <div className="mt-6">
+              <div className="mt-7">
                 {step === "phone" ? (
-                  <form onSubmit={sendOtp} className="space-y-4">
+                  <form onSubmit={sendOtp} className="space-y-5">
                     <label className="block">
-                      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                      <span className="mb-2 block text-[12px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                         Mobile number
                       </span>
                       <div className="relative">
-                        <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-muted-foreground">
+                        <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-[15px] font-semibold text-muted-foreground">
                           +91
                         </span>
                         <input
@@ -224,7 +224,7 @@ function LoginPage() {
                           onChange={(e) =>
                             setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
                           }
-                          className="h-14 w-full rounded-2xl border border-border/70 bg-white/70 pl-14 pr-5 text-[15px] font-medium tracking-wide text-foreground placeholder:text-muted-foreground/60 backdrop-blur transition-all focus:border-accent focus:bg-white focus:outline-none focus:ring-4 focus:ring-accent/15"
+                          className="h-14 w-full rounded-2xl border border-border/70 bg-white/85 pl-14 pr-5 text-[16px] font-medium tracking-wide text-foreground placeholder:text-muted-foreground/60 backdrop-blur transition-all focus:border-accent focus:bg-white focus:outline-none focus:ring-4 focus:ring-accent/15"
                         />
                       </div>
                     </label>
