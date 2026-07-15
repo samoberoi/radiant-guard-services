@@ -7,7 +7,8 @@ function readInitial(): Theme {
   if (typeof window === "undefined") return "light";
   const saved = window.localStorage.getItem(KEY);
   if (saved === "light" || saved === "dark") return saved;
-  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  // Default to light for all roles, regardless of OS preference.
+  return "light";
 }
 
 function apply(theme: Theme) {
