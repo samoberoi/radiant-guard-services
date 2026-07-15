@@ -281,10 +281,10 @@ function FieldOfficerDashboard() {
       </div>
 
       {/* Profile hero card — avatar + identity + 3 stat bars */}
-      <section className="rounded-[32px] border border-white/60 bg-white/85 p-6 shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_28px_70px_-38px_rgba(15,23,42,0.24)] backdrop-blur-2xl sm:p-7">
+      <section className="rounded-[32px] border border-border/60 bg-card/85 p-6 shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_28px_70px_-38px_rgba(15,23,42,0.24)] backdrop-blur-2xl sm:p-7">
         <div className="grid gap-6 sm:grid-cols-[auto_minmax(0,1fr)] sm:items-center">
           <div className="relative shrink-0">
-            <div className="grid h-28 w-28 place-items-center rounded-[28px] bg-gradient-to-br from-accent/25 via-accent/10 to-sky-200/40 font-display text-3xl font-bold text-accent shadow-inner ring-1 ring-white/70 sm:h-32 sm:w-32">
+            <div className="grid h-28 w-28 place-items-center rounded-[28px] bg-gradient-to-br from-accent/25 via-accent/10 to-sky-200/40 font-display text-3xl font-bold text-accent shadow-inner ring-1 ring-border/70 sm:h-32 sm:w-32">
               {initials(data?.meName || "FO")}
             </div>
             <span className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full bg-white text-emerald-500 shadow ring-1 ring-emerald-500/30">
@@ -408,7 +408,7 @@ function QuickChip({ to, icon: Icon, label }: { to: string; icon: React.Componen
   return (
     <Link
       to={to}
-      className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-white/85 px-3.5 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:border-accent/50 hover:text-accent"
+      className="inline-flex items-center gap-1.5 rounded-full border border-border/70 bg-card/85 px-3.5 py-1.5 text-xs font-semibold text-foreground shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:border-accent/50 hover:text-accent"
     >
       <Icon className="h-3.5 w-3.5" />
       {label}
@@ -448,10 +448,10 @@ function PastelTile({
   const negative = invertColor ? delta > 0 : delta < 0;
   const TrendIcon = delta === 0 ? Minus : delta > 0 ? TrendingUp : TrendingDown;
   const trendCls = delta === 0
-    ? "bg-white/70 text-foreground/60"
-    : positive ? "bg-white/85 text-emerald-700"
-    : negative ? "bg-white/85 text-rose-700"
-    : "bg-white/70 text-foreground/60";
+    ? "bg-card/70 text-foreground/60"
+    : positive ? "bg-card/85 text-emerald-700"
+    : negative ? "bg-card/85 text-rose-700"
+    : "bg-card/70 text-foreground/60";
 
   const inner = (
     <div className={`relative flex h-full min-h-[152px] flex-col justify-between overflow-hidden rounded-[26px] p-5 ring-1 ring-inset transition-transform hover:-translate-y-0.5 ${bg} ${ring}`}>
@@ -460,7 +460,7 @@ function PastelTile({
           <div className="text-[13px] font-semibold text-foreground/80">{label}</div>
           <div className="mt-0.5 text-[11px] text-foreground/55">{hint}</div>
         </div>
-        <span className="grid h-9 w-9 place-items-center rounded-full bg-white/80 text-foreground/70 shadow-sm">
+        <span className="grid h-9 w-9 place-items-center rounded-full bg-card/80 text-foreground/70 shadow-sm">
           <ArrowUpRight className="h-4 w-4" />
         </span>
       </div>
@@ -473,7 +473,7 @@ function PastelTile({
             <TrendIcon className="h-3 w-3" />
             {delta > 0 ? "+" : ""}{delta}{deltaSuffix}
           </span>
-          <span className="grid h-7 w-7 place-items-center rounded-full bg-white/70 text-foreground/70">
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-card/70 text-foreground/70">
             <Icon className="h-3.5 w-3.5" />
           </span>
         </div>
