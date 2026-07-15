@@ -1171,6 +1171,43 @@ function EmployeesPage() {
         } as unknown as never)
         .eq("id", candidate.id);
       if (error) throw error;
+
+      // Post inventory return movements: negative at guard, positive at destination
+      const returns = (details.inventory_returns ?? []).filter((r) => r.qty_returned > 0);
+      if (returns.length) {
+        const moves = returns.flatMap((r) => [
+          {
+            movement_type: "offboarding_return",
+            location_type: "guard" as LocationType,
+            location_id: candidate.id,
+            item_id: r.item_id,
+            size_value: r.size_value ?? "",
+            qty_change: -Math.abs(r.qty_returned),
+            reference_type: "offboarding_return",
+            reference_id: candidate.id,
+            notes: r.remarks ?? `Returned on offboarding · ${r.item_name}`,
+          },
+          {
+            movement_type: "offboarding_return",
+            location_type: r.destination_type,
+            location_id: r.destination_id,
+            item_id: r.item_id,
+            size_value: r.size_value ?? "",
+            qty_change: Math.abs(r.qty_returned),
+            reference_type: "offboarding_return",
+            reference_id: candidate.id,
+            notes: r.remarks ?? `Received back from ${candidate.full_name || candidate.employee_code}`,
+          },
+        ]);
+        try {
+          await postMovements(moves);
+        } catch (e) {
+          // Do not fail offboarding on movement error; surface a toast.
+          console.error("Inventory return movement failed", e);
+          toast.error("Employee offboarded, but inventory return failed to post. Please review Stock Ledger.");
+        }
+      }
+
       await logActivity({
         module: "Employees",
         action: "offboard",
@@ -1178,12 +1215,14 @@ function EmployeesPage() {
         entityId: candidate.id,
         entityLabel: candidate.full_name || candidate.employee_code,
         before: { is_enabled: candidate.is_enabled, status: candidate.status },
-        after: { is_enabled: false, status: "inactive", offboarding_reason: reasonName, no_hire: noHire, offboarding_details: details },
+        after: { is_enabled: false, status: "inactive", offboarding_reason: reasonName, no_hire: noHire, offboarding_details: details, inventory_returns_count: returns.length },
       });
     },
     onSuccess: () => {
       toast.success("Employee offboarded");
       qc.invalidateQueries({ queryKey: QK });
+      qc.invalidateQueries({ queryKey: ["inv_stock_balances"] });
+      qc.invalidateQueries({ queryKey: ["inv_stock_movements"] });
       setOffboardTarget(null);
       setOffboardReasonId("");
     },
