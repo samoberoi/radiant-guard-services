@@ -36,14 +36,11 @@ export function HeroTile({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-[32px] border border-border/60 bg-gradient-to-br from-card/90 via-card/70 to-accent/[0.04] p-6 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_30px_80px_-40px_rgba(10,20,40,0.25)] sm:p-9",
+        "relative overflow-hidden rounded-[32px] border border-border bg-card p-6 shadow-sm sm:p-9",
         className,
       )}
     >
-      <div className="pointer-events-none absolute -right-32 -top-32 h-80 w-80 rounded-full bg-[oklch(0.65_0.22_262/0.25)] blur-3xl aurora-blob" />
-      <div className="pointer-events-none absolute -left-24 -bottom-32 h-72 w-72 rounded-full bg-[oklch(0.78_0.13_200/0.22)] blur-3xl aurora-blob" style={{ animationDelay: "3s" }} />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent" />
-      <div className="pointer-events-none absolute inset-0 rounded-[32px] ring-1 ring-inset ring-border/40" />
+
 
       <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 space-y-3">
