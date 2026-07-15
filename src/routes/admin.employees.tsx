@@ -732,24 +732,35 @@ function EmployeesPage() {
   const isEmployeeStatus = (s: string) => s === "approved" || s === "active" || s === "inactive";
 
   const employees = useMemo(
-    () => candidates.filter((c) => isEmployeeStatus(c.status) && matchesSearch(c) && matchesFilters(c)),
+    () => candidates.filter((c) => {
+      if (!isEmployeeStatus(c.status)) return false;
+      if (!matchesSearch(c)) return false;
+      if (!matchesFilters(c)) return false;
+      if (isFieldOfficer) {
+        // FO sees active employees only within his assigned units.
+        if (!c.unit_id || !scopedUnitIdSet.has(c.unit_id)) return false;
+      }
+      return true;
+    }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations],
+    [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations, isFieldOfficer, scopedUnitIdSet],
   );
   const candidateRows = useMemo(
     () => candidates.filter((c) => {
       if (isEmployeeStatus(c.status)) return false;
       if (!matchesSearch(c)) return false;
       if (isFieldOfficer) {
-        // Field officers see only their own submissions, and only while pending/rejected/draft.
-        if (!currentUserId) return false;
-        if (currentUserId && c.created_by !== currentUserId) return false;
+        // FO sees pending/rejected/draft submissions within his units,
+        // plus his own submissions regardless of unit (in case unit not yet set).
+        const inMyUnits = !!c.unit_id && scopedUnitIdSet.has(c.unit_id);
+        const isMine = !!currentUserId && c.created_by === currentUserId;
+        if (!inMyUnits && !isMine) return false;
         if (c.status === "approved") return false;
       }
       return true;
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, search, isFieldOfficer, currentUserId],
+    [candidates, search, isFieldOfficer, currentUserId, scopedUnitIdSet],
   );
 
   // ---------------- Export ---------------- //
