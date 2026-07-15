@@ -168,6 +168,8 @@
   .font-black { font-weight: 500 !important; }
   .font-semibold { font-weight: 500 !important; }
   .font-medium { font-weight: 450 !important; }
+}
+
 
 @layer utilities {
   .scrollbar-hide::-webkit-scrollbar { display: none; }
