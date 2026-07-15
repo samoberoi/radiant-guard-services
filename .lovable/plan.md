@@ -1,60 +1,51 @@
-## End-to-end UI/UX refinement pass
+# End-to-End Flow Test: FPL Unit (Attendance → Payroll → Invoice)
 
-Acting as senior product designer, this pass fixes the readability, contrast, and layout issues visible in the three screenshots and rolls the same fixes across every role and page.
+I'll run the full workflow myself against the live database and browser, then report calculation correctness vs. industry standard.
 
-### Problems seen in screenshots
+## Scope
 
-1. **P&L dashboard table** — numbers like `₹21,27,549` wrap across 3 lines in the header; variance pill wraps `(0.0%)` and `₹0` onto separate lines. Column widths are wrong and text is not `whitespace-nowrap` / `tabular-nums`.
-2. **Payroll KPI tiles** — pastel yellow / mint / pink / blue tiles with same-tone labels give very low text contrast (fails WCAG AA). Numbers ("0") also sit on tinted backgrounds without enough weight.
-3. **Client Contracts hero** — huge translucent white hero with pale grey KPI labels/values on near-white background; `AWAITING APPROVAL 0`, `REJECTED 0`, `LOST 1` almost invisible. Same glass-on-glass problem across all `PageHeader` KPIs.
-4. **General** — buttons in hero (Export / Import / Create) sit on white with soft shadows and low separation; breadcrumbs and eyebrow labels too faint; some tab pills also low contrast.
+Pick one FPL unit with an active contract and 2–5 deployed employees. Use the previous calendar month (e.g. June 2026) as the attendance period so payroll windows are already closed.
 
-### Fix strategy (design tokens first, then targeted layout fixes)
+## Steps
 
-**A. Contrast + readability (global, one edit reaches every page)**
+1. **Discover data** (read-only)
+   - Find FPL customer → pick one unit with active `client_contracts` + deployed `candidates`.
+   - Confirm attendance/payroll windows, day-basis, and cost components on that contract.
+   - Identify test users: one `field_officer` scoped to the unit, one `hr`, one `leadership`/admin (for payroll/invoice edit).
 
-- `src/components/PageHeader.tsx`
-  - Darken `eyebrow` (accent → `text-accent` at full strength, not `/90`) and breadcrumb text (`text-muted-foreground` not `/80`, active crumb `text-foreground`).
-  - Description: bump from `text-muted-foreground` (light) to a darker token, tighten leading.
-  - `PageStat`: replace white/70 glass with a more opaque surface (`bg-white/85` + stronger border) and use `text-foreground` for value, `text-muted-foreground` (not lighter) for label. Ensure value uses `font-semibold` not just display font weight cap.
-- `src/routes/admin.payroll.*` KPI pastel tiles — swap pastel fills for the shared `PageStat` component (or restyle to `bg-white/85` with a small colored icon chip) so labels/values inherit the fixed contrast tokens. Keep the accent color only on the icon chip, not the whole tile.
-- `src/styles.css` — nudge `--muted-foreground` one step darker so every "faint grey" label across the app becomes readable (single change, app-wide effect). Verify against light background; keep dark-mode variant unchanged.
+2. **Field Officer: submit attendance** (via Playwright, logged in as FO)
+   - Open `/admin/attendance/{unitId}` for the chosen month.
+   - Fill random-but-realistic entries (P/WO/PH mix, a couple of leaves and OT) for each deployed employee.
+   - Submit for approval. Verify `attendance_sheets.status = 'submitted'` and HR notification created.
 
-**B. Table / number wrapping (P&L and every data table)**
+3. **HR: review + edit + approve** (logged in as HR)
+   - Open the same sheet, tweak 1–2 entries, upload a proof image, approve.
+   - Verify status flips to `approved`, approver + timestamp recorded, payroll/invoice unlock.
 
-- `src/routes/admin.dashboard.tsx` P&L table:
-  - Header summary block: put `Contract / Invoice / Payroll / Variance` in a proper 2-col grid with `whitespace-nowrap tabular-nums` on values, right-aligned, so ₹21,27,549 stays on one line.
-  - Table columns: add `whitespace-nowrap` to numeric cells, `tabular-nums`, right-align money columns; give the Variance pill `inline-flex whitespace-nowrap` so `↗ ₹0 (0.0%)` stays on a single line; constrain unit/org text columns with `min-w-0` + `truncate` + `title` attr for overflow.
-- Sweep other data-heavy tables (payroll sheets, client contracts list, vehicles, inventory) for the same pattern: numeric cells → `whitespace-nowrap tabular-nums`, text cells → `min-w-0 truncate` with tooltip.
+4. **Payroll generation** (as HR / payroll-permitted user)
+   - Open `/admin/payroll/{unitId}` for the month, trigger generate.
+   - Inspect one employee's payslip: verify Basic, DA, HRA, other allowances, gross, PF (12% of PF-wages capped at ₹15k), ESI (0.75% employee / 3.25% employer if gross ≤ ₹21k), PT slab, LWF, net pay, and payable-days math (`gross / day_basis × payable_days`).
+   - Cross-check against the formulas in `allowance_types` / `cost_components` (hydrated via `contract-hydrate.ts` + `formula-engine.ts`) and against industry norms.
 
-**C. Hero + button polish**
+5. **Invoice generation**
+   - Open `/admin/invoice/{unitId}`, generate.
+   - Verify billing lines match `contract_resources` cost side, GST split (CGST+SGST vs IGST based on customer state vs branch state), rounding, and totals.
 
-- `PageHeader` action slot: give primary action (`Create …`) a solid accent background with `text-accent-foreground` for clear affordance; keep Export/Import as outline with a visible border (`border-border` not `border-white/60`) so they don't disappear on white.
-- Reduce hero vertical padding on desktop; the Client Contracts hero currently eats ~40% of viewport. Tighten `p-5 sm:p-6` → `p-4 sm:p-5` and cap KPI grid to 4-up on lg (already true) but shrink pill height.
+6. **Report**
+   - Table of each step: pass/fail, actual vs expected numbers, any UI or math bug found.
+   - List of concrete fixes needed (if any) — I will NOT apply them in this plan; I'll surface them for your approval.
 
-**D. Navigation / sidebar sanity check**
+## Technical notes
 
-- Sidebar active pill is fine, but the phone chip at the bottom (`+91 … 0002`) is on solid black — leave it; verify hover/focus tokens on collapsed state have visible contrast.
+- Uses `psql` + `supabase--read_query` for discovery and verification.
+- Uses Playwright (headless Chromium) with the managed Supabase session env vars to drive real UI flows per role. Screenshots saved under `/tmp/browser/fpl-flow/`.
+- No schema changes. If a bug requires a data fix (e.g. missing role permission like last time), I'll list it and wait for approval before running any `UPDATE`.
+- Auth: I'll need to switch sessions between FO / HR / admin. If session injection only covers the currently signed-in preview user, I'll fall back to invoking the same server functions directly with each role's bearer via `psql`-backed checks and note which UI steps I couldn't drive in-browser.
 
-**E. Accessibility sweep**
+## Deliverable
 
-- All icon-only buttons: verify `aria-label`.
-- Ensure `PageStat` value/label pair meets 4.5:1 on the glass background after the token bump.
-- Add `min-h-11 min-w-11` to primary tap targets in hero actions.
-
-### Verification
-
-- `tsgo --noEmit` after edits.
-- Playwright screenshot of `/admin/dashboard`, `/admin/payroll`, `/admin/contracts/client-contracts` at 1440px and 1024px; confirm no wrapped numbers and readable KPIs.
-- Spot-check one page per role cluster (Attendance, Inventory, Vehicles, Assets, Org Settings) that inherit `PageHeader` + `PageStat` — no per-page edits needed unless they override tokens.
-
-### Files expected to change
-
-- `src/styles.css` (muted-foreground token)
-- `src/components/PageHeader.tsx` (contrast, eyebrow, PageStat surface, action button treatment)
-- `src/routes/admin.dashboard.tsx` (P&L header + table nowrap/tabular)
-- `src/routes/admin.payroll.index.tsx` (KPI tile restyle)
-- `src/routes/admin.contracts.client-contracts.tsx` (hero density + KPI contrast if not fully covered by PageHeader change)
-- Minor sweeps in tables flagged during Playwright review
-
-Out of scope: business logic, data model, route structure.
+A single feedback report with:
+- Flow pass/fail per stage
+- Sample employee payroll math breakdown (expected vs actual)
+- Sample invoice math breakdown (expected vs actual)
+- Bug list with proposed fixes (not yet applied)
