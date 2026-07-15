@@ -2413,6 +2413,58 @@ function EmployeesPage() {
         }}
       />
 
+      {/* Reactivation chooser: reuse the archived record vs create a fresh one */}
+      <Dialog open={!!reactivateTarget} onOpenChange={(o) => !o && setReactivateTarget(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Reactivate {reactivateTarget?.full_name || reactivateTarget?.employee_code}?</DialogTitle>
+            <DialogDescription>
+              This employee was previously offboarded ({reactivateTarget?.employee_code}). Choose how to bring them back.
+              {!(isSuperAdmin || ["admin", "super_admin", "hr", "leadership"].includes(roleKey ?? "")) && (
+                <span className="mt-2 block text-xs">Your request will be sent to HR / Admin for approval before the employee becomes active.</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-2">
+            <button
+              type="button"
+              className="rounded-lg border border-border p-3 text-left transition hover:border-primary hover:bg-accent/40"
+              onClick={() => {
+                if (!reactivateTarget) return;
+                const target = reactivateTarget;
+                setReactivateTarget(null);
+                reactivateMut.mutate({ candidate: target, mode: "reuse" });
+              }}
+            >
+              <div className="font-semibold">Reactivate the same record</div>
+              <div className="text-xs text-muted-foreground">
+                Keeps the existing employee ID <span className="font-mono">{reactivateTarget?.employee_code || "—"}</span>. Clears offboarding fields and rehires them on the same profile.
+              </div>
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-border p-3 text-left transition hover:border-primary hover:bg-accent/40"
+              onClick={() => {
+                if (!reactivateTarget) return;
+                const target = reactivateTarget;
+                setReactivateTarget(null);
+                reactivateMut.mutate({ candidate: target, mode: "new" });
+              }}
+            >
+              <div className="font-semibold">Create a new employee record</div>
+              <div className="text-xs text-muted-foreground">
+                A brand-new employee ID will be generated. All KYC/documents are copied over; the original record ({reactivateTarget?.employee_code || "—"}) stays archived for audit.
+              </div>
+            </button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReactivateTarget(null)}>Cancel</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
+
 
       <Dialog
         open={!!rejectTarget}
