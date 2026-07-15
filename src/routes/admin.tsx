@@ -922,35 +922,51 @@ function CollapsedGroupPopover({
 }) {
   const [open, setOpen] = useState(false);
   const t = useT();
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelClose = () => {
+    if (closeTimer.current) {
+      clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+    }
+  };
+  const scheduleClose = () => {
+    cancelClose();
+    closeTimer.current = setTimeout(() => setOpen(false), 120);
+  };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <Tooltip>
-        <PopoverTrigger asChild>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              aria-label={t(group.label)}
-              aria-expanded={open}
-              className={cn(itemBase, "justify-center px-2", groupActive ? itemActive : itemIdle)}
-            >
-              <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
-                <Icon className="h-4 w-4" />
-              </span>
-            </button>
-          </TooltipTrigger>
-        </PopoverTrigger>
-        {!open && (
-          <TooltipContent side="right" sideOffset={10} className="font-medium">
-            {t(group.label)}
-          </TooltipContent>
-        )}
-      </Tooltip>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={t(group.label)}
+          aria-expanded={open}
+          onMouseEnter={() => {
+            cancelClose();
+            setOpen(true);
+          }}
+          onMouseLeave={scheduleClose}
+          onFocus={() => {
+            cancelClose();
+            setOpen(true);
+          }}
+          onBlur={scheduleClose}
+          className={cn(itemBase, "justify-center px-2", groupActive ? itemActive : itemIdle)}
+        >
+          <span className={cn(iconSpanBase, groupActive ? iconSpanActive : iconSpanIdle)}>
+            <Icon className="h-4 w-4" />
+          </span>
+        </button>
+      </PopoverTrigger>
       {group.children && (
         <PopoverContent
           side="right"
           align="start"
           sideOffset={12}
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
+          onOpenAutoFocus={(e) => e.preventDefault()}
           className="w-60 rounded-2xl border border-border/50 bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
         >
           <div className="mb-1 px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
@@ -981,5 +997,6 @@ function CollapsedGroupPopover({
         </PopoverContent>
       )}
     </Popover>
+
   );
 }
