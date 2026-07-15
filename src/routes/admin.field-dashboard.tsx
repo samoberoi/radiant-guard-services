@@ -450,9 +450,10 @@ function PastelTile({
   const TrendIcon = delta === 0 ? Minus : delta > 0 ? TrendingUp : TrendingDown;
   const trendCls = delta === 0
     ? "bg-card/70 text-foreground/60"
-    : positive ? "bg-card/85 text-emerald-700"
-    : negative ? "bg-card/85 text-rose-700"
+    : positive ? "bg-card/85 text-emerald-700 dark:text-emerald-300"
+    : negative ? "bg-card/85 text-rose-700 dark:text-rose-300"
     : "bg-card/70 text-foreground/60";
+
 
   const inner = (
     <div className={`relative flex h-full min-h-[152px] flex-col justify-between overflow-hidden rounded-[26px] p-5 ring-1 ring-inset transition-transform hover:-translate-y-0.5 ${bg} ${ring}`}>
