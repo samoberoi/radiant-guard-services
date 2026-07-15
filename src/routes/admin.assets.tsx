@@ -378,7 +378,7 @@ function StatCard({
           <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {label}
           </div>
-          <div className="mt-2 font-display text-3xl font-bold tracking-tight tabular-nums">
+          <div className="mt-2 font-display text-2xl font-bold tracking-tight tabular-nums">
             {valuePrefix}
             {value.toLocaleString("en-IN")}
           </div>

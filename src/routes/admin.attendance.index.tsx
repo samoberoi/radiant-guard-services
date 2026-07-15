@@ -920,7 +920,7 @@ function SummaryTile({
           <Icon className="h-6 w-6" />
         </div>
         <div>
-          <div className="text-4xl font-semibold tracking-tight text-foreground">{value}</div>
+          <div className="text-2xl font-semibold tracking-tight text-foreground">{value}</div>
           <div className="mt-1 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             {label}
           </div>

@@ -325,7 +325,7 @@ function StatTile({ label, value, tone }: { label: string; value: number | strin
     <div className="rounded-2xl border border-border bg-card p-5">
       <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className={cn(
-        "mt-2 font-display text-3xl font-bold tracking-tight",
+        "mt-2 font-display text-2xl font-bold tracking-tight",
         tone === "warning" && "text-amber-600 dark:text-amber-400",
       )}>
         {value}

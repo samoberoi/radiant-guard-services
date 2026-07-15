@@ -500,7 +500,7 @@ function StatCard({
           <Icon className="h-4 w-4" />
         </span>
       </div>
-      <div className="mt-3 font-display text-3xl font-bold text-foreground">{value}</div>
+      <div className="mt-3 font-display text-2xl font-bold text-foreground">{value}</div>
     </div>
   );
 }

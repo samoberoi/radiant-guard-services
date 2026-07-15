@@ -511,7 +511,7 @@ function DashboardPage() {
               <Sparkles className="h-3.5 w-3.5 text-accent" /> Leadership snapshot
             </div>
             <div className="flex items-end gap-3">
-              <div className="font-display text-5xl font-bold tracking-tight text-foreground sm:text-6xl">{MONTH_NAMES[month]}</div>
+              <div className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-2xl">{MONTH_NAMES[month]}</div>
               <div className="pb-2 text-2xl font-semibold text-muted-foreground/80">{year}</div>
               {isCurrent && (
                 <span className="mb-2 inline-flex rounded-full bg-accent/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent ring-1 ring-inset ring-accent/30">
@@ -777,11 +777,11 @@ function StatusTile({ icon, label, approved, pending, draft, rejected, approvedL
       <TileLabel>{label}</TileLabel>
       <div className="mt-1 grid grid-cols-2 gap-3">
         <div>
-          <div className="font-display text-3xl font-bold tabular-nums leading-none text-emerald-600">{approved}</div>
+          <div className="font-display text-2xl font-bold tabular-nums leading-none text-emerald-600">{approved}</div>
           <div className="mt-1.5 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{approvedLabel}</div>
         </div>
         <div>
-          <div className="font-display text-3xl font-bold tabular-nums leading-none text-amber-600">{pending}</div>
+          <div className="font-display text-2xl font-bold tabular-nums leading-none text-amber-600">{pending}</div>
           <div className="mt-1.5 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{pendingLabel}</div>
         </div>
       </div>

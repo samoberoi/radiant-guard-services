@@ -79,7 +79,7 @@ export function RadialGauge({
         />
       </svg>
       <div className="-mt-12 flex flex-col items-center">
-        <div className="font-display text-4xl font-bold tabular-nums tracking-tight text-foreground">
+        <div className="font-display text-2xl font-bold tabular-nums tracking-tight text-foreground">
           {Math.round(animated)}<span className="text-xl text-muted-foreground">%</span>
         </div>
         {label && <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{label}</div>}
