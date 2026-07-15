@@ -145,15 +145,12 @@ function LoginPage() {
         }}
       />
 
-      {/* Reveal overlay */}
-      <div
-        className={`pointer-events-none fixed inset-0 z-50 origin-bottom bg-background transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
-          revealing ? "translate-y-0" : "translate-y-full"
-        }`}
-      />
+      {/* Content wrapper — slides up on successful sign-in to reveal the CRM */}
+      <div className={revealing ? "animate-slide-out-up" : ""}>
 
       {/* Centered glass card */}
       <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10 sm:px-6">
+
         <div className="w-full max-w-[440px]">
           {/* Brand */}
           <div className="mb-8 flex flex-col items-center gap-4 text-center">
