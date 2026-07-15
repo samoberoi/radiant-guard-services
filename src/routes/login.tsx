@@ -320,7 +320,7 @@ function LoginPage() {
               {/* trust row */}
               <div className="mt-7 flex items-center justify-center gap-2 rounded-2xl border border-border/60 bg-white/70 px-3 py-2.5 text-[12px] text-muted-foreground backdrop-blur">
                 <ShieldCheck className="h-4 w-4 text-accent" />
-                <span>Encrypted end-to-end · No password required</span>
+                <span>Encrypted end-to-end · Secure OTP verification</span>
               </div>
             </div>
           </div>
@@ -336,6 +336,7 @@ function LoginPage() {
             </span>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
