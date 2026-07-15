@@ -4868,6 +4868,106 @@ function OffboardingDialog({
             )}
           </section>
 
+          {/* Section: Return Issued Inventory (uniform / shoes / torch etc.) */}
+          <section className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                Return Issued Inventory
+              </h3>
+              <span className="text-[11px] text-muted-foreground">
+                {invReturns.filter((r) => r.qty_returned > 0).length} of {invReturns.length} items collected
+              </span>
+            </div>
+            {balancesQ.isLoading ? (
+              <p className="rounded-md border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+                Loading issued inventory…
+              </p>
+            ) : invReturns.length === 0 ? (
+              <p className="rounded-md border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+                No inventory items are currently held by this employee. If they left items behind, record them via a stock adjustment.
+              </p>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label>Where should returned items be received? *</Label>
+                    <Select value={returnDestKey} onValueChange={setReturnDestKey}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select receiving location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {isFieldOfficer && currentUserCandidateId && (
+                          <SelectItem value={`field_officer:${currentUserCandidateId}`}>
+                            My inventory (field officer)
+                          </SelectItem>
+                        )}
+                        {(warehousesQ.data ?? []).map((w) => (
+                          <SelectItem key={w.id} value={`warehouse:${w.id}`}>
+                            Warehouse · {w.name}{w.is_default ? " (default)" : ""}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="scrap:00000000-0000-0000-0000-000000000000">
+                          Scrap / Write-off (item not usable)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-muted-foreground">
+                      Set the quantity to 0 for items the employee did NOT return. Only returned quantities are moved back into stock.
+                    </p>
+                  </div>
+                </div>
+                <div className="rounded-md border border-border">
+                  <div className="grid grid-cols-[2fr,auto,auto,2fr] gap-3 border-b border-border bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <div>Item</div>
+                    <div className="text-right">Held</div>
+                    <div className="text-right">Returned</div>
+                    <div>Remarks</div>
+                  </div>
+                  {invReturns.map((row, idx) => (
+                    <div
+                      key={`${row.item_id}:${row.size_value}`}
+                      className={cn(
+                        "grid grid-cols-[2fr,auto,auto,2fr] items-center gap-3 px-3 py-2 text-sm",
+                        idx > 0 && "border-t border-border",
+                      )}
+                    >
+                      <div>
+                        <div className="font-medium">{row.item_name}</div>
+                        {row.size_value && (
+                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Size {row.size_value}</div>
+                        )}
+                      </div>
+                      <div className="text-right tabular-nums text-xs text-muted-foreground">
+                        {row.on_hand} {row.unit}
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={row.on_hand}
+                        step="1"
+                        className="h-8 w-20 text-right tabular-nums"
+                        value={row.qty_returned}
+                        onChange={(e) => {
+                          const v = Math.max(0, Math.min(row.on_hand, Number(e.target.value) || 0));
+                          setInvReturns((rows) => rows.map((r, i) => (i === idx ? { ...r, qty_returned: v } : r)));
+                        }}
+                      />
+                      <Input
+                        placeholder="Condition / remarks (optional)"
+                        className="h-8"
+                        value={row.remarks ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setInvReturns((rows) => rows.map((r, i) => (i === idx ? { ...r, remarks: v } : r)));
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+
           {/* Section: Rating */}
           <section className="space-y-3">
             <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
