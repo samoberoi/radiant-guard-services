@@ -503,7 +503,7 @@ function UnitRow({ unit }: { unit: UnitNode }) {
             <div className="flex items-center gap-2 truncate text-sm font-semibold">
               {unit.name}
               {unit.is_primary && (
-                <span className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Primary</span>
+                <span className="inline-flex rounded-full bg-emerald-500/15 dark:bg-emerald-400/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Primary</span>
               )}
             </div>
             <div className="truncate text-xs text-muted-foreground">{unit.customer_name} · <span className="font-mono">{unit.code}</span></div>
@@ -562,7 +562,7 @@ function UnitRow({ unit }: { unit: UnitNode }) {
 function Pill({ tone, value, label }: { tone: "slate" | "amber" | "violet" | "cyan"; value: number; label: string }) {
   const toneCls = {
     slate: "bg-slate-100 text-slate-700",
-    amber: "bg-amber-100 text-amber-700",
+    amber: "bg-amber-500/15 dark:bg-amber-400/20 text-amber-700 dark:text-amber-300",
     violet: "bg-violet-100 text-violet-700",
     cyan: "bg-cyan-100 text-cyan-700",
   }[tone];
