@@ -550,8 +550,7 @@ function EmployeesPage() {
   }, []);
 
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"employee" | "candidate">(isFieldOfficer ? "candidate" : "employee");
-  useEffect(() => { if (isFieldOfficer && tab !== "candidate") setTab("candidate"); }, [isFieldOfficer, tab]);
+  const [tab, setTab] = useState<"employee" | "candidate">("employee");
   const [viewMode, setViewMode] = useState<"list" | "tree">("list");
   const [openWizard, setOpenWizard] = useState(false);
   const [editing, setEditing] = useState<Candidate | null>(null);
