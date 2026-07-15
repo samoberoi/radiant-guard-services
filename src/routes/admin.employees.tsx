@@ -1121,8 +1121,9 @@ function EmployeesPage() {
         existingReactivation = (existing as typeof existingReactivation) ?? null;
       }
       if (existingReactivation) {
-        return { ...existingReactivation, reusedExisting: true, mode } as ReactivationResult;
+        return { ...(existingReactivation as { id: string; employee_code: string; full_name: string; status: string }), reusedExisting: true, mode } as ReactivationResult;
       }
+
 
       if (mode === "reuse") {
         // Update the existing (inactive) record in place — keep the same employee_code / id.
