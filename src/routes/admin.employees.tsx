@@ -550,8 +550,7 @@ function EmployeesPage() {
   }, []);
 
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"employee" | "candidate">(isFieldOfficer ? "candidate" : "employee");
-  useEffect(() => { if (isFieldOfficer && tab !== "candidate") setTab("candidate"); }, [isFieldOfficer, tab]);
+  const [tab, setTab] = useState<"employee" | "candidate">("employee");
   const [viewMode, setViewMode] = useState<"list" | "tree">("list");
   const [openWizard, setOpenWizard] = useState(false);
   const [editing, setEditing] = useState<Candidate | null>(null);
@@ -689,6 +688,10 @@ function EmployeesPage() {
       return false;
     });
   }, [isFieldOfficer, currentCandidateId, scopeAssignments, units]);
+  const scopedUnitIdSet = useMemo(
+    () => new Set(scopedUnitsForWizard.map((u) => u.id)),
+    [scopedUnitsForWizard],
+  );
   const scopeStillLoading = isFieldOfficer && (roleLoading || scopeQuery.isLoading || !currentCandidateId);
 
   const matchesSearch = (c: CandidateListItem) => {
@@ -729,24 +732,35 @@ function EmployeesPage() {
   const isEmployeeStatus = (s: string) => s === "approved" || s === "active" || s === "inactive";
 
   const employees = useMemo(
-    () => candidates.filter((c) => isEmployeeStatus(c.status) && matchesSearch(c) && matchesFilters(c)),
+    () => candidates.filter((c) => {
+      if (!isEmployeeStatus(c.status)) return false;
+      if (!matchesSearch(c)) return false;
+      if (!matchesFilters(c)) return false;
+      if (isFieldOfficer) {
+        // FO sees active employees only within his assigned units.
+        if (!c.unit_id || !scopedUnitIdSet.has(c.unit_id)) return false;
+      }
+      return true;
+    }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations],
+    [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations, isFieldOfficer, scopedUnitIdSet],
   );
   const candidateRows = useMemo(
     () => candidates.filter((c) => {
       if (isEmployeeStatus(c.status)) return false;
       if (!matchesSearch(c)) return false;
       if (isFieldOfficer) {
-        // Field officers see only their own submissions, and only while pending/rejected/draft.
-        if (!currentUserId) return false;
-        if (currentUserId && c.created_by !== currentUserId) return false;
+        // FO sees pending/rejected/draft submissions within his units,
+        // plus his own submissions regardless of unit (in case unit not yet set).
+        const inMyUnits = !!c.unit_id && scopedUnitIdSet.has(c.unit_id);
+        const isMine = !!currentUserId && c.created_by === currentUserId;
+        if (!inMyUnits && !isMine) return false;
         if (c.status === "approved") return false;
       }
       return true;
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, search, isFieldOfficer, currentUserId],
+    [candidates, search, isFieldOfficer, currentUserId, scopedUnitIdSet],
   );
 
   // ---------------- Export ---------------- //
@@ -1906,14 +1920,12 @@ function EmployeesPage() {
       <Tabs value={tab} onValueChange={(v) => setTab(v as "employee" | "candidate")} className="space-y-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <TabsList className="inline-flex h-auto rounded-xl border border-border/60 bg-secondary/40 p-1 backdrop-blur-sm">
-            {!isFieldOfficer && (
-              <TabsTrigger
-                value="employee"
-                className="rounded-lg px-6 py-2 text-sm font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
-              >
-                Employees <span className="ml-1.5 text-xs opacity-60">({stats.empTotal})</span>
-              </TabsTrigger>
-            )}
+            <TabsTrigger
+              value="employee"
+              className="rounded-lg px-6 py-2 text-sm font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+            >
+              {isFieldOfficer ? "My Employees" : "Employees"} <span className="ml-1.5 text-xs opacity-60">({isFieldOfficer ? employees.length : stats.empTotal})</span>
+            </TabsTrigger>
             <TabsTrigger
               value="candidate"
               className="rounded-lg px-6 py-2 text-sm font-medium data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
