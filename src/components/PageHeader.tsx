@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, Home } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export type Crumb = { label: string; to?: string };
 
@@ -11,6 +12,8 @@ export function PageHeader({
   actions,
   icon: Icon,
   eyebrow,
+  kpis,
+  className,
 }: {
   title: string;
   description?: string;
@@ -18,11 +21,14 @@ export function PageHeader({
   actions?: React.ReactNode;
   icon?: LucideIcon;
   eyebrow?: string;
+  /** Optional KPI/stat row rendered below the title inside the hero */
+  kpis?: React.ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="relative mb-6">
-      <nav aria-label="Breadcrumb" className="mb-2.5">
-        <ol className="flex flex-wrap items-center gap-1.5 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+    <div className={cn("relative mb-6", className)}>
+      <nav aria-label="Breadcrumb" className="mb-3">
+        <ol className="flex flex-wrap items-center gap-1.5 text-[10.5px] uppercase tracking-[0.16em] text-muted-foreground/80">
           <li>
             <Link
               to="/admin/customers"
@@ -34,7 +40,7 @@ export function PageHeader({
           </li>
           {crumbs.map((c, i) => (
             <li key={`${c.label}-${i}`} className="flex items-center gap-1.5">
-              <ChevronRight className="h-3 w-3 opacity-50" />
+              <ChevronRight className="h-3 w-3 opacity-40" />
               {c.to && i < crumbs.length - 1 ? (
                 <Link to={c.to} className="transition-colors hover:text-foreground">
                   {c.label}
@@ -46,41 +52,111 @@ export function PageHeader({
           ))}
         </ol>
       </nav>
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4">
-        <div className="flex min-w-0 items-start gap-3.5">
-          {Icon && (
-            <div className="relative mt-0.5 hidden shrink-0 sm:block">
-              <div className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-br from-accent/40 to-accent/0 blur-lg" />
-              <div className="grid h-12 w-12 place-items-center rounded-2xl border border-white/70 bg-gradient-to-br from-white to-accent/[0.08] text-accent shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_10px_24px_-14px_color-mix(in_oklab,var(--accent)_45%,transparent)]">
-                <Icon className="h-5 w-5" />
+
+      <div className="relative overflow-hidden rounded-[28px] border border-white/60 bg-gradient-to-br from-white/85 via-white/65 to-accent/[0.05] p-5 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_20px_50px_-32px_rgba(10,20,40,0.18)] sm:p-6">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-[oklch(0.65_0.22_262/0.18)] blur-3xl" />
+        <div className="pointer-events-none absolute -left-16 -bottom-24 h-56 w-56 rounded-full bg-[oklch(0.78_0.13_200/0.14)] blur-3xl" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 rounded-[28px] ring-1 ring-inset ring-white/40" />
+
+        <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
+          <div className="flex min-w-0 items-start gap-3.5">
+            {Icon && (
+              <div className="relative mt-0.5 hidden shrink-0 sm:block">
+                <div className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-br from-accent/35 to-accent/0 blur-lg" />
+                <div className="grid h-11 w-11 place-items-center rounded-2xl border border-white/70 bg-gradient-to-br from-white to-accent/[0.10] text-accent shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_8px_18px_-10px_color-mix(in_oklab,var(--accent)_40%,transparent)]">
+                  <Icon className="h-[18px] w-[18px]" />
+                </div>
               </div>
+            )}
+            <div className="min-w-0">
+              {eyebrow && (
+                <div className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-white/70 px-2.5 py-0.5 text-[9.5px] uppercase tracking-[0.22em] text-accent/90 backdrop-blur">
+                  {eyebrow}
+                </div>
+              )}
+              <h1 className="truncate font-display text-[24px] leading-[1.1] tracking-tight text-foreground sm:text-[28px]">
+                {title}
+              </h1>
+              {description && (
+                <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
+                  {description}
+                </p>
+              )}
             </div>
-          )}
-          <div className="min-w-0">
-            {eyebrow && (
-              <div className="mb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-accent">
-                {eyebrow}
-              </div>
-            )}
-            <h1 className="truncate font-display text-[24px] font-bold leading-tight tracking-tight text-foreground sm:text-[28px]">
-              {title}
-            </h1>
-            {description && (
-              <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
-                {description}
-              </p>
-            )}
           </div>
+          {actions && (
+            <div className="flex shrink-0 flex-wrap items-center gap-2 self-start">{actions}</div>
+          )}
         </div>
-        {actions && (
-          <div className="flex shrink-0 items-center gap-2 self-end">{actions}</div>
+
+        {kpis && (
+          <div className="relative mt-5 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">{kpis}</div>
         )}
       </div>
-      <div className="mt-5 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
     </div>
   );
 }
 
+/**
+ * Compact stat pill used inside <PageHeader kpis={...}>.
+ */
+export function PageStat({
+  label,
+  value,
+  tone = "default",
+  icon: Icon,
+  trend,
+}: {
+  label: string;
+  value: React.ReactNode;
+  tone?: "default" | "accent" | "success" | "warning" | "destructive";
+  icon?: LucideIcon;
+  trend?: { delta: string; direction?: "up" | "down" | "flat" };
+}) {
+  const toneClasses =
+    tone === "accent"
+      ? "text-accent"
+      : tone === "success"
+        ? "text-emerald-600"
+        : tone === "warning"
+          ? "text-amber-600"
+          : tone === "destructive"
+            ? "text-destructive"
+            : "text-foreground";
+  const trendCls =
+    trend?.direction === "down"
+      ? "text-rose-600 bg-rose-500/10 ring-rose-500/20"
+      : trend?.direction === "flat"
+        ? "text-muted-foreground bg-muted ring-border"
+        : "text-emerald-600 bg-emerald-500/10 ring-emerald-500/20";
+  return (
+    <div className="group relative overflow-hidden rounded-2xl border border-white/60 bg-white/70 px-3.5 py-3 backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-accent/40">
+      <div className="pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full bg-accent/5 blur-xl" />
+      <div className="relative flex items-center gap-2.5">
+        {Icon && (
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent ring-1 ring-inset ring-accent/15">
+            <Icon className="h-4 w-4" />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground">{label}</div>
+          <div className={cn("font-display text-[20px] leading-none tabular-nums", toneClasses)}>{value}</div>
+        </div>
+        {trend && (
+          <span
+            className={cn(
+              "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] ring-1 ring-inset tabular-nums",
+              trendCls,
+            )}
+          >
+            {trend.delta}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export function ComingSoonCard({
   icon: Icon,
@@ -96,11 +172,9 @@ export function ComingSoonCard({
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/15 text-accent">
         <Icon className="h-7 w-7" />
       </div>
-      <h2 className="mt-5 font-display text-xl font-bold tracking-tight text-foreground">
-        {title}
-      </h2>
+      <h2 className="mt-5 font-display text-xl tracking-tight text-foreground">{title}</h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">{message}</p>
-      <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
+      <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-accent">
         Coming soon
       </span>
     </div>
