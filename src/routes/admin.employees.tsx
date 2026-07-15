@@ -314,7 +314,7 @@ type CandidateListItem = Pick<
   | "unit_id"
   | "designation_id"
   | "status"
-> & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null; offboarding_reason_id: string | null; offboarded_at: string | null; assigned_asset_ids: string[]; no_hire: boolean; offboarding_details: OffboardingDetails; date_of_birth: string | null; preferred_joining_date: string | null; approved_at: string | null; created_by: string | null };
+> & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null; offboarding_reason_id: string | null; offboarded_at: string | null; assigned_asset_ids: string[]; no_hire: boolean; offboarding_details: OffboardingDetails; date_of_birth: string | null; preferred_joining_date: string | null; approved_at: string | null; created_by: string | null; created_at: string | null; updated_at: string | null };
 
 type ReactivationResult = {
   id: string;
@@ -361,6 +361,42 @@ function getMutationErrorMessage(error: unknown, fallback: string) {
   }
   if (typeof error === "string" && error.trim()) return error;
   return fallback;
+}
+
+function toTime(value: string | null | undefined) {
+  if (!value) return 0;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? time : 0;
+}
+
+function employeeCodeNumber(code: string | null | undefined) {
+  const match = (code ?? "").match(/(\d+)$/);
+  return match ? Number(match[1]) : 0;
+}
+
+function employeeLifecycleTime(candidate: CandidateListItem) {
+  if (candidate.status === "inactive") {
+    return (
+      toTime(candidate.offboarded_at) ||
+      toTime(candidate.updated_at) ||
+      toTime(candidate.approved_at) ||
+      toTime(candidate.created_at)
+    );
+  }
+  return (
+    toTime(candidate.updated_at) ||
+    toTime(candidate.approved_at) ||
+    toTime(candidate.created_at)
+  );
+}
+
+function newestEmployeeRecordFirst(a: CandidateListItem, b: CandidateListItem) {
+  return (
+    employeeLifecycleTime(b) - employeeLifecycleTime(a) ||
+    employeeCodeNumber(b.employee_code) - employeeCodeNumber(a.employee_code) ||
+    toTime(b.created_at) - toTime(a.created_at) ||
+    b.id.localeCompare(a.id)
+  );
 }
 
 function useSignedDocsSummary() {
@@ -428,7 +464,7 @@ function useCandidates() {
       const { data, error } = await runWithQueryTimeout("Employees", async (signal) =>
         await supabase
           .from("candidates" as never)
-          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key,is_enabled,reports_to,offboarding_reason_id,offboarded_at,assigned_asset_ids,no_hire,offboarding_details,date_of_birth,preferred_joining_date,approved_at,created_by")
+          .select("id,candidate_code,employee_code,rejection_reason,aadhaar_number,full_name,photo_url,mobile,email,unit_id,designation_id,status,role_key,is_enabled,reports_to,offboarding_reason_id,offboarded_at,assigned_asset_ids,no_hire,offboarding_details,date_of_birth,preferred_joining_date,approved_at,created_by,created_at,updated_at")
           .order("created_at", { ascending: false })
           .limit(250)
           .abortSignal(signal),
