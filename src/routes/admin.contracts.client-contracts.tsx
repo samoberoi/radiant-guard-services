@@ -2311,32 +2311,6 @@ function LostBadge() {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone: "default" | "active" | "inactive" | "expired";
-}) {
-  const toneClass: Record<typeof tone, string> = {
-    default: "text-foreground",
-    active: "text-accent",
-    inactive: "text-muted-foreground",
-    expired: "text-destructive",
-  };
-  return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="text-xs uppercase tracking-wide text-muted-foreground">
-        {label}
-      </div>
-      <div className={cn("mt-1 text-2xl font-semibold", toneClass[tone])}>
-        {value}
-      </div>
-    </div>
-  );
-}
 
 function StatusBadge({ status }: { status: ContractStatus }) {
   const map: Record<ContractStatus, string> = {
