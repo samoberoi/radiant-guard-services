@@ -156,7 +156,9 @@ function LoginPage() {
         <div className="w-full max-w-[440px]">
           {/* Brand */}
           <div className="mb-8 flex flex-col items-center gap-4 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-white shadow-[0 context: the user wants a white circle behind the logo. The current rounded-[22px] is a rounded square. I should change it to rounded-full to make it a literal circle. Also keep the logo bigger. Let me update. ]
+            <div className="grid h-20 w-20 place-items-center rounded-full bg-white shadow-[0_20px_50px_-15px_color-mix(in_oklab,var(--primary)_30%,transparent)] ring-1 ring-black/5">
+              <img src={logo} alt="Radiant" className="h-14 w-14 object-contain" />
+            </div>
             <div>
               <div className="font-display text-[17px] font-semibold tracking-tight text-foreground">
                 Radiant Guard
