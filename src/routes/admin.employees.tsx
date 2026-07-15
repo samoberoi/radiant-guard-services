@@ -1735,18 +1735,13 @@ function EmployeesPage() {
                     toast.error("This employee is flagged Do not re-hire and cannot be reactivated.");
                     return;
                   }
-                  // If previously offboarded, spin up a fresh employee record
+                  // If previously offboarded, ask whether to reuse the same record or create a new one
                   const wasOffboarded = !!c.offboarding_reason_id || !!c.offboarded_at;
                   if (wasOffboarded) {
-                    const ok = await confirmAction({
-                      title: "Reactivate employee?",
-                      description: `A new employee record will be created for ${c.full_name || c.employee_code} with today's joining date. All documents and KYC details will be copied over. Offboarding history will be reset on the new record. The original record (${c.employee_code}) stays archived for audit.`,
-                      confirmText: "Reactivate & create new record",
-                    });
-                    if (!ok) return;
-                    reactivateMut.mutate({ candidate: c });
+                    setReactivateTarget(c);
                     return;
                   }
+
                   const ok = await confirmAction({
                     title: "Activate employee?",
                     description: `${c.full_name || c.employee_code} will be marked active again.`,
