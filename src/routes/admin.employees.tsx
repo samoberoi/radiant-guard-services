@@ -1123,19 +1123,20 @@ function EmployeesPage() {
         existingReactivation = (existing as typeof existingReactivation) ?? null;
       }
       if (existingReactivation) {
+        const existing = existingReactivation as { id: string; employee_code: string; full_name: string; status: string };
         if (mode === "reuse") {
           // A pending/active record already exists — surface it instead of creating a duplicate.
-          return { ...(existingReactivation as { id: string; employee_code: string; full_name: string; status: string }), reusedExisting: true, mode } as ReactivationResult;
+          return { ...existing, reusedExisting: true, mode } as ReactivationResult;
         }
         // mode === "new": user explicitly wants a fresh employee ID.
-        if (existingReactivation.status === "active") {
+        if (existing.status === "active") {
           throw new Error("This person already has an active employee record. Offboard it first before creating a new one.");
         }
         // Supersede the previous pending reactivation so the mobile unique index frees up.
         const { error: supersedeErr } = await supabase
           .from("candidates" as never)
           .delete()
-          .eq("id", existingReactivation.id);
+          .eq("id", existing.id);
         if (supersedeErr) {
           throw new Error(getMutationErrorMessage(supersedeErr, "Could not clear previous pending reactivation"));
         }
