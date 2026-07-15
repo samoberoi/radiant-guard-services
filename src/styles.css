@@ -59,28 +59,29 @@
 
 :root {
   --radius: 1.25rem;
-  /* surfaces — clean white + soft gray surround */
-  --background: oklch(0.985 0.003 250);
-  --foreground: oklch(0.13 0.02 260);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.13 0.02 260);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.13 0.02 260);
+  /* surfaces — slightly darker greys for stronger text contrast */
+  --background: oklch(0.955 0.004 250);
+  --foreground: oklch(0.11 0.02 260);
+  --card: oklch(0.985 0.003 250);
+  --card-foreground: oklch(0.11 0.02 260);
+  --popover: oklch(0.99 0.002 250);
+  --popover-foreground: oklch(0.11 0.02 260);
   /* deep navy/black ink primary (#0B1220) */
-  --primary: oklch(0.18 0.03 260);
+  --primary: oklch(0.16 0.03 260);
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.965 0.005 250);
+  --secondary: oklch(0.92 0.006 250);
   --secondary-foreground: oklch(0.13 0.02 260);
-  --muted: oklch(0.965 0.005 250);
-  --muted-foreground: oklch(0.42 0.02 260);
+  --muted: oklch(0.92 0.006 250);
+  --muted-foreground: oklch(0.36 0.02 260);
   /* electric blue accent (#2563EB) — from logo */
-  --accent: oklch(0.55 0.22 262);
+  --accent: oklch(0.52 0.22 262);
   --accent-foreground: oklch(0.99 0 0);
-  --accent-secondary: oklch(0.18 0.03 260);
-  --destructive: oklch(0.62 0.22 27);
+  --accent-secondary: oklch(0.16 0.03 260);
+  --destructive: oklch(0.58 0.22 27);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.92 0.006 260);
-  --input: oklch(0.92 0.006 260);
+  --border: oklch(0.86 0.008 260);
+  --input: oklch(0.86 0.008 260);
+
   --ring: oklch(0.55 0.22 262);
   --chart-1: oklch(0.55 0.22 262);
   --chart-2: oklch(0.18 0.03 260);
