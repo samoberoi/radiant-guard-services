@@ -6,7 +6,7 @@ import { csvJoin, downloadCsv } from "@/lib/csv-export";
 import { toast } from "sonner";
 import { confirmAction } from "@/components/ConfirmProvider";
 import { logActivity } from "@/lib/activity-log";
-import { PageHeader } from "@/components/PageHeader";
+import { PageHeader, PageStat } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
