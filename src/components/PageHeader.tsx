@@ -50,8 +50,8 @@ export function PageHeader({
         <div className="flex min-w-0 items-start gap-3.5">
           {Icon && (
             <div className="relative mt-0.5 hidden shrink-0 sm:block">
-              <div className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-br from-accent/30 to-accent/0 blur-md" />
-              <div className="grid h-11 w-11 place-items-center rounded-2xl border border-accent/25 bg-gradient-to-br from-white to-accent/[0.06] text-accent shadow-sm">
+              <div className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-br from-accent/40 to-accent/0 blur-lg" />
+              <div className="grid h-12 w-12 place-items-center rounded-2xl border border-white/70 bg-gradient-to-br from-white to-accent/[0.08] text-accent shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_10px_24px_-14px_color-mix(in_oklab,var(--accent)_45%,transparent)]">
                 <Icon className="h-5 w-5" />
               </div>
             </div>
@@ -62,11 +62,11 @@ export function PageHeader({
                 {eyebrow}
               </div>
             )}
-            <h1 className="truncate font-display text-[22px] font-bold tracking-tight text-foreground sm:text-[26px]">
+            <h1 className="truncate font-display text-[24px] font-bold leading-tight tracking-tight text-foreground sm:text-[28px]">
               {title}
             </h1>
             {description && (
-              <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
+              <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
                 {description}
               </p>
             )}
@@ -76,7 +76,7 @@ export function PageHeader({
           <div className="flex shrink-0 items-center gap-2 self-end">{actions}</div>
         )}
       </div>
-      <div className="mt-5 h-px w-full bg-gradient-to-r from-border via-border/60 to-transparent" />
+      <div className="mt-5 h-px w-full bg-gradient-to-r from-transparent via-border to-transparent" />
     </div>
   );
 }
