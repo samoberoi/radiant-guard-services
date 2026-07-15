@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Loader2, ShieldCheck } from "lucide-react";
+import { ArrowRight, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,31 +27,10 @@ export const Route = createFileRoute("/login")({
 
 type Step = "phone" | "otp";
 
-function useClock() {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
-  const fmt = (tz: string) =>
-    new Intl.DateTimeFormat("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-      timeZone: tz,
-    }).format(now);
-  return {
-    ist: fmt("Asia/Kolkata"),
-    bst: fmt("Europe/London"),
-    edt: fmt("America/New_York"),
-  };
-}
-
 function LoginPage() {
   const navigate = useNavigate();
   const { user, login } = useAuth();
   const verifyInFlightRef = useRef(false);
-  const clock = useClock();
 
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
@@ -119,6 +98,39 @@ function LoginPage() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-background text-foreground">
+      {/* Ambient background — soft mesh + orbs */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 55% at 15% 15%, color-mix(in oklab, var(--accent) 22%, transparent), transparent 60%), radial-gradient(ellipse 60% 50% at 85% 85%, color-mix(in oklab, var(--primary) 18%, transparent), transparent 60%), radial-gradient(ellipse 40% 35% at 50% 100%, color-mix(in oklab, var(--accent) 15%, transparent), transparent 70%)",
+        }}
+      />
+      {/* floating orbs */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -left-24 top-1/4 h-[420px] w-[420px] rounded-full opacity-60 blur-3xl animate-[pulse_8s_ease-in-out_infinite]"
+        style={{ background: "radial-gradient(circle, color-mix(in oklab, var(--accent) 55%, transparent), transparent 70%)" }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -right-32 bottom-0 h-[520px] w-[520px] rounded-full opacity-50 blur-3xl animate-[pulse_10s_ease-in-out_infinite]"
+        style={{ background: "radial-gradient(circle, color-mix(in oklab, var(--primary) 40%, transparent), transparent 70%)" }}
+      />
+      {/* fine grid */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-[0.35]"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 6%, transparent) 1px, transparent 1px)",
+          backgroundSize: "48px 48px",
+          maskImage:
+            "radial-gradient(ellipse 70% 60% at 50% 50%, black, transparent 80%)",
+        }}
+      />
+
       {/* Reveal overlay */}
       <div
         className={`pointer-events-none fixed inset-0 z-50 origin-bottom bg-background transition-transform duration-700 ease-[cubic-bezier(0.32,0.72,0,1)] ${
@@ -126,257 +138,191 @@ function LoginPage() {
         }`}
       />
 
-      {/* Full-bleed split */}
-      <div className="relative grid min-h-screen w-full grid-cols-1 lg:grid-cols-[1.15fr_1fr]">
-        {/* LEFT — brand canvas */}
-        <div className="relative hidden flex-col justify-between overflow-hidden p-10 xl:p-14 lg:flex bg-primary text-primary-foreground">
-          {/* accent wash */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -left-32 -top-32 h-[520px] w-[520px] rounded-full opacity-40 blur-3xl"
-            style={{
-              background:
-                "radial-gradient(circle, color-mix(in oklab, var(--accent) 70%, transparent), transparent 70%)",
-            }}
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -right-24 bottom-0 h-[420px] w-[420px] rounded-full opacity-30 blur-3xl"
-            style={{
-              background:
-                "radial-gradient(circle, color-mix(in oklab, var(--accent) 90%, transparent), transparent 70%)",
-            }}
-          />
-          {/* dot grid */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0 opacity-[0.08]"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle, rgba(255,255,255,0.7) 1px, transparent 1px)",
-              backgroundSize: "28px 28px",
-            }}
-          />
-          <ShieldCheck
-            aria-hidden
-            className="absolute -right-16 top-1/2 h-[460px] w-[460px] -translate-y-1/2 text-primary-foreground/[0.05]"
-            strokeWidth={1}
-          />
-
+      {/* Centered glass card */}
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10 sm:px-6">
+        <div className="w-full max-w-[440px]">
           {/* Brand */}
-          <div className="relative flex items-center gap-3">
-            <div className="grid h-11 w-11 place-items-center rounded-xl bg-primary-foreground shadow-lg">
-              <img src={logo} alt="Radiant" className="h-8 w-8 object-contain" />
+          <div className="mb-6 flex flex-col items-center gap-3 text-center">
+            <div className="grid h-14 w-14 place-items-center rounded-2xl bg-primary shadow-[0_20px_50px_-15px_color-mix(in_oklab,var(--primary)_60%,transparent)] ring-1 ring-primary-foreground/10">
+              <img src={logo} alt="Radiant" className="h-9 w-9 object-contain" />
             </div>
-            <div className="leading-tight">
-              <div className="font-display text-base font-semibold tracking-tight">
+            <div>
+              <div className="font-display text-[15px] font-semibold tracking-tight text-foreground">
                 Radiant Guard
               </div>
-              <div className="text-[10px] font-medium uppercase tracking-[0.22em] opacity-60">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground">
                 Services Pvt. Ltd.
               </div>
             </div>
           </div>
 
-          {/* Hero */}
-          <div className="relative max-w-lg">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-primary-foreground/15 bg-primary-foreground/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] opacity-90 backdrop-blur">
-              Operations portal
-            </div>
-            <h1 className="font-display text-[clamp(2.25rem,4vw,3.5rem)] font-semibold leading-[1.05] tracking-tight">
-              Command your<br />Guard Force.
-            </h1>
-            <p className="mt-4 max-w-md text-[15px] leading-relaxed opacity-70">
-              Sign in to manage employees, units, attendance, payroll and
-              compliance — all in one place.
-            </p>
-          </div>
+          {/* Glass card */}
+          <div className="relative overflow-hidden rounded-[28px] border border-white/60 bg-white/55 p-7 shadow-[0_30px_80px_-20px_color-mix(in_oklab,var(--primary)_35%,transparent)] backdrop-blur-2xl sm:p-9">
+            {/* inner highlight */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-0 top-0 h-px"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent)",
+              }}
+            />
+            {/* soft accent halo inside card */}
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full opacity-40 blur-3xl"
+              style={{ background: "radial-gradient(circle, color-mix(in oklab, var(--accent) 60%, transparent), transparent 70%)" }}
+            />
 
-          {/* Footer row: clock */}
-          <div className="relative flex items-center justify-between text-[11px] uppercase tracking-[0.22em] opacity-70">
-            <div className="flex items-center gap-3">
-              <div className="relative h-4 w-4">
-                <div className="absolute inset-0 rounded-full border border-primary-foreground/60" />
-                <div
-                  className="absolute inset-0 origin-center animate-spin rounded-full border border-transparent border-t-primary-foreground"
-                  style={{ animationDuration: "6s" }}
-                />
+            <div className="relative">
+              <div className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-white/70 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground backdrop-blur">
+                {step === "phone" ? (
+                  <><Sparkles className="h-3 w-3 text-accent" /> Welcome back</>
+                ) : (
+                  <><ShieldCheck className="h-3 w-3 text-accent" /> Almost there</>
+                )}
               </div>
-              <span>Real-time</span>
-            </div>
-            <div className="grid grid-cols-[auto_auto] gap-x-3 gap-y-0.5 font-mono normal-case tracking-normal tabular-nums">
-              <span>{clock.ist}</span><span className="opacity-60">IST</span>
-              <span>{clock.bst}</span><span className="opacity-60">BST</span>
-              <span>{clock.edt}</span><span className="opacity-60">EDT</span>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT — form */}
-        <div className="relative flex min-h-screen items-center justify-center bg-background px-5 py-12 sm:px-10 lg:px-14">
-          <div className="w-full max-w-[440px]">
-            {/* mobile brand */}
-            <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary">
-                <img src={logo} alt="Radiant" className="h-7 w-7 object-contain" />
-              </div>
-              <div className="leading-tight">
-                <div className="font-display text-base font-semibold tracking-tight text-foreground">
-                  Radiant Guard
-                </div>
-                <div className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                  Services Pvt. Ltd.
-                </div>
-              </div>
-            </div>
-
-            {/* Heading */}
-            <div className="mb-8">
-              <div className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {step === "phone" ? "Welcome back" : "Almost there"}
-              </div>
-              <h2 className="font-display text-[clamp(2rem,5vw,2.5rem)] font-semibold leading-[1.05] tracking-tight text-foreground">
-                {step === "phone" ? "Sign in" : "Verify OTP"}
-              </h2>
-              <p className="mt-2 text-[14px] text-muted-foreground">
+              <h1 className="font-display text-[28px] font-semibold leading-tight tracking-tight text-foreground">
+                {step === "phone" ? "Sign in to continue" : "Verify your number"}
+              </h1>
+              <p className="mt-1.5 text-[13.5px] text-muted-foreground">
                 {step === "phone"
                   ? "Enter your mobile number to receive a one-time code."
                   : `We sent a 6-digit code to +91 ••• ••• ${phone.slice(-4)}.`}
               </p>
-            </div>
 
-            {step === "phone" ? (
-              <form onSubmit={sendOtp} className="space-y-4">
-                <label className="block">
-                  <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    Mobile number
-                  </span>
-                  <div className="relative">
-                    <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-[15px] font-medium text-muted-foreground">
-                      +91
-                    </span>
-                    <input
-                      type="tel"
-                      inputMode="numeric"
-                      autoComplete="tel"
-                      placeholder="98765 43210"
-                      value={phone}
-                      onChange={(e) =>
-                        setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
-                      }
-                      className="h-14 w-full rounded-2xl border border-border bg-secondary pl-14 pr-5 text-[15px] font-medium tracking-wide text-foreground placeholder:text-muted-foreground/60 transition-all focus:border-accent focus:bg-card focus:outline-none focus:ring-4 focus:ring-accent/15"
-                    />
-                  </div>
-                </label>
-
-                <Button
-                  type="submit"
-                  disabled={!phoneValid || sending}
-                  className="group h-14 w-full rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground shadow-[0_18px_40px_-12px_color-mix(in_oklab,var(--primary)_55%,transparent)] transition-all hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {sending ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <>
-                      Send OTP
-                      <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-                    </>
-                  )}
-                </Button>
-
-                <p className="pt-1 text-center text-[12.5px] text-muted-foreground">
-                  No password required — we'll text you a code.
-                </p>
-              </form>
-            ) : (
-              <div className="space-y-5">
-                <div className={error ? "animate-shake" : ""}>
-                  <InputOTP
-                    maxLength={6}
-                    value={otp}
-                    onChange={(v) => {
-                      setOtp(v);
-                      setError(null);
-                      if (v.length === 6) handleVerify(v);
-                    }}
-                    containerClassName="justify-between gap-2"
-                  >
-                    <InputOTPGroup className="flex w-full justify-between gap-2">
-                      {[0, 1, 2, 3, 4, 5].map((i) => (
-                        <InputOTPSlot
-                          key={i}
-                          index={i}
-                          className="h-14 w-12 rounded-2xl border border-border bg-secondary text-xl font-semibold tabular-nums text-foreground first:rounded-l-2xl last:rounded-r-2xl data-[active=true]:border-accent data-[active=true]:bg-card data-[active=true]:ring-4 data-[active=true]:ring-accent/15"
-                        />
-                      ))}
-                    </InputOTPGroup>
-                  </InputOTP>
-
-                  {error ? (
-                    <p className="mt-3 text-center text-sm font-medium text-destructive">
-                      {error}
-                    </p>
-                  ) : (
-                    <p className="mt-3 text-center text-xs text-muted-foreground">
-                      Demo code:{" "}
-                      <span className="font-mono font-semibold text-foreground">
-                        {DEMO_OTP_HINT}
+              <div className="mt-6">
+                {step === "phone" ? (
+                  <form onSubmit={sendOtp} className="space-y-4">
+                    <label className="block">
+                      <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        Mobile number
                       </span>
-                    </p>
-                  )}
-                </div>
+                      <div className="relative">
+                        <span className="pointer-events-none absolute left-5 top-1/2 -translate-y-1/2 text-[14px] font-semibold text-muted-foreground">
+                          +91
+                        </span>
+                        <input
+                          type="tel"
+                          inputMode="numeric"
+                          autoComplete="tel"
+                          placeholder="98765 43210"
+                          value={phone}
+                          onChange={(e) =>
+                            setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))
+                          }
+                          className="h-14 w-full rounded-2xl border border-border/70 bg-white/70 pl-14 pr-5 text-[15px] font-medium tracking-wide text-foreground placeholder:text-muted-foreground/60 backdrop-blur transition-all focus:border-accent focus:bg-white focus:outline-none focus:ring-4 focus:ring-accent/15"
+                        />
+                      </div>
+                    </label>
 
-                <Button
-                  onClick={() => handleVerify()}
-                  disabled={otp.length !== 6 || verifying}
-                  className="h-14 w-full rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground shadow-[0_18px_40px_-12px_color-mix(in_oklab,var(--primary)_55%,transparent)] hover:bg-primary/90 disabled:opacity-50"
-                >
-                  {verifying ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    "Verify & sign in"
-                  )}
-                </Button>
+                    <Button
+                      type="submit"
+                      disabled={!phoneValid || sending}
+                      className="group h-14 w-full rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground shadow-[0_18px_40px_-12px_color-mix(in_oklab,var(--primary)_60%,transparent)] transition-all hover:bg-primary/90 hover:shadow-[0_22px_44px_-12px_color-mix(in_oklab,var(--primary)_70%,transparent)] disabled:opacity-50"
+                    >
+                      {sending ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <>
+                          Send OTP
+                          <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                ) : (
+                  <div className="space-y-5">
+                    <div className={error ? "animate-shake" : ""}>
+                      <InputOTP
+                        maxLength={6}
+                        value={otp}
+                        onChange={(v) => {
+                          setOtp(v);
+                          setError(null);
+                          if (v.length === 6) handleVerify(v);
+                        }}
+                        containerClassName="justify-between gap-2"
+                      >
+                        <InputOTPGroup className="flex w-full justify-between gap-2">
+                          {[0, 1, 2, 3, 4, 5].map((i) => (
+                            <InputOTPSlot
+                              key={i}
+                              index={i}
+                              className="h-14 w-full rounded-2xl border border-border/70 bg-white/70 text-xl font-semibold tabular-nums text-foreground backdrop-blur first:rounded-l-2xl last:rounded-r-2xl data-[active=true]:border-accent data-[active=true]:bg-white data-[active=true]:ring-4 data-[active=true]:ring-accent/15"
+                            />
+                          ))}
+                        </InputOTPGroup>
+                      </InputOTP>
 
-                <div className="flex items-center justify-between text-sm">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStep("phone");
-                      setOtp("");
-                      setError(null);
-                    }}
-                    className="font-medium text-muted-foreground hover:text-foreground"
-                  >
-                    ← Change number
-                  </button>
-                  <button
-                    type="button"
-                    disabled={resendIn > 0 || sending}
-                    onClick={() => sendOtp()}
-                    className="font-semibold text-accent hover:opacity-80 disabled:cursor-not-allowed disabled:text-muted-foreground"
-                  >
-                    {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend OTP"}
-                  </button>
-                </div>
+                      {error ? (
+                        <p className="mt-3 text-center text-sm font-medium text-destructive">
+                          {error}
+                        </p>
+                      ) : (
+                        <p className="mt-3 text-center text-xs text-muted-foreground">
+                          Demo code:{" "}
+                          <span className="font-mono font-semibold text-foreground">
+                            {DEMO_OTP_HINT}
+                          </span>
+                        </p>
+                      )}
+                    </div>
+
+                    <Button
+                      onClick={() => handleVerify()}
+                      disabled={otp.length !== 6 || verifying}
+                      className="h-14 w-full rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground shadow-[0_18px_40px_-12px_color-mix(in_oklab,var(--primary)_60%,transparent)] hover:bg-primary/90 disabled:opacity-50"
+                    >
+                      {verifying ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        "Verify & sign in"
+                      )}
+                    </Button>
+
+                    <div className="flex items-center justify-between text-sm">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setStep("phone");
+                          setOtp("");
+                          setError(null);
+                        }}
+                        className="font-medium text-muted-foreground hover:text-foreground"
+                      >
+                        ← Change number
+                      </button>
+                      <button
+                        type="button"
+                        disabled={resendIn > 0 || sending}
+                        onClick={() => sendOtp()}
+                        className="font-semibold text-accent hover:opacity-80 disabled:cursor-not-allowed disabled:text-muted-foreground"
+                      >
+                        {resendIn > 0 ? `Resend in ${resendIn}s` : "Resend OTP"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
 
-            {step === "phone" && (
-              <p className="mt-10 text-center text-[12px] leading-relaxed text-muted-foreground">
-                By signing in you agree to Radiant's{" "}
-                <span className="font-semibold text-foreground">Terms of Service</span>{" "}
-                and{" "}
-                <span className="font-semibold text-foreground">Privacy Policy</span>.
-              </p>
-            )}
+              {/* trust row */}
+              <div className="mt-6 flex items-center justify-center gap-2 rounded-2xl border border-border/60 bg-white/50 px-3 py-2.5 text-[11px] text-muted-foreground backdrop-blur">
+                <ShieldCheck className="h-3.5 w-3.5 text-accent" />
+                <span>Encrypted end-to-end · No password required</span>
+              </div>
+            </div>
+          </div>
 
-            <div className="mt-8 flex items-center justify-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              <span>Powered by</span>
-              <span className="rounded-md border border-border px-2 py-0.5">
+          {/* Footer */}
+          <div className="mt-6 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <span>Radiant Ops Portal</span>
+            <span className="inline-flex items-center gap-1.5">
+              Powered by
+              <span className="rounded-md border border-border bg-white/60 px-1.5 py-0.5 backdrop-blur">
                 HyperRevamp
               </span>
-            </div>
+            </span>
           </div>
         </div>
       </div>
