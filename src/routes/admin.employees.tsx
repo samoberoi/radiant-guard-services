@@ -108,6 +108,7 @@ import {
   type ScopeType,
 } from "@/lib/deployment";
 import { useBranches, useCustomers, useStates } from "@/lib/admin-data";
+import { postMovements, type LocationType } from "@/lib/inv-helpers";
 
 export const Route = createFileRoute("/admin/employees")({
   component: EmployeesPage,
@@ -236,6 +237,19 @@ export type OffboardingAssetReturn = {
   remarks?: string;
 };
 
+export type OffboardingInventoryReturn = {
+  item_id: string;
+  item_name: string;
+  size_value: string;
+  unit: string;
+  on_hand: number;
+  qty_returned: number;
+  destination_type: LocationType;
+  destination_id: string;
+  destination_label: string;
+  remarks?: string;
+};
+
 export type OffboardingDetails = {
   date_of_offboarding?: string | null;
   date_of_resignation?: string | null;
@@ -245,6 +259,7 @@ export type OffboardingDetails = {
   reason_text?: string;
   review?: string;
   asset_returns?: OffboardingAssetReturn[];
+  inventory_returns?: OffboardingInventoryReturn[];
   rating?: number;
   rating_remarks?: string;
 };
@@ -1156,6 +1171,43 @@ function EmployeesPage() {
         } as unknown as never)
         .eq("id", candidate.id);
       if (error) throw error;
+
+      // Post inventory return movements: negative at guard, positive at destination
+      const returns = (details.inventory_returns ?? []).filter((r) => r.qty_returned > 0);
+      if (returns.length) {
+        const moves = returns.flatMap((r) => [
+          {
+            movement_type: "offboarding_return",
+            location_type: "guard" as LocationType,
+            location_id: candidate.id,
+            item_id: r.item_id,
+            size_value: r.size_value ?? "",
+            qty_change: -Math.abs(r.qty_returned),
+            reference_type: "offboarding_return",
+            reference_id: candidate.id,
+            notes: r.remarks ?? `Returned on offboarding · ${r.item_name}`,
+          },
+          {
+            movement_type: "offboarding_return",
+            location_type: r.destination_type,
+            location_id: r.destination_id,
+            item_id: r.item_id,
+            size_value: r.size_value ?? "",
+            qty_change: Math.abs(r.qty_returned),
+            reference_type: "offboarding_return",
+            reference_id: candidate.id,
+            notes: r.remarks ?? `Received back from ${candidate.full_name || candidate.employee_code}`,
+          },
+        ]);
+        try {
+          await postMovements(moves);
+        } catch (e) {
+          // Do not fail offboarding on movement error; surface a toast.
+          console.error("Inventory return movement failed", e);
+          toast.error("Employee offboarded, but inventory return failed to post. Please review Stock Ledger.");
+        }
+      }
+
       await logActivity({
         module: "Employees",
         action: "offboard",
@@ -1163,12 +1215,14 @@ function EmployeesPage() {
         entityId: candidate.id,
         entityLabel: candidate.full_name || candidate.employee_code,
         before: { is_enabled: candidate.is_enabled, status: candidate.status },
-        after: { is_enabled: false, status: "inactive", offboarding_reason: reasonName, no_hire: noHire, offboarding_details: details },
+        after: { is_enabled: false, status: "inactive", offboarding_reason: reasonName, no_hire: noHire, offboarding_details: details, inventory_returns_count: returns.length },
       });
     },
     onSuccess: () => {
       toast.success("Employee offboarded");
       qc.invalidateQueries({ queryKey: QK });
+      qc.invalidateQueries({ queryKey: ["inv_stock_balances"] });
+      qc.invalidateQueries({ queryKey: ["inv_stock_movements"] });
       setOffboardTarget(null);
       setOffboardReasonId("");
     },
@@ -2245,6 +2299,8 @@ function EmployeesPage() {
         assets={assets}
         initialReasonId={offboardReasonId}
         isSubmitting={offboardMut.isPending}
+        currentUserCandidateId={currentCandidateId}
+        isFieldOfficer={isFieldOfficer}
         onClose={() => { setOffboardTarget(null); setOffboardReasonId(""); }}
         onSubmit={({ reasonId, details, noHire }) => {
           if (!offboardTarget) return;
@@ -4520,6 +4576,8 @@ function OffboardingDialog({
   assets,
   initialReasonId,
   isSubmitting,
+  currentUserCandidateId,
+  isFieldOfficer,
   onClose,
   onSubmit,
 }: {
@@ -4529,6 +4587,8 @@ function OffboardingDialog({
   assets: { id: string; name: string; category: string }[];
   initialReasonId: string;
   isSubmitting: boolean;
+  currentUserCandidateId: string | null;
+  isFieldOfficer: boolean;
   onClose: () => void;
   onSubmit: (args: { reasonId: string; details: OffboardingDetails; noHire: boolean }) => void;
 }) {
@@ -4542,10 +4602,51 @@ function OffboardingDialog({
   const [reasonText, setReasonText] = useState<string>("");
   const [review, setReview] = useState<string>("");
   const [assetReturns, setAssetReturns] = useState<OffboardingAssetReturn[]>([]);
+  const [invReturns, setInvReturns] = useState<OffboardingInventoryReturn[]>([]);
+  const [returnDestKey, setReturnDestKey] = useState<string>(""); // "type:id"
   const [rating, setRating] = useState<number>(0);
   const [ratingRemarks, setRatingRemarks] = useState<string>("");
   const [noHire, setNoHire] = useState<boolean>(false);
   const [noHireTouched, setNoHireTouched] = useState<boolean>(false);
+
+  // Fetch inventory currently held by this guard (balances at guard location = candidate.id)
+  const balancesQ = useQuery({
+    queryKey: ["offboard-inv-balances", target?.id],
+    enabled: !!target?.id,
+    staleTime: 15_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_stock_balances" as never)
+        .select("item_id,size_value,qty,inv_items(name,unit)")
+        .eq("location_type", "guard")
+        .eq("location_id", target!.id)
+        .gt("qty", 0);
+      if (error) throw error;
+      return ((data as unknown) as Array<{
+        item_id: string;
+        size_value: string;
+        qty: number;
+        inv_items: { name: string; unit: string } | null;
+      }>) ?? [];
+    },
+  });
+
+  // Fetch warehouses for return destination selection
+  const warehousesQ = useQuery({
+    queryKey: ["offboard-warehouses"],
+    enabled: !!target?.id,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("inv_warehouses" as never)
+        .select("id,name,is_default,enabled")
+        .eq("enabled", true)
+        .order("is_default", { ascending: false })
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return ((data as unknown) as Array<{ id: string; name: string; is_default: boolean }>) ?? [];
+    },
+  });
 
   // Reset when target changes
   useEffect(() => {
@@ -4560,12 +4661,67 @@ function OffboardingDialog({
     setReview("");
     const prefill = (target.assigned_asset_ids ?? []).map((id) => ({ asset_id: id, returned: false, remarks: "" }));
     setAssetReturns(prefill);
+    setInvReturns([]);
+    setReturnDestKey("");
     setRating(0);
     setRatingRemarks("");
     setNoHire(false);
     setNoHireTouched(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [target?.id]);
+
+  // Build default destination + inv return rows once balances/warehouses load
+  useEffect(() => {
+    if (!target) return;
+    const bal = balancesQ.data ?? [];
+    if (bal.length === 0) {
+      setInvReturns([]);
+    } else {
+      // Default destination: FO → own field_officer bucket; else default warehouse if available
+      let destType: LocationType = "warehouse";
+      let destId = "";
+      let destLabel = "";
+      if (isFieldOfficer && currentUserCandidateId) {
+        destType = "field_officer";
+        destId = currentUserCandidateId;
+        destLabel = "My inventory (field officer)";
+      } else {
+        const wh = warehousesQ.data ?? [];
+        const def = wh.find((w) => w.is_default) ?? wh[0];
+        if (def) { destId = def.id; destLabel = `Warehouse · ${def.name}`; }
+      }
+      const key = destId ? `${destType}:${destId}` : "";
+      setReturnDestKey(key);
+      setInvReturns(
+        bal.map((b) => ({
+          item_id: b.item_id,
+          item_name: b.inv_items?.name ?? "Item",
+          size_value: b.size_value ?? "",
+          unit: b.inv_items?.unit ?? "pcs",
+          on_hand: Number(b.qty ?? 0),
+          qty_returned: Number(b.qty ?? 0),
+          destination_type: destType,
+          destination_id: destId,
+          destination_label: destLabel,
+          remarks: "",
+        })),
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target?.id, balancesQ.data, warehousesQ.data]);
+
+  // Propagate destination change to all rows
+  useEffect(() => {
+    if (!returnDestKey) return;
+    const [type, id] = returnDestKey.split(":") as [LocationType, string];
+    let label = "";
+    if (type === "field_officer") label = "My inventory (field officer)";
+    else if (type === "warehouse") {
+      const w = (warehousesQ.data ?? []).find((x) => x.id === id);
+      label = w ? `Warehouse · ${w.name}` : "Warehouse";
+    } else if (type === "scrap") label = "Scrap / Write-off";
+    setInvReturns((rows) => rows.map((r) => ({ ...r, destination_type: type, destination_id: id, destination_label: label })));
+  }, [returnDestKey, warehousesQ.data]);
 
   const selectedReason = reasons.find((r) => r.id === reasonId);
   const isAbsconding = !!selectedReason && ABSCONDING_NAMES.has(selectedReason.name.trim().toLowerCase());
@@ -4714,6 +4870,106 @@ function OffboardingDialog({
             )}
           </section>
 
+          {/* Section: Return Issued Inventory (uniform / shoes / torch etc.) */}
+          <section className="space-y-3">
+            <div className="flex items-baseline justify-between">
+              <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                Return Issued Inventory
+              </h3>
+              <span className="text-[11px] text-muted-foreground">
+                {invReturns.filter((r) => r.qty_returned > 0).length} of {invReturns.length} items collected
+              </span>
+            </div>
+            {balancesQ.isLoading ? (
+              <p className="rounded-md border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+                Loading issued inventory…
+              </p>
+            ) : invReturns.length === 0 ? (
+              <p className="rounded-md border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+                No inventory items are currently held by this employee. If they left items behind, record them via a stock adjustment.
+              </p>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div className="space-y-1 sm:col-span-2">
+                    <Label>Where should returned items be received? *</Label>
+                    <Select value={returnDestKey} onValueChange={setReturnDestKey}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select receiving location" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {isFieldOfficer && currentUserCandidateId && (
+                          <SelectItem value={`field_officer:${currentUserCandidateId}`}>
+                            My inventory (field officer)
+                          </SelectItem>
+                        )}
+                        {(warehousesQ.data ?? []).map((w) => (
+                          <SelectItem key={w.id} value={`warehouse:${w.id}`}>
+                            Warehouse · {w.name}{w.is_default ? " (default)" : ""}
+                          </SelectItem>
+                        ))}
+                        <SelectItem value="scrap:00000000-0000-0000-0000-000000000000">
+                          Scrap / Write-off (item not usable)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-[11px] text-muted-foreground">
+                      Set the quantity to 0 for items the employee did NOT return. Only returned quantities are moved back into stock.
+                    </p>
+                  </div>
+                </div>
+                <div className="rounded-md border border-border">
+                  <div className="grid grid-cols-[2fr,auto,auto,2fr] gap-3 border-b border-border bg-muted/30 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <div>Item</div>
+                    <div className="text-right">Held</div>
+                    <div className="text-right">Returned</div>
+                    <div>Remarks</div>
+                  </div>
+                  {invReturns.map((row, idx) => (
+                    <div
+                      key={`${row.item_id}:${row.size_value}`}
+                      className={cn(
+                        "grid grid-cols-[2fr,auto,auto,2fr] items-center gap-3 px-3 py-2 text-sm",
+                        idx > 0 && "border-t border-border",
+                      )}
+                    >
+                      <div>
+                        <div className="font-medium">{row.item_name}</div>
+                        {row.size_value && (
+                          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Size {row.size_value}</div>
+                        )}
+                      </div>
+                      <div className="text-right tabular-nums text-xs text-muted-foreground">
+                        {row.on_hand} {row.unit}
+                      </div>
+                      <Input
+                        type="number"
+                        min={0}
+                        max={row.on_hand}
+                        step="1"
+                        className="h-8 w-20 text-right tabular-nums"
+                        value={row.qty_returned}
+                        onChange={(e) => {
+                          const v = Math.max(0, Math.min(row.on_hand, Number(e.target.value) || 0));
+                          setInvReturns((rows) => rows.map((r, i) => (i === idx ? { ...r, qty_returned: v } : r)));
+                        }}
+                      />
+                      <Input
+                        placeholder="Condition / remarks (optional)"
+                        className="h-8"
+                        value={row.remarks ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setInvReturns((rows) => rows.map((r, i) => (i === idx ? { ...r, remarks: v } : r)));
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </section>
+
           {/* Section: Rating */}
           <section className="space-y-3">
             <h3 className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
@@ -4774,7 +5030,12 @@ function OffboardingDialog({
             Cancel
           </Button>
           <Button
-            disabled={!reasonId || !dateOfOffboarding || isSubmitting}
+            disabled={
+              !reasonId ||
+              !dateOfOffboarding ||
+              isSubmitting ||
+              (invReturns.some((r) => r.qty_returned > 0) && !returnDestKey)
+            }
             onClick={() => {
               onSubmit({
                 reasonId,
@@ -4788,6 +5049,7 @@ function OffboardingDialog({
                   reason_text: reasonText.trim(),
                   review: review.trim(),
                   asset_returns: assetReturns,
+                  inventory_returns: invReturns.filter((r) => r.qty_returned > 0),
                   rating,
                   rating_remarks: ratingRemarks.trim(),
                 },
