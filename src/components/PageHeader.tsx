@@ -131,22 +131,22 @@ export function PageStat({
         ? "text-muted-foreground bg-muted ring-border"
         : "text-emerald-600 bg-emerald-500/10 ring-emerald-500/20";
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-white/60 bg-white/70 px-3.5 py-3 backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-accent/40">
+    <div className="group relative overflow-hidden rounded-2xl border border-border/70 bg-white/90 px-3.5 py-3 shadow-sm backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-md">
       <div className="pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full bg-accent/5 blur-xl" />
       <div className="relative flex items-center gap-2.5">
         {Icon && (
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-accent/10 text-accent ring-1 ring-inset ring-accent/15">
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-accent/12 text-accent ring-1 ring-inset ring-accent/20">
             <Icon className="h-4 w-4" />
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <div className="text-[9.5px] uppercase tracking-[0.16em] text-muted-foreground">{label}</div>
-          <div className={cn("font-display text-[20px] leading-none tabular-nums", toneClasses)}>{value}</div>
+          <div className="truncate text-[9.5px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</div>
+          <div className={cn("mt-0.5 whitespace-nowrap font-display text-[20px] font-semibold leading-none tabular-nums", toneClasses)}>{value}</div>
         </div>
         {trend && (
           <span
             className={cn(
-              "shrink-0 rounded-full px-1.5 py-0.5 text-[10px] ring-1 ring-inset tabular-nums",
+              "shrink-0 whitespace-nowrap rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset tabular-nums",
               trendCls,
             )}
           >
