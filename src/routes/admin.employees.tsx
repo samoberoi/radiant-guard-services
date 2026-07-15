@@ -739,6 +739,7 @@ function EmployeesPage() {
       if (!matchesSearch(c)) return false;
       if (isFieldOfficer) {
         // Field officers see only their own submissions, and only while pending/rejected/draft.
+        if (!currentUserId) return false;
         if (currentUserId && c.created_by !== currentUserId) return false;
         if (c.status === "approved") return false;
       }
@@ -3906,36 +3907,33 @@ function CandidateWizard({
                     </Field>
                   ) : null}
 
-                  <Field label="Status">
-                    <Select value={form.status} onValueChange={(v) => {
-                      const isEmp = !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive");
-                      if (isEmp && v === "inactive" && form.status !== "inactive" && onRequestOffboard) {
-                        onRequestOffboard();
-                        return;
-                      }
-                      if (isEmp && v === "active" && form.status === "inactive" && form.no_hire) {
-                        toast.error("This employee is flagged Do not re-hire and cannot be reactivated.");
-                        return;
-                      }
-                      set("status", v);
-                    }}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive") ? (
-                          <>
-                            <SelectItem value="active" disabled={form.status === "inactive" && form.no_hire}>Active</SelectItem>
-                            <SelectItem value="inactive">Inactive</SelectItem>
-                          </>
-                        ) : (
-                          <>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="active">Active</SelectItem>
-                            <SelectItem value="rejected">Rejected</SelectItem>
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </Field>
+                  {editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive") ? (
+                    <Field label="Status">
+                      <Select value={form.status} onValueChange={(v) => {
+                        if (v === "inactive" && form.status !== "inactive" && onRequestOffboard) {
+                          onRequestOffboard();
+                          return;
+                        }
+                        if (v === "active" && form.status === "inactive" && form.no_hire) {
+                          toast.error("This employee is flagged Do not re-hire and cannot be reactivated.");
+                          return;
+                        }
+                        set("status", v);
+                      }}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="active" disabled={form.status === "inactive" && form.no_hire}>Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  ) : (
+                    <Field label="Approval status">
+                      <div className="flex h-10 items-center rounded-md border border-border bg-secondary/40 px-3 text-sm text-muted-foreground">
+                        Will be sent to approval
+                      </div>
+                    </Field>
+                  )}
                   <div className="sm:col-span-2">
                     <Field label={`Assigned Assets${form.assigned_asset_ids.length > 0 ? ` · ${form.assigned_asset_ids.length} selected` : ""}`}>
                       <AssetMultiPicker
@@ -4032,7 +4030,9 @@ function CandidateWizard({
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
               {submitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-              {editing ? "Submit" : "Create Candidate"}
+              {editing
+                ? (editing.status === "approved" || editing.status === "active" || editing.status === "inactive" ? "Save Employee" : "Save & Send to Approval")
+                : "Save & Send to Approval"}
             </Button>
           </div>
         </DialogFooter>
