@@ -2444,8 +2444,10 @@ function EmployeesPage() {
           <div className="grid gap-3 py-2">
             <button
               type="button"
+              data-force-enabled="true"
               disabled={reactivateMut.isPending}
-              className="rounded-lg border-2 border-border bg-background p-3 text-left transition hover:border-primary hover:bg-accent/40 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ pointerEvents: reactivateMut.isPending ? "none" : "auto", opacity: reactivateMut.isPending ? 0.5 : 1 }}
+              className="rounded-lg border-2 border-border bg-background p-3 text-left transition hover:border-primary hover:bg-accent/40 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed"
               onClick={() => {
                 if (!reactivateTarget) return;
                 const target = reactivateTarget;
@@ -2460,8 +2462,10 @@ function EmployeesPage() {
             </button>
             <button
               type="button"
+              data-force-enabled="true"
               disabled={reactivateMut.isPending}
-              className="rounded-lg border-2 border-border bg-background p-3 text-left transition hover:border-primary hover:bg-accent/40 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ pointerEvents: reactivateMut.isPending ? "none" : "auto", opacity: reactivateMut.isPending ? 0.5 : 1 }}
+              className="rounded-lg border-2 border-border bg-background p-3 text-left transition hover:border-primary hover:bg-accent/40 focus:outline-none focus:ring-2 focus:ring-primary disabled:cursor-not-allowed"
               onClick={() => {
                 if (!reactivateTarget) return;
                 const target = reactivateTarget;
@@ -2474,6 +2478,7 @@ function EmployeesPage() {
                 A brand-new employee ID will be generated. All KYC/documents are copied over; the original record ({reactivateTarget?.employee_code || "—"}) stays archived for audit.
               </div>
             </button>
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setReactivateTarget(null)} disabled={reactivateMut.isPending}>Cancel</Button>
