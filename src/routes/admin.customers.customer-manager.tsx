@@ -568,31 +568,8 @@ function StatusBadge({ status }: { status: CustomerStatus }) {
   );
 }
 
-function StatCard({
-  label,
-  value,
-  accent,
-}: {
-  label: string;
-  value: number;
-  accent?: boolean;
-}) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <div className="text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-        {label}
-      </div>
-      <div
-        className={cn(
-          "mt-2 font-display text-3xl font-bold",
-          accent ? "text-accent" : "text-foreground",
-        )}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
+
+
 
 
 function CustomerFormDialog({
