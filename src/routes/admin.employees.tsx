@@ -688,6 +688,10 @@ function EmployeesPage() {
       return false;
     });
   }, [isFieldOfficer, currentCandidateId, scopeAssignments, units]);
+  const scopedUnitIdSet = useMemo(
+    () => new Set(scopedUnitsForWizard.map((u) => u.id)),
+    [scopedUnitsForWizard],
+  );
   const scopeStillLoading = isFieldOfficer && (roleLoading || scopeQuery.isLoading || !currentCandidateId);
 
   const matchesSearch = (c: CandidateListItem) => {
