@@ -177,27 +177,30 @@ function UnitManagerPage() {
     <div>
       <PageHeader
         title="Unit Manager"
+        eyebrow="Organizations"
+        icon={Warehouse}
         description="Track operational units deployed across branches."
         crumbs={[
           { label: "Organizations", to: "/admin/customers" },
           { label: "Unit Manager" },
         ]}
+        kpis={
+          <>
+            <PageStat label="Total units" value={units.length} icon={Warehouse} />
+            <PageStat label="Active" value={activeCount} tone="accent" />
+            <PageStat label="Inactive" value={units.length - activeCount} tone="warning" />
+          </>
+        }
       />
 
-      <div className="mb-5 grid gap-3 sm:grid-cols-3">
-        <StatCard label="Total units" value={units.length} />
-        <StatCard label="Active" value={activeCount} accent />
-        <StatCard label="Inactive" value={units.length - activeCount} />
-      </div>
-
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-white/60 bg-white/60 p-2.5 backdrop-blur-xl sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:max-w-sm">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by code, name, branch, organisation…"
-            className="h-10 rounded-lg pl-9"
+            className="h-10 rounded-xl border-transparent bg-white/80 pl-9 shadow-sm focus-visible:border-accent/30"
           />
         </div>
         <div className="flex gap-2">
