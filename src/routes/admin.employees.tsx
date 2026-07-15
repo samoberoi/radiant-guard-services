@@ -237,6 +237,19 @@ export type OffboardingAssetReturn = {
   remarks?: string;
 };
 
+export type OffboardingInventoryReturn = {
+  item_id: string;
+  item_name: string;
+  size_value: string;
+  unit: string;
+  on_hand: number;
+  qty_returned: number;
+  destination_type: LocationType;
+  destination_id: string;
+  destination_label: string;
+  remarks?: string;
+};
+
 export type OffboardingDetails = {
   date_of_offboarding?: string | null;
   date_of_resignation?: string | null;
@@ -246,6 +259,7 @@ export type OffboardingDetails = {
   reason_text?: string;
   review?: string;
   asset_returns?: OffboardingAssetReturn[];
+  inventory_returns?: OffboardingInventoryReturn[];
   rating?: number;
   rating_remarks?: string;
 };
