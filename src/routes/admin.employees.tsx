@@ -323,6 +323,7 @@ type ReactivationResult = {
   status: string;
   reusedExisting?: boolean;
   mode?: "reuse" | "new";
+  sourceId?: string;
 };
 
 
@@ -771,9 +772,28 @@ function EmployeesPage() {
 
   const isEmployeeStatus = (s: string) => s === "approved" || s === "active" || s === "inactive";
 
+  const supersededInactiveEmployeeIds = useMemo(() => {
+    const liveRecordByMobile = new Map<string, CandidateListItem>();
+    for (const c of candidates) {
+      const mobile = c.mobile?.trim();
+      if (!mobile || c.status === "inactive") continue;
+      liveRecordByMobile.set(mobile, c);
+    }
+
+    const ids = new Set<string>();
+    for (const c of candidates) {
+      const mobile = c.mobile?.trim();
+      if (!mobile || c.status !== "inactive") continue;
+      const liveRecord = liveRecordByMobile.get(mobile);
+      if (liveRecord && liveRecord.id !== c.id) ids.add(c.id);
+    }
+    return ids;
+  }, [candidates]);
+
   const employees = useMemo(
     () => candidates.filter((c) => {
       if (!isEmployeeStatus(c.status)) return false;
+      if (supersededInactiveEmployeeIds.has(c.id)) return false;
       if (!matchesSearch(c)) return false;
       if (!matchesFilters(c)) return false;
       if (isFieldOfficer) {
@@ -783,7 +803,7 @@ function EmployeesPage() {
       return true;
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations, isFieldOfficer, scopedUnitIdSet],
+    [candidates, supersededInactiveEmployeeIds, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations, isFieldOfficer, scopedUnitIdSet],
   );
   const candidateRows = useMemo(
     () => candidates.filter((c) => {
@@ -997,7 +1017,7 @@ function EmployeesPage() {
     const candRejected = candidateOnly.filter((c) => c.status === "rejected").length;
 
     // Employee-tab stats (employees only)
-    const employeeOnly = candidates.filter((c) => isEmployeeStatus(c.status));
+    const employeeOnly = candidates.filter((c) => isEmployeeStatus(c.status) && !supersededInactiveEmployeeIds.has(c.id));
     const empTotal = employeeOnly.length;
     const empActive = employeeOnly.filter((c) => c.is_enabled && c.status !== "inactive").length;
     const empInactive = empTotal - empActive;
@@ -1008,7 +1028,7 @@ function EmployeesPage() {
       candTotal, candDrafts, candPending, candRejected,
       empTotal, empActive, empInactive, empNdaSigned, empAlSigned,
     };
-  }, [candidates, signedByCandidate]);
+  }, [candidates, signedByCandidate, supersededInactiveEmployeeIds]);
 
   const deleteMut = useMutation({
     mutationFn: async (c: CandidateListItem) => {
@@ -1244,7 +1264,7 @@ function EmployeesPage() {
         before: { source_id: candidate.id, source_employee_code: candidate.employee_code },
         after: { new_employee_code: newRec.employee_code, joining_date: today, status: newRec.status, mode: "new" },
       });
-      return { ...newRec, mode } as ReactivationResult;
+      return { ...newRec, mode, sourceId: candidate.id } as ReactivationResult;
     },
     onSuccess: (rec) => {
       const reuseLabel = rec.mode === "reuse" ? " (same employee ID)" : " (new employee ID)";
@@ -1257,6 +1277,9 @@ function EmployeesPage() {
       } else {
         toast.success(`Reactivated as ${rec.employee_code || "new employee"}${reuseLabel}`);
         setTab("employee");
+      }
+      if (rec.sourceId) {
+        qc.setQueryData<CandidateListItem[]>(QK, (old) => old?.filter((row) => row.id !== rec.sourceId) ?? old);
       }
       qc.invalidateQueries({ queryKey: QK });
     },
@@ -1433,7 +1456,15 @@ function EmployeesPage() {
     mutationFn: async (c: CandidateListItem) => {
       const { data, error } = await supabase
         .from("candidates" as never)
-        .update({ status: "active", rejection_reason: "" } as unknown as never)
+        .update({
+          status: "active",
+          is_enabled: true,
+          rejection_reason: "",
+          rejected_at: null,
+          offboarding_reason_id: null,
+          offboarded_at: null,
+          offboarding_details: {},
+        } as unknown as never)
         .eq("id", c.id)
         .select("id,employee_code,full_name")
         .single();
