@@ -320,19 +320,19 @@ function LoginPage() {
               </div>
 
               {/* trust row */}
-              <div className="mt-6 flex items-center justify-center gap-2 rounded-2xl border border-border/60 bg-white/50 px-3 py-2.5 text-[11px] text-muted-foreground backdrop-blur">
-                <ShieldCheck className="h-3.5 w-3.5 text-accent" />
+              <div className="mt-7 flex items-center justify-center gap-2 rounded-2xl border border-border/60 bg-white/70 px-3 py-2.5 text-[12px] text-muted-foreground backdrop-blur">
+                <ShieldCheck className="h-4 w-4 text-accent" />
                 <span>Encrypted end-to-end · No password required</span>
               </div>
             </div>
           </div>
 
           {/* Footer */}
-          <div className="mt-6 flex items-center justify-between px-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <div className="mt-8 flex items-center justify-between px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             <span>Radiant Ops Portal</span>
             <span className="inline-flex items-center gap-1.5">
               Powered by
-              <span className="rounded-md border border-border bg-white/60 px-1.5 py-0.5 backdrop-blur">
+              <span className="rounded-md border border-border bg-white/70 px-1.5 py-0.5 backdrop-blur">
                 HyperRevamp
               </span>
             </span>
