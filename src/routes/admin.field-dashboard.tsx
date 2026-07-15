@@ -89,14 +89,21 @@ function FieldOfficerDashboard() {
       const primaryMap = new Map(legacyUnits.map((r) => [r.unit_id, r.is_primary]));
       const unitIds = Array.from(new Set([...scopeUnitIds, ...legacyUnits.map((r) => r.unit_id)]));
 
-      // Guards reporting to me (regardless of whether unit_id is set on the candidate)
-      const { data: myGuards } = await supabase
+      // Guards in my team: explicitly reporting to me, submitted by me, or assigned
+      // to one of the units I cover. This keeps approved onboarding visible to FOs.
+      let guardQuery = supabase
         .from("candidates")
-        .select("id,full_name,mobile,designation_id,unit_id,role_key,status,is_enabled,reports_to")
-        .eq("reports_to", meId)
+        .select("id,full_name,mobile,designation_id,unit_id,role_key,status,is_enabled,reports_to,created_by")
         .in("role_key", ["guard", "security_guard"])
         .eq("status", "active")
         .eq("is_enabled", true);
+
+      const teamFilters = [`reports_to.eq.${meId}`];
+      if (userId) teamFilters.push(`created_by.eq.${userId}`);
+      if (unitIds.length) teamFilters.push(`unit_id.in.(${unitIds.join(",")})`);
+      guardQuery = guardQuery.or(teamFilters.join(","));
+
+      const { data: myGuards } = await guardQuery;
       const guardList = (myGuards ?? []) as Array<{ id: string; full_name: string; mobile: string; designation_id: string | null; unit_id: string | null }>;
 
       // Resolve guard unit via scope_assignments when candidates.unit_id is null
