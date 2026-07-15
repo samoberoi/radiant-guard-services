@@ -1086,7 +1086,7 @@ function EmployeesPage() {
   });
 
   const reactivateMut = useMutation({
-    mutationFn: async ({ candidate }: { candidate: CandidateListItem }) => {
+    mutationFn: async ({ candidate, mode }: { candidate: CandidateListItem; mode: "reuse" | "new" }) => {
       // Fetch fresh source row so we don't act on stale cache (e.g. no_hire just toggled)
       const { data: src, error: fetchErr } = await supabase
         .from("candidates" as never)
@@ -1099,9 +1099,16 @@ function EmployeesPage() {
         throw new Error("Employee is flagged Do not re-hire. Uncheck it on the profile and save before reactivating.");
       }
 
+      const canDirectActivate = isSuperAdmin || ["admin", "super_admin", "hr", "leadership"].includes(roleKey ?? "");
+      const newStatus = canDirectActivate ? "active" : "pending";
+      const today = new Date().toISOString().slice(0, 10);
       const sourceMobile = typeof source.mobile === "string" ? source.mobile.trim() : "";
+
+      // Check if a non-inactive record already exists for this mobile (pending reactivation
+      // or an active employee). If so we cannot create/keep another one alongside it.
+      let existingReactivation: { id: string; employee_code: string; full_name: string; status: string } | null = null;
       if (sourceMobile) {
-        const { data: existingReactivation, error: existingErr } = await supabase
+        const { data: existing, error: existingErr } = await supabase
           .from("candidates" as never)
           .select("id,employee_code,full_name,status")
           .eq("mobile", sourceMobile)
@@ -1111,16 +1118,47 @@ function EmployeesPage() {
           .limit(1)
           .maybeSingle();
         if (existingErr) throw existingErr;
-        if (existingReactivation) {
-          return {
-            ...((existingReactivation as unknown) as Omit<ReactivationResult, "reusedExisting">),
-            reusedExisting: true,
-          };
-        }
+        existingReactivation = (existing as typeof existingReactivation) ?? null;
+      }
+      if (existingReactivation) {
+        return { ...existingReactivation, reusedExisting: true, mode } as ReactivationResult;
       }
 
+      if (mode === "reuse") {
+        // Update the existing (inactive) record in place — keep the same employee_code / id.
+        const patch: Record<string, unknown> = {
+          status: newStatus,
+          is_enabled: canDirectActivate,
+          no_hire: false,
+          offboarding_reason_id: null,
+          offboarded_at: null,
+          offboarding_details: {},
+          rejection_reason: "",
+          rejected_at: null,
+          preferred_joining_date: today,
+        };
+        const { data: updated, error: updateErr } = await supabase
+          .from("candidates" as never)
+          .update(patch as never)
+          .eq("id", candidate.id)
+          .select("id,employee_code,full_name,status")
+          .single();
+        if (updateErr) throw new Error(getMutationErrorMessage(updateErr, "Reactivation failed"));
+        const rec = updated as unknown as ReactivationResult;
+        await logActivity({
+          module: "Employees",
+          action: "reactivate",
+          entityType: "candidate",
+          entityId: rec.id,
+          entityLabel: rec.full_name || rec.employee_code,
+          before: { status: "inactive", employee_code: candidate.employee_code },
+          after: { status: rec.status, employee_code: rec.employee_code, mode: "reuse" },
+        });
+        return { ...rec, mode } as ReactivationResult;
+      }
+
+      // mode === "new": clone into a fresh record (new employee_code will be generated on approval)
       const stripped: Record<string, unknown> = { ...source };
-      // Remove system / unique columns so a fresh record is created
       [
         "id",
         "created_at",
@@ -1132,13 +1170,7 @@ function EmployeesPage() {
         "rejected_at",
         "rejection_reason",
       ].forEach((k) => delete stripped[k]);
-      const today = new Date().toISOString().slice(0, 10);
 
-      // FO / non-approver roles can only insert rows as 'pending' per RLS.
-      const canDirectActivate = isSuperAdmin || ["admin", "super_admin", "hr", "leadership"].includes(roleKey ?? "");
-      const newStatus = canDirectActivate ? "active" : "pending";
-
-      // Reset offboarding + lifecycle fields for the new record
       stripped.status = newStatus;
       stripped.is_enabled = canDirectActivate;
       stripped.no_hire = false;
@@ -1149,7 +1181,6 @@ function EmployeesPage() {
       stripped.preferred_joining_date = today;
       stripped.employee_code = "";
       stripped.candidate_code = "";
-      // created_by must be the current user for RLS insert check on non-admin paths.
       stripped.created_by = currentUserId ?? source.created_by ?? null;
 
       const { data: inserted, error: insertErr } = await supabase
@@ -1166,7 +1197,6 @@ function EmployeesPage() {
       }
       const newRec = inserted as unknown as ReactivationResult;
 
-      // Copy candidate_units mapping to the new candidate
       const { data: units } = await supabase
         .from("candidate_units" as never)
         .select("unit_id,is_primary,sort_order")
@@ -1193,22 +1223,27 @@ function EmployeesPage() {
         entityId: newRec.id,
         entityLabel: newRec.full_name || newRec.employee_code,
         before: { source_id: candidate.id, source_employee_code: candidate.employee_code },
-        after: { new_employee_code: newRec.employee_code, joining_date: today, status: newRec.status },
+        after: { new_employee_code: newRec.employee_code, joining_date: today, status: newRec.status, mode: "new" },
       });
-      return newRec;
+      return { ...newRec, mode } as ReactivationResult;
     },
     onSuccess: (rec) => {
-      if (rec.status === "pending") {
-        toast.success(rec.reusedExisting ? "Reactivation is already pending HR/Admin approval" : "Reactivation submitted for HR/Admin approval");
+      const reuseLabel = rec.mode === "reuse" ? " (same employee ID)" : " (new employee ID)";
+      if (rec.reusedExisting) {
+        toast.success(`Reactivation is already pending HR/Admin approval for ${rec.full_name || rec.employee_code}`);
+        setTab("candidate");
+      } else if (rec.status === "pending") {
+        toast.success(`Reactivation submitted for HR/Admin approval${reuseLabel}`);
         setTab("candidate");
       } else {
-        toast.success(rec.reusedExisting ? `Employee already reactivated as ${rec.employee_code || "new employee"}` : `Reactivated as ${rec.employee_code || "new employee"}`);
+        toast.success(`Reactivated as ${rec.employee_code || "new employee"}${reuseLabel}`);
         setTab("employee");
       }
       qc.invalidateQueries({ queryKey: QK });
     },
     onError: (e) => toast.error(getMutationErrorMessage(e, "Reactivation failed")),
   });
+
 
   const offboardMut = useMutation({
     mutationFn: async ({
