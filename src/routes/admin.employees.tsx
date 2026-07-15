@@ -375,28 +375,32 @@ function employeeCodeNumber(code: string | null | undefined) {
 }
 
 function employeeLifecycleTime(candidate: CandidateListItem) {
-  if (candidate.status === "inactive") {
-    return (
-      toTime(candidate.offboarded_at) ||
-      toTime(candidate.updated_at) ||
-      toTime(candidate.approved_at) ||
-      toTime(candidate.created_at)
-    );
-  }
   return (
-    toTime(candidate.updated_at) ||
     toTime(candidate.approved_at) ||
-    toTime(candidate.created_at)
+    toTime(candidate.created_at) ||
+    toTime(candidate.updated_at) ||
+    toTime(candidate.offboarded_at)
   );
+}
+
+function employeeStatusRank(candidate: CandidateListItem) {
+  if (candidate.status !== "inactive" && candidate.is_enabled) return 4;
+  if (candidate.status === "active") return 3;
+  if (candidate.status === "approved") return 2;
+  return 1;
 }
 
 function newestEmployeeRecordFirst(a: CandidateListItem, b: CandidateListItem) {
   return (
-    employeeLifecycleTime(b) - employeeLifecycleTime(a) ||
     employeeCodeNumber(b.employee_code) - employeeCodeNumber(a.employee_code) ||
+    employeeLifecycleTime(b) - employeeLifecycleTime(a) ||
     toTime(b.created_at) - toTime(a.created_at) ||
     b.id.localeCompare(a.id)
   );
+}
+
+function preferredEmployeeRecordFirst(a: CandidateListItem, b: CandidateListItem) {
+  return employeeStatusRank(b) - employeeStatusRank(a) || newestEmployeeRecordFirst(a, b);
 }
 
 function useSignedDocsSummary() {
