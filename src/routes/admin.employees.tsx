@@ -316,6 +316,14 @@ type CandidateListItem = Pick<
   | "status"
 > & { employee_code: string; role_key: string; is_enabled: boolean; reports_to: string | null; offboarding_reason_id: string | null; offboarded_at: string | null; assigned_asset_ids: string[]; no_hire: boolean; offboarding_details: OffboardingDetails; date_of_birth: string | null; preferred_joining_date: string | null; approved_at: string | null; created_by: string | null };
 
+type ReactivationResult = {
+  id: string;
+  employee_code: string;
+  full_name: string;
+  status: string;
+  reusedExisting?: boolean;
+};
+
 type RoleLite = { key: string; name: string };
 
 type UnitLite = {
@@ -1088,6 +1096,27 @@ function EmployeesPage() {
       if (source.no_hire === true) {
         throw new Error("Employee is flagged Do not re-hire. Uncheck it on the profile and save before reactivating.");
       }
+
+      const sourceMobile = typeof source.mobile === "string" ? source.mobile.trim() : "";
+      if (sourceMobile) {
+        const { data: existingReactivation, error: existingErr } = await supabase
+          .from("candidates" as never)
+          .select("id,employee_code,full_name,status")
+          .eq("mobile", sourceMobile)
+          .neq("id", candidate.id)
+          .neq("status", "inactive")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (existingErr) throw existingErr;
+        if (existingReactivation) {
+          return {
+            ...((existingReactivation as unknown) as Omit<ReactivationResult, "reusedExisting">),
+            reusedExisting: true,
+          };
+        }
+      }
+
       const stripped: Record<string, unknown> = { ...source };
       // Remove system / unique columns so a fresh record is created
       [
@@ -1133,7 +1162,7 @@ function EmployeesPage() {
         }
         throw new Error(message);
       }
-      const newRec = inserted as unknown as { id: string; employee_code: string; full_name: string; status: string };
+      const newRec = inserted as unknown as ReactivationResult;
 
       // Copy candidate_units mapping to the new candidate
       const { data: units } = await supabase
@@ -1168,9 +1197,11 @@ function EmployeesPage() {
     },
     onSuccess: (rec) => {
       if (rec.status === "pending") {
-        toast.success("Reactivation submitted for HR/Admin approval");
+        toast.success(rec.reusedExisting ? "Reactivation is already pending HR/Admin approval" : "Reactivation submitted for HR/Admin approval");
+        setTab("candidate");
       } else {
-        toast.success(`Reactivated as ${rec.employee_code || "new employee"}`);
+        toast.success(rec.reusedExisting ? `Employee already reactivated as ${rec.employee_code || "new employee"}` : `Reactivated as ${rec.employee_code || "new employee"}`);
+        setTab("employee");
       }
       qc.invalidateQueries({ queryKey: QK });
     },
