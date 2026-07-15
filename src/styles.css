@@ -402,10 +402,14 @@
   .animate-dialog-in  { animation: dialog-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both; }
   .animate-dialog-out { animation: dialog-out 160ms cubic-bezier(0.4, 0, 1, 1) both; }
 
-  /* Flat canvas — no gradient wash */
+  /* Softly tinted canvas — subtle accent wash so pages aren't blank white */
   .app-canvas {
-    background: var(--background);
+    background:
+      radial-gradient(ellipse 60% 45% at 8% -5%, color-mix(in oklab, var(--accent) 10%, transparent) 0%, transparent 55%),
+      radial-gradient(ellipse 55% 40% at 100% 10%, color-mix(in oklab, var(--accent-secondary) 9%, transparent) 0%, transparent 60%),
+      var(--background);
   }
+
 
 
   /* Grid removed — kept as no-op so existing usages stay safe */
