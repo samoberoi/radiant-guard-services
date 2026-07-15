@@ -301,6 +301,30 @@
   .reveal > *:nth-child(7) { animation-delay: 340ms; }
   .reveal > *:nth-child(8) { animation-delay: 390ms; }
 
+  @keyframes slide-out-up {
+    0% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(-105%); opacity: 0; }
+  }
+  .animate-slide-out-up { animation: slide-out-up 720ms cubic-bezier(0.32, 0.72, 0, 1) both; }
+
+  @keyframes slide-in-left {
+    0% { transform: translateX(-120%); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+  }
+  .animate-slide-in-left { animation: slide-in-left 620ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  @keyframes slide-in-top {
+    0% { transform: translateY(-120%); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  .animate-slide-in-top { animation: slide-in-top 560ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both; }
+
+  @keyframes slide-in-right-soft {
+    0% { transform: translateX(40px); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
+  }
+  .animate-slide-in-right-soft { animation: slide-in-right-soft 560ms cubic-bezier(0.22, 1, 0.36, 1) 220ms both; }
+
   @keyframes aurora-float {
     0%, 100% { transform: translate(0, 0) scale(1); }
     33% { transform: translate(4%, -3%) scale(1.05); }
