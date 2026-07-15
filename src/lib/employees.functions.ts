@@ -12,6 +12,7 @@ export type CandidateListItem = {
   unit_id: string | null;
   designation_id: string | null;
   status: string;
+  created_at?: string;
 };
 
 export type UnitLite = {
