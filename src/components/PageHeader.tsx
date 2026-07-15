@@ -54,6 +54,10 @@ export function PageHeader({
       </nav>
 
       <div className="relative overflow-hidden rounded-[28px] border border-border bg-card p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b from-accent via-accent to-accent-secondary" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent/[0.07] via-transparent to-accent-secondary/[0.06]" />
+        <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-accent/15 blur-3xl" />
+
 
 
         <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
