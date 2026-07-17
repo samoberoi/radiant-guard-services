@@ -24,6 +24,8 @@ import {
 import { DashboardShell } from "@/components/LiveFeed";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentPermissions } from "@/lib/rbac";
+import { PeopleInsightsCard } from "@/components/PeopleInsightsCard";
+import { usePeopleInsights } from "@/lib/people-insights";
 
 export const Route = createFileRoute("/admin/field-dashboard")({
   component: FieldOfficerDashboard,
