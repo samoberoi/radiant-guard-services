@@ -386,6 +386,28 @@ function MusterRollPage() {
     enabled: Boolean(unitId && periodStart && periodEnd),
   });
   const status: SheetStatus = sheet?.status ?? "draft";
+
+  // Payroll-run state for this period — used to decide whether the
+  // "Send for Payroll & Invoice" handoff has happened.
+  type PayrollRunLite = { id: string; status: "draft" | "submitted" | "approved" | "rejected" };
+  const payrollRunQK = ["attendance-payroll-run", unitId, periodStart, periodEnd];
+  const { data: payrollRun } = useQuery({
+    queryKey: payrollRunQK,
+    enabled: Boolean(unitId && periodStart && periodEnd),
+    queryFn: async (): Promise<PayrollRunLite | null> => {
+      const { data, error } = await supabase
+        .from("payroll_runs" as never)
+        .select("id, status")
+        .eq("unit_id", unitId)
+        .eq("period_start", periodStart)
+        .eq("period_end", periodEnd)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as unknown as PayrollRunLite | null);
+    },
+  });
+  const sentToPayroll = ["submitted", "approved"].includes(payrollRun?.status ?? "");
+
   // FO/admin edit when draft or rejected. Approver may also edit inline while
   // the sheet is submitted (HR can fix in place instead of bouncing back).
   const editable = status === "draft" || status === "rejected" || (status === "submitted" && canApprove);
@@ -451,12 +473,23 @@ function MusterRollPage() {
       });
       // Fan out notifications.
       const link = `/admin/attendance/${unitId}?month=${new Date(periodStart).getMonth()}&year=${new Date(periodStart).getFullYear()}`;
+      const unitLabel = ((unit as { customer_name?: string; name?: string } | null | undefined)?.customer_name
+        ? `${(unit as { customer_name?: string }).customer_name} — ${(unit as { name?: string }).name ?? ""}`
+        : (unit as { name?: string } | null | undefined)?.name ?? "unit").trim();
+      const periodLabel = `${MONTH_NAMES[monthIdx]} ${year}`;
       if (next.status === "submitted") {
+        // Look up the field officer's display name for a richer approver message.
+        let actorName = "A field officer";
+        if (uid) {
+          const { data: rows } = await supabase.rpc("get_user_display_name" as never, { _user_id: uid } as never);
+          const row = Array.isArray(rows) ? (rows[0] as { full_name?: string } | undefined) : undefined;
+          if (row?.full_name) actorName = row.full_name;
+        }
         void notifyApprovers({
           moduleKey: "attendance",
           type: "attendance_submitted",
-          title: "Attendance awaiting approval",
-          message: `Attendance for ${periodStart} → ${periodEnd} was submitted for review.`,
+          title: `Attendance approval needed — ${unitLabel}`,
+          message: `${actorName} submitted attendance for ${unitLabel} (${periodLabel}). Tap to review.`,
           link,
           entityType: "attendance_sheets",
           entityId: sheet?.id ?? "",
@@ -464,10 +497,10 @@ function MusterRollPage() {
       } else if (next.status === "approved" || next.status === "rejected") {
         void notifyUser(sheet?.submitted_by ?? null, {
           type: next.status === "approved" ? "attendance_approved" : "attendance_rejected",
-          title: next.status === "approved" ? "Attendance approved" : "Attendance rejected",
+          title: next.status === "approved" ? `Attendance approved — ${unitLabel}` : `Attendance rejected — ${unitLabel}`,
           message: next.status === "approved"
-            ? `Your attendance for ${periodStart} → ${periodEnd} was approved.`
-            : `Your attendance for ${periodStart} → ${periodEnd} was rejected. Reason: ${next.reason ?? ""}`,
+            ? `Your attendance for ${unitLabel} (${periodLabel}) was approved.`
+            : `Your attendance for ${unitLabel} (${periodLabel}) was rejected. Reason: ${next.reason ?? ""}`,
           link,
           entityType: "attendance_sheets",
           entityId: sheet?.id ?? "",
@@ -476,6 +509,7 @@ function MusterRollPage() {
     },
     onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: sheetQK });
+      queryClient.invalidateQueries({ queryKey: payrollRunQK });
       toast.success(
         vars.status === "submitted" ? "Submitted for approval" :
         vars.status === "approved" ? "Attendance approved — payroll unlocked" :
@@ -483,6 +517,103 @@ function MusterRollPage() {
       );
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+  // Handoff to Payroll & Invoice teams. Creates/updates payroll_runs
+  // row for this period with status='submitted' so the payroll and
+  // invoice pages surface it as pending, and fans out notifications
+  // to both approver groups.
+  const sendToPayroll = useMutation({
+    mutationFn: async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth?.user?.id ?? null;
+      const ts = new Date().toISOString();
+      const base: Record<string, unknown> = {
+        unit_id: unitId,
+        period_start: periodStart,
+        period_end: periodEnd,
+        status: "submitted",
+        submitted_at: ts,
+        submitted_by: uid,
+        rejection_reason: null,
+      };
+      if (payrollRun?.id) {
+        const { error } = await supabase.from("payroll_runs" as never).update(base as never).eq("id", payrollRun.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("payroll_runs" as never).insert(base as never);
+        if (error) throw error;
+      }
+      void logActivity({
+        module: "Attendance",
+        action: "send_to_payroll",
+        entityType: "attendance_sheets",
+        entityLabel: `${unitId} ${periodStart} → ${periodEnd}`,
+        details: { unit_id: unitId, period_start: periodStart, period_end: periodEnd },
+      });
+      const unitLabel = ((unit as { customer_name?: string; name?: string } | null | undefined)?.customer_name
+        ? `${(unit as { customer_name?: string }).customer_name} — ${(unit as { name?: string }).name ?? ""}`
+        : (unit as { name?: string } | null | undefined)?.name ?? "unit").trim();
+      const periodLabel = `${MONTH_NAMES[monthIdx]} ${year}`;
+      let actorName = "An approver";
+      if (uid) {
+        const { data: rows } = await supabase.rpc("get_user_display_name" as never, { _user_id: uid } as never);
+        const row = Array.isArray(rows) ? (rows[0] as { full_name?: string } | undefined) : undefined;
+        if (row?.full_name) actorName = row.full_name;
+      }
+      const payrollLink = `/admin/payroll/${unitId}?start=${periodStart}&end=${periodEnd}`;
+      const invoiceLink = `/admin/invoice/${unitId}?start=${periodStart}&end=${periodEnd}`;
+      await Promise.all([
+        notifyApprovers({
+          moduleKey: "payroll",
+          type: "payroll_pending",
+          title: `Payroll ready to process — ${unitLabel}`,
+          message: `${actorName} sent ${unitLabel} (${periodLabel}) for payroll. Tap to open.`,
+          link: payrollLink,
+          entityType: "payroll_runs",
+          entityId: payrollRun?.id ?? "",
+        }).catch(() => undefined),
+        notifyApprovers({
+          moduleKey: "invoice",
+          type: "invoice_pending",
+          title: `Invoice ready to generate — ${unitLabel}`,
+          message: `${actorName} sent ${unitLabel} (${periodLabel}) for invoicing. Tap to open.`,
+          link: invoiceLink,
+          entityType: "payroll_runs",
+          entityId: payrollRun?.id ?? "",
+        }).catch(() => undefined),
+      ]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: payrollRunQK });
+      toast.success("Sent for Payroll & Invoice");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to send"),
+  });
+
+  // Reopen after handoff — clears the payroll_runs handoff back to draft
+  // and moves the attendance sheet back to draft in one click.
+  const reopenAfterHandoff = useMutation({
+    mutationFn: async () => {
+      if (payrollRun?.id) {
+        const { error } = await supabase
+          .from("payroll_runs" as never)
+          .update({ status: "draft", submitted_at: null, submitted_by: null, rejection_reason: null } as never)
+          .eq("id", payrollRun.id);
+        if (error) throw error;
+      }
+      await new Promise<void>((resolve, reject) => {
+        transitionSheet.mutate(
+          { status: "draft" },
+          { onSuccess: () => resolve(), onError: (e) => reject(e) },
+        );
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: payrollRunQK });
+      queryClient.invalidateQueries({ queryKey: sheetQK });
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to reopen"),
   });
 
   const { data: codes = [] } = useQuery({
@@ -1616,7 +1747,7 @@ function MusterRollPage() {
         <div className="flex items-center gap-2">
           {(status === "draft" || status === "rejected") && (
             <Button size="sm" onClick={() => transitionSheet.mutate({ status: "submitted" })} disabled={transitionSheet.isPending}>
-              <Send className="mr-1.5 h-4 w-4" /> Submit for Payroll
+              <Send className="mr-1.5 h-4 w-4" /> Submit for Approval
             </Button>
           )}
           {status === "submitted" && canApprove && (
@@ -1632,10 +1763,35 @@ function MusterRollPage() {
           {status === "submitted" && !canApprove && (
             <span className="text-xs text-muted-foreground">Awaiting approver action</span>
           )}
-          {status === "approved" && canApprove && (
-            <Button size="sm" variant="outline" onClick={() => transitionSheet.mutate({ status: "draft" })} disabled={transitionSheet.isPending}>
-              <RotateCcw className="mr-1.5 h-4 w-4" /> Reopen
-            </Button>
+          {status === "approved" && canApprove && !sentToPayroll && (
+            <>
+              <Button
+                size="sm"
+                className="bg-primary hover:bg-primary/90"
+                onClick={() => sendToPayroll.mutate()}
+                disabled={sendToPayroll.isPending}
+              >
+                <Send className="mr-1.5 h-4 w-4" /> Send for Payroll &amp; Invoice
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => transitionSheet.mutate({ status: "draft" })} disabled={transitionSheet.isPending}>
+                <RotateCcw className="mr-1.5 h-4 w-4" /> Reopen
+              </Button>
+            </>
+          )}
+          {status === "approved" && canApprove && sentToPayroll && (
+            <>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Sent for Payroll &amp; Invoice
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => reopenAfterHandoff.mutate()}
+                disabled={reopenAfterHandoff.isPending || transitionSheet.isPending}
+              >
+                <RotateCcw className="mr-1.5 h-4 w-4" /> Reopen
+              </Button>
+            </>
           )}
         </div>
       </div>
