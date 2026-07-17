@@ -473,12 +473,23 @@ function MusterRollPage() {
       });
       // Fan out notifications.
       const link = `/admin/attendance/${unitId}?month=${new Date(periodStart).getMonth()}&year=${new Date(periodStart).getFullYear()}`;
+      const unitLabel = ((unit as { customer_name?: string; name?: string } | null | undefined)?.customer_name
+        ? `${(unit as { customer_name?: string }).customer_name} — ${(unit as { name?: string }).name ?? ""}`
+        : (unit as { name?: string } | null | undefined)?.name ?? "unit").trim();
+      const periodLabel = `${MONTH_NAMES[monthIdx]} ${year}`;
       if (next.status === "submitted") {
+        // Look up the field officer's display name for a richer approver message.
+        let actorName = "A field officer";
+        if (uid) {
+          const { data: rows } = await supabase.rpc("get_user_display_name" as never, { _user_id: uid } as never);
+          const row = Array.isArray(rows) ? (rows[0] as { full_name?: string } | undefined) : undefined;
+          if (row?.full_name) actorName = row.full_name;
+        }
         void notifyApprovers({
           moduleKey: "attendance",
           type: "attendance_submitted",
-          title: "Attendance awaiting approval",
-          message: `Attendance for ${periodStart} → ${periodEnd} was submitted for review.`,
+          title: `Attendance approval needed — ${unitLabel}`,
+          message: `${actorName} submitted attendance for ${unitLabel} (${periodLabel}). Tap to review.`,
           link,
           entityType: "attendance_sheets",
           entityId: sheet?.id ?? "",
@@ -486,10 +497,10 @@ function MusterRollPage() {
       } else if (next.status === "approved" || next.status === "rejected") {
         void notifyUser(sheet?.submitted_by ?? null, {
           type: next.status === "approved" ? "attendance_approved" : "attendance_rejected",
-          title: next.status === "approved" ? "Attendance approved" : "Attendance rejected",
+          title: next.status === "approved" ? `Attendance approved — ${unitLabel}` : `Attendance rejected — ${unitLabel}`,
           message: next.status === "approved"
-            ? `Your attendance for ${periodStart} → ${periodEnd} was approved.`
-            : `Your attendance for ${periodStart} → ${periodEnd} was rejected. Reason: ${next.reason ?? ""}`,
+            ? `Your attendance for ${unitLabel} (${periodLabel}) was approved.`
+            : `Your attendance for ${unitLabel} (${periodLabel}) was rejected. Reason: ${next.reason ?? ""}`,
           link,
           entityType: "attendance_sheets",
           entityId: sheet?.id ?? "",
