@@ -129,11 +129,10 @@ export function PageStat({
         ? "text-muted-foreground bg-muted ring-border"
         : "text-emerald-600 bg-emerald-500/10 ring-emerald-500/20";
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card/90 px-3.5 py-3 shadow-sm backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-md">
-      <div className="pointer-events-none absolute -right-6 -top-6 h-16 w-16 rounded-full bg-accent/5 blur-xl" />
+    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card px-3.5 py-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md">
       <div className="relative flex items-center gap-2.5">
         {Icon && (
-          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-accent/12 text-accent ring-1 ring-inset ring-accent/20">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground shadow-sm">
             <Icon className="h-4 w-4" />
           </span>
         )}
