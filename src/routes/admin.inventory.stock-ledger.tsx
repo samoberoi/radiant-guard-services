@@ -778,13 +778,13 @@ function StockLedgerPage() {
 
 function KpiCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number | string; accent: "emerald" | "rose" | "slate" }) {
   const cls =
-    accent === "emerald" ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-700"
-    : accent === "rose" ? "border-rose-500/30 bg-rose-500/5 text-rose-700"
-    : "border-border bg-card";
+    accent === "emerald" ? "bg-emerald-600 text-white"
+    : accent === "rose" ? "bg-rose-500 text-white"
+    : "bg-slate-700 text-white";
   return (
-    <div className={`rounded-2xl border p-4 ${cls}`}>
-      <div className="flex items-center gap-2 text-xs uppercase tracking-wider opacity-80">{icon}{label}</div>
-      <div className="mt-1 font-display text-2xl font-bold tabular-nums">{typeof value === "number" ? value.toLocaleString("en-IN") : value}</div>
+    <div className={`rounded-2xl p-4 shadow-sm ${cls}`}>
+      <div className="flex items-center gap-2 text-xs uppercase tracking-wider text-white/90">{icon}{label}</div>
+      <div className="mt-1 font-display text-2xl font-bold tabular-nums text-white">{typeof value === "number" ? value.toLocaleString("en-IN") : value}</div>
     </div>
   );
 }
