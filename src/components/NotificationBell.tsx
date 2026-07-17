@@ -19,6 +19,7 @@ const NQK = ["notifications", "mine"] as const;
 
 export function NotificationBell() {
   const qc = useQueryClient();
+  const router = useRouter();
   const { data: items = [] } = useQuery({
     queryKey: NQK,
     queryFn: listMyNotifications,
