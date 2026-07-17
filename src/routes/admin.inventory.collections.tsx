@@ -306,15 +306,14 @@ function CollectionsPanel({ me }: { me: Candidate }) {
 
 function StatTile({ icon: Icon, label, value, accent }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent: string }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
-      <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-40 ${accent}`} />
+    <div className={`relative overflow-hidden rounded-2xl p-4 shadow-sm text-white ${accent}`}>
       <div className="flex items-center gap-2.5">
-        <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${accent}`}>
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/25">
           <Icon className="h-4 w-4" />
         </div>
-        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90">{label}</div>
       </div>
-      <div className="mt-2 font-display text-2xl font-bold tabular-nums tracking-tight text-foreground">{value.toLocaleString()}</div>
+      <div className="mt-2 font-display text-2xl font-bold tabular-nums tracking-tight text-white">{value.toLocaleString()}</div>
     </div>
   );
 }
