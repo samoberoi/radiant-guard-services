@@ -39,7 +39,7 @@ export function LiveFeed({ className }: { className?: string }) {
         className,
       )}
     >
-      <div className="flex items-center justify-between border-b border-border/50 bg-gradient-to-b from-card/80 to-card/40 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border/50 bg-card px-4 py-3">
         <div className="min-w-0 flex items-center gap-2">
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-accent/15 text-accent ring-1 ring-inset ring-accent/20">
             <Bell className="h-3.5 w-3.5" />
@@ -99,39 +99,48 @@ export function LiveFeed({ className }: { className?: string }) {
             type="button"
             onClick={() => handleOpen(featured)}
             className={cn(
-              "group relative m-3 mb-2 flex items-start gap-3 rounded-2xl border border-border/60 p-3 text-left transition-all",
+              "group relative m-3 mb-2 flex items-start gap-3 rounded-2xl border p-3 text-left transition-all",
               !featured.readAt
-                ? "bg-gradient-to-br from-accent/[0.12] via-card/80 to-card/60 shadow-[0_8px_24px_-12px_color-mix(in_oklab,var(--accent)_45%,transparent)] hover:shadow-[0_12px_28px_-12px_color-mix(in_oklab,var(--accent)_55%,transparent)]"
-                : "bg-card/60 hover:bg-card",
+                ? "border-accent bg-accent text-accent-foreground shadow-md hover:shadow-lg"
+                : "border-border/60 bg-card hover:bg-secondary/40",
             )}
           >
-            {!featured.readAt && (
-              <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r bg-accent" />
-            )}
             <span
               className={cn(
-                "grid h-10 w-10 shrink-0 place-items-center rounded-xl ring-1 ring-inset",
+                "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
                 !featured.readAt
-                  ? "bg-accent text-accent-foreground ring-accent/30"
-                  : "bg-secondary text-muted-foreground ring-border",
+                  ? "bg-white/25 text-accent-foreground"
+                  : "bg-secondary text-muted-foreground ring-1 ring-inset ring-border",
               )}
             >
               <Bell className="h-4 w-4" />
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">
+                <div className={cn(
+                  "text-[10px] font-bold uppercase tracking-[0.18em]",
+                  !featured.readAt ? "text-accent-foreground/85" : "text-accent",
+                )}>
                   {featured.readAt ? "Latest" : "New"}
                 </div>
-                <div className="shrink-0 text-[10px] font-medium text-muted-foreground">
+                <div className={cn(
+                  "shrink-0 text-[10px] font-medium",
+                  !featured.readAt ? "text-accent-foreground/80" : "text-muted-foreground",
+                )}>
                   {formatDistanceToNow(new Date(featured.createdAt), { addSuffix: true })}
                 </div>
               </div>
-              <div className="mt-0.5 line-clamp-2 text-[13.5px] font-bold leading-snug text-foreground">
+              <div className={cn(
+                "mt-0.5 line-clamp-2 text-[13.5px] font-bold leading-snug",
+                !featured.readAt ? "text-accent-foreground" : "text-foreground",
+              )}>
                 {featured.title}
               </div>
               {featured.message && (
-                <div className="mt-1 line-clamp-2 text-[11.5px] leading-snug text-muted-foreground">
+                <div className={cn(
+                  "mt-1 line-clamp-2 text-[11.5px] leading-snug",
+                  !featured.readAt ? "text-accent-foreground/85" : "text-muted-foreground",
+                )}>
                   {featured.message}
                 </div>
               )}

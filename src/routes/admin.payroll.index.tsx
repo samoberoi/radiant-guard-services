@@ -817,29 +817,28 @@ function DashStat({
   onClick?: () => void;
 }) {
   const accentMap: Record<string, string> = {
-    amber: "from-amber-200/70 to-amber-50/40 text-amber-800",
-    emerald: "from-emerald-200/70 to-emerald-50/40 text-emerald-800",
-    sky: "from-sky-200/70 to-sky-50/40 text-sky-800",
-    violet: "from-violet-200/70 to-violet-50/40 text-violet-800",
-    rose: "from-rose-200/70 to-rose-50/40 text-rose-800",
-    cyan: "from-cyan-200/70 to-cyan-50/40 text-cyan-800",
-    lime: "from-lime-200/70 to-lime-50/40 text-lime-800",
+    amber: "bg-amber-500",
+    emerald: "bg-emerald-600",
+    sky: "bg-sky-600",
+    violet: "bg-violet-600",
+    rose: "bg-rose-500",
+    cyan: "bg-cyan-600",
+    lime: "bg-lime-600",
   };
   const Cmp: React.ElementType = onClick ? "button" : "div";
   return (
     <Cmp
       onClick={onClick}
-      className={`group relative w-full text-left overflow-hidden rounded-2xl border bg-card/85 p-3 shadow-sm backdrop-blur transition hover:border-accent/50 hover:bg-white ${active ? "border-accent/60 ring-2 ring-accent/30" : "border-border/70"} ${onClick ? "cursor-pointer" : ""}`}
+      className={`group relative w-full text-left overflow-hidden rounded-2xl p-3 shadow-sm transition text-white hover:-translate-y-0.5 hover:shadow-md ${accentMap[accent]} ${active ? "ring-2 ring-offset-2 ring-white/60" : ""} ${onClick ? "cursor-pointer" : ""}`}
     >
-      <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-30 ${accentMap[accent]}`} />
       <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white ring-1 ring-border/70">
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/25 text-white">
           <Icon className="h-3.5 w-3.5" />
         </div>
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-foreground/75">{label}</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/90">{label}</div>
       </div>
-      <div className={`mt-1 font-display font-bold tabular-nums tracking-tight text-foreground ${compact ? "text-2xl" : "text-2xl"}`}>
-        {loading ? <span className="text-muted-foreground/60">—</span> : value.toLocaleString()}
+      <div className={`mt-1 font-display font-bold tabular-nums tracking-tight text-white ${compact ? "text-2xl" : "text-2xl"}`}>
+        {loading ? <span className="text-white/60">—</span> : value.toLocaleString()}
       </div>
     </Cmp>
   );

@@ -55,7 +55,7 @@ export function PeopleInsightsCard(props: Variant & { isLoading?: boolean }) {
 
   return (
     <section className="overflow-hidden rounded-[24px] border border-border/60 bg-card/70 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]">
-      <header className="flex items-center gap-3 border-b border-border/50 bg-gradient-to-b from-card/80 to-card/40 px-5 py-3.5">
+      <header className="flex items-center gap-3 border-b border-border/50 bg-card px-5 py-3.5">
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-accent/15 text-accent ring-1 ring-inset ring-accent/20">
           <meta.Icon className="h-3.5 w-3.5" />
         </span>

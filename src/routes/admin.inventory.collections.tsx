@@ -253,10 +253,10 @@ function CollectionsPanel({ me }: { me: Candidate }) {
   return (
     <div>
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile icon={Warehouse} label="Units covered" value={unitIds.length} accent="from-cyan-500/20 to-cyan-500/5 text-cyan-600" />
-        <StatTile icon={ShieldCheck} label="Guards on duty" value={totalGuards} accent="from-emerald-500/20 to-emerald-500/5 text-emerald-600" />
-        <StatTile icon={PackageCheck} label="Guards with stock" value={guardsWithStock} accent="from-violet-500/20 to-violet-500/5 text-violet-600" />
-        <StatTile icon={Inbox} label="Total items at guards" value={balances.reduce((s, b) => s + Number(b.qty || 0), 0)} accent="from-amber-500/20 to-amber-500/5 text-amber-600" />
+        <StatTile icon={Warehouse} label="Units covered" value={unitIds.length} accent="bg-cyan-600" />
+        <StatTile icon={ShieldCheck} label="Guards on duty" value={totalGuards} accent="bg-emerald-600" />
+        <StatTile icon={PackageCheck} label="Guards with stock" value={guardsWithStock} accent="bg-violet-600" />
+        <StatTile icon={Inbox} label="Total items at guards" value={balances.reduce((s, b) => s + Number(b.qty || 0), 0)} accent="bg-amber-500" />
       </div>
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -306,15 +306,14 @@ function CollectionsPanel({ me }: { me: Candidate }) {
 
 function StatTile({ icon: Icon, label, value, accent }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent: string }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-border/70 bg-card p-4 shadow-sm">
-      <div className={`absolute inset-0 -z-10 bg-gradient-to-br opacity-40 ${accent}`} />
+    <div className={`relative overflow-hidden rounded-2xl p-4 shadow-sm text-white ${accent}`}>
       <div className="flex items-center gap-2.5">
-        <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${accent}`}>
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/25">
           <Icon className="h-4 w-4" />
         </div>
-        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90">{label}</div>
       </div>
-      <div className="mt-2 font-display text-2xl font-bold tabular-nums tracking-tight text-foreground">{value.toLocaleString()}</div>
+      <div className="mt-2 font-display text-2xl font-bold tabular-nums tracking-tight text-white">{value.toLocaleString()}</div>
     </div>
   );
 }
