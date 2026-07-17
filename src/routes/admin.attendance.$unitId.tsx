@@ -509,6 +509,7 @@ function MusterRollPage() {
     },
     onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: sheetQK });
+      queryClient.invalidateQueries({ queryKey: payrollRunQK });
       toast.success(
         vars.status === "submitted" ? "Submitted for approval" :
         vars.status === "approved" ? "Attendance approved — payroll unlocked" :
@@ -516,6 +517,103 @@ function MusterRollPage() {
       );
     },
     onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed"),
+  });
+
+  // Handoff to Payroll & Invoice teams. Creates/updates payroll_runs
+  // row for this period with status='submitted' so the payroll and
+  // invoice pages surface it as pending, and fans out notifications
+  // to both approver groups.
+  const sendToPayroll = useMutation({
+    mutationFn: async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth?.user?.id ?? null;
+      const ts = new Date().toISOString();
+      const base: Record<string, unknown> = {
+        unit_id: unitId,
+        period_start: periodStart,
+        period_end: periodEnd,
+        status: "submitted",
+        submitted_at: ts,
+        submitted_by: uid,
+        rejection_reason: null,
+      };
+      if (payrollRun?.id) {
+        const { error } = await supabase.from("payroll_runs" as never).update(base as never).eq("id", payrollRun.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("payroll_runs" as never).insert(base as never);
+        if (error) throw error;
+      }
+      void logActivity({
+        module: "Attendance",
+        action: "send_to_payroll",
+        entityType: "attendance_sheets",
+        entityLabel: `${unitId} ${periodStart} → ${periodEnd}`,
+        details: { unit_id: unitId, period_start: periodStart, period_end: periodEnd },
+      });
+      const unitLabel = ((unit as { customer_name?: string; name?: string } | null | undefined)?.customer_name
+        ? `${(unit as { customer_name?: string }).customer_name} — ${(unit as { name?: string }).name ?? ""}`
+        : (unit as { name?: string } | null | undefined)?.name ?? "unit").trim();
+      const periodLabel = `${MONTH_NAMES[monthIdx]} ${year}`;
+      let actorName = "An approver";
+      if (uid) {
+        const { data: rows } = await supabase.rpc("get_user_display_name" as never, { _user_id: uid } as never);
+        const row = Array.isArray(rows) ? (rows[0] as { full_name?: string } | undefined) : undefined;
+        if (row?.full_name) actorName = row.full_name;
+      }
+      const payrollLink = `/admin/payroll/${unitId}?start=${periodStart}&end=${periodEnd}`;
+      const invoiceLink = `/admin/invoice/${unitId}?start=${periodStart}&end=${periodEnd}`;
+      await Promise.all([
+        notifyApprovers({
+          moduleKey: "payroll",
+          type: "payroll_pending",
+          title: `Payroll ready to process — ${unitLabel}`,
+          message: `${actorName} sent ${unitLabel} (${periodLabel}) for payroll. Tap to open.`,
+          link: payrollLink,
+          entityType: "payroll_runs",
+          entityId: payrollRun?.id ?? "",
+        }).catch(() => undefined),
+        notifyApprovers({
+          moduleKey: "invoice",
+          type: "invoice_pending",
+          title: `Invoice ready to generate — ${unitLabel}`,
+          message: `${actorName} sent ${unitLabel} (${periodLabel}) for invoicing. Tap to open.`,
+          link: invoiceLink,
+          entityType: "payroll_runs",
+          entityId: payrollRun?.id ?? "",
+        }).catch(() => undefined),
+      ]);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: payrollRunQK });
+      toast.success("Sent for Payroll & Invoice");
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to send"),
+  });
+
+  // Reopen after handoff — clears the payroll_runs handoff back to draft
+  // and moves the attendance sheet back to draft in one click.
+  const reopenAfterHandoff = useMutation({
+    mutationFn: async () => {
+      if (payrollRun?.id) {
+        const { error } = await supabase
+          .from("payroll_runs" as never)
+          .update({ status: "draft", submitted_at: null, submitted_by: null, rejection_reason: null } as never)
+          .eq("id", payrollRun.id);
+        if (error) throw error;
+      }
+      await new Promise<void>((resolve, reject) => {
+        transitionSheet.mutate(
+          { status: "draft" },
+          { onSuccess: () => resolve(), onError: (e) => reject(e) },
+        );
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: payrollRunQK });
+      queryClient.invalidateQueries({ queryKey: sheetQK });
+    },
+    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Failed to reopen"),
   });
 
   const { data: codes = [] } = useQuery({
