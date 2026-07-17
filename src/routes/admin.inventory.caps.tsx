@@ -50,7 +50,7 @@ function CapsPage() {
   if (!isLoading && !isInvAdmin) {
     return (
       <div className="space-y-6">
-        <PageHeader title="Inventory Cap" crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Inventory Cap" }]} icon={Gauge} />
+        <PageHeader title="Inventory Cap" crumbs={[{ label: "Uniform Manager", to: "/admin/inventory" }, { label: "Inventory Cap" }]} icon={Gauge} />
         <div className="rounded-2xl border bg-card p-8 text-sm text-muted-foreground">
           You do not have permission to manage inventory caps.
         </div>
@@ -296,7 +296,7 @@ function CapsInner() {
       <PageHeader
         title="Inventory Cap"
         description="Hold-value limits per branch and field officer. Green = safe, amber = nearing cap, red = cap reached."
-        crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Inventory Cap" }]}
+        crumbs={[{ label: "Uniform Manager", to: "/admin/inventory" }, { label: "Inventory Cap" }]}
         icon={Gauge}
         actions={
           <Button variant="outline" asChild>

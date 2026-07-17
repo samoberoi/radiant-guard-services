@@ -138,7 +138,7 @@ function InventoryWorkflowsPage() {
       <PageHeader
         title="Inventory Workflows"
         description="The four end-to-end paths inventory takes — from supplier all the way to the guard on duty."
-        crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Workflows" }]}
+        crumbs={[{ label: "Uniform Manager", to: "/admin/inventory" }, { label: "Workflows" }]}
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

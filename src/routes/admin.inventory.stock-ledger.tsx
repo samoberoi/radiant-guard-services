@@ -557,7 +557,7 @@ function StockLedgerPage() {
       <PageHeader
         title="Stock Ledger"
         description="Daybook — every stock-in and stock-out movement. Super admin sees all; branches see their chain; field officers see their own and reporting guards."
-        crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Stock Ledger" }]}
+        crumbs={[{ label: "Uniform Manager", to: "/admin/inventory" }, { label: "Stock Ledger" }]}
       />
 
       {/* Mode toggle (By Count / By Value) */}

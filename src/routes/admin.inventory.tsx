@@ -19,7 +19,7 @@ function InventoryDashboard() {
       <PageHeader
         title="Inventory Command Center"
         description="End-to-end chain of custody from supplier → warehouse → branch → field officer → guard."
-        crumbs={[{ label: "Inventory" }]}
+        crumbs={[{ label: "Uniform Manager" }]}
       />
       <InventoryOwnerDashboard />
     </div>

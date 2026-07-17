@@ -164,7 +164,7 @@ function TransfersPage() {
 
   return (
     <div>
-      <PageHeader title="Internal Transfers" description="Move stock warehouse → branch, or branch → branch. Dispatch decreases source; receipt increases destination." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Transfers" }]} />
+      <PageHeader title="Internal Transfers" description="Move stock warehouse → branch, or branch → branch. Dispatch decreases source; receipt increases destination." crumbs={[{ label: "Uniform Manager", to: "/admin/inventory" }, { label: "Transfers" }]} />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full sm:max-w-xs">

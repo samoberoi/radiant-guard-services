@@ -256,7 +256,7 @@ function POPage() {
       <PageHeader
         title="Purchase Orders"
         description="Warehouse needs stock? Create a PO: pick the vendor, add items + qty + price, issue it. When goods arrive, receive against the PO in Goods Receipts to add stock into the warehouse."
-        crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Purchase Orders" }]}
+        crumbs={[{ label: "Uniform Manager", to: "/admin/inventory" }, { label: "Purchase Orders" }]}
       />
 
 
