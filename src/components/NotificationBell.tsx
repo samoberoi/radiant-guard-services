@@ -75,8 +75,11 @@ export function NotificationBell() {
                     await markNotificationRead(n.id);
                     qc.invalidateQueries({ queryKey: NQK });
                   }
-                  if (n.link && typeof window !== "undefined") {
-                    window.location.href = n.link;
+                  const target = n.link && n.link.trim() ? n.link : "/admin/notifications";
+                  if (target.startsWith("/")) {
+                    router.history.push(target);
+                  } else if (typeof window !== "undefined") {
+                    window.location.href = target;
                   }
                 }}
                 className={cn(
