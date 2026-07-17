@@ -386,6 +386,28 @@ function MusterRollPage() {
     enabled: Boolean(unitId && periodStart && periodEnd),
   });
   const status: SheetStatus = sheet?.status ?? "draft";
+
+  // Payroll-run state for this period — used to decide whether the
+  // "Send for Payroll & Invoice" handoff has happened.
+  type PayrollRunLite = { id: string; status: "draft" | "submitted" | "approved" | "rejected" };
+  const payrollRunQK = ["attendance-payroll-run", unitId, periodStart, periodEnd];
+  const { data: payrollRun } = useQuery({
+    queryKey: payrollRunQK,
+    enabled: Boolean(unitId && periodStart && periodEnd),
+    queryFn: async (): Promise<PayrollRunLite | null> => {
+      const { data, error } = await supabase
+        .from("payroll_runs" as never)
+        .select("id, status")
+        .eq("unit_id", unitId)
+        .eq("period_start", periodStart)
+        .eq("period_end", periodEnd)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as unknown as PayrollRunLite | null);
+    },
+  });
+  const sentToPayroll = ["submitted", "approved"].includes(payrollRun?.status ?? "");
+
   // FO/admin edit when draft or rejected. Approver may also edit inline while
   // the sheet is submitted (HR can fix in place instead of bouncing back).
   const editable = status === "draft" || status === "rejected" || (status === "submitted" && canApprove);
