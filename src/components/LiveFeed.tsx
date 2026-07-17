@@ -25,7 +25,7 @@ export function LiveFeed({ className }: { className?: string }) {
   return (
     <aside
       className={cn(
-        "flex h-fit max-h-[520px] flex-col overflow-hidden rounded-[24px] border border-border/60 bg-card/70 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]",
+        "flex h-fit max-h-[380px] flex-col overflow-hidden rounded-[24px] border border-border/60 bg-card/70 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]",
         className,
       )}
     >
@@ -35,7 +35,7 @@ export function LiveFeed({ className }: { className?: string }) {
             Live feed
           </div>
           <div className="mt-0.5 flex items-center gap-2">
-            <h3 className="font-display text-lg font-bold text-foreground">Recent activity</h3>
+            <h3 className="font-display text-[15px] font-bold text-foreground leading-tight">Recent activity</h3>
             {unread > 0 && (
               <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
                 {unread > 9 ? "9+" : unread}
@@ -158,13 +158,13 @@ export function DashboardShell({
   rightExtras?: React.ReactNode;
 }) {
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0 space-y-6">{children}</div>
-      <div className="hidden lg:flex lg:sticky lg:top-6 lg:h-fit lg:max-h-[calc(100vh-3rem)] lg:flex-col lg:gap-4 lg:overflow-y-auto lg:pr-1">
+      <div className="hidden lg:flex lg:sticky lg:top-6 lg:h-fit lg:max-h-[calc(100vh-3rem)] lg:flex-col lg:gap-3 lg:overflow-y-auto lg:pr-1">
         <LiveFeed />
         {rightExtras}
       </div>
-      {rightExtras && <div className="lg:hidden space-y-4">{rightExtras}</div>}
+      {rightExtras && <div className="lg:hidden space-y-3">{rightExtras}</div>}
     </div>
   );
 }
