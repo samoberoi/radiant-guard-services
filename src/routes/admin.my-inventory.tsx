@@ -138,14 +138,14 @@ function MyInventoryPage() {
   });
 
   if (isSuperAdmin) {
-    return <div className="text-sm text-muted-foreground">My Inventory is for end-users (guards). Switch account.</div>;
+    return <div className="text-sm text-muted-foreground">My Uniform is for end-users (guards). Switch account.</div>;
   }
   if (meLoading) return <div className="text-sm text-muted-foreground">Loading…</div>;
   if (!me) return <div className="text-sm text-muted-foreground">No employee profile found for this phone.</div>;
 
   return (
     <DashboardShell>
-      <PageHeader title="My Inventory" description="Items assigned to you and pending confirmations." crumbs={[{ label: "My Inventory" }]} />
+      <PageHeader title="My Uniform" description="Items assigned to you and pending confirmations." crumbs={[{ label: "My Uniform" }]} />
 
       {pending.length > 0 && (
         <section className="rounded-2xl border border-border bg-card p-5">

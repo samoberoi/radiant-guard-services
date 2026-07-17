@@ -253,7 +253,7 @@ function AdminLayout() {
   };
   useEffect(() => {
     if (!isReady || permsLoading || !user) return;
-    // Guards have no module-based permissions; route them to their My Inventory page.
+    // Guards have no module-based permissions; route them to their My Uniform page.
     if (roleKey === "guard" && !isSuperAdmin) {
       if (
         pathname !== "/admin/my-inventory" &&
@@ -372,7 +372,7 @@ function AdminLayout() {
 
   const isGuard = !isSuperAdmin && roleKey === "guard";
   const guardGroups: GroupItem[] = useMemo(() => [
-    { key: "my-inventory", label: "My Inventory", icon: Boxes, to: "/admin/my-inventory", activePrefixes: ["/admin/my-inventory"] },
+    { key: "my-inventory", label: "My Uniform", icon: Boxes, to: "/admin/my-inventory", activePrefixes: ["/admin/my-inventory"] },
     { key: "profile", label: "My Profile", icon: Users, to: "/admin/profile", activePrefixes: ["/admin/profile"] },
   ], []);
   const isFieldOfficer = !isSuperAdmin && roleKey === "field_officer";

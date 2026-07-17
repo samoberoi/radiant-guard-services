@@ -278,7 +278,7 @@ function FieldOfficerDashboard() {
         </h1>
         <div className="hidden items-center gap-2 sm:flex">
           <QuickChip to="/admin/employees" icon={UserPlus} label="Onboard" />
-          <QuickChip to="/admin/my-inventory" icon={PackageSearch} label="Inventory" />
+          <QuickChip to="/admin/my-inventory" icon={PackageSearch} label="My Uniform" />
         </div>
       </div>
 
