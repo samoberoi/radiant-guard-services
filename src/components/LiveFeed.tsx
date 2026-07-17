@@ -39,7 +39,7 @@ export function LiveFeed({ className }: { className?: string }) {
         className,
       )}
     >
-      <div className="flex items-center justify-between border-b border-border/50 bg-gradient-to-b from-card/80 to-card/40 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border/50 bg-card px-4 py-3">
         <div className="min-w-0 flex items-center gap-2">
           <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-accent/15 text-accent ring-1 ring-inset ring-accent/20">
             <Bell className="h-3.5 w-3.5" />
