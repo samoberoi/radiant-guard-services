@@ -70,7 +70,7 @@ export function PeopleInsightsCard(props: Variant & { isLoading?: boolean }) {
         )}
       </header>
 
-      <ul className="max-h-[360px] divide-y divide-border/60 overflow-y-auto">
+      <ul className="max-h-[280px] divide-y divide-border/60 overflow-y-auto">
         {isLoading ? (
           <li className="px-4 py-6 text-center text-xs text-muted-foreground">Loading…</li>
         ) : props.items.length === 0 ? (
