@@ -158,13 +158,13 @@ export function DashboardShell({
   rightExtras?: React.ReactNode;
 }) {
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0 space-y-6">{children}</div>
-      <div className="hidden lg:flex lg:sticky lg:top-6 lg:h-fit lg:max-h-[calc(100vh-3rem)] lg:flex-col lg:gap-4 lg:overflow-y-auto lg:pr-1">
+      <div className="hidden lg:flex lg:sticky lg:top-6 lg:h-fit lg:max-h-[calc(100vh-3rem)] lg:flex-col lg:gap-3 lg:overflow-y-auto lg:pr-1">
         <LiveFeed />
         {rightExtras}
       </div>
-      {rightExtras && <div className="lg:hidden space-y-4">{rightExtras}</div>}
+      {rightExtras && <div className="lg:hidden space-y-3">{rightExtras}</div>}
     </div>
   );
 }
