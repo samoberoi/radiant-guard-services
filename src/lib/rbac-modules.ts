@@ -124,12 +124,12 @@ export const RBAC_MODULES: ModuleDef[] = [
   },
   {
     key: "inventory",
-    label: "Inventory",
+    label: "Uniform Manager",
     path: "/admin/inventory",
     icon: Boxes,
     subModules: [
-      { key: "inventory_dashboard", label: "Inventory Dashboard", path: "/admin/inventory/dashboard",       icon: LayoutDashboard },
-      { key: "inventory_workflows", label: "Inventory Workflows", path: "/admin/inventory/workflows",       icon: Sparkles },
+      { key: "inventory_dashboard", label: "Uniform Dashboard", path: "/admin/inventory/dashboard",       icon: LayoutDashboard },
+      { key: "inventory_workflows", label: "Uniform Workflows", path: "/admin/inventory/workflows",       icon: Sparkles },
       { key: "item_master",       label: "Products",          path: "/admin/inventory/items",           icon: PackageOpen },
       { key: "vendors",           label: "Vendors",           path: "/admin/inventory/vendors",         icon: ShoppingBag },
       { key: "warehouses",        label: "Warehouses",        path: "/admin/inventory/warehouses",      icon: Warehouse },
@@ -139,8 +139,8 @@ export const RBAC_MODULES: ModuleDef[] = [
       { key: "transfers",         label: "Transfers",         path: "/admin/inventory/transfers",       icon: Boxes },
       { key: "issuances",         label: "Issuances",         path: "/admin/inventory/issuances",       icon: UserPlus },
       { key: "collections",       label: "Collections",       path: "/admin/inventory/collections",     icon: UserPlus },
-      { key: "inventory_caps",    label: "Inventory Caps",    path: "/admin/inventory/caps",            icon: ShieldCheck },
-      { key: "my_inventory",      label: "My Inventory",      path: "/admin/my-inventory",              icon: PackageOpen },
+      { key: "inventory_caps",    label: "Uniform Caps",      path: "/admin/inventory/caps",            icon: ShieldCheck },
+      { key: "my_inventory",      label: "My Uniform",        path: "/admin/my-inventory",              icon: PackageOpen },
       { key: "field_dashboard",   label: "Field Dashboard",   path: "/admin/field-dashboard",           icon: LayoutDashboard },
 
       { key: "stock_report",      label: "Stock Report",      path: "/admin/inventory/stock",           icon: Wallet },
