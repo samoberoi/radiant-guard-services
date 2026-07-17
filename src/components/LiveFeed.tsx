@@ -35,7 +35,7 @@ export function LiveFeed({ className }: { className?: string }) {
             Live feed
           </div>
           <div className="mt-0.5 flex items-center gap-2">
-            <h3 className="font-display text-lg font-bold text-foreground">Recent activity</h3>
+            <h3 className="font-display text-[15px] font-bold text-foreground leading-tight">Recent activity</h3>
             {unread > 0 && (
               <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
                 {unread > 9 ? "9+" : unread}
