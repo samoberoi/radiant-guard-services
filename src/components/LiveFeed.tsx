@@ -25,7 +25,7 @@ export function LiveFeed({ className }: { className?: string }) {
   return (
     <aside
       className={cn(
-        "sticky top-6 flex h-fit max-h-[calc(100vh-3rem)] flex-col overflow-hidden rounded-[28px] border border-border/60 bg-card/70 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]",
+        "flex h-fit max-h-[520px] flex-col overflow-hidden rounded-[24px] border border-border/60 bg-card/70 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]",
         className,
       )}
     >
@@ -150,11 +150,21 @@ export function LiveFeed({ className }: { className?: string }) {
  * Dashboard 2-column shell — main content + sticky right-side Live Feed.
  * Collapses to single column below `lg`.
  */
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+export function DashboardShell({
+  children,
+  rightExtras,
+}: {
+  children: React.ReactNode;
+  rightExtras?: React.ReactNode;
+}) {
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
       <div className="min-w-0 space-y-6">{children}</div>
-      <LiveFeed className="hidden lg:flex" />
+      <div className="hidden lg:flex lg:sticky lg:top-6 lg:h-fit lg:max-h-[calc(100vh-3rem)] lg:flex-col lg:gap-4 lg:overflow-y-auto lg:pr-1">
+        <LiveFeed />
+        {rightExtras}
+      </div>
+      {rightExtras && <div className="lg:hidden space-y-4">{rightExtras}</div>}
     </div>
   );
 }
