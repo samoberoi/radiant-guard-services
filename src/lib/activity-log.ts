@@ -222,7 +222,7 @@ export async function logActivity(p: LogParams): Promise<void> {
     if (!cachedIp) void getClientIp();
     // Auto-broadcast a notification to admins for meaningful actions.
     if ((p.status ?? "success") === "success" && !SILENT_ACTIONS.has(p.action.toLowerCase())) {
-      const link = MODULE_LINKS[p.module] ?? "";
+      const link = MODULE_LINKS[p.module] ?? ENTITY_LINKS[p.entityType ?? ""] ?? "";
       const label = p.entityLabel || p.entityType || "record";
       const actionTitle = titleCase(p.action);
       void notifyAdmins({
