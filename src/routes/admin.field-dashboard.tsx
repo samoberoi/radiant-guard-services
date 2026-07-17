@@ -24,6 +24,8 @@ import {
 import { DashboardShell } from "@/components/LiveFeed";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentPermissions } from "@/lib/rbac";
+import { PeopleInsightsCard } from "@/components/PeopleInsightsCard";
+import { usePeopleInsights } from "@/lib/people-insights";
 
 export const Route = createFileRoute("/admin/field-dashboard")({
   component: FieldOfficerDashboard,
@@ -400,7 +402,19 @@ function FieldOfficerDashboard() {
           )}
         </div>
       </section>
+
+      <FoPeopleInsights />
     </DashboardShell>
+  );
+}
+
+function FoPeopleInsights() {
+  const { isLoading, birthdays, anniversaries } = usePeopleInsights();
+  return (
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <PeopleInsightsCard kind="birthdays" items={birthdays} isLoading={isLoading} />
+      <PeopleInsightsCard kind="anniversaries" items={anniversaries} isLoading={isLoading} />
+    </div>
   );
 }
 

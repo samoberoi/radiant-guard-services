@@ -1,57 +1,50 @@
-## Attendance approval → Payroll/Invoice handoff, plus clickable notifications
+## Goal
 
-### 1. Clickable notifications (bell + live feed)
-Already 90% there — both `NotificationBell` and `LiveFeed` already navigate to `n.link` on click, and `transitionSheet` already writes a `link` like `/admin/attendance/{unitId}?month=…&year=…` into every attendance notification.
+Add three insight cards to the role dashboards, all driven by `candidates.date_of_birth` and `candidates.approved_at`, with role-based scoping. Daily notifications fire when someone has a birthday or work anniversary today.
 
-Fixes:
-- Ensure every notification we emit in the flow includes a `link` (approver notif on submit, submitter notif on approve/reject, and the new payroll/invoice notif — see step 3).
-- Verify the URL search-param format matches what the attendance route expects (`month` is 0-based today; the attendance page reads it — will double-check while implementing and normalize both sides to 1-based month if needed, so the notification opens the correct sheet).
-- Mark notification as read on click (already done in bell; add same in `LiveFeed`).
+## New cards (no new pages)
 
-### 2. Attendance submit button + richer approver message
-In `src/routes/admin.attendance.$unitId.tsx`:
-- Rename the draft/rejected action button `Submit for Payroll` → `Submit for Approval` (also update the icon tooltip/aria if any).
-- In the `transitionSheet` "submitted" branch, look up the current field officer's `full_name` from `candidates` (via `current_user_candidate_id` / mobile) and the unit name (already fetched as `unit`), then send an approver notification like:
-  - Title: `Attendance approval needed — {Unit Name}`
-  - Message: `{FO full name} submitted attendance for {Unit Name} ({period}). Tap to review.`
-  - Link: existing attendance URL.
-- Keep the existing `notifyApprovers({ moduleKey: "attendance" })` fan-out so HR + Leadership + Admin all receive it.
+Each card lives on the dashboard, right column, compact size. Rows are clickable and route to `/admin/candidates/$id/details`. Today's matches are pinned to the top with a highlighted chip and a congratulations line.
 
-### 3. New "Send for Payroll & Invoice" button after approval
-Currently after approval the only action is `Reopen`. Add a new primary action visible when `status === "approved"` and the user has `payroll.edit` (or `attendance.approve`) permission:
+1. **Upcoming Birthdays** — next 30 days
+   - Row: photo, name, unit / designation, date + "in N days" (or "Today 🎉" chip).
+   - Shown on: super_admin, leadership, hr, branch_manager, field_officer dashboards.
+2. **Upcoming Work Anniversaries** — next 30 days, using `approved_at` (fallback `created_at`)
+   - Row: photo, name, "N years with RGS", date + "Today" chip.
+   - Shown on: same dashboards as above.
+3. **Employees 60+** — computed from `date_of_birth`
+   - Sorted oldest first, shows age, unit, mobile.
+   - Shown on: super_admin and leadership dashboards **only**.
 
-- Button label: `Send for Payroll & Invoice` (icon: `Send`).
-- On click:
-  1. Upsert a `payroll_runs` row for `(unit_id, period_start, period_end)` with `status = 'submitted'`, `submitted_by = auth.uid()`, `submitted_at = now()` (mirrors existing `transitionRun` shape in `admin.payroll.$unitId.tsx`). This is the "handoff" — payroll/invoice pages read from `attendance_sheets` + `payroll_runs` and already unlock once attendance is approved; setting `payroll_runs.status = 'submitted'` marks it as officially sent.
-  2. Add a boolean `attendance_sheets.sent_to_payroll` (migration, default false) so the button state is durable across refresh — OR derive it purely from `payroll_runs.status IN ('submitted','approved')` and skip the migration. Will use the derived approach to avoid schema churn.
-  3. Fire two notifications with links to the payroll and invoice pages:
-     - `notifyApprovers({ moduleKey: "payroll", … link: /admin/payroll/{unitId}?… })`
-     - `notifyApprovers({ moduleKey: "invoice", … link: /admin/invoice/{unitId}?… })`
-     Message includes unit name + period + who sent it.
-  4. Log activity ("send_to_payroll" on the attendance sheet).
-- After success, the button flips to `Reopen` (which calls the existing `transitionSheet.mutate({ status: 'draft' })` AND resets `payroll_runs.status` back to `draft` so the "sent" state clears).
-- If the sheet is reopened, all downstream payroll/invoice pages naturally lock again (existing behaviour).
+## Scoping rules (enforced in query, not just UI)
 
-Button visibility matrix (status = approved):
-```text
-                       sent? = false   sent? = true
-approver / admin       [Send…] [Reopen]  [Reopen]
-non-approver           —                 —
-```
+- **super_admin, leadership, hr**: all active employees.
+- **branch_manager**: candidates whose branch is in `current_user_branch_scope_ids()`.
+- **field_officer**: candidates whose `unit_id` is in the FO's scoped unit set (reuse `useFieldOfficerUnitScope`).
+- All queries filter `status IN ('approved','active')` and require `date_of_birth IS NOT NULL`.
 
-### 4. Files to change
-- `src/routes/admin.attendance.$unitId.tsx` — rename button, enrich approver notif, add "Send for Payroll & Invoice" action + reopen wiring, query `payroll_runs.status` to know if already sent.
-- `src/components/LiveFeed.tsx` — mark-as-read on click (parity with `NotificationBell`).
-- `src/lib/notifications.ts` — no schema changes; reuse `notifyApprovers` / `notifyUser`.
-- No DB migration required (state derived from existing `payroll_runs` row).
+## Daily notifications
 
-### 5. End-to-end test matrix I'll run (Playwright, with FO 1111111111/111111, HR, and admin sessions where possible)
-1. **FO submit**: log in as FO → open FPL Pune April 2026 → click `Submit for Approval` → confirm bell+live-feed on HR account show the new notification with FO name, and clicking it lands on the exact sheet.
-2. **HR reject with reason**: reject → confirm FO gets clickable rejection notif and lands on the sheet in `rejected` state.
-3. **FO re-submit → HR approve**: confirm approval notif to FO, and that the new `Send for Payroll & Invoice` button appears for HR/admin.
-4. **Send for Payroll & Invoice**: click → confirm `payroll_runs` row created with `status=submitted`, two notifications fanned out (payroll + invoice module approvers), and the button becomes `Reopen`.
-5. **Payroll approver clicks payroll notif** → lands on `/admin/payroll/{unitId}`; invoice approver clicks invoice notif → lands on `/admin/invoice/{unitId}`.
-6. **Reopen**: click `Reopen` → attendance goes back to `draft`, `payroll_runs.status` back to `draft`, downstream pages re-lock, sent-state indicator cleared.
-7. **Permission edge cases**: non-approver FO does NOT see Send/Reopen; guard role sees nothing on this page.
+- Add a public cron route `src/routes/api/public/hooks/daily-people-pings.ts` that:
+  - Loads today's birthdays and today's work anniversaries (all active employees).
+  - For each match, fans out a notification to the appropriate audience:
+    - **Birthdays / anniversaries**: notify HR, leadership, super_admin, plus the person's branch_manager and reporting field_officer.
+    - Title: "🎂 Birthday today — {name}" / "🎉 {N}-year work anniversary — {name}"; message includes designation + unit; link = `/admin/candidates/{id}/details`.
+  - Dedupe by writing a `type` + `entity_id` + date-suffixed key so re-runs the same day are no-ops.
+- Schedule with `pg_cron` at 03:30 UTC daily (09:00 IST) via `supabase--insert` after route ships.
+- These notifications flow through the existing `NotificationBell` and `LiveFeed` (already clickable → link).
 
-Deliverable at the end: short pass/fail table + screenshots for each of the 7 scenarios.
+## Implementation
+
+- **New file `src/components/PeopleInsightsCard.tsx`**: shared card component with three variants (`birthdays`, `anniversaries`, `sixty-plus`). Takes a pre-scoped list of candidates and computes/sorts client-side.
+- **New file `src/lib/people-insights.ts`**: shared helpers — `daysUntilNextOccurrence(mmdd)`, `yearsSince(date)`, `ageFrom(dob)`, and a `usePeopleInsights({ scope })` hook that returns `{ birthdays, anniversaries, sixtyPlus }` with the scoping rules above.
+- **Edit `src/routes/admin.dashboard.tsx`**: add a right-column stack rendering the three cards (60+ only when `isSuperAdmin || roleKey === 'leadership'`; birthdays/anniversaries always).
+- **Edit `src/routes/admin.field-dashboard.tsx`**: add birthdays + anniversaries cards, scoped to `useFieldOfficerUnitScope().unitIds`. No 60+ card.
+- **New file `src/routes/api/public/hooks/daily-people-pings.ts`**: cron handler described above, using `supabaseAdmin` loaded inside the handler.
+- **Migration** (after route lands): schedule `pg_cron` job hitting the stable `project--{id}.lovable.app` URL.
+
+## Out of scope
+
+- No new standalone birthday/anniversary page.
+- No changes to onboarding fields; DOB and approval date already exist.
+- No email — in-app notifications only.

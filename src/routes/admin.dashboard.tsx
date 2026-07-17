@@ -29,6 +29,21 @@ import {
   type ContractResourceLike,
 } from "@/lib/payroll-calc";
 import { fetchAttendanceEntriesForPeriod } from "@/lib/attendance-fetch";
+import { PeopleInsightsCard } from "@/components/PeopleInsightsCard";
+import { usePeopleInsights } from "@/lib/people-insights";
+
+function PeopleInsightsSection() {
+  const { isLoading, showSixtyPlus, birthdays, anniversaries, sixtyPlus } = usePeopleInsights();
+  return (
+    <div className={`grid grid-cols-1 gap-4 md:grid-cols-2 ${showSixtyPlus ? "xl:grid-cols-3" : ""}`}>
+      <PeopleInsightsCard kind="birthdays" items={birthdays} isLoading={isLoading} />
+      <PeopleInsightsCard kind="anniversaries" items={anniversaries} isLoading={isLoading} />
+      {showSixtyPlus && (
+        <PeopleInsightsCard kind="sixty-plus" items={sixtyPlus} isLoading={isLoading} />
+      )}
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/admin/dashboard")({
   component: DashboardPage,
@@ -697,6 +712,8 @@ function DashboardPage() {
           </div>
         </div>
       )}
+
+      <PeopleInsightsSection />
       </DashboardShell>
     </div>
   );
