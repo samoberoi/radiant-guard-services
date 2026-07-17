@@ -697,6 +697,8 @@ function DashboardPage() {
           </div>
         </div>
       )}
+
+      <PeopleInsightsSection />
       </DashboardShell>
     </div>
   );
