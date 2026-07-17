@@ -54,17 +54,19 @@ export function PeopleInsightsCard(props: Variant & { isLoading?: boolean }) {
         : { title: "Employees 60+", subtitle: "Sorted by age", Icon: ShieldAlert, empty: "No employees aged 60 or above." };
 
   return (
-    <section className="rounded-2xl border border-border bg-card shadow-sm">
-      <header className="flex items-center gap-3 border-b border-border/70 px-4 py-3">
-        <span className="grid h-9 w-9 place-items-center rounded-xl bg-accent/15 text-accent">
-          <meta.Icon className="h-4 w-4" />
+    <section className="overflow-hidden rounded-[24px] border border-border/60 bg-card/70 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]">
+      <header className="flex items-center gap-3 border-b border-border/50 bg-gradient-to-b from-card/80 to-card/40 px-5 py-3.5">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-accent/15 text-accent ring-1 ring-inset ring-accent/20">
+          <meta.Icon className="h-3.5 w-3.5" />
         </span>
-        <div className="min-w-0">
-          <div className="text-[14px] font-semibold text-foreground">{meta.title}</div>
-          <div className="text-[11px] text-muted-foreground">{meta.subtitle}</div>
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">
+            {meta.subtitle}
+          </div>
+          <div className="font-display text-[15px] font-bold text-foreground leading-tight">{meta.title}</div>
         </div>
         {props.items.length > 0 && (
-          <span className="ml-auto rounded-full bg-secondary px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+          <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent/15 px-1.5 text-[10px] font-bold text-accent ring-1 ring-inset ring-accent/20">
             {props.items.length}
           </span>
         )}
