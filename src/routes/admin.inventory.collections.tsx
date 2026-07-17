@@ -50,7 +50,7 @@ function CollectionsPage() {
       <PageHeader
         title="Collections"
         description="Collect items back from the guards reporting to you."
-        crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Collections" }]}
+        crumbs={[{ label: "Uniform Manager", to: "/admin/inventory" }, { label: "Collections" }]}
       />
       {meLoading ? (
         <div className="rounded-2xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">Loading…</div>

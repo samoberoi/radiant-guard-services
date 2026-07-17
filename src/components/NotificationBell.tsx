@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { Bell, CheckCheck } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -19,6 +19,7 @@ const NQK = ["notifications", "mine"] as const;
 
 export function NotificationBell() {
   const qc = useQueryClient();
+  const router = useRouter();
   const { data: items = [] } = useQuery({
     queryKey: NQK,
     queryFn: listMyNotifications,
@@ -74,8 +75,11 @@ export function NotificationBell() {
                     await markNotificationRead(n.id);
                     qc.invalidateQueries({ queryKey: NQK });
                   }
-                  if (n.link && typeof window !== "undefined") {
-                    window.location.href = n.link;
+                  const target = n.link && n.link.trim() ? n.link : "/admin/notifications";
+                  if (target.startsWith("/")) {
+                    router.history.push(target);
+                  } else if (typeof window !== "undefined") {
+                    window.location.href = target;
                   }
                 }}
                 className={cn(

@@ -140,7 +140,7 @@ function RateCardsPage() {
       <PageHeader
         title="Vendor Rate Cards"
         description="Capability matrix: who can supply what, at what price, with what lead time."
-        crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Rate Cards" }]}
+        crumbs={[{ label: "Uniform Manager", to: "/admin/inventory" }, { label: "Rate Cards" }]}
       />
       <div className="mb-4 flex items-center justify-between gap-2">
         <div className="inline-flex rounded-lg border border-border bg-card p-0.5 text-xs">

@@ -124,8 +124,8 @@ const officeAssetsChildren: LeafItem[] = [
 ];
 
 const inventoryChildren: LeafItem[] = [
-  { to: "/admin/inventory", label: "Inventory Command Center", icon: LayoutDashboard },
-  { to: "/admin/inventory/workflows", label: "Inventory Workflows", icon: Boxes },
+  { to: "/admin/inventory", label: "Uniform Command Center", icon: LayoutDashboard },
+  { to: "/admin/inventory/workflows", label: "Uniform Workflows", icon: Boxes },
   { to: "/admin/inventory/items", label: "Products", icon: PackageOpen, sub: "item_master" },
   { to: "/admin/inventory/vendors", label: "Vendors", icon: ShoppingBag, sub: "vendors" },
   { to: "/admin/inventory/warehouses", label: "Warehouses", icon: Warehouse, sub: "warehouses" },
@@ -139,7 +139,7 @@ const inventoryChildren: LeafItem[] = [
   { to: "/admin/inventory/stock", label: "Stock Report", icon: Wallet, sub: "stock_report" },
   { to: "/admin/inventory/stock-ledger", label: "Stock Ledger", icon: Banknote, sub: "stock_ledger" },
   { to: "/admin/inventory/rate-cards", label: "Vendor Rate Cards", icon: FileText, sub: "rate_cards" },
-  { to: "/admin/inventory/caps", label: "Inventory Cap", icon: Gauge, adminOnly: true },
+  { to: "/admin/inventory/caps", label: "Uniform Cap", icon: Gauge, adminOnly: true },
 ];
 
 
@@ -253,7 +253,7 @@ function AdminLayout() {
   };
   useEffect(() => {
     if (!isReady || permsLoading || !user) return;
-    // Guards have no module-based permissions; route them to their My Inventory page.
+    // Guards have no module-based permissions; route them to their My Uniform page.
     if (roleKey === "guard" && !isSuperAdmin) {
       if (
         pathname !== "/admin/my-inventory" &&
@@ -330,7 +330,7 @@ function AdminLayout() {
       { key: "attendance", label: "Attendance", module: "attendance", icon: ClipboardList, to: "/admin/attendance", activePrefixes: ["/admin/attendance"] },
       { key: "payroll", label: "Payroll", module: "payroll", icon: Wallet, children: payrollChildren, activePrefixes: ["/admin/payroll", "/admin/additions", "/admin/deductions"] },
       { key: "invoice", label: "Invoice", module: "invoice", icon: CreditCard, to: "/admin/invoice", activePrefixes: ["/admin/invoice"] },
-      { key: "inventory", label: "Inventory", module: "inventory", icon: Boxes, children: inventoryChildren, activePrefixes: ["/admin/inventory"] },
+      { key: "inventory", label: "Uniform Manager", module: "inventory", icon: Boxes, children: inventoryChildren, activePrefixes: ["/admin/inventory"] },
       { key: "vehicles", label: "Vehicles", module: "vehicles", icon: Car, to: "/admin/vehicles", children: vehiclesChildren, activePrefixes: ["/admin/vehicles"] },
       { key: "assets", label: "Assets", module: "assets", icon: Home, to: "/admin/assets", children: assetsChildren, activePrefixes: ["/admin/assets"] },
       { key: "office-assets", label: "Office Assets", module: "office_assets", icon: Briefcase, to: "/admin/office-assets", children: officeAssetsChildren, activePrefixes: ["/admin/office-assets"] },
@@ -372,7 +372,7 @@ function AdminLayout() {
 
   const isGuard = !isSuperAdmin && roleKey === "guard";
   const guardGroups: GroupItem[] = useMemo(() => [
-    { key: "my-inventory", label: "My Inventory", icon: Boxes, to: "/admin/my-inventory", activePrefixes: ["/admin/my-inventory"] },
+    { key: "my-inventory", label: "My Uniform", icon: Boxes, to: "/admin/my-inventory", activePrefixes: ["/admin/my-inventory"] },
     { key: "profile", label: "My Profile", icon: Users, to: "/admin/profile", activePrefixes: ["/admin/profile"] },
   ], []);
   const isFieldOfficer = !isSuperAdmin && roleKey === "field_officer";

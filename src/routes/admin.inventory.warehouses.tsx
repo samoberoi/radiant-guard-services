@@ -109,7 +109,7 @@ function WarehousesPage() {
 
   return (
     <div>
-      <PageHeader title="Warehouses" description="Storage locations that receive vendor deliveries and dispatch to branches." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Warehouses" }]} />
+      <PageHeader title="Warehouses" description="Storage locations that receive vendor deliveries and dispatch to branches." crumbs={[{ label: "Uniform Manager", to: "/admin/inventory" }, { label: "Warehouses" }]} />
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full sm:max-w-xs">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouter } from "@tanstack/react-router";
 import { Bell, CheckCheck, RotateCw, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -15,6 +15,7 @@ const NQK = ["notifications", "mine"] as const;
  */
 export function LiveFeed({ className }: { className?: string }) {
   const qc = useQueryClient();
+  const router = useRouter();
   const { data: items = [], isFetching, refetch } = useQuery({
     queryKey: NQK,
     queryFn: listMyNotifications,
@@ -29,7 +30,13 @@ export function LiveFeed({ className }: { className?: string }) {
       await markNotificationRead(n.id);
       qc.invalidateQueries({ queryKey: NQK });
     }
-    if (n.link && typeof window !== "undefined") window.location.href = n.link;
+    const target = n.link && n.link.trim() ? n.link : "/admin/notifications";
+    // SPA-navigate for internal URLs; fall back to full nav for absolute URLs.
+    if (target.startsWith("/")) {
+      router.history.push(target);
+    } else if (typeof window !== "undefined") {
+      window.location.href = target;
+    }
   };
 
   return (

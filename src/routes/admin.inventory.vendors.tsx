@@ -183,7 +183,7 @@ function VendorsPage() {
         description="Suppliers that fulfil warehouse purchase orders."
         icon={Truck}
         eyebrow="Inventory"
-        crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Vendors" }]}
+        crumbs={[{ label: "Uniform Manager", to: "/admin/inventory" }, { label: "Vendors" }]}
         actions={
           <>
             <Button

@@ -304,7 +304,7 @@ function StockPage() {
   if (scope.isLoading || role.isLoading) {
     return (
       <div>
-        <PageHeader title="Stock Report" description="Live balances across warehouses, branches, field officers and guards." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Stock" }]} />
+        <PageHeader title="Stock Report" description="Live balances across warehouses, branches, field officers and guards." crumbs={[{ label: "Uniform Manager", to: "/admin/inventory" }, { label: "Stock" }]} />
         <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">Loading…</div>
       </div>
     );
@@ -312,7 +312,7 @@ function StockPage() {
 
   return (
     <div>
-      <PageHeader title="Stock Report" description="Live balances across warehouses, branches, field officers and guards." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Stock" }]} />
+      <PageHeader title="Stock Report" description="Live balances across warehouses, branches, field officers and guards." crumbs={[{ label: "Uniform Manager", to: "/admin/inventory" }, { label: "Stock" }]} />
 
       {/* KPI band */}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-6">

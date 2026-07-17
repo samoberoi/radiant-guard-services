@@ -180,7 +180,7 @@ function IssuancesPage() {
 
   return (
     <div>
-      <PageHeader title="Issuances" description="Issue items: branch → field officer, or field officer / branch → guard. Stock moves on receiver acknowledgement." crumbs={[{ label: "Inventory", to: "/admin/inventory" }, { label: "Issuances" }]} />
+      <PageHeader title="Issuances" description="Issue items: branch → field officer, or field officer / branch → guard. Stock moves on receiver acknowledgement." crumbs={[{ label: "Uniform Manager", to: "/admin/inventory" }, { label: "Issuances" }]} />
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative w-full sm:max-w-xs">
