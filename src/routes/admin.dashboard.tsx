@@ -600,40 +600,39 @@ function DashboardPage() {
         crumbs={[{ label: "Dashboard" }]}
       />
 
-      {/* Month hero — light glass, matches tile system */}
-      <div className="relative overflow-hidden rounded-[28px] border border-border/70 bg-card/85 p-6 backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.7)_inset,0_20px_60px_-30px_rgba(10,20,40,0.18)] sm:p-8">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-[oklch(0.7_0.16_262/0.18)] blur-3xl" />
-        <div className="pointer-events-none absolute -left-20 -bottom-24 h-64 w-64 rounded-full bg-[oklch(0.75_0.12_200/0.15)] blur-3xl" />
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-card/80 to-transparent" />
+      {/* Month hero — bold indigo, clean and aligned */}
+      <div className="relative overflow-hidden rounded-[28px] border border-indigo-700/40 bg-indigo-600 p-6 shadow-[0_20px_60px_-30px_rgba(49,46,129,0.55)] sm:p-8">
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-white/30" />
 
-        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background/60 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-muted-foreground backdrop-blur">
-              <Sparkles className="h-3.5 w-3.5 text-accent" /> Leadership snapshot
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2.5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/90">
+              <Sparkles className="h-3.5 w-3.5" /> Leadership snapshot
             </div>
-            <div className="flex items-end gap-3">
-              <div className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-2xl">{MONTH_NAMES[month]}</div>
-              <div className="pb-2 text-2xl font-semibold text-muted-foreground/80">{year}</div>
+            <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+              <span className="font-display text-3xl font-bold leading-none tracking-tight text-white sm:text-[32px]">
+                {MONTH_NAMES[month]} {year}
+              </span>
               {isCurrent && (
-                <span className="mb-2 inline-flex rounded-full bg-accent/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-accent ring-1 ring-inset ring-accent/30">
+                <span className="inline-flex items-center rounded-full bg-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-700">
                   Current
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-border/70 bg-background/60 p-1.5 backdrop-blur">
-            <button onClick={() => shift(-1)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label="Previous"><ChevronLeft className="h-4 w-4" /></button>
+          <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/20 bg-white/10 p-1.5 backdrop-blur">
+            <button onClick={() => shift(-1)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-white/80 transition hover:bg-white/20 hover:text-white" aria-label="Previous"><ChevronLeft className="h-4 w-4" /></button>
             <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-              <SelectTrigger className="h-8 w-[130px] rounded-xl border-0 bg-transparent shadow-none hover:bg-muted focus:ring-0"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-[130px] rounded-xl border-0 bg-transparent text-white shadow-none hover:bg-white/20 focus:ring-0 [&>svg]:text-white/70"><SelectValue /></SelectTrigger>
               <SelectContent>{MONTH_NAMES.map((m, i) => <SelectItem key={m} value={String(i)}>{m}</SelectItem>)}</SelectContent>
             </Select>
-            <div className="h-5 w-px bg-border/70" />
+            <div className="h-5 w-px bg-white/25" />
             <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-              <SelectTrigger className="h-8 w-[92px] rounded-xl border-0 bg-transparent shadow-none hover:bg-muted focus:ring-0"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-[92px] rounded-xl border-0 bg-transparent text-white shadow-none hover:bg-white/20 focus:ring-0 [&>svg]:text-white/70"><SelectValue /></SelectTrigger>
               <SelectContent>{Array.from({ length: 7 }, (_, i) => now.getFullYear() - 3 + i).map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
             </Select>
-            <button onClick={() => shift(1)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-muted hover:text-foreground" aria-label="Next"><ChevronRight className="h-4 w-4" /></button>
+            <button onClick={() => shift(1)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-white/80 transition hover:bg-white/20 hover:text-white" aria-label="Next"><ChevronRight className="h-4 w-4" /></button>
           </div>
         </div>
       </div>
@@ -721,12 +720,28 @@ function DashboardPage() {
   );
 }
 
-/* -------------------- Tiles — unified clean layout -------------------- */
+/* -------------------- Tiles — vivid, bold, high contrast -------------------- */
 
-function Shell({ children, to }: { children: React.ReactNode; to: string }) {
+type Accent = "rose" | "cyan" | "lime" | "violet" | "amber" | "emerald" | "sky" | "indigo";
+
+const ACCENT_BG: Record<Accent, string> = {
+  rose: "bg-rose-600 border-rose-700/40",
+  cyan: "bg-cyan-600 border-cyan-700/40",
+  lime: "bg-lime-600 border-lime-700/40",
+  violet: "bg-violet-600 border-violet-700/40",
+  amber: "bg-amber-500 border-amber-600/40",
+  emerald: "bg-emerald-600 border-emerald-700/40",
+  sky: "bg-sky-600 border-sky-700/40",
+  indigo: "bg-indigo-600 border-indigo-700/40",
+};
+
+function Shell({ children, to, accent = "indigo" }: { children: React.ReactNode; to: string; accent?: Accent }) {
   return (
-    <Link to={to} className="group tile tile-interactive">
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-card/70 to-transparent" />
+    <Link
+      to={to}
+      className={`group relative flex min-h-[168px] flex-col overflow-hidden rounded-[22px] border p-5 text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-24px_rgba(15,23,42,0.45)] ${ACCENT_BG[accent]}`}
+    >
+      <div className="pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
       {children}
     </Link>
   );
@@ -734,81 +749,81 @@ function Shell({ children, to }: { children: React.ReactNode; to: string }) {
 
 function TileHeader({ Icon }: { Icon: React.ComponentType<{ className?: string }> }) {
   return (
-    <div className="flex items-center justify-between">
-      <div className="tile-icon">
+    <div className="relative flex items-center justify-between">
+      <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/20 text-white ring-1 ring-inset ring-white/25">
         <Icon className="h-[18px] w-[18px]" />
       </div>
-      <ArrowRight className="h-4 w-4 -translate-x-1 text-muted-foreground/40 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:text-accent group-hover:opacity-100" />
+      <ArrowRight className="h-4 w-4 -translate-x-1 text-white/60 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:text-white group-hover:opacity-100" />
     </div>
   );
 }
 
 function TileLabel({ children }: { children: React.ReactNode }) {
-  return <div className="mt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">{children}</div>;
+  return <div className="relative mt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/80">{children}</div>;
 }
 
-function MetricTile({ icon, label, value, to }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent?: string; to: string }) {
+function MetricTile({ icon, label, value, to, accent = "indigo" }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent?: Accent; to: string }) {
   const display = useCountUp(value);
   return (
-    <Shell to={to}>
+    <Shell to={to} accent={accent}>
       <TileHeader Icon={icon} />
       <TileLabel>{label}</TileLabel>
-      <div className="mt-1 font-display text-[38px] font-bold leading-none tabular-nums tracking-tight text-foreground">
+      <div className="relative mt-1 font-display text-[38px] font-bold leading-none tabular-nums tracking-tight text-white">
         {display}
       </div>
-      <div className="mt-auto pt-3 text-xs font-medium text-muted-foreground">Open →</div>
+      <div className="relative mt-auto pt-3 text-xs font-semibold text-white/85">Open →</div>
     </Shell>
   );
 }
 
-function DualTile({ icon, label, primary, primaryLabel, secondary, secondaryLabel, to }: {
+function DualTile({ icon, label, primary, primaryLabel, secondary, secondaryLabel, to, accent = "violet" }: {
   icon: React.ComponentType<{ className?: string }>; label: string;
   primary: number; primaryLabel: string;
   secondary: string; secondaryLabel: string;
-  accent?: string; to: string;
+  accent?: Accent; to: string;
 }) {
   const display = useCountUp(primary);
   return (
-    <Shell to={to}>
+    <Shell to={to} accent={accent}>
       <TileHeader Icon={icon} />
       <TileLabel>{label}</TileLabel>
-      <div className="mt-1 font-display text-[32px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
-      <div className="mt-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{primaryLabel}</div>
-      <div className="mt-auto flex items-center justify-between border-t border-border/50 pt-3">
-        <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{secondaryLabel}</span>
-        <span className="flex items-center gap-1 font-display text-sm font-semibold tabular-nums text-foreground">
-          <Fuel className="h-3.5 w-3.5 text-muted-foreground" />{secondary}
+      <div className="relative mt-1 font-display text-[32px] font-bold leading-none tabular-nums tracking-tight text-white">{display}</div>
+      <div className="relative mt-1 text-[10px] uppercase tracking-[0.15em] text-white/75">{primaryLabel}</div>
+      <div className="relative mt-auto flex items-center justify-between border-t border-white/20 pt-3">
+        <span className="text-[10px] uppercase tracking-[0.15em] text-white/75">{secondaryLabel}</span>
+        <span className="flex items-center gap-1 font-display text-sm font-semibold tabular-nums text-white">
+          <Fuel className="h-3.5 w-3.5 text-white/80" />{secondary}
         </span>
       </div>
     </Shell>
   );
 }
 
-function StatusTile({ icon, label, approved, pending, draft, rejected, approvedLabel = "Approved", pendingLabel = "Pending", to }: {
+function StatusTile({ icon, label, approved, pending, draft, rejected, approvedLabel = "Approved", pendingLabel = "Pending", to, accent = "emerald" }: {
   icon: React.ComponentType<{ className?: string }>; label: string;
   approved: number; pending: number; draft: number; rejected: number;
-  accent?: string; approvedLabel?: string; pendingLabel?: string; to: string;
+  accent?: Accent; approvedLabel?: string; pendingLabel?: string; to: string;
 }) {
   const total = Math.max(approved + pending + draft + rejected, 1);
   return (
-    <Shell to={to}>
+    <Shell to={to} accent={accent}>
       <TileHeader Icon={icon} />
       <TileLabel>{label}</TileLabel>
-      <div className="mt-1 grid grid-cols-2 gap-3">
+      <div className="relative mt-1 grid grid-cols-2 gap-3">
         <div>
-          <div className="font-display text-2xl font-bold tabular-nums leading-none text-emerald-600">{approved}</div>
-          <div className="mt-1.5 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{approvedLabel}</div>
+          <div className="font-display text-2xl font-bold tabular-nums leading-none text-white">{approved}</div>
+          <div className="mt-1.5 text-[10px] uppercase tracking-[0.15em] text-white/75">{approvedLabel}</div>
         </div>
         <div>
-          <div className="font-display text-2xl font-bold tabular-nums leading-none text-amber-600">{pending}</div>
-          <div className="mt-1.5 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">{pendingLabel}</div>
+          <div className="font-display text-2xl font-bold tabular-nums leading-none text-white">{pending}</div>
+          <div className="mt-1.5 text-[10px] uppercase tracking-[0.15em] text-white/75">{pendingLabel}</div>
         </div>
       </div>
-      <div className="mt-auto flex h-1 overflow-hidden rounded-full bg-secondary">
-        {approved > 0 && <div className="bg-emerald-500" style={{ width: `${(approved / total) * 100}%` }} />}
-        {pending > 0 && <div className="bg-amber-500" style={{ width: `${(pending / total) * 100}%` }} />}
-        {draft > 0 && <div className="bg-sky-500" style={{ width: `${(draft / total) * 100}%` }} />}
-        {rejected > 0 && <div className="bg-rose-500" style={{ width: `${(rejected / total) * 100}%` }} />}
+      <div className="relative mt-auto flex h-1.5 overflow-hidden rounded-full bg-white/20">
+        {approved > 0 && <div className="bg-white" style={{ width: `${(approved / total) * 100}%` }} />}
+        {pending > 0 && <div className="bg-white/70" style={{ width: `${(pending / total) * 100}%` }} />}
+        {draft > 0 && <div className="bg-white/50" style={{ width: `${(draft / total) * 100}%` }} />}
+        {rejected > 0 && <div className="bg-white/30" style={{ width: `${(rejected / total) * 100}%` }} />}
       </div>
     </Shell>
   );
@@ -818,12 +833,12 @@ function ContractsTile({ active, expiring }: { active: number; expiring: Array<{
   const soonest = expiring[0];
   const display = useCountUp(active);
   return (
-    <Shell to="/admin/contracts/client-contracts">
+    <Shell to="/admin/contracts/client-contracts" accent="amber">
       <TileHeader Icon={Files} />
       <TileLabel>Contracts</TileLabel>
-      <div className="mt-1 font-display text-[38px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
-      <div className="mt-1 text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Active</div>
-      <div className="mt-auto flex items-center gap-2 rounded-xl border border-amber-200/60 bg-amber-50/80 px-3 py-1.5 text-[11px] font-medium text-amber-900">
+      <div className="relative mt-1 font-display text-[38px] font-bold leading-none tabular-nums tracking-tight text-white">{display}</div>
+      <div className="relative mt-1 text-[10px] uppercase tracking-[0.15em] text-white/75">Active</div>
+      <div className="relative mt-auto flex items-center gap-2 rounded-xl border border-white/25 bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white">
         <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
         <span className="leading-tight">{expiring.length === 0 ? "No renewals in next 60 days" : `${expiring.length} renewal${expiring.length === 1 ? "" : "s"} in 60 days${soonest?.end_date ? ` · soonest ${soonest.end_date}` : ""}`}</span>
       </div>
