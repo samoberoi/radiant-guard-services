@@ -578,10 +578,10 @@ function StockLedgerPage() {
 
       {/* KPI band */}
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <KpiCard icon={<ArrowDownCircle className="h-4 w-4 text-emerald-600" />} label={mode === "value" ? "Stock In Value" : "Stock In"} value={mode === "value" ? fmtInr(totalDebitVal) : totalDebit} accent="emerald" />
-        <KpiCard icon={<ArrowUpCircle className="h-4 w-4 text-rose-600" />} label={mode === "value" ? "Stock Out Value" : "Stock Out"} value={mode === "value" ? fmtInr(totalCreditVal) : totalCredit} accent="rose" />
-        <KpiCard icon={<Scale className="h-4 w-4" />} label={mode === "value" ? "Net Value" : "Net Movement"} value={mode === "value" ? fmtInr(netVal) : net} accent={(mode === "value" ? netVal : net) >= 0 ? "emerald" : "rose"} />
-        <KpiCard icon={<BookOpenCheck className="h-4 w-4" />} label="Ledger Entries" value={rows.length} accent="slate" />
+        <KpiCard icon={<ArrowDownCircle className="h-4 w-4 text-white" />} label={mode === "value" ? "Stock In Value" : "Stock In"} value={mode === "value" ? fmtInr(totalDebitVal) : totalDebit} accent="emerald" />
+        <KpiCard icon={<ArrowUpCircle className="h-4 w-4 text-white" />} label={mode === "value" ? "Stock Out Value" : "Stock Out"} value={mode === "value" ? fmtInr(totalCreditVal) : totalCredit} accent="rose" />
+        <KpiCard icon={<Scale className="h-4 w-4 text-white" />} label={mode === "value" ? "Net Value" : "Net Movement"} value={mode === "value" ? fmtInr(netVal) : net} accent={(mode === "value" ? netVal : net) >= 0 ? "emerald" : "rose"} />
+        <KpiCard icon={<BookOpenCheck className="h-4 w-4 text-white" />} label="Ledger Entries" value={rows.length} accent="slate" />
       </div>
 
       {/* Controls */}
