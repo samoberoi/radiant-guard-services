@@ -17,7 +17,7 @@ function InventoryDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Inventory Command Center"
+        title="Uniform Command Center"
         description="End-to-end chain of custody from supplier → warehouse → branch → field officer → guard."
         crumbs={[{ label: "Uniform Manager" }]}
       />
