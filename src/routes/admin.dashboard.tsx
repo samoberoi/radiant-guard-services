@@ -507,7 +507,7 @@ function DashboardPage() {
 
   return (
     <div className="p-4 sm:p-6">
-      <DashboardShell>
+      <DashboardShell rightExtras={<PeopleInsightsSection />}>
       <PageHeader
         title="Dashboard"
         description="Live snapshot of everything you have access to — tiles, counts, and P&L for the selected cycle."
@@ -713,7 +713,6 @@ function DashboardPage() {
         </div>
       )}
 
-      <PeopleInsightsSection />
       </DashboardShell>
     </div>
   );
