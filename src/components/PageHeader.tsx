@@ -61,9 +61,8 @@ export function PageHeader({
         <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
           <div className="flex min-w-0 items-start gap-3.5">
             {Icon && (
-              <div className="relative mt-0.5 hidden shrink-0 sm:block">
-                <div className="absolute inset-0 -z-10 rounded-2xl bg-gradient-to-br from-accent/35 to-accent/0 blur-lg" />
-                <div className="grid h-11 w-11 place-items-center rounded-2xl border border-border/70 bg-gradient-to-br from-card to-accent/[0.10] text-accent shadow-[0_1px_0_0_rgba(255,255,255,0.9)_inset,0_8px_18px_-10px_color-mix(in_oklab,var(--accent)_40%,transparent)]">
+              <div className="mt-0.5 hidden shrink-0 sm:block">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-accent text-accent-foreground shadow-sm">
                   <Icon className="h-[18px] w-[18px]" />
                 </div>
               </div>
