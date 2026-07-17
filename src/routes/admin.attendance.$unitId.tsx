@@ -1747,7 +1747,7 @@ function MusterRollPage() {
         <div className="flex items-center gap-2">
           {(status === "draft" || status === "rejected") && (
             <Button size="sm" onClick={() => transitionSheet.mutate({ status: "submitted" })} disabled={transitionSheet.isPending}>
-              <Send className="mr-1.5 h-4 w-4" /> Submit for Payroll
+              <Send className="mr-1.5 h-4 w-4" /> Submit for Approval
             </Button>
           )}
           {status === "submitted" && canApprove && (
@@ -1763,10 +1763,35 @@ function MusterRollPage() {
           {status === "submitted" && !canApprove && (
             <span className="text-xs text-muted-foreground">Awaiting approver action</span>
           )}
-          {status === "approved" && canApprove && (
-            <Button size="sm" variant="outline" onClick={() => transitionSheet.mutate({ status: "draft" })} disabled={transitionSheet.isPending}>
-              <RotateCcw className="mr-1.5 h-4 w-4" /> Reopen
-            </Button>
+          {status === "approved" && canApprove && !sentToPayroll && (
+            <>
+              <Button
+                size="sm"
+                className="bg-primary hover:bg-primary/90"
+                onClick={() => sendToPayroll.mutate()}
+                disabled={sendToPayroll.isPending}
+              >
+                <Send className="mr-1.5 h-4 w-4" /> Send for Payroll &amp; Invoice
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => transitionSheet.mutate({ status: "draft" })} disabled={transitionSheet.isPending}>
+                <RotateCcw className="mr-1.5 h-4 w-4" /> Reopen
+              </Button>
+            </>
+          )}
+          {status === "approved" && canApprove && sentToPayroll && (
+            <>
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Sent for Payroll &amp; Invoice
+              </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => reopenAfterHandoff.mutate()}
+                disabled={reopenAfterHandoff.isPending || transitionSheet.isPending}
+              >
+                <RotateCcw className="mr-1.5 h-4 w-4" /> Reopen
+              </Button>
+            </>
           )}
         </div>
       </div>
