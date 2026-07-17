@@ -110,28 +110,40 @@ export function LiveFeed({ className }: { className?: string }) {
             )}
             <span
               className={cn(
-                "grid h-10 w-10 shrink-0 place-items-center rounded-xl ring-1 ring-inset",
+                "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
                 !featured.readAt
-                  ? "bg-accent text-accent-foreground ring-accent/30"
-                  : "bg-secondary text-muted-foreground ring-border",
+                  ? "bg-white/25 text-accent-foreground"
+                  : "bg-secondary text-muted-foreground ring-1 ring-inset ring-border",
               )}
             >
               <Bell className="h-4 w-4" />
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
-                <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-accent">
+                <div className={cn(
+                  "text-[10px] font-bold uppercase tracking-[0.18em]",
+                  !featured.readAt ? "text-accent-foreground/85" : "text-accent",
+                )}>
                   {featured.readAt ? "Latest" : "New"}
                 </div>
-                <div className="shrink-0 text-[10px] font-medium text-muted-foreground">
+                <div className={cn(
+                  "shrink-0 text-[10px] font-medium",
+                  !featured.readAt ? "text-accent-foreground/80" : "text-muted-foreground",
+                )}>
                   {formatDistanceToNow(new Date(featured.createdAt), { addSuffix: true })}
                 </div>
               </div>
-              <div className="mt-0.5 line-clamp-2 text-[13.5px] font-bold leading-snug text-foreground">
+              <div className={cn(
+                "mt-0.5 line-clamp-2 text-[13.5px] font-bold leading-snug",
+                !featured.readAt ? "text-accent-foreground" : "text-foreground",
+              )}>
                 {featured.title}
               </div>
               {featured.message && (
-                <div className="mt-1 line-clamp-2 text-[11.5px] leading-snug text-muted-foreground">
+                <div className={cn(
+                  "mt-1 line-clamp-2 text-[11.5px] leading-snug",
+                  !featured.readAt ? "text-accent-foreground/85" : "text-muted-foreground",
+                )}>
                   {featured.message}
                 </div>
               )}
