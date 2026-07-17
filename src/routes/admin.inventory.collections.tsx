@@ -253,10 +253,10 @@ function CollectionsPanel({ me }: { me: Candidate }) {
   return (
     <div>
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile icon={Warehouse} label="Units covered" value={unitIds.length} accent="from-cyan-500/20 to-cyan-500/5 text-cyan-600" />
-        <StatTile icon={ShieldCheck} label="Guards on duty" value={totalGuards} accent="from-emerald-500/20 to-emerald-500/5 text-emerald-600" />
-        <StatTile icon={PackageCheck} label="Guards with stock" value={guardsWithStock} accent="from-violet-500/20 to-violet-500/5 text-violet-600" />
-        <StatTile icon={Inbox} label="Total items at guards" value={balances.reduce((s, b) => s + Number(b.qty || 0), 0)} accent="from-amber-500/20 to-amber-500/5 text-amber-600" />
+        <StatTile icon={Warehouse} label="Units covered" value={unitIds.length} accent="bg-cyan-600" />
+        <StatTile icon={ShieldCheck} label="Guards on duty" value={totalGuards} accent="bg-emerald-600" />
+        <StatTile icon={PackageCheck} label="Guards with stock" value={guardsWithStock} accent="bg-violet-600" />
+        <StatTile icon={Inbox} label="Total items at guards" value={balances.reduce((s, b) => s + Number(b.qty || 0), 0)} accent="bg-amber-500" />
       </div>
 
       <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
