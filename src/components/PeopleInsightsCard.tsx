@@ -110,7 +110,7 @@ export function PeopleInsightsCard(props: Variant & { isLoading?: boolean }) {
                       )}
                     </div>
                     <div className="truncate text-[11px] text-muted-foreground">{secondary}</div>
-                    {isToday && kind !== "sixty-plus" && (
+                    {isToday && (kind === "birthdays" || kind === "anniversaries") && (
                       <div className="mt-0.5 truncate text-[11px] font-medium text-accent">
                         {kind === "birthdays"
                           ? `🎂 Happy birthday, ${item.full_name.split(" ")[0]}!`
