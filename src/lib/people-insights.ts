@@ -85,7 +85,7 @@ export function usePeopleInsights() {
   const q = useQuery({
     queryKey: [
       "people-insights",
-      { canAll, isBranchManager, isFieldOfficer, foUnits: Array.from(foScope.unitIds), branches: branchScope.branchIds },
+      { canAll, isBranchManager, isFieldOfficer, foUnits: Array.from(foScope.unitIds), branch: branchScope.branchId },
     ],
     enabled,
     staleTime: 5 * 60_000,
@@ -102,12 +102,12 @@ export function usePeopleInsights() {
           if (ids.length === 0) return { rows: [] as Row[], unitNameById: new Map<string, string>(), desigNameById: new Map<string, string>() };
           query = query.in("unit_id", ids);
         } else if (isBranchManager) {
-          const branchIds = branchScope.branchIds;
-          if (!branchIds.length) return { rows: [] as Row[], unitNameById: new Map<string, string>(), desigNameById: new Map<string, string>() };
+          const branchId = branchScope.branchId;
+          if (!branchId) return { rows: [] as Row[], unitNameById: new Map<string, string>(), desigNameById: new Map<string, string>() };
           const { data: unitsInBranch } = await supabase
             .from("units")
             .select("id")
-            .in("branch_id", branchIds);
+            .eq("branch_id", branchId);
           const uIds = ((unitsInBranch as unknown) as Array<{ id: string }> ?? []).map((u) => u.id);
           if (!uIds.length) return { rows: [] as Row[], unitNameById: new Map<string, string>(), desigNameById: new Map<string, string>() };
           query = query.in("unit_id", uIds);
