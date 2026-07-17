@@ -105,9 +105,6 @@ export function LiveFeed({ className }: { className?: string }) {
                 : "border-border/60 bg-card hover:bg-secondary/40",
             )}
           >
-            {!featured.readAt && (
-              <span className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r bg-accent" />
-            )}
             <span
               className={cn(
                 "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
