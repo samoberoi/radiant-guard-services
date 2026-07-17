@@ -270,7 +270,7 @@ function FieldOfficerDashboard() {
   const totalItems = data?.inventoryItemsTotal ?? 0;
 
   return (
-    <DashboardShell>
+    <DashboardShell rightExtras={<FoPeopleInsights />}>
       {/* Page title (mirrors "My Activity") */}
       <div className="flex items-end justify-between gap-4">
         <h1 className="font-display text-2xl font-bold tracking-tight text-foreground sm:text-2xl">
@@ -403,7 +403,6 @@ function FieldOfficerDashboard() {
         </div>
       </section>
 
-      <FoPeopleInsights />
     </DashboardShell>
   );
 }
@@ -411,7 +410,7 @@ function FieldOfficerDashboard() {
 function FoPeopleInsights() {
   const { isLoading, birthdays, anniversaries } = usePeopleInsights();
   return (
-    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div className="flex flex-col gap-4">
       <PeopleInsightsCard kind="birthdays" items={birthdays} isLoading={isLoading} />
       <PeopleInsightsCard kind="anniversaries" items={anniversaries} isLoading={isLoading} />
     </div>

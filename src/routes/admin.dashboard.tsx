@@ -35,7 +35,7 @@ import { usePeopleInsights } from "@/lib/people-insights";
 function PeopleInsightsSection() {
   const { isLoading, showSixtyPlus, birthdays, anniversaries, sixtyPlus } = usePeopleInsights();
   return (
-    <div className={`grid grid-cols-1 gap-4 md:grid-cols-2 ${showSixtyPlus ? "xl:grid-cols-3" : ""}`}>
+    <div className="flex flex-col gap-4">
       <PeopleInsightsCard kind="birthdays" items={birthdays} isLoading={isLoading} />
       <PeopleInsightsCard kind="anniversaries" items={anniversaries} isLoading={isLoading} />
       {showSixtyPlus && (
@@ -507,7 +507,7 @@ function DashboardPage() {
 
   return (
     <div className="p-4 sm:p-6">
-      <DashboardShell>
+      <DashboardShell rightExtras={<PeopleInsightsSection />}>
       <PageHeader
         title="Dashboard"
         description="Live snapshot of everything you have access to — tiles, counts, and P&L for the selected cycle."
@@ -713,7 +713,6 @@ function DashboardPage() {
         </div>
       )}
 
-      <PeopleInsightsSection />
       </DashboardShell>
     </div>
   );
