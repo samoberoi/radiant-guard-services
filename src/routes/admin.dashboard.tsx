@@ -505,9 +505,95 @@ function DashboardPage() {
     );
   }
 
+  const pnlBlock = showPnL ? (
+    <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-[0_1px_2px_rgba(10,10,10,0.03),0_20px_50px_-30px_rgba(10,20,40,0.15)]">
+      <div className="flex flex-col gap-3 border-b border-border/50 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="max-w-2xl space-y-1">
+          <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">P&amp;L — {MONTH_NAMES[month]} {year}</h2>
+          <p className="text-[13px] leading-relaxed text-muted-foreground">Invoice &amp; payroll are computed from attendance. Contract value is the full-month projection. Variance = invoice − payroll cost.</p>
+        </div>
+        {data && (
+          <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[13px] sm:grid-cols-4 lg:flex lg:flex-row lg:items-center lg:gap-6">
+            <div className="flex items-center justify-between gap-3 whitespace-nowrap"><span className="text-muted-foreground">Contract</span><span className="num font-semibold">{fmtINR(data.pnlTotals.contract)}</span></div>
+            <div className="flex items-center justify-between gap-3 whitespace-nowrap"><span className="text-muted-foreground">Invoice</span><span className="num font-semibold">{fmtINR(data.pnlTotals.invoice)}</span></div>
+            <div className="flex items-center justify-between gap-3 whitespace-nowrap"><span className="text-muted-foreground">Payroll</span><span className="num font-semibold">{fmtINR(data.pnlTotals.payroll)}</span></div>
+            <div className="flex items-center justify-between gap-3 whitespace-nowrap">
+              <span className="text-muted-foreground">Variance</span>
+              <span className={`num font-semibold ${(data.pnlTotals.invoice - data.pnlTotals.payroll) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{fmtINR(data.pnlTotals.invoice - data.pnlTotals.payroll)}</span>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="overflow-x-auto">
+        <table className="ios-table w-full min-w-[1040px]">
+          <colgroup>
+            <col className="w-[22%]" />
+            <col className="w-[20%]" />
+            <col className="w-[12%]" />
+            <col className="w-[12%]" />
+            <col className="w-[12%]" />
+            <col className="w-[16%]" />
+            <col className="w-[64px]" />
+          </colgroup>
+          <thead>
+            <tr>
+              <th className="text-left">Unit</th>
+              <th className="text-left">Organization</th>
+              <th className="text-right">Contract</th>
+              <th className="text-right">Invoice</th>
+              <th className="text-right">Payroll</th>
+              <th className="text-right">Variance</th>
+              <th className="text-right" aria-label="Action" />
+            </tr>
+          </thead>
+          <tbody>
+            {(data?.pnlRows ?? []).length === 0 ? (
+              <tr><td colSpan={7} className="px-5 py-16 text-center text-sm text-muted-foreground">No active contracts for this period.</td></tr>
+            ) : (
+              (data?.pnlRows ?? []).map((r) => {
+                const pos = r.variance >= 0;
+                return (
+                  <tr key={r.unit_id} className="group">
+                    <td>
+                      <div className="text-[14px] font-semibold leading-tight text-foreground">{r.unit_name || r.unit_code}</div>
+                      <div className="mt-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">{r.unit_code}</div>
+                    </td>
+                    <td className="text-[13px] text-muted-foreground">{r.customer_name}</td>
+                    <td className="num text-right text-muted-foreground">{fmtINR(r.contract_value)}</td>
+                    <td className="num text-right text-foreground">{fmtINR(r.invoice_amount)}</td>
+                    <td className="num text-right text-foreground">{fmtINR(r.payroll_cost)}</td>
+                    <td className="text-right">
+                      <span className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-semibold num ring-1 ring-inset ${pos ? "bg-emerald-50 text-emerald-700 ring-emerald-200/70" : "bg-rose-50 text-rose-700 ring-rose-200/70"}`}>
+                        {pos ? <TrendingUp className="h-3 w-3 shrink-0" /> : <TrendingDown className="h-3 w-3 shrink-0" />}
+                        <span>{fmtINR(r.variance)}</span>
+                        <span className="opacity-60">({r.variance_pct.toFixed(1)}%)</span>
+                      </span>
+                    </td>
+                    <td className="text-right">
+                      <Link
+                        to="/admin/payroll/$unitId"
+                        params={{ unitId: r.unit_id }}
+                        search={{ start: monthStart, end: monthEnd }}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition group-hover:bg-accent/10 group-hover:text-accent hover:scale-105"
+                        aria-label="Open unit"
+                      >
+                        <ArrowRight className="h-4 w-4" />
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="p-4 sm:p-6">
-      <DashboardShell rightExtras={<PeopleInsightsSection />}>
+      <DashboardShell rightExtras={<PeopleInsightsSection />} fullWidthBelow={pnlBlock}>
+
       <PageHeader
         title="Dashboard"
         description="Live snapshot of everything you have access to — tiles, counts, and P&L for the selected cycle."
@@ -627,91 +713,8 @@ function DashboardPage() {
         );
       })()}
 
-      {/* P&L */}
-      {showPnL && (
-        <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-[0_1px_2px_rgba(10,10,10,0.03),0_20px_50px_-30px_rgba(10,20,40,0.15)]">
-          <div className="flex flex-col gap-3 border-b border-border/50 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-2xl space-y-1">
-              <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">P&amp;L — {MONTH_NAMES[month]} {year}</h2>
-              <p className="text-[13px] leading-relaxed text-muted-foreground">Invoice &amp; payroll are computed from attendance. Contract value is the full-month projection. Variance = invoice − payroll cost.</p>
-            </div>
-            {data && (
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-[13px] sm:grid-cols-4 lg:flex lg:flex-col lg:items-end lg:gap-1">
-                <div className="flex items-center justify-between gap-3 whitespace-nowrap lg:gap-4"><span className="text-muted-foreground">Contract</span><span className="num font-semibold">{fmtINR(data.pnlTotals.contract)}</span></div>
-                <div className="flex items-center justify-between gap-3 whitespace-nowrap lg:gap-4"><span className="text-muted-foreground">Invoice</span><span className="num font-semibold">{fmtINR(data.pnlTotals.invoice)}</span></div>
-                <div className="flex items-center justify-between gap-3 whitespace-nowrap lg:gap-4"><span className="text-muted-foreground">Payroll</span><span className="num font-semibold">{fmtINR(data.pnlTotals.payroll)}</span></div>
-                <div className="flex items-center justify-between gap-3 whitespace-nowrap lg:gap-4">
-                  <span className="text-muted-foreground">Variance</span>
-                  <span className={`num font-semibold ${(data.pnlTotals.invoice - data.pnlTotals.payroll) >= 0 ? "text-emerald-600" : "text-rose-600"}`}>{fmtINR(data.pnlTotals.invoice - data.pnlTotals.payroll)}</span>
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="overflow-x-auto">
-            <table className="ios-table min-w-[1040px]">
-              <colgroup>
-                <col className="w-[22%]" />
-                <col className="w-[20%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
-                <col className="w-[11%]" />
-                <col className="w-[180px]" />
-                <col className="w-[64px]" />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th className="text-left">Unit</th>
-                  <th className="text-left">Organization</th>
-                  <th className="text-right">Contract</th>
-                  <th className="text-right">Invoice</th>
-                  <th className="text-right">Payroll</th>
-                  <th className="text-right">Variance</th>
-                  <th className="text-right" aria-label="Action" />
-                </tr>
-              </thead>
-              <tbody>
-                {(data?.pnlRows ?? []).length === 0 ? (
-                  <tr><td colSpan={7} className="px-5 py-16 text-center text-sm text-muted-foreground">No active contracts for this period.</td></tr>
-                ) : (
-                  (data?.pnlRows ?? []).map((r) => {
-                    const pos = r.variance >= 0;
-                    return (
-                      <tr key={r.unit_id} className="group">
-                        <td>
-                          <div className="text-[14px] font-semibold leading-tight text-foreground">{r.unit_name || r.unit_code}</div>
-                          <div className="mt-0.5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/70">{r.unit_code}</div>
-                        </td>
-                        <td className="text-[13px] text-muted-foreground">{r.customer_name}</td>
-                        <td className="num text-right text-muted-foreground">{fmtINR(r.contract_value)}</td>
-                        <td className="num text-right text-foreground">{fmtINR(r.invoice_amount)}</td>
-                        <td className="num text-right text-foreground">{fmtINR(r.payroll_cost)}</td>
-                        <td className="text-right">
-                          <span className={`inline-flex w-full max-w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-1 text-[12px] font-semibold num ring-1 ring-inset ${pos ? "bg-emerald-50 text-emerald-700 ring-emerald-200/70" : "bg-rose-50 text-rose-700 ring-rose-200/70"}`}>
-                            {pos ? <TrendingUp className="h-3 w-3 shrink-0" /> : <TrendingDown className="h-3 w-3 shrink-0" />}
-                            <span>{fmtINR(r.variance)}</span>
-                            <span className="opacity-60">({r.variance_pct.toFixed(1)}%)</span>
-                          </span>
-                        </td>
-                        <td className="text-right">
-                          <Link
-                            to="/admin/payroll/$unitId"
-                            params={{ unitId: r.unit_id }}
-                            search={{ start: monthStart, end: monthEnd }}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition group-hover:bg-accent/10 group-hover:text-accent hover:scale-105"
-                            aria-label="Open unit"
-                          >
-                            <ArrowRight className="h-4 w-4" />
-                          </Link>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* P&L renders full-width below the shell via fullWidthBelow */}
+
 
       </DashboardShell>
     </div>
