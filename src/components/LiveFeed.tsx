@@ -99,10 +99,10 @@ export function LiveFeed({ className }: { className?: string }) {
             type="button"
             onClick={() => handleOpen(featured)}
             className={cn(
-              "group relative m-3 mb-2 flex items-start gap-3 rounded-2xl border border-border/60 p-3 text-left transition-all",
+              "group relative m-3 mb-2 flex items-start gap-3 rounded-2xl border p-3 text-left transition-all",
               !featured.readAt
-                ? "bg-gradient-to-br from-accent/[0.12] via-card/80 to-card/60 shadow-[0_8px_24px_-12px_color-mix(in_oklab,var(--accent)_45%,transparent)] hover:shadow-[0_12px_28px_-12px_color-mix(in_oklab,var(--accent)_55%,transparent)]"
-                : "bg-card/60 hover:bg-card",
+                ? "border-accent bg-accent text-accent-foreground shadow-md hover:shadow-lg"
+                : "border-border/60 bg-card hover:bg-secondary/40",
             )}
           >
             {!featured.readAt && (
