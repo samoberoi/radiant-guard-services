@@ -124,8 +124,8 @@ const officeAssetsChildren: LeafItem[] = [
 ];
 
 const inventoryChildren: LeafItem[] = [
-  { to: "/admin/inventory", label: "Inventory Command Center", icon: LayoutDashboard },
-  { to: "/admin/inventory/workflows", label: "Inventory Workflows", icon: Boxes },
+  { to: "/admin/inventory", label: "Uniform Command Center", icon: LayoutDashboard },
+  { to: "/admin/inventory/workflows", label: "Uniform Workflows", icon: Boxes },
   { to: "/admin/inventory/items", label: "Products", icon: PackageOpen, sub: "item_master" },
   { to: "/admin/inventory/vendors", label: "Vendors", icon: ShoppingBag, sub: "vendors" },
   { to: "/admin/inventory/warehouses", label: "Warehouses", icon: Warehouse, sub: "warehouses" },
@@ -139,7 +139,7 @@ const inventoryChildren: LeafItem[] = [
   { to: "/admin/inventory/stock", label: "Stock Report", icon: Wallet, sub: "stock_report" },
   { to: "/admin/inventory/stock-ledger", label: "Stock Ledger", icon: Banknote, sub: "stock_ledger" },
   { to: "/admin/inventory/rate-cards", label: "Vendor Rate Cards", icon: FileText, sub: "rate_cards" },
-  { to: "/admin/inventory/caps", label: "Inventory Cap", icon: Gauge, adminOnly: true },
+  { to: "/admin/inventory/caps", label: "Uniform Cap", icon: Gauge, adminOnly: true },
 ];
 
 
