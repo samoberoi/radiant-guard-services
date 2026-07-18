@@ -641,7 +641,7 @@ function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {isLoading ? (
           Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-40 animate-pulse rounded-[22px] border border-border/60 bg-card" />
+            <div key={i} className="h-[172px] animate-pulse rounded-2xl border border-border/60 bg-card" />
           ))
         ) : (
           tiles.map((t, i) => (
