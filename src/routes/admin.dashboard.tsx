@@ -600,39 +600,39 @@ function DashboardPage() {
         crumbs={[{ label: "Dashboard" }]}
       />
 
-      {/* Month hero — bold indigo, clean and aligned */}
-      <div className="relative overflow-hidden rounded-[28px] border border-indigo-700/40 bg-indigo-600 p-6 shadow-[0_20px_60px_-30px_rgba(49,46,129,0.55)] sm:p-8">
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-white/30" />
+      {/* Month hero — restrained slate panel */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-foreground/80" />
 
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-2.5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/90">
-              <Sparkles className="h-3.5 w-3.5" /> Leadership snapshot
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <Sparkles className="h-3 w-3" /> Leadership snapshot
             </div>
-            <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-              <span className="font-display text-3xl font-bold leading-none tracking-tight text-white sm:text-[32px]">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <span className="font-display text-2xl font-bold leading-none tracking-tight text-foreground sm:text-[26px]">
                 {MONTH_NAMES[month]} {year}
               </span>
               {isCurrent && (
-                <span className="inline-flex items-center rounded-full bg-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-700">
+                <span className="inline-flex items-center rounded-full bg-foreground px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-background">
                   Current
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/20 bg-white/10 p-1.5 backdrop-blur">
-            <button onClick={() => shift(-1)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-white/80 transition hover:bg-white/20 hover:text-white" aria-label="Previous"><ChevronLeft className="h-4 w-4" /></button>
+          <div className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/40 p-1">
+            <button onClick={() => shift(-1)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-background hover:text-foreground" aria-label="Previous"><ChevronLeft className="h-4 w-4" /></button>
             <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-              <SelectTrigger className="h-8 w-[130px] rounded-xl border-0 bg-transparent text-white shadow-none hover:bg-white/20 focus:ring-0 [&>svg]:text-white/70"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-[130px] rounded-lg border-0 bg-transparent shadow-none hover:bg-background focus:ring-0"><SelectValue /></SelectTrigger>
               <SelectContent>{MONTH_NAMES.map((m, i) => <SelectItem key={m} value={String(i)}>{m}</SelectItem>)}</SelectContent>
             </Select>
-            <div className="h-5 w-px bg-white/25" />
+            <div className="h-5 w-px bg-border" />
             <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-              <SelectTrigger className="h-8 w-[92px] rounded-xl border-0 bg-transparent text-white shadow-none hover:bg-white/20 focus:ring-0 [&>svg]:text-white/70"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-[92px] rounded-lg border-0 bg-transparent shadow-none hover:bg-background focus:ring-0"><SelectValue /></SelectTrigger>
               <SelectContent>{Array.from({ length: 7 }, (_, i) => now.getFullYear() - 3 + i).map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
             </Select>
-            <button onClick={() => shift(1)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-white/80 transition hover:bg-white/20 hover:text-white" aria-label="Next"><ChevronRight className="h-4 w-4" /></button>
+            <button onClick={() => shift(1)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-background hover:text-foreground" aria-label="Next"><ChevronRight className="h-4 w-4" /></button>
           </div>
         </div>
       </div>
