@@ -600,39 +600,39 @@ function DashboardPage() {
         crumbs={[{ label: "Dashboard" }]}
       />
 
-      {/* Month hero — bold indigo, clean and aligned */}
-      <div className="relative overflow-hidden rounded-[28px] border border-indigo-700/40 bg-indigo-600 p-6 shadow-[0_20px_60px_-30px_rgba(49,46,129,0.55)] sm:p-8">
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-white/30" />
+      {/* Month hero — restrained slate panel */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-foreground/80" />
 
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-2.5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/90">
-              <Sparkles className="h-3.5 w-3.5" /> Leadership snapshot
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <Sparkles className="h-3 w-3" /> Leadership snapshot
             </div>
-            <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-              <span className="font-display text-3xl font-bold leading-none tracking-tight text-white sm:text-[32px]">
+            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <span className="font-display text-2xl font-bold leading-none tracking-tight text-foreground sm:text-[26px]">
                 {MONTH_NAMES[month]} {year}
               </span>
               {isCurrent && (
-                <span className="inline-flex items-center rounded-full bg-white px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-indigo-700">
+                <span className="inline-flex items-center rounded-full bg-foreground px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-background">
                   Current
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-white/20 bg-white/10 p-1.5 backdrop-blur">
-            <button onClick={() => shift(-1)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-white/80 transition hover:bg-white/20 hover:text-white" aria-label="Previous"><ChevronLeft className="h-4 w-4" /></button>
+          <div className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/40 p-1">
+            <button onClick={() => shift(-1)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-background hover:text-foreground" aria-label="Previous"><ChevronLeft className="h-4 w-4" /></button>
             <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-              <SelectTrigger className="h-8 w-[130px] rounded-xl border-0 bg-transparent text-white shadow-none hover:bg-white/20 focus:ring-0 [&>svg]:text-white/70"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-[130px] rounded-lg border-0 bg-transparent shadow-none hover:bg-background focus:ring-0"><SelectValue /></SelectTrigger>
               <SelectContent>{MONTH_NAMES.map((m, i) => <SelectItem key={m} value={String(i)}>{m}</SelectItem>)}</SelectContent>
             </Select>
-            <div className="h-5 w-px bg-white/25" />
+            <div className="h-5 w-px bg-border" />
             <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-              <SelectTrigger className="h-8 w-[92px] rounded-xl border-0 bg-transparent text-white shadow-none hover:bg-white/20 focus:ring-0 [&>svg]:text-white/70"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-[92px] rounded-lg border-0 bg-transparent shadow-none hover:bg-background focus:ring-0"><SelectValue /></SelectTrigger>
               <SelectContent>{Array.from({ length: 7 }, (_, i) => now.getFullYear() - 3 + i).map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
             </Select>
-            <button onClick={() => shift(1)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-white/80 transition hover:bg-white/20 hover:text-white" aria-label="Next"><ChevronRight className="h-4 w-4" /></button>
+            <button onClick={() => shift(1)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-background hover:text-foreground" aria-label="Next"><ChevronRight className="h-4 w-4" /></button>
           </div>
         </div>
       </div>
@@ -641,7 +641,7 @@ function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {isLoading ? (
           Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="h-40 animate-pulse rounded-[22px] border border-border/60 bg-card" />
+            <div key={i} className="h-[172px] animate-pulse rounded-2xl border border-border/60 bg-card" />
           ))
         ) : (
           tiles.map((t, i) => (
@@ -720,58 +720,63 @@ function DashboardPage() {
   );
 }
 
-/* -------------------- Tiles — vivid, bold, high contrast -------------------- */
+/* -------------------- Tiles — neutral card with subtle accent -------------------- */
 
 type Accent = "rose" | "cyan" | "lime" | "violet" | "amber" | "emerald" | "sky" | "indigo";
 
-const ACCENT_BG: Record<Accent, string> = {
-  rose: "bg-rose-600 border-rose-700/40",
-  cyan: "bg-cyan-600 border-cyan-700/40",
-  lime: "bg-lime-600 border-lime-700/40",
-  violet: "bg-violet-600 border-violet-700/40",
-  amber: "bg-amber-500 border-amber-600/40",
-  emerald: "bg-emerald-600 border-emerald-700/40",
-  sky: "bg-sky-600 border-sky-700/40",
-  indigo: "bg-indigo-600 border-indigo-700/40",
+const ACCENT_CHIP: Record<Accent, string> = {
+  rose: "bg-rose-50 text-rose-700 ring-rose-200/70 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-400/20",
+  cyan: "bg-cyan-50 text-cyan-700 ring-cyan-200/70 dark:bg-cyan-500/10 dark:text-cyan-300 dark:ring-cyan-400/20",
+  lime: "bg-lime-50 text-lime-700 ring-lime-200/70 dark:bg-lime-500/10 dark:text-lime-300 dark:ring-lime-400/20",
+  violet: "bg-violet-50 text-violet-700 ring-violet-200/70 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-400/20",
+  amber: "bg-amber-50 text-amber-700 ring-amber-200/70 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/20",
+  emerald: "bg-emerald-50 text-emerald-700 ring-emerald-200/70 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/20",
+  sky: "bg-sky-50 text-sky-700 ring-sky-200/70 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/20",
+  indigo: "bg-indigo-50 text-indigo-700 ring-indigo-200/70 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-400/20",
+};
+
+const ACCENT_BAR: Record<Accent, string> = {
+  rose: "bg-rose-500", cyan: "bg-cyan-500", lime: "bg-lime-500", violet: "bg-violet-500",
+  amber: "bg-amber-500", emerald: "bg-emerald-500", sky: "bg-sky-500", indigo: "bg-indigo-500",
 };
 
 function Shell({ children, to, accent = "indigo" }: { children: React.ReactNode; to: string; accent?: Accent }) {
   return (
     <Link
       to={to}
-      className={`group relative flex min-h-[168px] flex-col overflow-hidden rounded-[22px] border p-5 text-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.35)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_50px_-24px_rgba(15,23,42,0.45)] ${ACCENT_BG[accent]}`}
+      className="group relative flex h-[172px] flex-col overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md"
     >
-      <div className="pointer-events-none absolute -right-14 -top-14 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
+      <div className={`pointer-events-none absolute inset-y-0 left-0 w-0.5 ${ACCENT_BAR[accent]}`} />
       {children}
     </Link>
   );
 }
 
-function TileHeader({ Icon }: { Icon: React.ComponentType<{ className?: string }> }) {
+function TileHeader({ Icon, accent }: { Icon: React.ComponentType<{ className?: string }>; accent: Accent }) {
   return (
     <div className="relative flex items-center justify-between">
-      <div className="grid h-10 w-10 place-items-center rounded-xl bg-white/20 text-white ring-1 ring-inset ring-white/25">
-        <Icon className="h-[18px] w-[18px]" />
+      <div className={`grid h-9 w-9 place-items-center rounded-lg ring-1 ring-inset ${ACCENT_CHIP[accent]}`}>
+        <Icon className="h-[17px] w-[17px]" />
       </div>
-      <ArrowRight className="h-4 w-4 -translate-x-1 text-white/60 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:text-white group-hover:opacity-100" />
+      <ArrowRight className="h-4 w-4 -translate-x-1 text-muted-foreground/50 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:text-foreground group-hover:opacity-100" />
     </div>
   );
 }
 
 function TileLabel({ children }: { children: React.ReactNode }) {
-  return <div className="relative mt-4 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/80">{children}</div>;
+  return <div className="relative mt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{children}</div>;
 }
 
 function MetricTile({ icon, label, value, to, accent = "indigo" }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent?: Accent; to: string }) {
   const display = useCountUp(value);
   return (
     <Shell to={to} accent={accent}>
-      <TileHeader Icon={icon} />
+      <TileHeader Icon={icon} accent={accent} />
       <TileLabel>{label}</TileLabel>
-      <div className="relative mt-1 font-display text-[38px] font-bold leading-none tabular-nums tracking-tight text-white">
+      <div className="relative mt-1 font-display text-[30px] font-bold leading-none tabular-nums tracking-tight text-foreground">
         {display}
       </div>
-      <div className="relative mt-auto pt-3 text-xs font-semibold text-white/85">Open →</div>
+      <div className="relative mt-auto pt-3 text-[11px] font-semibold text-muted-foreground">Open →</div>
     </Shell>
   );
 }
@@ -785,14 +790,14 @@ function DualTile({ icon, label, primary, primaryLabel, secondary, secondaryLabe
   const display = useCountUp(primary);
   return (
     <Shell to={to} accent={accent}>
-      <TileHeader Icon={icon} />
+      <TileHeader Icon={icon} accent={accent} />
       <TileLabel>{label}</TileLabel>
-      <div className="relative mt-1 font-display text-[32px] font-bold leading-none tabular-nums tracking-tight text-white">{display}</div>
-      <div className="relative mt-1 text-[10px] uppercase tracking-[0.15em] text-white/75">{primaryLabel}</div>
-      <div className="relative mt-auto flex items-center justify-between border-t border-white/20 pt-3">
-        <span className="text-[10px] uppercase tracking-[0.15em] text-white/75">{secondaryLabel}</span>
-        <span className="flex items-center gap-1 font-display text-sm font-semibold tabular-nums text-white">
-          <Fuel className="h-3.5 w-3.5 text-white/80" />{secondary}
+      <div className="relative mt-1 font-display text-[26px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
+      <div className="relative mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{primaryLabel}</div>
+      <div className="relative mt-auto flex items-center justify-between border-t border-border pt-2.5">
+        <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{secondaryLabel}</span>
+        <span className="flex items-center gap-1 font-display text-sm font-semibold tabular-nums text-foreground">
+          <Fuel className="h-3.5 w-3.5 text-muted-foreground" />{secondary}
         </span>
       </div>
     </Shell>
@@ -807,23 +812,23 @@ function StatusTile({ icon, label, approved, pending, draft, rejected, approvedL
   const total = Math.max(approved + pending + draft + rejected, 1);
   return (
     <Shell to={to} accent={accent}>
-      <TileHeader Icon={icon} />
+      <TileHeader Icon={icon} accent={accent} />
       <TileLabel>{label}</TileLabel>
       <div className="relative mt-1 grid grid-cols-2 gap-3">
         <div>
-          <div className="font-display text-2xl font-bold tabular-nums leading-none text-white">{approved}</div>
-          <div className="mt-1.5 text-[10px] uppercase tracking-[0.15em] text-white/75">{approvedLabel}</div>
+          <div className="font-display text-xl font-bold tabular-nums leading-none text-foreground">{approved}</div>
+          <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{approvedLabel}</div>
         </div>
         <div>
-          <div className="font-display text-2xl font-bold tabular-nums leading-none text-white">{pending}</div>
-          <div className="mt-1.5 text-[10px] uppercase tracking-[0.15em] text-white/75">{pendingLabel}</div>
+          <div className="font-display text-xl font-bold tabular-nums leading-none text-foreground">{pending}</div>
+          <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{pendingLabel}</div>
         </div>
       </div>
-      <div className="relative mt-auto flex h-1.5 overflow-hidden rounded-full bg-white/20">
-        {approved > 0 && <div className="bg-white" style={{ width: `${(approved / total) * 100}%` }} />}
-        {pending > 0 && <div className="bg-white/70" style={{ width: `${(pending / total) * 100}%` }} />}
-        {draft > 0 && <div className="bg-white/50" style={{ width: `${(draft / total) * 100}%` }} />}
-        {rejected > 0 && <div className="bg-white/30" style={{ width: `${(rejected / total) * 100}%` }} />}
+      <div className="relative mt-auto flex h-1.5 overflow-hidden rounded-full bg-muted">
+        {approved > 0 && <div className={ACCENT_BAR[accent]} style={{ width: `${(approved / total) * 100}%` }} />}
+        {pending > 0 && <div className="bg-muted-foreground/50" style={{ width: `${(pending / total) * 100}%` }} />}
+        {draft > 0 && <div className="bg-muted-foreground/30" style={{ width: `${(draft / total) * 100}%` }} />}
+        {rejected > 0 && <div className="bg-rose-400/70" style={{ width: `${(rejected / total) * 100}%` }} />}
       </div>
     </Shell>
   );
@@ -834,13 +839,13 @@ function ContractsTile({ active, expiring }: { active: number; expiring: Array<{
   const display = useCountUp(active);
   return (
     <Shell to="/admin/contracts/client-contracts" accent="amber">
-      <TileHeader Icon={Files} />
+      <TileHeader Icon={Files} accent="amber" />
       <TileLabel>Contracts</TileLabel>
-      <div className="relative mt-1 font-display text-[38px] font-bold leading-none tabular-nums tracking-tight text-white">{display}</div>
-      <div className="relative mt-1 text-[10px] uppercase tracking-[0.15em] text-white/75">Active</div>
-      <div className="relative mt-auto flex items-center gap-2 rounded-xl border border-white/25 bg-white/15 px-3 py-1.5 text-[11px] font-semibold text-white">
+      <div className="relative mt-1 font-display text-[30px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
+      <div className="relative mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Active</div>
+      <div className="relative mt-auto flex items-center gap-2 rounded-lg border border-amber-200/70 bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-800 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-300">
         <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-        <span className="leading-tight">{expiring.length === 0 ? "No renewals in next 60 days" : `${expiring.length} renewal${expiring.length === 1 ? "" : "s"} in 60 days${soonest?.end_date ? ` · soonest ${soonest.end_date}` : ""}`}</span>
+        <span className="leading-tight line-clamp-2">{expiring.length === 0 ? "No renewals in next 60 days" : `${expiring.length} renewal${expiring.length === 1 ? "" : "s"} in 60 days${soonest?.end_date ? ` · soonest ${soonest.end_date}` : ""}`}</span>
       </div>
     </Shell>
   );
