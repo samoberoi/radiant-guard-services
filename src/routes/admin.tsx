@@ -23,6 +23,7 @@ import {
   Home,
   Inbox,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
   Car,
   CreditCard,
