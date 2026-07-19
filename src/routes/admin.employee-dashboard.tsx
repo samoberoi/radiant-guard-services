@@ -394,7 +394,10 @@ function EmployeeDashboard() {
           </ul>
         )}
       </section>
-    </DashboardShell>
+        </div>
+        <div className="space-y-4 lg:sticky lg:top-6 lg:h-fit">{rightRail}</div>
+      </div>
+    </div>
   );
 }
 
