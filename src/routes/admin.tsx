@@ -301,6 +301,25 @@ function AdminLayout() {
     if (!user) navigate({ to: "/login", replace: true });
   }, [user, isReady, navigate]);
 
+  // Offboarding gate: if a signed-in employee is deactivated, sign them out.
+  useEffect(() => {
+    if (!isReady || !user || isSuperAdmin) return;
+    let alive = true;
+    const check = async () => {
+      try {
+        const { data } = await supabase.rpc("is_current_employee_active" as never);
+        if (!alive) return;
+        if (data === false) {
+          toast.error("Your access has been disabled. Signing you out.");
+          logout();
+        }
+      } catch { /* ignore transient */ }
+    };
+    void check();
+    const t = setInterval(check, 60_000);
+    return () => { alive = false; clearInterval(t); };
+  }, [isReady, user, isSuperAdmin, logout]);
+
   // When the Supabase session finishes restoring (or the user signs in), drop
   // any cached empty results from queries that fired before auth was ready.
   const queryClient = useQueryClient();
