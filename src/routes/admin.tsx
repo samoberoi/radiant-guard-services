@@ -65,6 +65,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/lib/use-theme";
+import { toast } from "sonner";
 
 
 export const Route = createFileRoute("/admin")({
