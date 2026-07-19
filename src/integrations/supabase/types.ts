@@ -4504,6 +4504,7 @@ export type Database = {
         Args: { _id: string; p: Json }
         Returns: undefined
       }
+      can_phone_login: { Args: { _mobile: string }; Returns: boolean }
       candidate_branch_ids: {
         Args: { _candidate_id: string }
         Returns: string[]
@@ -4598,6 +4599,7 @@ export type Database = {
         Args: { _candidate_id: string }
         Returns: boolean
       }
+      is_current_employee_active: { Args: never; Returns: boolean }
       is_inv_location_in_current_user_scope: {
         Args: { _id: string; _type: string }
         Returns: boolean
