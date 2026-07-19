@@ -36,8 +36,8 @@ function Index() {
     if (isLoading) return;
 
     // Role-based dashboard landing
-    if (roleKey === "guard" && !isSuperAdmin) {
-      navigate({ to: "/admin/my-inventory", replace: true });
+    if ((roleKey === "guard" || roleKey === "security_guard") && !isSuperAdmin) {
+      navigate({ to: "/admin/employee-dashboard", replace: true });
       return;
     }
     if (roleKey === "field_officer" && !isSuperAdmin) {
