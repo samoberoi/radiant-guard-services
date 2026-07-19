@@ -228,77 +228,79 @@ function EmployeeDashboard() {
   const started = me.approved_at || me.created_at;
   const tenureYears = started ? yearsBetween(started, new Date()) : null;
 
-  return (
-    <DashboardShell
-      right={
-        <div className="space-y-4">
-          {/* Notifications */}
-          <section className="rounded-2xl border border-border bg-card p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm font-semibold"><Bell className="h-4 w-4 text-primary" /> Notifications</div>
-              <Link to="/admin/notifications" className="text-xs text-primary hover:underline">View all</Link>
-            </div>
-            {notifs.length === 0 ? (
-              <div className="py-6 text-center text-xs text-muted-foreground">Nothing new.</div>
-            ) : (
-              <ul className="space-y-2">
-                {notifs.map((n) => (
-                  <li key={n.id}>
-                    <Link
-                      to={n.link ?? "/admin/notifications"}
-                      className={`block rounded-xl border p-3 text-sm transition hover:bg-secondary/60 ${n.read_at ? "border-border" : "border-primary/40 bg-primary/5"}`}
-                    >
-                      <div className="font-medium">{n.title}</div>
-                      {n.body && <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.body}</div>}
-                      <div className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">{new Date(n.created_at).toLocaleString("en-IN")}</div>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          {/* Birthdays */}
-          <section className="rounded-2xl border border-border bg-card p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><Cake className="h-4 w-4 text-rose-600" /> Upcoming birthdays</div>
-            {birthdays.length === 0 ? (
-              <div className="py-4 text-center text-xs text-muted-foreground">No birthdays in the next 30 days.</div>
-            ) : (
-              <ul className="space-y-1.5">
-                {birthdays.map((b) => (
-                  <li key={b.id} className="flex items-center justify-between text-sm">
-                    <span className="truncate">{b.name}</span>
-                    <span className="ml-2 shrink-0 text-xs text-muted-foreground">{fmtDate(b.date)} · turns {b.turningAge}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          {/* Anniversaries */}
-          <section className="rounded-2xl border border-border bg-card p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4 text-amber-600" /> Work anniversaries</div>
-            {anniversaries.length === 0 ? (
-              <div className="py-4 text-center text-xs text-muted-foreground">No anniversaries in the next 30 days.</div>
-            ) : (
-              <ul className="space-y-1.5">
-                {anniversaries.map((a) => (
-                  <li key={a.id} className="flex items-center justify-between text-sm">
-                    <span className="truncate">{a.name}</span>
-                    <span className="ml-2 shrink-0 text-xs text-muted-foreground">{fmtDate(a.date)} · {a.years} yr</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
+  const rightRail = (
+    <div className="space-y-4">
+      {/* Notifications */}
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-semibold"><Bell className="h-4 w-4 text-primary" /> Notifications</div>
+          <Link to="/admin/notifications" className="text-xs text-primary hover:underline">View all</Link>
         </div>
-      }
-    >
+        {notifs.length === 0 ? (
+          <div className="py-6 text-center text-xs text-muted-foreground">Nothing new.</div>
+        ) : (
+          <ul className="space-y-2">
+            {notifs.map((n) => (
+              <li key={n.id}>
+                <Link
+                  to={n.link ?? "/admin/notifications"}
+                  className={`block rounded-xl border p-3 text-sm transition hover:bg-secondary/60 ${n.read_at ? "border-border" : "border-primary/40 bg-primary/5"}`}
+                >
+                  <div className="font-medium">{n.title}</div>
+                  {n.body && <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.body}</div>}
+                  <div className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">{new Date(n.created_at).toLocaleString("en-IN")}</div>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Birthdays */}
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><Cake className="h-4 w-4 text-rose-600" /> Upcoming birthdays</div>
+        {birthdays.length === 0 ? (
+          <div className="py-4 text-center text-xs text-muted-foreground">No birthdays in the next 30 days.</div>
+        ) : (
+          <ul className="space-y-1.5">
+            {birthdays.map((b) => (
+              <li key={b.id} className="flex items-center justify-between text-sm">
+                <span className="truncate">{b.name}</span>
+                <span className="ml-2 shrink-0 text-xs text-muted-foreground">{fmtDate(b.date)} · turns {b.turningAge}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Anniversaries */}
+      <section className="rounded-2xl border border-border bg-card p-4">
+        <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4 text-amber-600" /> Work anniversaries</div>
+        {anniversaries.length === 0 ? (
+          <div className="py-4 text-center text-xs text-muted-foreground">No anniversaries in the next 30 days.</div>
+        ) : (
+          <ul className="space-y-1.5">
+            {anniversaries.map((a) => (
+              <li key={a.id} className="flex items-center justify-between text-sm">
+                <span className="truncate">{a.name}</span>
+                <span className="ml-2 shrink-0 text-xs text-muted-foreground">{fmtDate(a.date)} · {a.years} yr</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+
+  return (
+    <div className="space-y-6">
       <PageHeader
         title={`Welcome back, ${me.full_name.split(" ")[0] || "there"}`}
         description={desig?.name ? `${desig.name}${unit?.name ? ` · ${unit.name}` : ""}` : "Your workspace"}
         crumbs={[{ label: "My Dashboard" }]}
       />
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0 space-y-6">
 
       {/* Profile card */}
       <section className="rounded-2xl border border-border bg-card p-5">
