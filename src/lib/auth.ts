@@ -103,6 +103,23 @@ async function authUserFromSession(): Promise<AuthUser | null> {
 }
 
 async function ensureSupabaseSession(phone: string) {
+  const digits = phone.replace(/\D/g, "").slice(-10);
+  const isSuperAdmin = digits === SUPER_ADMIN_PHONE;
+
+  // Preflight: only super-admins or active/approved & enabled employees may sign in.
+  if (!isSuperAdmin) {
+    const rpcRes = await withTimeout(
+      Promise.resolve(supabase.rpc("can_phone_login" as never, { _mobile: digits } as never)) as Promise<{ data: boolean | null; error: { message: string } | null }>,
+      "Verifying access is taking too long. Please try again.",
+    );
+    if (rpcRes.error) throw new Error(rpcRes.error.message);
+    if (!rpcRes.data) {
+      throw new Error(
+        "Access disabled. Your account is not active. Please contact your administrator.",
+      );
+    }
+  }
+
   const { email, password } = credsForPhone(phone);
   const signIn = await withTimeout(
     supabase.auth.signInWithPassword({ email, password }),

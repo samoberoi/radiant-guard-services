@@ -23,6 +23,7 @@ import {
   Home,
   Inbox,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
   Car,
   CreditCard,
@@ -64,6 +65,7 @@ import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTheme } from "@/lib/use-theme";
+import { toast } from "sonner";
 
 
 export const Route = createFileRoute("/admin")({
@@ -160,9 +162,10 @@ function AdminLayout() {
   const { user, logout, isReady } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { can, canSub, isLoading: permsLoading, isSuperAdmin, roleKey } = useCurrentPermissions();
+  const isGuardRole = !isSuperAdmin && (roleKey === "guard" || roleKey === "security_guard");
   const dashboardHref =
-    roleKey === "guard" && !isSuperAdmin
-      ? "/admin/my-inventory"
+    isGuardRole
+      ? "/admin/employee-dashboard"
       : roleKey === "field_officer" && !isSuperAdmin
         ? "/admin/field-dashboard"
         : "/admin/dashboard";
@@ -253,15 +256,16 @@ function AdminLayout() {
   };
   useEffect(() => {
     if (!isReady || permsLoading || !user) return;
-    // Guards have no module-based permissions; route them to their My Uniform page.
-    if (roleKey === "guard" && !isSuperAdmin) {
-      if (
-        pathname !== "/admin/my-inventory" &&
-        pathname !== "/admin/profile" &&
-        !pathname.startsWith("/admin/my-inventory/")
-      ) {
-        navigate({ to: "/admin/my-inventory", replace: true });
-      }
+    // Guards have no module-based permissions; restrict them to their personal pages.
+    if (isGuardRole) {
+      const allowed =
+        pathname === "/admin/employee-dashboard" ||
+        pathname === "/admin/my-inventory" ||
+        pathname === "/admin/profile" ||
+        pathname === "/admin/notifications" ||
+        pathname.startsWith("/admin/my-inventory/") ||
+        pathname.startsWith("/admin/notifications/");
+      if (!allowed) navigate({ to: "/admin/employee-dashboard", replace: true });
       return;
     }
     // Field officers must never land on the Inventory Command Center hub.
@@ -297,6 +301,25 @@ function AdminLayout() {
     if (!isReady) return;
     if (!user) navigate({ to: "/login", replace: true });
   }, [user, isReady, navigate]);
+
+  // Offboarding gate: if a signed-in employee is deactivated, sign them out.
+  useEffect(() => {
+    if (!isReady || !user || isSuperAdmin) return;
+    let alive = true;
+    const check = async () => {
+      try {
+        const { data } = await supabase.rpc("is_current_employee_active" as never);
+        if (!alive) return;
+        if (data === false) {
+          toast.error("Your access has been disabled. Signing you out.");
+          logout();
+        }
+      } catch { /* ignore transient */ }
+    };
+    void check();
+    const t = setInterval(check, 60_000);
+    return () => { alive = false; clearInterval(t); };
+  }, [isReady, user, isSuperAdmin, logout]);
 
   // When the Supabase session finishes restoring (or the user signs in), drop
   // any cached empty results from queries that fired before auth was ready.
@@ -370,9 +393,11 @@ function AdminLayout() {
     [isSuperAdmin, permsLoading, roleKey],
   );
 
-  const isGuard = !isSuperAdmin && roleKey === "guard";
+  const isGuard = isGuardRole;
   const guardGroups: GroupItem[] = useMemo(() => [
+    { key: "dashboard", label: "My Dashboard", icon: LayoutGrid, to: "/admin/employee-dashboard", activePrefixes: ["/admin/employee-dashboard"] },
     { key: "my-inventory", label: "My Uniform", icon: Boxes, to: "/admin/my-inventory", activePrefixes: ["/admin/my-inventory"] },
+    { key: "notifications", label: "Notifications", icon: Bell, to: "/admin/notifications", activePrefixes: ["/admin/notifications"] },
     { key: "profile", label: "My Profile", icon: Users, to: "/admin/profile", activePrefixes: ["/admin/profile"] },
   ], []);
   const isFieldOfficer = !isSuperAdmin && roleKey === "field_officer";
