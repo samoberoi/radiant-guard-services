@@ -14,7 +14,6 @@ import {
   Users,
 } from "lucide-react";
 
-import { DashboardShell } from "@/components/LiveFeed";
 import { PageHeader } from "@/components/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
