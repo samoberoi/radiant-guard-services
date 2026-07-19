@@ -1,6 +1,7 @@
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
-import { Bell, CheckCheck } from "lucide-react";
+import { Bell, CheckCheck, Volume2, VolumeX } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
   Popover,
@@ -14,6 +15,11 @@ import {
   markAllRead,
   markNotificationRead,
 } from "@/lib/notifications";
+import {
+  isNotificationSoundMuted,
+  playNotificationChime,
+  setNotificationSoundMuted,
+} from "@/lib/notification-sound";
 
 const NQK = ["notifications", "mine"] as const;
 
@@ -27,6 +33,26 @@ export function NotificationBell() {
   });
   const unread = items.filter((n) => !n.readAt).length;
   const top = items.slice(0, 8);
+
+  // Track seen notification IDs so we only chime on genuinely new arrivals.
+  const seenRef = useRef<Set<string> | null>(null);
+  const [muted, setMuted] = useState<boolean>(() => isNotificationSoundMuted());
+
+  useEffect(() => {
+    if (!items || items.length === 0) return;
+    const currentIds = items.map((n) => n.id);
+    if (seenRef.current === null) {
+      // First load — prime the set without chiming for historical notifications.
+      seenRef.current = new Set(currentIds);
+      return;
+    }
+    const seen = seenRef.current;
+    const newUnread = items.filter((n) => !n.readAt && !seen.has(n.id));
+    for (const id of currentIds) seen.add(id);
+    if (newUnread.length > 0) {
+      playNotificationChime();
+    }
+  }, [items]);
 
   return (
     <Popover>
@@ -47,18 +73,34 @@ export function NotificationBell() {
       <PopoverContent align="end" className="w-80 p-0">
         <div className="flex items-center justify-between border-b border-border px-3 py-2">
           <div className="text-sm font-semibold">Notifications</div>
-          <button
-            type="button"
-            disabled={unread === 0}
-            onClick={async () => {
-              await markAllRead();
-              qc.invalidateQueries({ queryKey: NQK });
-            }}
-            className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-accent disabled:opacity-50"
-          >
-            <CheckCheck className="h-3.5 w-3.5" />
-            Mark all read
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const next = !muted;
+                setNotificationSoundMuted(next);
+                setMuted(next);
+                if (!next) playNotificationChime();
+              }}
+              aria-label={muted ? "Unmute notification sound" : "Mute notification sound"}
+              title={muted ? "Sound off" : "Sound on"}
+              className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+            >
+              {muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+            </button>
+            <button
+              type="button"
+              disabled={unread === 0}
+              onClick={async () => {
+                await markAllRead();
+                qc.invalidateQueries({ queryKey: NQK });
+              }}
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-muted-foreground hover:text-accent disabled:opacity-50"
+            >
+              <CheckCheck className="h-3.5 w-3.5" />
+              Mark all read
+            </button>
+          </div>
         </div>
         <div className="max-h-80 overflow-y-auto">
           {top.length === 0 ? (
