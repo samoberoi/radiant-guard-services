@@ -108,12 +108,12 @@ async function ensureSupabaseSession(phone: string) {
 
   // Preflight: only super-admins or active/approved & enabled employees may sign in.
   if (!isSuperAdmin) {
-    const { data: allowed, error: rpcErr } = await withTimeout(
-      supabase.rpc("can_phone_login" as never, { _mobile: digits } as never),
+    const rpcRes = await withTimeout(
+      Promise.resolve(supabase.rpc("can_phone_login" as never, { _mobile: digits } as never)) as Promise<{ data: boolean | null; error: { message: string } | null }>,
       "Verifying access is taking too long. Please try again.",
     );
-    if (rpcErr) throw rpcErr;
-    if (!allowed) {
+    if (rpcRes.error) throw new Error(rpcRes.error.message);
+    if (!rpcRes.data) {
       throw new Error(
         "Access disabled. Your account is not active. Please contact your administrator.",
       );
