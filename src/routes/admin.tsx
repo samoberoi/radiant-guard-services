@@ -160,9 +160,10 @@ function AdminLayout() {
   const { user, logout, isReady } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { can, canSub, isLoading: permsLoading, isSuperAdmin, roleKey } = useCurrentPermissions();
+  const isGuardRole = !isSuperAdmin && (roleKey === "guard" || roleKey === "security_guard");
   const dashboardHref =
-    roleKey === "guard" && !isSuperAdmin
-      ? "/admin/my-inventory"
+    isGuardRole
+      ? "/admin/employee-dashboard"
       : roleKey === "field_officer" && !isSuperAdmin
         ? "/admin/field-dashboard"
         : "/admin/dashboard";
