@@ -372,9 +372,11 @@ function AdminLayout() {
     [isSuperAdmin, permsLoading, roleKey],
   );
 
-  const isGuard = !isSuperAdmin && roleKey === "guard";
+  const isGuard = isGuardRole;
   const guardGroups: GroupItem[] = useMemo(() => [
+    { key: "dashboard", label: "My Dashboard", icon: LayoutGrid, to: "/admin/employee-dashboard", activePrefixes: ["/admin/employee-dashboard"] },
     { key: "my-inventory", label: "My Uniform", icon: Boxes, to: "/admin/my-inventory", activePrefixes: ["/admin/my-inventory"] },
+    { key: "notifications", label: "Notifications", icon: Bell, to: "/admin/notifications", activePrefixes: ["/admin/notifications"] },
     { key: "profile", label: "My Profile", icon: Users, to: "/admin/profile", activePrefixes: ["/admin/profile"] },
   ], []);
   const isFieldOfficer = !isSuperAdmin && roleKey === "field_officer";
