@@ -254,15 +254,16 @@ function AdminLayout() {
   };
   useEffect(() => {
     if (!isReady || permsLoading || !user) return;
-    // Guards have no module-based permissions; route them to their My Uniform page.
-    if (roleKey === "guard" && !isSuperAdmin) {
-      if (
-        pathname !== "/admin/my-inventory" &&
-        pathname !== "/admin/profile" &&
-        !pathname.startsWith("/admin/my-inventory/")
-      ) {
-        navigate({ to: "/admin/my-inventory", replace: true });
-      }
+    // Guards have no module-based permissions; restrict them to their personal pages.
+    if (isGuardRole) {
+      const allowed =
+        pathname === "/admin/employee-dashboard" ||
+        pathname === "/admin/my-inventory" ||
+        pathname === "/admin/profile" ||
+        pathname === "/admin/notifications" ||
+        pathname.startsWith("/admin/my-inventory/") ||
+        pathname.startsWith("/admin/notifications/");
+      if (!allowed) navigate({ to: "/admin/employee-dashboard", replace: true });
       return;
     }
     // Field officers must never land on the Inventory Command Center hub.
