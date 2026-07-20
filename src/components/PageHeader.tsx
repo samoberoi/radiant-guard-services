@@ -54,7 +54,15 @@ export function PageHeader({
       </nav>
 
       <div className="relative overflow-hidden rounded-[28px] border border-border bg-card p-5 shadow-sm sm:p-6">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-90"
+          style={{
+            background:
+              "linear-gradient(120deg, color-mix(in oklab, var(--accent) 7%, transparent) 0%, transparent 45%), radial-gradient(ellipse 55% 90% at 100% 0%, color-mix(in oklab, var(--accent-secondary) 6%, transparent) 0%, transparent 60%)",
+          }}
+        />
         <div className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-accent" />
+
 
 
 
