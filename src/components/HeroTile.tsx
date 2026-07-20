@@ -41,6 +41,15 @@ export function HeroTile({
       )}
     >
       <div className="pointer-events-none absolute inset-y-0 left-0 w-1.5 bg-accent" />
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(120deg, color-mix(in oklab, var(--accent) 8%, transparent) 0%, transparent 48%), radial-gradient(ellipse 60% 90% at 100% 0%, color-mix(in oklab, var(--accent-secondary) 7%, transparent) 0%, transparent 62%)",
+        }}
+      />
+
+
 
 
 
