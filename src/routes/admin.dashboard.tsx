@@ -837,15 +837,22 @@ function StatusTile({ icon, label, approved, pending, draft, rejected, approvedL
 function ContractsTile({ active, expiring }: { active: number; expiring: Array<{ id: string; contract_code: string | null; end_date: string | null }> }) {
   const soonest = expiring[0];
   const display = useCountUp(active);
+  const hasExpiring = expiring.length > 0;
+  const alertText = hasExpiring
+    ? `${expiring.length} renewal${expiring.length === 1 ? "" : "s"} in 60d`
+    : "No renewals in 60d";
+  const alertTone = hasExpiring
+    ? "border-amber-200/70 bg-amber-50 text-amber-800 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-300"
+    : "border-emerald-200/70 bg-emerald-50 text-emerald-800 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300";
   return (
     <Shell to="/admin/contracts/client-contracts" accent="amber">
       <TileHeader Icon={Files} accent="amber" />
       <TileLabel>Contracts</TileLabel>
       <div className="relative mt-1 font-display text-[30px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
       <div className="relative mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Active</div>
-      <div className="relative mt-auto flex items-center gap-2 rounded-lg border border-amber-200/70 bg-amber-50 px-2.5 py-1.5 text-[11px] font-semibold text-amber-800 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-300">
-        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-        <span className="leading-tight line-clamp-2">{expiring.length === 0 ? "No renewals in next 60 days" : `${expiring.length} renewal${expiring.length === 1 ? "" : "s"} in 60 days${soonest?.end_date ? ` · soonest ${soonest.end_date}` : ""}`}</span>
+      <div className={`relative mt-auto flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-semibold ${alertTone}`}>
+        <AlertTriangle className="h-3 w-3 shrink-0" />
+        <span className="truncate leading-none" title={hasExpiring && soonest?.end_date ? `Soonest: ${soonest.end_date}` : alertText}>{alertText}</span>
       </div>
     </Shell>
   );
