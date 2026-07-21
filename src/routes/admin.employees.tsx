@@ -663,22 +663,43 @@ function EmployeesPage() {
   const offboardReasons = offboardReasonsQuery.data ?? [];
 
   const assetsQuery = useQuery({
-    queryKey: ["assets_lite"],
+    queryKey: ["assets_lite_available"],
     retry: false,
     refetchOnWindowFocus: false,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("assets" as never)
-        .select("id,name,category,enabled")
-        .eq("enabled", true)
-        .order("name", { ascending: true })
-        .limit(500);
-      if (error) throw error;
-      return ((data as unknown) as Array<{ id: string; name: string; category: string }>) ?? [];
+      const [assetsRes, balRes] = await Promise.all([
+        supabase
+          .from("assets" as never)
+          .select("id,name,category,enabled")
+          .eq("enabled", true)
+          .order("name", { ascending: true })
+          .limit(500),
+        supabase
+          .from("inv_stock_balances" as never)
+          .select("qty,inv_items:item_id(name,enabled)"),
+      ]);
+      if (assetsRes.error) throw assetsRes.error;
+      if (balRes.error) throw balRes.error;
+      const rows = ((assetsRes.data as unknown) as Array<{ id: string; name: string; category: string }>) ?? [];
+      const availByName = new Map<string, number>();
+      type BalRow = { qty: number | string; inv_items: { name: string; enabled: boolean } | null };
+      for (const b of ((balRes.data as unknown) as BalRow[]) ?? []) {
+        const it = b.inv_items;
+        if (!it || it.enabled === false) continue;
+        const key = (it.name ?? "").trim().toLowerCase();
+        if (!key) continue;
+        availByName.set(key, (availByName.get(key) ?? 0) + Number(b.qty ?? 0));
+      }
+      return rows.map((a) => ({
+        ...a,
+        available_qty: availByName.get((a.name ?? "").trim().toLowerCase()) ?? 0,
+      }));
     },
   });
   const assets = assetsQuery.data ?? [];
+
+
 
   // Filters
   const [filterRole, setFilterRole] = useState<string>("all");
@@ -3078,7 +3099,7 @@ function CandidateWizard({
   languagesList: LanguageLite[];
   esicBranches: EsicBranchLite[];
   offboardReasons?: { id: string; name: string }[];
-  assets?: { id: string; name: string; category: string }[];
+  assets?: { id: string; name: string; category: string; available_qty?: number }[];
   canReview?: boolean;
   isApproving?: boolean;
   onApprove?: () => void;
@@ -5362,7 +5383,7 @@ function AssetMultiPicker({
   sizes,
   onSizesChange,
 }: {
-  assets: { id: string; name: string; category: string }[];
+  assets: { id: string; name: string; category: string; available_qty?: number }[];
   value: string[];
   onChange: (ids: string[]) => void;
   sizes?: Record<string, string>;
@@ -5375,13 +5396,20 @@ function AssetMultiPicker({
   const selectedSet = useMemo(() => new Set(value), [value]);
   const selected = useMemo(() => assets.filter((a) => selectedSet.has(a.id)), [assets, selectedSet]);
 
+  // Only offer items that have inventory available; keep already-selected in list.
+  const pickable = useMemo(
+    () => assets.filter((a) => (a.available_qty ?? 0) > 0 || selectedSet.has(a.id)),
+    [assets, selectedSet],
+  );
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return assets;
-    return assets.filter((a) =>
+    if (!needle) return pickable;
+    return pickable.filter((a) =>
       [a.name, a.category].some((p) => (p ?? "").toLowerCase().includes(needle)),
     );
-  }, [query, assets]);
+  }, [query, pickable]);
+
 
   const grouped = useMemo(() => {
     const groups = new Map<string, typeof assets>();
@@ -5496,7 +5524,7 @@ function AssetMultiPicker({
             </div>
             <div className="max-h-[340px] overflow-y-auto p-2">
               {grouped.length === 0 ? (
-                <div className="px-2 py-6 text-center text-sm text-muted-foreground">No assets found.</div>
+                <div className="px-2 py-6 text-center text-sm text-muted-foreground">No matching assets available in inventory.</div>
               ) : (
                 <div className="space-y-3">
                   {grouped.map(([cat, list]) => (
@@ -5520,6 +5548,10 @@ function AssetMultiPicker({
                               <Check className={cn("h-4 w-4 shrink-0", checked ? "opacity-100" : "opacity-0")} />
                               <span className="flex-1 truncate">{a.name}</span>
                               <span className="text-[10px] text-muted-foreground">{a.category}</span>
+                              <span className="ml-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                                {a.available_qty ?? 0} in stock
+                              </span>
+
                             </button>
                           );
                         })}
