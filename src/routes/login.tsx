@@ -283,10 +283,7 @@ function LoginPage() {
                         </p>
                       ) : (
                         <p className="mt-3 text-center text-[13px] text-muted-foreground">
-                          Demo code:{" "}
-                          <span className="font-mono font-semibold text-foreground">
-                            {DEMO_OTP_HINT}
-                          </span>
+                          Enter the 6-digit code sent to your phone
                         </p>
                       )}
                     </div>
