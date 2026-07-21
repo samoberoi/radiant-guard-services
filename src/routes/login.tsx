@@ -105,12 +105,7 @@ function LoginPage() {
         src={loginBg.url}
         alt=""
         aria-hidden
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-50"
-      />
-      {/* Soft scrim to separate the busy background from the card */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/30 via-white/10 to-white/30"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-90"
       />
       {/* Ambient overlay — soft mesh + orbs */}
       <div
