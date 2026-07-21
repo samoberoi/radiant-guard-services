@@ -188,8 +188,11 @@ function CandidateDetailsPage() {
     setSaving(true);
     try {
       const payload = buildCandidatePayload(form);
-      const { error } = await supabase.from("candidates").update(payload).eq("id", id);
+      const { data: updated, error } = await supabase.from("candidates").update(payload).eq("id", id).select("id");
       if (error) throw error;
+      if (!updated || updated.length === 0) {
+        throw new Error("You do not have permission to edit this employee.");
+      }
       await logActivity({
         module: MODULE,
         action: "update",
