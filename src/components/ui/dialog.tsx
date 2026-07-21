@@ -233,7 +233,7 @@ const DialogContent = React.forwardRef<
           ref={handleRef}
           data-pristine={pristine ? "true" : "false"}
           className={cn(
-            "dialog-content-centered fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg gap-4 border border-border/60 bg-card text-card-foreground p-6 shadow-[0_24px_60px_-15px_rgba(15,23,42,0.25)] data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out sm:rounded-xl",
+            "dialog-content-centered fixed left-[50%] top-[50%] z-50 grid w-[calc(100vw-1.5rem)] max-w-lg max-h-[calc(100dvh-1.5rem)] overflow-y-auto overscroll-contain gap-4 rounded-2xl border border-border/60 bg-card text-card-foreground p-4 sm:p-6 shadow-[0_24px_60px_-15px_rgba(15,23,42,0.25)] data-[state=open]:animate-dialog-in data-[state=closed]:animate-dialog-out sm:rounded-xl",
             className,
           )}
           {...props}
