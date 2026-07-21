@@ -5524,7 +5524,7 @@ function AssetMultiPicker({
             </div>
             <div className="max-h-[340px] overflow-y-auto p-2">
               {grouped.length === 0 ? (
-                <div className="px-2 py-6 text-center text-sm text-muted-foreground">No assets found.</div>
+                <div className="px-2 py-6 text-center text-sm text-muted-foreground">No matching assets available in inventory.</div>
               ) : (
                 <div className="space-y-3">
                   {grouped.map(([cat, list]) => (
