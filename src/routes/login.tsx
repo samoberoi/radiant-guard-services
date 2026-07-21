@@ -105,7 +105,16 @@ function LoginPage() {
         src={loginBg.url}
         alt=""
         aria-hidden
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-90"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-95"
+      />
+      {/* Dark vignette so white/black text above the card remains readable */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 60% at 50% 35%, rgba(15,23,42,0.35) 0%, rgba(15,23,42,0.12) 45%, transparent 70%), linear-gradient(to bottom, rgba(15,23,42,0.45) 0%, transparent 35%, transparent 70%, rgba(15,23,42,0.35) 100%)",
+        }}
       />
       {/* Ambient overlay — soft mesh + orbs */}
       <div
@@ -130,7 +139,7 @@ function LoginPage() {
       {/* fine grid */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.25]"
+        className="pointer-events-none absolute inset-0 opacity-[0.18]"
         style={{
           backgroundImage:
             "linear-gradient(to right, color-mix(in oklab, var(--foreground) 5%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 5%, transparent) 1px, transparent 1px)",
@@ -149,21 +158,27 @@ function LoginPage() {
         <div className="w-full max-w-[440px]">
           {/* Brand */}
           <div className="mb-8 flex flex-col items-center gap-4 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-white shadow-[0_20px_50px_-15px_color-mix(in_oklab,var(--primary)_30%,transparent)] ring-1 ring-black/5">
+            <div className="grid h-20 w-20 place-items-center rounded-full bg-white shadow-[0_20px_50px_-15px_rgba(15,23,42,0.35)] ring-1 ring-white/30">
               <img src={logo} alt="Radiant" className="h-14 w-14 object-contain" />
             </div>
             <div>
-              <div className="font-display text-[17px] font-semibold tracking-tight text-foreground">
+              <div
+                className="font-display text-[18px] font-semibold tracking-tight text-white"
+                style={{ textShadow: "0 2px 10px rgba(15,23,42,0.35)" }}
+              >
                 Radiant Guard
               </div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              <div
+                className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/85"
+                style={{ textShadow: "0 1px 6px rgba(15,23,42,0.35)" }}
+              >
                 Services Pvt. Ltd.
               </div>
             </div>
           </div>
 
           {/* Glass card */}
-          <div className="relative overflow-hidden rounded-[28px] border border-white/70 bg-white/80 p-7 shadow-[0_30px_80px_-20px_color-mix(in_oklab,var(--primary)_30%,transparent)] backdrop-blur-2xl sm:p-9">
+          <div className="relative overflow-hidden rounded-[28px] border border-white/80 bg-white/[0.96] p-7 shadow-[0_30px_80px_-20px_rgba(15,23,42,0.35)] backdrop-blur-2xl sm:p-9">
             {/* inner highlight */}
             <div
               aria-hidden
@@ -324,11 +339,14 @@ function LoginPage() {
           </div>
 
           {/* Footer */}
-          <div className="mt-8 flex items-center justify-between px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div
+            className="mt-8 flex items-center justify-between px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85"
+            style={{ textShadow: "0 1px 6px rgba(15,23,42,0.35)" }}
+          >
             <span>Radiant Ops Portal</span>
             <span className="inline-flex items-center gap-1.5">
               Powered by
-              <span className="rounded-md border border-border bg-white/70 px-1.5 py-0.5 backdrop-blur">
+              <span className="rounded-md border border-white/30 bg-white/20 px-1.5 py-0.5 text-white backdrop-blur">
                 HyperRevamp
               </span>
             </span>
