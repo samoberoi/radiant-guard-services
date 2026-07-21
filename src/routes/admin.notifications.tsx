@@ -1,7 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, CheckCheck, Trash2 } from "lucide-react";
+import { Bell, CheckCheck, Trash2, ExternalLink, Eye } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,10 @@ import {
   listMyNotifications,
   markAllRead,
   markNotificationRead,
+  type Notification,
 } from "@/lib/notifications";
+import { shouldRedirect } from "@/lib/notification-routing";
+import { NotificationDetailDialog } from "@/components/NotificationDetailDialog";
 
 export const Route = createFileRoute("/admin/notifications")({
   component: NotificationCenter,
@@ -21,7 +24,9 @@ const NQK = ["notifications", "mine"] as const;
 
 function NotificationCenter() {
   const qc = useQueryClient();
+  const router = useRouter();
   const [filter, setFilter] = useState<"all" | "unread">("all");
+  const [detail, setDetail] = useState<Notification | null>(null);
   const { data: items = [] } = useQuery({
     queryKey: NQK,
     queryFn: listMyNotifications,
@@ -30,6 +35,13 @@ function NotificationCenter() {
 
   const filtered = filter === "unread" ? items.filter((n) => !n.readAt) : items;
   const unread = items.filter((n) => !n.readAt).length;
+
+  const openLink = (target: string) => {
+    if (!target) return;
+    if (target.startsWith("/")) router.history.push(target);
+    else if (typeof window !== "undefined") window.location.href = target;
+  };
+
 
   return (
     <div>
@@ -110,19 +122,26 @@ function NotificationCenter() {
                     </div>
                   )}
                   <div className="mt-2 flex items-center gap-2">
-                    {n.link && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs"
-                        onClick={() => {
-                          if (typeof window !== "undefined")
-                            window.location.href = n.link;
-                        }}
-                      >
-                        Open
-                      </Button>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={async () => {
+                        if (!n.readAt) {
+                          await markNotificationRead(n.id);
+                          qc.invalidateQueries({ queryKey: NQK });
+                        }
+                        if (shouldRedirect(n.type) && n.link) openLink(n.link);
+                        else setDetail(n);
+                      }}
+                    >
+                      {shouldRedirect(n.type) && n.link ? (
+                        <><ExternalLink className="mr-1 h-3.5 w-3.5" />Open</>
+                      ) : (
+                        <><Eye className="mr-1 h-3.5 w-3.5" />View</>
+                      )}
+                    </Button>
+
                     {!n.readAt && (
                       <Button
                         size="sm"
@@ -158,6 +177,13 @@ function NotificationCenter() {
           </ul>
         )}
       </div>
+      <NotificationDetailDialog
+        notification={detail}
+        open={detail !== null}
+        onOpenChange={(o) => { if (!o) setDetail(null); }}
+        onOpenLink={openLink}
+      />
     </div>
   );
 }
+

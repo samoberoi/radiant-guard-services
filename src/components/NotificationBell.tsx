@@ -14,12 +14,15 @@ import {
   listMyNotifications,
   markAllRead,
   markNotificationRead,
+  type Notification,
 } from "@/lib/notifications";
 import {
   isNotificationSoundMuted,
   playNotificationChime,
   setNotificationSoundMuted,
 } from "@/lib/notification-sound";
+import { shouldRedirect } from "@/lib/notification-routing";
+import { NotificationDetailDialog } from "@/components/NotificationDetailDialog";
 
 const NQK = ["notifications", "mine"] as const;
 
@@ -37,12 +40,12 @@ export function NotificationBell() {
   // Track seen notification IDs so we only chime on genuinely new arrivals.
   const seenRef = useRef<Set<string> | null>(null);
   const [muted, setMuted] = useState<boolean>(() => isNotificationSoundMuted());
+  const [detail, setDetail] = useState<Notification | null>(null);
 
   useEffect(() => {
     if (!items || items.length === 0) return;
     const currentIds = items.map((n) => n.id);
     if (seenRef.current === null) {
-      // First load — prime the set without chiming for historical notifications.
       seenRef.current = new Set(currentIds);
       return;
     }
@@ -53,6 +56,13 @@ export function NotificationBell() {
       playNotificationChime();
     }
   }, [items]);
+
+  const openLink = (target: string) => {
+    if (!target) return;
+    if (target.startsWith("/")) router.history.push(target);
+    else if (typeof window !== "undefined") window.location.href = target;
+  };
+
 
   return (
     <Popover>
@@ -117,13 +127,13 @@ export function NotificationBell() {
                     await markNotificationRead(n.id);
                     qc.invalidateQueries({ queryKey: NQK });
                   }
-                  const target = n.link && n.link.trim() ? n.link : "/admin/notifications";
-                  if (target.startsWith("/")) {
-                    router.history.push(target);
-                  } else if (typeof window !== "undefined") {
-                    window.location.href = target;
+                  if (shouldRedirect(n.type) && n.link && n.link.trim()) {
+                    openLink(n.link);
+                  } else {
+                    setDetail(n);
                   }
                 }}
+
                 className={cn(
                   "block w-full border-b border-border/60 px-3 py-2.5 text-left transition-colors hover:bg-secondary/50",
                   !n.readAt && "bg-accent/5",
@@ -155,6 +165,13 @@ export function NotificationBell() {
           </Button>
         </div>
       </PopoverContent>
+      <NotificationDetailDialog
+        notification={detail}
+        open={detail !== null}
+        onOpenChange={(o) => { if (!o) setDetail(null); }}
+        onOpenLink={openLink}
+      />
     </Popover>
   );
 }
+
