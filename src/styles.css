@@ -435,18 +435,22 @@
   /* Grid removed — kept as no-op so existing usages stay safe */
   .app-canvas-grid { background-image: none; }
 
-  /* Subtle gradient wash on every base card so surfaces have depth rather
-     than looking like flat cutouts. Applied via layered background so any
-     explicit bg-* utility on the same element still wins. */
+  /* Every base card gets a clean, consistent modern surface: crisp white in
+     light mode, subtle hairline border via component classes, and a soft
+     layered shadow so cards read as elevated without gradients. */
   .bg-card {
-    background-image: linear-gradient(180deg,
-      color-mix(in oklab, var(--accent) 3.5%, transparent) 0%,
-      transparent 55%);
+    background-image: none;
+    box-shadow:
+      0 1px 0 0 color-mix(in oklab, var(--foreground) 4%, transparent) inset,
+      0 1px 2px rgb(var(--surface-shadow) / 0.04),
+      0 12px 28px -18px rgb(var(--surface-shadow) / 0.18);
   }
   .dark .bg-card {
-    background-image: linear-gradient(180deg,
-      color-mix(in oklab, var(--accent) 8%, transparent) 0%,
-      transparent 55%);
+    background-image: none;
+    box-shadow:
+      0 1px 0 0 color-mix(in oklab, white 5%, transparent) inset,
+      0 1px 2px rgb(0 0 0 / 0.35),
+      0 18px 40px -22px rgb(0 0 0 / 0.55);
   }
 
   /* Soft tinted tile variants — pair with .tile. Adds a coloured wash + a
