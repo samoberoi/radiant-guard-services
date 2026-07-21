@@ -3145,7 +3145,8 @@ function CandidateWizard({
   const [scanning, setScanning] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [initialUnitIds, setInitialUnitIds] = useState<string[]>([]);
-  const isEditingEmployeeProfile = !!editing && isEmployeeStatus(editing.status);
+  const isEditingEmployeeProfile =
+    !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive");
 
   useEffect(() => {
     if (!open) return;
