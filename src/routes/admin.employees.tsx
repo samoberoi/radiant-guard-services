@@ -3099,7 +3099,7 @@ function CandidateWizard({
   languagesList: LanguageLite[];
   esicBranches: EsicBranchLite[];
   offboardReasons?: { id: string; name: string }[];
-  assets?: { id: string; name: string; category: string }[];
+  assets?: { id: string; name: string; category: string; available_qty?: number }[];
   canReview?: boolean;
   isApproving?: boolean;
   onApprove?: () => void;
