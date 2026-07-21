@@ -4452,18 +4452,17 @@ function CandidateWizard({
               Save Draft
             </Button>
             {(() => {
-              const isExistingEmployee = !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive");
-              const requiresCompletion = !isExistingEmployee;
-              const submitDisabled = submitting || savingDraft || !!uploading || scanning || (requiresCompletion && !profileComplete);
+              const isExistingEmployee = !!editing;
+              const submitDisabled = submitting || savingDraft || !!uploading || scanning;
               return (
                 <Button
                   onClick={submit}
                   disabled={submitDisabled}
-                  title={requiresCompletion && !profileComplete ? `Complete all ${completionTotal} required fields to submit (${completionPct}% done)` : undefined}
+                  title={!isExistingEmployee && !profileComplete ? `Tip: complete all ${completionTotal} required fields (${completionPct}% done)` : undefined}
                   className="bg-primary text-primary-foreground hover:bg-primary/90"
                 >
                   {submitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-                  {isExistingEmployee ? "Save Employee" : "Save & Send to Approval"}
+                  {isExistingEmployee ? "Save Changes" : "Save & Send to Approval"}
                 </Button>
               );
             })()}
