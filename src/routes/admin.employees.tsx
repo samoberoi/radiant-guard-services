@@ -663,22 +663,41 @@ function EmployeesPage() {
   const offboardReasons = offboardReasonsQuery.data ?? [];
 
   const assetsQuery = useQuery({
-    queryKey: ["assets_lite"],
+    queryKey: ["assets_lite_available"],
     retry: false,
     refetchOnWindowFocus: false,
     staleTime: 60_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("assets" as never)
-        .select("id,name,category,enabled")
-        .eq("enabled", true)
-        .order("name", { ascending: true })
-        .limit(500);
-      if (error) throw error;
-      return ((data as unknown) as Array<{ id: string; name: string; category: string }>) ?? [];
+      const [assetsRes, balRes] = await Promise.all([
+        supabase
+          .from("assets" as never)
+          .select("id,name,category,enabled")
+          .eq("enabled", true)
+          .order("name", { ascending: true })
+          .limit(500),
+        supabase
+          .from("inv_stock_balances" as never)
+          .select("item_id,qty,inv_items:item_id(name,enabled)"),
+      ]);
+      if (assetsRes.error) throw assetsRes.error;
+      if (balRes.error) throw balRes.error;
+      const rows = (assetsRes.data as unknown) as Array<{ id: string; name: string; category: string }>;
+      // Aggregate available stock by item name (case-insensitive, trimmed).
+      const availByName = new Map<string, number>();
+      type BalRow = { qty: number | string; inv_items: { name: string; enabled: boolean } | null };
+      for (const b of ((balRes.data as unknown) as BalRow[]) ?? []) {
+        const it = b.inv_items;
+        if (!it || it.enabled === false) continue;
+        const key = (it.name ?? "").trim().toLowerCase();
+        if (!key) continue;
+        availByName.set(key, (availByName.get(key) ?? 0) + Number(b.qty ?? 0));
+      }
+      // Only include assets whose name matches an inventory item with qty > 0.
+      return (rows ?? []).filter((a) => (availByName.get((a.name ?? "").trim().toLowerCase()) ?? 0) > 0);
     },
   });
   const assets = assetsQuery.data ?? [];
+
 
   // Filters
   const [filterRole, setFilterRole] = useState<string>("all");
