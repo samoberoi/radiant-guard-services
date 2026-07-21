@@ -8,15 +8,16 @@ import {
   Cake,
   ClipboardCheck,
   Package,
-  ShieldCheck,
-  Sparkles,
+  PartyPopper,
   UserRound,
   Users,
+  ArrowRight,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/PageHeader";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useCountUp } from "@/hooks/useCountUp";
 import { nextOccurrence, ageFrom, yearsBetween } from "@/lib/people-insights";
 
 export const Route = createFileRoute("/admin/employee-dashboard")({
@@ -52,9 +53,25 @@ type Teammate = {
 
 type Notif = { id: string; title: string; body: string | null; link: string | null; created_at: string; read_at: string | null };
 
-function fmtDate(d: Date) {
-  return d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmt(d: Date) { return `${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`; }
+function initials(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0,2).map(p=>p[0]?.toUpperCase()??"").join("") || "?";
 }
+
+type Accent = "emerald" | "rose" | "amber" | "sky" | "indigo" | "violet";
+const ACCENT_CHIP: Record<Accent, string> = {
+  emerald: "bg-emerald-50 text-emerald-700 ring-emerald-200/70 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/20",
+  rose: "bg-rose-50 text-rose-700 ring-rose-200/70 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-400/20",
+  amber: "bg-amber-50 text-amber-700 ring-amber-200/70 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/20",
+  sky: "bg-sky-50 text-sky-700 ring-sky-200/70 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/20",
+  indigo: "bg-indigo-50 text-indigo-700 ring-indigo-200/70 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-400/20",
+  violet: "bg-violet-50 text-violet-700 ring-violet-200/70 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-400/20",
+};
+const ACCENT_BAR: Record<Accent, string> = {
+  emerald: "bg-emerald-500", rose: "bg-rose-500", amber: "bg-amber-500",
+  sky: "bg-sky-500", indigo: "bg-indigo-500", violet: "bg-violet-500",
+};
 
 function EmployeeDashboard() {
   const { user } = useAuth();
@@ -96,7 +113,6 @@ function EmployeeDashboard() {
   const unit = lookupsQ.data?.unit ?? null;
   const desig = lookupsQ.data?.designation ?? null;
 
-  // Attendance this month
   const monthStart = useMemo(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
@@ -132,7 +148,6 @@ function EmployeeDashboard() {
     return { present, absent, leave, ot, total: rows.length };
   }, [attQ.data]);
 
-  // All units this employee is assigned to (primary unit_id + candidate_units mappings)
   const myUnitsQ = useQuery({
     queryKey: ["me-units", me?.id, me?.unit_id],
     enabled: !!me?.id,
@@ -151,7 +166,6 @@ function EmployeeDashboard() {
   });
   const myUnitIds = useMemo(() => myUnitsQ.data ?? [], [myUnitsQ.data]);
 
-  // Teammates across every unit this employee is assigned to
   const teamQ = useQuery({
     queryKey: ["me-team", myUnitIds.join(","), me?.id],
     enabled: !!me?.id && myUnitIds.length > 0,
@@ -183,7 +197,6 @@ function EmployeeDashboard() {
   });
   const desigMap = desigNameQ.data ?? new Map<string, string>();
 
-  // Uniform holdings (issued/acknowledged)
   const issQ = useQuery({
     queryKey: ["me-iss-count", me?.id],
     enabled: !!me?.id,
@@ -199,7 +212,6 @@ function EmployeeDashboard() {
     },
   });
 
-  // Notifications
   const notifQ = useQuery({
     queryKey: ["me-notifs"],
     queryFn: async () => {
@@ -217,29 +229,28 @@ function EmployeeDashboard() {
   });
   const notifs = notifQ.data ?? [];
 
-  // Birthdays & anniversaries within team (rest of current year)
   const HORIZON = useMemo(() => {
     const today = new Date();
     const eoy = new Date(today.getFullYear(), 11, 31);
     return Math.round((eoy.getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 86400000);
   }, []);
   const birthdays = useMemo(() => {
-    const list: Array<{ id: string; name: string; days: number; date: Date; turningAge: number }> = [];
+    const list: Array<{ id: string; name: string; photo: string | null; days: number; date: Date; turningAge: number }> = [];
     for (const t of team) {
       if (!t.date_of_birth) continue;
       const { next, days } = nextOccurrence(t.date_of_birth);
-      if (days <= HORIZON) list.push({ id: t.id, name: t.full_name, days, date: next, turningAge: yearsBetween(t.date_of_birth, next) });
+      if (days <= HORIZON) list.push({ id: t.id, name: t.full_name, photo: t.photo_url, days, date: next, turningAge: yearsBetween(t.date_of_birth, next) });
     }
     return list.sort((a, b) => a.days - b.days);
   }, [team, HORIZON]);
   const anniversaries = useMemo(() => {
-    const list: Array<{ id: string; name: string; days: number; date: Date; years: number }> = [];
+    const list: Array<{ id: string; name: string; photo: string | null; days: number; date: Date; years: number }> = [];
     for (const t of team) {
       const started = t.approved_at || t.created_at;
       if (!started) continue;
       const { next, days } = nextOccurrence(started);
       const years = yearsBetween(started, next);
-      if (days <= HORIZON && years >= 1) list.push({ id: t.id, name: t.full_name, days, date: next, years });
+      if (days <= HORIZON && years >= 1) list.push({ id: t.id, name: t.full_name, photo: t.photo_url, days, date: next, years });
     }
     return list.sort((a, b) => a.days - b.days);
   }, [team, HORIZON]);
@@ -251,70 +262,6 @@ function EmployeeDashboard() {
   const started = me.approved_at || me.created_at;
   const tenureYears = started ? yearsBetween(started, new Date()) : null;
 
-  const rightRail = (
-    <div className="space-y-4">
-      {/* Notifications */}
-      <section className="rounded-2xl border border-border bg-card p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm font-semibold"><Bell className="h-4 w-4 text-primary" /> Notifications</div>
-          <Link to="/admin/notifications" className="text-xs text-primary hover:underline">View all</Link>
-        </div>
-        {notifs.length === 0 ? (
-          <div className="py-6 text-center text-xs text-muted-foreground">Nothing new.</div>
-        ) : (
-          <ul className="space-y-2">
-            {notifs.map((n) => (
-              <li key={n.id}>
-                <Link
-                  to={n.link ?? "/admin/notifications"}
-                  className={`block rounded-xl border p-3 text-sm transition hover:bg-secondary/60 ${n.read_at ? "border-border" : "border-primary/40 bg-primary/5"}`}
-                >
-                  <div className="font-medium">{n.title}</div>
-                  {n.body && <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.body}</div>}
-                  <div className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">{new Date(n.created_at).toLocaleString("en-IN")}</div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* Birthdays */}
-      <section className="rounded-2xl border border-border bg-card p-4">
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><Cake className="h-4 w-4 text-rose-600" /> Upcoming birthdays</div>
-        {birthdays.length === 0 ? (
-          <div className="py-4 text-center text-xs text-muted-foreground">No birthdays in the rest of this year.</div>
-        ) : (
-          <ul className="space-y-1.5">
-            {birthdays.map((b) => (
-              <li key={b.id} className="flex items-center justify-between text-sm">
-                <span className="truncate">{b.name}</span>
-                <span className="ml-2 shrink-0 text-xs text-muted-foreground">{fmtDate(b.date)} · turns {b.turningAge}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* Anniversaries */}
-      <section className="rounded-2xl border border-border bg-card p-4">
-        <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4 text-amber-600" /> Work anniversaries</div>
-        {anniversaries.length === 0 ? (
-          <div className="py-4 text-center text-xs text-muted-foreground">No anniversaries in the rest of this year.</div>
-        ) : (
-          <ul className="space-y-1.5">
-            {anniversaries.map((a) => (
-              <li key={a.id} className="flex items-center justify-between text-sm">
-                <span className="truncate">{a.name}</span>
-                <span className="ml-2 shrink-0 text-xs text-muted-foreground">{fmtDate(a.date)} · {a.years} yr</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-    </div>
-  );
-
   return (
     <div className="space-y-6">
       <PageHeader
@@ -322,133 +269,251 @@ function EmployeeDashboard() {
         description={desig?.name ? `${desig.name}${unit?.name ? ` · ${unit.name}` : ""}` : "Your workspace"}
         crumbs={[{ label: "My Dashboard" }]}
       />
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-6">
-
-      {/* Profile card */}
-      <section className="rounded-2xl border border-border bg-card p-5">
-        <div className="flex items-start gap-4">
-          <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-secondary text-lg font-semibold">
-            {me.photo_url ? <img src={me.photo_url} alt="" className="h-full w-full object-cover" /> : (me.full_name?.[0] ?? "?")}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <div className="text-lg font-semibold">{me.full_name}</div>
-              {me.employee_code && <div className="font-mono text-xs text-muted-foreground">{me.employee_code}</div>}
-              <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">{me.status}</span>
-            </div>
-            <div className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 text-sm text-muted-foreground sm:grid-cols-2">
-              <div><span className="font-medium text-foreground">Phone:</span> {me.mobile ?? "—"}</div>
-              <div><span className="font-medium text-foreground">Email:</span> {me.email || "—"}</div>
-              <div><span className="font-medium text-foreground">Designation:</span> {desig?.name ?? "—"}</div>
-              <div><span className="font-medium text-foreground">Unit:</span> {unit?.name ?? "—"}</div>
-              {age !== null && <div><span className="font-medium text-foreground">Age:</span> {age}</div>}
-              {tenureYears !== null && <div><span className="font-medium text-foreground">Tenure:</span> {tenureYears} yr</div>}
-            </div>
-          </div>
-          <Link to="/admin/profile" className="shrink-0 rounded-lg border border-border px-3 py-1.5 text-xs font-medium hover:bg-secondary">
-            <UserRound className="mr-1 inline h-3.5 w-3.5" /> View profile
-          </Link>
-        </div>
-      </section>
-
-      {/* Stat tiles */}
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile icon={ClipboardCheck} label="Present days" value={attStats.present} accent="emerald" sub={`${new Date().toLocaleString("en-IN",{month:"long"})}`} />
-        <StatTile icon={ClipboardCheck} label="Absent" value={attStats.absent} accent="rose" />
-        <StatTile icon={ClipboardCheck} label="Leaves" value={attStats.leave} accent="amber" />
-        <StatTile icon={Package} label="Uniform items" value={issQ.data?.total ?? 0} accent="sky" sub={issQ.data?.pending ? `${issQ.data.pending} pending OTP` : undefined} />
-      </section>
-
-      {/* Duty & unit */}
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><CalendarDays className="h-4 w-4 text-primary" /> Your duty</div>
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-            <dt className="text-muted-foreground">Shift start</dt>
-            <dd className="font-medium">{unit?.shift_start_time || "—"}</dd>
-            <dt className="text-muted-foreground">Shift end</dt>
-            <dd className="font-medium">{unit?.shift_end_time || "—"}</dd>
-            <dt className="text-muted-foreground">OT this month</dt>
-            <dd className="font-medium">{attStats.ot} hrs</dd>
-            <dt className="text-muted-foreground">Site</dt>
-            <dd className="font-medium">{unit?.site_address || unit?.name || "—"}</dd>
-          </dl>
-        </div>
-
-        <div className="rounded-2xl border border-border bg-card p-5">
-          <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><Building2 className="h-4 w-4 text-primary" /> Unit</div>
-          <div className="text-lg font-semibold">{unit?.name ?? "Not assigned"}</div>
-          {unit?.code && <div className="font-mono text-xs text-muted-foreground">{unit.code}</div>}
-          <div className="mt-3 flex gap-2">
-            <div className="flex-1 rounded-lg bg-secondary/60 px-3 py-2 text-center">
-              <div className="text-lg font-semibold">{team.length + 1}</div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Team size</div>
-            </div>
-            <Link to="/admin/my-inventory" className="flex-1 rounded-lg border border-border px-3 py-2 text-center text-sm font-medium hover:bg-secondary">
-              My Uniform →
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Team roster */}
-      <section className="rounded-2xl border border-border bg-card p-5">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm font-semibold"><Users className="h-4 w-4 text-primary" /> Your team at this unit</div>
-          <div className="text-xs text-muted-foreground">{team.length} colleague{team.length === 1 ? "" : "s"}</div>
-        </div>
-        {team.length === 0 ? (
-          <div className="py-6 text-center text-sm text-muted-foreground">No teammates yet.</div>
-        ) : (
-          <ul className="divide-y divide-border">
-            {team.map((t) => (
-              <li key={t.id} className="flex items-center gap-3 py-2">
-                <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary text-sm font-semibold">
-                  {t.photo_url ? <img src={t.photo_url} alt="" className="h-full w-full object-cover" /> : (t.full_name?.[0] ?? "?")}
+          {/* Profile card — matches admin card aesthetic */}
+          <section className="overflow-hidden rounded-[24px] border border-border/60 bg-card/70 p-5 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]">
+            <div className="flex items-start gap-4">
+              <div className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl bg-secondary text-lg font-semibold ring-1 ring-border">
+                {me.photo_url ? <img src={me.photo_url} alt="" className="h-full w-full object-cover" /> : initials(me.full_name)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <div className="font-display text-lg font-bold text-foreground">{me.full_name}</div>
+                  {me.employee_code && <div className="font-mono text-xs text-muted-foreground">{me.employee_code}</div>}
+                  <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-700 ring-1 ring-inset ring-emerald-500/25 dark:text-emerald-300">{me.status}</span>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium">{t.full_name}</div>
-                  <div className="text-xs text-muted-foreground">{t.designation_id ? desigMap.get(t.designation_id) ?? "" : ""}</div>
+                <div className="mt-2 grid grid-cols-1 gap-x-6 gap-y-1 text-sm text-muted-foreground sm:grid-cols-2">
+                  <div><span className="font-medium text-foreground">Phone:</span> {me.mobile ?? "—"}</div>
+                  <div><span className="font-medium text-foreground">Email:</span> {me.email || "—"}</div>
+                  <div><span className="font-medium text-foreground">Designation:</span> {desig?.name ?? "—"}</div>
+                  <div><span className="font-medium text-foreground">Unit:</span> {unit?.name ?? "—"}</div>
+                  {age !== null && <div><span className="font-medium text-foreground">Age:</span> {age}</div>}
+                  {tenureYears !== null && <div><span className="font-medium text-foreground">Tenure:</span> {tenureYears} yr</div>}
                 </div>
-                {t.employee_code && <div className="shrink-0 font-mono text-[11px] text-muted-foreground">{t.employee_code}</div>}
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+              </div>
+              <Link to="/admin/profile" className="shrink-0 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-secondary">
+                <UserRound className="mr-1 inline h-3.5 w-3.5" /> View profile
+              </Link>
+            </div>
+          </section>
+
+          {/* Stat tiles — match admin MetricTile aesthetic */}
+          <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <MetricTile icon={ClipboardCheck} label="Present days" value={attStats.present} accent="emerald" sub={new Date().toLocaleString("en-IN",{month:"long"})} />
+            <MetricTile icon={ClipboardCheck} label="Absent" value={attStats.absent} accent="rose" />
+            <MetricTile icon={ClipboardCheck} label="Leaves" value={attStats.leave} accent="amber" />
+            <MetricTile icon={Package} label="Uniform items" value={issQ.data?.total ?? 0} accent="sky" sub={issQ.data?.pending ? `${issQ.data.pending} pending OTP` : undefined} to="/admin/my-inventory" />
+          </section>
+
+          {/* Duty & unit */}
+          <section className="grid gap-4 lg:grid-cols-2">
+            <div className="rounded-[24px] border border-border/60 bg-card/70 p-5 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]">
+              <div className="mb-3 flex items-center gap-2">
+                <span className={`grid h-8 w-8 place-items-center rounded-xl ring-1 ring-inset ${ACCENT_CHIP.indigo}`}><CalendarDays className="h-3.5 w-3.5" /></span>
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Today</div>
+                  <div className="font-display text-[15px] font-bold leading-tight">Your duty</div>
+                </div>
+              </div>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <dt className="text-muted-foreground">Shift start</dt>
+                <dd className="font-medium tabular-nums">{unit?.shift_start_time || "—"}</dd>
+                <dt className="text-muted-foreground">Shift end</dt>
+                <dd className="font-medium tabular-nums">{unit?.shift_end_time || "—"}</dd>
+                <dt className="text-muted-foreground">OT this month</dt>
+                <dd className="font-medium tabular-nums">{attStats.ot} hrs</dd>
+                <dt className="text-muted-foreground">Site</dt>
+                <dd className="truncate font-medium">{unit?.site_address || unit?.name || "—"}</dd>
+              </dl>
+            </div>
+
+            <div className="rounded-[24px] border border-border/60 bg-card/70 p-5 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]">
+              <div className="mb-3 flex items-center gap-2">
+                <span className={`grid h-8 w-8 place-items-center rounded-xl ring-1 ring-inset ${ACCENT_CHIP.violet}`}><Building2 className="h-3.5 w-3.5" /></span>
+                <div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Assignment</div>
+                  <div className="font-display text-[15px] font-bold leading-tight">Unit</div>
+                </div>
+              </div>
+              <div className="font-display text-lg font-bold">{unit?.name ?? "Not assigned"}</div>
+              {unit?.code && <div className="font-mono text-xs text-muted-foreground">{unit.code}</div>}
+              <div className="mt-3 flex gap-2">
+                <div className="flex-1 rounded-xl bg-secondary/60 px-3 py-2 text-center ring-1 ring-border">
+                  <div className="font-display text-lg font-bold tabular-nums">{team.length + 1}</div>
+                  <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Team size</div>
+                </div>
+                <Link to="/admin/my-inventory" className="flex flex-1 items-center justify-center gap-1 rounded-xl border border-border bg-card px-3 py-2 text-center text-sm font-semibold hover:bg-secondary">
+                  My Uniform <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            </div>
+          </section>
+
+          {/* Team roster */}
+          <section className="overflow-hidden rounded-[24px] border border-border/60 bg-card/70 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]">
+            <header className="flex items-center gap-3 border-b border-border/50 bg-card px-5 py-3.5">
+              <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ring-1 ring-inset ${ACCENT_CHIP.indigo}`}><Users className="h-3.5 w-3.5" /></span>
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">Your unit</div>
+                <div className="font-display text-[15px] font-bold text-foreground leading-tight">Teammates</div>
+              </div>
+              <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent/15 px-1.5 text-[10px] font-bold text-accent ring-1 ring-inset ring-accent/20">{team.length}</span>
+            </header>
+            {team.length === 0 ? (
+              <div className="px-4 py-8 text-center text-xs text-muted-foreground">No teammates yet.</div>
+            ) : (
+              <ul className="max-h-[320px] divide-y divide-border/60 overflow-y-auto">
+                {team.map((t) => (
+                  <li key={t.id} className="flex items-center gap-3 px-4 py-2.5">
+                    <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-accent/15 text-[11px] font-bold text-accent ring-1 ring-inset ring-accent/20">
+                      {t.photo_url ? <img src={t.photo_url} alt="" className="h-full w-full object-cover" /> : initials(t.full_name)}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[13px] font-semibold text-foreground">{t.full_name}</div>
+                      <div className="truncate text-[11px] text-muted-foreground">{t.designation_id ? desigMap.get(t.designation_id) ?? "" : ""}</div>
+                    </div>
+                    {t.employee_code && <div className="shrink-0 font-mono text-[11px] text-muted-foreground">{t.employee_code}</div>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
-        <div className="space-y-4 lg:sticky lg:top-6 lg:h-fit">{rightRail}</div>
+
+        {/* Right rail */}
+        <div className="space-y-4 lg:sticky lg:top-6 lg:h-fit">
+          <SidePanel Icon={Bell} accent="indigo" eyebrow="Latest" title="Notifications" count={notifs.length}>
+            {notifs.length === 0 ? (
+              <div className="px-4 py-8 text-center text-xs text-muted-foreground">Nothing new.</div>
+            ) : (
+              <ul className="divide-y divide-border/60">
+                {notifs.map((n) => (
+                  <li key={n.id}>
+                    <Link
+                      to={n.link ?? "/admin/notifications"}
+                      className={`block px-4 py-2.5 transition-colors hover:bg-accent/5 ${n.read_at ? "" : "bg-accent/8"}`}
+                    >
+                      <div className="text-[13px] font-semibold text-foreground">{n.title}</div>
+                      {n.body && <div className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{n.body}</div>}
+                      <div className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">{new Date(n.created_at).toLocaleString("en-IN")}</div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </SidePanel>
+
+          <SidePanel Icon={Cake} accent="rose" eyebrow="This year" title="Upcoming Birthdays" count={birthdays.length}>
+            {birthdays.length === 0 ? (
+              <div className="px-4 py-8 text-center text-xs text-muted-foreground">No more birthdays this year.</div>
+            ) : (
+              <ul className="divide-y divide-border/60">
+                {birthdays.slice(0, 25).map((b) => {
+                  const today = b.days === 0;
+                  return (
+                    <li key={b.id} className={`flex items-center gap-3 px-4 py-2.5 ${today ? "bg-accent/8" : ""}`}>
+                      <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-accent/15 text-[11px] font-bold text-accent ring-1 ring-inset ring-accent/20">
+                        {b.photo ? <img src={b.photo} alt="" className="h-full w-full object-cover" /> : initials(b.name)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[13px] font-semibold text-foreground">{b.name}</div>
+                        <div className="truncate text-[11px] text-muted-foreground">{fmt(b.date)} · turning {b.turningAge}</div>
+                      </div>
+                      <span className={`shrink-0 text-[11px] font-semibold tabular-nums ${today ? "text-accent" : "text-muted-foreground"}`}>{today ? "Today" : `in ${b.days}d`}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </SidePanel>
+
+          <SidePanel Icon={PartyPopper} accent="amber" eyebrow="This year" title="Work Anniversaries" count={anniversaries.length}>
+            {anniversaries.length === 0 ? (
+              <div className="px-4 py-8 text-center text-xs text-muted-foreground">No more anniversaries this year.</div>
+            ) : (
+              <ul className="divide-y divide-border/60">
+                {anniversaries.slice(0, 25).map((a) => {
+                  const today = a.days === 0;
+                  return (
+                    <li key={a.id} className={`flex items-center gap-3 px-4 py-2.5 ${today ? "bg-accent/8" : ""}`}>
+                      <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-full bg-accent/15 text-[11px] font-bold text-accent ring-1 ring-inset ring-accent/20">
+                        {a.photo ? <img src={a.photo} alt="" className="h-full w-full object-cover" /> : initials(a.name)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-[13px] font-semibold text-foreground">{a.name}</div>
+                        <div className="truncate text-[11px] text-muted-foreground">{fmt(a.date)} · {a.years} yr{a.years===1?"":"s"} with RGS</div>
+                      </div>
+                      <span className={`shrink-0 text-[11px] font-semibold tabular-nums ${today ? "text-accent" : "text-muted-foreground"}`}>{today ? "Today" : `in ${a.days}d`}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </SidePanel>
+        </div>
       </div>
     </div>
   );
 }
 
-function StatTile({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  accent,
+function SidePanel({
+  Icon, accent, eyebrow, title, count, children,
+}: {
+  Icon: React.ComponentType<{ className?: string }>;
+  accent: Accent;
+  eyebrow: string;
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-[24px] border border-border/60 bg-card/70 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]">
+      <header className="flex items-center gap-3 border-b border-border/50 bg-card px-5 py-3.5">
+        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl ring-1 ring-inset ${ACCENT_CHIP[accent]}`}>
+          <Icon className="h-3.5 w-3.5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground">{eyebrow}</div>
+          <div className="font-display text-[15px] font-bold text-foreground leading-tight">{title}</div>
+        </div>
+        {count > 0 && (
+          <span className="inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-accent/15 px-1.5 text-[10px] font-bold text-accent ring-1 ring-inset ring-accent/20">
+            {count}
+          </span>
+        )}
+      </header>
+      <div className="max-h-[320px] overflow-y-auto">{children}</div>
+    </section>
+  );
+}
+
+function MetricTile({
+  icon: Icon, label, value, accent, sub, to,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  value: number | string;
+  value: number;
+  accent: Accent;
   sub?: string;
-  accent: "emerald" | "rose" | "amber" | "sky";
+  to?: string;
 }) {
-  const chip = {
-    emerald: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-    rose: "bg-rose-500/15 text-rose-700 dark:text-rose-300",
-    amber: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-    sky: "bg-sky-500/15 text-sky-700 dark:text-sky-300",
-  }[accent];
-  return (
-    <div className="rounded-2xl border border-border bg-card p-4">
-      <div className={`inline-flex h-8 w-8 items-center justify-center rounded-lg ${chip}`}><Icon className="h-4 w-4" /></div>
-      <div className="mt-3 text-2xl font-semibold tabular-nums">{value}</div>
-      <div className="text-xs font-medium text-muted-foreground">{label}</div>
-      {sub && <div className="mt-0.5 text-[10px] text-muted-foreground">{sub}</div>}
-    </div>
+  const display = useCountUp(value);
+  const inner = (
+    <>
+      <div className={`pointer-events-none absolute inset-y-0 left-0 w-0.5 ${ACCENT_BAR[accent]}`} />
+      <div className="relative flex items-center justify-between">
+        <div className={`grid h-9 w-9 place-items-center rounded-lg ring-1 ring-inset ${ACCENT_CHIP[accent]}`}>
+          <Icon className="h-[17px] w-[17px]" />
+        </div>
+        {to && <ArrowRight className="h-4 w-4 -translate-x-1 text-muted-foreground/50 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:text-foreground group-hover:opacity-100" />}
+      </div>
+      <div className="relative mt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
+      <div className="relative mt-1 font-display text-[30px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
+      {sub && <div className="relative mt-auto pt-3 text-[11px] font-semibold text-muted-foreground">{sub}</div>}
+    </>
   );
+  const cls = "group relative flex h-[172px] flex-col overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md";
+  return to ? <Link to={to} className={cls}>{inner}</Link> : <div className={cls}>{inner}</div>;
 }
