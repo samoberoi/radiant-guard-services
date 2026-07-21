@@ -165,6 +165,13 @@ export function NotificationBell() {
           </Button>
         </div>
       </PopoverContent>
+      <NotificationDetailDialog
+        notification={detail}
+        open={detail !== null}
+        onOpenChange={(o) => { if (!o) setDetail(null); }}
+        onOpenLink={openLink}
+      />
     </Popover>
   );
 }
+
