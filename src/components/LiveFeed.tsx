@@ -222,8 +222,16 @@ export function LiveFeed({ className }: { className?: string }) {
         </Link>
       </div>
     </aside>
+    <NotificationDetailDialog
+      notification={detail}
+      open={detail !== null}
+      onOpenChange={(o) => { if (!o) setDetail(null); }}
+      onOpenLink={openLink}
+    />
+    </>
   );
 }
+
 
 /**
  * Dashboard shell — main content + sticky right rail (Live Feed + extras).
