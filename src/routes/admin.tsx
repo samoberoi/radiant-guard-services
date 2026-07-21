@@ -62,6 +62,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from "@/lib/auth";
 import { useMe } from "@/lib/use-me";
 import { useCurrentPermissions } from "@/lib/rbac";
+import { RBAC_MODULES } from "@/lib/rbac-modules";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
@@ -94,36 +95,36 @@ type GroupItem = {
 };
 
 const customersChildren: LeafItem[] = [
-  { to: "/admin/customers/state-manager", label: "State Manager", icon: MapPin },
-  { to: "/admin/customers/branch-manager", label: "Branch Manager", icon: Building2 },
-  { to: "/admin/customers/customer-manager", label: "Organization Manager", icon: Users },
-  { to: "/admin/customers/unit-manager", label: "Unit Manager", icon: Warehouse },
+  { to: "/admin/customers/state-manager", label: "State Manager", icon: MapPin, sub: "state_manager" },
+  { to: "/admin/customers/branch-manager", label: "Branch Manager", icon: Building2, sub: "branch_manager" },
+  { to: "/admin/customers/customer-manager", label: "Organization Manager", icon: Users, sub: "organization_manager" },
+  { to: "/admin/customers/unit-manager", label: "Unit Manager", icon: Warehouse, sub: "unit_manager" },
 ];
 
 const contractsChildren: LeafItem[] = [
-  { to: "/admin/contracts/client-contracts", label: "Client Contracts", icon: FileText },
+  { to: "/admin/contracts/client-contracts", label: "Client Contracts", icon: FileText, sub: "client_contracts" },
 ];
 
 const vehiclesChildren: LeafItem[] = [
-  { to: "/admin/vehicles/inventory", label: "Vehicle Inventory", icon: Car },
-  { to: "/admin/vehicles/fastags", label: "FastTag Manager", icon: CreditCard },
-  { to: "/admin/vehicles/insurances", label: "Insurance Manager", icon: ShieldCheck },
-  { to: "/admin/vehicles/pucs", label: "PUC Manager", icon: Wind },
-  { to: "/admin/vehicles/service-manager", label: "Service Manager", icon: Wrench },
-  { to: "/admin/vehicles/expense-manager", label: "Expense Manager", icon: Fuel },
+  { to: "/admin/vehicles/inventory", label: "Vehicle Inventory", icon: Car, sub: "vehicle_inventory" },
+  { to: "/admin/vehicles/fastags", label: "FastTag Manager", icon: CreditCard, sub: "fastag_manager" },
+  { to: "/admin/vehicles/insurances", label: "Insurance Manager", icon: ShieldCheck, sub: "insurance_manager" },
+  { to: "/admin/vehicles/pucs", label: "PUC Manager", icon: Wind, sub: "puc_manager" },
+  { to: "/admin/vehicles/service-manager", label: "Service Manager", icon: Wrench, sub: "service_manager" },
+  { to: "/admin/vehicles/expense-manager", label: "Expense Manager", icon: Fuel, sub: "expense_manager" },
 ];
 
 const assetsChildren: LeafItem[] = [
-  { to: "/admin/assets/inventory", label: "Asset Inventory", icon: Home },
-  { to: "/admin/assets/loan-manager", label: "Loan Manager", icon: Banknote },
-  { to: "/admin/assets/expense-manager", label: "Expense Manager", icon: Receipt },
+  { to: "/admin/assets/inventory", label: "Asset Inventory", icon: Home, sub: "asset_inventory" },
+  { to: "/admin/assets/loan-manager", label: "Loan Manager", icon: Banknote, sub: "loan_manager" },
+  { to: "/admin/assets/expense-manager", label: "Expense Manager", icon: Receipt, sub: "expense_manager" },
 ];
 
 const officeAssetsChildren: LeafItem[] = [
-  { to: "/admin/office-assets", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/admin/office-assets/inventory", label: "Inventory", icon: Boxes },
-  { to: "/admin/office-assets/allocations", label: "Allocations", icon: UserCheck },
-  { to: "/admin/office-assets/categories", label: "Categories", icon: Tag },
+  { to: "/admin/office-assets", label: "Dashboard", icon: LayoutDashboard, sub: "office_assets_dashboard" },
+  { to: "/admin/office-assets/inventory", label: "Inventory", icon: Boxes, sub: "office_assets_inventory" },
+  { to: "/admin/office-assets/allocations", label: "Allocations", icon: UserCheck, sub: "office_assets_allocations" },
+  { to: "/admin/office-assets/categories", label: "Categories", icon: Tag, sub: "office_assets_categories" },
 ];
 
 const inventoryChildren: LeafItem[] = [
@@ -157,6 +158,18 @@ function maskPhone(phone: string) {
   const d = phone.replace(/\D/g, "");
   return `+91 ••• ••• ${d.slice(-4)}`;
 }
+// Derived path→(module,sub) map from the RBAC registry so any sub-module route
+// can be gated by canSub without hand-maintaining a duplicate list.
+const subPathList: { prefix: string; module: string; sub: string }[] = (() => {
+  const list: { prefix: string; module: string; sub: string }[] = [];
+  for (const m of RBAC_MODULES) {
+    for (const s of m.subModules) {
+      if (s.path) list.push({ prefix: s.path, module: m.key, sub: s.key });
+    }
+  }
+  return list.sort((a, b) => b.prefix.length - a.prefix.length);
+})();
+
 
 function AdminLayout() {
   const navigate = useNavigate();
@@ -288,11 +301,15 @@ function AdminLayout() {
       else logout();
       return;
     }
-    if (hit.module === "inventory") {
-      const activeChild = inventoryChildren.find((c) => c.sub && (pathname === c.to || pathname.startsWith(c.to + "/")));
-      if (activeChild?.to === "/admin/inventory/collections" && roleKey === "field_officer") return;
-      if (activeChild?.sub && !canSub("inventory", activeChild.sub)) {
-        navigate({ to: "/admin/inventory", replace: true });
+    // Sub-module gating: enforce canSub for any known sub-module path.
+    const subHit = subPathList.find((p) => pathname === p.prefix || pathname.startsWith(p.prefix + "/"));
+    if (subHit) {
+      if (subHit.module === "inventory" && subHit.sub === "collections" && roleKey === "field_officer") return;
+      if (!canSub(subHit.module, subHit.sub)) {
+        // Fall back to the module hub or first allowed path.
+        const modulePath = pathToModule.find((p) => p.module === subHit.module)?.prefix;
+        const dest = modulePath && can(subHit.module) ? modulePath : firstAllowedPath();
+        if (dest) navigate({ to: dest, replace: true });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -417,7 +434,12 @@ function AdminLayout() {
     }
     const base = groups
       .filter((g) => !g.module || can(g.module))
-      .map((g) => (g.key === "inventory" ? { ...g, children: filteredInventoryChildren } : g));
+      .map((g) => {
+        if (g.key === "inventory") return { ...g, children: filteredInventoryChildren };
+        if (!g.module || !g.children) return g;
+        const filtered = g.children.filter((c) => !c.sub || canSub(g.module!, c.sub));
+        return { ...g, children: filtered };
+      });
     if (isFieldOfficer) {
       // FO gets a single dashboard entry that already shows their units and team.
       return base;
