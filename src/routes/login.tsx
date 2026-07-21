@@ -8,7 +8,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { useAuth, verifyOtp, DEMO_OTP_HINT } from "@/lib/auth";
+import { useAuth, verifyOtp } from "@/lib/auth";
 import logo from "@/assets/radiant-logo-v2.png";
 import loginBg from "@/assets/login-bg.jpg.asset.json";
 
@@ -64,9 +64,7 @@ function LoginPage() {
     setResendIn(30);
     setOtp("");
     setError(null);
-    toast.success(`OTP sent to +91 ••• ••• ${phone.slice(-4)}`, {
-      description: `Use ${DEMO_OTP_HINT} for this demo.`,
-    });
+    toast.success(`OTP sent to +91 ••• ••• ${phone.slice(-4)}`);
   }
 
   async function handleVerify(value?: string) {
@@ -77,7 +75,7 @@ function LoginPage() {
     if (!verifyOtp(code)) {
       verifyInFlightRef.current = false;
       setVerifying(false);
-      setError(`Incorrect code. Try ${DEMO_OTP_HINT} for the demo.`);
+      setError("Incorrect code. Please check your SMS and try again.");
       setOtp("");
       return;
     }
@@ -285,10 +283,7 @@ function LoginPage() {
                         </p>
                       ) : (
                         <p className="mt-3 text-center text-[13px] text-muted-foreground">
-                          Demo code:{" "}
-                          <span className="font-mono font-semibold text-foreground">
-                            {DEMO_OTP_HINT}
-                          </span>
+                          Enter the 6-digit code sent to your phone
                         </p>
                       )}
                     </div>
