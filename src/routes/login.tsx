@@ -158,21 +158,27 @@ function LoginPage() {
         <div className="w-full max-w-[440px]">
           {/* Brand */}
           <div className="mb-8 flex flex-col items-center gap-4 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-white shadow-[0_20px_50px_-15px_color-mix(in_oklab,var(--primary)_30%,transparent)] ring-1 ring-black/5">
+            <div className="grid h-20 w-20 place-items-center rounded-full bg-white shadow-[0_20px_50px_-15px_rgba(15,23,42,0.35)] ring-1 ring-white/30">
               <img src={logo} alt="Radiant" className="h-14 w-14 object-contain" />
             </div>
             <div>
-              <div className="font-display text-[17px] font-semibold tracking-tight text-foreground">
+              <div
+                className="font-display text-[18px] font-semibold tracking-tight text-white"
+                style={{ textShadow: "0 2px 10px rgba(15,23,42,0.35)" }}
+              >
                 Radiant Guard
               </div>
-              <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              <div
+                className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/85"
+                style={{ textShadow: "0 1px 6px rgba(15,23,42,0.35)" }}
+              >
                 Services Pvt. Ltd.
               </div>
             </div>
           </div>
 
           {/* Glass card */}
-          <div className="relative overflow-hidden rounded-[28px] border border-white/70 bg-white/80 p-7 shadow-[0_30px_80px_-20px_color-mix(in_oklab,var(--primary)_30%,transparent)] backdrop-blur-2xl sm:p-9">
+          <div className="relative overflow-hidden rounded-[28px] border border-white/80 bg-white/[0.96] p-7 shadow-[0_30px_80px_-20px_rgba(15,23,42,0.35)] backdrop-blur-2xl sm:p-9">
             {/* inner highlight */}
             <div
               aria-hidden
