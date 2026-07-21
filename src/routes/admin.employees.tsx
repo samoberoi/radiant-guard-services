@@ -5420,18 +5420,16 @@ function AssetMultiPicker({
   sizes?: Record<string, string>;
   onSizesChange?: (next: Record<string, string>) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const selectedSet = useMemo(() => new Set(value), [value]);
   const selected = useMemo(() => assets.filter((a) => selectedSet.has(a.id)), [assets, selectedSet]);
 
-  // Only offer items that have inventory available; keep already-selected in list.
-  const pickable = useMemo(
-    () => assets.filter((a) => (a.available_qty ?? 0) > 0 || selectedSet.has(a.id)),
-    [assets, selectedSet],
-  );
+  // Show every enabled asset / inventory item so users can browse what exists.
+  // Out-of-stock rows stay visible but are visually flagged below.
+  const pickable = useMemo(() => assets, [assets]);
 
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
@@ -5579,8 +5577,13 @@ function AssetMultiPicker({
                               <Check className={cn("h-4 w-4 shrink-0", checked ? "opacity-100" : "opacity-0")} />
                               <span className="flex-1 truncate">{a.name}</span>
                               <span className="text-[10px] text-muted-foreground">{a.category}</span>
-                              <span className="ml-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
-                                {a.available_qty ?? 0} in stock
+                              <span className={cn(
+                                "ml-1 rounded px-1.5 py-0.5 text-[10px] font-medium",
+                                (a.available_qty ?? 0) > 0
+                                  ? "bg-emerald-500/10 text-emerald-700"
+                                  : "bg-amber-500/10 text-amber-700",
+                              )}>
+                                {(a.available_qty ?? 0) > 0 ? `${a.available_qty} in stock` : "Out of stock"}
                               </span>
 
                             </button>
