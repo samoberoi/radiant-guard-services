@@ -440,10 +440,11 @@
      layered shadow so cards read as elevated without gradients. */
   .bg-card {
     background-image: none;
+    border-radius: 20px;
     box-shadow:
-      0 1px 0 0 color-mix(in oklab, var(--foreground) 4%, transparent) inset,
-      0 1px 2px rgb(var(--surface-shadow) / 0.04),
-      0 12px 28px -18px rgb(var(--surface-shadow) / 0.18);
+      0 1px 0 0 color-mix(in oklab, var(--foreground) 3%, transparent) inset,
+      0 1px 2px rgb(var(--surface-shadow) / 0.035),
+      0 14px 34px -22px rgb(var(--surface-shadow) / 0.16);
   }
   .dark .bg-card {
     background-image: none;
@@ -488,31 +489,34 @@
   }
   .ios-table thead th {
     position: sticky; top: 0;
-    background: color-mix(in oklab, var(--card) 88%, transparent);
-    backdrop-filter: blur(12px);
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
+    z-index: 1;
+    background: color-mix(in oklab, var(--card) 94%, transparent);
+    backdrop-filter: blur(14px) saturate(140%);
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.11em;
     text-transform: uppercase;
-    color: var(--muted-foreground);
-    padding: 12px 14px;
-    border-bottom: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+    color: color-mix(in oklab, var(--muted-foreground) 88%, var(--foreground));
+    padding: 14px 14px;
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 55%, transparent);
     white-space: normal;
     text-align: left !important;
     overflow: visible;
     text-overflow: clip;
     overflow-wrap: anywhere;
-    vertical-align: top;
+    vertical-align: middle;
   }
-  .ios-table thead th:first-child { padding-left: 20px; }
-  .ios-table thead th:last-child { padding-right: 20px; }
+  .ios-table thead th:first-child { padding-left: 22px; }
+  .ios-table thead th:last-child { padding-right: 22px; }
   .ios-table tbody td {
     min-width: 96px;
     max-width: min(360px, 44vw);
-    padding: 12px 12px;
-    font-size: 13.5px;
-    border-bottom: 1px solid color-mix(in oklab, var(--border) 35%, transparent);
-    vertical-align: top;
+    padding: 14px 14px;
+    font-size: 13.25px;
+    line-height: 1.45;
+    color: var(--foreground);
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 28%, transparent);
+    vertical-align: middle;
     white-space: normal;
     overflow: visible;
     text-overflow: clip;
@@ -520,11 +524,9 @@
     word-break: normal;
     text-align: left !important;
   }
-  .ios-table tbody td:first-child { padding-left: 20px; }
-  .ios-table tbody td:last-child { padding-right: 20px; overflow: visible; }
+  .ios-table tbody td:first-child { padding-left: 22px; }
+  .ios-table tbody td:last-child { padding-right: 22px; overflow: visible; }
   .ios-table tbody td[data-wrap="false"] { white-space: normal; }
-  /* Wrappable cells: allow the content to flow onto multiple lines and
-     reveal full text instead of truncating with an ellipsis. */
   .ios-table tbody td[data-wrap="true"] {
     white-space: normal;
     overflow: visible;
@@ -541,6 +543,11 @@
     overflow: visible !important;
     text-overflow: clip !important;
   }
+  /* Subtle zebra for readability — light-mode only */
+  .ios-table tbody tr:nth-child(even) > td {
+    background: color-mix(in oklab, var(--foreground) 1.6%, transparent);
+  }
+  .dark .ios-table tbody tr:nth-child(even) > td { background: transparent; }
 
   /* Inline pill used inside table cells for things like website / map / tag
      links. Stays as a single rounded capsule even when the surrounding cell
@@ -681,7 +688,7 @@
     color: var(--muted-foreground);
   }
   .ios-table tbody tr { transition: background-color .15s ease; }
-  .ios-table tbody tr:hover { background: color-mix(in oklab, var(--accent) 4%, transparent); }
+  .ios-table tbody tr:hover > td { background: color-mix(in oklab, var(--accent) 6%, transparent); }
   .ios-table tbody tr:last-child td { border-bottom: 0; }
   .num { font-variant-numeric: tabular-nums; white-space: nowrap; overflow-wrap: normal; }
 
