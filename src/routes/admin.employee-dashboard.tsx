@@ -283,7 +283,7 @@ function EmployeeDashboard() {
       <section className="rounded-2xl border border-border bg-card p-4">
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><Cake className="h-4 w-4 text-rose-600" /> Upcoming birthdays</div>
         {birthdays.length === 0 ? (
-          <div className="py-4 text-center text-xs text-muted-foreground">No birthdays in the next 30 days.</div>
+          <div className="py-4 text-center text-xs text-muted-foreground">No birthdays in the rest of this year.</div>
         ) : (
           <ul className="space-y-1.5">
             {birthdays.map((b) => (
@@ -300,7 +300,7 @@ function EmployeeDashboard() {
       <section className="rounded-2xl border border-border bg-card p-4">
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4 text-amber-600" /> Work anniversaries</div>
         {anniversaries.length === 0 ? (
-          <div className="py-4 text-center text-xs text-muted-foreground">No anniversaries in the next 30 days.</div>
+          <div className="py-4 text-center text-xs text-muted-foreground">No anniversaries in the rest of this year.</div>
         ) : (
           <ul className="space-y-1.5">
             {anniversaries.map((a) => (
