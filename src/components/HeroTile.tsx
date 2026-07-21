@@ -57,8 +57,8 @@ export function HeroTile({
               {eyebrow}
             </div>
           )}
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="font-display text-[38px] font-bold leading-[1.05] tracking-tight text-foreground sm:text-[46px]">
+          <div className="flex flex-wrap items-end gap-2 sm:gap-3">
+            <div className="font-display text-[26px] font-bold leading-[1.1] tracking-tight text-foreground sm:text-[38px] md:text-[46px]">
               {title}
             </div>
             {subtitle && (
