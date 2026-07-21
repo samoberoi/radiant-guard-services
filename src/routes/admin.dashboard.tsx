@@ -864,13 +864,13 @@ function ContractsTile({ active, expiring }: { active: number; expiring: Array<{
     : "border-emerald-200/70 bg-emerald-50 text-emerald-800 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300";
   return (
     <Shell to="/admin/contracts/client-contracts" accent="amber">
-      <TileHeader Icon={Files} accent="amber" />
-      <TileLabel>Contracts</TileLabel>
-      <div className="relative mt-1 font-display text-[30px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
-      <div className="relative mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Active</div>
-      <div className={`relative mt-auto flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-semibold ${alertTone}`}>
-        <AlertTriangle className="h-3 w-3 shrink-0" />
-        <span className="truncate leading-none" title={hasExpiring && soonest?.end_date ? `Soonest: ${soonest.end_date}` : alertText}>{alertText}</span>
+      <TileHeader accent="amber" label="Contracts" sub="Active client contracts" />
+      <div className="relative mt-auto flex items-end justify-between gap-3">
+        <div className="font-display text-[46px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
+        <div className={`flex max-w-[55%] items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-semibold ${alertTone}`}>
+          <AlertTriangle className="h-3 w-3 shrink-0" />
+          <span className="truncate leading-none" title={hasExpiring && soonest?.end_date ? `Soonest: ${soonest.end_date}` : alertText}>{alertText}</span>
+        </div>
       </div>
     </Shell>
   );
