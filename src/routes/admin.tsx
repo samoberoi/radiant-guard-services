@@ -161,6 +161,7 @@ function maskPhone(phone: string) {
 function AdminLayout() {
   const navigate = useNavigate();
   const { user, logout, isReady } = useAuth();
+  const me = useMe();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { can, canSub, isLoading: permsLoading, isSuperAdmin, roleKey } = useCurrentPermissions();
   const isGuardRole = !isSuperAdmin && (roleKey === "guard" || roleKey === "security_guard");
