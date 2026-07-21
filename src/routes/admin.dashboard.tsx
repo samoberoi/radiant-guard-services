@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import {
   Building2, Briefcase, CalendarDays, ChevronLeft, ChevronRight,
   ClipboardList, Files, Fuel, PackageOpen, Receipt, TrendingDown, TrendingUp,
-  UserPlus, Wallet, Warehouse, AlertTriangle, ArrowRight, Sparkles,
+  UserPlus, Wallet, Warehouse, AlertTriangle, ArrowRight, ArrowUpRight, Sparkles,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/PageHeader";
