@@ -695,7 +695,7 @@ function AdminLayout() {
               placeholder="Search employees, units, invoices…"
               className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground/70"
             />
-            <kbd className="hidden rounded-md border border-border/60 bg-card/80 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground sm:inline-flex">⌘K</kbd>
+            
           </div>
           <NotificationBell />
         </div>
