@@ -809,15 +809,15 @@ function DualTile({ icon, label, primary, primaryLabel, secondary, secondaryLabe
   const display = useCountUp(primary);
   return (
     <Shell to={to} accent={accent}>
-      <TileHeader Icon={icon} accent={accent} />
-      <TileLabel>{label}</TileLabel>
-      <div className="relative mt-1 font-display text-[26px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
-      <div className="relative mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{primaryLabel}</div>
-      <div className="relative mt-auto flex items-center justify-between border-t border-border pt-2.5">
-        <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{secondaryLabel}</span>
-        <span className="flex items-center gap-1 font-display text-sm font-semibold tabular-nums text-foreground">
-          <Fuel className="h-3.5 w-3.5 text-muted-foreground" />{secondary}
-        </span>
+      <TileHeader accent={accent} label={label} sub={primaryLabel} />
+      <div className="relative mt-auto flex items-end justify-between gap-3">
+        <div className="font-display text-[40px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
+        <div className="flex flex-col items-end text-right">
+          <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{secondaryLabel}</span>
+          <span className="mt-0.5 flex items-center gap-1 font-display text-sm font-semibold tabular-nums text-foreground">
+            <Fuel className="h-3.5 w-3.5 text-muted-foreground" />{secondary}
+          </span>
+        </div>
       </div>
     </Shell>
   );
