@@ -54,7 +54,11 @@ export function yearsBetween(from: string, to: Date): number {
   return Math.max(0, years);
 }
 
-const HORIZON_DAYS = 30;
+function daysUntilEndOfYear() {
+  const today = startOfDay(new Date());
+  const eoy = new Date(today.getFullYear(), 11, 31);
+  return Math.round((eoy.getTime() - today.getTime()) / 86400000);
+}
 
 type Row = {
   id: string;
