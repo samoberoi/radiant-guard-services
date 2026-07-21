@@ -288,11 +288,15 @@ function AdminLayout() {
       else logout();
       return;
     }
-    if (hit.module === "inventory") {
-      const activeChild = inventoryChildren.find((c) => c.sub && (pathname === c.to || pathname.startsWith(c.to + "/")));
-      if (activeChild?.to === "/admin/inventory/collections" && roleKey === "field_officer") return;
-      if (activeChild?.sub && !canSub("inventory", activeChild.sub)) {
-        navigate({ to: "/admin/inventory", replace: true });
+    // Sub-module gating: enforce canSub for any known sub-module path.
+    const subHit = subPathList.find((p) => pathname === p.prefix || pathname.startsWith(p.prefix + "/"));
+    if (subHit) {
+      if (subHit.module === "inventory" && subHit.sub === "collections" && roleKey === "field_officer") return;
+      if (!canSub(subHit.module, subHit.sub)) {
+        // Fall back to the module hub or first allowed path.
+        const modulePath = pathToModule.find((p) => p.module === subHit.module)?.prefix;
+        const dest = modulePath && can(subHit.module) ? modulePath : firstAllowedPath();
+        if (dest) navigate({ to: dest, replace: true });
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
