@@ -94,36 +94,36 @@ type GroupItem = {
 };
 
 const customersChildren: LeafItem[] = [
-  { to: "/admin/customers/state-manager", label: "State Manager", icon: MapPin },
-  { to: "/admin/customers/branch-manager", label: "Branch Manager", icon: Building2 },
-  { to: "/admin/customers/customer-manager", label: "Organization Manager", icon: Users },
-  { to: "/admin/customers/unit-manager", label: "Unit Manager", icon: Warehouse },
+  { to: "/admin/customers/state-manager", label: "State Manager", icon: MapPin, sub: "state_manager" },
+  { to: "/admin/customers/branch-manager", label: "Branch Manager", icon: Building2, sub: "branch_manager" },
+  { to: "/admin/customers/customer-manager", label: "Organization Manager", icon: Users, sub: "organization_manager" },
+  { to: "/admin/customers/unit-manager", label: "Unit Manager", icon: Warehouse, sub: "unit_manager" },
 ];
 
 const contractsChildren: LeafItem[] = [
-  { to: "/admin/contracts/client-contracts", label: "Client Contracts", icon: FileText },
+  { to: "/admin/contracts/client-contracts", label: "Client Contracts", icon: FileText, sub: "client_contracts" },
 ];
 
 const vehiclesChildren: LeafItem[] = [
-  { to: "/admin/vehicles/inventory", label: "Vehicle Inventory", icon: Car },
-  { to: "/admin/vehicles/fastags", label: "FastTag Manager", icon: CreditCard },
-  { to: "/admin/vehicles/insurances", label: "Insurance Manager", icon: ShieldCheck },
-  { to: "/admin/vehicles/pucs", label: "PUC Manager", icon: Wind },
-  { to: "/admin/vehicles/service-manager", label: "Service Manager", icon: Wrench },
-  { to: "/admin/vehicles/expense-manager", label: "Expense Manager", icon: Fuel },
+  { to: "/admin/vehicles/inventory", label: "Vehicle Inventory", icon: Car, sub: "vehicle_inventory" },
+  { to: "/admin/vehicles/fastags", label: "FastTag Manager", icon: CreditCard, sub: "fastag_manager" },
+  { to: "/admin/vehicles/insurances", label: "Insurance Manager", icon: ShieldCheck, sub: "insurance_manager" },
+  { to: "/admin/vehicles/pucs", label: "PUC Manager", icon: Wind, sub: "puc_manager" },
+  { to: "/admin/vehicles/service-manager", label: "Service Manager", icon: Wrench, sub: "service_manager" },
+  { to: "/admin/vehicles/expense-manager", label: "Expense Manager", icon: Fuel, sub: "expense_manager" },
 ];
 
 const assetsChildren: LeafItem[] = [
-  { to: "/admin/assets/inventory", label: "Asset Inventory", icon: Home },
-  { to: "/admin/assets/loan-manager", label: "Loan Manager", icon: Banknote },
-  { to: "/admin/assets/expense-manager", label: "Expense Manager", icon: Receipt },
+  { to: "/admin/assets/inventory", label: "Asset Inventory", icon: Home, sub: "asset_inventory" },
+  { to: "/admin/assets/loan-manager", label: "Loan Manager", icon: Banknote, sub: "loan_manager" },
+  { to: "/admin/assets/expense-manager", label: "Expense Manager", icon: Receipt, sub: "expense_manager" },
 ];
 
 const officeAssetsChildren: LeafItem[] = [
-  { to: "/admin/office-assets", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/admin/office-assets/inventory", label: "Inventory", icon: Boxes },
-  { to: "/admin/office-assets/allocations", label: "Allocations", icon: UserCheck },
-  { to: "/admin/office-assets/categories", label: "Categories", icon: Tag },
+  { to: "/admin/office-assets", label: "Dashboard", icon: LayoutDashboard, sub: "office_assets_dashboard" },
+  { to: "/admin/office-assets/inventory", label: "Inventory", icon: Boxes, sub: "office_assets_inventory" },
+  { to: "/admin/office-assets/allocations", label: "Allocations", icon: UserCheck, sub: "office_assets_allocations" },
+  { to: "/admin/office-assets/categories", label: "Categories", icon: Tag, sub: "office_assets_categories" },
 ];
 
 const inventoryChildren: LeafItem[] = [
