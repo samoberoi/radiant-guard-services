@@ -28,7 +28,7 @@ export function PageHeader({
   return (
     <div className={cn("relative mb-6", className)}>
       <nav aria-label="Breadcrumb" className="mb-3">
-        <ol className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+        <ol className="flex flex-wrap items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
           <li>
             <Link
               to="/admin/customers"
@@ -40,45 +40,40 @@ export function PageHeader({
           </li>
           {crumbs.map((c, i) => (
             <li key={`${c.label}-${i}`} className="flex items-center gap-1.5">
-              <ChevronRight className="h-3 w-3 opacity-60" />
+              <ChevronRight className="h-3 w-3 opacity-50" />
               {c.to && i < crumbs.length - 1 ? (
                 <Link to={c.to} className="transition-colors hover:text-foreground">
                   {c.label}
                 </Link>
               ) : (
-                <span className="text-foreground">{c.label}</span>
+                <span className="text-foreground/90">{c.label}</span>
               )}
             </li>
           ))}
         </ol>
       </nav>
 
-      <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card p-5 sm:p-7">
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-accent/80" />
-
-
-
-
+      <div className="relative overflow-hidden rounded-[22px] border border-border/60 bg-card p-5 sm:p-6">
         <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
           <div className="flex min-w-0 items-start gap-3.5">
             {Icon && (
               <div className="mt-0.5 hidden shrink-0 sm:block">
-                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-accent text-accent-foreground shadow-sm">
+                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-accent/10 text-accent ring-1 ring-inset ring-accent/20">
                   <Icon className="h-[18px] w-[18px]" />
                 </div>
               </div>
             )}
             <div className="min-w-0">
               {eyebrow && (
-                <div className="mb-1 inline-flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/10 px-2.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-[0.22em] text-accent">
+                <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
                   {eyebrow}
                 </div>
               )}
-              <h1 className="truncate font-display text-[24px] font-semibold leading-[1.1] tracking-tight text-foreground sm:text-2xl">
+              <h1 className="truncate font-display text-[22px] font-semibold leading-[1.15] tracking-tight text-foreground sm:text-[24px]">
                 {title}
               </h1>
               {description && (
-                <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-foreground/70">
+                <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted-foreground">
                   {description}
                 </p>
               )}
