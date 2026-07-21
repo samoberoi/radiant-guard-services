@@ -132,15 +132,34 @@ function EmployeeDashboard() {
     return { present, absent, leave, ot, total: rows.length };
   }, [attQ.data]);
 
-  // Team in same unit
+  // All units this employee is assigned to (primary unit_id + candidate_units mappings)
+  const myUnitsQ = useQuery({
+    queryKey: ["me-units", me?.id, me?.unit_id],
+    enabled: !!me?.id,
+    queryFn: async () => {
+      const set = new Set<string>();
+      if (me?.unit_id) set.add(me.unit_id);
+      const { data } = await supabase
+        .from("candidate_units" as never)
+        .select("unit_id")
+        .eq("candidate_id", me!.id);
+      for (const r of ((data as unknown) as Array<{ unit_id: string }>) ?? []) {
+        if (r.unit_id) set.add(r.unit_id);
+      }
+      return Array.from(set);
+    },
+  });
+  const myUnitIds = useMemo(() => myUnitsQ.data ?? [], [myUnitsQ.data]);
+
+  // Teammates across every unit this employee is assigned to
   const teamQ = useQuery({
-    queryKey: ["me-team", me?.unit_id, me?.id],
-    enabled: !!me?.unit_id,
+    queryKey: ["me-team", myUnitIds.join(","), me?.id],
+    enabled: !!me?.id && myUnitIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("candidates")
         .select("id,full_name,employee_code,photo_url,date_of_birth,approved_at,created_at,designation_id")
-        .eq("unit_id", me!.unit_id!)
+        .in("unit_id", myUnitIds)
         .in("status", ["active", "approved"])
         .neq("id", me!.id)
         .order("full_name");
