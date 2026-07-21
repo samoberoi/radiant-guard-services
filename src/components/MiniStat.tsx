@@ -36,8 +36,8 @@ export function MiniStat({
         : "text-muted-foreground bg-muted ring-border";
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card/90 px-4 py-3.5 shadow-[0_1px_0_0_rgba(255,255,255,0.6)_inset,0_10px_28px_-18px_rgba(15,23,42,0.18)] backdrop-blur-xl transition-all hover:-translate-y-0.5 hover:border-accent/40 hover:shadow-[0_1px_0_0_rgba(255,255,255,0.7)_inset,0_18px_36px_-20px_color-mix(in_oklab,var(--accent)_35%,transparent)]">
-      <div className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-accent/5 blur-2xl transition-opacity group-hover:bg-accent/10" />
+    <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card px-4 py-3.5 transition-all hover:-translate-y-0.5 hover:border-accent/40">
+
       <div className="relative flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
