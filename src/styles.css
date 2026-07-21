@@ -418,15 +418,17 @@
      looking like flat white paper. Kept low-opacity for professionalism. */
   .app-canvas {
     background:
-      radial-gradient(ellipse 55% 40% at 6% -6%, color-mix(in oklab, var(--accent) 12%, transparent) 0%, transparent 55%),
-      radial-gradient(ellipse 50% 38% at 100% 8%, color-mix(in oklab, oklch(0.7 0.14 30) 10%, transparent) 0%, transparent 58%),
-      radial-gradient(ellipse 60% 40% at 50% 105%, color-mix(in oklab, oklch(0.7 0.14 160) 7%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 45% at 0% -5%, color-mix(in oklab, var(--accent) 22%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse 55% 40% at 100% 0%, color-mix(in oklab, oklch(0.65 0.20 320) 18%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 50% 110%, color-mix(in oklab, oklch(0.72 0.16 190) 14%, transparent) 0%, transparent 65%),
+      radial-gradient(ellipse 40% 30% at 85% 55%, color-mix(in oklab, oklch(0.75 0.14 60) 10%, transparent) 0%, transparent 60%),
       var(--background);
   }
   .dark .app-canvas {
     background:
-      radial-gradient(ellipse 55% 40% at 6% -6%, color-mix(in oklab, var(--accent) 20%, transparent) 0%, transparent 55%),
-      radial-gradient(ellipse 50% 38% at 100% 8%, color-mix(in oklab, oklch(0.55 0.18 30) 14%, transparent) 0%, transparent 58%),
+      radial-gradient(ellipse 60% 45% at 0% -5%, color-mix(in oklab, var(--accent) 28%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse 55% 40% at 100% 0%, color-mix(in oklab, oklch(0.55 0.22 320) 22%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 50% 110%, color-mix(in oklab, oklch(0.55 0.18 190) 18%, transparent) 0%, transparent 65%),
       var(--background);
   }
 
@@ -435,18 +437,41 @@
   /* Grid removed — kept as no-op so existing usages stay safe */
   .app-canvas-grid { background-image: none; }
 
-  /* Subtle gradient wash on every base card so surfaces have depth rather
-     than looking like flat cutouts. Applied via layered background so any
-     explicit bg-* utility on the same element still wins. */
+  /* Premium card treatment: soft accent halo at top-left + warm counter-tint
+     at bottom-right so surfaces feel dimensional without looking busy. */
   .bg-card {
-    background-image: linear-gradient(180deg,
-      color-mix(in oklab, var(--accent) 3.5%, transparent) 0%,
-      transparent 55%);
+    background-image:
+      radial-gradient(ellipse 90% 60% at 0% 0%, color-mix(in oklab, var(--accent) 7%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse 80% 55% at 100% 100%, color-mix(in oklab, oklch(0.72 0.16 320) 5%, transparent) 0%, transparent 60%);
   }
   .dark .bg-card {
-    background-image: linear-gradient(180deg,
-      color-mix(in oklab, var(--accent) 8%, transparent) 0%,
-      transparent 55%);
+    background-image:
+      radial-gradient(ellipse 90% 60% at 0% 0%, color-mix(in oklab, var(--accent) 14%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse 80% 55% at 100% 100%, color-mix(in oklab, oklch(0.55 0.20 320) 10%, transparent) 0%, transparent 60%);
+  }
+
+  /* Premium gradient stripe — used as the accent bar in PageHeader and
+     wherever a vibrant vertical/horizontal accent is needed. */
+  .accent-stripe {
+    background: linear-gradient(180deg,
+      var(--accent) 0%,
+      color-mix(in oklab, var(--accent) 70%, oklch(0.65 0.22 320)) 50%,
+      color-mix(in oklab, var(--accent) 50%, oklch(0.72 0.16 190)) 100%);
+  }
+
+  /* Rich hero wash for PageHeader — visible but tasteful, layered gradients
+     that make every section feel intentional and alive. */
+  .hero-wash {
+    background:
+      radial-gradient(ellipse 60% 100% at 0% 50%, color-mix(in oklab, var(--accent) 12%, transparent) 0%, transparent 65%),
+      radial-gradient(ellipse 50% 100% at 100% 0%, color-mix(in oklab, oklch(0.68 0.20 320) 9%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 90% at 100% 100%, color-mix(in oklab, oklch(0.72 0.16 190) 7%, transparent) 0%, transparent 60%);
+  }
+  .dark .hero-wash {
+    background:
+      radial-gradient(ellipse 60% 100% at 0% 50%, color-mix(in oklab, var(--accent) 22%, transparent) 0%, transparent 65%),
+      radial-gradient(ellipse 50% 100% at 100% 0%, color-mix(in oklab, oklch(0.55 0.22 320) 16%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 90% at 100% 100%, color-mix(in oklab, oklch(0.55 0.18 190) 14%, transparent) 0%, transparent 60%);
   }
 
   /* Soft tinted tile variants — pair with .tile. Adds a coloured wash + a
