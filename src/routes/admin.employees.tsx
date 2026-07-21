@@ -3144,6 +3144,7 @@ function CandidateWizard({
   const [savingDraft, setSavingDraft] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [initialUnitIds, setInitialUnitIds] = useState<string[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -3164,6 +3165,7 @@ function CandidateWizard({
       // Optimistically seed with the single mirrored unit_id so the picker isn't empty during fetch.
       const initialUnitIds = rest.unit_id ? [rest.unit_id] : [];
       const normalizedStatus = rest.status === "approved" ? "active" : rest.status;
+      setInitialUnitIds(initialUnitIds);
       setForm({ ...(rest as CandidateForm), status: normalizedStatus, contacts, unit_ids: initialUnitIds });
       // Load full multi-unit assignment from junction table.
       (async () => {
@@ -3177,9 +3179,11 @@ function CandidateWizard({
         const rows = (data ?? []) as { unit_id: string; is_primary: boolean; sort_order: number }[];
         if (rows.length === 0) return;
         const ids = rows.map((r) => r.unit_id);
+        setInitialUnitIds(ids);
         setForm((f) => ({ ...f, unit_ids: ids, unit_id: ids[0] ?? null }));
       })();
     } else {
+      setInitialUnitIds([]);
       setForm(emptyForm());
     }
   }, [open, editing]);
@@ -3496,6 +3500,12 @@ function CandidateWizard({
     if (error) throw error;
   };
 
+  const unitAssignmentsChanged = () => {
+    if (!editing) return true;
+    if (form.unit_ids.length !== initialUnitIds.length) return true;
+    return form.unit_ids.some((id, idx) => id !== initialUnitIds[idx]);
+  };
+
   const persist = async (status: string, successMsg: string) => {
     const payload = buildPayload(status);
     if (editing) {
@@ -3514,7 +3524,10 @@ function CandidateWizard({
         .update(patched as never)
         .eq("id", editing.id);
       if (error) throw error;
-      await syncCandidateUnits(editing.id);
+      if (unitAssignmentsChanged()) {
+        await syncCandidateUnits(editing.id);
+        setInitialUnitIds([...form.unit_ids]);
+      }
       await logActivity({
         module: "Employees",
         action: isResubmit ? "resubmit" : "update",
@@ -3546,6 +3559,7 @@ function CandidateWizard({
       if (error) throw error;
       const newId = (data as { id: string }).id;
       await syncCandidateUnits(newId);
+      setInitialUnitIds([...form.unit_ids]);
       await logActivity({
         module: "Employees",
         action: "create",
@@ -3584,27 +3598,29 @@ function CandidateWizard({
   };
 
   const submit = async () => {
-    if (!form.photo_url) return toast.error("Photograph is required");
-    if (!form.aadhaar_image_url) return toast.error("Aadhaar upload is required");
-    if (!form.signature_url) return toast.error("Signature is required");
-    if (!form.pan_image_url) return toast.error("PAN card upload is required");
-    if (!form.full_name.trim()) return toast.error("Name is required");
-    if (!form.mobile.trim()) return toast.error("Mobile is required");
+    const isEmployee = !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive");
+    if (!isEmployee) {
+      if (!form.photo_url) return toast.error("Photograph is required");
+      if (!form.aadhaar_image_url) return toast.error("Aadhaar upload is required");
+      if (!form.signature_url) return toast.error("Signature is required");
+      if (!form.pan_image_url) return toast.error("PAN card upload is required");
+      if (!form.full_name.trim()) return toast.error("Name is required");
+      if (!form.mobile.trim()) return toast.error("Mobile is required");
+      const compliance = (form.compliance ?? {}) as Record<string, unknown>;
+      const esicEnabled = compliance.esic_enabled !== false; // default true
+      if (esicEnabled && !compliance.esic_branch_id) {
+        return toast.error("ESIC Branch is missing. Please map a branch from ESIC Branch Manager (Compliance section).");
+      }
+    }
     if (form.pan_number && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(form.pan_number.trim().toUpperCase()))
       return toast.error("PAN number format is invalid (e.g. ABCDE1234F)");
     if (form.bank_ifsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.bank_ifsc.trim().toUpperCase()))
       return toast.error("IFSC code format is invalid (e.g. SBIN0001234)");
     if (form.bank_account_number && !/^\d{6,18}$/.test(form.bank_account_number.trim()))
       return toast.error("Bank account number must be 6–18 digits");
-    const compliance = (form.compliance ?? {}) as Record<string, unknown>;
-    const esicEnabled = compliance.esic_enabled !== false; // default true
-    if (esicEnabled && !compliance.esic_branch_id) {
-      return toast.error("ESIC Branch is missing. Please map a branch from ESIC Branch Manager (Compliance section).");
-    }
     setSubmitting(true);
     try {
       // Creating / re-submitting moves to "pending" so the admin can approve.
-      const isEmployee = !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive");
       // For employees, preserve the chosen status (active/inactive). New/candidate edits go to pending.
       const nextStatus = isEmployee
         ? (form.status === "inactive" ? "inactive" : "active")
