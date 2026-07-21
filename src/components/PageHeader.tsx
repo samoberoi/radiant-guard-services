@@ -53,7 +53,7 @@ export function PageHeader({
         </ol>
       </nav>
 
-      <div className="relative overflow-hidden rounded-[22px] border border-border/60 bg-card p-5 sm:p-6">
+      <div className="relative overflow-hidden rounded-2xl sm:rounded-[22px] border border-border/60 bg-card p-4 sm:p-6">
         <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
           <div className="flex min-w-0 items-start gap-3.5">
             {Icon && (
