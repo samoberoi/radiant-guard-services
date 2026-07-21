@@ -158,6 +158,18 @@ function maskPhone(phone: string) {
   const d = phone.replace(/\D/g, "");
   return `+91 ••• ••• ${d.slice(-4)}`;
 }
+// Derived path→(module,sub) map from the RBAC registry so any sub-module route
+// can be gated by canSub without hand-maintaining a duplicate list.
+const subPathList: { prefix: string; module: string; sub: string }[] = (() => {
+  const list: { prefix: string; module: string; sub: string }[] = [];
+  for (const m of RBAC_MODULES) {
+    for (const s of m.subModules) {
+      if (s.path) list.push({ prefix: s.path, module: m.key, sub: s.key });
+    }
+  }
+  return list.sort((a, b) => b.prefix.length - a.prefix.length);
+})();
+
 
 function AdminLayout() {
   const navigate = useNavigate();
