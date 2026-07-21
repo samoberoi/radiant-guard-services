@@ -8,7 +8,7 @@ import {
   InputOTPGroup,
   InputOTPSlot,
 } from "@/components/ui/input-otp";
-import { useAuth, verifyOtp, DEMO_OTP_HINT } from "@/lib/auth";
+import { useAuth, verifyOtp } from "@/lib/auth";
 import logo from "@/assets/radiant-logo-v2.png";
 import loginBg from "@/assets/login-bg.jpg.asset.json";
 
