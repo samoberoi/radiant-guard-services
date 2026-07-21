@@ -831,19 +831,18 @@ function StatusTile({ icon, label, approved, pending, draft, rejected, approvedL
   const total = Math.max(approved + pending + draft + rejected, 1);
   return (
     <Shell to={to} accent={accent}>
-      <TileHeader Icon={icon} accent={accent} />
-      <TileLabel>{label}</TileLabel>
-      <div className="relative mt-1 grid grid-cols-2 gap-3">
+      <TileHeader accent={accent} label={label} />
+      <div className="relative mt-3 grid grid-cols-2 gap-3">
         <div>
-          <div className="font-display text-xl font-bold tabular-nums leading-none text-foreground">{approved}</div>
+          <div className="font-display text-[26px] font-bold tabular-nums leading-none text-foreground">{approved}</div>
           <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{approvedLabel}</div>
         </div>
         <div>
-          <div className="font-display text-xl font-bold tabular-nums leading-none text-foreground">{pending}</div>
+          <div className="font-display text-[26px] font-bold tabular-nums leading-none text-foreground">{pending}</div>
           <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{pendingLabel}</div>
         </div>
       </div>
-      <div className="relative mt-auto flex h-1.5 overflow-hidden rounded-full bg-muted">
+      <div className="relative mt-auto flex h-1.5 overflow-hidden rounded-full bg-white/60">
         {approved > 0 && <div className={ACCENT_BAR[accent]} style={{ width: `${(approved / total) * 100}%` }} />}
         {pending > 0 && <div className="bg-muted-foreground/50" style={{ width: `${(pending / total) * 100}%` }} />}
         {draft > 0 && <div className="bg-muted-foreground/30" style={{ width: `${(draft / total) * 100}%` }} />}
