@@ -59,28 +59,28 @@
 
 :root {
   --radius: 1.5rem;
-  /* Airy pastel-blue canvas inspired by Crextio dashboard reference */
-  --background: oklch(0.955 0.018 250);
-  --foreground: oklch(0.16 0.04 260);
-  --card: oklch(0.995 0.004 250);
-  --card-foreground: oklch(0.14 0.03 260);
-  --popover: oklch(0.998 0.003 250);
+  /* Modern command-center palette: cool blue canvas + navy structure + vivid accents. */
+  --background: oklch(0.935 0.027 249);
+  --foreground: oklch(0.145 0.042 259);
+  --card: oklch(0.985 0.008 248);
+  --card-foreground: oklch(0.13 0.035 259);
+  --popover: oklch(0.992 0.006 248);
   --popover-foreground: oklch(0.14 0.03 260);
   /* Deep navy primary (#0B1F5C-ish) — matches active pill / dark cards */
   --primary: oklch(0.24 0.11 262);
   --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.93 0.02 250);
+  --secondary: oklch(0.902 0.031 249);
   --secondary-foreground: oklch(0.16 0.04 260);
-  --muted: oklch(0.935 0.018 250);
-  --muted-foreground: oklch(0.42 0.03 260);
+  --muted: oklch(0.905 0.025 249);
+  --muted-foreground: oklch(0.345 0.035 259);
   /* Electric blue accent (#2563EB) */
   --accent: oklch(0.58 0.22 262);
   --accent-foreground: oklch(0.99 0 0);
   --accent-secondary: oklch(0.24 0.11 262);
   --destructive: oklch(0.58 0.22 27);
   --destructive-foreground: oklch(0.99 0 0);
-  --border: oklch(0.88 0.018 258);
-  --input: oklch(0.88 0.018 258);
+  --border: oklch(0.82 0.026 254);
+  --input: oklch(0.82 0.026 254);
 
   --ring: oklch(0.58 0.22 262);
   --chart-1: oklch(0.58 0.22 262);
@@ -88,13 +88,13 @@
   --chart-3: oklch(0.72 0.16 262);
   --chart-4: oklch(0.4 0.19 262);
   --chart-5: oklch(0.84 0.09 262);
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.16 0.04 260);
-  --sidebar-primary: oklch(0.24 0.11 262);
+  --sidebar: oklch(0.205 0.068 259);
+  --sidebar-foreground: oklch(0.96 0.01 250);
+  --sidebar-primary: oklch(0.62 0.21 260);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.955 0.018 250);
-  --sidebar-accent-foreground: oklch(0.16 0.04 260);
-  --sidebar-border: oklch(0.92 0.014 258);
+  --sidebar-accent: oklch(0.275 0.074 259);
+  --sidebar-accent-foreground: oklch(0.98 0.006 250);
+  --sidebar-border: oklch(1 0 0 / 18%);
   --sidebar-ring: oklch(0.58 0.22 262);
 
   /* Theme-aware surfaces used by .glass, .tile, admin shell, etc. */
@@ -102,19 +102,27 @@
   --surface-strong: 255 255 255;
   --surface-hairline: 255 255 255;
   --surface-shadow: 15 23 82;
-  --surface-glass-alpha: 0.7;
-  --surface-glass-strong-alpha: 0.86;
-  --surface-border-alpha: 0.55;
+  --surface-glass-alpha: 0.94;
+  --surface-glass-strong-alpha: 0.98;
+  --surface-border-alpha: 0.78;
+
+  --app-sidebar: linear-gradient(180deg, oklch(0.23 0.085 260), oklch(0.17 0.055 260));
+  --app-sidebar-active: oklch(0.64 0.22 260);
+  --app-topbar: rgb(255 255 255 / 0.92);
+  --app-panel: rgb(255 255 255 / 0.96);
+  --app-panel-strong: rgb(255 255 255 / 0.99);
+  --app-shadow: 0 18px 44px -26px rgb(15 23 82 / 0.32);
+  --app-shadow-strong: 0 28px 70px -34px rgb(15 23 82 / 0.44);
 
   /* Soft tint palette — pastel-blue leaning to echo the reference */
-  --tint-blue:    228 239 255;
-  --tint-indigo:  231 234 255;
-  --tint-emerald: 230 249 240;
-  --tint-amber:   253 245 224;
-  --tint-rose:    253 234 240;
-  --tint-violet:  238 232 255;
-  --tint-sky:     224 240 255;
-  --tint-slate:   236 242 250;
+  --tint-blue:    216 232 255;
+  --tint-indigo:  221 225 255;
+  --tint-emerald: 214 245 229;
+  --tint-amber:   255 239 197;
+  --tint-rose:    255 222 232;
+  --tint-violet:  231 220 255;
+  --tint-sky:     207 236 255;
+  --tint-slate:   225 234 246;
 }
 
 
@@ -162,6 +170,14 @@
   --surface-glass-alpha: 0.72;
   --surface-glass-strong-alpha: 0.88;
   --surface-border-alpha: 0.22;
+
+  --app-sidebar: linear-gradient(180deg, oklch(0.18 0.048 260), oklch(0.135 0.035 260));
+  --app-sidebar-active: oklch(0.72 0.18 262);
+  --app-topbar: rgb(38 44 61 / 0.9);
+  --app-panel: rgb(43 50 68 / 0.92);
+  --app-panel-strong: rgb(52 60 82 / 0.96);
+  --app-shadow: 0 20px 52px -28px rgb(0 0 0 / 0.7);
+  --app-shadow-strong: 0 30px 76px -34px rgb(0 0 0 / 0.78);
 }
 
 
@@ -176,7 +192,8 @@
   }
 
   body {
-    background-color: var(--color-background);
+    background:
+      linear-gradient(180deg, color-mix(in oklab, var(--background) 78%, white) 0%, var(--background) 42%, color-mix(in oklab, var(--background) 90%, var(--accent)) 100%);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -243,22 +260,20 @@
 
   /* ============ Glassmorphism system (theme-aware) ============ */
   .glass {
-    background: rgb(var(--surface) / var(--surface-glass-alpha));
-    backdrop-filter: blur(22px) saturate(160%);
-    border: 1px solid rgb(var(--surface-hairline) / var(--surface-border-alpha));
+    background: var(--app-panel);
+    backdrop-filter: blur(18px) saturate(150%);
+    border: 1px solid color-mix(in oklab, var(--border) 72%, white);
     box-shadow:
-      0 1px 0 0 rgb(var(--surface-hairline) / 0.22) inset,
-      0 1px 2px rgb(var(--surface-shadow) / 0.06),
-      0 12px 32px -16px rgb(var(--surface-shadow) / 0.28);
+      0 1px 0 0 rgb(255 255 255 / 0.78) inset,
+      var(--app-shadow);
   }
   .glass-strong {
-    background: rgb(var(--surface-strong) / var(--surface-glass-strong-alpha));
-    backdrop-filter: blur(28px) saturate(180%);
-    border: 1px solid rgb(var(--surface-hairline) / calc(var(--surface-border-alpha) + 0.08));
+    background: var(--app-panel-strong);
+    backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid color-mix(in oklab, var(--border) 76%, white);
     box-shadow:
-      0 1px 0 0 rgb(var(--surface-hairline) / 0.28) inset,
-      0 2px 4px rgb(var(--surface-shadow) / 0.07),
-      0 24px 48px -20px rgb(var(--surface-shadow) / 0.32);
+      0 1px 0 0 rgb(255 255 255 / 0.86) inset,
+      var(--app-shadow-strong);
   }
   .glass-dark {
     background: color-mix(in oklab, oklch(0.18 0.03 260) 70%, transparent);
@@ -307,14 +322,13 @@
     height: 100%;
     min-height: 168px;
     padding: 1.25rem;
-    border-radius: 22px;
-    background: rgb(var(--surface) / var(--surface-glass-alpha));
-    border: 1px solid rgb(var(--surface-hairline) / var(--surface-border-alpha));
-    backdrop-filter: blur(22px) saturate(160%);
+    border-radius: 28px;
+    background: var(--app-panel-strong);
+    border: 1px solid color-mix(in oklab, var(--border) 70%, white);
+    backdrop-filter: blur(16px) saturate(145%);
     box-shadow:
-      0 1px 0 0 rgb(var(--surface-hairline) / 0.24) inset,
-      0 1px 2px rgb(var(--surface-shadow) / 0.06),
-      0 14px 36px -20px rgb(var(--surface-shadow) / 0.32);
+      0 1px 0 0 rgb(255 255 255 / 0.82) inset,
+      var(--app-shadow);
     transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
     color: var(--foreground);
   }
@@ -417,9 +431,9 @@
      looking like flat white paper. Kept low-opacity for professionalism. */
   .app-canvas {
     background:
-      radial-gradient(ellipse 70% 50% at 0% 0%, color-mix(in oklab, var(--accent) 16%, transparent) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 45% at 100% 10%, color-mix(in oklab, oklch(0.72 0.14 250) 14%, transparent) 0%, transparent 60%),
-      radial-gradient(ellipse 70% 45% at 50% 110%, color-mix(in oklab, var(--accent) 10%, transparent) 0%, transparent 65%),
+      radial-gradient(ellipse 72% 52% at 2% -8%, color-mix(in oklab, var(--accent) 23%, transparent) 0%, transparent 58%),
+      radial-gradient(ellipse 62% 46% at 100% 0%, color-mix(in oklab, oklch(0.82 0.15 205) 22%, transparent) 0%, transparent 60%),
+      radial-gradient(ellipse 76% 48% at 50% 112%, color-mix(in oklab, var(--primary) 12%, transparent) 0%, transparent 65%),
       var(--background);
   }
   .dark .app-canvas {
@@ -439,11 +453,10 @@
      layered shadow so cards read as elevated without gradients. */
   .bg-card {
     background-image: none;
-    border-radius: 24px;
+    border-radius: 28px;
     box-shadow:
-      0 1px 0 0 color-mix(in oklab, var(--foreground) 3%, transparent) inset,
-      0 1px 2px rgb(var(--surface-shadow) / 0.04),
-      0 18px 42px -24px rgb(var(--surface-shadow) / 0.18);
+      0 1px 0 0 rgb(255 255 255 / 0.78) inset,
+      var(--app-shadow);
   }
   .dark .bg-card {
     background-image: none;
@@ -455,14 +468,48 @@
 
   /* Soft tinted tile variants — pair with .tile. Adds a coloured wash + a
      tinted accent bar/icon without shouting. */
-  .tile-tint-blue    { background: linear-gradient(180deg, rgb(var(--tint-blue))    0%, rgb(var(--surface) / 0.9) 100%); }
-  .tile-tint-indigo  { background: linear-gradient(180deg, rgb(var(--tint-indigo))  0%, rgb(var(--surface) / 0.9) 100%); }
-  .tile-tint-emerald { background: linear-gradient(180deg, rgb(var(--tint-emerald)) 0%, rgb(var(--surface) / 0.9) 100%); }
-  .tile-tint-amber   { background: linear-gradient(180deg, rgb(var(--tint-amber))   0%, rgb(var(--surface) / 0.9) 100%); }
-  .tile-tint-rose    { background: linear-gradient(180deg, rgb(var(--tint-rose))    0%, rgb(var(--surface) / 0.9) 100%); }
-  .tile-tint-violet  { background: linear-gradient(180deg, rgb(var(--tint-violet))  0%, rgb(var(--surface) / 0.9) 100%); }
-  .tile-tint-sky     { background: linear-gradient(180deg, rgb(var(--tint-sky))     0%, rgb(var(--surface) / 0.9) 100%); }
-  .tile-tint-slate   { background: linear-gradient(180deg, rgb(var(--tint-slate))   0%, rgb(var(--surface) / 0.9) 100%); }
+  .tile-tint-blue    { background: rgb(var(--tint-blue)); }
+  .tile-tint-indigo  { background: rgb(var(--tint-indigo)); }
+  .tile-tint-emerald { background: rgb(var(--tint-emerald)); }
+  .tile-tint-amber   { background: rgb(var(--tint-amber)); }
+  .tile-tint-rose    { background: rgb(var(--tint-rose)); }
+  .tile-tint-violet  { background: rgb(var(--tint-violet)); }
+  .tile-tint-sky     { background: rgb(var(--tint-sky)); }
+  .tile-tint-slate   { background: rgb(var(--tint-slate)); }
+
+  .app-sidebar-shell {
+    background: var(--app-sidebar);
+    color: var(--sidebar-foreground);
+    border-color: var(--sidebar-border);
+    box-shadow: 0 28px 64px -30px color-mix(in oklab, var(--primary) 72%, black);
+  }
+  .app-topbar-shell {
+    background: var(--app-topbar);
+    border-color: color-mix(in oklab, var(--border) 70%, white);
+    box-shadow: var(--app-shadow);
+  }
+  .app-section-panel {
+    background: var(--app-panel-strong);
+    border: 1px solid color-mix(in oklab, var(--border) 72%, white);
+    border-radius: 30px;
+    box-shadow: var(--app-shadow);
+  }
+  .app-hero-panel {
+    background: color-mix(in oklab, var(--primary) 94%, black);
+    color: var(--primary-foreground);
+    border: 1px solid color-mix(in oklab, var(--primary) 72%, white 18%);
+    border-radius: 30px;
+    box-shadow: var(--app-shadow-strong);
+  }
+  .app-hero-panel :where(h1,h2,h3,p,span,svg) { color: inherit; }
+  .dashboard-card {
+    border-radius: 30px;
+    border: 1px solid rgb(255 255 255 / 0.72);
+    box-shadow: var(--app-shadow);
+  }
+  .dashboard-card:hover {
+    box-shadow: var(--app-shadow-strong);
+  }
   .dark .tile-tint-blue,
   .dark .tile-tint-indigo,
   .dark .tile-tint-emerald,
@@ -489,15 +536,15 @@
   .ios-table thead th {
     position: sticky; top: 0;
     z-index: 1;
-    background: color-mix(in oklab, var(--card) 94%, transparent);
+    background: color-mix(in oklab, var(--primary) 92%, black);
     backdrop-filter: blur(14px) saturate(140%);
     font-size: 10.5px;
     font-weight: 600;
     letter-spacing: 0.11em;
     text-transform: uppercase;
-    color: color-mix(in oklab, var(--muted-foreground) 88%, var(--foreground));
+    color: var(--primary-foreground);
     padding: 14px 14px;
-    border-bottom: 1px solid color-mix(in oklab, var(--border) 55%, transparent);
+    border-bottom: 1px solid color-mix(in oklab, var(--primary) 72%, white 18%);
     white-space: normal;
     text-align: left !important;
     overflow: visible;
@@ -514,7 +561,7 @@
     font-size: 13.25px;
     line-height: 1.45;
     color: var(--foreground);
-    border-bottom: 1px solid color-mix(in oklab, var(--border) 28%, transparent);
+    border-bottom: 1px solid color-mix(in oklab, var(--border) 36%, transparent);
     vertical-align: middle;
     white-space: normal;
     overflow: visible;
@@ -544,7 +591,7 @@
   }
   /* Subtle zebra for readability — light-mode only */
   .ios-table tbody tr:nth-child(even) > td {
-    background: color-mix(in oklab, var(--foreground) 1.6%, transparent);
+    background: color-mix(in oklab, var(--accent) 4%, transparent);
   }
   .dark .ios-table tbody tr:nth-child(even) > td { background: transparent; }
 
@@ -687,7 +734,7 @@
     color: var(--muted-foreground);
   }
   .ios-table tbody tr { transition: background-color .15s ease; }
-  .ios-table tbody tr:hover > td { background: color-mix(in oklab, var(--accent) 6%, transparent); }
+  .ios-table tbody tr:hover > td { background: color-mix(in oklab, var(--accent) 10%, transparent); }
   .ios-table tbody tr:last-child td { border-bottom: 0; }
   .num { font-variant-numeric: tabular-nums; white-space: nowrap; overflow-wrap: normal; }
 

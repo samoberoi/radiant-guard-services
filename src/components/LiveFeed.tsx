@@ -53,21 +53,21 @@ export function LiveFeed({ className }: { className?: string }) {
     <aside
 
       className={cn(
-        "flex h-fit max-h-[460px] flex-col overflow-hidden rounded-[24px] border border-border/60 bg-card/70 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]",
+        "app-section-panel flex h-fit max-h-[460px] flex-col overflow-hidden backdrop-blur-2xl",
         className,
       )}
     >
-      <div className="flex items-center justify-between border-b border-border/50 bg-card px-4 py-3">
+      <div className="flex items-center justify-between border-b border-primary/20 bg-primary px-4 py-3 text-primary-foreground">
         <div className="min-w-0 flex items-center gap-2">
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-accent/15 text-accent ring-1 ring-inset ring-accent/20">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-xl bg-primary-foreground/14 text-primary-foreground ring-1 ring-inset ring-primary-foreground/16">
             <Bell className="h-3.5 w-3.5" />
           </span>
           <div className="min-w-0">
-            <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground leading-none">
+            <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-primary-foreground/70 leading-none">
               Live feed
             </div>
             <div className="mt-0.5 flex items-center gap-1.5">
-              <h3 className="font-display text-[13px] font-bold text-foreground leading-tight">Activity</h3>
+              <h3 className="font-display text-[13px] font-bold text-primary-foreground leading-tight">Activity</h3>
               {unread > 0 && (
                 <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[9px] font-bold text-destructive-foreground">
                   {unread > 9 ? "9+" : unread}
@@ -81,7 +81,7 @@ export function LiveFeed({ className }: { className?: string }) {
             type="button"
             onClick={() => refetch()}
             aria-label="Refresh"
-            className="grid h-7 w-7 place-items-center rounded-full border border-border/70 bg-card/80 text-muted-foreground transition hover:text-foreground"
+            className="grid h-7 w-7 place-items-center rounded-full border border-primary-foreground/18 bg-primary-foreground/10 text-primary-foreground/72 transition hover:bg-primary-foreground/16 hover:text-primary-foreground"
           >
             <RotateCw className={cn("h-3 w-3", isFetching && "animate-spin")} />
           </button>
@@ -93,7 +93,7 @@ export function LiveFeed({ className }: { className?: string }) {
               qc.invalidateQueries({ queryKey: NQK });
             }}
             aria-label="Mark all read"
-            className="grid h-7 w-7 place-items-center rounded-full border border-border/70 bg-card/80 text-muted-foreground transition hover:text-foreground disabled:opacity-40"
+            className="grid h-7 w-7 place-items-center rounded-full border border-primary-foreground/18 bg-primary-foreground/10 text-primary-foreground/72 transition hover:bg-primary-foreground/16 hover:text-primary-foreground disabled:opacity-40"
           >
             <CheckCheck className="h-3 w-3" />
           </button>
@@ -117,17 +117,17 @@ export function LiveFeed({ className }: { className?: string }) {
             type="button"
             onClick={() => handleOpen(featured)}
             className={cn(
-              "group relative m-3 mb-2 flex items-start gap-3 rounded-2xl border p-3 text-left transition-all",
+              "group relative m-3 mb-2 flex items-start gap-3 rounded-3xl border p-3 text-left transition-all",
               !featured.readAt
-                ? "border-accent bg-accent text-accent-foreground shadow-md hover:shadow-lg"
-                : "border-border/60 bg-card hover:bg-secondary/40",
+                ? "border-primary bg-primary text-primary-foreground shadow-md hover:shadow-lg"
+                : "border-border/70 bg-card hover:bg-secondary/55",
             )}
           >
             <span
               className={cn(
                 "grid h-10 w-10 shrink-0 place-items-center rounded-xl",
                 !featured.readAt
-                  ? "bg-white/25 text-accent-foreground"
+                  ? "bg-primary-foreground/18 text-primary-foreground"
                   : "bg-secondary text-muted-foreground ring-1 ring-inset ring-border",
               )}
             >
@@ -137,27 +137,27 @@ export function LiveFeed({ className }: { className?: string }) {
               <div className="flex items-start justify-between gap-2">
                 <div className={cn(
                   "text-[10px] font-bold uppercase tracking-[0.18em]",
-                  !featured.readAt ? "text-accent-foreground/85" : "text-accent",
+                  !featured.readAt ? "text-primary-foreground/85" : "text-primary",
                 )}>
                   {featured.readAt ? "Latest" : "New"}
                 </div>
                 <div className={cn(
                   "shrink-0 text-[10px] font-medium",
-                  !featured.readAt ? "text-accent-foreground/80" : "text-muted-foreground",
+                  !featured.readAt ? "text-primary-foreground/80" : "text-muted-foreground",
                 )}>
                   {formatDistanceToNow(new Date(featured.createdAt), { addSuffix: true })}
                 </div>
               </div>
               <div className={cn(
                 "mt-0.5 line-clamp-2 text-[13.5px] font-bold leading-snug",
-                !featured.readAt ? "text-accent-foreground" : "text-foreground",
+                !featured.readAt ? "text-primary-foreground" : "text-foreground",
               )}>
                 {featured.title}
               </div>
               {featured.message && (
                 <div className={cn(
                   "mt-1 line-clamp-2 text-[11.5px] leading-snug",
-                  !featured.readAt ? "text-accent-foreground/85" : "text-muted-foreground",
+                  !featured.readAt ? "text-primary-foreground/85" : "text-muted-foreground",
                 )}>
                   {featured.message}
                 </div>
@@ -180,15 +180,15 @@ export function LiveFeed({ className }: { className?: string }) {
                         type="button"
                         onClick={() => handleOpen(n)}
                         className={cn(
-                          "group flex w-full items-center gap-2.5 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-card",
-                          !n.readAt && "bg-accent/[0.06]",
+                          "group flex w-full items-center gap-2.5 rounded-2xl px-2 py-1.5 text-left transition-colors hover:bg-secondary/65",
+                          !n.readAt && "bg-primary/[0.08]",
                         )}
                       >
                         <span
                           className={cn(
                             "grid h-6 w-6 shrink-0 place-items-center rounded-lg ring-1 ring-inset",
                             !n.readAt
-                              ? "bg-accent/15 text-accent ring-accent/25"
+                              ? "bg-primary/12 text-primary ring-primary/22"
                               : "bg-secondary/70 text-muted-foreground ring-border",
                           )}
                         >
@@ -215,7 +215,7 @@ export function LiveFeed({ className }: { className?: string }) {
         </>
       )}
 
-      <div className="border-t border-border/50 bg-card/50 px-3 py-2 text-center">
+      <div className="border-t border-border/50 bg-card/80 px-3 py-2 text-center">
         <Link
           to="/admin/notifications"
           className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition hover:text-foreground"

@@ -53,23 +53,23 @@ export function PageHeader({
         </ol>
       </nav>
 
-      <div className="relative overflow-hidden rounded-2xl sm:rounded-[22px] border border-border/60 bg-card p-4 sm:p-6">
+      <div className="app-section-panel relative overflow-hidden p-4 sm:p-6">
         <div className="relative grid grid-cols-[minmax(0,1fr)_auto] items-start gap-4">
           <div className="flex min-w-0 items-start gap-3.5">
             {Icon && (
               <div className="mt-0.5 hidden shrink-0 sm:block">
-                <div className="grid h-11 w-11 place-items-center rounded-2xl bg-accent/10 text-accent ring-1 ring-inset ring-accent/20">
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 ring-1 ring-inset ring-primary-foreground/15">
                   <Icon className="h-[18px] w-[18px]" />
                 </div>
               </div>
             )}
             <div className="min-w-0">
               {eyebrow && (
-                <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-accent">
+                <div className="mb-1.5 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary ring-1 ring-inset ring-primary/15">
                   {eyebrow}
                 </div>
               )}
-              <h1 className="truncate font-display text-[22px] font-semibold leading-[1.15] tracking-tight text-foreground sm:text-[24px]">
+              <h1 className="truncate font-display text-[22px] font-semibold leading-[1.15] text-foreground sm:text-[24px]">
                 {title}
               </h1>
               {description && (
@@ -125,10 +125,10 @@ export function PageStat({
         ? "text-muted-foreground bg-muted ring-border"
         : "text-emerald-600 bg-emerald-500/10 ring-emerald-500/20";
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card px-3.5 py-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-accent/60 hover:shadow-md">
+    <div className="group relative overflow-hidden rounded-3xl border border-border/70 bg-card px-3.5 py-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-md">
       <div className="relative flex items-center gap-2.5">
         {Icon && (
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground shadow-sm">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
             <Icon className="h-4 w-4" />
           </span>
         )}
@@ -161,13 +161,13 @@ export function ComingSoonCard({
   message: string;
 }) {
   return (
-    <div className="glass rounded-2xl p-10 text-center sm:p-14">
-      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/15 text-accent">
+    <div className="app-section-panel p-10 text-center sm:p-14">
+      <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
         <Icon className="h-7 w-7" />
       </div>
       <h2 className="mt-5 font-display text-xl tracking-tight text-foreground">{title}</h2>
       <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">{message}</p>
-      <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-accent">
+      <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] uppercase tracking-[0.2em] text-primary">
         Coming soon
       </span>
     </div>
