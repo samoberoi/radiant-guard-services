@@ -740,17 +740,29 @@ const ACCENT_BAR: Record<Accent, string> = {
   amber: "bg-amber-500", emerald: "bg-emerald-500", sky: "bg-sky-500", indigo: "bg-indigo-500",
 };
 
+const ACCENT_TILE_BG: Record<Accent, string> = {
+  rose: "bg-rose-50/70 dark:bg-rose-500/10",
+  cyan: "bg-cyan-50/70 dark:bg-cyan-500/10",
+  lime: "bg-lime-50/70 dark:bg-lime-500/10",
+  violet: "bg-violet-50/70 dark:bg-violet-500/10",
+  amber: "bg-amber-50/70 dark:bg-amber-500/10",
+  emerald: "bg-emerald-50/70 dark:bg-emerald-500/10",
+  sky: "bg-sky-50/70 dark:bg-sky-500/10",
+  indigo: "bg-indigo-50/70 dark:bg-indigo-500/10",
+};
+
 function Shell({ children, to, accent = "indigo" }: { children: React.ReactNode; to: string; accent?: Accent }) {
   return (
     <Link
       to={to}
-      className="group relative flex h-[172px] flex-col overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md"
+      className={`group relative flex h-[172px] flex-col overflow-hidden rounded-2xl border border-border ${ACCENT_TILE_BG[accent]} p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md`}
     >
       <div className={`pointer-events-none absolute inset-y-0 left-0 w-0.5 ${ACCENT_BAR[accent]}`} />
       {children}
     </Link>
   );
 }
+
 
 function TileHeader({ Icon, accent }: { Icon: React.ComponentType<{ className?: string }>; accent: Accent }) {
   return (
