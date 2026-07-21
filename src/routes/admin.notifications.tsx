@@ -122,19 +122,26 @@ function NotificationCenter() {
                     </div>
                   )}
                   <div className="mt-2 flex items-center gap-2">
-                    {n.link && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs"
-                        onClick={() => {
-                          if (typeof window !== "undefined")
-                            window.location.href = n.link;
-                        }}
-                      >
-                        Open
-                      </Button>
-                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={async () => {
+                        if (!n.readAt) {
+                          await markNotificationRead(n.id);
+                          qc.invalidateQueries({ queryKey: NQK });
+                        }
+                        if (shouldRedirect(n.type) && n.link) openLink(n.link);
+                        else setDetail(n);
+                      }}
+                    >
+                      {shouldRedirect(n.type) && n.link ? (
+                        <><ExternalLink className="mr-1 h-3.5 w-3.5" />Open</>
+                      ) : (
+                        <><Eye className="mr-1 h-3.5 w-3.5" />View</>
+                      )}
+                    </Button>
+
                     {!n.readAt && (
                       <Button
                         size="sm"
