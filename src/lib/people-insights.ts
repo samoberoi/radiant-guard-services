@@ -163,7 +163,7 @@ export function usePeopleInsights() {
       const p = enrich(r);
       if (r.date_of_birth) {
         const { next, days } = nextOccurrence(r.date_of_birth);
-        if (days <= HORIZON_DAYS) {
+        if (days <= daysUntilEndOfYear()) {
           birthdays.push({ ...p, daysUntil: days, nextDate: next, turningAge: yearsBetween(r.date_of_birth, next) });
         }
         const age = ageFrom(r.date_of_birth);
@@ -173,7 +173,7 @@ export function usePeopleInsights() {
       if (startedAt) {
         const { next, days } = nextOccurrence(startedAt);
         const years = yearsBetween(startedAt, next);
-        if (days <= HORIZON_DAYS && years >= 1) {
+        if (days <= daysUntilEndOfYear() && years >= 1) {
           anniversaries.push({ ...p, daysUntil: days, nextDate: next, years });
         }
       }
