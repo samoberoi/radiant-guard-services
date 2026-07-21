@@ -72,6 +72,15 @@ const ACCENT_BAR: Record<Accent, string> = {
   emerald: "bg-emerald-500", rose: "bg-rose-500", amber: "bg-amber-500",
   sky: "bg-sky-500", indigo: "bg-indigo-500", violet: "bg-violet-500",
 };
+const ACCENT_TILE_BG: Record<Accent, string> = {
+  emerald: "bg-emerald-50/70 dark:bg-emerald-500/10",
+  rose: "bg-rose-50/70 dark:bg-rose-500/10",
+  amber: "bg-amber-50/70 dark:bg-amber-500/10",
+  sky: "bg-sky-50/70 dark:bg-sky-500/10",
+  indigo: "bg-indigo-50/70 dark:bg-indigo-500/10",
+  violet: "bg-violet-50/70 dark:bg-violet-500/10",
+};
+
 
 function EmployeeDashboard() {
   const { user } = useAuth();
