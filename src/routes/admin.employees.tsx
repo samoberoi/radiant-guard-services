@@ -5383,7 +5383,7 @@ function AssetMultiPicker({
   sizes,
   onSizesChange,
 }: {
-  assets: { id: string; name: string; category: string }[];
+  assets: { id: string; name: string; category: string; available_qty?: number }[];
   value: string[];
   onChange: (ids: string[]) => void;
   sizes?: Record<string, string>;
@@ -5396,13 +5396,20 @@ function AssetMultiPicker({
   const selectedSet = useMemo(() => new Set(value), [value]);
   const selected = useMemo(() => assets.filter((a) => selectedSet.has(a.id)), [assets, selectedSet]);
 
+  // Only offer items that have inventory available; keep already-selected in list.
+  const pickable = useMemo(
+    () => assets.filter((a) => (a.available_qty ?? 0) > 0 || selectedSet.has(a.id)),
+    [assets, selectedSet],
+  );
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    if (!needle) return assets;
-    return assets.filter((a) =>
+    if (!needle) return pickable;
+    return pickable.filter((a) =>
       [a.name, a.category].some((p) => (p ?? "").toLowerCase().includes(needle)),
     );
-  }, [query, assets]);
+  }, [query, pickable]);
+
 
   const grouped = useMemo(() => {
     const groups = new Map<string, typeof assets>();
