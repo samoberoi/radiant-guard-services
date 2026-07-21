@@ -668,7 +668,7 @@ function EmployeesPage() {
     refetchOnWindowFocus: false,
     staleTime: 60_000,
     queryFn: async () => {
-      const [assetsRes, balRes] = await Promise.all([
+      const [assetsRes, balRes, invItemsRes, invCatsRes] = await Promise.all([
         supabase
           .from("assets" as never)
           .select("id,name,category,enabled")
@@ -677,25 +677,56 @@ function EmployeesPage() {
           .limit(500),
         supabase
           .from("inv_stock_balances" as never)
-          .select("qty,inv_items:item_id(name,enabled)"),
+          .select("qty,item_id,inv_items:item_id(name,enabled)"),
+        supabase
+          .from("inv_items" as never)
+          .select("id,name,category_id,enabled")
+          .eq("enabled", true)
+          .order("name", { ascending: true })
+          .limit(1000),
+        supabase
+          .from("inv_item_categories" as never)
+          .select("id,name"),
       ]);
       if (assetsRes.error) throw assetsRes.error;
       if (balRes.error) throw balRes.error;
+      if (invItemsRes.error) throw invItemsRes.error;
+      if (invCatsRes.error) throw invCatsRes.error;
+
       const rows = ((assetsRes.data as unknown) as Array<{ id: string; name: string; category: string }>) ?? [];
       const availByName = new Map<string, number>();
-      type BalRow = { qty: number | string; inv_items: { name: string; enabled: boolean } | null };
+      const availByItemId = new Map<string, number>();
+      type BalRow = { qty: number | string; item_id: string; inv_items: { name: string; enabled: boolean } | null };
       for (const b of ((balRes.data as unknown) as BalRow[]) ?? []) {
+        const q = Number(b.qty ?? 0);
+        if (b.item_id) availByItemId.set(b.item_id, (availByItemId.get(b.item_id) ?? 0) + q);
         const it = b.inv_items;
         if (!it || it.enabled === false) continue;
         const key = (it.name ?? "").trim().toLowerCase();
         if (!key) continue;
-        availByName.set(key, (availByName.get(key) ?? 0) + Number(b.qty ?? 0));
+        availByName.set(key, (availByName.get(key) ?? 0) + q);
       }
-      return rows.map((a) => ({
+
+      const catNameById = new Map(
+        (((invCatsRes.data as unknown) as Array<{ id: string; name: string }>) ?? []).map((c) => [c.id, c.name]),
+      );
+      const assetNameSet = new Set(rows.map((r) => (r.name ?? "").trim().toLowerCase()));
+      const invRows = (((invItemsRes.data as unknown) as Array<{ id: string; name: string; category_id: string | null }>) ?? [])
+        .filter((it) => !assetNameSet.has((it.name ?? "").trim().toLowerCase()))
+        .map((it) => ({
+          id: it.id,
+          name: it.name,
+          category: (it.category_id && catNameById.get(it.category_id)) || "Inventory",
+          available_qty: availByItemId.get(it.id) ?? 0,
+        }));
+
+      const merged = rows.map((a) => ({
         ...a,
         available_qty: availByName.get((a.name ?? "").trim().toLowerCase()) ?? 0,
       }));
+      return [...merged, ...invRows];
     },
+
   });
   const assets = assetsQuery.data ?? [];
 
