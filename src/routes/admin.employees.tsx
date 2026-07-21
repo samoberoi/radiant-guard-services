@@ -5420,7 +5420,7 @@ function AssetMultiPicker({
   sizes?: Record<string, string>;
   onSizesChange?: (next: Record<string, string>) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [query, setQuery] = useState("");
   const searchInputRef = useRef<HTMLInputElement>(null);
 
