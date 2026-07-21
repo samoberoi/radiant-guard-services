@@ -49,7 +49,9 @@ export function LiveFeed({ className }: { className?: string }) {
 
 
   return (
+    <>
     <aside
+
       className={cn(
         "flex h-fit max-h-[460px] flex-col overflow-hidden rounded-[24px] border border-border/60 bg-card/70 backdrop-blur-2xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_24px_60px_-30px_rgba(15,23,42,0.22)]",
         className,
