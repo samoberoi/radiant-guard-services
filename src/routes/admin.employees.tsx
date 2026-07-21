@@ -3145,6 +3145,7 @@ function CandidateWizard({
   const [scanning, setScanning] = useState(false);
   const [uploading, setUploading] = useState<string | null>(null);
   const [initialUnitIds, setInitialUnitIds] = useState<string[]>([]);
+  const isEditingEmployeeProfile = !!editing && isEmployeeStatus(editing.status);
 
   useEffect(() => {
     if (!open) return;
@@ -3598,8 +3599,7 @@ function CandidateWizard({
   };
 
   const submit = async () => {
-    const isEmployee = !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive");
-    if (!isEmployee) {
+    if (!isEditingEmployeeProfile) {
       if (!form.photo_url) return toast.error("Photograph is required");
       if (!form.aadhaar_image_url) return toast.error("Aadhaar upload is required");
       if (!form.signature_url) return toast.error("Signature is required");
@@ -3611,22 +3611,22 @@ function CandidateWizard({
       if (esicEnabled && !compliance.esic_branch_id) {
         return toast.error("ESIC Branch is missing. Please map a branch from ESIC Branch Manager (Compliance section).");
       }
+      if (form.pan_number && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(form.pan_number.trim().toUpperCase()))
+        return toast.error("PAN number format is invalid (e.g. ABCDE1234F)");
+      if (form.bank_ifsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.bank_ifsc.trim().toUpperCase()))
+        return toast.error("IFSC code format is invalid (e.g. SBIN0001234)");
+      if (form.bank_account_number && !/^\d{6,18}$/.test(form.bank_account_number.trim()))
+        return toast.error("Bank account number must be 6–18 digits");
     }
-    if (form.pan_number && !/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(form.pan_number.trim().toUpperCase()))
-      return toast.error("PAN number format is invalid (e.g. ABCDE1234F)");
-    if (form.bank_ifsc && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.bank_ifsc.trim().toUpperCase()))
-      return toast.error("IFSC code format is invalid (e.g. SBIN0001234)");
-    if (form.bank_account_number && !/^\d{6,18}$/.test(form.bank_account_number.trim()))
-      return toast.error("Bank account number must be 6–18 digits");
     setSubmitting(true);
     try {
       // Creating / re-submitting moves to "pending" so the admin can approve.
       // For employees, preserve the chosen status (active/inactive). New/candidate edits go to pending.
-      const nextStatus = isEmployee
+      const nextStatus = isEditingEmployeeProfile
         ? (form.status === "inactive" ? "inactive" : "active")
         : "pending";
       const successMsg = editing
-        ? (isEmployee ? "Employee updated" : "Candidate updated")
+        ? (isEditingEmployeeProfile ? "Employee updated" : "Candidate updated")
         : "Candidate submitted for approval";
       await persist(nextStatus, successMsg);
       onOpenChange(false);
