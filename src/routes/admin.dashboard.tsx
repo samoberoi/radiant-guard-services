@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import {
   Building2, Briefcase, CalendarDays, ChevronLeft, ChevronRight,
   ClipboardList, Files, Fuel, PackageOpen, Receipt, TrendingDown, TrendingUp,
-  UserPlus, Wallet, Warehouse, AlertTriangle, ArrowRight, Sparkles,
+  UserPlus, Wallet, Warehouse, AlertTriangle, ArrowRight, ArrowUpRight, Sparkles,
 } from "lucide-react";
 
 import { PageHeader } from "@/components/PageHeader";
@@ -741,36 +741,39 @@ const ACCENT_BAR: Record<Accent, string> = {
 };
 
 const ACCENT_TILE_BG: Record<Accent, string> = {
-  rose: "bg-rose-50/70 dark:bg-rose-500/10",
-  cyan: "bg-cyan-50/70 dark:bg-cyan-500/10",
-  lime: "bg-lime-50/70 dark:bg-lime-500/10",
-  violet: "bg-violet-50/70 dark:bg-violet-500/10",
-  amber: "bg-amber-50/70 dark:bg-amber-500/10",
-  emerald: "bg-emerald-50/70 dark:bg-emerald-500/10",
-  sky: "bg-sky-50/70 dark:bg-sky-500/10",
-  indigo: "bg-indigo-50/70 dark:bg-indigo-500/10",
+  rose: "bg-rose-100/80 dark:bg-rose-500/15",
+  cyan: "bg-cyan-100/80 dark:bg-cyan-500/15",
+  lime: "bg-lime-100/80 dark:bg-lime-500/15",
+  violet: "bg-violet-100/80 dark:bg-violet-500/15",
+  amber: "bg-amber-100/80 dark:bg-amber-500/15",
+  emerald: "bg-emerald-100/80 dark:bg-emerald-500/15",
+  sky: "bg-sky-100/80 dark:bg-sky-500/15",
+  indigo: "bg-indigo-100/80 dark:bg-indigo-500/15",
 };
 
 function Shell({ children, to, accent = "indigo" }: { children: React.ReactNode; to: string; accent?: Accent }) {
   return (
     <Link
       to={to}
-      className={`group relative flex h-[172px] flex-col overflow-hidden rounded-2xl border border-border ${ACCENT_TILE_BG[accent]} p-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-md`}
+      className={`group relative flex h-[188px] flex-col overflow-hidden rounded-[26px] border border-border/40 ${ACCENT_TILE_BG[accent]} p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg`}
     >
-      <div className={`pointer-events-none absolute inset-y-0 left-0 w-0.5 ${ACCENT_BAR[accent]}`} />
       {children}
     </Link>
   );
 }
 
 
-function TileHeader({ Icon, accent }: { Icon: React.ComponentType<{ className?: string }>; accent: Accent }) {
+function TileHeader({ Icon, accent, label, sub }: { Icon?: React.ComponentType<{ className?: string }>; accent: Accent; label: string; sub?: string }) {
+  void Icon; void accent;
   return (
-    <div className="relative flex items-center justify-between">
-      <div className={`grid h-9 w-9 place-items-center rounded-lg ring-1 ring-inset ${ACCENT_CHIP[accent]}`}>
-        <Icon className="h-[17px] w-[17px]" />
+    <div className="relative flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <div className="font-display text-[15px] font-semibold text-foreground leading-tight">{label}</div>
+        {sub && <div className="mt-1 text-[11px] text-muted-foreground truncate">{sub}</div>}
       </div>
-      <ArrowRight className="h-4 w-4 -translate-x-1 text-muted-foreground/50 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:text-foreground group-hover:opacity-100" />
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-foreground shadow-sm ring-1 ring-black/5 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5">
+        <ArrowUpRight className="h-4 w-4" />
+      </span>
     </div>
   );
 }
@@ -779,16 +782,20 @@ function TileLabel({ children }: { children: React.ReactNode }) {
   return <div className="relative mt-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{children}</div>;
 }
 
-function MetricTile({ icon, label, value, to, accent = "indigo" }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent?: Accent; to: string }) {
+function MetricTile({ icon, label, value, to, accent = "indigo", sub }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent?: Accent; to: string; sub?: string }) {
   const display = useCountUp(value);
+  const I = icon;
   return (
     <Shell to={to} accent={accent}>
-      <TileHeader Icon={icon} accent={accent} />
-      <TileLabel>{label}</TileLabel>
-      <div className="relative mt-1 font-display text-[30px] font-bold leading-none tabular-nums tracking-tight text-foreground">
-        {display}
+      <TileHeader accent={accent} label={label} sub={sub} />
+      <div className="relative mt-auto flex items-end justify-between gap-3">
+        <div className="font-display text-[46px] font-bold leading-none tabular-nums tracking-tight text-foreground">
+          {display}
+        </div>
+        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/80 ring-1 ring-inset ${ACCENT_CHIP[accent]}`}>
+          <I className="h-4 w-4" />
+        </span>
       </div>
-      <div className="relative mt-auto pt-3 text-[11px] font-semibold text-muted-foreground">Open →</div>
     </Shell>
   );
 }
@@ -802,15 +809,15 @@ function DualTile({ icon, label, primary, primaryLabel, secondary, secondaryLabe
   const display = useCountUp(primary);
   return (
     <Shell to={to} accent={accent}>
-      <TileHeader Icon={icon} accent={accent} />
-      <TileLabel>{label}</TileLabel>
-      <div className="relative mt-1 font-display text-[26px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
-      <div className="relative mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{primaryLabel}</div>
-      <div className="relative mt-auto flex items-center justify-between border-t border-border pt-2.5">
-        <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{secondaryLabel}</span>
-        <span className="flex items-center gap-1 font-display text-sm font-semibold tabular-nums text-foreground">
-          <Fuel className="h-3.5 w-3.5 text-muted-foreground" />{secondary}
-        </span>
+      <TileHeader accent={accent} label={label} sub={primaryLabel} />
+      <div className="relative mt-auto flex items-end justify-between gap-3">
+        <div className="font-display text-[40px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
+        <div className="flex flex-col items-end text-right">
+          <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{secondaryLabel}</span>
+          <span className="mt-0.5 flex items-center gap-1 font-display text-sm font-semibold tabular-nums text-foreground">
+            <Fuel className="h-3.5 w-3.5 text-muted-foreground" />{secondary}
+          </span>
+        </div>
       </div>
     </Shell>
   );
@@ -824,19 +831,18 @@ function StatusTile({ icon, label, approved, pending, draft, rejected, approvedL
   const total = Math.max(approved + pending + draft + rejected, 1);
   return (
     <Shell to={to} accent={accent}>
-      <TileHeader Icon={icon} accent={accent} />
-      <TileLabel>{label}</TileLabel>
-      <div className="relative mt-1 grid grid-cols-2 gap-3">
+      <TileHeader accent={accent} label={label} />
+      <div className="relative mt-3 grid grid-cols-2 gap-3">
         <div>
-          <div className="font-display text-xl font-bold tabular-nums leading-none text-foreground">{approved}</div>
+          <div className="font-display text-[26px] font-bold tabular-nums leading-none text-foreground">{approved}</div>
           <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{approvedLabel}</div>
         </div>
         <div>
-          <div className="font-display text-xl font-bold tabular-nums leading-none text-foreground">{pending}</div>
+          <div className="font-display text-[26px] font-bold tabular-nums leading-none text-foreground">{pending}</div>
           <div className="mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{pendingLabel}</div>
         </div>
       </div>
-      <div className="relative mt-auto flex h-1.5 overflow-hidden rounded-full bg-muted">
+      <div className="relative mt-auto flex h-1.5 overflow-hidden rounded-full bg-white/60">
         {approved > 0 && <div className={ACCENT_BAR[accent]} style={{ width: `${(approved / total) * 100}%` }} />}
         {pending > 0 && <div className="bg-muted-foreground/50" style={{ width: `${(pending / total) * 100}%` }} />}
         {draft > 0 && <div className="bg-muted-foreground/30" style={{ width: `${(draft / total) * 100}%` }} />}
@@ -858,13 +864,13 @@ function ContractsTile({ active, expiring }: { active: number; expiring: Array<{
     : "border-emerald-200/70 bg-emerald-50 text-emerald-800 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-300";
   return (
     <Shell to="/admin/contracts/client-contracts" accent="amber">
-      <TileHeader Icon={Files} accent="amber" />
-      <TileLabel>Contracts</TileLabel>
-      <div className="relative mt-1 font-display text-[30px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
-      <div className="relative mt-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Active</div>
-      <div className={`relative mt-auto flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[10px] font-semibold ${alertTone}`}>
-        <AlertTriangle className="h-3 w-3 shrink-0" />
-        <span className="truncate leading-none" title={hasExpiring && soonest?.end_date ? `Soonest: ${soonest.end_date}` : alertText}>{alertText}</span>
+      <TileHeader accent="amber" label="Contracts" sub="Active client contracts" />
+      <div className="relative mt-auto flex items-end justify-between gap-3">
+        <div className="font-display text-[46px] font-bold leading-none tabular-nums tracking-tight text-foreground">{display}</div>
+        <div className={`flex max-w-[55%] items-center gap-1.5 rounded-full border px-2 py-1 text-[10px] font-semibold ${alertTone}`}>
+          <AlertTriangle className="h-3 w-3 shrink-0" />
+          <span className="truncate leading-none" title={hasExpiring && soonest?.end_date ? `Soonest: ${soonest.end_date}` : alertText}>{alertText}</span>
+        </div>
       </div>
     </Shell>
   );
