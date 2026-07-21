@@ -5548,6 +5548,10 @@ function AssetMultiPicker({
                               <Check className={cn("h-4 w-4 shrink-0", checked ? "opacity-100" : "opacity-0")} />
                               <span className="flex-1 truncate">{a.name}</span>
                               <span className="text-[10px] text-muted-foreground">{a.category}</span>
+                              <span className="ml-1 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700">
+                                {a.available_qty ?? 0} in stock
+                              </span>
+
                             </button>
                           );
                         })}
