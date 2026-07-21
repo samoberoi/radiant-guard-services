@@ -1,9 +1,12 @@
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useRouter } from "@tanstack/react-router";
 import { Bell, CheckCheck, RotateCw, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { cn } from "@/lib/utils";
-import { listMyNotifications, markAllRead, markNotificationRead } from "@/lib/notifications";
+import { listMyNotifications, markAllRead, markNotificationRead, type Notification } from "@/lib/notifications";
+import { shouldRedirect } from "@/lib/notification-routing";
+import { NotificationDetailDialog } from "@/components/NotificationDetailDialog";
 
 const NQK = ["notifications", "mine"] as const;
 
@@ -16,6 +19,7 @@ const NQK = ["notifications", "mine"] as const;
 export function LiveFeed({ className }: { className?: string }) {
   const qc = useQueryClient();
   const router = useRouter();
+  const [detail, setDetail] = useState<Notification | null>(null);
   const { data: items = [], isFetching, refetch } = useQuery({
     queryKey: NQK,
     queryFn: listMyNotifications,
@@ -25,19 +29,24 @@ export function LiveFeed({ className }: { className?: string }) {
   const featured = items[0];
   const rest = items.slice(1, 10);
 
+  const openLink = (target: string) => {
+    if (!target) return;
+    if (target.startsWith("/")) router.history.push(target);
+    else if (typeof window !== "undefined") window.location.href = target;
+  };
+
   const handleOpen = async (n: (typeof items)[number]) => {
     if (!n.readAt) {
       await markNotificationRead(n.id);
       qc.invalidateQueries({ queryKey: NQK });
     }
-    const target = n.link && n.link.trim() ? n.link : "/admin/notifications";
-    // SPA-navigate for internal URLs; fall back to full nav for absolute URLs.
-    if (target.startsWith("/")) {
-      router.history.push(target);
-    } else if (typeof window !== "undefined") {
-      window.location.href = target;
+    if (shouldRedirect(n.type) && n.link && n.link.trim()) {
+      openLink(n.link);
+    } else {
+      setDetail(n);
     }
   };
+
 
   return (
     <aside
