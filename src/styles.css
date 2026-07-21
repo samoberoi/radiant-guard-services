@@ -440,10 +440,11 @@
      layered shadow so cards read as elevated without gradients. */
   .bg-card {
     background-image: none;
+    border-radius: 20px;
     box-shadow:
-      0 1px 0 0 color-mix(in oklab, var(--foreground) 4%, transparent) inset,
-      0 1px 2px rgb(var(--surface-shadow) / 0.04),
-      0 12px 28px -18px rgb(var(--surface-shadow) / 0.18);
+      0 1px 0 0 color-mix(in oklab, var(--foreground) 3%, transparent) inset,
+      0 1px 2px rgb(var(--surface-shadow) / 0.035),
+      0 14px 34px -22px rgb(var(--surface-shadow) / 0.16);
   }
   .dark .bg-card {
     background-image: none;
