@@ -127,13 +127,13 @@ export function NotificationBell() {
                     await markNotificationRead(n.id);
                     qc.invalidateQueries({ queryKey: NQK });
                   }
-                  const target = n.link && n.link.trim() ? n.link : "/admin/notifications";
-                  if (target.startsWith("/")) {
-                    router.history.push(target);
-                  } else if (typeof window !== "undefined") {
-                    window.location.href = target;
+                  if (shouldRedirect(n.type) && n.link && n.link.trim()) {
+                    openLink(n.link);
+                  } else {
+                    setDetail(n);
                   }
                 }}
+
                 className={cn(
                   "block w-full border-b border-border/60 px-3 py-2.5 text-left transition-colors hover:bg-secondary/50",
                   !n.readAt && "bg-accent/5",
