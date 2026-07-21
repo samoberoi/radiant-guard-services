@@ -434,7 +434,12 @@ function AdminLayout() {
     }
     const base = groups
       .filter((g) => !g.module || can(g.module))
-      .map((g) => (g.key === "inventory" ? { ...g, children: filteredInventoryChildren } : g));
+      .map((g) => {
+        if (g.key === "inventory") return { ...g, children: filteredInventoryChildren };
+        if (!g.module || !g.children) return g;
+        const filtered = g.children.filter((c) => !c.sub || canSub(g.module!, c.sub));
+        return { ...g, children: filtered };
+      });
     if (isFieldOfficer) {
       // FO gets a single dashboard entry that already shows their units and team.
       return base;
