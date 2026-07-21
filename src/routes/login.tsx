@@ -75,7 +75,7 @@ function LoginPage() {
     if (!verifyOtp(code)) {
       verifyInFlightRef.current = false;
       setVerifying(false);
-      setError(`Incorrect code. Try ${DEMO_OTP_HINT} for the demo.`);
+      setError("Incorrect code. Please check your SMS and try again.");
       setOtp("");
       return;
     }
