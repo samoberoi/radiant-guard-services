@@ -4451,17 +4451,22 @@ function CandidateWizard({
               {savingDraft && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
               Save Draft
             </Button>
-            <Button
-              onClick={submit}
-              disabled={submitting || savingDraft || !!uploading || scanning || !profileComplete}
-              title={!profileComplete ? `Complete all ${completionTotal} required fields to submit (${completionPct}% done)` : undefined}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              {submitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-              {editing
-                ? (editing.status === "approved" || editing.status === "active" || editing.status === "inactive" ? "Save Employee" : "Save & Send to Approval")
-                : "Save & Send to Approval"}
-            </Button>
+            {(() => {
+              const isExistingEmployee = !!editing && (editing.status === "approved" || editing.status === "active" || editing.status === "inactive");
+              const requiresCompletion = !isExistingEmployee;
+              const submitDisabled = submitting || savingDraft || !!uploading || scanning || (requiresCompletion && !profileComplete);
+              return (
+                <Button
+                  onClick={submit}
+                  disabled={submitDisabled}
+                  title={requiresCompletion && !profileComplete ? `Complete all ${completionTotal} required fields to submit (${completionPct}% done)` : undefined}
+                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  {submitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+                  {isExistingEmployee ? "Save Employee" : "Save & Send to Approval"}
+                </Button>
+              );
+            })()}
           </div>
         </DialogFooter>
       </DialogContent>
