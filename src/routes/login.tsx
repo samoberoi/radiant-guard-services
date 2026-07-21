@@ -105,7 +105,16 @@ function LoginPage() {
         src={loginBg.url}
         alt=""
         aria-hidden
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-90"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-95"
+      />
+      {/* Dark vignette so white/black text above the card remains readable */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 60% at 50% 35%, rgba(15,23,42,0.35) 0%, rgba(15,23,42,0.12) 45%, transparent 70%), linear-gradient(to bottom, rgba(15,23,42,0.45) 0%, transparent 35%, transparent 70%, rgba(15,23,42,0.35) 100%)",
+        }}
       />
       {/* Ambient overlay — soft mesh + orbs */}
       <div
@@ -130,7 +139,7 @@ function LoginPage() {
       {/* fine grid */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.25]"
+        className="pointer-events-none absolute inset-0 opacity-[0.18]"
         style={{
           backgroundImage:
             "linear-gradient(to right, color-mix(in oklab, var(--foreground) 5%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 5%, transparent) 1px, transparent 1px)",
