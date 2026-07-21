@@ -862,3 +862,61 @@
   pointer-events: none;
   filter: grayscale(0.2);
 }
+
+/* =========================================================
+   Mobile / small-screen safety net.
+   Applies globally so every page — regardless of author —
+   fits within the viewport, keeps tap targets comfortable,
+   and never produces a horizontal-scroll page.
+   ========================================================= */
+@media (max-width: 640px) {
+  /* Tabs, toolbars, chip rows: allow horizontal swipe when they overflow
+     instead of clipping or forcing wraps that break layout. */
+  [role="tablist"] {
+    overflow-x: auto;
+    flex-wrap: nowrap !important;
+    scrollbar-width: none;
+  }
+  [role="tablist"]::-webkit-scrollbar { display: none; }
+  [role="tablist"] > * { flex: 0 0 auto; }
+
+  /* Sheets / drawers / popovers shouldn't extend beyond the viewport. */
+  [data-radix-popper-content-wrapper] { max-width: calc(100vw - 1rem) !important; }
+
+  /* Common oversized paddings on hero/section wrappers → tighten. */
+  .p-6 { padding: 1rem !important; }
+  .p-8 { padding: 1.25rem !important; }
+  .px-6 { padding-left: 1rem !important; padding-right: 1rem !important; }
+  .px-8 { padding-left: 1.25rem !important; padding-right: 1.25rem !important; }
+  .py-8 { padding-top: 1.25rem !important; padding-bottom: 1.25rem !important; }
+  .gap-6 { gap: 1rem !important; }
+  .gap-8 { gap: 1.25rem !important; }
+
+  /* Any card that renders a data table on mobile — the ios-table already
+     collapses to a stacked list at ≤720px; ensure the wrapper never adds
+     its own horizontal padding that fights the stacked rows. */
+  .bg-card:has(> .ios-table),
+  .bg-card:has(> * > .ios-table) { padding: 0 !important; }
+
+  /* Tap targets on mobile — icon-only buttons deserve ≥36px hit area. */
+  button:where(:has(> svg:only-child)),
+  a:where(:has(> svg:only-child)) { min-height: 36px; min-width: 36px; }
+
+  /* Big display headings scale down further for phones. */
+  h1 { font-size: clamp(1.125rem, 4.5vw, 1.375rem) !important; }
+  .font-display.text-\[46px\],
+  .font-display.text-\[38px\] { font-size: 26px !important; line-height: 1.1 !important; }
+
+  /* Wide right-rail feeds collapse to full-width on phones. */
+  aside.max-h-\[460px\] { max-height: 360px; }
+}
+
+/* Prevent double horizontal scrollbars by clipping the app root while
+   still allowing named scroll containers (tables, tabs) to scroll. */
+html, body, #root { max-width: 100vw; }
+
+/* Give the fixed bottom of any sticky action bar breathing room on iOS. */
+@supports (padding: max(0px)) {
+  main { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+}
+
