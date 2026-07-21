@@ -339,11 +339,14 @@ function LoginPage() {
           </div>
 
           {/* Footer */}
-          <div className="mt-8 flex items-center justify-between px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          <div
+            className="mt-8 flex items-center justify-between px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85"
+            style={{ textShadow: "0 1px 6px rgba(15,23,42,0.35)" }}
+          >
             <span>Radiant Ops Portal</span>
             <span className="inline-flex items-center gap-1.5">
               Powered by
-              <span className="rounded-md border border-border bg-white/70 px-1.5 py-0.5 backdrop-blur">
+              <span className="rounded-md border border-white/30 bg-white/20 px-1.5 py-0.5 text-white backdrop-blur">
                 HyperRevamp
               </span>
             </span>
