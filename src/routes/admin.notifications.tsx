@@ -177,6 +177,13 @@ function NotificationCenter() {
           </ul>
         )}
       </div>
+      <NotificationDetailDialog
+        notification={detail}
+        open={detail !== null}
+        onOpenChange={(o) => { if (!o) setDetail(null); }}
+        onOpenLink={openLink}
+      />
     </div>
   );
 }
+
