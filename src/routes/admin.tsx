@@ -60,6 +60,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/auth";
+import { useMe } from "@/lib/use-me";
 import { useCurrentPermissions } from "@/lib/rbac";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -160,6 +161,7 @@ function maskPhone(phone: string) {
 function AdminLayout() {
   const navigate = useNavigate();
   const { user, logout, isReady } = useAuth();
+  const me = useMe();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { can, canSub, isLoading: permsLoading, isSuperAdmin, roleKey } = useCurrentPermissions();
   const isGuardRole = !isSuperAdmin && (roleKey === "guard" || roleKey === "security_guard");
@@ -521,23 +523,43 @@ function AdminLayout() {
                   collapsed && "justify-center p-1.5",
                 )}
               >
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground text-[11px] font-bold">
-                  {(user?.phone ?? "U").slice(-2)}
+                <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary text-primary-foreground text-[11px] font-bold">
+                  {me.photoUrl ? (
+                    <img src={me.photoUrl} alt="" className="h-full w-full object-cover" />
+                  ) : (
+                    me.initials
+                  )}
                 </span>
                 {!collapsed && (
                   <>
-                    <span className="min-w-0 flex-1 truncate text-left text-[13px]">
-                      {user?.phone ? maskPhone(user.phone) : "Account"}
+                    <span className="min-w-0 flex-1 text-left">
+                      <span className="block truncate text-[13px] font-semibold leading-tight">
+                        {me.fullName || (user?.phone ? maskPhone(user.phone) : "Account")}
+                      </span>
+                      {me.designation && (
+                        <span className="block truncate text-[11px] font-medium capitalize text-muted-foreground">
+                          {me.designation}
+                        </span>
+                      )}
                     </span>
                     <ChevronDown className="h-3.5 w-3.5 opacity-60" />
                   </>
                 )}
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" side="right" sideOffset={10} className="w-56 rounded-2xl">
+            <DropdownMenuContent align="end" side="right" sideOffset={10} className="w-60 rounded-2xl">
               <DropdownMenuLabel>
-                <div className="text-sm font-semibold">{user?.phone ? maskPhone(user.phone) : "Account"}</div>
-                <div className="text-xs text-muted-foreground capitalize">{user?.role?.replace("_", " ")}</div>
+                <div className="text-sm font-semibold">
+                  {me.fullName || (user?.phone ? maskPhone(user.phone) : "Account")}
+                </div>
+                <div className="text-xs text-muted-foreground capitalize">
+                  {me.designation || user?.role?.replace("_", " ")}
+                </div>
+                {user?.phone && (
+                  <div className="mt-0.5 font-mono text-[11px] text-muted-foreground/80">
+                    {maskPhone(user.phone)}
+                  </div>
+                )}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
