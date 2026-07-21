@@ -181,7 +181,7 @@ export function LiveFeed({ className }: { className?: string }) {
                         onClick={() => handleOpen(n)}
                         className={cn(
                           "group flex w-full items-center gap-2.5 rounded-2xl px-2 py-1.5 text-left transition-colors hover:bg-secondary/65",
-                          !n.readAt && "bg-primary/8",
+                          !n.readAt && "bg-primary/[0.08]",
                         )}
                       >
                         <span
