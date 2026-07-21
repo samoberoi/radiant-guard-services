@@ -62,6 +62,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from "@/lib/auth";
 import { useMe } from "@/lib/use-me";
 import { useCurrentPermissions } from "@/lib/rbac";
+import { RBAC_MODULES } from "@/lib/rbac-modules";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
