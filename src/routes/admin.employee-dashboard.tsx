@@ -217,8 +217,12 @@ function EmployeeDashboard() {
   });
   const notifs = notifQ.data ?? [];
 
-  // Birthdays & anniversaries within team (30 days horizon)
-  const HORIZON = 30;
+  // Birthdays & anniversaries within team (rest of current year)
+  const HORIZON = useMemo(() => {
+    const today = new Date();
+    const eoy = new Date(today.getFullYear(), 11, 31);
+    return Math.round((eoy.getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 86400000);
+  }, []);
   const birthdays = useMemo(() => {
     const list: Array<{ id: string; name: string; days: number; date: Date; turningAge: number }> = [];
     for (const t of team) {
@@ -226,8 +230,8 @@ function EmployeeDashboard() {
       const { next, days } = nextOccurrence(t.date_of_birth);
       if (days <= HORIZON) list.push({ id: t.id, name: t.full_name, days, date: next, turningAge: yearsBetween(t.date_of_birth, next) });
     }
-    return list.sort((a, b) => a.days - b.days).slice(0, 6);
-  }, [team]);
+    return list.sort((a, b) => a.days - b.days);
+  }, [team, HORIZON]);
   const anniversaries = useMemo(() => {
     const list: Array<{ id: string; name: string; days: number; date: Date; years: number }> = [];
     for (const t of team) {
@@ -237,8 +241,8 @@ function EmployeeDashboard() {
       const years = yearsBetween(started, next);
       if (days <= HORIZON && years >= 1) list.push({ id: t.id, name: t.full_name, days, date: next, years });
     }
-    return list.sort((a, b) => a.days - b.days).slice(0, 6);
-  }, [team]);
+    return list.sort((a, b) => a.days - b.days);
+  }, [team, HORIZON]);
 
   if (meQ.isLoading) return <div className="p-4 text-sm text-muted-foreground">Loading your dashboard…</div>;
   if (!me) return <div className="p-4 text-sm text-muted-foreground">No employee profile found for this phone.</div>;
@@ -279,7 +283,7 @@ function EmployeeDashboard() {
       <section className="rounded-2xl border border-border bg-card p-4">
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><Cake className="h-4 w-4 text-rose-600" /> Upcoming birthdays</div>
         {birthdays.length === 0 ? (
-          <div className="py-4 text-center text-xs text-muted-foreground">No birthdays in the next 30 days.</div>
+          <div className="py-4 text-center text-xs text-muted-foreground">No birthdays in the rest of this year.</div>
         ) : (
           <ul className="space-y-1.5">
             {birthdays.map((b) => (
@@ -296,7 +300,7 @@ function EmployeeDashboard() {
       <section className="rounded-2xl border border-border bg-card p-4">
         <div className="mb-3 flex items-center gap-2 text-sm font-semibold"><Sparkles className="h-4 w-4 text-amber-600" /> Work anniversaries</div>
         {anniversaries.length === 0 ? (
-          <div className="py-4 text-center text-xs text-muted-foreground">No anniversaries in the next 30 days.</div>
+          <div className="py-4 text-center text-xs text-muted-foreground">No anniversaries in the rest of this year.</div>
         ) : (
           <ul className="space-y-1.5">
             {anniversaries.map((a) => (

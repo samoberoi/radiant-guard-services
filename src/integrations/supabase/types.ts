@@ -4544,6 +4544,7 @@ export type Database = {
         Returns: boolean
       }
       current_user_role_key: { Args: never; Returns: string }
+      current_user_unit_ids: { Args: never; Returns: string[] }
       get_admin_user_ids: {
         Args: never
         Returns: {
