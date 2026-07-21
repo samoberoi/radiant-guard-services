@@ -64,9 +64,7 @@ function LoginPage() {
     setResendIn(30);
     setOtp("");
     setError(null);
-    toast.success(`OTP sent to +91 ••• ••• ${phone.slice(-4)}`, {
-      description: `Use ${DEMO_OTP_HINT} for this demo.`,
-    });
+    toast.success(`OTP sent to +91 ••• ••• ${phone.slice(-4)}`);
   }
 
   async function handleVerify(value?: string) {
