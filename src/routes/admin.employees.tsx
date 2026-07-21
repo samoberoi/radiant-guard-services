@@ -677,12 +677,11 @@ function EmployeesPage() {
           .limit(500),
         supabase
           .from("inv_stock_balances" as never)
-          .select("item_id,qty,inv_items:item_id(name,enabled)"),
+          .select("qty,inv_items:item_id(name,enabled)"),
       ]);
       if (assetsRes.error) throw assetsRes.error;
       if (balRes.error) throw balRes.error;
-      const rows = (assetsRes.data as unknown) as Array<{ id: string; name: string; category: string }>;
-      // Aggregate available stock by item name (case-insensitive, trimmed).
+      const rows = ((assetsRes.data as unknown) as Array<{ id: string; name: string; category: string }>) ?? [];
       const availByName = new Map<string, number>();
       type BalRow = { qty: number | string; inv_items: { name: string; enabled: boolean } | null };
       for (const b of ((balRes.data as unknown) as BalRow[]) ?? []) {
@@ -692,11 +691,14 @@ function EmployeesPage() {
         if (!key) continue;
         availByName.set(key, (availByName.get(key) ?? 0) + Number(b.qty ?? 0));
       }
-      // Only include assets whose name matches an inventory item with qty > 0.
-      return (rows ?? []).filter((a) => (availByName.get((a.name ?? "").trim().toLowerCase()) ?? 0) > 0);
+      return rows.map((a) => ({
+        ...a,
+        available_qty: availByName.get((a.name ?? "").trim().toLowerCase()) ?? 0,
+      }));
     },
   });
   const assets = assetsQuery.data ?? [];
+
 
 
   // Filters
