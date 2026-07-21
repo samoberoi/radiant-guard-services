@@ -492,7 +492,7 @@ function DashboardPage() {
 
   if (showInventoryDashboard) {
     return (
-      <div className="page-shell">
+      <div className="p-4 sm:p-6">
         <DashboardShell>
           <PageHeader
             title="Inventory Dashboard"
@@ -506,7 +506,7 @@ function DashboardPage() {
   }
 
   const pnlBlock = showPnL ? (
-    <div className="app-section-panel overflow-hidden">
+    <div className="overflow-hidden rounded-3xl border border-border/70 bg-card shadow-[0_1px_2px_rgba(10,10,10,0.03),0_20px_50px_-30px_rgba(10,20,40,0.15)]">
       <div className="flex flex-col gap-3 border-b border-border/50 px-6 py-5 lg:flex-row lg:items-start lg:justify-between">
         <div className="max-w-2xl space-y-1">
           <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">P&amp;L — {MONTH_NAMES[month]} {year}</h2>
@@ -591,7 +591,7 @@ function DashboardPage() {
   ) : null;
 
   return (
-    <div className="page-shell">
+    <div className="p-4 sm:p-6">
       <DashboardShell rightExtras={<PeopleInsightsSection />} fullWidthBelow={pnlBlock}>
 
       <PageHeader
@@ -600,12 +600,13 @@ function DashboardPage() {
         crumbs={[{ label: "Dashboard" }]}
       />
 
-      {/* Month hero */}
-      <div className="app-hero-panel relative overflow-hidden p-5 sm:p-6">
+      {/* Month hero — restrained slate panel */}
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-5 shadow-sm sm:p-6">
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-1 bg-foreground/80" />
 
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-primary-foreground/18 bg-primary-foreground/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-primary-foreground/76">
+            <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/60 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
               <Sparkles className="h-3 w-3" /> Leadership snapshot
             </div>
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
@@ -613,25 +614,25 @@ function DashboardPage() {
                 {MONTH_NAMES[month]} {year}
               </span>
               {isCurrent && (
-                <span className="inline-flex items-center rounded-full bg-primary-foreground px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">
+                <span className="inline-flex items-center rounded-full bg-foreground px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-background">
                   Current
                 </span>
               )}
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1 rounded-2xl border border-primary-foreground/18 bg-primary-foreground/10 p-1">
-            <button onClick={() => shift(-1)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-primary-foreground/78 transition hover:bg-primary-foreground/14 hover:text-primary-foreground" aria-label="Previous"><ChevronLeft className="h-4 w-4" /></button>
+          <div className="flex flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/40 p-1">
+            <button onClick={() => shift(-1)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-background hover:text-foreground" aria-label="Previous"><ChevronLeft className="h-4 w-4" /></button>
             <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-              <SelectTrigger className="h-8 w-[130px] rounded-xl border-0 bg-transparent text-primary-foreground shadow-none hover:bg-primary-foreground/14 focus:ring-0"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-[130px] rounded-lg border-0 bg-transparent shadow-none hover:bg-background focus:ring-0"><SelectValue /></SelectTrigger>
               <SelectContent>{MONTH_NAMES.map((m, i) => <SelectItem key={m} value={String(i)}>{m}</SelectItem>)}</SelectContent>
             </Select>
-            <div className="h-5 w-px bg-primary-foreground/18" />
+            <div className="h-5 w-px bg-border" />
             <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
-              <SelectTrigger className="h-8 w-[92px] rounded-xl border-0 bg-transparent text-primary-foreground shadow-none hover:bg-primary-foreground/14 focus:ring-0"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-8 w-[92px] rounded-lg border-0 bg-transparent shadow-none hover:bg-background focus:ring-0"><SelectValue /></SelectTrigger>
               <SelectContent>{Array.from({ length: 7 }, (_, i) => now.getFullYear() - 3 + i).map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}</SelectContent>
             </Select>
-            <button onClick={() => shift(1)} className="inline-flex h-8 w-8 items-center justify-center rounded-xl text-primary-foreground/78 transition hover:bg-primary-foreground/14 hover:text-primary-foreground" aria-label="Next"><ChevronRight className="h-4 w-4" /></button>
+            <button onClick={() => shift(1)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition hover:bg-background hover:text-foreground" aria-label="Next"><ChevronRight className="h-4 w-4" /></button>
           </div>
         </div>
       </div>
@@ -640,7 +641,7 @@ function DashboardPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {isLoading ? (
           Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="dashboard-card h-[196px] animate-pulse bg-card" />
+            <div key={i} className="h-[172px] animate-pulse rounded-2xl border border-border/60 bg-card" />
           ))
         ) : (
           tiles.map((t, i) => (
@@ -671,7 +672,7 @@ function DashboardPage() {
             className={`grid grid-cols-1 gap-4 ${showInvoiceChart && showGauge ? "lg:grid-cols-3" : "lg:grid-cols-1"}`}
           >
             {showInvoiceChart && (
-                <div className={`app-section-panel relative overflow-hidden p-5 ${showGauge ? "lg:col-span-2" : ""}`}>
+              <div className={`glass relative overflow-hidden rounded-3xl p-5 ${showGauge ? "lg:col-span-2" : ""}`}>
                 <div className="mb-3 flex items-end justify-between">
                   <div>
                     <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Top units · this cycle</div>
@@ -694,7 +695,7 @@ function DashboardPage() {
               </div>
             )}
             {showGauge && (
-              <div className="app-section-panel relative flex flex-col items-center justify-center overflow-hidden p-5">
+              <div className="glass relative flex flex-col items-center justify-center overflow-hidden rounded-3xl p-5">
                 <div className="mb-2 text-center">
                   <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">Approval rate</div>
                   <div className="font-display text-lg font-semibold tracking-tight text-foreground">Cycle health</div>
@@ -740,21 +741,21 @@ const ACCENT_BAR: Record<Accent, string> = {
 };
 
 const ACCENT_TILE_BG: Record<Accent, string> = {
-  rose: "tile-tint-rose",
-  cyan: "tile-tint-sky",
-  lime: "tile-tint-emerald",
-  violet: "tile-tint-violet",
-  amber: "tile-tint-amber",
-  emerald: "tile-tint-emerald",
-  sky: "tile-tint-sky",
-  indigo: "tile-tint-indigo",
+  rose: "bg-rose-100/80 dark:bg-rose-500/15",
+  cyan: "bg-cyan-100/80 dark:bg-cyan-500/15",
+  lime: "bg-lime-100/80 dark:bg-lime-500/15",
+  violet: "bg-violet-100/80 dark:bg-violet-500/15",
+  amber: "bg-amber-100/80 dark:bg-amber-500/15",
+  emerald: "bg-emerald-100/80 dark:bg-emerald-500/15",
+  sky: "bg-sky-100/80 dark:bg-sky-500/15",
+  indigo: "bg-indigo-100/80 dark:bg-indigo-500/15",
 };
 
 function Shell({ children, to, accent = "indigo" }: { children: React.ReactNode; to: string; accent?: Accent }) {
   return (
     <Link
       to={to}
-      className={`dashboard-card group relative flex h-[196px] flex-col overflow-hidden ${ACCENT_TILE_BG[accent]} p-5 transition-all duration-200 hover:-translate-y-0.5`}
+      className={`group relative flex h-[188px] flex-col overflow-hidden rounded-[26px] border border-border/40 ${ACCENT_TILE_BG[accent]} p-5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg`}
     >
       {children}
     </Link>
@@ -770,7 +771,7 @@ function TileHeader({ Icon, accent, label, sub }: { Icon?: React.ComponentType<{
         <div className="font-display text-[15px] font-semibold text-foreground leading-tight">{label}</div>
         {sub && <div className="mt-1 text-[11px] text-muted-foreground truncate">{sub}</div>}
       </div>
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-card text-foreground shadow-sm ring-1 ring-border/70 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5">
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-foreground shadow-sm ring-1 ring-black/5 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5">
         <ArrowUpRight className="h-4 w-4" />
       </span>
     </div>
@@ -791,7 +792,7 @@ function MetricTile({ icon, label, value, to, accent = "indigo", sub }: { icon: 
         <div className="font-display text-[46px] font-bold leading-none tabular-nums tracking-tight text-foreground">
           {display}
         </div>
-        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full bg-card/85 ring-1 ring-inset ${ACCENT_CHIP[accent]}`}>
+        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/80 ring-1 ring-inset ${ACCENT_CHIP[accent]}`}>
           <I className="h-4 w-4" />
         </span>
       </div>

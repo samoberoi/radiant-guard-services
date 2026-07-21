@@ -466,17 +466,17 @@ function AdminLayout() {
 
 
 
-      {/* Desktop vertical sidebar */}
+      {/* Desktop vertical sidebar — glass / iPadOS */}
       <aside
         className={cn(
-          "app-sidebar-shell fixed inset-y-3 left-3 z-30 hidden flex-col rounded-[30px] border backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex animate-slide-in-left",
+          "fixed inset-y-3 left-3 z-30 hidden flex-col rounded-[26px] border border-border/50 bg-card/65 shadow-[0_10px_40px_-16px_rgba(15,23,42,0.18)] backdrop-blur-2xl backdrop-saturate-150 transition-[width] duration-300 lg:flex animate-slide-in-left",
           sidebarWidth,
         )}
       >
         {/* Brand */}
         <div className={cn("flex items-center px-4 pt-5 pb-4", collapsed && "justify-center px-2")}>
           {collapsed ? (
-            <Link to={dashboardHref} className="grid h-10 w-10 place-items-center rounded-2xl bg-sidebar-primary text-sidebar-primary-foreground text-[13px] font-bold shadow-lg shadow-sidebar-primary/20">
+            <Link to={dashboardHref} className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground text-[13px] font-bold">
               R
             </Link>
           ) : (
@@ -505,7 +505,7 @@ function AdminLayout() {
                   return (
                     <div key={s.label} className="space-y-[3px]">
                       {!collapsed && (
-                        <div className="px-2.5 pt-1 pb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-sidebar-foreground/48">
+                        <div className="px-2.5 pt-1 pb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground/70">
                           {s.label}
                         </div>
                       )}
@@ -521,7 +521,7 @@ function AdminLayout() {
                   return (
                     <div className="space-y-[3px]">
                       {!collapsed && (
-                        <div className="px-2.5 pt-1 pb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-sidebar-foreground/48">More</div>
+                        <div className="px-2.5 pt-1 pb-1 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground/70">More</div>
                       )}
                       {rest.map((g) => (
                         <SidebarGroup key={g.key} group={g} collapsed={collapsed} isActive={isActive} groupActive={isGroupActive(g)} />
@@ -535,17 +535,17 @@ function AdminLayout() {
         </nav>
 
         {/* Footer: user + collapse */}
-        <div className="border-t border-sidebar-border p-3">
+        <div className="border-t border-border/40 p-3">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
                 className={cn(
-                  "flex w-full items-center gap-2.5 rounded-2xl border border-sidebar-border bg-sidebar-accent/60 p-2 text-sm font-semibold text-sidebar-foreground transition hover:bg-sidebar-accent",
+                  "flex w-full items-center gap-2.5 rounded-2xl border border-border/40 bg-card/60 p-2 text-sm font-semibold text-foreground transition hover:bg-card/80",
                   collapsed && "justify-center p-1.5",
                 )}
               >
-                <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-2xl bg-sidebar-primary text-sidebar-primary-foreground text-[11px] font-bold shadow-md shadow-sidebar-primary/20">
+                <span className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-primary text-primary-foreground text-[11px] font-bold">
                   {me.photoUrl ? (
                     <img src={me.photoUrl} alt="" className="h-full w-full object-cover" />
                   ) : (
@@ -559,7 +559,7 @@ function AdminLayout() {
                         {me.fullName || (user?.phone ? maskPhone(user.phone) : "Account")}
                       </span>
                       {me.designation && (
-                        <span className="block truncate text-[11px] font-medium capitalize text-sidebar-foreground/60">
+                        <span className="block truncate text-[11px] font-medium capitalize text-muted-foreground">
                           {me.designation}
                         </span>
                       )}
@@ -606,11 +606,11 @@ function AdminLayout() {
             onClick={toggleTheme}
             aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             className={cn(
-              "mt-2 flex w-full items-center gap-2 rounded-2xl border border-sidebar-border bg-sidebar-accent/55 px-2.5 py-2 text-[12px] font-semibold text-sidebar-foreground transition hover:bg-sidebar-accent",
+              "mt-2 flex w-full items-center gap-2 rounded-xl border border-border/40 bg-card/60 px-2.5 py-2 text-[12px] font-semibold text-foreground hover:bg-card/80 transition",
               collapsed && "justify-center px-1.5",
             )}
           >
-            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-xl bg-sidebar-foreground/10 text-sidebar-foreground/80">
+            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-foreground/[0.06] text-foreground/70">
               {themeMounted && theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
             </span>
             {!collapsed && (
@@ -624,7 +624,7 @@ function AdminLayout() {
             type="button"
             onClick={() => setCollapsed((v) => !v)}
             className={cn(
-              "mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-sidebar-foreground/62 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+              "mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl px-2 py-1.5 text-[11px] font-semibold text-muted-foreground hover:bg-card/60 hover:text-foreground",
             )}
             aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
@@ -635,11 +635,11 @@ function AdminLayout() {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="app-topbar-shell sticky top-0 z-20 flex h-14 items-center gap-2 border-b px-4 backdrop-blur-2xl backdrop-saturate-150 lg:hidden animate-slide-in-top">
+      <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border/40 bg-card/60 px-4 backdrop-blur-2xl backdrop-saturate-150 lg:hidden animate-slide-in-top">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
-          className="grid h-9 w-9 place-items-center rounded-2xl border border-border/70 bg-card text-foreground shadow-sm"
+          className="grid h-9 w-9 place-items-center rounded-xl border border-border/50 bg-card/70 text-foreground"
           aria-label="Open menu"
         >
           <Menu className="h-5 w-5" />
@@ -655,14 +655,14 @@ function AdminLayout() {
       {/* Mobile drawer */}
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <div className="absolute inset-0 bg-foreground/50 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="app-sidebar-shell absolute inset-y-2 left-2 w-[86%] max-w-sm overflow-y-auto rounded-[30px] border p-4 shadow-2xl backdrop-blur-2xl">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute inset-y-2 left-2 w-[86%] max-w-sm overflow-y-auto rounded-3xl border border-border/40 bg-card/80 p-4 shadow-2xl backdrop-blur-2xl">
             <div className="mb-4 flex items-center justify-between">
               <BrandMark />
               <button
                 type="button"
                 onClick={() => setMobileOpen(false)}
-                className="grid h-9 w-9 place-items-center rounded-2xl bg-sidebar-accent text-sidebar-foreground"
+                className="grid h-9 w-9 place-items-center rounded-xl bg-card/70 text-foreground"
                 aria-label="Close menu"
               >
                 <X className="h-5 w-5" />
@@ -675,20 +675,20 @@ function AdminLayout() {
               <div className="my-2 border-t border-border/40" />
               <Link
                 to="/admin/profile"
-                className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-semibold text-sidebar-foreground hover:bg-sidebar-accent"
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-card/70"
               >
                 <Users className="h-4 w-4" /> My Profile
               </Link>
               <Link
                 to="/admin/notifications"
-                className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5 text-sm font-semibold text-sidebar-foreground hover:bg-sidebar-accent"
+                className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold text-foreground hover:bg-card/70"
               >
                 <Bell className="h-4 w-4" /> Notifications
               </Link>
               <button
                 type="button"
                 onClick={toggleTheme}
-                className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-sidebar-foreground hover:bg-sidebar-accent"
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-foreground hover:bg-card/70"
               >
                 {themeMounted && theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                 {themeMounted && theme === "dark" ? "Light mode" : "Dark mode"}
@@ -697,7 +697,7 @@ function AdminLayout() {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex w-full items-center gap-2.5 rounded-2xl px-3 py-2.5 text-left text-sm font-semibold text-sidebar-foreground/82 hover:bg-destructive/20"
+                className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-destructive hover:bg-destructive/10"
               >
                 <LogOut className="h-4 w-4" /> Sign out
               </button>
@@ -709,8 +709,8 @@ function AdminLayout() {
       {/* Main */}
       <main className={cn("relative z-10 px-3 py-4 sm:px-6 sm:py-6 lg:py-8 lg:pr-6", mainPad)}>
         {/* Desktop top utility bar — global search + notifications */}
-        <div className="mb-5 hidden items-center gap-3 lg:flex animate-slide-in-top">
-          <div className="app-topbar-shell flex h-11 flex-1 items-center gap-2 rounded-full border px-4 text-sm text-muted-foreground backdrop-blur-xl">
+        <div className="mb-4 hidden items-center gap-3 lg:flex animate-slide-in-top">
+          <div className="flex h-10 flex-1 items-center gap-2 rounded-full border border-border/60 bg-card/70 px-4 text-sm text-muted-foreground backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_10px_30px_-18px_rgba(15,23,42,0.18)]">
             <svg className="h-4 w-4 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
             <input
               type="search"
@@ -721,7 +721,7 @@ function AdminLayout() {
           </div>
           <NotificationBell />
         </div>
-        <div className="mx-auto max-w-[1680px]">
+        <div className="mx-auto max-w-[1500px]">
           <div key={pathname} className="page-enter">
             {isReady && user && !permsLoading ? (
               <Outlet />
@@ -759,13 +759,13 @@ function SidebarGroup({
 
   const itemBase =
     "group relative flex w-full items-center gap-2.5 rounded-2xl px-2.5 py-2 text-[13px] font-medium transition-all";
-  const itemIdle = "text-sidebar-foreground/72 hover:bg-sidebar-accent hover:text-sidebar-foreground";
+  const itemIdle = "text-foreground/70 hover:bg-foreground/[0.05] hover:text-foreground";
   const itemActive =
-    "bg-sidebar-primary text-sidebar-primary-foreground shadow-[0_16px_34px_-18px_color-mix(in_oklab,var(--sidebar-primary)_75%,black)]";
+    "bg-foreground text-background shadow-[0_10px_28px_-14px_rgba(15,23,42,0.55)]";
 
   const iconSpanBase = "grid h-7 w-7 shrink-0 place-items-center rounded-xl transition-colors";
-  const iconSpanActive = "bg-sidebar-primary-foreground/16 text-sidebar-primary-foreground";
-  const iconSpanIdle = "text-sidebar-foreground/60 group-hover:text-sidebar-foreground";
+  const iconSpanActive = "bg-card/15 text-background";
+  const iconSpanIdle = "text-foreground/60 group-hover:text-foreground";
 
   if (!group.children || group.children.length === 0) {
     const link = (
@@ -826,7 +826,7 @@ function SidebarGroup({
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((v) => !v); }}
             aria-label={open ? "Collapse" : "Expand"}
-            className="grid h-6 w-6 place-items-center rounded-md hover:bg-sidebar-foreground/10"
+            className="grid h-6 w-6 place-items-center rounded-md hover:bg-foreground/10"
           >
             <ChevronDown className={cn("h-3.5 w-3.5 opacity-60 transition-transform", open ? "rotate-0" : "-rotate-90")} />
           </button>
@@ -845,7 +845,7 @@ function SidebarGroup({
         </button>
       )}
       {open && (
-        <div className="mt-0.5 ml-[22px] space-y-0.5 border-l border-sidebar-foreground/12 pl-3">
+        <div className="mt-0.5 ml-[22px] space-y-0.5 border-l border-foreground/10 pl-3">
           {group.children.map((c) => {
             const a = isActive(c.to);
             return (
@@ -856,8 +856,8 @@ function SidebarGroup({
                 className={cn(
                   "relative flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[12.5px] font-medium transition-colors",
                   a
-                    ? "bg-sidebar-foreground/12 text-sidebar-foreground font-semibold"
-                    : "text-sidebar-foreground/62 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                    ? "bg-accent/10 text-accent font-semibold"
+                    : "text-foreground/65 hover:bg-foreground/[0.04] hover:text-foreground",
                 )}
               >
                 <c.icon className="h-3.5 w-3.5 opacity-70" />
@@ -890,8 +890,8 @@ function MobileGroup({
         className={cn(
           "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
           isGroupActive
-            ? "bg-sidebar-primary text-sidebar-primary-foreground ring-1 ring-sidebar-primary/30"
-            : "text-sidebar-foreground/82 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+            ? "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)]"
+            : "text-foreground hover:bg-accent/10 hover:text-accent",
         )}
       >
         <Icon className="h-4 w-4" />
@@ -906,8 +906,8 @@ function MobileGroup({
           className={cn(
             "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
             isGroupActive
-              ? "bg-sidebar-primary text-sidebar-primary-foreground ring-1 ring-sidebar-primary/30"
-              : "text-sidebar-foreground/82 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+              ? "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)]"
+              : "text-foreground hover:bg-accent/10 hover:text-accent",
           )}
         >
           <Link to={group.to} className="flex flex-1 items-center gap-2.5 min-w-0">
@@ -918,7 +918,7 @@ function MobileGroup({
             type="button"
             onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpen((v) => !v); }}
             aria-label={open ? "Collapse" : "Expand"}
-            className="grid h-7 w-7 place-items-center rounded-md hover:bg-sidebar-foreground/10"
+            className="grid h-7 w-7 place-items-center rounded-md hover:bg-foreground/10"
           >
             <ChevronDown className={cn("h-4 w-4 transition-transform", open ? "rotate-0" : "-rotate-90")} />
           </button>
@@ -930,8 +930,8 @@ function MobileGroup({
           className={cn(
             "flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition-colors",
             isGroupActive
-              ? "bg-sidebar-primary text-sidebar-primary-foreground ring-1 ring-sidebar-primary/30"
-              : "text-sidebar-foreground/82 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+              ? "bg-[color-mix(in_oklab,var(--accent)_12%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_30%,transparent)]"
+              : "text-foreground hover:bg-accent/10 hover:text-accent",
           )}
         >
           <Icon className="h-4 w-4" />
@@ -951,8 +951,8 @@ function MobileGroup({
                 className={cn(
                   "flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors",
                   a
-                    ? "bg-sidebar-foreground/12 text-sidebar-foreground ring-1 ring-sidebar-foreground/14"
-                    : "text-sidebar-foreground/72 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                    ? "bg-[color-mix(in_oklab,var(--accent)_10%,white)] text-accent ring-1 ring-[color-mix(in_oklab,var(--accent)_25%,transparent)]"
+                    : "text-foreground/80 hover:bg-accent/10 hover:text-accent",
                 )}
               >
                 <c.icon className="h-4 w-4 opacity-80" />
@@ -1036,7 +1036,7 @@ function CollapsedGroupPopover({
           onMouseEnter={cancelClose}
           onMouseLeave={scheduleClose}
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="w-60 rounded-3xl border border-border/60 bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
+          className="w-60 rounded-2xl border border-border/50 bg-card/95 p-2 shadow-2xl backdrop-blur-xl"
         >
           <div className="mb-1 px-2 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
             {t(group.label)}
