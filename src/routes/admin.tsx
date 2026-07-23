@@ -649,7 +649,7 @@ function AdminLayout() {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border/40 bg-card/60 px-4 backdrop-blur-2xl backdrop-saturate-150 lg:hidden animate-slide-in-top">
+      <header data-app-header className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b border-border/40 bg-card/60 px-4 backdrop-blur-2xl backdrop-saturate-150 lg:hidden animate-slide-in-top safe-top safe-x">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
@@ -670,7 +670,7 @@ function AdminLayout() {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute inset-y-2 left-2 w-[86%] max-w-sm overflow-y-auto rounded-3xl border border-border/40 bg-card/80 p-4 shadow-2xl backdrop-blur-2xl">
+          <aside className="absolute inset-y-2 left-2 w-[86%] max-w-sm overflow-y-auto overscroll-contain rounded-3xl border border-border/40 bg-card/80 p-4 shadow-2xl backdrop-blur-2xl safe-top safe-bottom">
             <div className="mb-4 flex items-center justify-between">
               <BrandMark />
               <button
@@ -721,7 +721,7 @@ function AdminLayout() {
       )}
 
       {/* Main */}
-      <main className={cn("relative z-10 px-3 py-4 sm:px-6 sm:py-6 lg:py-8 lg:pr-6", mainPad)}>
+      <main className={cn("relative z-10 px-3 py-4 sm:px-6 sm:py-6 lg:py-8 lg:pr-6 safe-x", mainPad)}>
         {/* Desktop top utility bar — global search + notifications */}
         <div className="mb-4 hidden items-center gap-3 lg:flex animate-slide-in-top">
           <div className="flex h-10 flex-1 items-center gap-2 rounded-full border border-border/60 bg-card/70 px-4 text-sm text-muted-foreground backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_10px_30px_-18px_rgba(15,23,42,0.18)]">
