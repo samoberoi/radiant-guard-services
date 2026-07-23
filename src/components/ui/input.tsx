@@ -68,7 +68,7 @@ const DateInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input
           </button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-auto max-w-[min(20rem,calc(100vw-1rem))] p-0 pointer-events-auto"
+          className="w-auto p-0 pointer-events-auto"
           align="start"
           collisionPadding={16}
         >
@@ -79,7 +79,7 @@ const DateInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input
             captionLayout="dropdown"
             startMonth={minDate ?? new Date(new Date().getFullYear() - 100, 0)}
             endMonth={maxDate ?? new Date(new Date().getFullYear() + 50, 11)}
-            className="p-2 [--cell-size:2rem] text-sm"
+            className="p-2 [--cell-size:2rem] w-[260px] text-sm"
             onSelect={(d) => {
               if (d) {
                 fireChange(format(d, "yyyy-MM-dd"));
