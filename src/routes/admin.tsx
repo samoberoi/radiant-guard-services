@@ -670,7 +670,7 @@ function AdminLayout() {
       {mobileOpen && (
         <div className="fixed inset-0 z-40 lg:hidden">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute inset-y-2 left-2 w-[86%] max-w-sm overflow-y-auto rounded-3xl border border-border/40 bg-card/80 p-4 shadow-2xl backdrop-blur-2xl">
+          <aside className="absolute inset-y-2 left-2 w-[86%] max-w-sm overflow-y-auto overscroll-contain rounded-3xl border border-border/40 bg-card/80 p-4 shadow-2xl backdrop-blur-2xl safe-top safe-bottom">
             <div className="mb-4 flex items-center justify-between">
               <BrandMark />
               <button
