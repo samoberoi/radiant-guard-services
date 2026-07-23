@@ -237,6 +237,7 @@ function ItemsPage() {
       </AlertDialog>
 
       <PriceHistoryDialog item={historyFor} open={!!historyFor} onOpenChange={(o) => !o && setHistoryFor(null)} />
+      <AddStockDialog item={stockFor} open={!!stockFor} onOpenChange={(o) => !o && setStockFor(null)} onDone={() => { qc.invalidateQueries({ queryKey: ["inv_stock_balances"] }); qc.invalidateQueries({ queryKey: ["inv_stock_movements"] }); qc.invalidateQueries({ queryKey: ["inv", "stock"] }); }} />
     </div>
   );
 }
