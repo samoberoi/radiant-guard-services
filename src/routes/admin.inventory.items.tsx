@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { Download, Edit2, Plus, Search, Trash2, PackageOpen, History } from "lucide-react";
+import { Download, Edit2, Plus, Search, Trash2, PackageOpen, History, PackagePlus } from "lucide-react";
+import { postMovements } from "@/lib/inv-helpers";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { logActivity } from "@/lib/activity-log";
@@ -91,6 +92,7 @@ function ItemsPage() {
   const [editing, setEditing] = useState<Item | null>(null);
   const [deleting, setDeleting] = useState<Item | null>(null);
   const [historyFor, setHistoryFor] = useState<Item | null>(null);
+  const [stockFor, setStockFor] = useState<Item | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -210,6 +212,7 @@ function ItemsPage() {
                   <td className="px-5 py-3"><Switch checked={i.enabled} onCheckedChange={(v) => toggleMut.mutate({ id: i.id, enabled: v }, { onSuccess: () => toast.success(v ? "Enabled" : "Disabled") })} /></td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex gap-1">
+                      <Button size="sm" variant="ghost" className="h-8 px-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-500/10 hover:text-emerald-800" title="Add stock" onClick={() => setStockFor(i)}><PackagePlus className="mr-1 h-4 w-4" />Add Stock</Button>
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Price history" onClick={() => setHistoryFor(i)}><History className="h-4 w-4" /></Button>
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setEditing(i)}><Edit2 className="h-4 w-4" /></Button>
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => setDeleting(i)}><Trash2 className="h-4 w-4" /></Button>
@@ -234,6 +237,7 @@ function ItemsPage() {
       </AlertDialog>
 
       <PriceHistoryDialog item={historyFor} open={!!historyFor} onOpenChange={(o) => !o && setHistoryFor(null)} />
+      <AddStockDialog item={stockFor} open={!!stockFor} onOpenChange={(o) => !o && setStockFor(null)} onDone={() => { qc.invalidateQueries({ queryKey: ["inv_stock_balances"] }); qc.invalidateQueries({ queryKey: ["inv_stock_movements"] }); qc.invalidateQueries({ queryKey: ["inv", "stock"] }); }} />
     </div>
   );
 }
@@ -504,6 +508,124 @@ function PriceHistoryDialog({ item, open, onOpenChange }: { item: Item | null; o
             </tbody>
           </table>
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddStockDialog({ item, open, onOpenChange, onDone }: { item: Item | null; open: boolean; onOpenChange: (o: boolean) => void; onDone: () => void }) {
+  const [warehouseId, setWarehouseId] = useState("");
+  const [sizeValue, setSizeValue] = useState("");
+  const [qty, setQty] = useState<number>(0);
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const { data: warehouses = [] } = useQuery({
+    queryKey: ["inv", "warehouses", "enabled"],
+    enabled: open,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_warehouses" as never).select("id,name,warehouse_code,is_default,enabled").eq("enabled", true).order("name");
+      if (error) throw error;
+      return ((data as unknown) as Array<{ id: string; name: string; warehouse_code: string; is_default: boolean }>) ?? [];
+    },
+  });
+
+  const { data: sizes = [] } = useQuery({
+    queryKey: ["inv", "item-sizes", item?.id],
+    enabled: !!item?.id && !!item?.is_sized && open,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("inv_item_sizes" as never).select("size_value,enabled,sort_order").eq("item_id", item!.id).eq("enabled", true).order("sort_order");
+      if (error) throw error;
+      return ((data as unknown) as Array<{ size_value: string }>) ?? [];
+    },
+  });
+
+  useResetOnOpen(open, () => {
+    setSizeValue("");
+    setQty(0);
+    setNotes("");
+    setWarehouseId("");
+  });
+
+  // Auto-pick default/first warehouse once loaded
+  if (open && !warehouseId && warehouses.length) {
+    const def = warehouses.find((w) => w.is_default) ?? warehouses[0];
+    if (def) setWarehouseId(def.id);
+  }
+
+  async function submit() {
+    if (!item) return;
+    if (!warehouseId) { toast.error("Pick a warehouse"); return; }
+    if (item.is_sized && !sizeValue) { toast.error("Pick a size"); return; }
+    if (!qty || qty <= 0) { toast.error("Enter quantity greater than zero"); return; }
+    setSaving(true);
+    try {
+      await postMovements([{
+        movement_type: "OPENING_STOCK_IN",
+        location_type: "warehouse",
+        location_id: warehouseId,
+        item_id: item.id,
+        size_value: item.is_sized ? sizeValue : "",
+        qty_change: qty,
+        reference_type: "manual_adjust",
+        notes: notes || "Manual stock add",
+      }]);
+      void logActivity({ module: MODULE, action: "create", entityType: "inv_stock_movements", entityLabel: `+${qty} ${item.unit} of ${item.name}${item.is_sized ? ` (${sizeValue})` : ""}` });
+      toast.success(`Added ${qty} ${item.unit} to stock`);
+      onDone();
+      onOpenChange(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to add stock");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add Stock — {item?.name}</DialogTitle>
+          <DialogDescription>Quickly add quantity to a warehouse. Reflects everywhere immediately.</DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-2">
+          <div className="grid gap-2">
+            <Label>Warehouse</Label>
+            <Select value={warehouseId} onValueChange={setWarehouseId}>
+              <SelectTrigger><SelectValue placeholder="Pick warehouse" /></SelectTrigger>
+              <SelectContent>
+                {warehouses.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}{w.is_default ? " (Default)" : ""}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          {item?.is_sized && (
+            <div className="grid gap-2">
+              <Label>Size</Label>
+              {sizes.length === 0 ? (
+                <div className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">No sizes defined. Edit the item to add sizes first.</div>
+              ) : (
+                <Select value={sizeValue} onValueChange={setSizeValue}>
+                  <SelectTrigger><SelectValue placeholder="Pick size" /></SelectTrigger>
+                  <SelectContent>
+                    {sizes.map((s) => <SelectItem key={s.size_value} value={s.size_value}>{s.size_value}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+          <div className="grid gap-2">
+            <Label>Quantity ({item?.unit ?? "pcs"})</Label>
+            <Input type="number" min={1} step={1} inputMode="numeric" value={qty === 0 ? "" : qty} onChange={(e) => setQty(Number(e.target.value.replace(/^0+(?=\d)/, "")) || 0)} placeholder="e.g. 100" />
+          </div>
+          <div className="grid gap-2">
+            <Label>Notes (optional)</Label>
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Opening balance, manual adjustment, etc." />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button>
+          <Button onClick={submit} disabled={saving}>{saving ? "Adding…" : "Add Stock"}</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
