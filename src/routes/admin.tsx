@@ -469,7 +469,7 @@ function AdminLayout() {
     });
 
   const sidebarWidth = collapsed ? "lg:w-[72px]" : "lg:w-[244px]";
-  const mainPad = collapsed ? "lg:pl-[92px]" : "lg:pl-[264px]";
+  const mainPad = collapsed ? "lg:pl-28" : "lg:pl-[276px]";
 
   return (
     <TooltipProvider delayDuration={150} skipDelayDuration={100}>
