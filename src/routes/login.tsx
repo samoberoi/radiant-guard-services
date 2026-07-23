@@ -97,7 +97,7 @@ function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-background text-foreground">
+    <div className="relative min-h-dvh w-full overflow-x-hidden bg-background text-foreground">
       {/* Background image — soft wavy blur, dialed back so text stays crisp */}
       <img
         src={loginBg.url}
@@ -151,7 +151,7 @@ function LoginPage() {
       <div className={revealing ? "animate-slide-out-up" : ""}>
 
       {/* Centered glass card */}
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10 sm:px-6">
+      <div className="relative z-10 flex min-h-dvh items-center justify-center px-4 py-10 sm:px-6">
 
         <div className="w-full max-w-[440px]">
           {/* Brand */}
