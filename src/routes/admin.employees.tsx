@@ -908,10 +908,13 @@ function EmployeesPage() {
         // FO sees active employees only within his assigned units.
         if (!c.unit_id || !scopedUnitIdSet.has(c.unit_id)) return false;
       }
+      const isActive = c.is_enabled && c.status !== "inactive";
+      if (empStatusTab === "active" && !isActive) return false;
+      if (empStatusTab === "inactive" && isActive) return false;
       return true;
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [candidates, supersededEmployeeIds, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations, isFieldOfficer, scopedUnitIdSet],
+    [candidates, supersededEmployeeIds, search, filterRole, filterDesignation, filterCustomer, filterUnit, filterManager, filterEnabled, filterBillable, filterOffboardReason, units, designations, isFieldOfficer, scopedUnitIdSet, empStatusTab],
   );
   const candidateRows = useMemo(
     () => candidates.filter((c) => {
