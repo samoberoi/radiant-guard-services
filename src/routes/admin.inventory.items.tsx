@@ -92,6 +92,7 @@ function ItemsPage() {
   const [editing, setEditing] = useState<Item | null>(null);
   const [deleting, setDeleting] = useState<Item | null>(null);
   const [historyFor, setHistoryFor] = useState<Item | null>(null);
+  const [stockFor, setStockFor] = useState<Item | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
