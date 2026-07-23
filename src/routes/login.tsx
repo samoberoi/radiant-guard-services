@@ -125,15 +125,15 @@ function LoginPage() {
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "linear-gradient(to bottom, rgba(15,23,42,0.24) 0%, rgba(15,23,42,0.16) 30%, rgba(15,23,42,0.62) 41%, rgba(15,23,42,0.88) 55%, rgba(15,23,42,0.94) 100%), radial-gradient(ellipse 90% 70% at 50% 42%, rgba(15,23,42,0.04) 0%, rgba(15,23,42,0.32) 70%, rgba(15,23,42,0.74) 100%)",
+            "linear-gradient(to bottom, rgba(15,23,42,0.24) 0%, rgba(15,23,42,0.18) 28%, rgba(15,23,42,0.68) 34%, rgba(15,23,42,0.9) 48%, rgba(15,23,42,0.96) 100%), radial-gradient(ellipse 90% 70% at 50% 42%, rgba(15,23,42,0.04) 0%, rgba(15,23,42,0.32) 70%, rgba(15,23,42,0.74) 100%)",
         }}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[68%]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[76%]"
         style={{
           background:
-            "linear-gradient(to bottom, rgba(15,23,42,0), rgba(15,23,42,0.86) 16%, rgba(15,23,42,0.94) 100%)",
+            "linear-gradient(to bottom, rgba(15,23,42,0), rgba(15,23,42,0.9) 8%, rgba(15,23,42,0.96) 100%)",
         }}
       />
       {/* Ambient overlay — soft mesh */}
