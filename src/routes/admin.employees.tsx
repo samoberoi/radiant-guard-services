@@ -9,7 +9,7 @@ import {
   ListSection,
   NomineeSection,
 } from "@/components/candidate-extra-sections";
-import { notifyOnboardingApprovers, notifyUser } from "@/lib/notifications";
+import { notifyOnboardingApprovers, notifyUser, createNotification } from "@/lib/notifications";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClientOnlyFn, useServerFn } from "@tanstack/react-start";
@@ -1585,6 +1585,42 @@ function EmployeesPage() {
       // Fire-and-forget: activity log + notifications should not block the UI.
       void (async () => {
         try {
+          // Resolve rich context for a warm welcome notification.
+          const unit = c.unit_id ? unitMap.get(c.unit_id) : undefined;
+          const unitName = unit?.name ?? "";
+          const clientName = unit?.customer_name ?? "";
+          const desig = c.designation_id ? desigMap.get(c.designation_id) : undefined;
+          const desigName = desig?.name ?? "";
+          const joinDate = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+          let foName = "";
+          if (c.created_by) {
+            try {
+              const { data: fo } = await supabase.rpc("get_user_display_name" as never, { _user_id: c.created_by } as never);
+              foName = String((fo as string | null) ?? "");
+            } catch { /* ignore */ }
+          }
+          let empUserId: string | null = null;
+          try {
+            const { data: uid } = await supabase.rpc("get_user_id_by_candidate" as never, { _candidate_id: c.id } as never);
+            empUserId = uid ? String(uid) : null;
+          } catch { /* ignore */ }
+
+          const firstName = (c.full_name || "").split(" ")[0] || "there";
+          const welcomeTitle = `Welcome to Radiant Guard Services${empCode ? ` — ${empCode}` : ""}`;
+          const welcomeLines = [
+            `Hi ${firstName}, we're thrilled to have you on board!`,
+            "",
+            "Here are your onboarding details:",
+            empCode ? `• Employee ID: ${empCode}` : null,
+            desigName ? `• Designation: ${desigName}` : null,
+            unitName ? `• Job Location: ${unitName}${clientName ? ` (${clientName})` : ""}` : null,
+            unitName ? `• Unit: ${unitName}` : null,
+            `• Date of Joining: ${joinDate}`,
+            foName ? `• Field Officer: ${foName}` : null,
+            "",
+            "Thank you for choosing to grow with us — wishing you a proud, safe, and successful journey ahead. 🎉",
+          ].filter(Boolean).join("\n");
+
           await Promise.allSettled([
             logActivity({
               module: "Employees",
@@ -1608,6 +1644,17 @@ function EmployeesPage() {
                   title: "Your candidate was approved",
                   message: `${label} was approved${empCode ? ` — Employee Code ${empCode}` : ""}.`,
                   link: "/admin/employees",
+                  entityType: "candidate",
+                  entityId: c.id,
+                })
+              : Promise.resolve(),
+            empUserId
+              ? createNotification({
+                  userId: empUserId,
+                  type: "welcome_onboarded",
+                  title: welcomeTitle,
+                  message: welcomeLines,
+                  link: "/admin/employee-dashboard",
                   entityType: "candidate",
                   entityId: c.id,
                 })
