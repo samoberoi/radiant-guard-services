@@ -177,18 +177,21 @@ function AdminLayout() {
   const me = useMe();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { can, canSub, isLoading: permsLoading, isSuperAdmin, roleKey } = useCurrentPermissions();
-  // Frontline / FO-onboarded employees (guards, VMS operators, housekeeping,
+  // Frontline / FO-onboarded employees (guards, VMS/BMS operators, housekeeping,
   // drivers, etc.) — anyone who is not super admin, not a field officer, and
   // not on an admin-console role. They see only the employee dashboard,
   // their uniform, notifications and their own profile.
+  // Users with NO role_key at all (freshly onboarded frontline staff) are
+  // treated as frontline too — otherwise they'd land on the admin dashboard
+  // with an empty sidebar.
   const ADMIN_CONSOLE_ROLES = new Set([
     "admin","super_admin","hr","leadership","branch_manager","branch_admin",
     "inventory_manager","inventory","accounts","finance","operations","field_officer",
   ]);
   const isGuardRole =
     !isSuperAdmin &&
-    !!roleKey &&
-    !ADMIN_CONSOLE_ROLES.has(roleKey);
+    !permsLoading &&
+    (!roleKey || !ADMIN_CONSOLE_ROLES.has(roleKey));
   const dashboardHref =
     isGuardRole
       ? "/admin/employee-dashboard"
