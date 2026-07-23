@@ -14,7 +14,10 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const config: CapacitorConfig = {
   appId: "app.lovable.radiantguard",
   appName: "Radiant Guard",
-  webDir: "dist",
+  // TanStack Start is SSR — there is no static build output. Capacitor still
+  // requires `webDir` to exist for `cap copy`/`cap sync`, so we ship a tiny
+  // placeholder shell. The real app loads from `server.url` below.
+  webDir: "capacitor-web",
   server: {
     // Change to your custom domain in production.
     url: "https://radiant-guard-services.lovable.app",
