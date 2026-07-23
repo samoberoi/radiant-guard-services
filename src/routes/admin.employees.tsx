@@ -4650,22 +4650,16 @@ function UploadTile({
           size="sm"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="w-full min-w-0 px-2"
+          className="w-full"
         >
           {uploading ? (
             <>
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 shrink-0 animate-spin" />
-              <span className="truncate">{badge ?? "Uploading…"}</span>
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              {badge ?? "Uploading…"}
             </>
-          ) : (
-            <>
-              <Upload className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{url ? "Replace file" : "Upload Image / PDF"}</span>
-            </>
-          )}
+          ) : url ? "Replace" : "Upload (Image or PDF)"}
         </Button>
       )}
-
       {allowCamera && (
         <CameraCaptureDialog
           open={cameraOpen}
