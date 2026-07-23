@@ -153,6 +153,8 @@ const DialogContent = React.forwardRef<
     if (!contentElement || !dirtyCtx || dirtyCtx.disabled) return;
     dirtyCtx.reset();
     setPristine(true);
+    // Always start the dialog scrolled to the top so long forms don't open mid-way.
+    requestAnimationFrame(() => contentElement.scrollTo?.({ top: 0, left: 0 }));
     // Note: action words like "add"/"import" are intentionally excluded because
     // dialogs also contain secondary controls such as "Add component" pickers.
     const SAVE_RX = /^(save|update|create|submit|confirm|apply|generate|send|approve|sign|next|continue|finish|done)\b/i;
