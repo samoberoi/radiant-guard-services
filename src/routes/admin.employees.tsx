@@ -2339,9 +2339,42 @@ function EmployeesPage() {
           </div>
         </div>
 
+        {/* Active / Inactive sub-tabs (Employees tab only) */}
+        {tab === "employee" && (
+          <div className="flex items-center gap-2">
+            <div className="inline-flex h-auto rounded-xl border border-border/60 bg-secondary/40 p-1 backdrop-blur-sm">
+              <button
+                type="button"
+                onClick={() => setEmpStatusTab("active")}
+                className={cn(
+                  "rounded-lg px-4 py-1.5 text-xs font-semibold transition-colors",
+                  empStatusTab === "active"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Active <span className="ml-1 opacity-60">({stats.empActive})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEmpStatusTab("inactive")}
+                className={cn(
+                  "rounded-lg px-4 py-1.5 text-xs font-semibold transition-colors",
+                  empStatusTab === "inactive"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                Inactive <span className="ml-1 opacity-60">({stats.empInactive})</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Filter bar (Employees tab only) */}
         {tab === "employee" && (
           <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-border/60 bg-card/60 p-3 shadow-sm">
+
             {filtersVisible.role && (
               <Select value={filterRole} onValueChange={setFilterRole}>
                 <SelectTrigger className="h-9 w-[150px] text-xs"><SelectValue placeholder="Role" /></SelectTrigger>
