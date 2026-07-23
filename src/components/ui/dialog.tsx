@@ -153,6 +153,8 @@ const DialogContent = React.forwardRef<
     if (!contentElement || !dirtyCtx || dirtyCtx.disabled) return;
     dirtyCtx.reset();
     setPristine(true);
+    // Always start the dialog scrolled to the top so long forms don't open mid-way.
+    requestAnimationFrame(() => contentElement.scrollTo?.({ top: 0, left: 0 }));
     // Note: action words like "add"/"import" are intentionally excluded because
     // dialogs also contain secondary controls such as "Add component" pickers.
     const SAVE_RX = /^(save|update|create|submit|confirm|apply|generate|send|approve|sign|next|continue|finish|done)\b/i;
@@ -239,7 +241,7 @@ const DialogContent = React.forwardRef<
           {...props}
         >
           {children}
-          <DialogPrimitive.Close data-dialog-close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+          <DialogPrimitive.Close data-dialog-close className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full border border-border/70 bg-card text-foreground shadow-sm ring-offset-background transition hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
             <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>

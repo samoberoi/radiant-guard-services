@@ -4622,13 +4622,14 @@ function UploadTile({
             size="sm"
             onClick={() => setCameraOpen(true)}
             disabled={uploading}
+            className="min-w-0 px-2"
           >
             {uploading ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <>
-                <Camera className="mr-1 h-3.5 w-3.5" />
-                Take
+                <Camera className="mr-1 h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">Take</span>
               </>
             )}
           </Button>
@@ -4638,9 +4639,10 @@ function UploadTile({
             size="sm"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
+            className="min-w-0 px-2"
           >
-            <Upload className="mr-1 h-3.5 w-3.5" />
-            Upload
+            <Upload className="mr-1 h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">Upload</span>
           </Button>
         </div>
       ) : (
@@ -4650,14 +4652,16 @@ function UploadTile({
           size="sm"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="w-full"
+          className="w-full min-w-0 px-2"
         >
           {uploading ? (
             <>
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-              {badge ?? "Uploading…"}
+              <Loader2 className="mr-1.5 h-3.5 w-3.5 shrink-0 animate-spin" />
+              <span className="truncate">{badge ?? "Uploading…"}</span>
             </>
-          ) : url ? "Replace" : "Upload (Image or PDF)"}
+          ) : (
+            <span className="truncate">{url ? "Replace" : "Upload (Image or PDF)"}</span>
+          )}
         </Button>
       )}
       {allowCamera && (
