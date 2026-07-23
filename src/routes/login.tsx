@@ -97,7 +97,7 @@ function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-background text-foreground">
+    <div className="relative min-h-screen w-full overflow-x-hidden bg-background text-foreground">
       {/* Background image — soft wavy blur, dialed back so text stays crisp */}
       <img
         src={loginBg.url}
