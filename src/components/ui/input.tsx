@@ -68,7 +68,7 @@ const DateInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input
           </button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-auto p-0 pointer-events-auto"
+          className="w-auto overflow-hidden border-0 bg-transparent p-0 pointer-events-auto shadow-none"
           align="start"
           collisionPadding={16}
         >
