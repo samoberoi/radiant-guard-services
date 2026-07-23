@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/input-otp";
 import { useAuth, verifyOtp } from "@/lib/auth";
 import logo from "@/assets/radiant-logo-v2.png";
-import loginBg from "@/assets/login-bg.jpg.asset.json";
+import loginBg from "@/assets/login-bg-clean.jpg.asset.json";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -118,19 +118,19 @@ function LoginPage() {
         src={loginBg.url}
         alt=""
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[58dvh] min-h-[420px] w-full object-cover object-center opacity-95"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[52dvh] min-h-[420px] w-full object-cover object-center opacity-95"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[64dvh] min-h-[480px]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[60dvh] min-h-[460px]"
         style={{
           background:
-            "linear-gradient(to bottom, rgba(15,23,42,0.28) 0%, rgba(15,23,42,0.12) 44%, rgba(15,23,42,0.78) 82%, rgba(15,23,42,1) 100%)",
+            "linear-gradient(to bottom, rgba(15,23,42,0.26) 0%, rgba(15,23,42,0.1) 44%, rgba(15,23,42,0.78) 84%, rgba(15,23,42,1) 100%)",
         }}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-[40dvh] min-h-[60dvh]"
+        className="pointer-events-none absolute inset-x-0 top-[34dvh] min-h-[66dvh]"
         style={{
           background:
             "linear-gradient(to bottom, rgba(15,23,42,0), rgba(15,23,42,0.96) 16%, rgba(15,23,42,1) 100%)",
