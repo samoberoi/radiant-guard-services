@@ -111,19 +111,16 @@ function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-dvh w-full overflow-x-clip bg-slate-950 text-foreground">
-      {/* Full-screen background image */}
-      <img
-        src={loginBg.url}
-        alt=""
-        aria-hidden
-        className="pointer-events-none fixed inset-0 h-full w-full object-cover object-center"
-      />
+    <div
+      className="relative min-h-dvh w-full overflow-x-clip bg-slate-950 bg-cover bg-center bg-no-repeat text-foreground"
+      style={{ backgroundImage: `url(${loginBg.url})` }}
+    >
       {/* Subtle dark scrim for text legibility */}
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 bg-slate-950/30"
+        className="pointer-events-none absolute inset-0 bg-slate-950/30"
       />
+
 
 
       {/* Content wrapper — slides up on successful sign-in to reveal the CRM */}
