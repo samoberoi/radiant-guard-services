@@ -836,29 +836,30 @@ function DashStat({
   active?: boolean;
   onClick?: () => void;
 }) {
-  const accentMap: Record<string, string> = {
-    amber: "bg-amber-500",
-    emerald: "bg-emerald-600",
-    sky: "bg-sky-600",
-    violet: "bg-violet-600",
-    rose: "bg-rose-500",
-    cyan: "bg-cyan-600",
-    lime: "bg-lime-600",
+  const accentMap: Record<string, { bg: string; icon: string; text: string; ring: string }> = {
+    amber:   { bg: "bg-amber-50",   icon: "bg-amber-100 text-amber-700",     text: "text-amber-900",   ring: "ring-amber-300" },
+    emerald: { bg: "bg-emerald-50", icon: "bg-emerald-100 text-emerald-700", text: "text-emerald-900", ring: "ring-emerald-300" },
+    sky:     { bg: "bg-sky-50",     icon: "bg-sky-100 text-sky-700",         text: "text-sky-900",     ring: "ring-sky-300" },
+    violet:  { bg: "bg-violet-50",  icon: "bg-violet-100 text-violet-700",   text: "text-violet-900",  ring: "ring-violet-300" },
+    rose:    { bg: "bg-rose-50",    icon: "bg-rose-100 text-rose-700",       text: "text-rose-900",    ring: "ring-rose-300" },
+    cyan:    { bg: "bg-cyan-50",    icon: "bg-cyan-100 text-cyan-700",       text: "text-cyan-900",    ring: "ring-cyan-300" },
+    lime:    { bg: "bg-lime-50",    icon: "bg-lime-100 text-lime-700",       text: "text-lime-900",    ring: "ring-lime-300" },
   };
+  const a = accentMap[accent];
   const Cmp: React.ElementType = onClick ? "button" : "div";
   return (
     <Cmp
       onClick={onClick}
-      className={`group relative w-full text-left overflow-hidden rounded-2xl p-3 shadow-sm transition text-white hover:-translate-y-0.5 hover:shadow-md ${accentMap[accent]} ${active ? "ring-2 ring-offset-2 ring-white/60" : ""} ${onClick ? "cursor-pointer" : ""}`}
+      className={`group relative w-full text-left overflow-hidden rounded-2xl p-3 border border-border/60 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${a.bg} ${active ? `ring-2 ring-offset-2 ${a.ring}` : ""} ${onClick ? "cursor-pointer" : ""}`}
     >
       <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/25 text-white">
+        <div className={`flex h-7 w-7 items-center justify-center rounded-lg ${a.icon}`}>
           <Icon className="h-3.5 w-3.5" />
         </div>
-        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/90">{label}</div>
+        <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
       </div>
-      <div className={`mt-1 font-display font-bold tabular-nums tracking-tight text-white ${compact ? "text-2xl" : "text-2xl"}`}>
-        {loading ? <span className="text-white/60">—</span> : value.toLocaleString()}
+      <div className={`mt-1 font-display font-bold tabular-nums tracking-tight ${a.text} ${compact ? "text-2xl" : "text-2xl"}`}>
+        {loading ? <span className="text-muted-foreground/60">—</span> : value.toLocaleString()}
       </div>
     </Cmp>
   );
