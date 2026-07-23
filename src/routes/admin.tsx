@@ -469,7 +469,7 @@ function AdminLayout() {
     });
 
   const sidebarWidth = collapsed ? "lg:w-[72px]" : "lg:w-[244px]";
-  const mainPad = collapsed ? "lg:pl-28" : "lg:pl-[276px]";
+  const mainOffset = collapsed ? "lg:ml-24" : "lg:ml-[260px]";
 
   return (
     <TooltipProvider delayDuration={150} skipDelayDuration={100}>
@@ -721,7 +721,7 @@ function AdminLayout() {
       )}
 
       {/* Main */}
-      <main className={cn("relative z-10 px-3 py-4 sm:px-6 sm:py-6 lg:py-8 lg:pr-6", mainPad)}>
+      <main className={cn("relative z-10 px-3 py-4 transition-[margin] duration-300 sm:px-6 sm:py-6 lg:py-8 lg:pr-6", mainOffset)}>
         {/* Desktop top utility bar — global search + notifications */}
         <div className="mb-4 hidden items-center gap-3 lg:flex animate-slide-in-top">
           <div className="flex h-10 flex-1 items-center gap-2 rounded-full border border-border/60 bg-card/70 px-4 text-sm text-muted-foreground backdrop-blur-xl shadow-[0_1px_0_0_rgba(255,255,255,0.85)_inset,0_10px_30px_-18px_rgba(15,23,42,0.18)]">
