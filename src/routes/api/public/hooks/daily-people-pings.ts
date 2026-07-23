@@ -110,6 +110,16 @@ export const Route = createFileRoute("/api/public/hooks/daily-people-pings")({
           return ((data as unknown) as string) || null;
         }
 
+        async function unitTeammateUserIds(unitId: string | null | undefined, excludeCandidateId: string) {
+          if (!unitId) return [] as string[];
+          const { data } = await supabaseAdmin.rpc("get_user_ids_by_unit" as never, {
+            _unit_id: unitId,
+          } as never);
+          const ids = (((data as unknown) as Array<{ user_id: string }>) ?? []).map((r) => r.user_id);
+          const selfId = await foUserId(excludeCandidateId);
+          return selfId ? ids.filter((id) => id !== selfId) : ids;
+        }
+
         function personLine(r: Row) {
           const u = r.unit_id ? unitById.get(r.unit_id) : null;
           const desig = r.designation_id ? desigById.get(r.designation_id) : "";
@@ -125,6 +135,8 @@ export const Route = createFileRoute("/api/public/hooks/daily-people-pings")({
           branchIds.forEach((id) => recipients.add(id));
           const foId = await foUserId(r.reports_to);
           if (foId) recipients.add(foId);
+          const teammateIds = await unitTeammateUserIds(r.unit_id, r.id);
+          teammateIds.forEach((id) => recipients.add(id));
           if (!recipients.size) return 0;
 
           const entityKey = `${r.id}:${today.iso}`;
