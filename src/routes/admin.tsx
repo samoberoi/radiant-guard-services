@@ -649,7 +649,7 @@ function AdminLayout() {
       </aside>
 
       {/* Mobile top bar */}
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-2 border-b border-border/40 bg-card/60 px-4 backdrop-blur-2xl backdrop-saturate-150 lg:hidden animate-slide-in-top">
+      <header data-app-header className="sticky top-0 z-20 flex min-h-14 items-center gap-2 border-b border-border/40 bg-card/60 px-4 backdrop-blur-2xl backdrop-saturate-150 lg:hidden animate-slide-in-top safe-top safe-x">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
