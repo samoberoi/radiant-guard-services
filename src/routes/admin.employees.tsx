@@ -3932,8 +3932,8 @@ function CandidateWizard({
                   <Field label="Alternate Mobile">
                     <Input value={form.alt_mobile} inputMode="numeric" maxLength={10} placeholder="10-digit mobile" onChange={(e) => set("alt_mobile", e.target.value.replace(/\D/g, "").slice(0, 10))} />
                   </Field>
-                  <Field label="Personal Email">
-                    <Input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} />
+                  <Field label="Personal Email" required>
+                    <Input type="email" required value={form.email} onChange={(e) => set("email", e.target.value)} placeholder="name@example.com" />
                   </Field>
                 </div>
 
