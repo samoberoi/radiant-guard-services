@@ -3780,7 +3780,7 @@ function CandidateWizard({
             <div className="space-y-6">
               {/* Uploads strip */}
               <Section title={`Uploads — all required${uploadsComplete ? "" : " (incomplete)"}`}>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
                   <UploadTile
                     label="Photograph"
                     required
@@ -4615,20 +4615,21 @@ function UploadTile({
         }}
       />
       {allowCamera ? (
-        <div className="grid w-full grid-cols-2 gap-1.5">
+        <div className="grid w-full grid-cols-2 gap-2">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => setCameraOpen(true)}
             disabled={uploading}
+            className="min-w-0 px-2 text-[11px]"
           >
             {uploading ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <>
-                <Camera className="mr-1 h-3.5 w-3.5" />
-                Take
+                <Camera className="mr-1 h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">Take</span>
               </>
             )}
           </Button>
@@ -4638,9 +4639,10 @@ function UploadTile({
             size="sm"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
+            className="min-w-0 px-2 text-[11px]"
           >
-            <Upload className="mr-1 h-3.5 w-3.5" />
-            Upload
+            <Upload className="mr-1 h-3.5 w-3.5 shrink-0" />
+            <span className="truncate">Upload</span>
           </Button>
         </div>
       ) : (
@@ -4650,7 +4652,7 @@ function UploadTile({
           size="sm"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="w-full min-w-0 px-2"
+          className="w-full min-w-0 justify-center px-2 text-[11px]"
         >
           {uploading ? (
             <>
@@ -4660,7 +4662,7 @@ function UploadTile({
           ) : (
             <>
               <Upload className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{url ? "Replace file" : "Upload Image / PDF"}</span>
+              <span className="truncate">{url ? "Replace file" : "Upload file"}</span>
             </>
           )}
         </Button>
