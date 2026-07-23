@@ -630,6 +630,7 @@ function EmployeesPage() {
 
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<"employee" | "candidate">("employee");
+  const [empStatusTab, setEmpStatusTab] = useState<"active" | "inactive">("active");
   const [viewMode, setViewMode] = useState<"list" | "tree">("list");
   const [openWizard, setOpenWizard] = useState(false);
   const [editing, setEditing] = useState<Candidate | null>(null);
