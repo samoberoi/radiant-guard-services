@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/input-otp";
 import { useAuth, verifyOtp } from "@/lib/auth";
 import logo from "@/assets/radiant-logo-v2.png";
-import loginBg from "@/assets/login-bg-clean.jpg.asset.json";
+import loginBg from "@/assets/login-bg.jpg.asset.json";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
