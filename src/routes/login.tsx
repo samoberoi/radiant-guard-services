@@ -112,28 +112,28 @@ function LoginPage() {
 
   return (
     <div className="relative min-h-dvh w-full overflow-x-clip bg-slate-950 text-foreground">
-      {/* Background image */}
+      {/* Layered canvas: top image plus dark lower panel so the asset seam cannot show behind the card */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-slate-950" />
       <img
         src={loginBg.url}
         alt=""
         aria-hidden
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center opacity-90"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[58dvh] min-h-[420px] w-full object-cover object-center opacity-95"
       />
-      {/* Theme wash removes the hard pale split and keeps the card/footer readable */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[64dvh] min-h-[480px]"
         style={{
           background:
-            "linear-gradient(to bottom, rgba(15,23,42,0.24) 0%, rgba(15,23,42,0.18) 28%, rgba(15,23,42,0.68) 34%, rgba(15,23,42,0.9) 48%, rgba(15,23,42,0.96) 100%), radial-gradient(ellipse 90% 70% at 50% 42%, rgba(15,23,42,0.04) 0%, rgba(15,23,42,0.32) 70%, rgba(15,23,42,0.74) 100%)",
+            "linear-gradient(to bottom, rgba(15,23,42,0.28) 0%, rgba(15,23,42,0.12) 44%, rgba(15,23,42,0.78) 82%, rgba(15,23,42,1) 100%)",
         }}
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-[76%]"
+        className="pointer-events-none absolute inset-x-0 top-[40dvh] min-h-[60dvh]"
         style={{
           background:
-            "linear-gradient(to bottom, rgba(15,23,42,0), rgba(15,23,42,0.9) 8%, rgba(15,23,42,0.96) 100%)",
+            "linear-gradient(to bottom, rgba(15,23,42,0), rgba(15,23,42,0.96) 16%, rgba(15,23,42,1) 100%)",
         }}
       />
       {/* Ambient overlay — soft mesh */}
