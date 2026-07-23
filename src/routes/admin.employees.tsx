@@ -97,7 +97,6 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { DateInput } from "@/components/ui/date-input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { confirmAction } from "@/components/ConfirmProvider";
@@ -3781,7 +3780,7 @@ function CandidateWizard({
             <div className="space-y-6">
               {/* Uploads strip */}
               <Section title={`Uploads — all required${uploadsComplete ? "" : " (incomplete)"}`}>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                   <UploadTile
                     label="Photograph"
                     required
@@ -3833,9 +3832,10 @@ function CandidateWizard({
                     <Input value={form.full_name} onChange={(e) => set("full_name", e.target.value)} />
                   </Field>
                   <Field label="Date of Birth">
-                    <DateInput
+                    <Input
+                      type="date"
                       value={form.date_of_birth ?? ""}
-                      onChange={(v) => set("date_of_birth", v || null)}
+                      onChange={(e) => set("date_of_birth", e.target.value || null)}
                     />
                   </Field>
                   <Field label="Gender">
@@ -4272,15 +4272,17 @@ function CandidateWizard({
               <Section title="Assignment">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Application Date">
-                    <DateInput
+                    <Input
+                      type="date"
                       value={form.application_date}
-                      onChange={(v) => set("application_date", v)}
+                      onChange={(e) => set("application_date", e.target.value)}
                     />
                   </Field>
                   <Field label="Preferred Joining Date">
-                    <DateInput
+                    <Input
+                      type="date"
                       value={form.preferred_joining_date ?? ""}
-                      onChange={(v) => set("preferred_joining_date", v || null)}
+                      onChange={(e) => set("preferred_joining_date", e.target.value || null)}
                     />
                   </Field>
                   <div className="sm:col-span-2">
@@ -4613,21 +4615,20 @@ function UploadTile({
         }}
       />
       {allowCamera ? (
-        <div className="grid w-full grid-cols-2 gap-2">
+        <div className="grid w-full grid-cols-2 gap-1.5">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => setCameraOpen(true)}
             disabled={uploading}
-            className="min-w-0 px-2 text-[11px]"
           >
             {uploading ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : (
               <>
-                <Camera className="mr-1 h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">Take</span>
+                <Camera className="mr-1 h-3.5 w-3.5" />
+                Take
               </>
             )}
           </Button>
@@ -4637,10 +4638,9 @@ function UploadTile({
             size="sm"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="min-w-0 px-2 text-[11px]"
           >
-            <Upload className="mr-1 h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">Upload</span>
+            <Upload className="mr-1 h-3.5 w-3.5" />
+            Upload
           </Button>
         </div>
       ) : (
@@ -4650,7 +4650,7 @@ function UploadTile({
           size="sm"
           onClick={() => fileRef.current?.click()}
           disabled={uploading}
-          className="w-full min-w-0 justify-center px-2 text-[11px]"
+          className="w-full min-w-0 px-2"
         >
           {uploading ? (
             <>
@@ -4660,7 +4660,7 @@ function UploadTile({
           ) : (
             <>
               <Upload className="mr-1.5 h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">{url ? "Replace file" : "Upload file"}</span>
+              <span className="truncate">{url ? "Replace file" : "Upload Image / PDF"}</span>
             </>
           )}
         </Button>
@@ -5158,23 +5158,23 @@ function OffboardingDialog({
               </div>
               <div className="space-y-1">
                 <Label>Date of offboarding *</Label>
-                <DateInput value={dateOfOffboarding} onChange={setDateOfOffboarding} />
+                <Input type="date" value={dateOfOffboarding} onChange={(e) => setDateOfOffboarding(e.target.value)} />
               </div>
               <div className="space-y-1">
                 <Label>Date of resignation</Label>
-                <DateInput value={dateOfResignation} onChange={setDateOfResignation} />
+                <Input type="date" value={dateOfResignation} onChange={(e) => setDateOfResignation(e.target.value)} />
               </div>
               <div className="space-y-1">
                 <Label>Date of last working day</Label>
-                <DateInput value={dateOfLastWorking} onChange={setDateOfLastWorking} />
+                <Input type="date" value={dateOfLastWorking} onChange={(e) => setDateOfLastWorking(e.target.value)} />
               </div>
               <div className="space-y-1">
                 <Label>Date of PF update</Label>
-                <DateInput value={dateOfPfUpdate} onChange={setDateOfPfUpdate} />
+                <Input type="date" value={dateOfPfUpdate} onChange={(e) => setDateOfPfUpdate(e.target.value)} />
               </div>
               <div className="space-y-1 sm:col-span-2">
                 <Label>Date of ESIC update</Label>
-                <DateInput value={dateOfEsicUpdate} onChange={setDateOfEsicUpdate} />
+                <Input type="date" value={dateOfEsicUpdate} onChange={(e) => setDateOfEsicUpdate(e.target.value)} />
               </div>
               <div className="space-y-1 sm:col-span-2">
                 <Label>Reason for offboarding</Label>
