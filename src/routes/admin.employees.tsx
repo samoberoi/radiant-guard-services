@@ -97,6 +97,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DateInput } from "@/components/ui/date-input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { confirmAction } from "@/components/ConfirmProvider";
@@ -3832,10 +3833,9 @@ function CandidateWizard({
                     <Input value={form.full_name} onChange={(e) => set("full_name", e.target.value)} />
                   </Field>
                   <Field label="Date of Birth">
-                    <Input
-                      type="date"
+                    <DateInput
                       value={form.date_of_birth ?? ""}
-                      onChange={(e) => set("date_of_birth", e.target.value || null)}
+                      onChange={(v) => set("date_of_birth", v || null)}
                     />
                   </Field>
                   <Field label="Gender">
@@ -4272,17 +4272,15 @@ function CandidateWizard({
               <Section title="Assignment">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <Field label="Application Date">
-                    <Input
-                      type="date"
+                    <DateInput
                       value={form.application_date}
-                      onChange={(e) => set("application_date", e.target.value)}
+                      onChange={(v) => set("application_date", v)}
                     />
                   </Field>
                   <Field label="Preferred Joining Date">
-                    <Input
-                      type="date"
+                    <DateInput
                       value={form.preferred_joining_date ?? ""}
-                      onChange={(e) => set("preferred_joining_date", e.target.value || null)}
+                      onChange={(v) => set("preferred_joining_date", v || null)}
                     />
                   </Field>
                   <div className="sm:col-span-2">
@@ -5160,23 +5158,23 @@ function OffboardingDialog({
               </div>
               <div className="space-y-1">
                 <Label>Date of offboarding *</Label>
-                <Input type="date" value={dateOfOffboarding} onChange={(e) => setDateOfOffboarding(e.target.value)} />
+                <DateInput value={dateOfOffboarding} onChange={setDateOfOffboarding} />
               </div>
               <div className="space-y-1">
                 <Label>Date of resignation</Label>
-                <Input type="date" value={dateOfResignation} onChange={(e) => setDateOfResignation(e.target.value)} />
+                <DateInput value={dateOfResignation} onChange={setDateOfResignation} />
               </div>
               <div className="space-y-1">
                 <Label>Date of last working day</Label>
-                <Input type="date" value={dateOfLastWorking} onChange={(e) => setDateOfLastWorking(e.target.value)} />
+                <DateInput value={dateOfLastWorking} onChange={setDateOfLastWorking} />
               </div>
               <div className="space-y-1">
                 <Label>Date of PF update</Label>
-                <Input type="date" value={dateOfPfUpdate} onChange={(e) => setDateOfPfUpdate(e.target.value)} />
+                <DateInput value={dateOfPfUpdate} onChange={setDateOfPfUpdate} />
               </div>
               <div className="space-y-1 sm:col-span-2">
                 <Label>Date of ESIC update</Label>
-                <Input type="date" value={dateOfEsicUpdate} onChange={(e) => setDateOfEsicUpdate(e.target.value)} />
+                <DateInput value={dateOfEsicUpdate} onChange={setDateOfEsicUpdate} />
               </div>
               <div className="space-y-1 sm:col-span-2">
                 <Label>Reason for offboarding</Label>
