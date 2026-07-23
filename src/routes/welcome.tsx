@@ -39,7 +39,7 @@ function WelcomePage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-5 py-12">
+    <div className="relative flex min-h-dvh items-center justify-center overflow-x-hidden bg-background px-5 py-12">
       <div className="ambient-glow pointer-events-none absolute inset-0" />
       <div className="hero-glow pointer-events-none absolute inset-x-0 top-0 h-[60vh]" />
       <div className="dot-pattern pointer-events-none absolute inset-0 opacity-30" />

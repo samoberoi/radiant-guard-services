@@ -97,7 +97,7 @@ function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen w-full overflow-x-hidden bg-background text-foreground">
+    <div className="relative min-h-dvh w-full overflow-x-hidden bg-background text-foreground">
       {/* Background image — soft wavy blur, dialed back so text stays crisp */}
       <img
         src={loginBg.url}
@@ -151,7 +151,7 @@ function LoginPage() {
       <div className={revealing ? "animate-slide-out-up" : ""}>
 
       {/* Centered glass card */}
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-4 py-10 sm:px-6">
+      <div className="relative z-10 flex min-h-dvh items-center justify-center px-4 py-10 sm:px-6">
 
         <div className="w-full max-w-[440px]">
           {/* Brand */}
@@ -219,7 +219,7 @@ function LoginPage() {
                       </span>
                       <div className="flex h-14 w-full items-center overflow-hidden rounded-2xl border border-border/70 bg-white/85 backdrop-blur transition-all focus-within:border-accent focus-within:bg-white focus-within:ring-4 focus-within:ring-accent/15">
                         <div className="flex items-center gap-3 pl-5 pr-3">
-                          <span className="text-[15px] font-semibold text-foreground">
+                          <span className="whitespace-nowrap text-[15px] font-semibold text-foreground">
                             +91
                           </span>
                           <span className="h-6 w-px bg-border" />
