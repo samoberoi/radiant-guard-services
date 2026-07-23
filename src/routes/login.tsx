@@ -111,21 +111,29 @@ function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-dvh w-full overflow-x-clip bg-background text-foreground">
-      {/* Background image — full-bleed and anchored so the login canvas does not split into a pale lower band */}
+    <div className="relative min-h-dvh w-full overflow-x-clip bg-slate-950 text-foreground">
+      {/* Background image */}
       <img
         src={loginBg.url}
         alt=""
         aria-hidden
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center opacity-95"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center opacity-90"
       />
-      {/* Stronger desktop wash keeps the footer and floating card readable over the light part of the image */}
+      {/* Theme wash removes the hard pale split and keeps the card/footer readable */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 80% 60% at 50% 34%, rgba(15,23,42,0.24) 0%, rgba(15,23,42,0.08) 44%, transparent 68%), linear-gradient(to bottom, rgba(15,23,42,0.48) 0%, rgba(15,23,42,0.12) 34%, rgba(15,23,42,0.22) 68%, rgba(15,23,42,0.58) 100%)",
+            "linear-gradient(to bottom, rgba(15,23,42,0.26) 0%, rgba(15,23,42,0.18) 36%, rgba(15,23,42,0.78) 58%, rgba(15,23,42,0.9) 100%), radial-gradient(ellipse 90% 70% at 50% 42%, rgba(15,23,42,0.04) 0%, rgba(15,23,42,0.32) 70%, rgba(15,23,42,0.74) 100%)",
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-[54%]"
+        style={{
+          background:
+            "linear-gradient(to bottom, rgba(15,23,42,0), rgba(15,23,42,0.84) 18%, rgba(15,23,42,0.92) 100%)",
         }}
       />
       {/* Ambient overlay — soft mesh */}
@@ -159,8 +167,8 @@ function LoginPage() {
         <div className="w-full max-w-[440px]">
           {/* Brand */}
           <div className="mb-7 flex flex-col items-center gap-4 text-center">
-            <div className="grid h-[88px] w-[88px] place-items-center rounded-full bg-white shadow-[0_22px_54px_-16px_rgba(15,23,42,0.45)] ring-1 ring-white/50">
-              <img src={logo} alt="Radiant" className="h-16 w-16 object-contain" />
+            <div className="grid h-20 w-20 place-items-center rounded-full bg-white shadow-[0_22px_54px_-16px_rgba(15,23,42,0.45)] ring-1 ring-white/50">
+              <img src={logo} alt="Radiant" className="h-14 w-14 object-contain" />
             </div>
             <div>
               <div
