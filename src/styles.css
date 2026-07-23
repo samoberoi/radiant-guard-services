@@ -993,8 +993,8 @@ body {
 .safe-top    { padding-top: max(0.5rem, env(safe-area-inset-top)); }
 .safe-bottom { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
 .safe-x {
-  padding-left: max(0px, env(safe-area-inset-left));
-  padding-right: max(0px, env(safe-area-inset-right));
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
 }
 .safe-all {
   padding-top: env(safe-area-inset-top);
