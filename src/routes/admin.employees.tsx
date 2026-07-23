@@ -9,7 +9,7 @@ import {
   ListSection,
   NomineeSection,
 } from "@/components/candidate-extra-sections";
-import { notifyOnboardingApprovers, notifyUser } from "@/lib/notifications";
+import { notifyOnboardingApprovers, notifyUser, createNotification } from "@/lib/notifications";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createClientOnlyFn, useServerFn } from "@tanstack/react-start";
