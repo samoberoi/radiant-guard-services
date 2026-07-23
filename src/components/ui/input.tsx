@@ -79,7 +79,7 @@ const DateInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input
             captionLayout="dropdown"
             startMonth={minDate ?? new Date(new Date().getFullYear() - 100, 0)}
             endMonth={maxDate ?? new Date(new Date().getFullYear() + 50, 11)}
-            className="p-2 [--cell-size:2rem] w-[260px] text-sm"
+            className="text-sm"
             onSelect={(d) => {
               if (d) {
                 fireChange(format(d, "yyyy-MM-dd"));
