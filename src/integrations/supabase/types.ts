@@ -4585,6 +4585,12 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_user_ids_by_unit: {
+        Args: { _unit_id: string }
+        Returns: {
+          user_id: string
+        }[]
+      }
       get_user_ids_with_approve: {
         Args: { _module: string }
         Returns: {
