@@ -15,6 +15,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { ConfirmProvider } from "@/components/ConfirmProvider";
 import { ExportChooser } from "@/components/ExportChooser";
 import { LanguageProvider } from "@/lib/i18n";
+import { initNative } from "@/lib/native";
 
 
 function NotFoundComponent() {
@@ -129,6 +130,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Initialise Capacitor plugins on native (no-op on web).
+  useEffect(() => {
+    void initNative();
+  }, []);
 
   // Promote any [title] into [data-tip] (to suppress the slow native tooltip)
   // and render a portal-mounted floating pill on hover/focus. Using a fixed
