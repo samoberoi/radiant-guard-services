@@ -210,12 +210,12 @@ function ItemsPage() {
                   <td className="px-5 py-3 text-right tabular-nums">{i.last_purchase_price != null ? <><div>₹{i.last_purchase_price.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</div><div className="text-[10px] text-muted-foreground">{i.last_purchase_at ? new Date(i.last_purchase_at).toLocaleDateString() : ""}</div></> : "—"}</td>
                   <td className="px-5 py-3 text-right tabular-nums">{i.default_reorder_level}</td>
                   <td className="px-5 py-3"><Switch checked={i.enabled} onCheckedChange={(v) => toggleMut.mutate({ id: i.id, enabled: v }, { onSuccess: () => toast.success(v ? "Enabled" : "Disabled") })} /></td>
-                  <td className="px-5 py-3 text-right">
-                    <div className="inline-flex gap-1">
-                      <Button size="sm" variant="ghost" className="h-8 px-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-500/10 hover:text-emerald-800" title="Add stock" onClick={() => setStockFor(i)}><PackagePlus className="mr-1 h-4 w-4" />Add Stock</Button>
+                  <td className="px-5 py-3 text-right" data-col="actions">
+                    <div className="inline-flex items-center gap-1 whitespace-nowrap">
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-emerald-700 hover:bg-emerald-500/10 hover:text-emerald-800" title="Add stock" onClick={() => setStockFor(i)}><PackagePlus className="h-4 w-4" /></Button>
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Price history" onClick={() => setHistoryFor(i)}><History className="h-4 w-4" /></Button>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => setEditing(i)}><Edit2 className="h-4 w-4" /></Button>
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" onClick={() => setDeleting(i)}><Trash2 className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Edit" onClick={() => setEditing(i)}><Edit2 className="h-4 w-4" /></Button>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 hover:text-destructive" title="Delete" onClick={() => setDeleting(i)}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </td>
                 </tr>
