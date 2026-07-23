@@ -112,51 +112,19 @@ function LoginPage() {
 
   return (
     <div className="relative min-h-dvh w-full overflow-x-clip bg-slate-950 text-foreground">
-      {/* Layered canvas: top image plus dark lower panel so the asset seam cannot show behind the card */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-slate-950" />
+      {/* Full-screen background image */}
       <img
         src={loginBg.url}
         alt=""
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[52dvh] min-h-[420px] w-full object-cover object-center opacity-95"
+        className="pointer-events-none fixed inset-0 h-full w-full object-cover object-center"
       />
+      {/* Subtle dark scrim for text legibility */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[60dvh] min-h-[460px]"
-        style={{
-          background:
-            "linear-gradient(to bottom, rgba(15,23,42,0.26) 0%, rgba(15,23,42,0.1) 44%, rgba(15,23,42,0.78) 84%, rgba(15,23,42,1) 100%)",
-        }}
+        className="pointer-events-none fixed inset-0 bg-slate-950/30"
       />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-[34dvh] min-h-[66dvh]"
-        style={{
-          background:
-            "linear-gradient(to bottom, rgba(15,23,42,0), rgba(15,23,42,0.96) 16%, rgba(15,23,42,1) 100%)",
-        }}
-      />
-      {/* Ambient overlay — soft mesh */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-80"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 55% at 15% 15%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 60%), radial-gradient(ellipse 60% 50% at 85% 85%, color-mix(in oklab, var(--primary) 10%, transparent), transparent 60%)",
-        }}
-      />
-      {/* fine grid */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-[0.18]"
-        style={{
-          backgroundImage:
-            "linear-gradient(to right, color-mix(in oklab, var(--foreground) 5%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklab, var(--foreground) 5%, transparent) 1px, transparent 1px)",
-          backgroundSize: "48px 48px",
-          maskImage:
-            "radial-gradient(ellipse 70% 60% at 50% 50%, black, transparent 80%)",
-        }}
-      />
+
 
       {/* Content wrapper — slides up on successful sign-in to reveal the CRM */}
       <div className={revealing ? "animate-slide-out-up" : ""}>
