@@ -67,7 +67,11 @@ const DateInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input
             <CalendarIcon className="ml-2 h-4 w-4 opacity-60" />
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+        <PopoverContent
+          className="w-auto max-w-[min(20rem,calc(100vw-1rem))] p-0 pointer-events-auto"
+          align="start"
+          collisionPadding={16}
+        >
           <Calendar
             mode="single"
             selected={selected}
@@ -75,6 +79,7 @@ const DateInput = React.forwardRef<HTMLInputElement, React.ComponentProps<"input
             captionLayout="dropdown"
             startMonth={minDate ?? new Date(new Date().getFullYear() - 100, 0)}
             endMonth={maxDate ?? new Date(new Date().getFullYear() + 50, 11)}
+            className="p-2 [--cell-size:2rem] text-sm"
             onSelect={(d) => {
               if (d) {
                 fireChange(format(d, "yyyy-MM-dd"));
