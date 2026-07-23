@@ -21,6 +21,20 @@ export const Route = createFileRoute("/login")({
         content:
           "Sign in to Radiant Guard Services with your phone number and OTP.",
       },
+      { property: "og:title", content: "Sign in — Radiant Guard Services" },
+      {
+        property: "og:description",
+        content:
+          "Sign in to Radiant Guard Services with your phone number and OTP.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "Sign in — Radiant Guard Services" },
+      {
+        name: "twitter:description",
+        content:
+          "Sign in to Radiant Guard Services with your phone number and OTP.",
+      },
     ],
   }),
   component: LoginPage,
@@ -98,41 +112,30 @@ function LoginPage() {
 
   return (
     <div className="relative min-h-dvh w-full overflow-x-clip bg-background text-foreground">
-      {/* Background image — soft wavy blur, dialed back so text stays crisp */}
+      {/* Background image — full-bleed and anchored so the login canvas does not split into a pale lower band */}
       <img
         src={loginBg.url}
         alt=""
         aria-hidden
-        className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-95"
+        className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center opacity-95"
       />
-      {/* Dark vignette so white/black text above the card remains readable */}
+      {/* Stronger desktop wash keeps the footer and floating card readable over the light part of the image */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse 80% 60% at 50% 35%, rgba(15,23,42,0.35) 0%, rgba(15,23,42,0.12) 45%, transparent 70%), linear-gradient(to bottom, rgba(15,23,42,0.45) 0%, transparent 35%, transparent 70%, rgba(15,23,42,0.35) 100%)",
+            "radial-gradient(ellipse 80% 60% at 50% 34%, rgba(15,23,42,0.24) 0%, rgba(15,23,42,0.08) 44%, transparent 68%), linear-gradient(to bottom, rgba(15,23,42,0.48) 0%, rgba(15,23,42,0.12) 34%, rgba(15,23,42,0.22) 68%, rgba(15,23,42,0.58) 100%)",
         }}
       />
-      {/* Ambient overlay — soft mesh + orbs */}
+      {/* Ambient overlay — soft mesh */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 opacity-80"
         style={{
           background:
-            "radial-gradient(ellipse 70% 55% at 15% 15%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 60%), radial-gradient(ellipse 60% 50% at 85% 85%, color-mix(in oklab, var(--primary) 12%, transparent), transparent 60%), radial-gradient(ellipse 40% 35% at 50% 100%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 70%)",
+            "radial-gradient(ellipse 70% 55% at 15% 15%, color-mix(in oklab, var(--accent) 12%, transparent), transparent 60%), radial-gradient(ellipse 60% 50% at 85% 85%, color-mix(in oklab, var(--primary) 10%, transparent), transparent 60%)",
         }}
-      />
-      {/* floating orbs */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -left-24 top-1/4 h-[420px] w-[420px] rounded-full opacity-50 blur-3xl animate-[pulse_8s_ease-in-out_infinite]"
-        style={{ background: "radial-gradient(circle, color-mix(in oklab, var(--accent) 45%, transparent), transparent 70%)" }}
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute -right-32 bottom-0 h-[520px] w-[520px] rounded-full opacity-40 blur-3xl animate-[pulse_10s_ease-in-out_infinite]"
-        style={{ background: "radial-gradient(circle, color-mix(in oklab, var(--primary) 30%, transparent), transparent 70%)" }}
       />
       {/* fine grid */}
       <div
@@ -151,24 +154,24 @@ function LoginPage() {
       <div className={revealing ? "animate-slide-out-up" : ""}>
 
       {/* Centered glass card */}
-      <div className="relative z-10 flex min-h-dvh items-center justify-center px-4 py-10 sm:px-6">
+      <div className="relative z-10 flex min-h-dvh items-center justify-center px-4 py-8 sm:px-6 lg:py-10">
 
         <div className="w-full max-w-[440px]">
           {/* Brand */}
-          <div className="mb-8 flex flex-col items-center gap-4 text-center">
-            <div className="grid h-20 w-20 place-items-center rounded-full bg-white shadow-[0_20px_50px_-15px_rgba(15,23,42,0.35)] ring-1 ring-white/30">
-              <img src={logo} alt="Radiant" className="h-14 w-14 object-contain" />
+          <div className="mb-7 flex flex-col items-center gap-4 text-center">
+            <div className="grid h-[88px] w-[88px] place-items-center rounded-full bg-white shadow-[0_22px_54px_-16px_rgba(15,23,42,0.45)] ring-1 ring-white/50">
+              <img src={logo} alt="Radiant" className="h-16 w-16 object-contain" />
             </div>
             <div>
               <div
                 className="font-display text-[18px] font-semibold tracking-tight text-white"
-                style={{ textShadow: "0 2px 10px rgba(15,23,42,0.35)" }}
+                style={{ textShadow: "0 2px 12px rgba(15,23,42,0.55)" }}
               >
                 Radiant Guard
               </div>
               <div
-                className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/85"
-                style={{ textShadow: "0 1px 6px rgba(15,23,42,0.35)" }}
+                className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/90"
+                style={{ textShadow: "0 1px 8px rgba(15,23,42,0.55)" }}
               >
                 Services Pvt. Ltd.
               </div>
@@ -176,7 +179,7 @@ function LoginPage() {
           </div>
 
           {/* Glass card */}
-          <div className="relative overflow-hidden rounded-[28px] border border-white/80 bg-white/[0.96] p-7 shadow-[0_30px_80px_-20px_rgba(15,23,42,0.35)] backdrop-blur-2xl sm:p-9">
+          <div className="relative overflow-hidden rounded-[28px] border border-white/85 bg-white/[0.98] p-7 shadow-[0_32px_90px_-24px_rgba(15,23,42,0.5)] backdrop-blur-2xl sm:p-9">
             {/* inner highlight */}
             <div
               aria-hidden
@@ -241,7 +244,7 @@ function LoginPage() {
                     <Button
                       type="submit"
                       disabled={!phoneValid || sending}
-                      className="group h-14 w-full rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground shadow-[0_18px_40px_-12px_color-mix(in_oklab,var(--primary)_60%,transparent)] transition-all hover:bg-primary/90 hover:shadow-[0_22px_44px_-12px_color-mix(in_oklab,var(--primary)_70%,transparent)] disabled:opacity-50"
+                      className="group h-14 w-full rounded-2xl bg-primary text-[15px] font-semibold text-primary-foreground shadow-[0_18px_40px_-12px_color-mix(in_oklab,var(--primary)_60%,transparent)] transition-all hover:bg-primary/90 hover:shadow-[0_22px_44px_-12px_color-mix(in_oklab,var(--primary)_70%,transparent)] disabled:bg-slate-700 disabled:text-white disabled:opacity-60"
                     >
                       {sending ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
@@ -291,7 +294,7 @@ function LoginPage() {
                     <Button
                       onClick={() => handleVerify()}
                       disabled={otp.length !== 6 || verifying}
-                      className="h-14 w-full rounded-2xl bg-primary text-[16px] font-semibold text-primary-foreground shadow-[0_18px_40px_-12px_color-mix(in_oklab,var(--primary)_60%,transparent)] hover:bg-primary/90 disabled:opacity-50"
+                      className="h-14 w-full rounded-2xl bg-primary text-[16px] font-semibold text-primary-foreground shadow-[0_18px_40px_-12px_color-mix(in_oklab,var(--primary)_60%,transparent)] hover:bg-primary/90 disabled:bg-slate-700 disabled:text-white disabled:opacity-60"
                     >
                       {verifying ? (
                         <Loader2 className="h-5 w-5 animate-spin" />
@@ -326,7 +329,7 @@ function LoginPage() {
               </div>
 
               {/* trust row */}
-              <div className="mt-7 flex items-center justify-center gap-2 rounded-2xl border border-border/60 bg-white/70 px-3 py-2.5 text-[12px] text-muted-foreground backdrop-blur">
+              <div className="mt-7 flex items-center justify-center gap-2 rounded-2xl border border-border/60 bg-white/80 px-3 py-2.5 text-[12px] font-medium text-muted-foreground backdrop-blur">
                 <ShieldCheck className="h-4 w-4 text-accent" />
                 <span>Encrypted end-to-end · Secure OTP verification</span>
               </div>
@@ -335,13 +338,13 @@ function LoginPage() {
 
           {/* Footer */}
           <div
-            className="mt-8 flex items-center justify-between px-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/85"
-            style={{ textShadow: "0 1px 6px rgba(15,23,42,0.35)" }}
+            className="mx-auto mt-7 flex w-fit max-w-full flex-wrap items-center justify-center gap-x-7 gap-y-2 rounded-full border border-white/25 bg-slate-950/28 px-5 py-2.5 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-white shadow-[0_14px_34px_-18px_rgba(15,23,42,0.8)] backdrop-blur-md"
+            style={{ textShadow: "0 1px 8px rgba(15,23,42,0.75)" }}
           >
             <span>Radiant Ops Portal</span>
             <span className="inline-flex items-center gap-1.5">
               Powered by
-              <span className="rounded-md border border-white/30 bg-white/20 px-1.5 py-0.5 text-white backdrop-blur">
+              <span className="rounded-md border border-white/35 bg-white/20 px-1.5 py-0.5 text-white backdrop-blur">
                 HyperRevamp
               </span>
             </span>
