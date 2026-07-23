@@ -219,7 +219,7 @@ function LoginPage() {
                       </span>
                       <div className="flex h-14 w-full items-center overflow-hidden rounded-2xl border border-border/70 bg-white/85 backdrop-blur transition-all focus-within:border-accent focus-within:bg-white focus-within:ring-4 focus-within:ring-accent/15">
                         <div className="flex items-center gap-3 pl-5 pr-3">
-                          <span className="text-[15px] font-semibold text-foreground">
+                          <span className="whitespace-nowrap text-[15px] font-semibold text-foreground">
                             +91
                           </span>
                           <span className="h-6 w-px bg-border" />
