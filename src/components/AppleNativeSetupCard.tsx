@@ -24,6 +24,7 @@ import { cn } from "@/lib/utils";
 type AppleNativeSetupCardProps = {
   compact?: boolean;
   autoStart?: boolean;
+  nativeOnly?: boolean;
   className?: string;
 };
 
@@ -32,6 +33,7 @@ const AUTO_PUSH_KEY_PREFIX = "radiant.native.auto-push.v2";
 export function AppleNativeSetupCard({
   compact = false,
   autoStart = false,
+  nativeOnly = false,
   className,
 }: AppleNativeSetupCardProps) {
   const { user } = useAuth();
@@ -188,6 +190,8 @@ export function AppleNativeSetupCard({
     setNativeSnapshot(getNativeRuntimeSnapshot());
     toast.success("Native diagnostics cleared");
   }
+
+  if (nativeOnly && !nativeSupported) return null;
 
   return (
     <div className={cn(

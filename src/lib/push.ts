@@ -255,6 +255,10 @@ export async function registerPushForCurrentUser(): Promise<PushRegisterResult> 
   };
 }
 
+export function getLastPushTokenForDiagnostics(): string | null {
+  return lastApnsToken;
+}
+
 export function getPushDebugStatus() {
   return {
     initialized,
