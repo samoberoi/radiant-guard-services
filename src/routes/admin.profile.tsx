@@ -1,16 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Activity,
-  Bell,
   Briefcase,
   Camera,
   Download,
   FileSignature,
-  Fingerprint,
   GraduationCap,
   Heart,
   IdCard,
@@ -28,7 +25,6 @@ import {
   Loader2,
   Wallet,
   Building2,
-  Clipboard,
   X,
 } from "lucide-react";
 import { computeWages, fmtINR, type ContractResourceLike } from "@/lib/payroll-calc";
@@ -58,19 +54,7 @@ import {
   type DocType,
 } from "@/lib/company-documents";
 import { logActivity } from "@/lib/activity-log";
-import { sendTestPushToMe } from "@/lib/push.functions";
-import { getPushDebugStatus, registerPushForCurrentUser } from "@/lib/push";
-import {
-  clearNativeDebugLog,
-  getNativeDebugLog,
-  getNativeRuntimeSnapshot,
-  isNativePlatform,
-} from "@/lib/native";
-import {
-  disableBiometric,
-  enableBiometric,
-  getBiometricStatus,
-} from "@/lib/biometric";
+import { AppleNativeSetupCard } from "@/components/AppleNativeSetupCard";
 
 export const Route = createFileRoute("/admin/profile")({
   component: ProfilePage,
@@ -278,20 +262,6 @@ function ProfilePage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
-  const [pushLoading, setPushLoading] = useState(false);
-  const [bioEnabled, setBioEnabled] = useState(false);
-  const [bioBusy, setBioBusy] = useState(false);
-  const [pushStatus, setPushStatus] = useState<string>("");
-  const [bioStatus, setBioStatus] = useState<string>("");
-  const [nativeSupported, setNativeSupported] = useState(false);
-  const [nativeSnapshot, setNativeSnapshot] = useState(() => getNativeRuntimeSnapshot());
-  useEffect(() => {
-    const snapshot = getNativeRuntimeSnapshot();
-    setNativeSnapshot(snapshot);
-    setNativeSupported(isNativePlatform());
-    void refreshBiometricStatus();
-  }, []);
-  const sendTestPush = useServerFn(sendTestPushToMe);
 
   const phone = useMemo(
     () => (user?.phone ?? "").replace(/\D/g, "").slice(-10),
@@ -775,178 +745,7 @@ function ProfilePage() {
     }
   }
 
-  async function handleToggleBiometric() {
-    if (bioBusy) return;
-    setBioBusy(true);
-    try {
-      if (bioEnabled) {
-        await disableBiometric();
-        setBioEnabled(false);
-        setBioStatus("Face ID is disabled on this device.");
-        toast.success("Face ID disabled");
-      } else {
-        const phoneForBio = user?.phone || `+91${phone}`;
-        if (!phoneForBio || phoneForBio === "+91") {
-          toast.error("Sign in with your phone number before enabling Face ID.");
-          return;
-        }
-        await enableBiometric(phoneForBio);
-        setBioEnabled(true);
-        setBioStatus("Face ID is enabled on this iPhone.");
-        toast.success("Face ID enabled");
-      }
-    } catch (e: any) {
-      toast.error(e?.message || "Face ID action failed");
-      setBioStatus(e?.message || "Face ID action failed");
-    } finally {
-      setBioBusy(false);
-      void refreshBiometricStatus();
-    }
-  }
-
-  async function refreshBiometricStatus() {
-    setNativeSnapshot(getNativeRuntimeSnapshot());
-    const status = await getBiometricStatus();
-    setBioEnabled(status.enabled);
-    setBioStatus(status.message);
-  }
-
-  async function copyNativeDiagnostics() {
-    const payload = {
-      runtime: getNativeRuntimeSnapshot(),
-      push: getPushDebugStatus(),
-      biometric: await getBiometricStatus(),
-      logs: getNativeDebugLog(),
-    };
-    const text = JSON.stringify(payload, null, 2);
-    try {
-      await navigator.clipboard.writeText(text);
-      toast.success("Native diagnostics copied");
-    } catch {
-      const textarea = document.createElement("textarea");
-      textarea.value = text;
-      textarea.style.position = "fixed";
-      textarea.style.left = "-9999px";
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-      toast.success("Native diagnostics copied");
-    }
-  }
-
-  function resetNativeDiagnostics() {
-    clearNativeDebugLog();
-    setNativeSnapshot(getNativeRuntimeSnapshot());
-    toast.success("Native diagnostics cleared");
-  }
-
-  async function handleRegisterPush() {
-    if (pushLoading) return;
-    setPushLoading(true);
-    try {
-      const result = await registerPushForCurrentUser();
-      setPushStatus(result.message);
-      if (result.tokenSaved) {
-        toast.success("This iPhone is registered for push notifications");
-      } else {
-        toast.info(result.message);
-      }
-    } catch (e: any) {
-      const message = e?.message || "Could not register this iPhone for push notifications";
-      setPushStatus(message);
-      toast.error(message);
-    } finally {
-      setPushLoading(false);
-    }
-  }
-
-  async function handleTestPush() {
-    setPushLoading(true);
-    try {
-      const result = await sendTestPush({ data: { message: "Hello from Radiant Guard!" } });
-      if (result.sent > 0) {
-        toast.success(`Test push sent to ${result.sent} device${result.sent === 1 ? "" : "s"}.`);
-        setPushStatus(result.message || "Test push sent successfully.");
-      } else {
-        const message = result.message || "No registered device tokens found.";
-        toast.error(message);
-        setPushStatus(message);
-      }
-    } catch (e: any) {
-      toast.error(e?.message || "Failed to send test push");
-      setPushStatus(e?.message || "Failed to send test push");
-    } finally {
-      setPushLoading(false);
-    }
-  }
-
-  const appleNativeCard = (
-    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-accent" />
-            <h2 className="text-sm font-semibold tracking-wide">Apple app setup</h2>
-          </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Register this iPhone for push notifications and enable Face ID sign-in.
-          </p>
-          <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-            <p>{pushStatus || (nativeSupported ? "Push status not checked yet." : "Open the installed iOS app to use Apple push notifications.")}</p>
-            <p>{bioStatus || (nativeSupported ? "Face ID status not checked yet." : "Open the installed iOS app to use Face ID.")}</p>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-muted-foreground">
-            <Badge variant={nativeSnapshot.isNative ? "default" : "outline"}>
-              Platform: {nativeSnapshot.platform}
-            </Badge>
-            <Badge variant={nativeSnapshot.biometricPluginAvailable ? "default" : "outline"}>
-              Face ID plugin: {nativeSnapshot.biometricPluginAvailable ? "available" : "missing"}
-            </Badge>
-            <Badge variant={nativeSnapshot.pushPluginAvailable ? "default" : "outline"}>
-              Push plugin: {nativeSnapshot.pushPluginAvailable ? "available" : "missing"}
-            </Badge>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRegisterPush}
-            disabled={pushLoading || !nativeSupported}
-          >
-            {pushLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Bell className="mr-1.5 h-4 w-4" />}
-            Register iPhone
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleTestPush}
-            disabled={pushLoading}
-          >
-            {pushLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Bell className="mr-1.5 h-4 w-4" />}
-            Send test push
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleToggleBiometric}
-            disabled={bioBusy || !nativeSupported}
-          >
-            {bioBusy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Fingerprint className="mr-1.5 h-4 w-4" />}
-            {bioEnabled ? "Disable Face ID" : "Enable Face ID"}
-          </Button>
-          <Button variant="secondary" size="sm" onClick={copyNativeDiagnostics}>
-            <Clipboard className="mr-1.5 h-4 w-4" />
-            Copy diagnostics
-          </Button>
-          <Button variant="ghost" size="sm" onClick={resetNativeDiagnostics}>
-            Clear logs
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
+  const appleNativeCard = <AppleNativeSetupCard />;
 
   if (!phone) {
     return (

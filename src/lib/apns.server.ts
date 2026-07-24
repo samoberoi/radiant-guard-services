@@ -98,7 +98,7 @@ export async function sendApnsPush(
       title: payload.title || "Radiant Guard",
       body: payload.body || "You have a new notification",
     },
-    sound: payload.sound || "default",
+    sound: payload.sound || "radiant_chime.caf",
   };
 
   if (payload.badge !== undefined) {

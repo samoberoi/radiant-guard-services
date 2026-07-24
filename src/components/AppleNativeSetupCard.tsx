@@ -1,0 +1,254 @@
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useMemo, useState } from "react";
+import { Bell, Clipboard, Fingerprint, Loader2, ShieldCheck } from "lucide-react";
+import { toast } from "sonner";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth";
+import {
+  clearNativeDebugLog,
+  getNativeDebugLog,
+  getNativeRuntimeSnapshot,
+  isNativePlatform,
+} from "@/lib/native";
+import {
+  disableBiometric,
+  enableBiometric,
+  getBiometricStatus,
+} from "@/lib/biometric";
+import { getPushDebugStatus, registerPushForCurrentUser } from "@/lib/push";
+import { sendTestPushToMe } from "@/lib/push.functions";
+import { cn } from "@/lib/utils";
+
+type AppleNativeSetupCardProps = {
+  compact?: boolean;
+  autoStart?: boolean;
+  nativeOnly?: boolean;
+  className?: string;
+};
+
+const AUTO_PUSH_KEY_PREFIX = "radiant.native.auto-push.v2";
+
+export function AppleNativeSetupCard({
+  compact = false,
+  autoStart = false,
+  nativeOnly = false,
+  className,
+}: AppleNativeSetupCardProps) {
+  const { user } = useAuth();
+  const phoneDigits = useMemo(
+    () => (user?.phone ?? "").replace(/\D/g, "").slice(-10),
+    [user?.phone],
+  );
+  const sendTestPush = useServerFn(sendTestPushToMe);
+
+  const [nativeSupported, setNativeSupported] = useState(false);
+  const [nativeSnapshot, setNativeSnapshot] = useState(() => getNativeRuntimeSnapshot());
+  const [pushLoading, setPushLoading] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
+  const [bioEnabled, setBioEnabled] = useState(false);
+  const [pushStatus, setPushStatus] = useState<string>("");
+  const [bioStatus, setBioStatus] = useState<string>("");
+
+  useEffect(() => {
+    const snapshot = getNativeRuntimeSnapshot();
+    setNativeSnapshot(snapshot);
+    setNativeSupported(isNativePlatform());
+    void refreshBiometricStatus();
+  }, []);
+
+  useEffect(() => {
+    if (!autoStart || !phoneDigits || !isNativePlatform()) return;
+    const key = `${AUTO_PUSH_KEY_PREFIX}:${phoneDigits}`;
+    try {
+      if (window.localStorage.getItem(key) === "done") return;
+      window.localStorage.setItem(key, "done");
+    } catch {
+      /* continue best-effort */
+    }
+
+    setPushLoading(true);
+    void registerPushForCurrentUser()
+      .then((result) => {
+        setPushStatus(result.message);
+        if (result.tokenSaved) {
+          toast.success("This iPhone is registered for push notifications");
+        }
+      })
+      .catch((err) => {
+        const message = err instanceof Error ? err.message : "Could not register this iPhone for push notifications";
+        setPushStatus(message);
+      })
+      .finally(() => setPushLoading(false));
+  }, [autoStart, phoneDigits]);
+
+  async function refreshBiometricStatus() {
+    setNativeSnapshot(getNativeRuntimeSnapshot());
+    const status = await getBiometricStatus();
+    setBioEnabled(status.enabled);
+    setBioStatus(status.message);
+  }
+
+  async function handleRegisterPush() {
+    if (pushLoading) return;
+    setPushLoading(true);
+    try {
+      const result = await registerPushForCurrentUser();
+      setPushStatus(result.message);
+      if (result.tokenSaved) {
+        toast.success("This iPhone is registered for push notifications");
+      } else {
+        toast.info(result.message);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not register this iPhone for push notifications";
+      setPushStatus(message);
+      toast.error(message);
+    } finally {
+      setPushLoading(false);
+    }
+  }
+
+  async function handleTestPush() {
+    setPushLoading(true);
+    try {
+      const result = await sendTestPush({ data: { message: "Hello from Radiant Guard!" } });
+      if (result.sent > 0) {
+        toast.success(`Test push sent to ${result.sent} device${result.sent === 1 ? "" : "s"}.`);
+        setPushStatus(result.message || "Test push sent successfully.");
+      } else {
+        const message = result.message || "No registered iPhone tokens found.";
+        toast.error(message);
+        setPushStatus(message);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to send test push";
+      toast.error(message);
+      setPushStatus(message);
+    } finally {
+      setPushLoading(false);
+    }
+  }
+
+  async function handleToggleBiometric() {
+    if (bioBusy) return;
+    setBioBusy(true);
+    try {
+      if (bioEnabled) {
+        await disableBiometric();
+        setBioEnabled(false);
+        setBioStatus("Face ID is disabled on this device.");
+        toast.success("Face ID disabled");
+      } else {
+        const phoneForBio = user?.phone || (phoneDigits ? `+91${phoneDigits}` : "");
+        if (!phoneForBio) {
+          toast.error("Sign in with your phone number before enabling Face ID.");
+          return;
+        }
+        await enableBiometric(phoneForBio);
+        setBioEnabled(true);
+        setBioStatus("Face ID is enabled on this iPhone.");
+        toast.success("Face ID enabled");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Face ID action failed";
+      toast.error(message);
+      setBioStatus(message);
+    } finally {
+      setBioBusy(false);
+      void refreshBiometricStatus();
+    }
+  }
+
+  async function copyNativeDiagnostics() {
+    const payload = {
+      runtime: getNativeRuntimeSnapshot(),
+      push: getPushDebugStatus(),
+      biometric: await getBiometricStatus(),
+      logs: getNativeDebugLog(),
+    };
+    const text = JSON.stringify(payload, null, 2);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Native diagnostics copied");
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      toast.success("Native diagnostics copied");
+    }
+  }
+
+  function resetNativeDiagnostics() {
+    clearNativeDebugLog();
+    setNativeSnapshot(getNativeRuntimeSnapshot());
+    toast.success("Native diagnostics cleared");
+  }
+
+  if (nativeOnly && !nativeSupported) return null;
+
+  return (
+    <div className={cn(
+      "rounded-2xl border border-border bg-card shadow-sm",
+      compact ? "p-4" : "p-5",
+      className,
+    )}>
+      <div className={cn(
+        "flex flex-col gap-4",
+        compact ? "xl:flex-row xl:items-start xl:justify-between" : "lg:flex-row lg:items-start lg:justify-between",
+      )}>
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-accent" />
+            <h2 className="text-sm font-semibold tracking-wide">Apple app setup</h2>
+          </div>
+          <p className={cn("mt-1 text-sm text-muted-foreground", compact && "text-xs")}>
+            Register this iPhone for native push notifications and enable Face ID sign-in.
+          </p>
+          <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+            <p>{pushStatus || (nativeSupported ? "Push status not checked yet." : "Open the installed iOS app to use Apple push notifications.")}</p>
+            <p>{bioStatus || (nativeSupported ? "Face ID status not checked yet." : "Open the installed iOS app to use Face ID.")}</p>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-muted-foreground">
+            <Badge variant={nativeSnapshot.isNative ? "default" : "outline"}>
+              Platform: {nativeSnapshot.platform}
+            </Badge>
+            <Badge variant={nativeSnapshot.biometricPluginAvailable ? "default" : "outline"}>
+              Face ID plugin: {nativeSnapshot.biometricPluginAvailable ? "available" : "missing"}
+            </Badge>
+            <Badge variant={nativeSnapshot.pushPluginAvailable ? "default" : "outline"}>
+              Push plugin: {nativeSnapshot.pushPluginAvailable ? "available" : "missing"}
+            </Badge>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleRegisterPush} disabled={pushLoading || !nativeSupported}>
+            {pushLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Bell className="mr-1.5 h-4 w-4" />}
+            Register iPhone
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleTestPush} disabled={pushLoading}>
+            {pushLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Bell className="mr-1.5 h-4 w-4" />}
+            Send test push
+          </Button>
+          <Button variant="outline" size="sm" onClick={handleToggleBiometric} disabled={bioBusy || !nativeSupported}>
+            {bioBusy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Fingerprint className="mr-1.5 h-4 w-4" />}
+            {bioEnabled ? "Disable Face ID" : "Enable Face ID"}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={copyNativeDiagnostics}>
+            <Clipboard className="mr-1.5 h-4 w-4" />
+            Copy diagnostics
+          </Button>
+          <Button variant="ghost" size="sm" onClick={resetNativeDiagnostics}>
+            Clear logs
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
