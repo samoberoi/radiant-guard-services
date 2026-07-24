@@ -61,10 +61,20 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
   const [revealing, setRevealing] = useState(false);
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioEnabled, setBioEnabled] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
 
   useEffect(() => {
     if (user && !revealing) navigate({ to: "/", replace: true });
   }, [user, navigate, revealing]);
+
+  useEffect(() => {
+    void isBiometricAvailable().then((ok) => {
+      setBioAvailable(ok);
+      setBioEnabled(ok && isBiometricEnabled());
+    });
+  }, []);
 
   useEffect(() => {
     if (resendIn <= 0) return;
