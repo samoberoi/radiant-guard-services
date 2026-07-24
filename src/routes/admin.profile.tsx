@@ -265,6 +265,8 @@ function ProfilePage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const sendTestPush = useServerFn(sendTestPushToMe);
 
   const phone = useMemo(
     () => (user?.phone ?? "").replace(/\D/g, "").slice(-10),
