@@ -5,6 +5,7 @@
  * in public.device_push_tokens. Designed for the Cloudflare Worker runtime.
  */
 import { SignJWT, importPKCS8 } from "jose";
+import { createPrivateKey } from "node:crypto";
 
 const APNS_HOST_PROD = "https://api.push.apple.com";
 const APNS_HOST_DEV = "https://api.development.push.apple.com";
@@ -35,12 +36,24 @@ function getApnsConfig(): ApnsConfig {
 
 let cachedJwt: { token: string; exp: number } | null = null;
 
+/**
+ * Apple .p8 keys are PKCS#8 (`-----BEGIN PRIVATE KEY-----`).
+ * If the user pasted a SEC1 EC key (`-----BEGIN EC PRIVATE KEY-----`),
+ * convert it to PKCS#8 so jose can import it.
+ */
 function normalizeP8(raw: string): string {
-  if (raw.includes("-----BEGIN EC PRIVATE KEY-----")) {
-    return raw;
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("-----BEGIN PRIVATE KEY-----")) {
+    return trimmed;
   }
-  // User may have pasted the base64 body without PEM markers.
-  return `-----BEGIN EC PRIVATE KEY-----\n${raw}\n-----END EC PRIVATE KEY-----`;
+  if (trimmed.startsWith("-----BEGIN EC PRIVATE KEY-----")) {
+    const key = createPrivateKey(trimmed);
+    return key.export({ type: "pkcs8", format: "pem" }) as string;
+  }
+  // Bare base64 body — wrap as SEC1, then convert.
+  const sec1 = `-----BEGIN EC PRIVATE KEY-----\n${trimmed}\n-----END EC PRIVATE KEY-----`;
+  const key = createPrivateKey(sec1);
+  return key.export({ type: "pkcs8", format: "pem" }) as string;
 }
 
 async function getApnsJwt(): Promise<string> {
