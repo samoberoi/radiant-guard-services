@@ -58,6 +58,13 @@ import {
 import { logActivity } from "@/lib/activity-log";
 import { sendTestPushToMe } from "@/lib/push.functions";
 import { isNativePlatform } from "@/lib/native";
+import {
+  disableBiometric,
+  enableBiometric,
+  isBiometricAvailable,
+  isBiometricEnabled,
+} from "@/lib/biometric";
+import { Fingerprint } from "lucide-react";
 
 export const Route = createFileRoute("/admin/profile")({
   component: ProfilePage,
