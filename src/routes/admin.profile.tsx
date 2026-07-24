@@ -913,6 +913,26 @@ function ProfilePage() {
               />
               <InfoRow label="Status" value={profile.status} />
             </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleTestPush}
+                disabled={pushLoading}
+              >
+                {pushLoading ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Bell className="mr-1.5 h-4 w-4" />
+                )}
+                Test push notification
+              </Button>
+              {!isNativePlatform() && (
+                <span className="text-xs text-muted-foreground">
+                  Push test is only available on the iOS app
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
