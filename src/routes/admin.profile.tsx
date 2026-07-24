@@ -965,9 +965,24 @@ function ProfilePage() {
                 )}
                 Test push notification
               </Button>
+              {bioAvailable && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleToggleBiometric}
+                  disabled={bioBusy}
+                >
+                  {bioBusy ? (
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Fingerprint className="mr-1.5 h-4 w-4" />
+                  )}
+                  {bioEnabled ? "Disable Face ID" : "Enable Face ID"}
+                </Button>
+              )}
               {!isNativePlatform() && (
                 <span className="text-xs text-muted-foreground">
-                  Push test is only available on the iOS app
+                  Push & Face ID are only available on the iOS app
                 </span>
               )}
             </div>
