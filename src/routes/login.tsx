@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Fingerprint, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +9,12 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { useAuth, verifyOtp } from "@/lib/auth";
+import {
+  enableBiometric,
+  isBiometricAvailable,
+  isBiometricEnabled,
+  signInWithBiometric,
+} from "@/lib/biometric";
 import logo from "@/assets/radiant-logo-v2.png";
 import loginBg from "@/assets/login-bg.jpg.asset.json";
 
