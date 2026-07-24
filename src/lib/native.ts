@@ -83,4 +83,12 @@ export async function initNative(): Promise<void> {
     // Never let native init crash the web app.
     console.warn("[native] initialization failed", err);
   }
+
+  // Push notifications (APNs on iOS). Fire-and-forget; failures are logged.
+  try {
+    const { initPushNotifications } = await import("./push");
+    void initPushNotifications();
+  } catch {
+    /* noop */
+  }
 }
