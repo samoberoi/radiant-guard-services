@@ -1,5 +1,7 @@
 import UIKit
 import Capacitor
+import LocalAuthentication
+import Security
 
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -54,4 +56,141 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         NotificationCenter.default.post(name: .capacitorDidFailToRegisterForRemoteNotifications, object: error)
     }
 
+}
+
+@objc(RadiantBridgeViewController)
+class RadiantBridgeViewController: CAPBridgeViewController {
+    override open func capacitorDidLoad() {
+        super.capacitorDidLoad()
+        bridge?.registerPluginInstance(RadiantBiometricsPlugin())
+        bridge?.registerPluginInstance(RadiantNativeAuthStorePlugin())
+    }
+}
+
+@objc(RadiantBiometricsPlugin)
+public class RadiantBiometricsPlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "RadiantBiometricsPlugin"
+    public let jsName = "RadiantBiometrics"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "check", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "authenticate", returnType: CAPPluginReturnPromise)
+    ]
+
+    private func biometryLabel(_ type: LABiometryType) -> String {
+        if type == .faceID {
+            return "Face ID"
+        }
+        if type == .touchID {
+            return "Touch ID"
+        }
+        if #available(iOS 17.0, *), type == .opticID {
+            return "Optic ID"
+        }
+        return "Device passcode"
+    }
+
+    @objc func check(_ call: CAPPluginCall) {
+        let context = LAContext()
+        context.localizedFallbackTitle = "Use Passcode"
+        var error: NSError?
+        let available = context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
+        let biometryAvailable = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
+        call.resolve([
+            "available": available,
+            "biometryAvailable": biometryAvailable,
+            "deviceSecure": available,
+            "biometryType": String(context.biometryType.rawValue),
+            "label": biometryLabel(context.biometryType),
+            "code": error?.domain ?? (available ? "available" : "unavailable"),
+            "reason": error?.localizedDescription ?? "Device authentication is available."
+        ])
+    }
+
+    @objc func authenticate(_ call: CAPPluginCall) {
+        let reason = call.getString("reason") ?? "Unlock Radiant Guard"
+        let context = LAContext()
+        context.localizedCancelTitle = "Cancel"
+        context.localizedFallbackTitle = "Use Passcode"
+
+        var error: NSError?
+        guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else {
+            call.reject(error?.localizedDescription ?? "Face ID or device passcode is not available", "notAvailable")
+            return
+        }
+
+        context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: reason) { success, authError in
+            DispatchQueue.main.async {
+                if success {
+                    call.resolve(["success": true])
+                } else {
+                    call.reject(authError?.localizedDescription ?? "Authentication failed", "authFailed")
+                }
+            }
+        }
+    }
+}
+
+@objc(RadiantNativeAuthStorePlugin)
+public class RadiantNativeAuthStorePlugin: CAPPlugin, CAPBridgedPlugin {
+    public let identifier = "RadiantNativeAuthStorePlugin"
+    public let jsName = "RadiantNativeAuthStore"
+    public let pluginMethods: [CAPPluginMethod] = [
+        CAPPluginMethod(name: "getPhone", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "setPhone", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "clearPhone", returnType: CAPPluginReturnPromise)
+    ]
+
+    private let service = "app.lovable.radiantguard.biometric"
+    private let account = "primary-phone"
+
+    private func baseQuery() -> [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+    }
+
+    @objc func getPhone(_ call: CAPPluginCall) {
+        var query = baseQuery()
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+
+        var item: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &item)
+        guard status == errSecSuccess, let data = item as? Data, let phone = String(data: data, encoding: .utf8), !phone.isEmpty else {
+            call.resolve(["hasPhone": false])
+            return
+        }
+
+        call.resolve(["hasPhone": true, "phone": phone])
+    }
+
+    @objc func setPhone(_ call: CAPPluginCall) {
+        guard let phone = call.getString("phone"), !phone.isEmpty else {
+            call.reject("Missing phone", "missingPhone")
+            return
+        }
+
+        guard let data = phone.data(using: .utf8) else {
+            call.reject("Phone could not be encoded", "encodeFailed")
+            return
+        }
+
+        SecItemDelete(baseQuery() as CFDictionary)
+        var attributes = baseQuery()
+        attributes[kSecValueData as String] = data
+        attributes[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
+        let status = SecItemAdd(attributes as CFDictionary, nil)
+        if status == errSecSuccess {
+            call.resolve(["saved": true])
+        } else {
+            call.reject("Keychain save failed", "keychainSaveFailed", NSError(domain: NSOSStatusErrorDomain, code: Int(status)))
+        }
+    }
+
+    @objc func clearPhone(_ call: CAPPluginCall) {
+        SecItemDelete(baseQuery() as CFDictionary)
+        call.resolve(["cleared": true])
+    }
 }
