@@ -11,8 +11,7 @@ import {
 import { useAuth, verifyOtp } from "@/lib/auth";
 import {
   enableBiometric,
-  isBiometricAvailable,
-  isBiometricEnabled,
+  getBiometricStatus,
   signInWithBiometric,
 } from "@/lib/biometric";
 import logo from "@/assets/radiant-logo-v2.png";
@@ -70,9 +69,9 @@ function LoginPage() {
   }, [user, navigate, revealing]);
 
   useEffect(() => {
-    void isBiometricAvailable().then((ok) => {
-      setBioAvailable(ok);
-      setBioEnabled(ok && isBiometricEnabled());
+    void getBiometricStatus().then((status) => {
+      setBioAvailable(status.available);
+      setBioEnabled(status.enabled);
     });
   }, []);
 
@@ -113,9 +112,11 @@ function LoginPage() {
       await login(`+91${phone}`);
       toast.success("Signed in");
       // Offer to enable Face ID on first successful sign-in on a device.
-      if (bioAvailable && !isBiometricEnabled()) {
+      const biometricStatus = await getBiometricStatus();
+      if (biometricStatus.available && !biometricStatus.enabled) {
         try {
           await enableBiometric(`+91${phone}`);
+          setBioAvailable(true);
           setBioEnabled(true);
           toast.success("Face ID enabled for this device");
         } catch (bioErr) {
@@ -158,6 +159,10 @@ function LoginPage() {
       setError(
         err instanceof Error ? err.message : "Face ID sign-in failed. Use OTP instead.",
       );
+      void getBiometricStatus().then((status) => {
+        setBioAvailable(status.available);
+        setBioEnabled(status.enabled);
+      });
     } finally {
       setBioBusy(false);
     }
