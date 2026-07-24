@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Loader2, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, Fingerprint, Loader2, ShieldCheck, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,6 +9,12 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { useAuth, verifyOtp } from "@/lib/auth";
+import {
+  enableBiometric,
+  isBiometricAvailable,
+  isBiometricEnabled,
+  signInWithBiometric,
+} from "@/lib/biometric";
 import logo from "@/assets/radiant-logo-v2.png";
 import loginBg from "@/assets/login-bg.jpg.asset.json";
 
@@ -55,10 +61,20 @@ function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [resendIn, setResendIn] = useState(0);
   const [revealing, setRevealing] = useState(false);
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioEnabled, setBioEnabled] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
 
   useEffect(() => {
     if (user && !revealing) navigate({ to: "/", replace: true });
   }, [user, navigate, revealing]);
+
+  useEffect(() => {
+    void isBiometricAvailable().then((ok) => {
+      setBioAvailable(ok);
+      setBioEnabled(ok && isBiometricEnabled());
+    });
+  }, []);
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -96,8 +112,17 @@ function LoginPage() {
     try {
       await login(`+91${phone}`);
       toast.success("Signed in");
+      // Offer to enable Face ID on first successful sign-in on a device.
+      if (bioAvailable && !isBiometricEnabled()) {
+        try {
+          await enableBiometric(`+91${phone}`);
+          setBioEnabled(true);
+          toast.success("Face ID enabled for this device");
+        } catch {
+          /* user declined — no-op */
+        }
+      }
       setRevealing(true);
-      // Wait for the slide-up animation to play before navigating.
       setTimeout(() => navigate({ to: "/", replace: true }), 640);
     } catch (err) {
       setError(
@@ -107,6 +132,29 @@ function LoginPage() {
     } finally {
       verifyInFlightRef.current = false;
       setVerifying(false);
+    }
+  }
+
+  async function handleBiometricLogin() {
+    if (!bioAvailable || bioBusy) return;
+    setBioBusy(true);
+    setError(null);
+    try {
+      const savedPhone = await signInWithBiometric();
+      if (!savedPhone) {
+        setBioBusy(false);
+        return;
+      }
+      await login(savedPhone);
+      toast.success("Signed in with Face ID");
+      setRevealing(true);
+      setTimeout(() => navigate({ to: "/", replace: true }), 640);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Face ID sign-in failed. Use OTP instead.",
+      );
+    } finally {
+      setBioBusy(false);
     }
   }
 
@@ -228,6 +276,24 @@ function LoginPage() {
                         </>
                       )}
                     </Button>
+
+                    {bioAvailable && bioEnabled && (
+                      <button
+                        type="button"
+                        onClick={handleBiometricLogin}
+                        disabled={bioBusy}
+                        className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border/70 bg-white/70 text-[14px] font-semibold text-foreground backdrop-blur transition hover:bg-white disabled:opacity-60"
+                      >
+                        {bioBusy ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Fingerprint className="h-4 w-4 text-accent" />
+                            Sign in with Face ID
+                          </>
+                        )}
+                      </button>
+                    )}
                   </form>
                 ) : (
                   <div className="space-y-5">
