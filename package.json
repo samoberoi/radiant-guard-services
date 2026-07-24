@@ -66,6 +66,7 @@
     "framer-motion": "^12.40.0",
     "html2canvas-pro": "^2.0.4",
     "input-otp": "^1.4.2",
+    "jose": "^6.2.4",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.575.0",

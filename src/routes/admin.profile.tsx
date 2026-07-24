@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   Activity,
+  Bell,
   Briefcase,
   Camera,
   Download,
@@ -54,6 +56,8 @@ import {
   type DocType,
 } from "@/lib/company-documents";
 import { logActivity } from "@/lib/activity-log";
+import { sendTestPushToMe } from "@/lib/push.functions";
+import { isNativePlatform } from "@/lib/native";
 
 export const Route = createFileRoute("/admin/profile")({
   component: ProfilePage,
@@ -261,6 +265,8 @@ function ProfilePage() {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+  const sendTestPush = useServerFn(sendTestPushToMe);
 
   const phone = useMemo(
     () => (user?.phone ?? "").replace(/\D/g, "").slice(-10),
@@ -744,6 +750,22 @@ function ProfilePage() {
     }
   }
 
+  async function handleTestPush() {
+    setPushLoading(true);
+    try {
+      const result = await sendTestPush({ data: { message: "Hello from Radiant Guard!" } });
+      if (result.sent > 0) {
+        toast.success(`Test push sent to ${result.sent} device${result.sent === 1 ? "" : "s"}.`);
+      } else {
+        toast.info(result.message || "No device tokens found.");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to send test push");
+    } finally {
+      setPushLoading(false);
+    }
+  }
+
   if (!phone) {
     return (
       <div>
@@ -890,6 +912,26 @@ function ProfilePage() {
                 }
               />
               <InfoRow label="Status" value={profile.status} />
+            </div>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleTestPush}
+                disabled={pushLoading}
+              >
+                {pushLoading ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Bell className="mr-1.5 h-4 w-4" />
+                )}
+                Test push notification
+              </Button>
+              {!isNativePlatform() && (
+                <span className="text-xs text-muted-foreground">
+                  Push test is only available on the iOS app
+                </span>
+              )}
             </div>
           </div>
         </div>
