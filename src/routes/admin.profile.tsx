@@ -273,6 +273,15 @@ function ProfilePage() {
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioEnabled, setBioEnabled] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
+  useEffect(() => {
+    void isBiometricAvailable().then((ok) => {
+      setBioAvailable(ok);
+      setBioEnabled(ok && isBiometricEnabled());
+    });
+  }, []);
   const sendTestPush = useServerFn(sendTestPushToMe);
 
   const phone = useMemo(
