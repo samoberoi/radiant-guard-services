@@ -118,8 +118,13 @@ function LoginPage() {
           await enableBiometric(`+91${phone}`);
           setBioEnabled(true);
           toast.success("Face ID enabled for this device");
-        } catch {
-          /* user declined — no-op */
+        } catch (bioErr) {
+          console.warn("[biometric] enable failed", bioErr);
+          toast.info(
+            bioErr instanceof Error && bioErr.message
+              ? `Face ID not enabled: ${bioErr.message}`
+              : "Face ID not enabled (you can enable it later from Profile).",
+          );
         }
       }
       setRevealing(true);

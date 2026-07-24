@@ -58,6 +58,13 @@ import {
 import { logActivity } from "@/lib/activity-log";
 import { sendTestPushToMe } from "@/lib/push.functions";
 import { isNativePlatform } from "@/lib/native";
+import {
+  disableBiometric,
+  enableBiometric,
+  isBiometricAvailable,
+  isBiometricEnabled,
+} from "@/lib/biometric";
+import { Fingerprint } from "lucide-react";
 
 export const Route = createFileRoute("/admin/profile")({
   component: ProfilePage,
@@ -266,6 +273,15 @@ function ProfilePage() {
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
+  const [bioAvailable, setBioAvailable] = useState(false);
+  const [bioEnabled, setBioEnabled] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
+  useEffect(() => {
+    void isBiometricAvailable().then((ok) => {
+      setBioAvailable(ok);
+      setBioEnabled(ok && isBiometricEnabled());
+    });
+  }, []);
   const sendTestPush = useServerFn(sendTestPushToMe);
 
   const phone = useMemo(
@@ -750,6 +766,28 @@ function ProfilePage() {
     }
   }
 
+  async function handleToggleBiometric() {
+    if (bioBusy) return;
+    setBioBusy(true);
+    try {
+      if (bioEnabled) {
+        await disableBiometric();
+        setBioEnabled(false);
+        toast.success("Face ID disabled");
+      } else {
+        const phoneForBio = user?.phone || `+91${phone}`;
+        await enableBiometric(phoneForBio);
+        setBioEnabled(true);
+        toast.success("Face ID enabled");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Face ID action failed");
+    } finally {
+      setBioBusy(false);
+    }
+  }
+
+
   async function handleTestPush() {
     setPushLoading(true);
     try {
@@ -927,9 +965,24 @@ function ProfilePage() {
                 )}
                 Test push notification
               </Button>
+              {bioAvailable && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleToggleBiometric}
+                  disabled={bioBusy}
+                >
+                  {bioBusy ? (
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Fingerprint className="mr-1.5 h-4 w-4" />
+                  )}
+                  {bioEnabled ? "Disable Face ID" : "Enable Face ID"}
+                </Button>
+              )}
               {!isNativePlatform() && (
                 <span className="text-xs text-muted-foreground">
-                  Push test is only available on the iOS app
+                  Push & Face ID are only available on the iOS app
                 </span>
               )}
             </div>
