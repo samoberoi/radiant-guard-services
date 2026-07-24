@@ -92,7 +92,6 @@ export async function sendApnsPush(
 ): Promise<{ success: boolean; status?: number; error?: string }> {
   const { bundleId, useSandbox } = getApnsConfig();
   const jwt = await getApnsJwt();
-  const host = useSandbox ? APNS_HOST_DEV : APNS_HOST_PROD;
 
   const aps: Record<string, unknown> = {
     alert: {
@@ -111,12 +110,14 @@ export async function sendApnsPush(
     link: payload.link,
   });
 
-  try {
+  const postToApns = async (host: string) => {
     const response = await fetch(`${host}/3/device/${deviceToken}`, {
       method: "POST",
       headers: {
         authorization: `bearer ${jwt}`,
         "apns-topic": bundleId,
+        "apns-push-type": "alert",
+        "apns-priority": "10",
         "content-type": "application/json",
       },
       body,
@@ -128,6 +129,30 @@ export async function sendApnsPush(
     }
 
     return { success: true, status: response.status };
+  };
+
+  try {
+    const primaryHost = useSandbox ? APNS_HOST_DEV : APNS_HOST_PROD;
+    const fallbackHost = useSandbox ? APNS_HOST_PROD : APNS_HOST_DEV;
+    const primary = await postToApns(primaryHost);
+    if (primary.success) return primary;
+
+    const shouldRetryOtherEnvironment =
+      primary.status === 400 &&
+      /BadDeviceToken|DeviceTokenNotForTopic|TopicDisallowed|BadCertificateEnvironment/i.test(
+        primary.error || "",
+      );
+
+    if (shouldRetryOtherEnvironment) {
+      const fallback = await postToApns(fallbackHost);
+      if (fallback.success) return fallback;
+      return {
+        ...fallback,
+        error: `Production/sandbox APNs both failed. Primary: ${primary.error}; fallback: ${fallback.error}`,
+      };
+    }
+
+    return primary;
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : String(err) };
   }

@@ -10,15 +10,85 @@ import { toast } from "sonner";
 import { isNativePlatform } from "./native";
 import { playNotificationChime } from "./notification-sound";
 
-let registered = false;
+let initialized = false;
+let initPromise: Promise<void> | null = null;
+let lastApnsToken: string | null = null;
+let lastPermission: string | null = null;
+let lastError: string | null = null;
+let authSyncAttached = false;
+
+type PushRegisterResult = {
+  supported: boolean;
+  permission: string | null;
+  tokenSaved: boolean;
+  tokenSuffix: string | null;
+  message: string;
+};
+
+async function saveTokenForSignedInUser(token: string): Promise<boolean> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    lastError = "Sign in first, then register this iPhone for push notifications.";
+    console.warn("[push] no signed-in user; token not stored");
+    return false;
+  }
+
+  const { error } = await supabase.from("device_push_tokens").upsert(
+    {
+      user_id: user.id,
+      token,
+      platform: "ios",
+      last_seen_at: new Date().toISOString(),
+    },
+    { onConflict: "token" },
+  );
+
+  if (error) {
+    lastError = error.message;
+    console.warn("[push] failed to store token", error);
+    return false;
+  }
+
+  lastError = null;
+  console.info("[push] APNs token stored", token.slice(-8));
+  return true;
+}
+
+function attachAuthTokenSync() {
+  if (authSyncAttached) return;
+  authSyncAttached = true;
+  supabase.auth.onAuthStateChange((event) => {
+    if (
+      event === "SIGNED_IN" ||
+      event === "TOKEN_REFRESHED" ||
+      event === "INITIAL_SESSION"
+    ) {
+      if (lastApnsToken) {
+        void saveTokenForSignedInUser(lastApnsToken);
+      } else if (initialized && isNativePlatform()) {
+        void registerPushForCurrentUser();
+      }
+    }
+  });
+}
 
 export async function initPushNotifications(): Promise<void> {
-  if (registered) return;
+  if (initPromise) return initPromise;
+  initPromise = initPushNotificationsOnce();
+  return initPromise;
+}
+
+async function initPushNotificationsOnce(): Promise<void> {
+  if (initialized) return;
   if (!isNativePlatform()) return;
-  registered = true;
+  initialized = true;
 
   try {
     const { PushNotifications } = await import("@capacitor/push-notifications");
+    attachAuthTokenSync();
 
     const perm = await PushNotifications.checkPermissions();
     let granted = perm.receive;
@@ -26,36 +96,21 @@ export async function initPushNotifications(): Promise<void> {
       const req = await PushNotifications.requestPermissions();
       granted = req.receive;
     }
+    lastPermission = granted;
     if (granted !== "granted") {
+      lastError = `Push permission is ${granted}. Enable notifications for Radiant Guard in iOS Settings.`;
       console.warn("[push] permission not granted:", granted);
       return;
     }
 
     PushNotifications.addListener("registration", async (token) => {
       console.info("[push] APNs token registered", token.value.slice(-8));
-      try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-        if (!user) {
-          console.warn("[push] no signed-in user; token not stored");
-          return;
-        }
-        await supabase.from("device_push_tokens").upsert(
-          {
-            user_id: user.id,
-            token: token.value,
-            platform: "ios",
-            last_seen_at: new Date().toISOString(),
-          },
-          { onConflict: "token" },
-        );
-      } catch (err) {
-        console.warn("[push] failed to store token", err);
-      }
+      lastApnsToken = token.value;
+      await saveTokenForSignedInUser(token.value);
     });
 
     PushNotifications.addListener("registrationError", (err) => {
+      lastError = err?.error || JSON.stringify(err);
       console.warn("[push] registration error", err);
     });
 
@@ -94,6 +149,47 @@ export async function initPushNotifications(): Promise<void> {
     await PushNotifications.register();
     console.info("[push] register() called");
   } catch (err) {
+    lastError = err instanceof Error ? err.message : String(err);
     console.warn("[push] init failed", err);
   }
+}
+
+export async function registerPushForCurrentUser(): Promise<PushRegisterResult> {
+  if (!isNativePlatform()) {
+    return {
+      supported: false,
+      permission: null,
+      tokenSaved: false,
+      tokenSuffix: null,
+      message: "Open the installed iOS app to register Apple push notifications.",
+    };
+  }
+
+  await initPushNotifications();
+
+  try {
+    const { PushNotifications } = await import("@capacitor/push-notifications");
+    const perm = await PushNotifications.checkPermissions();
+    lastPermission = perm.receive;
+    if (perm.receive !== "granted") {
+      const req = await PushNotifications.requestPermissions();
+      lastPermission = req.receive;
+    }
+    if (lastPermission === "granted") {
+      await PushNotifications.register();
+    }
+  } catch (err) {
+    lastError = err instanceof Error ? err.message : String(err);
+  }
+
+  const tokenSaved = lastApnsToken ? await saveTokenForSignedInUser(lastApnsToken) : false;
+  return {
+    supported: true,
+    permission: lastPermission,
+    tokenSaved,
+    tokenSuffix: lastApnsToken ? lastApnsToken.slice(-8) : null,
+    message: tokenSaved
+      ? "This iPhone is registered for Apple push notifications."
+      : lastError || "Apple push registration has started. Try again in a few seconds.",
+  };
 }

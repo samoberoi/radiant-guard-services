@@ -28,10 +28,58 @@ export async function isBiometricAvailable(): Promise<boolean> {
   const m = await mod();
   if (!m) return false;
   try {
-    const res = await m.NativeBiometric.isAvailable();
+    const res = await m.NativeBiometric.isAvailable({ useFallback: true });
     return !!res.isAvailable;
   } catch {
     return false;
+  }
+}
+
+export async function getBiometricStatus(): Promise<{
+  supported: boolean;
+  available: boolean;
+  enabled: boolean;
+  saved: boolean;
+  message: string;
+}> {
+  const m = await mod();
+  if (!m) {
+    return {
+      supported: false,
+      available: false,
+      enabled: false,
+      saved: false,
+      message: "Open the installed iOS app to use Face ID.",
+    };
+  }
+  try {
+    const [availability, saved] = await Promise.all([
+      m.NativeBiometric.isAvailable({ useFallback: true }),
+      m.NativeBiometric.isCredentialsSaved({ server: SERVER }).catch(() => ({ isSaved: false })),
+    ]);
+    const enabled = !!availability.isAvailable && (isBiometricEnabled() || !!saved.isSaved);
+    if (enabled && !isBiometricEnabled() && typeof window !== "undefined") {
+      window.localStorage.setItem(ENABLED_KEY, "1");
+    }
+    return {
+      supported: true,
+      available: !!availability.isAvailable,
+      enabled,
+      saved: !!saved.isSaved,
+      message: availability.isAvailable
+        ? saved.isSaved
+          ? "Face ID is saved on this device."
+          : "Face ID is available but not enabled yet."
+        : `Face ID is not available on this device${availability.errorCode ? ` (${availability.errorCode})` : ""}.`,
+    };
+  } catch (err) {
+    return {
+      supported: true,
+      available: false,
+      enabled: false,
+      saved: false,
+      message: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 
@@ -48,6 +96,8 @@ export async function enableBiometric(phone: string): Promise<void> {
     reason: "Enable Face ID for quick sign-in",
     title: "Enable Face ID",
     subtitle: "Confirm it's you to save this device.",
+    useFallback: true,
+    fallbackTitle: "Use Passcode",
   });
   await m.NativeBiometric.setCredentials({
     username: USERNAME,
@@ -60,17 +110,24 @@ export async function enableBiometric(phone: string): Promise<void> {
 /** Prompt Face ID and return the stored phone, or null if unavailable / cancelled. */
 export async function signInWithBiometric(): Promise<string | null> {
   const m = await mod();
-  if (!m || !isBiometricEnabled()) return null;
+  if (!m) return null;
   try {
+    const saved = await m.NativeBiometric.isCredentialsSaved({ server: SERVER });
+    if (!isBiometricEnabled() && !saved.isSaved) return null;
     await m.NativeBiometric.verifyIdentity({
       reason: "Sign in to Radiant Guard",
       title: "Face ID",
       subtitle: "Use Face ID to continue",
+      useFallback: true,
+      fallbackTitle: "Use Passcode",
     });
     const creds = await m.NativeBiometric.getCredentials({ server: SERVER });
+    if (creds?.password && typeof window !== "undefined") {
+      window.localStorage.setItem(ENABLED_KEY, "1");
+    }
     return creds?.password ?? null;
-  } catch {
-    return null;
+  } catch (err) {
+    throw err instanceof Error ? err : new Error(String(err));
   }
 }
 

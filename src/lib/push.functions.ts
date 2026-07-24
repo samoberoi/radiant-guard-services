@@ -47,5 +47,14 @@ export const sendTestPushToMe = createServerFn({ method: "POST" })
       }
     }
 
-    return { sent, total: rows.length, results };
+    const failed = results.filter((result) => !result.ok);
+    return {
+      sent,
+      total: rows.length,
+      results,
+      message:
+        sent > 0
+          ? `Sent ${sent} of ${rows.length} push notification${rows.length === 1 ? "" : "s"}.`
+          : failed[0]?.error || "No push notifications were sent.",
+    };
   });
