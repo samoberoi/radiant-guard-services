@@ -8,20 +8,20 @@ runs as a hybrid app: the native shell loads the published Lovable web app
 
 Requirements:
 
-- Node 20+, Bun, Xcode 15+ (iOS), Android Studio (Android)
+- Node 20+, Bun, Xcode 26+ (iOS), Android Studio (Android)
 - CocoaPods (`sudo gem install cocoapods`)
 
 ```bash
 # From project root, after cloning:
 bun install
 
-# Create the native platform folders (only needed once):
-npx cap add ios
-npx cap add android
-
-# Copy web config into the native projects:
-npx cap sync
+# Create missing native projects if needed and copy the web config:
+npm run mobile:sync
 ```
+
+The repository now includes the `ios/` and `android/` platform folders. If one
+is missing after a fresh clone, `npm run mobile:sync` recreates the missing
+platform and then runs `npx cap sync`.
 
 ## Point the app at your production URL
 
@@ -34,10 +34,10 @@ For a custom domain, change it and re-run `npx cap sync`.
 
 ```bash
 # iOS (opens Xcode)
-npx cap open ios
+npm run mobile:ios
 
 # Android (opens Android Studio)
-npx cap open android
+npm run mobile:android
 ```
 
 Then Run in Xcode / Android Studio on a simulator or device.
