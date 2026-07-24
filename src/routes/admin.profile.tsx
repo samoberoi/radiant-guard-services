@@ -63,8 +63,6 @@ import {
   disableBiometric,
   enableBiometric,
   getBiometricStatus,
-  isBiometricAvailable,
-  isBiometricEnabled,
 } from "@/lib/biometric";
 import { Fingerprint } from "lucide-react";
 
@@ -275,7 +273,6 @@ function ProfilePage() {
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
   const [cameraOpen, setCameraOpen] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
-  const [bioAvailable, setBioAvailable] = useState(false);
   const [bioEnabled, setBioEnabled] = useState(false);
   const [bioBusy, setBioBusy] = useState(false);
   const [pushStatus, setPushStatus] = useState<string>("");
@@ -784,7 +781,6 @@ function ProfilePage() {
         }
         await enableBiometric(phoneForBio);
         setBioEnabled(true);
-        setBioAvailable(true);
         setBioStatus("Face ID is enabled on this iPhone.");
         toast.success("Face ID enabled");
       }
@@ -799,7 +795,6 @@ function ProfilePage() {
 
   async function refreshBiometricStatus() {
     const status = await getBiometricStatus();
-    setBioAvailable(status.available);
     setBioEnabled(status.enabled);
     setBioStatus(status.message);
   }
