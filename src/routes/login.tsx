@@ -112,8 +112,17 @@ function LoginPage() {
     try {
       await login(`+91${phone}`);
       toast.success("Signed in");
+      // Offer to enable Face ID on first successful sign-in on a device.
+      if (bioAvailable && !isBiometricEnabled()) {
+        try {
+          await enableBiometric(`+91${phone}`);
+          setBioEnabled(true);
+          toast.success("Face ID enabled for this device");
+        } catch {
+          /* user declined — no-op */
+        }
+      }
       setRevealing(true);
-      // Wait for the slide-up animation to play before navigating.
       setTimeout(() => navigate({ to: "/", replace: true }), 640);
     } catch (err) {
       setError(
@@ -123,6 +132,29 @@ function LoginPage() {
     } finally {
       verifyInFlightRef.current = false;
       setVerifying(false);
+    }
+  }
+
+  async function handleBiometricLogin() {
+    if (!bioAvailable || bioBusy) return;
+    setBioBusy(true);
+    setError(null);
+    try {
+      const savedPhone = await signInWithBiometric();
+      if (!savedPhone) {
+        setBioBusy(false);
+        return;
+      }
+      await login(savedPhone);
+      toast.success("Signed in with Face ID");
+      setRevealing(true);
+      setTimeout(() => navigate({ to: "/", replace: true }), 640);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Face ID sign-in failed. Use OTP instead.",
+      );
+    } finally {
+      setBioBusy(false);
     }
   }
 
