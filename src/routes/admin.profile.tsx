@@ -766,6 +766,28 @@ function ProfilePage() {
     }
   }
 
+  async function handleToggleBiometric() {
+    if (bioBusy) return;
+    setBioBusy(true);
+    try {
+      if (bioEnabled) {
+        await disableBiometric();
+        setBioEnabled(false);
+        toast.success("Face ID disabled");
+      } else {
+        const phoneForBio = user?.phone || `+91${phone}`;
+        await enableBiometric(phoneForBio);
+        setBioEnabled(true);
+        toast.success("Face ID enabled");
+      }
+    } catch (e: any) {
+      toast.error(e?.message || "Face ID action failed");
+    } finally {
+      setBioBusy(false);
+    }
+  }
+
+
   async function handleTestPush() {
     setPushLoading(true);
     try {
