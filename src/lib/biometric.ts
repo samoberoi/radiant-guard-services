@@ -1,5 +1,5 @@
 /** Native Face ID / Touch ID helper with the proven Radiant Swift plugin first. */
-import { Capacitor, registerPlugin } from "@capacitor/core";
+import { registerPlugin } from "@capacitor/core";
 import { getNativeRuntimeSnapshot, isNativePlatform, logNativeEvent } from "./native";
 
 const SERVER = "app.lovable.radiantguard";
