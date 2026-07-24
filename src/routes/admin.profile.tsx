@@ -10,6 +10,7 @@ import {
   Camera,
   Download,
   FileSignature,
+  Fingerprint,
   GraduationCap,
   Heart,
   IdCard,
@@ -70,7 +71,6 @@ import {
   enableBiometric,
   getBiometricStatus,
 } from "@/lib/biometric";
-import { Fingerprint } from "lucide-react";
 
 export const Route = createFileRoute("/admin/profile")({
   component: ProfilePage,
