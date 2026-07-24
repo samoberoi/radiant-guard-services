@@ -7,7 +7,7 @@
  *
  * All calls are guarded so the web build is unaffected.
  */
-import { isNativePlatform } from "./native";
+import { getNativeRuntimeSnapshot, isNativePlatform, logNativeEvent } from "./native";
 
 const SERVER = "app.lovable.radiantguard";
 const USERNAME = "primary-phone";
@@ -16,10 +16,16 @@ const ENABLED_KEY = "radiant.biometric.enabled";
 type Native = typeof import("@capgo/capacitor-native-biometric");
 
 async function mod(): Promise<Native | null> {
-  if (!isNativePlatform()) return null;
+  if (!isNativePlatform()) {
+    logNativeEvent("biometric", "plugin skipped: not native", getNativeRuntimeSnapshot());
+    return null;
+  }
   try {
     return await import("@capgo/capacitor-native-biometric");
-  } catch {
+  } catch (err) {
+    logNativeEvent("biometric", "plugin import failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return null;
   }
 }
@@ -29,8 +35,12 @@ export async function isBiometricAvailable(): Promise<boolean> {
   if (!m) return false;
   try {
     const res = await m.NativeBiometric.isAvailable({ useFallback: true });
+    logNativeEvent("biometric", "availability checked", res);
     return !!res.isAvailable;
-  } catch {
+  } catch (err) {
+    logNativeEvent("biometric", "availability check failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return false;
   }
 }
@@ -57,6 +67,7 @@ export async function getBiometricStatus(): Promise<{
       m.NativeBiometric.isAvailable({ useFallback: true }),
       m.NativeBiometric.isCredentialsSaved({ server: SERVER }).catch(() => ({ isSaved: false })),
     ]);
+    logNativeEvent("biometric", "status checked", { availability, saved });
     const enabled = !!availability.isAvailable && (isBiometricEnabled() || !!saved.isSaved);
     if (enabled && !isBiometricEnabled() && typeof window !== "undefined") {
       window.localStorage.setItem(ENABLED_KEY, "1");
@@ -73,6 +84,9 @@ export async function getBiometricStatus(): Promise<{
         : `Face ID is not available on this device${availability.errorCode ? ` (${availability.errorCode})` : ""}.`,
     };
   } catch (err) {
+    logNativeEvent("biometric", "status check failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     return {
       supported: true,
       available: false,
@@ -92,6 +106,14 @@ export function isBiometricEnabled(): boolean {
 export async function enableBiometric(phone: string): Promise<void> {
   const m = await mod();
   if (!m) throw new Error("Biometric authentication is only available on device.");
+  logNativeEvent("biometric", "enable started");
+  const availability = await m.NativeBiometric.isAvailable({ useFallback: true });
+  logNativeEvent("biometric", "enable availability", availability);
+  if (!availability.isAvailable) {
+    throw new Error(
+      `Face ID is not available on this iPhone${availability.errorCode ? ` (${availability.errorCode})` : ""}.`,
+    );
+  }
   await m.NativeBiometric.verifyIdentity({
     reason: "Enable Face ID for quick sign-in",
     title: "Enable Face ID",
@@ -99,6 +121,7 @@ export async function enableBiometric(phone: string): Promise<void> {
     useFallback: true,
     fallbackTitle: "Use Passcode",
   });
+  logNativeEvent("biometric", "enable identity verified");
   await m.NativeBiometric.setCredentials({
     username: USERNAME,
     password: phone,
@@ -107,6 +130,11 @@ export async function enableBiometric(phone: string): Promise<void> {
     title: "Protect Face ID sign-in",
     negativeButtonText: "Cancel",
   });
+  const saved = await m.NativeBiometric.isCredentialsSaved({ server: SERVER });
+  logNativeEvent("biometric", "credentials saved", saved);
+  if (!saved.isSaved) {
+    throw new Error("Face ID could not save credentials on this iPhone.");
+  }
   window.localStorage.setItem(ENABLED_KEY, "1");
 }
 
@@ -115,7 +143,9 @@ export async function signInWithBiometric(): Promise<string | null> {
   const m = await mod();
   if (!m) return null;
   try {
+    logNativeEvent("biometric", "sign-in started");
     const saved = await m.NativeBiometric.isCredentialsSaved({ server: SERVER });
+    logNativeEvent("biometric", "sign-in saved check", saved);
     if (!isBiometricEnabled() && !saved.isSaved) return null;
     let creds: { username: string; password: string };
     try {
@@ -126,7 +156,11 @@ export async function signInWithBiometric(): Promise<string | null> {
         subtitle: "Use Face ID to continue",
         negativeButtonText: "Cancel",
       });
-    } catch {
+      logNativeEvent("biometric", "secure credentials read");
+    } catch (secureErr) {
+      logNativeEvent("biometric", "secure credentials read failed; trying legacy fallback", {
+        error: secureErr instanceof Error ? secureErr.message : String(secureErr),
+      });
       // Older saved credentials may not have biometric access-control yet.
       // Keep them working, but still require an explicit Face ID / passcode prompt.
       await m.NativeBiometric.verifyIdentity({
@@ -137,12 +171,16 @@ export async function signInWithBiometric(): Promise<string | null> {
         fallbackTitle: "Use Passcode",
       });
       creds = await m.NativeBiometric.getCredentials({ server: SERVER });
+      logNativeEvent("biometric", "legacy credentials read after identity verification");
     }
     if (creds?.password && typeof window !== "undefined") {
       window.localStorage.setItem(ENABLED_KEY, "1");
     }
     return creds?.password ?? null;
   } catch (err) {
+    logNativeEvent("biometric", "sign-in failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     throw err instanceof Error ? err : new Error(String(err));
   }
 }
@@ -152,6 +190,7 @@ export async function disableBiometric(): Promise<void> {
   if (m) {
     try {
       await m.NativeBiometric.deleteCredentials({ server: SERVER });
+      logNativeEvent("biometric", "credentials deleted");
     } catch {
       /* noop */
     }
