@@ -57,10 +57,12 @@ import {
 } from "@/lib/company-documents";
 import { logActivity } from "@/lib/activity-log";
 import { sendTestPushToMe } from "@/lib/push.functions";
+import { registerPushForCurrentUser } from "@/lib/push";
 import { isNativePlatform } from "@/lib/native";
 import {
   disableBiometric,
   enableBiometric,
+  getBiometricStatus,
   isBiometricAvailable,
   isBiometricEnabled,
 } from "@/lib/biometric";
@@ -276,11 +278,10 @@ function ProfilePage() {
   const [bioAvailable, setBioAvailable] = useState(false);
   const [bioEnabled, setBioEnabled] = useState(false);
   const [bioBusy, setBioBusy] = useState(false);
+  const [pushStatus, setPushStatus] = useState<string>("");
+  const [bioStatus, setBioStatus] = useState<string>("");
   useEffect(() => {
-    void isBiometricAvailable().then((ok) => {
-      setBioAvailable(ok);
-      setBioEnabled(ok && isBiometricEnabled());
-    });
+    void refreshBiometricStatus();
   }, []);
   const sendTestPush = useServerFn(sendTestPushToMe);
 
@@ -773,20 +774,55 @@ function ProfilePage() {
       if (bioEnabled) {
         await disableBiometric();
         setBioEnabled(false);
+        setBioStatus("Face ID is disabled on this device.");
         toast.success("Face ID disabled");
       } else {
         const phoneForBio = user?.phone || `+91${phone}`;
+        if (!phoneForBio || phoneForBio === "+91") {
+          toast.error("Sign in with your phone number before enabling Face ID.");
+          return;
+        }
         await enableBiometric(phoneForBio);
         setBioEnabled(true);
+        setBioAvailable(true);
+        setBioStatus("Face ID is enabled on this iPhone.");
         toast.success("Face ID enabled");
       }
     } catch (e: any) {
       toast.error(e?.message || "Face ID action failed");
+      setBioStatus(e?.message || "Face ID action failed");
     } finally {
       setBioBusy(false);
+      void refreshBiometricStatus();
     }
   }
 
+  async function refreshBiometricStatus() {
+    const status = await getBiometricStatus();
+    setBioAvailable(status.available);
+    setBioEnabled(status.enabled);
+    setBioStatus(status.message);
+  }
+
+  async function handleRegisterPush() {
+    if (pushLoading) return;
+    setPushLoading(true);
+    try {
+      const result = await registerPushForCurrentUser();
+      setPushStatus(result.message);
+      if (result.tokenSaved) {
+        toast.success("This iPhone is registered for push notifications");
+      } else {
+        toast.info(result.message);
+      }
+    } catch (e: any) {
+      const message = e?.message || "Could not register this iPhone for push notifications";
+      setPushStatus(message);
+      toast.error(message);
+    } finally {
+      setPushLoading(false);
+    }
+  }
 
   async function handleTestPush() {
     setPushLoading(true);
@@ -796,18 +832,70 @@ function ProfilePage() {
         toast.success(`Test push sent to ${result.sent} device${result.sent === 1 ? "" : "s"}.`);
       } else {
         toast.info(result.message || "No device tokens found.");
+        setPushStatus(result.message || "No registered device tokens found.");
       }
     } catch (e: any) {
       toast.error(e?.message || "Failed to send test push");
+      setPushStatus(e?.message || "Failed to send test push");
     } finally {
       setPushLoading(false);
     }
   }
 
+  const appleNativeCard = (
+    <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-accent" />
+            <h2 className="text-sm font-semibold tracking-wide">Apple app setup</h2>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Register this iPhone for push notifications and enable Face ID sign-in.
+          </p>
+          <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+            <p>{pushStatus || (isNativePlatform() ? "Push status not checked yet." : "Open the installed iOS app to use Apple push notifications.")}</p>
+            <p>{bioStatus || (isNativePlatform() ? "Face ID status not checked yet." : "Open the installed iOS app to use Face ID.")}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRegisterPush}
+            disabled={pushLoading || !isNativePlatform()}
+          >
+            {pushLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Bell className="mr-1.5 h-4 w-4" />}
+            Register iPhone
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleTestPush}
+            disabled={pushLoading}
+          >
+            {pushLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Bell className="mr-1.5 h-4 w-4" />}
+            Send test push
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleToggleBiometric}
+            disabled={bioBusy || !isNativePlatform()}
+          >
+            {bioBusy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Fingerprint className="mr-1.5 h-4 w-4" />}
+            {bioEnabled ? "Disable Face ID" : "Enable Face ID"}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+
   if (!phone) {
     return (
-      <div>
+      <div className="space-y-5">
         <PageHeader title="My Profile" crumbs={[{ label: "My Profile" }]} />
+        {appleNativeCard}
         <div className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
           Sign in to view your profile.
         </div>
@@ -817,8 +905,9 @@ function ProfilePage() {
 
   if (profileQ.isLoading) {
     return (
-      <div>
+      <div className="space-y-5">
         <PageHeader title="My Profile" crumbs={[{ label: "My Profile" }]} />
+        {appleNativeCard}
         <div className="flex items-center justify-center rounded-2xl border border-border bg-card p-12 text-sm text-muted-foreground">
           <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
         </div>
@@ -828,8 +917,9 @@ function ProfilePage() {
 
   if (!profile) {
     return (
-      <div>
+      <div className="space-y-5">
         <PageHeader title="My Profile" crumbs={[{ label: "My Profile" }]} />
+        {appleNativeCard}
         <div className="rounded-2xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
           No employee record is linked to your phone number ({phone}). Please contact your admin.
         </div>
@@ -853,6 +943,8 @@ function ProfilePage() {
       />
 
       <LanguagePreferenceCard candidateId={profile.id} />
+
+      {appleNativeCard}
 
 
       {/* Hero card */}
@@ -950,41 +1042,6 @@ function ProfilePage() {
                 }
               />
               <InfoRow label="Status" value={profile.status} />
-            </div>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleTestPush}
-                disabled={pushLoading}
-              >
-                {pushLoading ? (
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                ) : (
-                  <Bell className="mr-1.5 h-4 w-4" />
-                )}
-                Test push notification
-              </Button>
-              {bioAvailable && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleToggleBiometric}
-                  disabled={bioBusy}
-                >
-                  {bioBusy ? (
-                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Fingerprint className="mr-1.5 h-4 w-4" />
-                  )}
-                  {bioEnabled ? "Disable Face ID" : "Enable Face ID"}
-                </Button>
-              )}
-              {!isNativePlatform() && (
-                <span className="text-xs text-muted-foreground">
-                  Push & Face ID are only available on the iOS app
-                </span>
-              )}
             </div>
           </div>
         </div>
