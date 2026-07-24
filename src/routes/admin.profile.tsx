@@ -753,7 +753,7 @@ function ProfilePage() {
   async function handleTestPush() {
     setPushLoading(true);
     try {
-      const result = await sendTestPush({ message: "Hello from Radiant Guard!" });
+      const result = await sendTestPush({ data: { message: "Hello from Radiant Guard!" } });
       if (result.sent > 0) {
         toast.success(`Test push sent to ${result.sent} device${result.sent === 1 ? "" : "s"}.`);
       } else {
