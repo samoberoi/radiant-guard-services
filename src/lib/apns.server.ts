@@ -36,7 +36,7 @@ function getApnsConfig(): ApnsConfig {
 let cachedJwt: { token: string; exp: number } | null = null;
 
 function normalizeP8(raw: string): string {
-  if (raw.includes("-----BEGIN EC PRIVATE KEY-----)) {
+  if (raw.includes("-----BEGIN EC PRIVATE KEY-----")) {
     return raw;
   }
   // User may have pasted the base64 body without PEM markers.
