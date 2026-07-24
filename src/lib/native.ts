@@ -8,6 +8,65 @@
 import { Capacitor } from "@capacitor/core";
 
 let initialized = false;
+const NATIVE_LOG_KEY = "radiant.native.debug.v1";
+const MAX_NATIVE_LOGS = 80;
+
+export type NativeDebugEntry = {
+  at: string;
+  area: string;
+  message: string;
+  details?: unknown;
+};
+
+function redactNativeDetails(details: unknown): unknown {
+  if (!details || typeof details !== "object") return details;
+  if (Array.isArray(details)) return details.map(redactNativeDetails);
+  const redacted: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(details)) {
+    if (/token|secret|key|password|authorization/i.test(key)) {
+      redacted[key] = typeof value === "string" ? `…${value.slice(-8)}` : "[redacted]";
+    } else if (value && typeof value === "object") {
+      redacted[key] = redactNativeDetails(value);
+    } else {
+      redacted[key] = value;
+    }
+  }
+  return redacted;
+}
+
+export function logNativeEvent(area: string, message: string, details?: unknown) {
+  if (typeof window === "undefined") return;
+  const entry: NativeDebugEntry = {
+    at: new Date().toISOString(),
+    area,
+    message,
+    details: redactNativeDetails(details),
+  };
+  try {
+    const raw = window.localStorage.getItem(NATIVE_LOG_KEY);
+    const current = raw ? (JSON.parse(raw) as NativeDebugEntry[]) : [];
+    const next = [...current, entry].slice(-MAX_NATIVE_LOGS);
+    window.localStorage.setItem(NATIVE_LOG_KEY, JSON.stringify(next));
+  } catch {
+    /* noop */
+  }
+  console.info(`[native:${area}] ${message}`, entry.details ?? "");
+}
+
+export function getNativeDebugLog(): NativeDebugEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(NATIVE_LOG_KEY);
+    return raw ? (JSON.parse(raw) as NativeDebugEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function clearNativeDebugLog() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(NATIVE_LOG_KEY);
+}
 
 export function isNativePlatform(): boolean {
   if (typeof window === "undefined") return false;
@@ -21,11 +80,47 @@ export function isNativePlatform(): boolean {
   }
 }
 
+export function getNativeRuntimeSnapshot() {
+  if (typeof window === "undefined") {
+    return {
+      platform: "server",
+      isNative: false,
+      nativeBridgePresent: false,
+      pushPluginAvailable: false,
+      biometricPluginAvailable: false,
+      userAgent: "",
+      href: "",
+    };
+  }
+
+  let platform = "unknown";
+  let pushPluginAvailable = false;
+  let biometricPluginAvailable = false;
+  try {
+    platform = Capacitor.getPlatform();
+    pushPluginAvailable = Capacitor.isPluginAvailable("PushNotifications");
+    biometricPluginAvailable = Capacitor.isPluginAvailable("NativeBiometric");
+  } catch {
+    /* fallback fields below still help diagnostics */
+  }
+
+  return {
+    platform,
+    isNative: isNativePlatform(),
+    nativeBridgePresent: !!(window as unknown as { Capacitor?: unknown }).Capacitor,
+    pushPluginAvailable,
+    biometricPluginAvailable,
+    userAgent: window.navigator.userAgent,
+    href: window.location.href,
+  };
+}
+
 export async function initNative(): Promise<void> {
   if (initialized) return;
   if (typeof window === "undefined") return;
   if (!isNativePlatform()) return;
   initialized = true;
+  logNativeEvent("runtime", "initNative started", getNativeRuntimeSnapshot());
 
   try {
     const [{ StatusBar, Style }, { SplashScreen }, { Keyboard, KeyboardResize }, { App }] =
@@ -87,14 +182,21 @@ export async function initNative(): Promise<void> {
     }
   } catch (err) {
     // Never let native init crash the web app.
+    logNativeEvent("runtime", "initialization failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     console.warn("[native] initialization failed", err);
   }
 
-  // Push notifications (APNs on iOS). Fire-and-forget; failures are logged.
+  // Push notifications (APNs on iOS). Prepare listeners only; permission is
+  // requested after sign-in or when the user taps Register iPhone.
   try {
-    const { initPushNotifications } = await import("./push");
-    void initPushNotifications();
-  } catch {
+    const { preparePushNotifications } = await import("./push");
+    void preparePushNotifications();
+  } catch (err) {
+    logNativeEvent("push", "prepare import failed", {
+      error: err instanceof Error ? err.message : String(err),
+    });
     /* noop */
   }
 }
