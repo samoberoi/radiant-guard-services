@@ -27,6 +27,7 @@ import {
   Loader2,
   Wallet,
   Building2,
+  Clipboard,
   X,
 } from "lucide-react";
 import { computeWages, fmtINR, type ContractResourceLike } from "@/lib/payroll-calc";
@@ -57,8 +58,13 @@ import {
 } from "@/lib/company-documents";
 import { logActivity } from "@/lib/activity-log";
 import { sendTestPushToMe } from "@/lib/push.functions";
-import { registerPushForCurrentUser } from "@/lib/push";
-import { isNativePlatform } from "@/lib/native";
+import { getPushDebugStatus, registerPushForCurrentUser } from "@/lib/push";
+import {
+  clearNativeDebugLog,
+  getNativeDebugLog,
+  getNativeRuntimeSnapshot,
+  isNativePlatform,
+} from "@/lib/native";
 import {
   disableBiometric,
   enableBiometric,
@@ -278,7 +284,10 @@ function ProfilePage() {
   const [pushStatus, setPushStatus] = useState<string>("");
   const [bioStatus, setBioStatus] = useState<string>("");
   const [nativeSupported, setNativeSupported] = useState(false);
+  const [nativeSnapshot, setNativeSnapshot] = useState(() => getNativeRuntimeSnapshot());
   useEffect(() => {
+    const snapshot = getNativeRuntimeSnapshot();
+    setNativeSnapshot(snapshot);
     setNativeSupported(isNativePlatform());
     void refreshBiometricStatus();
   }, []);
@@ -796,9 +805,40 @@ function ProfilePage() {
   }
 
   async function refreshBiometricStatus() {
+    setNativeSnapshot(getNativeRuntimeSnapshot());
     const status = await getBiometricStatus();
     setBioEnabled(status.enabled);
     setBioStatus(status.message);
+  }
+
+  async function copyNativeDiagnostics() {
+    const payload = {
+      runtime: getNativeRuntimeSnapshot(),
+      push: getPushDebugStatus(),
+      biometric: await getBiometricStatus(),
+      logs: getNativeDebugLog(),
+    };
+    const text = JSON.stringify(payload, null, 2);
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Native diagnostics copied");
+    } catch {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      toast.success("Native diagnostics copied");
+    }
+  }
+
+  function resetNativeDiagnostics() {
+    clearNativeDebugLog();
+    setNativeSnapshot(getNativeRuntimeSnapshot());
+    toast.success("Native diagnostics cleared");
   }
 
   async function handleRegisterPush() {
@@ -843,7 +883,7 @@ function ProfilePage() {
 
   const appleNativeCard = (
     <div className="rounded-2xl border border-border bg-card p-5 shadow-sm">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-accent" />
@@ -855,6 +895,17 @@ function ProfilePage() {
           <div className="mt-2 space-y-1 text-xs text-muted-foreground">
             <p>{pushStatus || (nativeSupported ? "Push status not checked yet." : "Open the installed iOS app to use Apple push notifications.")}</p>
             <p>{bioStatus || (nativeSupported ? "Face ID status not checked yet." : "Open the installed iOS app to use Face ID.")}</p>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-semibold text-muted-foreground">
+            <Badge variant={nativeSnapshot.isNative ? "default" : "outline"}>
+              Platform: {nativeSnapshot.platform}
+            </Badge>
+            <Badge variant={nativeSnapshot.biometricPluginAvailable ? "default" : "outline"}>
+              Face ID plugin: {nativeSnapshot.biometricPluginAvailable ? "available" : "missing"}
+            </Badge>
+            <Badge variant={nativeSnapshot.pushPluginAvailable ? "default" : "outline"}>
+              Push plugin: {nativeSnapshot.pushPluginAvailable ? "available" : "missing"}
+            </Badge>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -884,6 +935,13 @@ function ProfilePage() {
           >
             {bioBusy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Fingerprint className="mr-1.5 h-4 w-4" />}
             {bioEnabled ? "Disable Face ID" : "Enable Face ID"}
+          </Button>
+          <Button variant="secondary" size="sm" onClick={copyNativeDiagnostics}>
+            <Clipboard className="mr-1.5 h-4 w-4" />
+            Copy diagnostics
+          </Button>
+          <Button variant="ghost" size="sm" onClick={resetNativeDiagnostics}>
+            Clear logs
           </Button>
         </div>
       </div>
