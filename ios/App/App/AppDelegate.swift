@@ -77,19 +77,16 @@ public class RadiantBiometricsPlugin: CAPPlugin, CAPBridgedPlugin {
     ]
 
     private func biometryLabel(_ type: LABiometryType) -> String {
-        switch type {
-        case .faceID:
+        if type == .faceID {
             return "Face ID"
-        case .touchID:
-            return "Touch ID"
-        case .opticID where {
-            if #available(iOS 17.0, *) { return true }
-            return false
-        }():
-            return "Optic ID"
-        default:
-            return "Device passcode"
         }
+        if type == .touchID {
+            return "Touch ID"
+        }
+        if #available(iOS 17.0, *), type == .opticID {
+            return "Optic ID"
+        }
+        return "Device passcode"
     }
 
     @objc func check(_ call: CAPPluginCall) {
