@@ -37,6 +37,9 @@ const config: CapacitorConfig = {
     webContentsDebuggingEnabled: false,
   },
   plugins: {
+    PushNotifications: {
+      presentationOptions: ["badge", "sound", "alert"],
+    },
     SplashScreen: {
       launchShowDuration: 800,
       launchAutoHide: true,
