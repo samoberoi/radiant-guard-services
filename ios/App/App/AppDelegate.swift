@@ -82,7 +82,10 @@ public class RadiantBiometricsPlugin: CAPPlugin, CAPBridgedPlugin {
             return "Face ID"
         case .touchID:
             return "Touch ID"
-        case .opticID:
+        case .opticID where {
+            if #available(iOS 17.0, *) { return true }
+            return false
+        }():
             return "Optic ID"
         default:
             return "Device passcode"
