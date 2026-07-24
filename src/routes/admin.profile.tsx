@@ -825,9 +825,11 @@ function ProfilePage() {
       const result = await sendTestPush({ data: { message: "Hello from Radiant Guard!" } });
       if (result.sent > 0) {
         toast.success(`Test push sent to ${result.sent} device${result.sent === 1 ? "" : "s"}.`);
+        setPushStatus(result.message || "Test push sent successfully.");
       } else {
-        toast.info(result.message || "No device tokens found.");
-        setPushStatus(result.message || "No registered device tokens found.");
+        const message = result.message || "No registered device tokens found.";
+        toast.error(message);
+        setPushStatus(message);
       }
     } catch (e: any) {
       toast.error(e?.message || "Failed to send test push");
