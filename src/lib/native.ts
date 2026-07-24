@@ -5,14 +5,20 @@
  * inside `initNative()` so nothing runs during SSR and web-only builds don't
  * pay the cost when Capacitor isn't present.
  */
+import { Capacitor } from "@capacitor/core";
 
 let initialized = false;
 
 export function isNativePlatform(): boolean {
   if (typeof window === "undefined") return false;
-  // Capacitor injects window.Capacitor in the WebView.
-  const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
-  return !!cap?.isNativePlatform?.();
+  try {
+    return Capacitor.isNativePlatform();
+  } catch {
+    // Capacitor also injects window.Capacitor in the WebView. Keep this as a
+    // fallback for older native shells.
+    const cap = (window as unknown as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor;
+    return !!cap?.isNativePlatform?.();
+  }
 }
 
 export async function initNative(): Promise<void> {
