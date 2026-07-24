@@ -103,48 +103,47 @@ async function initPushNotificationsOnce(): Promise<void> {
       return;
     }
 
-    PushNotifications.addListener("registration", async (token) => {
-      console.info("[push] APNs token registered", token.value.slice(-8));
-      lastApnsToken = token.value;
-      await saveTokenForSignedInUser(token.value);
-    });
-
-    PushNotifications.addListener("registrationError", (err) => {
-      lastError = err?.error || JSON.stringify(err);
-      console.warn("[push] registration error", err);
-    });
-
-    // Foreground: iOS does NOT show a system banner or play a sound when the
-    // app is open. We handle it in-app: play a chime and show a toast that
-    // links to the deep-link target if provided.
-    PushNotifications.addListener("pushNotificationReceived", (notif) => {
-      try {
-        playNotificationChime();
-      } catch {
-        /* noop */
-      }
-      const title = notif.title || "Radiant Guard";
-      const body = notif.body || "";
-      const link = (notif.data as { link?: string } | undefined)?.link;
-      toast(title, {
-        description: body,
-        action: link
-          ? {
-              label: "Open",
-              onClick: () => {
-                if (link.startsWith("/")) window.location.href = link;
-              },
-            }
-          : undefined,
-      });
-    });
-
-    PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
-      const link = (action.notification.data as { link?: string } | undefined)?.link;
-      if (link && typeof window !== "undefined" && link.startsWith("/")) {
-        window.location.href = link;
-      }
-    });
+    await Promise.all([
+      PushNotifications.addListener("registration", async (token) => {
+        console.info("[push] APNs token registered", token.value.slice(-8));
+        lastApnsToken = token.value;
+        await saveTokenForSignedInUser(token.value);
+      }),
+      PushNotifications.addListener("registrationError", (err) => {
+        lastError = err?.error || JSON.stringify(err);
+        console.warn("[push] registration error", err);
+      }),
+      // Foreground: iOS does NOT show a system banner or play a sound when the
+      // app is open. We handle it in-app: play a chime and show a toast that
+      // links to the deep-link target if provided.
+      PushNotifications.addListener("pushNotificationReceived", (notif) => {
+        try {
+          playNotificationChime();
+        } catch {
+          /* noop */
+        }
+        const title = notif.title || "Radiant Guard";
+        const body = notif.body || "";
+        const link = (notif.data as { link?: string } | undefined)?.link;
+        toast(title, {
+          description: body,
+          action: link
+            ? {
+                label: "Open",
+                onClick: () => {
+                  if (link.startsWith("/")) window.location.href = link;
+                },
+              }
+            : undefined,
+        });
+      }),
+      PushNotifications.addListener("pushNotificationActionPerformed", (action) => {
+        const link = (action.notification.data as { link?: string } | undefined)?.link;
+        if (link && typeof window !== "undefined" && link.startsWith("/")) {
+          window.location.href = link;
+        }
+      }),
+    ]);
 
     await PushNotifications.register();
     console.info("[push] register() called");

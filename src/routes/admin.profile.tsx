@@ -277,7 +277,9 @@ function ProfilePage() {
   const [bioBusy, setBioBusy] = useState(false);
   const [pushStatus, setPushStatus] = useState<string>("");
   const [bioStatus, setBioStatus] = useState<string>("");
+  const [nativeSupported, setNativeSupported] = useState(false);
   useEffect(() => {
+    setNativeSupported(isNativePlatform());
     void refreshBiometricStatus();
   }, []);
   const sendTestPush = useServerFn(sendTestPushToMe);
@@ -851,8 +853,8 @@ function ProfilePage() {
             Register this iPhone for push notifications and enable Face ID sign-in.
           </p>
           <div className="mt-2 space-y-1 text-xs text-muted-foreground">
-            <p>{pushStatus || (isNativePlatform() ? "Push status not checked yet." : "Open the installed iOS app to use Apple push notifications.")}</p>
-            <p>{bioStatus || (isNativePlatform() ? "Face ID status not checked yet." : "Open the installed iOS app to use Face ID.")}</p>
+            <p>{pushStatus || (nativeSupported ? "Push status not checked yet." : "Open the installed iOS app to use Apple push notifications.")}</p>
+            <p>{bioStatus || (nativeSupported ? "Face ID status not checked yet." : "Open the installed iOS app to use Face ID.")}</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -860,7 +862,7 @@ function ProfilePage() {
             variant="outline"
             size="sm"
             onClick={handleRegisterPush}
-            disabled={pushLoading || !isNativePlatform()}
+            disabled={pushLoading || !nativeSupported}
           >
             {pushLoading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Bell className="mr-1.5 h-4 w-4" />}
             Register iPhone
@@ -878,7 +880,7 @@ function ProfilePage() {
             variant="outline"
             size="sm"
             onClick={handleToggleBiometric}
-            disabled={bioBusy || !isNativePlatform()}
+            disabled={bioBusy || !nativeSupported}
           >
             {bioBusy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Fingerprint className="mr-1.5 h-4 w-4" />}
             {bioEnabled ? "Disable Face ID" : "Enable Face ID"}

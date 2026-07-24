@@ -103,6 +103,9 @@ export async function enableBiometric(phone: string): Promise<void> {
     username: USERNAME,
     password: phone,
     server: SERVER,
+    accessControl: m.AccessControl.BIOMETRY_ANY,
+    title: "Protect Face ID sign-in",
+    negativeButtonText: "Cancel",
   });
   window.localStorage.setItem(ENABLED_KEY, "1");
 }
@@ -114,14 +117,27 @@ export async function signInWithBiometric(): Promise<string | null> {
   try {
     const saved = await m.NativeBiometric.isCredentialsSaved({ server: SERVER });
     if (!isBiometricEnabled() && !saved.isSaved) return null;
-    await m.NativeBiometric.verifyIdentity({
-      reason: "Sign in to Radiant Guard",
-      title: "Face ID",
-      subtitle: "Use Face ID to continue",
-      useFallback: true,
-      fallbackTitle: "Use Passcode",
-    });
-    const creds = await m.NativeBiometric.getCredentials({ server: SERVER });
+    let creds: { username: string; password: string };
+    try {
+      creds = await m.NativeBiometric.getSecureCredentials({
+        server: SERVER,
+        reason: "Sign in to Radiant Guard",
+        title: "Face ID",
+        subtitle: "Use Face ID to continue",
+        negativeButtonText: "Cancel",
+      });
+    } catch {
+      // Older saved credentials may not have biometric access-control yet.
+      // Keep them working, but still require an explicit Face ID / passcode prompt.
+      await m.NativeBiometric.verifyIdentity({
+        reason: "Sign in to Radiant Guard",
+        title: "Face ID",
+        subtitle: "Use Face ID to continue",
+        useFallback: true,
+        fallbackTitle: "Use Passcode",
+      });
+      creds = await m.NativeBiometric.getCredentials({ server: SERVER });
+    }
     if (creds?.password && typeof window !== "undefined") {
       window.localStorage.setItem(ENABLED_KEY, "1");
     }
