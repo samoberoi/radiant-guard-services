@@ -276,6 +276,24 @@ function LoginPage() {
                         </>
                       )}
                     </Button>
+
+                    {bioAvailable && bioEnabled && (
+                      <button
+                        type="button"
+                        onClick={handleBiometricLogin}
+                        disabled={bioBusy}
+                        className="flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-border/70 bg-white/70 text-[14px] font-semibold text-foreground backdrop-blur transition hover:bg-white disabled:opacity-60"
+                      >
+                        {bioBusy ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            <Fingerprint className="h-4 w-4 text-accent" />
+                            Sign in with Face ID
+                          </>
+                        )}
+                      </button>
+                    )}
                   </form>
                 ) : (
                   <div className="space-y-5">
